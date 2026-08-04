@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+</helmet>
+<div style="width:236px;min-width:236px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;padding:46px 15px 16px;background:linear-gradient(180deg,#1d1240 0%,#160c30 100%);border-right:1px solid rgba(148,120,246,.14);font-family:system-ui,-apple-system,sans-serif;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:11px;padding:0 4px">
+    <img src="assets/syxx-logo.png" alt="Syxx" width="50" height="50" style="display:block;filter:drop-shadow(0 0 10px rgba(255,45,120,.3))">
+    <div>
+      <div style="font:700 27px/1 'Cinzel',serif;background:linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff);-webkit-background-clip:text;background-clip:text;color:transparent">Syxx</div>
+      <div style="font-size:9.5px;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin-top:5px;font-weight:600">{{ subtitle }}</div>
+    </div>
+  </div>
+  <div style="height:1px;background:rgba(148,120,246,.16);margin:15px 4px 11px"></div>
+  <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:2px">
+    <sc-for list="{{ items }}" as="it" hint-placeholder-count="10">
+      <sc-if value="{{ it.divBefore }}" hint-placeholder-val="{{ false }}"><div style="height:1px;background:#d9a441;opacity:.32;margin:11px 8px"></div></sc-if>
+      <a href="{{ it.href }}" style="{{ it.style }}" style-hover="{{ it.hover }}">
+        <sc-if value="{{ it.isText }}" hint-placeholder-val="{{ true }}"><span style="{{ it.glyphStyle }}">{{ it.g }}</span></sc-if>
+        <sc-if value="{{ it.isDash }}" hint-placeholder-val="{{ false }}"><span style="width:22px;display:flex;justify-content:center;color:{{ it.iconColor }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="13"></line><line x1="12" y1="20" x2="12" y2="8"></line><line x1="18" y1="20" x2="18" y2="4"></line></svg></span></sc-if>
+        <sc-if value="{{ it.isSpark }}" hint-placeholder-val="{{ false }}"><span style="width:22px;display:flex;justify-content:center;color:{{ it.iconColor }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 5.6L19.5 9l-5.8 1.4L12 16l-1.7-5.6L4.5 9l5.8-1.4z"></path><circle cx="18.5" cy="17.5" r="1.7"></circle></svg></span></sc-if>
+        <sc-if value="{{ it.isGlobe }}" hint-placeholder-val="{{ false }}"><span style="width:22px;display:flex;justify-content:center;color:{{ it.iconColor }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"></path></svg></span></sc-if>
+        <sc-if value="{{ it.isVerdict }}" hint-placeholder-val="{{ false }}"><span style="width:22px;display:flex;justify-content:center;color:{{ it.iconColor }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M9.3 14.2l1.8 1.8 3.4-4"></path></svg></span></sc-if>
+        <span style="flex:1">{{ it.label }}</span>
+        <sc-if value="{{ it.locked }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;color:#e0b45a;filter:drop-shadow(0 0 5px rgba(224,180,90,.55))"><svg width="17" height="20" viewBox="0 0 26 30" fill="none"><path d="M7 13 V10 a6 6 0 0 1 12 0 V13" stroke="currentColor" stroke-width="2.8" fill="none"></path><rect x="5" y="13" width="16" height="12.5" rx="3" fill="currentColor"></rect><circle cx="13" cy="18.5" r="1.9" fill="#160c30"></circle></svg><span style="font:700 10px system-ui;letter-spacing:.1em;color:#e0b45a">PRO</span></span></sc-if>
+        <sc-if value="{{ it.external }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;opacity:.7">↗</span></sc-if>
+      </a>
+    </sc-for>
+  </div>
+  <div style="padding-top:12px">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid rgba(217,164,65,.35);color:#e0b45a;font-size:12.5px;font-weight:500;cursor:pointer;transition:all .14s" style-hover="background:rgba(217,164,65,.10)"><span style="font-size:13px">⟲</span><span>Start your story anew</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:236,&quot;height&quot;:680},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;dashboard&quot;,&quot;options&quot;:[&quot;whatsnew&quot;,&quot;dashboard&quot;,&quot;prophet&quot;,&quot;mirror&quot;,&quot;portal&quot;,&quot;glutton&quot;,&quot;cage&quot;,&quot;witness&quot;,&quot;conclusions&quot;,&quot;dimensions&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active || 'dashboard';
+    const prefix = this.props.prefix || '';
+    const raw = [
+      { k: 'whatsnew', label: "What's New", g: '✦' },
+      { k: 'dashboard', label: 'Dashboard', g: '▂▅▇' },
+      { k: 'prophet', label: 'Prophet', g: 'ᚨ', rune: true, divBefore: true },
+      { k: 'mirror', label: 'Mirror', g: 'ᛞ', rune: true, locked: true },
+      { k: 'portal', label: 'Portal', g: 'ᛜ', rune: true },
+      { k: 'glutton', label: 'Glutton', g: 'ᚦ', rune: true, locked: true },
+      { k: 'cage', label: 'Cage', g: 'ᚾ', rune: true },
+      { k: 'witness', label: 'Witness', g: 'ᛉ', rune: true, locked: true },
+      { k: 'conclusions', label: 'Conclusion', g: '✒', divBefore: true },
+      { k: 'dimensions', label: 'Dimensions', g: '⊕', gold: true, external: true, divBefore: true },
+    ];
+    const items = raw.map(it => {
+      const isActive = it.k === active;
+      const glyphColor = it.gold ? '#e0b45a' : (isActive ? '#fff' : (it.rune ? '#9b8ac9' : '#8f83b8'));
+      const glyphStyle = `width:22px;text-align:center;font-size:${it.rune ? '17px' : '15px'};color:${glyphColor}`;
+      const style = isActive
+        ? 'display:flex;align-items:center;gap:13px;padding:9px 13px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;color:#fff;background:linear-gradient(90deg,#7c5cff,#6a49ef);box-shadow:0 8px 20px rgba(124,92,255,.4)'
+        : `display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:${it.gold ? '600' : '500'};cursor:pointer;transition:all .14s;text-decoration:none;color:${it.gold ? '#e0b45a' : '#b3a7d6'}`;
+      const type = it.k === 'whatsnew' ? 'spark' : it.k === 'dashboard' ? 'dash' : it.k === 'dimensions' ? 'globe' : it.k === 'conclusions' ? 'verdict' : 'text';
+      const iconColor = isActive ? '#fff' : (it.gold ? '#e0b45a' : '#8f83b8');
+      const hover = isActive ? 'filter:brightness(1.06)' : (it.gold ? 'background:rgba(217,164,65,.09)' : 'background:rgba(124,92,255,.10);color:#efeafe');
+      return { ...it, isActive, isNotActive: !isActive, isText: type === 'text', isDash: type === 'dash', isSpark: type === 'spark', isGlobe: type === 'globe', isVerdict: type === 'verdict', iconColor, hover, glyphStyle, style, href: it.external ? '#' : ('#pane-' + prefix + it.k), divBefore: !!it.divBefore, external: !!it.external, locked: !!it.locked };
+    });
+    return { items, subtitle: prefix === 'g-' ? 'DNS Investigation' : 'The Six Wardens' };
+  }
+}
+</script>
+</body>
+</html>

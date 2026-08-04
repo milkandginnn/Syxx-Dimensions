@@ -1,0 +1,11 @@
+{
+  "id": "REPLACE-with-unique-id-per-message",
+  "title": "Short headline",
+  "body": "Body text shown in the startup panel.",
+  "severity": "info",
+  "startsAt": null,
+  "endsAt": null,
+  "minVersion": null,
+  "maxVersion": null,
+  "url": null
+}

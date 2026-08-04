@@ -1,0 +1,244 @@
+{
+  "summary": {
+    "projectName": "Syxx",
+    "locale": "en",
+    "modelId": "agent-work-loop-v4",
+    "reportContractVersion": 25,
+    "overview": "The project has strong honesty-context governance and real security engineering in its Server core, but the Windows build and CI paths are stale, the Server security core has no CI test job, and the honesty-coverage gate that protects the defining failure class is unwired and known-red. Session evidence was unavailable for the 30-day review window, making this a session-limited assessment.",
+    "aiAgentPractice": {
+      "inspectedSurfaces": [
+        "Rules",
+        "Skills",
+        "Custom Agents",
+        "Workflows"
+      ],
+      "coverageRows": [
+        {
+          "surface": "Rules",
+          "scopes": [
+            "Project"
+          ],
+          "count": 2,
+          "paths": [
+            "AGENTS.md",
+            "DESIGN.md"
+          ]
+        },
+        {
+          "surface": "Skills",
+          "scopes": [
+            "Project"
+          ],
+          "count": 4,
+          "paths": [
+            ".agents/skills/syxx-delta-file/SKILL.md",
+            ".agents/skills/syxx-honesty-audit/SKILL.md",
+            ".agents/skills/syxx-parity-check/SKILL.md",
+            ".agents/skills/syxx-reference-lookup/SKILL.md"
+          ]
+        },
+        {
+          "surface": "Custom Agents",
+          "scopes": [
+            "Project"
+          ],
+          "count": 84,
+          "paths": [
+            ".qoder/agents/accessibility-tester.md",
+            ".qoder/agents/ad-security-reviewer.md",
+            ".qoder/agents/agent-installer.md",
+            ".qoder/agents/api-designer.md",
+            ".qoder/agents/api-documenter.md",
+            ".qoder/agents/architect-reviewer.md",
+            ".qoder/agents/avalonia-architect.md",
+            ".qoder/agents/backend-developer.md",
+            ".qoder/agents/build-engineer.md",
+            ".qoder/agents/business-analyst.md",
+            ".qoder/agents/chaos-engineer.md",
+            ".qoder/agents/cli-developer.md"
+          ]
+        },
+        {
+          "surface": "Workflows",
+          "scopes": [
+            "Project"
+          ],
+          "count": 1,
+          "paths": [
+            ".github/workflows/ci.yml"
+          ]
+        },
+        {
+          "surface": "Memories",
+          "scopes": [
+            "Project"
+          ],
+          "count": 5
+        }
+      ]
+    },
+    "assignmentSummaries": [],
+    "dimensions": [
+      {
+        "id": "task-understanding",
+        "label": "Task Understanding",
+        "score": 70,
+        "summary": "AGENTS.md provides exceptional binding context with explicit acceptance boundaries and a Verification and Honesty Protocol, but does not govern the 84-file custom-agent layer.",
+        "findingRefs": [
+          "agents-md-no-agent-governance"
+        ]
+      },
+      {
+        "id": "controlled-execution",
+        "label": "Controlled Execution",
+        "score": 50,
+        "summary": "macOS and Server startup routes work, but Windows solution and CI paths are stale, no lint workflows exist, and all 84 custom agents fail the required name field.",
+        "findingRefs": [
+          "windows-sln-paths-stale",
+          "no-lint-security-gates",
+          "custom-agents-missing-name"
+        ]
+      },
+      {
+        "id": "change-validation",
+        "label": "Change Validation",
+        "score": 45,
+        "summary": "macOS tests run in CI, but the Server security core has no CI test job and the honesty-coverage gate is unwired while known-red.",
+        "findingRefs": [
+          "server-no-ci-tests",
+          "honesty-gate-unwired"
+        ]
+      },
+      {
+        "id": "reliable-delivery",
+        "label": "Reliable Delivery",
+        "score": 48,
+        "summary": "CI exists but only covers macOS tests; the synthesis-engine parity diff job is a placeholder and no rollback mechanism is visible.",
+        "findingRefs": [
+          "synthesis-parity-placeholder"
+        ]
+      },
+      {
+        "id": "learning-capture",
+        "label": "Learning Capture",
+        "score": 35,
+        "summary": "Session evidence was unavailable for the 30-day window (0 eligible sessions, source-root warnings), keeping all Learning Capture checks Unobserved in the evidence boundary.",
+        "findingRefs": []
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "windows-sln-paths-stale",
+      "title": "Windows solution and CI reference project paths that no longer exist",
+      "severity": "High",
+      "reason": "Fact: Windows/Syxx.sln and Windows/Syxx.Linux.slnf reference projects at relative paths like Syxx.Kit/Syxx.Kit.csproj, but the projects now live under Windows/dotNET/. The CI workflow at .github/workflows/ci.yml uses the same stale paths for dotnet build and dotnet test commands. Inference: an agent following the documented `dotnet build Windows/Syxx.sln` cannot restore or build the .NET parity matrix, which is the project's central cross-platform deliverable. Owner: Windows/ solution files and .github/workflows/ci.yml. Uncertainty: this is working-tree (uncommitted) state; no build was executed to confirm the runtime failure, and an in-flight .sln update could reconcile it.",
+      "expectedOutput": [
+        "Windows/Syxx.sln and Windows/Syxx.Linux.slnf reference projects under Windows/dotNET/",
+        "ci.yml dotnet build and test commands use Windows/dotNET/ paths",
+        "dotnet build Windows/Syxx.sln restores and builds without path errors"
+      ],
+      "expectedArtifact": "Updated solution and CI files",
+      "aiFixPrompt": "/better-harness fix this issue\n\nUpdate Windows/Syxx.sln, Windows/Syxx.Linux.slnf, and the dotnet build/test commands in .github/workflows/ci.yml to reference the projects under Windows/dotNET/ instead of the old Windows/ relative paths. Also update run-tests.ps1 if it references the same stale paths.\n\n## Validation\n\n- Run `dotnet build Windows/Syxx.sln` and confirm it restores and builds successfully\n- Run `dotnet test Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj` and confirm tests execute\n- Confirm ci.yml dotnet steps reference the corrected paths",
+      "dimensionRefs": [
+        "controlled-execution"
+      ]
+    },
+    {
+      "id": "server-no-ci-tests",
+      "title": "Server security core has no CI test job",
+      "severity": "High",
+      "reason": "Fact: The core-change-watch evidence-pack scores Server/syxx_server at 98 (core score) with 8 hot files including app.py, resolver.py, investigate.py, leak.py, and dns_authoritative.py. There are 21 server test files including test_leak.py with real failure cases. However, .github/workflows/ci.yml contains only swift and dotnet jobs, with no pytest or server build/smoke step. Inference: regressions in the DNS tampering-detection and Ed25519 evidence-signing server can merge with no automated check, violating AGENTS.md sections 2 and 3 (real-run primacy, mandatory failure cases). Owner: .github/workflows/ci.yml and Server/tests. Uncertainty: tests may run in an external CI system not visible in-repo, but no evidence of that exists.",
+      "expectedOutput": [
+        "ci.yml includes a pytest job for Server/tests",
+        "The job runs on push and pull_request events",
+        "Server test failures block merge"
+      ],
+      "expectedArtifact": "CI workflow with Server test job",
+      "aiFixPrompt": "/better-harness fix this issue\n\nAdd a CI job to .github/workflows/ci.yml that runs the Server test suite. The job should install Python dependencies from Server/requirements.txt (or equivalent), run `python3 -m pytest Server/tests/` (or the project's documented test command), and run on both push and pull_request events. Include a Server boot smoke check if one exists (e.g., python3 Server/server.py --health-check).\n\n## Validation\n\n- Confirm ci.yml includes a Server pytest job triggered on push and pull_request\n- Run the CI job locally: `cd Server && python3 -m pytest tests/`\n- Confirm test failures block the CI pipeline",
+      "dimensionRefs": [
+        "change-validation"
+      ]
+    },
+    {
+      "id": "honesty-gate-unwired",
+      "title": "Honesty-coverage gate is unwired while known-red",
+      "severity": "Medium",
+      "reason": "Fact: scripts/honesty-coverage-gate.py is a well-designed branch-coverage gate over the honesty-spine security guards (A024, A009, D040/A021, A056, A023, AUTH-ZONE, AUTH-LEN) using anchor-based guard location. Its docstring cites a 2026-07-16 audit where four security guards including A024 were deleted against a green 119/119 test suite. However, the gate is invoked by no workflow or script, and MEMORY.md records it as RED today. Inference: the guards preventing a false secure or signed-clean verdict have no automated trigger, and their known-red state is unreconciled. This is the documented origin condition for the gate. Owner: scripts/ and .github/workflows/ci.yml. Uncertainty: the gate may be run manually out-of-band, but there is no enforceable trigger.",
+      "expectedOutput": [
+        "scripts/honesty-coverage-gate.py is invoked in a CI job",
+        "The gate runs on push and pull_request events",
+        "Guard anchor rot or missing branches fail the build"
+      ],
+      "expectedArtifact": "Wired honesty-coverage gate",
+      "aiFixPrompt": "/better-harness fix this issue\n\nWire scripts/honesty-coverage-gate.py into the CI workflow at .github/workflows/ci.yml as a job or step that runs on push and pull_request events. The gate should fail the build if any honesty-spine guard anchor is missing or if branch coverage regresses. If the gate is currently RED, document the failing guards in DELTAS.md and either fix them or mark the gate as non-blocking with a tracked issue until resolved.\n\n## Validation\n\n- Confirm ci.yml invokes scripts/honesty-coverage-gate.py\n- Run the gate locally: `python3 scripts/honesty-coverage-gate.py` and inspect output\n- Confirm guard anchor rot or missing branches fail the CI build",
+      "dimensionRefs": [
+        "change-validation"
+      ]
+    },
+    {
+      "id": "no-lint-security-gates",
+      "title": "No lint, type, or static-security gates in CI for a security tool",
+      "severity": "Medium",
+      "reason": "Fact: No swiftlint, flake8, mypy, ruff, pylintrc, bandit, eslint, tsc, or .editorconfig configuration exists anywhere in the repository. The CI workflow at .github/workflows/ci.yml has no lint or analyze step. AGENTS.md identifies tri-state-to-boolean backsliding as the single most common defect class in DELTAS.md. Inference: the most common defect class has no mechanical backstop beyond tests, and general code quality, input validation, and unsafe crypto handling are unenforced in CI. Owner: repository root and .github/workflows/ci.yml. Uncertainty: some checks may live in editor or agent configurations not visible in CI, but CI is the enforceable surface and it has none.",
+      "expectedOutput": [
+        "ci.yml includes lint steps for Swift and Python",
+        "A static security scan (bandit for Python) runs in CI",
+        "Lint and security failures block merge"
+      ],
+      "expectedArtifact": "CI lint and security analysis steps",
+      "aiFixPrompt": "/better-harness fix this issue\n\nAdd lint, type-check, and static-security analysis steps to .github/workflows/ci.yml. At minimum: add swiftlint (or swift-format) for macOS sources, add ruff or flake8 for Python Server sources, and add bandit for Python security scanning. Each step should run on push and pull_request and fail the build on violations. Add the corresponding configuration files (e.g., .swiftlint.yml, pyproject.toml with ruff config, .bandit) at the repository root.\n\n## Validation\n\n- Confirm ci.yml includes lint steps for Swift and Python\n- Confirm a static security scan (bandit) runs in CI\n- Run each linter locally and confirm it produces actionable output",
+      "dimensionRefs": [
+        "controlled-execution"
+      ]
+    },
+    {
+      "id": "synthesis-parity-placeholder",
+      "title": "Synthesis-engine platform parity diff job is a CI placeholder",
+      "severity": "Medium",
+      "reason": "Fact: DESIGN.md states macOS uses MatrixDeterminativeEngine while Windows/Syxx.Kit/Synthesis/ still runs the retired DST engine pending the MATRIX-MIGRATION-PLAN. The CI parity-transcript diff job that would detect cross-platform divergence is an explicit placeholder: it emits a warning annotation, calls exit 0, and comments do not read a green here as parity proven. Inference: the one honest conclusion synthesis output that the witness layer signs can diverge across platforms with no mechanical detection. A Windows user could receive a verdict from an engine the project has declared untrustworthy. Owner: DESIGN.md, Windows/Syxx.Kit/Synthesis/, and .github/workflows/ci.yml. Uncertainty: the migration is a tracked intentional in-flight effort, not an unknown gap, but the placeholder CI job is a present defect.",
+      "expectedOutput": [
+        "The CI parity diff job runs a real comparison instead of exit 0",
+        "Divergent synthesis output across platforms fails the build or emits a visible warning",
+        "The placeholder warning annotation is removed or replaced with a real result"
+      ],
+      "expectedArtifact": "Real parity check in CI",
+      "aiFixPrompt": "/better-harness fix this issue\n\nReplace the placeholder parity diff job in .github/workflows/ci.yml with a real comparison that runs the synthesis engine on a golden-vector input on both macOS and Windows and fails the build on byte-level divergence. If the migration is not yet complete, make the job non-blocking with a tracked issue and a clear warning, but remove the silent exit 0 so the gap is visible in CI output.\n\n## Validation\n\n- Confirm the CI parity diff job runs a real comparison instead of exit 0\n- Run the golden-vector comparison locally on macOS and confirm output\n- Confirm divergent synthesis output across platforms is detected",
+      "dimensionRefs": [
+        "reliable-delivery"
+      ]
+    },
+    {
+      "id": "custom-agents-missing-name",
+      "title": "All 84 custom agents fail the Qoder-required name field",
+      "severity": "Low",
+      "reason": "Fact: The asset lint reports 84 errors of type custom-agent-missing-name across all 84 files in .qoder/agents/. Two sampled files (accessibility-tester.md and code-reviewer.md) confirm the pattern: frontmatter includes description, mode, tools, temperature, and steps, but omits the name field. Inference: agent routing and discoverability are impaired because the Qoder provider cannot resolve agents by their required name identifier. Owner: .qoder/agents/. Uncertainty: minimal, as lint and two samples agree. The agents may still be invocable by filename, but the required field is absent.",
+      "expectedOutput": [
+        "Every .qoder/agents/*.md file declares a name field in frontmatter",
+        "agent-lint reports 0 custom-agent-missing-name errors",
+        "Agent names match their filename stems"
+      ],
+      "expectedArtifact": "Agent files with name field",
+      "aiFixPrompt": "/better-harness fix this issue\n\nAdd the `name` field to the frontmatter of every .qoder/agents/*.md file. The name should match the filename stem (e.g., accessibility-tester.md gets `name: accessibility-tester`). Verify with agent-lint that all 84 custom-agent-missing-name errors are resolved.\n\n## Validation\n\n- Run `better-harness coding-agent-practices asset-baseline qoder --workspace . --language en --json` and confirm lint errors drop to 0\n- Open 3-5 agent files and confirm the name field is present and matches the filename stem",
+      "dimensionRefs": [
+        "controlled-execution"
+      ]
+    },
+    {
+      "id": "agents-md-no-agent-governance",
+      "title": "AGENTS.md does not route or govern the 84-file custom-agent layer",
+      "severity": "Low",
+      "reason": "Fact: AGENTS.md routes exhaustively to the skill tree (_ROOT_.md), four ledgers (DELTAS.md, ROADMAP.md, PROPOSALS.md, DESIGN.md), MEMORY.md, CHANGELOG.md, and the four .agents/skills/ skills. It never mentions the .qoder/agents/ directory or its 84 custom agents. Two sampled agents (accessibility-tester, code-reviewer) contain no reference to the tri-state mandate, the six Syxx toolsets, DELTAS.md, or the honesty protocol that AGENTS.md makes binding. Inference: an entire agent surface operates outside the honesty and tri-state fence that AGENTS.md calls binding, not advisory. Owner: AGENTS.md. Uncertainty: Qoder may invoke custom agents via provider-default routing that does not require an AGENTS.md mention, and only 2 of 84 agents were sampled.",
+      "expectedOutput": [
+        "AGENTS.md includes a section on custom agent selection and invocation",
+        "The section requires custom agents to honor the tri-state and honesty protocol",
+        "Agent routing guidance is present and testable"
+      ],
+      "expectedArtifact": "Updated AGENTS.md with agent governance",
+      "aiFixPrompt": "/better-harness fix this issue\n\nAdd a section to AGENTS.md that governs the custom-agent layer at .qoder/agents/. The section should define: when to use custom agents vs the CLI or skills, selection criteria for security-sensitive tasks, and a requirement that any agent handling verdicts, evidence, or security output must honor the tri-state and honesty protocol. Keep it concise and routing-focused, not a per-agent catalog.\n\n## Validation\n\n- Confirm AGENTS.md includes a custom-agent governance section\n- Confirm the section references the tri-state mandate and honesty protocol\n- Confirm the section provides selection guidance for security-sensitive tasks",
+      "dimensionRefs": [
+        "task-understanding"
+      ]
+    }
+  ]
+}

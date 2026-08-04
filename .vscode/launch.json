@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Syxx}/macOS",
+            "name": "Debug syxx (macOS)",
+            "target": "syxx",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug syxx (macOS)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Syxx}/macOS",
+            "name": "Release syxx (macOS)",
+            "target": "syxx",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release syxx (macOS)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Syxx}/macOS",
+            "name": "Debug syxx-gui (macOS)",
+            "target": "syxx-gui",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug syxx-gui (macOS)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Syxx}/macOS",
+            "name": "Release syxx-gui (macOS)",
+            "target": "syxx-gui",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release syxx-gui (macOS)"
+        }
+    ]
+}

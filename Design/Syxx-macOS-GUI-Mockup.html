@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Syxx — macOS GUI Mockup · Design Spec v1</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!--
+  ══════════════════════════════════════════════════════════════════════
+  SYXX · macOS GUI MOCKUP · Design Spec v1
+  Platform  : macOS Tahoe 26 / SwiftUI
+  Layout    : 3-column — sidebar 210px · content flex · inspector 290px
+  Palette   : bg #07101f · yellow #E8F53C · purple #8C5CF5 · lavender #C7A9FF
+  Type      : -apple-system / SF Pro · JetBrains Mono for terminal output
+  Note      : Design prototype only — not production code.
+  ══════════════════════════════════════════════════════════════════════
+-->
+<style>
+:root {
+  --bg:       #07101f;  --bg-mid:   #0a1425;  --bg-card:  #111827;
+  --bg-input: #1A2138;  --bg-side:  #0c1524;  --bg-tb:    #080f1d;
+  --border:   #1e3148;  --border-f: #142030;
+  --y: #E8F53C;  --p: #8C5CF5;  --lav: #C7A9FF;
+  --t1: #E8ECF6; --t2: #9AA6C0; --t3: #6E7A96;
+  --ok: #34d399; --warn: #f59e0b; --err: #ef4444; --inc: #818cf8;
+  --grad:      linear-gradient(135deg,#E8F53C 0%,#8C5CF5 100%);
+  --grad-soft: linear-gradient(100deg,#E8F53C 10%,#C7A9FF 60%,#8C5CF5 100%);
+  --sw: 210px; --iw: 290px;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { background:#040810; font-family:-apple-system,'SF Pro Text','Helvetica Neue',sans-serif;
+  color:var(--t1); font-size:13px; -webkit-font-smoothing:antialiased; }
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-thumb { background:#1e3148; border-radius:2px; }
+
+/* ── page chrome ── */
+.page { padding:20px 24px 48px; display:flex; flex-direction:column; gap:24px;
+  max-width:1360px; margin:0 auto; }
+.page-label { font-size:9px; font-weight:700; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--t3); }
+.page-desc { font-size:11px; color:var(--t2); margin-top:3px; }
+.page-desc strong { color:var(--y); }
+
+/* ── window ── */
+.win { border-radius:12px; overflow:hidden;
+  box-shadow:0 40px 80px rgba(0,0,0,.75),0 0 0 1px var(--border);
+  display:flex; flex-direction:column;
+  background:radial-gradient(900px 600px at 65% -15%,#14213a 0%,#0a1425 55%,#07101f 100%); }
+
+/* title bar */
+.tb { height:38px; background:var(--bg-tb); display:flex; align-items:center;
+  padding:0 14px; gap:8px; flex-shrink:0; border-bottom:1px solid var(--border-f);
+  position:relative; user-select:none; }
+.dot { width:12px; height:12px; border-radius:50%; }
+.dr{background:#ef4444;} .dy{background:#f59e0b;} .dg{background:#22c55e;}
+.tb-title { position:absolute; left:50%; transform:translateX(-50%);
+  font-size:12px; font-weight:600; color:var(--t3); white-space:nowrap; }
+.tb-right { margin-left:auto; }
+.pro-badge { font-size:9px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  padding:2px 8px; border-radius:10px;
+  background:linear-gradient(135deg,rgba(232,245,60,.09),rgba(140,92,245,.14));
+  border:1px solid rgba(140,92,245,.28); color:var(--lav); }
+
+/* ── 3-column body ── */
+.app-body { flex:1; display:flex; overflow:hidden; min-height:0; }
+
+/* sidebar */
+.sidebar { width:var(--sw); background:var(--bg-side); border-right:1px solid var(--border-f);
+  display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
+.sb-head { padding:14px 12px 6px; display:flex; align-items:center; gap:9px; }
+.app-icon { width:28px; height:28px; border-radius:6px; background:#0F1629;
+  border:1px solid rgba(255,255,255,.07); display:grid; place-items:center;
+  box-shadow:0 0 8px rgba(232,245,60,.2),0 0 14px rgba(140,92,245,.14); flex-shrink:0; }
+.app-name { font-size:13px; font-weight:800; letter-spacing:.06em;
+  background:var(--grad-soft); -webkit-background-clip:text;
+  background-clip:text; -webkit-text-fill-color:transparent; }
+.sb-sec { font-size:9px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--t3); padding:12px 12px 4px; }
+.nav { display:flex; align-items:center; gap:8px; padding:6px 10px; margin:1px 5px;
+  border-radius:6px; cursor:pointer; color:var(--t2); font-size:12px; font-weight:500;
+  transition:background .12s; }
+.nav:hover { background:rgba(255,255,255,.04); }
+.nav.on { background:rgba(232,245,60,.08); color:var(--y); border:1px solid rgba(232,245,60,.14); }
+.nav-ic { width:15px; text-align:center; font-size:12px; flex-shrink:0; }
+.nav-badge { margin-left:auto; font-size:9px; font-weight:700;
+  background:rgba(140,92,245,.2); color:var(--lav); border-radius:8px; padding:1px 5px; }
+.sb-space { flex:1; }
+.sb-foot { padding:10px 12px; border-top:1px solid var(--border-f); }
+.pro-pill { display:flex; align-items:center; gap:7px; padding:7px 10px; border-radius:6px;
+  background:linear-gradient(135deg,rgba(232,245,60,.05),rgba(140,92,245,.08));
+  border:1px solid rgba(140,92,245,.2); cursor:pointer; }
+.pro-dot { width:7px; height:7px; border-radius:50%; background:var(--y);
+  box-shadow:0 0 5px rgba(232,245,60,.55); animation:pulse 2.2s ease-in-out infinite; }
+.pro-txt { font-size:11px; color:var(--lav); font-weight:600; }
+
+/* content */
+.content { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+.ctb { height:42px; padding:0 18px; display:flex; align-items:center; gap:9px;
+  border-bottom:1px solid var(--border-f); background:rgba(8,15,29,.5); flex-shrink:0; }
+.ctb-title { font-size:13px; font-weight:700; }
+.sep { width:1px; height:16px; background:var(--border); margin:0 3px; }
+.tpg { display:flex; gap:2px; background:var(--bg-card); border:1px solid var(--border);
+  border-radius:6px; padding:3px; }
+.tp { font-size:10px; font-weight:700; letter-spacing:.05em; padding:2px 7px;
+  border-radius:4px; color:var(--t3); cursor:pointer; }
+.tp.on { background:rgba(232,245,60,.11); color:var(--y); }
+.tbtn { height:24px; padding:0 10px; border-radius:6px; border:1px solid var(--border);
+  background:var(--bg-card); color:var(--t2); font-size:11px; font-weight:600;
+  cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.tbtn.prim { background:var(--grad); color:#0F1629; border:none; }
+.tr { margin-left:auto; display:flex; align-items:center; gap:6px; }
+.cmain { padding:16px 18px; display:flex; flex-direction:column; gap:13px;
+  overflow-y:auto; flex:1; }
+
+/* query panel */
+.qp { background:var(--bg-card); border:1px solid var(--border); border-radius:10px;
+  padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+.qrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.ql { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--t3); white-space:nowrap; }
+input[type=text] { flex:1; padding:7px 11px; font-size:12px;
+  font-family:ui-monospace,'SF Mono',Menlo,monospace;
+  color:var(--t1); background:var(--bg-input); border:1px solid #2a3f5f;
+  border-radius:6px; outline:none; transition:border-color .2s,box-shadow .2s; }
+input[type=text]:focus { border-color:var(--y); box-shadow:0 0 0 2px rgba(232,245,60,.11); }
+select { padding:7px 9px; font-size:11px; color:var(--t2); background:var(--bg-input);
+  border:1px solid #2a3f5f; border-radius:6px; outline:none; cursor:pointer; min-width:80px; }
+.btn-run { height:32px; padding:0 16px; border-radius:6px; border:none;
+  background:var(--grad); color:#0F1629; font-size:12px; font-weight:800; cursor:pointer; }
+.orow { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.cbl { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--t2); cursor:pointer; }
+input[type=checkbox] { accent-color:var(--y); width:12px; height:12px; }
+input[type=range] { accent-color:var(--y); }
+.srow { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--t3); margin-left:auto; }
+@keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+.pdot { width:6px; height:6px; border-radius:50%; background:var(--y);
+  box-shadow:0 0 5px rgba(232,245,60,.55); animation:pulse 2.2s ease-in-out infinite; }
+
+/* verdict */
+.vban { border-radius:10px; padding:12px 16px; display:flex; align-items:flex-start;
+  gap:12px; border-width:1px; border-style:solid; }
+.vban.ok  { background:rgba(52,211,153,.06); border-color:rgba(52,211,153,.27); }
+.vban.bad { background:rgba(239,68,68,.07);  border-color:rgba(239,68,68,.3); }
+.vban.inc { background:rgba(129,140,248,.06);border-color:rgba(129,140,248,.27); }
+.vic { font-size:20px; flex-shrink:0; margin-top:1px; }
+.vlbl { font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+.vban.ok  .vlbl { color:var(--ok); }
+.vban.bad .vlbl { color:var(--err); }
+.vban.inc .vlbl { color:var(--inc); }
+.vdesc { font-size:11px; color:var(--t2); margin-top:2px; line-height:1.5; }
+.vmeta { margin-left:auto; text-align:right; font-size:10px; color:var(--t3); flex-shrink:0; }
+.vmeta strong { display:block; font-size:12px; color:var(--t1); margin-bottom:2px; }
+
+/* result grid */
+.rg { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.rc { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.rc-h { padding:9px 13px; border-bottom:1px solid var(--border-f);
+  display:flex; align-items:center; gap:7px; }
+.rc-t { font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--t3); }
+.rc-b { padding:11px 13px; }
+.badge { font-size:9px; font-weight:700; padding:2px 7px; border-radius:8px; margin-left:auto; }
+.bok  { background:rgba(52,211,153,.13);  color:var(--ok); }
+.bwrn { background:rgba(245,158,11,.13);  color:var(--warn); }
+.berr { background:rgba(239,68,68,.13);   color:var(--err); }
+.binf { background:rgba(140,92,245,.13);  color:var(--lav); }
+
+/* dns table */
+.dt { width:100%; border-collapse:collapse; font-size:11px; }
+.dt th { text-align:left; font-size:9px; font-weight:700; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--t3); padding:3px 5px; border-bottom:1px solid var(--border-f); }
+.dt td { padding:5px 5px; color:var(--t2); border-bottom:1px solid rgba(255,255,255,.025);
+  font-family:ui-monospace,'SF Mono',monospace; font-size:10.5px; }
+.dt td.v  { color:var(--t1); }
+.dt td.ok { color:var(--ok); }
+.dt td.bd { color:var(--err); }
+.dt tr:last-child td { border-bottom:none; }
+.dt-meta { margin-top:8px; font-size:10px; color:var(--t3); font-family:ui-monospace,monospace; }
+
+/* vantage list */
+.vl { display:flex; flex-direction:column; gap:6px; }
+.vrow { display:flex; align-items:center; gap:7px; padding:5px 7px;
+  border-radius:6px; background:rgba(255,255,255,.022); }
+.vn { font-size:11px; color:var(--t2); flex:1; }
+.vd { font-family:ui-monospace,monospace; font-size:10px; color:var(--t1); }
+.vs { font-size:10px; font-weight:700; width:66px; text-align:right; }
+.vm  { color:var(--ok); }
+.vx  { color:var(--err); }
+.vto { color:var(--warn); }
+
+/* terminal */
+.term { background:#050b14; border:1px solid #1d2e45; border-radius:10px;
+  overflow:hidden; font-family:'JetBrains Mono','SF Mono',monospace; }
+.term-h { background:#0c1524; padding:8px 13px; display:flex; align-items:center;
+  gap:6px; border-bottom:1px solid #1d2e45; }
+.tdot { width:10px; height:10px; border-radius:50%; }
+.term-ttl { color:#52637a; font-size:10px; margin:0 auto; }
+.term-b { padding:12px 14px; font-size:11px; max-height:175px; overflow-y:auto;
+  line-height:1.65; color:#C7A9FF; }
+.tc { color:var(--t1); } .ts { color:var(--y); } .ti { color:var(--t3); }
+.tw { color:var(--warn); } .te { color:var(--err); }
+
+/* inspector */
+.insp { width:var(--iw); background:var(--bg-side); border-left:1px solid var(--border-f);
+  display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
+.insp-h { padding:11px 13px; border-bottom:1px solid var(--border-f);
+  font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--t3); }
+.isec { padding:10px 13px; border-bottom:1px solid var(--border-f); }
+.isec-t { font-size:9px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--t3); margin-bottom:7px; }
+.kv { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+.kk { font-size:11px; color:var(--t3); }
+.kv-v { font-size:11px; font-family:ui-monospace,monospace; color:var(--t1); text-align:right;
+  max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kv-v.ok   { color:var(--ok); }
+.kv-v.warn { color:var(--warn); }
+.kv-v.err  { color:var(--err); }
+.kv-v.unk  { color:var(--inc); }
+.mbar { height:4px; border-radius:2px; background:var(--border); overflow:hidden; margin-top:5px; }
+.mbar-f { height:100%; border-radius:2px; background:var(--grad); }
+.inote { font-size:10px; color:var(--t3); line-height:1.5; margin-top:5px; }
+.nkrow { display:flex; align-items:center; gap:7px; padding:5px 6px;
+  background:rgba(255,255,255,.022); border-radius:5px; margin-bottom:4px; }
+.nkic { font-size:11px; width:16px; text-align:center; }
+.nklbl { font-size:11px; color:var(--t2); flex:1; }
+.nkst { font-size:9px; font-weight:700; padding:2px 6px; border-radius:8px; }
+.nkt { background:rgba(52,211,153,.13); color:var(--ok); }
+.nkf { background:rgba(239,68,68,.11);  color:var(--err); }
+.nku { background:rgba(129,140,248,.11);color:var(--inc); }
+.nkn { background:rgba(199,169,255,.1); color:var(--lav); }
+.iact { padding:10px 13px; display:flex; flex-direction:column; gap:5px; }
+.ibtn { padding:8px; border-radius:6px; border:1px solid var(--border);
+  background:rgba(140,92,245,.09); color:var(--lav); font-size:11px; font-weight:700;
+  cursor:pointer; text-align:center; }
+.ibtn.dest { background:rgba(239,68,68,.07); border-color:rgba(239,68,68,.2); color:var(--err); }
+
+/* annotation cards */
+.ag { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.ac { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:14px; }
+.ac-t { font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; margin-bottom:7px; }
+.ac-b { font-size:11px; color:var(--t2); line-height:1.7; }
+.ac-b strong { color:var(--t1); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- page header -->
+<div>
+  <div class="page-label">Syxx · macOS GUI Mockup · Design Spec v1 · macOS Tahoe 26 / SwiftUI · Not production code</div>
+  <div class="page-desc">View: <strong>Investigate — DNS Tampering (primary)</strong> · 1280 × 800 pt window · 3-column layout</div>
+</div>
+
+<!-- ════════════════════════════
+     WINDOW 1 — DNS Tampering
+     ════════════════════════════ -->
+<div class="win" style="height:800px">
+  <div class="tb">
+    <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+    <span class="tb-title">Syxx — Lyin' Eyes · DNS Investigation Suite</span>
+    <div class="tb-right"><span class="pro-badge">Pro</span></div>
+  </div>
+
+  <div class="app-body">
+    <!-- ── sidebar ── -->
+    <aside class="sidebar">
+      <div class="sb-head">
+        <div class="app-icon">
+          <svg width="17" height="17" viewBox="0 0 64 64" fill="none">
+            <path d="M10 32C19 18 45 18 54 32C45 46 19 46 10 32Z" stroke="url(#sg)" stroke-width="5" fill="none"/>
+            <circle cx="32" cy="32" r="8.5" fill="url(#sg)"/>
+            <circle cx="32" cy="32" r="3" fill="#0F1629"/>
+            <defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#E8F53C"/><stop offset="1" stop-color="#8C5CF5"/>
+            </linearGradient></defs>
+          </svg>
+        </div>
+        <span class="app-name">SYXX</span>
+      </div>
+      <div class="sb-sec">Investigate</div>
+      <div class="nav on"><span class="nav-ic">🔍</span>DNS Tampering</div>
+      <div class="nav"><span class="nav-ic">📄</span>Content Warp</div>
+      <div class="nav"><span class="nav-ic">🔒</span>DNS Privacy Leak<span class="nav-badge">Pro</span></div>
+      <div class="sb-sec">Diagnose</div>
+      <div class="nav"><span class="nav-ic">🌐</span>Network Key State</div>
+      <div class="nav"><span class="nav-ic">🛣</span>Route Trace</div>
+      <div class="nav"><span class="nav-ic">🔎</span>NSLook</div>
+      <div class="sb-sec">Capture</div>
+      <div class="nav"><span class="nav-ic">📡</span>Cages<span class="nav-badge">sudo</span></div>
+      <div class="nav"><span class="nav-ic">📊</span>Capture Reports</div>
+      <div class="sb-sec">Evidence</div>
+      <div class="nav"><span class="nav-ic">🧾</span>Witness Sign</div>
+      <div class="nav"><span class="nav-ic">✅</span>Verify Snapshot</div>
+      <div class="sb-space"></div>
+      <div class="sb-foot">
+        <div class="pro-pill">
+          <div class="pro-dot"></div>
+          <span class="pro-txt">Syxx Pro · Active</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── content ── -->
+    <main class="content">
+      <div class="ctb">
+        <span class="ctb-title">DNS Tampering &amp; Vantage Compare</span>
+        <div class="sep"></div>
+        <div class="tpg">
+          <span class="tp on">A</span><span class="tp">AAAA</span><span class="tp">MX</span>
+          <span class="tp">TXT</span><span class="tp">NS</span><span class="tp">ANY</span>
+        </div>
+        <div class="sep"></div>
+        <button class="tbtn">Export</button>
+        <button class="tbtn">History</button>
+        <div class="tr"><button class="tbtn prim">▶ Run Investigation</button></div>
+      </div>
+
+      <div class="cmain">
+        <!-- query panel -->
+        <div class="qp">
+          <div class="qrow">
+            <span class="ql">Domain</span>
+            <input type="text" value="example.com" style="max-width:260px">
+            <span class="ql">Resolver</span>
+            <select>
+              <option>System Default</option>
+              <option>8.8.8.8 (Google)</option>
+              <option>1.1.1.1 (Cloudflare)</option>
+              <option>9.9.9.9 (Quad9)</option>
+              <option>Custom…</option>
+            </select>
+            <span class="ql">DoH</span>
+            <input type="text" placeholder="https://dns.example/dns-query" style="max-width:200px;font-size:11px">
+            <button class="btn-run">Investigate</button>
+          </div>
+          <div class="orow">
+            <label class="cbl"><input type="checkbox" checked> Compare vantage points</label>
+            <label class="cbl"><input type="checkbox" checked> DNSSEC check</label>
+            <label class="cbl"><input type="checkbox"> Content Warp <span style="font-size:9px;color:var(--lav);margin-left:2px">Pro</span></label>
+            <label class="cbl"><input type="checkbox"> Multi-transport (UDP / TCP / DoH)</label>
+            <div class="srow"><div class="pdot"></div><span>Last run 14:02:38</span></div>
+          </div>
+        </div>
+
+        <!-- verdict: INCONCLUSIVE / degraded baseline -->
+        <div class="vban inc">
+          <div class="vic">⚠️</div>
+          <div>
+            <div class="vlbl">Inconclusive — Degraded Baseline</div>
+            <div class="vdesc">Local resolver returned 2 A records. 1 of 3 vantage resolvers timed out (Quad9 — transport failure). Remaining 2 agree. Cannot confirm SECURE without full consensus. Re-run or add a replacement vantage resolver.</div>
+          </div>
+          <div class="vmeta">
+            <strong>example.com · A</strong>
+            3 resolvers · 1 timeout
+          </div>
+        </div>
+
+        <!-- results grid -->
+        <div class="rg">
+          <!-- local resolver -->
+          <div class="rc">
+            <div class="rc-h">
+              <span style="font-size:12px">📡</span>
+              <span class="rc-t">Local Resolver Response</span>
+              <span class="badge bok">NOERROR</span>
+            </div>
+            <div class="rc-b">
+              <table class="dt">
+                <thead><tr><th>Name</th><th>Type</th><th>TTL</th><th>Answer</th></tr></thead>
+                <tbody>
+                  <tr><td>example.com</td><td>A</td><td>3600</td><td class="v ok">93.184.216.34</td></tr>
+                  <tr><td>example.com</td><td>A</td><td>3600</td><td class="v ok">93.184.216.35</td></tr>
+                  <tr><td style="color:var(--t3)"></td><td style="color:var(--t3)">RRSIG</td><td>3600</td><td style="color:var(--ok);font-size:10px">✓ Signature valid</td></tr>
+                </tbody>
+              </table>
+              <div class="dt-meta">Via 192.168.1.1 · UDP→TCP (TC=1) · XID 0x4F2A · AD=1</div>
+            </div>
+          </div>
+
+          <!-- vantage compare -->
+          <div class="rc">
+            <div class="rc-h">
+              <span style="font-size:12px">🌐</span>
+              <span class="rc-t">Vantage Point Comparison</span>
+              <span class="badge bwrn">1 TIMEOUT</span>
+            </div>
+            <div class="rc-b">
+              <div class="vl">
+                <div class="vrow">
+                  <span class="vn">Google 8.8.8.8</span>
+                  <span class="vd">93.184.216.34</span>
+                  <span class="vs vm">✓ Match</span>
+                </div>
+                <div class="vrow">
+                  <span class="vn">Cloudflare 1.1.1.1</span>
+                  <span class="vd">93.184.216.34</span>
+                  <span class="vs vm">✓ Match</span>
+                </div>
+                <div class="vrow" style="opacity:.55">
+                  <span class="vn">Quad9 9.9.9.9</span>
+                  <span class="vd" style="color:var(--warn)">—</span>
+                  <span class="vs vto">⏱ Timeout</span>
+                </div>
+                <div class="vrow" style="border:1px dashed rgba(140,92,245,.22);opacity:.5">
+                  <span class="vn" style="font-size:10px;color:var(--p)">+ Add vantage resolver…</span>
+                </div>
+              </div>
+              <div class="dt-meta" style="margin-top:8px">CDN tolerance ON · Consensus 2 / 3</div>
+            </div>
+          </div>
+
+          <!-- DNSSEC -->
+          <div class="rc">
+            <div class="rc-h">
+              <span style="font-size:12px">🔐</span>
+              <span class="rc-t">DNSSEC Status</span>
+              <span class="badge bok">RECORDS PRESENT</span>
+            </div>
+            <div class="rc-b">
+              <div class="kv"><span class="kk">RRSIG present</span><span class="kv-v ok">Yes</span></div>
+              <div class="kv"><span class="kk">Validity window</span><span class="kv-v ok">In range</span></div>
+              <div class="kv"><span class="kk">DNSKEY queried via</span><span class="kv-v">8.8.8.8</span></div>
+              <div class="kv"><span class="kk">Chain validation</span><span class="kv-v unk">Presence-only ⓘ</span></div>
+              <div class="inote">Full DS→DNSKEY→RRSIG chain validation is a planned enhancement (Proposal A2).</div>
+            </div>
+          </div>
+
+          <!-- raw terminal output — full width -->
+          <div class="rc" style="grid-column:1/-1">
+            <div class="rc-h">
+              <span style="font-size:12px">⌨️</span>
+              <span class="rc-t">Raw Diagnostic Output</span>
+              <span class="badge binf">syxx-mirror</span>
+            </div>
+            <div class="rc-b" style="padding:0">
+              <div class="term" style="border:none;border-radius:0">
+                <div class="term-h">
+                  <div class="tdot" style="background:#ef4444"></div>
+                  <div class="tdot" style="background:#f59e0b"></div>
+                  <div class="tdot" style="background:#22c55e"></div>
+                  <span class="term-ttl">syxx-mirror example.com</span>
+                </div>
+                <div class="term-b">
+                  <div class="tc">% syxx-mirror example.com</div>
+                  <div class="ti">================================================</div>
+                  <div class="ti">       Syxx Mirror · DNS Vantage Comparer      </div>
+                  <div class="ti">================================================</div>
+                  <div class="ts">Querying local resolver (192.168.1.1)…</div>
+                  <div class="ts">  A  93.184.216.34  TTL=3600</div>
+                  <div class="ts">  A  93.184.216.35  TTL=3600</div>
+                  <div class="ti">Querying public vantage points…</div>
+                  <div class="ts">  8.8.8.8   → 93.184.216.34  [MATCH]</div>
+                  <div class="ts">  1.1.1.1   → 93.184.216.34  [MATCH]</div>
+                  <div class="tw">  9.9.9.9   → TIMEOUT after 5s</div>
+                  <div class="ti">------------------------------------------------</div>
+                  <div class="tw">⚠  INCONCLUSIVE: 1 vantage point failed (degraded baseline).</div>
+                  <div class="tw">   Consensus 2/3 — no redirection detected in available results.</div>
+                  <div class="ti">   Re-run or substitute the timed-out vantage point for a stronger verdict.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /rg -->
+      </div><!-- /cmain -->
+    </main>
+
+    <!-- ── inspector ── -->
+    <aside class="insp">
+      <div class="insp-h">Inspector</div>
+
+      <div class="isec">
+        <div class="isec-t">Network Key State</div>
+        <div class="nkrow"><span class="nkic">🔒</span><span class="nklbl">Encrypted DNS</span><span class="nkst nku">UNKNOWN</span></div>
+        <div class="nkrow"><span class="nkic">🛡</span><span class="nklbl">VPN Active</span><span class="nkst nkt">YES</span></div>
+        <div class="nkrow"><span class="nkic">🚧</span><span class="nklbl">Captive Portal</span><span class="nkst nkf">NONE</span></div>
+        <div class="nkrow"><span class="nkic">📶</span><span class="nklbl">Interface</span><span class="nkst nkn">en0</span></div>
+        <div class="inote">UNKNOWN: loopback proxy detected; upstream unverifiable.</div>
+      </div>
+
+      <div class="isec">
+        <div class="isec-t">Query Metadata</div>
+        <div class="kv"><span class="kk">Domain</span><span class="kv-v">example.com</span></div>
+        <div class="kv"><span class="kk">Record type</span><span class="kv-v">A</span></div>
+        <div class="kv"><span class="kk">Transport</span><span class="kv-v">UDP → TCP (TC)</span></div>
+        <div class="kv"><span class="kk">XID</span><span class="kv-v">0x4F2A</span></div>
+        <div class="kv"><span class="kk">RCODE</span><span class="kv-v ok">NOERROR (0)</span></div>
+        <div class="kv"><span class="kk">Round-trip</span><span class="kv-v">42 ms</span></div>
+      </div>
+
+      <div class="isec">
+        <div class="isec-t">Active Resolvers</div>
+        <div class="kv"><span class="kk">Primary</span><span class="kv-v">192.168.1.1</span></div>
+        <div class="kv"><span class="kk">Scoped</span><span class="kv-v unk">2 scoped</span></div>
+        <div class="kv"><span class="kk">Search domains</span><span class="kv-v">local</span></div>
+        <div class="mbar"><div class="mbar-f" style="width:67%"></div></div>
+        <div class="inote" style="margin-top:4px">2 / 3 vantage resolvers responded</div>
+      </div>
+
+      <div class="isec">
+        <div class="isec-t">DNSSEC</div>
+        <div class="kv"><span class="kk">Status</span><span class="kv-v ok">Records present</span></div>
+        <div class="kv"><span class="kk">RRSIG window</span><span class="kv-v ok">Valid</span></div>
+        <div class="kv"><span class="kk">Verified via</span><span class="kv-v">8.8.8.8</span></div>
+      </div>
+
+      <div class="isec">
+        <div class="isec-t">Evidence</div>
+        <div class="kv"><span class="kk">Snapshot ID</span><span class="kv-v" style="font-size:9px">—</span></div>
+        <div class="kv"><span class="kk">Signed</span><span class="kv-v unk">Not signed</span></div>
+      </div>
+      <div class="iact">
+        <div class="ibtn">🧾 Sign with Witness…</div>
+        <div class="ibtn">📤 Export Report…</div>
+        <div class="ibtn dest">🗑 Clear Results</div>
+      </div>
+    </aside>
+  </div><!-- /app-body -->
+</div><!-- /win 1 -->
+
+<!-- ════════════════════════════
+     WINDOW 2 — Cages Capture
+     ════════════════════════════ -->
+<div>
+  <div class="page-label" style="margin-bottom:6px">Secondary view: Cages — Live DNS Capture</div>
+</div>
+<div class="win" style="height:600px">
+  <div class="tb">
+    <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+    <span class="tb-title">Syxx — Cages · Live DNS Capture</span>
+    <div class="tb-right"><span class="pro-badge">sudo</span></div>
+  </div>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sb-head">
+        <div class="app-icon">
+          <svg width="17" height="17" viewBox="0 0 64 64" fill="none">
+            <path d="M10 32C19 18 45 18 54 32C45 46 19 46 10 32Z" stroke="url(#sg2)" stroke-width="5" fill="none"/>
+            <circle cx="32" cy="32" r="8.5" fill="url(#sg2)"/>
+            <circle cx="32" cy="32" r="3" fill="#0F1629"/>
+            <defs><linearGradient id="sg2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#E8F53C"/><stop offset="1" stop-color="#8C5CF5"/>
+            </linearGradient></defs>
+          </svg>
+        </div>
+        <span class="app-name">SYXX</span>
+      </div>
+      <div class="sb-sec">Investigate</div>
+      <div class="nav"><span class="nav-ic">🔍</span>DNS Tampering</div>
+      <div class="nav"><span class="nav-ic">📄</span>Content Warp</div>
+      <div class="nav"><span class="nav-ic">🔒</span>DNS Privacy Leak<span class="nav-badge">Pro</span></div>
+      <div class="sb-sec">Diagnose</div>
+      <div class="nav"><span class="nav-ic">🌐</span>Network Key State</div>
+      <div class="nav"><span class="nav-ic">🛣</span>Route Trace</div>
+      <div class="nav"><span class="nav-ic">🔎</span>NSLook</div>
+      <div class="sb-sec">Capture</div>
+      <div class="nav on"><span class="nav-ic">📡</span>Cages<span class="nav-badge">sudo</span></div>
+      <div class="nav"><span class="nav-ic">📊</span>Capture Reports</div>
+      <div class="sb-sec">Evidence</div>
+      <div class="nav"><span class="nav-ic">🧾</span>Witness Sign</div>
+      <div class="nav"><span class="nav-ic">✅</span>Verify Snapshot</div>
+      <div class="sb-space"></div>
+      <div class="sb-foot"><div class="pro-pill"><div class="pro-dot"></div><span class="pro-txt">Syxx Pro · Active</span></div></div>
+    </aside>
+
+    <main class="content">
+      <div class="ctb">
+        <span class="ctb-title">Cages — Live DNS Capture</span>
+        <div class="sep"></div>
+        <span style="font-size:11px;color:var(--t3)">Duration:</span>
+        <input type="range" min="5" max="300" value="30" style="width:80px">
+        <span style="font-size:11px;color:var(--t1);font-family:monospace">30s</span>
+        <div class="sep"></div>
+        <label class="cbl" style="font-size:11px"><input type="checkbox" checked> Process attribution</label>
+        <label class="cbl" style="font-size:11px"><input type="checkbox" checked> IPv6</label>
+        <div class="tr">
+          <button class="tbtn" style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.26);color:var(--err)">■ Stop</button>
+          <button class="tbtn prim">▶ Start Capture</button>
+        </div>
+      </div>
+
+      <div class="cmain" style="flex-direction:row;gap:13px;overflow:hidden">
+        <!-- left: terminal + stats -->
+        <div style="flex:1;display:flex;flex-direction:column;gap:11px;min-width:0;overflow:hidden">
+          <div class="term" style="flex:1">
+            <div class="term-h">
+              <div class="tdot" style="background:#ef4444"></div>
+              <div class="tdot" style="background:#f59e0b"></div>
+              <div class="tdot" style="background:#22c55e"></div>
+              <span class="term-ttl">syxx-cages --duration 30</span>
+            </div>
+            <div class="term-b" style="max-height:330px">
+              <div class="tc">% sudo syxx-cages --duration 30</div>
+              <div class="ti">================================================</div>
+              <div class="ti">       Syxx Cages · DNS Query Capturer         </div>
+              <div class="ti">================================================</div>
+              <div class="ti">Sniffing port 53 on en0…</div>
+              <div class="ts">[OK] Sniffer started. Capturing packet streams…</div>
+              <div class="ts">  • [14:02:12] mask.icloud.com A          (mDNSResponder · 312)  NOERROR</div>
+              <div class="ts">  • [14:02:13] safebrowsing.googleapis.com A (Safari · 1248)      NOERROR</div>
+              <div class="ts">  • [14:02:14] syxx.app A                 (syxx · 9201)           NOERROR</div>
+              <div class="tw">  • [14:02:15] exfil-b95f15a3.attacker.net TXT (unknown · 8102)   NXDOMAIN</div>
+              <div class="tw">    ↳ ⚠ HIGH-ENTROPY LABEL — possible DNS tunnel / exfiltration</div>
+              <div class="ts">  • [14:02:16] nextdns.io A               (mDNSResponder · 312)   NOERROR</div>
+              <div class="ti">  …capturing…</div>
+            </div>
+          </div>
+          <!-- stats row -->
+          <div class="rc">
+            <div class="rc-b" style="display:flex;justify-content:space-around;text-align:center;padding:10px">
+              <div><div style="font-size:22px;font-weight:800;color:var(--y);font-family:monospace">47</div><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em">Packets</div></div>
+              <div><div style="font-size:22px;font-weight:800;color:var(--lav);font-family:monospace">31</div><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em">Domains</div></div>
+              <div><div style="font-size:22px;font-weight:800;color:var(--warn);font-family:monospace">1</div><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em">Suspicious</div></div>
+              <div><div style="font-size:22px;font-weight:800;color:var(--t2);font-family:monospace">8</div><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em">Processes</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- right: process table + actions -->
+        <div style="width:250px;display:flex;flex-direction:column;gap:11px">
+          <div class="rc" style="flex:1">
+            <div class="rc-h"><span style="font-size:12px">🔎</span><span class="rc-t">Process Attribution</span></div>
+            <div class="rc-b" style="padding:8px">
+              <table class="dt" style="font-size:10px">
+                <thead><tr><th>Process</th><th>PID</th><th>Qrys</th><th>Code</th></tr></thead>
+                <tbody>
+                  <tr><td>mDNSResponder</td><td>312</td><td>18</td><td style="color:var(--ok)">✓ Signed</td></tr>
+                  <tr><td>Safari</td><td>1248</td><td>12</td><td style="color:var(--ok)">✓ Signed</td></tr>
+                  <tr><td>syxx</td><td>9201</td><td>4</td><td style="color:var(--ok)">✓ Signed</td></tr>
+                  <tr><td style="color:var(--warn)">unknown</td><td>8102</td><td>2</td><td style="color:var(--err)">✗ Unknown</td></tr>
+                  <tr><td>cloudd</td><td>488</td><td>5</td><td style="color:var(--ok)">✓ Signed</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="rc">
+            <div class="rc-h"><span class="rc-t">Actions</span></div>
+            <div class="rc-b" style="display:flex;flex-direction:column;gap:5px">
+              <div class="ibtn">📊 Generate Report…</div>
+              <div class="ibtn">🧾 Sign with Witness…</div>
+              <div class="ibtn">💾 Export PCAP…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="insp" style="width:220px">
+      <div class="insp-h">Capture Info</div>
+      <div class="isec">
+        <div class="isec-t">Capture State</div>
+        <div class="kv"><span class="kk">Status</span><span class="kv-v ok" style="display:flex;align-items:center;gap:5px"><span class="pdot"></span>Running</span></div>
+        <div class="kv"><span class="kk">Elapsed</span><span class="kv-v">14 s / 30 s</span></div>
+        <div class="kv"><span class="kk">Interface</span><span class="kv-v">en0</span></div>
+        <div class="kv"><span class="kk">IPv6</span><span class="kv-v ok">Yes</span></div>
+        <div class="mbar" style="margin-top:6px"><div class="mbar-f" style="width:47%"></div></div>
+        <div class="inote" style="margin-top:4px">14 of 30 seconds</div>
+      </div>
+      <div class="isec">
+        <div class="isec-t">Anomaly Flags</div>
+        <div style="padding:7px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:6px">
+          <div style="font-size:10px;color:var(--warn);font-weight:700">⚠ High-entropy label</div>
+          <div style="font-size:9px;color:var(--t3);margin-top:3px;font-family:monospace">exfil-b95f15a3.attacker.net</div>
+          <div style="font-size:9px;color:var(--t3);margin-top:2px">PID 8102 · unsigned</div>
+        </div>
+      </div>
+      <div class="isec">
+        <div class="isec-t">Privileges</div>
+        <div class="inote">Root / sudo required for raw socket.<br>Authorization prompt on first launch.<br><span style="color:var(--warn)">Process IDs via SecStaticCode.</span></div>
+      </div>
+    </aside>
+  </div>
+</div><!-- /win 2 -->
+
+<!-- ── annotation grid ── -->
+<div class="ag">
+  <div class="ac">
+    <div class="ac-t" style="color:var(--y)">View Inventory (10 screens)</div>
+    <div class="ac-b">
+      <strong>DNS Tampering</strong> — primary view shown above<br>
+      <strong>Content Warp</strong> — URL + proxy input, asset hash diff table<br>
+      <strong>DNS Privacy Leak</strong> — collector token, trigger queries, leak verdict<br>
+      <strong>Network Key State</strong> — interface cards, VPN / captive / DoH tri-state<br>
+      <strong>Route Trace</strong> — hop table, ASN column, baseline diff<br>
+      <strong>NSLook</strong> — type picker, DoH URL, raw record table<br>
+      <strong>Cages Capture</strong> — secondary view shown above<br>
+      <strong>Capture Reports</strong> — anomaly flags, entropy, per-domain table<br>
+      <strong>Witness Sign</strong> — payload preview, key field, sig hex<br>
+      <strong>Verify Snapshot</strong> — drop zone, verification result
+    </div>
+  </div>
+  <div class="ac">
+    <div class="ac-t" style="color:var(--lav)">UX Principles</div>
+    <div class="ac-b">
+      · Tri-state verdict — SECURE / TAMPERED / INCONCLUSIVE; degraded never collapses to SECURE<br>
+      · Network Key State ambient in inspector at all times<br>
+      · Record-type toolbar includes AAAA — AAAA tampering independently checkable<br>
+      · Full provenance: XID, transport, RCODE, resolver IP all surfaced<br>
+      · Vantage timeout visible inline; replacement resolver addable immediately<br>
+      · DNSSEC note is honest about presence-only; A2 proposal surfaced to user<br>
+      · Destructive action (Clear) last, styled red, visually separate
+    </div>
+  </div>
+  <div class="ac">
+    <div class="ac-t" style="color:var(--p)">Accessibility</div>
+    <div class="ac-b">
+      · Colour never sole signal — every status has a text label<br>
+      · VoiceOver: sidebar items aria-current="page", role=button<br>
+      · Verdict banner meets WCAG AA contrast on dark background<br>
+      · DNS table uses semantic &lt;table&gt; with th scope="col"<br>
+      · ⌘R runs investigation; Tab order: toolbar → inputs → results<br>
+      · prefers-reduced-motion: pulse dot suppressed, no layout animations<br>
+      · Dynamic Type: SwiftUI implementation uses pt sizing
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+</body>
+</html>

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{{const H=new URLSearchParams(location.search).get("theme");if(H==="light"||H==="dark"){document.documentElement.dataset.theme=H}}{const H=()=>{try{if(document.querySelector('meta[name="color-scheme"]'))return;const A=getComputedStyle(document.documentElement).getPropertyValue("color-scheme").trim();if(A&&A!=="normal")return;const M=(L)=>{if(!L)return null;const F=getComputedStyle(L).backgroundColor.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+%?))?\s*\)$/);if(!F)return null;const Y=F[4]==null?1:parseFloat(F[4])/(F[4].endsWith("%")?100:1);if(Y<0.99)return null;return[+F[1],+F[2],+F[3]]};const j=M(document.body)||M(document.documentElement);if(!j)return;const x=(L)=>{const F=L/255;return F<=0.04045?F/12.92:((F+0.055)/1.055)**2.4};const G=0.2126*x(j[0])+0.7152*x(j[1])+0.0722*x(j[2]);document.documentElement.style.setProperty("color-scheme",G<0.4?"dark":"light")}catch{}};if(document.readyState==="complete")H();else window.addEventListener("load",H)}var S=["https://claude.ai","https://preview.claude.ai","https://99f4a301-0653-47f9-b9a4-96501349e7a9.claudeusercontent.com"];var v=true;var P=30000;var h=3000;document.addEventListener("DOMContentLoaded",()=>{const H=window.Babel;const A="om-src-id";if(H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[A])){H.registerPlugin(A,({types:G})=>({visitor:{JSXOpeningElement(L,F){const Y=L.node;if(Y.name&&Y.name.type==="JSXMemberExpression")return;for(let J=0;J<Y.attributes.length;J++){const V=Y.attributes[J];if(V.type==="JSXAttribute"&&V.name&&V.name.name==="data-om-id")return}const B=F.file&&F.file.opts&&F.file.opts.filename||"?";const w=Y.loc&&Y.loc.start;const z=`jsx:${B}:${Y.start??0}:${w?w.line:0}:${w?w.column+1:0}`;Y.attributes.push(G.jsxAttribute(G.jsxIdentifier("data-om-id"),G.stringLiteral(z)))}}}))}const M="om-text-extract";let j=false;if(v&&H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[M])){const G=window.React;if(G&&G.useSyncExternalStore&&G.createElement){j=true;const L={};const F=new Set;let Y=0;window.__omTextO=L;window.__omTextSet=(z)=>{for(const J in z){const V=z[J];if(V==null)delete L[J];else L[J]=V}Y++;F.forEach((J)=>J())};const B=(z)=>{F.add(z);return()=>F.delete(z)};const w=()=>Y;window.__OmT=function z(J){G.useSyncExternalStore(B,w,w);return G.createElement("span",{"data-om-text":J.i,className:"__om-t"},J.i in L?L[J.i]:J.children)};H.registerPlugin(M,({types:z})=>{const J={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const V={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const W=(Z,q)=>z.logicalExpression("??",z.memberExpression(z.logicalExpression("||",z.memberExpression(z.identifier("window"),z.identifier("__omTextO")),z.objectExpression([])),z.stringLiteral(Z),true),q);const Q=(Z)=>Z.file&&Z.file.opts&&Z.file.opts.filename||"?";const C=(Z)=>Z.file&&Z.file.code||"";const K=(Z,q)=>{const U=($)=>$&&$.start!=null&&$.end!=null&&($.type==="StringLiteral"||$.type==="TemplateLiteral"&&$.expressions.length===0)?[$.start,$.end]:null;const N=U(q);if(N)return N;if(q&&q.type==="Identifier"){const $=Z.scope.getBinding(q.name);if($&&$.constant&&$.path.node.type==="VariableDeclarator"){return U($.path.node.init)}}return null};const E=(Z,q,U)=>{const N=Z.node;let $=false;const R=(D,k)=>{$=true;return z.jsxElement(z.jsxOpeningElement(z.jsxIdentifier("__OmT"),[z.jsxAttribute(z.jsxIdentifier("i"),z.stringLiteral(D))],false),z.jsxClosingElement(z.jsxIdentifier("__OmT")),[k],false)};const X=N.children.map((D)=>{if(D.type==="JSXText"){if(D.start==null||D.end==null)return D;const k=U.slice(D.start,D.end);const f=k.length-k.trimStart().length;const I=k.length-k.trimEnd().length;if(f+I>=k.length)return D;return R(`txt:${q}:${D.start+f}:${D.end-I}`,D)}if(D.type==="JSXExpressionContainer"){const k=K(Z,D.expression);if(k)return R(`str:${q}:${k[0]}:${k[1]}`,D)}return D});if($)N.children=X};return{visitor:{JSXOpeningElement(Z,q){const U=Z.node;const N=Q(q);const $={};for(let R=0;R<U.attributes.length;R++){const X=U.attributes[R];if(X.type!=="JSXAttribute"||!X.name)continue;const D=X.name.name;if(!V[D])continue;if(!X.value||X.value.type!=="StringLiteral")continue;if(X.value.start==null||X.value.end==null)continue;const k=`txt:${N}:${X.value.start}:${X.value.end}`;$[D]=k;X.value=z.jsxExpressionContainer(W(k,z.stringLiteral(X.value.value)))}if(Object.keys($).length){U.attributes.push(z.jsxAttribute(z.jsxIdentifier("data-om-text-attrs"),z.stringLiteral(JSON.stringify($))))}},JSXElement(Z,q){const U=Z.node.openingElement;const N=U&&U.name&&U.name.name;if(N==="__OmT")return;if(typeof N==="string"&&J[N])return;E(Z,Q(q),C(q))},JSXFragment(Z,q){E(Z,Q(q),C(q))}}}})}}const x=j?["transform-react-jsx-source",A,M]:["transform-react-jsx-source",A];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((G,L)=>{const F=G.getAttribute("data-plugins")||"";const Y=x.filter((B)=>F.indexOf(B)<0);if(Y.length){G.setAttribute("data-plugins",F?`${F},${Y.join(",")}`:Y.join(","))}if(!G.hasAttribute("data-filename")){G.setAttribute("data-filename",G.getAttribute("src")||`inline-${L}`)}})});var _=window.parent;if(_&&_!==window){const H=(z,J)=>{try{_.postMessage({__omelette_log:true,type:z,data:J},"*")}catch{}};["log","warn","error"].forEach((z)=>{const J=console[z];console[z]=(...V)=>{const W=V.map((Q)=>{try{return typeof Q==="object"?JSON.stringify(Q):String(Q)}catch{try{return String(Q)}catch{return"[unstringifiable]"}}}).join(" ");H(z,W);J.apply(console,V)}});window.addEventListener("error",(z)=>{const J=z.target;if(J&&J!==window&&J.tagName){const V=J.src||J.href||"";H("resource_error",`${J.tagName} failed to load: ${V}`)}else{H("error",`${z.message||"Unknown error"} at ${z.filename||"?"}:${z.lineno||0}:${z.colno||0}`)}},true);window.addEventListener("unhandledrejection",(z)=>{const J=z.reason;const V=J instanceof Error?`${J.message} ${J.stack}`:String(J);H("error",`Unhandled rejection: ${V}`)});window.addEventListener("click",(z)=>{if(z.defaultPrevented||z.button!==0)return;if(z.metaKey||z.ctrlKey||z.shiftKey||z.altKey)return;const J=z.composedPath?z.composedPath():[];const V=["button","input","select","textarea","summary","label"];let W=null;for(const E of J){if(!(E instanceof Element))continue;if(E.localName==="a"){if(!(E instanceof HTMLAnchorElement))return;W=E;break}if(V.indexOf(E.localName)!==-1)return}if(!W)return;if(W.isContentEditable)return;const Q=W.closest("[contenteditable]");if(Q&&Q.getAttribute("contenteditable")!=="false")return;const C=(W.getAttribute("target")||"_self").toLowerCase();if(C!=="_self"&&C!=="_top"&&C!=="_parent")return;let K;try{K=new URL(W.href)}catch{return}if(K.protocol!=="http:"&&K.protocol!=="https:")return;if(location.origin==="null")return;if(K.origin===location.origin)return;z.preventDefault();window.open(K.href,"_blank","noopener,noreferrer")});const A=()=>{try{_.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(window.ResizeObserver)new ResizeObserver(A).observe(document.documentElement);const M=()=>{A();if(!document.querySelector('script[type="text/babel"],script[type="text/jsx"]'))return;const z=()=>document.getElementById("root")||document.querySelector("body > div[id]");const J=z()?.firstElementChild??null;let V=0;const W=()=>{const Q=z();if(Q&&Q.firstElementChild!==J||++V>30){A();return}setTimeout(W,100)};setTimeout(W,100)};if(document.readyState==="complete")M();else window.addEventListener("load",M);const j={};let x=0;const G=(z)=>new Promise((J,V)=>{if(!S.length){V(new Error("claude.complete: no parent origin"));return}const W=`c${++x}`;const Q=()=>setTimeout(()=>{delete j[W];V(new Error(`claude.complete: no data for ${P/1000}s`))},P);const C=Q();j[W]={resolve:J,reject:V,text:"",t:C,arm:Q};try{for(const K of S){_.postMessage({__om_api:true,id:W,body:z},K)}}catch(K){clearTimeout(C);delete j[W];V(K)}});const L=8;const F=async(z,J)=>{if(!Array.isArray(z.messages)){throw new Error("claude.complete: tools require a messages array")}const V=z.messages.slice();const W={...z,tools:z.tools.map((K)=>{if(K===null||typeof K!=="object")return K;const E={};for(const Z of Object.keys(K)){if(typeof K[Z]!=="function")E[Z]=K[Z]}return E})};const Q=W.tool_choice;const C=Q!=null&&(Q.type==="any"||Q.type==="tool")?{...W,tool_choice:Q.disable_parallel_tool_use!==undefined?{type:"auto",disable_parallel_tool_use:Q.disable_parallel_tool_use}:{type:"auto"}}:W;for(let K=0;K<L;K++){const E=await G({...K===0?W:C,messages:V});const Z=E.message;const q=Z&&Array.isArray(Z.content)?Z.content:null;const U=q?q.filter(($)=>$?.type==="tool_use"):[];if(Z?.stop_reason!=="tool_use"||U.length===0){return E.text}const N=[];for(const $ of U){const R=J.get($.name);if(!R){N.push({type:"tool_result",tool_use_id:$.id,content:`no handler for tool "${$.name}"`,is_error:true});continue}try{const X=await R($.input);const D=typeof X==="string"?X:w(X)??"";N.push({type:"tool_result",tool_use_id:$.id,content:D})}catch(X){N.push({type:"tool_result",tool_use_id:$.id,content:String(X?.message??X??"tool handler failed"),is_error:true})}}V.push({role:"assistant",content:q},{role:"user",content:N})}throw new Error(`claude.complete: exceeded ${L} tool turns`)};window.claude={complete(z){const J=z;if(J!==null&&typeof J==="object"&&Array.isArray(J.tools)&&J.tools.some((V)=>V!==null&&typeof V==="object"&&typeof V.run==="function")){const V=new Map;for(const W of J.tools){if(W!==null&&typeof W==="object"&&typeof W.run==="function"){V.set(String(W.name),W.run)}}return F(J,V)}return G(z).then((V)=>V.text)}};const Y={};let B=0;window.omelette={writeFile:(z,J)=>new Promise((V,W)=>{if(!S.length){V();return}const Q=`f${++B}`;const C=setTimeout(()=>{delete Y[Q];V()},h);Y[Q]={resolve:V,reject:W,t:C};try{for(const K of S){_.postMessage({__om_file:true,id:Q,op:"write",path:z,content:J},K)}}catch{clearTimeout(C);delete Y[Q];V()}})};const w=(z)=>{try{return JSON.stringify(z)}catch{return JSON.stringify(String(z))}};window.addEventListener("message",(z)=>{if(S.indexOf(z.origin)<0)return;if(z.source!==_)return;const J=z.data;if(!J)return;if(J.type==="omelette-preview-refresh"){if(typeof J.token!=="string"||!/^[0-9a-f.-]+(\.(rc|pr-[0-9]+))?(\.[0-9]+\.[0-9a-f]{16})?$/.test(J.token))return;const Q=Math.max(1,Math.floor((J.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+J.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+Q;return}if(J.__om_file_r){const Q=Y[J.id];if(!Q)return;clearTimeout(Q.t);delete Y[J.id];if(J.ok)Q.resolve();else Q.reject(new Error(J.error||"write failed"));return}if(J.__om_api_r){const Q=j[J.id];if(!Q)return;if(J.error!=null){clearTimeout(Q.t);delete j[J.id];Q.reject(new Error(J.error));return}if(J.chunk!=null){clearTimeout(Q.t);Q.t=Q.arm();Q.text+=J.chunk;return}if(J.done){clearTimeout(Q.t);delete j[J.id];Q.resolve({text:J.text!=null?J.text:Q.text,message:J.message});return}return}if(!J.__om_eval)return;const V=J;const W=(Q)=>{z.source.postMessage({...Q,__om_eval_r:1,id:V.id},z.origin)};try{const Q=(0,eval)(V.code);if(Q&&typeof Q.then==="function"){Q.then((C)=>W({ok:1,v:w(C)}),(C)=>W({ok:0,e:String(C)}))}else{W({ok:1,v:w(Q)})}}catch(Q){W({ok:0,e:String(Q)})}})}})();
+</script>
+
+<style data-omelette-print-defaults>
+@media print {
+  @page { margin: 0.5in; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  figure, table, pre, blockquote, img, svg, tr, [class~="card" i] { break-inside: avoid; }
+  img, svg { max-width: 100%; }
+  p { orphans: 3; widows: 3; }
+}
+</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/colors.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;}</style>
+</helmet>
+<div style="min-width:22000px;padding:56px 64px 90px;background:radial-gradient(120% 40% at 30% 0%, #241a48, #0c0820 72%);font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;--wm:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);">
+
+  <!-- ===== TITLE ===== -->
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+    <img src="assets/syxx-logo.png" width="46" height="46" alt="Syxx" style="display:block;border-radius:11px;box-shadow:0 2px 10px rgba(0,0,0,.5);">
+    <div style="font-family:'Space Grotesk';font-size:32px;font-weight:700;background:var(--wm);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx — All Views &amp; Style Guide</div>
+  </div>
+  <div style="font-size:15px;color:#cabfe6;max-width:900px;line-height:1.6;margin-bottom:36px;">Every pane of the Syxx GUI laid out side by side — the ten macOS views first, then the ten Windows views. Below the reference panels, each screen is captioned with what it does and how a user proceeds through it. All screens are live: click the sidebar items and buttons in any panel.</div>
+
+  <!-- ===== REFERENCE ROW: swatches / gradients / icons ===== -->
+  <div style="display:flex;gap:20px;align-items:stretch;margin-bottom:48px;flex-wrap:nowrap;width:max-content;">
+
+    <!-- Color swatches -->
+    <div style="width:520px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Color Swatch Chart · Dark Theme</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#130d26;border:1px solid #382c66;"></span><div><div style="font-size:12px;font-weight:600;">Background</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#130d26</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#1d1640;border:1px solid #382c66;"></span><div><div style="font-size:12px;font-weight:600;">Surface</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#1d1640</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#2a2154;border:1px solid #382c66;"></span><div><div style="font-size:12px;font-weight:600;">Surface Elevated</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#2a2154</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#382c66;"></span><div><div style="font-size:12px;font-weight:600;">Border</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#382c66</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#8b5cf6;"></span><div><div style="font-size:12px;font-weight:600;">Blue (accent)</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#8b5cf6</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#b98cff;"></span><div><div style="font-size:12px;font-weight:600;">Electric</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#b98cff</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#f0ac38;"></span><div><div style="font-size:12px;font-weight:600;">Accent Start (warm)</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#f0ac38</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#f2ba4a;"></span><div><div style="font-size:12px;font-weight:600;">Label / Divider</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#f2ba4a</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#7c3aed;"></span><div><div style="font-size:12px;font-weight:600;">Accent End</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#7c3aed</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#f5405e;"></span><div><div style="font-size:12px;font-weight:600;">Critical</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#f5405e</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#fa7317;"></span><div><div style="font-size:12px;font-weight:600;">High</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#fa7317</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#0d9487;"></span><div><div style="font-size:12px;font-weight:600;">Success (teal)</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#0d9487</div></div></div>
+      </div>
+    </div>
+
+    <!-- Gradients -->
+    <div style="width:460px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Gradient Reference</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div><div style="height:40px;border-radius:9px;background:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);margin-bottom:6px;"></div><div style="font-size:12px;font-weight:600;">Wordmark text</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">linear-gradient(100deg, #f0ac38, #e6c6dd 52%, #a96ad6)</div></div>
+        <div><div style="height:40px;border-radius:9px;background:linear-gradient(135deg,#f0ac38,#7c3aed);margin-bottom:6px;"></div><div style="font-size:12px;font-weight:600;">Accent tile / Pro badge</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">linear-gradient(135deg, #f0ac38, #7c3aed)</div></div>
+        <div><div style="height:40px;border-radius:9px;background:radial-gradient(120% 90% at 50% 0%, #241a48, #0c0820 72%);margin-bottom:6px;"></div><div style="font-size:12px;font-weight:600;">App / page background</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">radial-gradient(120% 90% at 50% 0%, #241a48, #0c0820 72%)</div></div>
+      </div>
+    </div>
+
+    <!-- Icon locations -->
+    <div style="width:520px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Icon &amp; Image Locations</div>
+      <div style="font-size:12px;color:#cabfe6;line-height:1.5;margin-bottom:14px;">Raster assets live in the project's <span style="font-family:'Space Mono';color:#f0ac38;">assets/</span> folder. Inline UI glyphs are hand-drawn SVG (Lucide-style, 2px stroke) inside each pane.</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div style="display:flex;align-items:center;gap:11px;"><img src="assets/syxx-logo.png" width="30" height="30" style="border-radius:7px;"><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/syxx-logo.png</span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><img src="assets/nnyx-logo.png" width="30" height="30" style="border-radius:7px;"><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/nnyx-logo.png</span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><img src="assets/zzyn-logo.png" width="30" height="30" style="border-radius:7px;"><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/zzyn-logo.png</span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><span style="width:30px;height:30px;border-radius:7px;background:#0a1120;border:1px solid #382c66;"></span><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/nnyx-1.png · nnyx-2.png <span style="color:#a99fc8;">(Nnyx screenshots)</span></span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><span style="width:30px;height:30px;border-radius:7px;background:#0a1120;border:1px solid #382c66;"></span><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/zzyn-1.png · zzyn-2.png <span style="color:#a99fc8;">(Zzyn screenshots)</span></span></div>
+      </div>
+      <div style="font-size:11px;color:#a99fc8;line-height:1.5;margin-top:14px;">Source components: <span style="font-family:'Space Mono';">SyxxApp.dc.html</span> (app), <span style="font-family:'Space Mono';">Syxx Web.dc.html</span> (site), <span style="font-family:'Space Mono';">Syxx GUI.dc.html</span> (mac/win frames).</div>
+    </div>
+
+    <!-- How to read -->
+    <div style="width:460px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">How the app works</div>
+      <div style="font-size:12.5px;color:#cabfe6;line-height:1.65;">Syxx is navigated entirely from the left <b style="color:#fff;">sidebar</b>. The top item is the entry point (What's New on macOS, Welcome on Windows), followed by the six <b style="color:#fff;">Diagnostics</b> — Prophets, Mirrors, Portals, Gluttons, Cages, Witnesses — a <b style="color:#fff;">Dimensions</b> link to syxx.app framed by two orange dividers, and the <b style="color:#fff;">Account · License</b> pane. Each diagnostic takes a domain (default <span style="font-family:'Space Mono';color:#f0ac38;">github.com</span>), runs on a button click, and returns labelled output cards. Severity is color-coded: teal = safe, orange = warning/high, red = critical.</div>
+    </div>
+
+    <!-- Dimensions -->
+    <div style="width:520px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Dimensions &amp; Type Scale</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a99fc8;margin-bottom:2px;">Spacing &amp; Layout</div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Sidebar width</span><span style="font-family:'Space Mono';color:#e9deff;">258px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Pane inset</span><span style="font-family:'Space Mono';color:#e9deff;">32px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Section gap</span><span style="font-family:'Space Mono';color:#e9deff;">24px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Card padding</span><span style="font-family:'Space Mono';color:#e9deff;">16–18px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Grid gap</span><span style="font-family:'Space Mono';color:#e9deff;">16px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">App pane</span><span style="font-family:'Space Mono';color:#e9deff;">1180×800</span></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a99fc8;margin-bottom:2px;">Corner Radii</div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Badge</span><span style="font-family:'Space Mono';color:#e9deff;">4px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Chip</span><span style="font-family:'Space Mono';color:#e9deff;">6px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Button / input</span><span style="font-family:'Space Mono';color:#e9deff;">8px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Card / stat</span><span style="font-family:'Space Mono';color:#e9deff;">12px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Panel / frame</span><span style="font-family:'Space Mono';color:#e9deff;">14–16px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Pill</span><span style="font-family:'Space Mono';color:#e9deff;">999px</span></div>
+        </div>
+      </div>
+
+      <div style="height:1px;background:#382c66;margin:18px 0 14px;"></div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a99fc8;margin-bottom:8px;">Type Scale</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">View title</span><span style="font-family:'Space Mono';color:#e9deff;">28 / 600</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Card title</span><span style="font-family:'Space Mono';color:#e9deff;">20 / 700</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Body</span><span style="font-family:'Space Mono';color:#e9deff;">14</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Caption</span><span style="font-family:'Space Mono';color:#e9deff;">13.5</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Meta / small</span><span style="font-family:'Space Mono';color:#e9deff;">12</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Eyebrow</span><span style="font-family:'Space Mono';color:#e9deff;">10 · .06em</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== macOS ROW ===== -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#f0ac38,#7c3aed);">macOS 26 · Liquid Glass</span>
+    <span style="font-size:13px;color:#a99fc8;">Nine views, left to right in sidebar order</span>
+  </div>
+  <div style="display:flex;gap:28px;align-items:flex-start;width:max-content;margin-bottom:56px;">
+    <sc-for list="{{ macViews }}" as="v" hint-placeholder-count="10">
+      <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+        <div style="width:1180px;height:150px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Mono';font-size:12px;color:#0c0820;font-weight:700;background:#f0ac38;border-radius:6px;padding:2px 8px;">{{ v.n }}</span><span style="font-family:'Space Grotesk';font-size:20px;font-weight:700;">{{ v.title }}</span><span style="font-size:12px;color:#a99fc8;">{{ v.tag }}</span></div>
+          <div style="font-size:13.5px;color:#cabfe6;line-height:1.5;">{{ v.what }}</div>
+          <div style="font-size:13px;color:#e9deff;line-height:1.5;"><b style="color:#f2ba4a;">Proceed:</b> {{ v.how }}</div>
+        </div>
+        <dc-import name="SyxxApp" platform="mac" section="{{ v.section }}" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ===== Windows ROW ===== -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#b98cff,#7c3aed);">Windows 11 · Fluent</span>
+    <span style="font-size:13px;color:#a99fc8;">Same ten views; entry point is Welcome instead of What's New</span>
+  </div>
+  <div style="display:flex;gap:28px;align-items:flex-start;width:max-content;">
+    <sc-for list="{{ winViews }}" as="v" hint-placeholder-count="10">
+      <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+        <div style="width:1180px;height:150px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Mono';font-size:12px;color:#0c0820;font-weight:700;background:#b98cff;border-radius:6px;padding:2px 8px;">{{ v.n }}</span><span style="font-family:'Space Grotesk';font-size:20px;font-weight:700;">{{ v.title }}</span><span style="font-size:12px;color:#a99fc8;">{{ v.tag }}</span></div>
+          <div style="font-size:13.5px;color:#cabfe6;line-height:1.5;">{{ v.what }}</div>
+          <div style="font-size:13px;color:#e9deff;line-height:1.5;"><b style="color:#b98cff;">Proceed:</b> {{ v.how }}</div>
+        </div>
+        <dc-import name="SyxxApp" platform="win" section="{{ v.section }}" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ===== TALL PANELS · FULL LAYOUT ===== -->
+  <div style="display:flex;align-items:center;gap:12px;margin:56px 0 20px;">
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#0d9487,#7c3aed);">Full layout · unclipped</span>
+    <span style="font-size:13px;color:#a99fc8;">Panels that scroll inside the 800px window, shown here at full height so the whole layout reads in one continuous piece.</span>
+  </div>
+  <div style="display:flex;gap:28px;align-items:flex-start;width:max-content;margin-bottom:40px;">
+    <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+      <div style="width:1180px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:14px 20px;font-size:13px;color:#cabfe6;"><b style="color:#fff;">Conclusion</b> — in the app (800px window; scrolls internally, so the lower sections are hidden)</div>
+      <dc-import name="SyxxApp" platform="mac" section="conclusion" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+      <div style="width:1180px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:14px 20px;font-size:13px;color:#cabfe6;"><b style="color:#f2ba4a;">Same panel, full height</b> — every section visible, nothing behind a scrollbar</div>
+      <dc-import name="SyxxApp" platform="mac" section="conclusion" vh="1560" theme="dark" style="width:1180px;height:1560px;" hint-size="1180px,1560px"></dc-import>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const diag = [
+      { section: "prophet", title: "Prophets", tag: "· Resolver accuracy", what: "Foretells the records your resolver returns and whether they can be cryptographically trusted.", how: "Type a domain → Check. Read the four output cards: local DNS server, encryption status, returned records, and DNSSEC." },
+      { section: "mirror", title: "Mirrors", tag: "· Censorship & tampering (Pro)", what: "Compares the resolvers and static web content you see locally against a remote off-network vantage.", how: "Enter a domain → Check. Compare the two 'Result:' blocks — resolver agreement, then content-hash match." },
+      { section: "portal", title: "Portals", tag: "· LAN & route", what: "Maps your local network, then follows the path to a chosen domain to locate redirection.", how: "Enter a domain → Trace. Read resolvers, interfaces, VPN, devices, then the hop list — note where the route goes dark." },
+      { section: "glutton", title: "Gluttons", tag: "· Leak & encryption", what: "Dispatches signed probes to check whether your DNS is encrypted and leaking outside the tunnel.", how: "Click 'Check for Leaks'. Read Feature/VPN status, the probe rows, and the collector's Leak / No-Leak verdict." },
+      { section: "cage", title: "Cages", tag: "· Live DNS capture", what: "Sniffs port 53 in real time and attributes each query to the process behind it.", how: "Optionally set a duration (max 480s). 'Close the Cages' captures live; 'Hide the Cages' runs it behind a countdown." },
+      { section: "witness", title: "Witnesses", tag: "· Signed resolution", what: "Resolves a domain through local and remote witnesses, signed with a secret so forgery is detectable.", how: "Enter a domain + secret. 'Witness Testimony' signs & saves; 'Verify Testimony' shows the report; 'Free the Witnesses' resets the DNS cache." },
+    ];
+    const license = { section: "license", title: "License", tag: "· Account", what: "Lite (free local tools) vs Pro ($2/mo with a 3-day trial) plus a one-time $10 permanent license.", how: "Enter a license key → Activate, or start the Pro trial. Machine ID and activation count show below." };
+    const dash = { section: "dashboard", title: "Dashboard", tag: "· Overview", what: "Trial status, current alerts, why Pro matters, and upgrade options in one place.", how: "Scan the alerts up top, read the 'why pay' note, then jump into any diagnostic from the sidebar." };
+    const conclusion = { section: "conclusion", title: "Conclusion", tag: "· Signed verdict", what: "Fuses all six diagnostics into one confidence-scored verdict for the checked domain.", how: "Read the verdict banner and evidence-confidence score, scan the per-discipline findings, then follow 'What you should do'." };
+
+    const mac = [
+      { section: "beta", title: "What's New", tag: "· Entry point (macOS)", what: "Advertises the upcoming Nnyx & Zzyn betas — the malware scanner and firewall siblings.", how: "Read the two product cards, tick your interest, then open the Dashboard or a diagnostic from the sidebar." },
+      dash, ...diag, conclusion, license,
+    ];
+    const win = [
+      { section: "welcome", title: "Welcome", tag: "· Entry point (Windows)", what: "Explains what Syxx does, how it leans on the syxx.app server, the MilkandGin story, and pricing.", how: "Read the overview, then choose a plan ($2/mo or $10 permanent) or open the Dashboard from the sidebar." },
+      dash, ...diag, conclusion, license,
+    ];
+    const num = arr => arr.map((v, i) => Object.assign({ n: String(i + 1).padStart(2, "0") }, v));
+    return { macViews: num(mac), winViews: num(win) };
+  }
+}
+</script>
+<script>
+(async () => {
+  if (!document.title || !document.title.trim()) document.title = "Syxx Views";
+  // Prepend so page-supplied @page / break rules (deck-stage's margin:0,
+  // author CSS) keep source-order precedence over the baseline.
+  const baseCss = document.createElement('style');
+  baseCss.textContent = "@media print {\n  figure, table { break-inside: avoid; }\n  *, *::before, *::after {\n    print-color-adjust: exact; -webkit-print-color-adjust: exact;\n    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;\n    animation-delay: -99s !important; animation-duration: .001s !important;\n    animation-iteration-count: 1 !important; animation-fill-mode: both !important;\n    animation-play-state: running !important; transition-duration: 0s !important;\n  }\n}";
+  document.head.prepend(baseCss);
+  if (document.readyState === 'loading') {
+    await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+  let ds = document.querySelector('deck-stage');
+  // whenDefined never resolves when nothing registers the element, so only
+  // await it when a <deck-stage> tag exists (and race a timeout regardless).
+  if (ds && !customElements.get('deck-stage')) {
+    try {
+      await Promise.race([
+        customElements.whenDefined('deck-stage'),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    ds = document.querySelector('deck-stage');
+  }
+  // dc-runtime assigns window.DCLogic at init and mounts into #dc-root on
+  // DOMContentLoaded; settle on that subtree so React has rendered before
+  // print(). Non-DC pages fall through to weighing body.
+  const isDc = !ds && 'DCLogic' in window;
+  const settleRoot = ds || (isDc ? document.getElementById('dc-root') : null) || document.body;
+  if (settleRoot) {
+    // Weigh only content children — skip script/style/template so inline
+    // Babel/CSS doesn't register as stable "content" before the framework
+    // has mounted anything.
+    const MEDIA = 'img,svg,canvas,video,picture,iframe,embed,object';
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of settleRoot.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll(MEDIA).length + (c.matches(MEDIA) ? 1 : 0);
+      }
+      return text + media * 100;
+    };
+    // "Non-zero and stable" alone is not sufficient to mean rendered: generic
+    // body can carry a static shell while async main content is pending, and
+    // #dc-root can carry the root DC's static text while child refs are still
+    // .sc-placeholder boxes. Gate generic on readyState 'complete', and never
+    // accept stability while a dc-runtime placeholder is present.
+    const isGeneric = settleRoot === document.body;
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      const ready =
+        (!isGeneric || document.readyState === 'complete') &&
+        !settleRoot.querySelector('.sc-placeholder');
+      if (n > 0 && n === last && ready) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  // Project support.js may predate runtime default-seeding; push via bridge.
+  if (isDc && window.__dcSetProps && window.__dcRootName) {
+    try {
+      const dpEl = document.querySelector('script[data-dc-script]');
+      const meta = JSON.parse((dpEl && dpEl.getAttribute('data-props')) || '{}');
+      const bag = {};
+      for (const k in meta)
+        if (k[0] !== '$' && meta[k] && meta[k].default !== undefined)
+          bag[k] = meta[k].default;
+      if (Object.keys(bag).length) {
+        window.__dcSetProps(window.__dcRootName(), bag);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    } catch (e) {}
+  }
+  // Reveal content gated on scroll or visibility before printing. Lazy <img>,
+  // IntersectionObserver fade-ins, and collapsed <details> don't render while
+  // off-screen, so a long page would print with them blank or closed. Open
+  // every <details>, force native-lazy images eager, and scroll the document
+  // through its full height to trip lazy-load + IO; then wait (bounded) for the
+  // newly-triggered images. Inert for deck-stage (slides aren't scroll-gated).
+  try {
+    for (const d of document.querySelectorAll('details')) d.open = true;
+    for (const img of document.querySelectorAll('img[loading="lazy"]'))
+      img.loading = 'eager';
+    const scroller = document.scrollingElement || document.documentElement;
+    const full = Math.max(scroller.scrollHeight, document.body.scrollHeight);
+    const step = window.innerHeight || 800;
+    for (let y = 0; y <= full; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    window.scrollTo(0, 0);
+    await Promise.race([
+      Promise.all(
+        [...document.images].map((img) =>
+          img.complete
+            ? null
+            : new Promise((res) => {
+                img.addEventListener('load', res, { once: true });
+                img.addEventListener('error', res, { once: true });
+              })
+        )
+      ),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+  } catch (e) {}
+  try { await document.fonts.ready; } catch (e) {}
+  // Jump every animation to its end state so print() never captures a slide
+  // mid-entrance. Ordering matters: the 0s-transition style must be live
+  // BEFORE data-deck-active is set so attribute-keyed transitions don't
+  // start a (now-0s) run from the pre-active base.
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{animation-delay:-99s !important;animation-duration:.001s !important;animation-iteration-count:1 !important;animation-fill-mode:both !important;animation-play-state:running !important;transition-duration:0s !important}';
+  document.head.appendChild(st);
+  for (const d of document.querySelectorAll('deck-stage')) {
+    for (const c of d.children) {
+      const t = c.tagName;
+      if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+      c.setAttribute('data-deck-active', '');
+    }
+  }
+  // Re-append deck-stage's @page last so no author @page can add a margin and
+  // spill each full-bleed slide onto two sheets. Backstop for old copies.
+  if (ds) {
+    let pg = document.getElementById('deck-stage-print-page');
+    if (!pg) {
+      pg = document.createElement('style');
+      pg.textContent = '@page{size:' + (+ds.getAttribute('width') || 1920) +
+        'px ' + (+ds.getAttribute('height') || 1080) + 'px;margin:0}';
+    }
+    document.body.appendChild(pg);
+  }
+  try {
+    const sweep = () => {
+      for (const a of document.getAnimations()) {
+        try { a.finish(); } catch (e) {
+          try { a.currentTime = (a.effect && a.effect.getComputedTiming().duration) || 0; a.pause(); } catch (e2) {}
+        }
+      }
+    };
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+  } catch (e) {}
+  // Size the PDF page to the rendered design unless the file opted into
+  // standard paper via @page{size:letter|A4|…}. Decks own their own @page.
+  // Wrappers (body, …) lose padding+margin so the frame sits at (0,0); the
+  // frame itself loses only margin — its padding is INSIDE the measured
+  // rect and must stay, or content shifts and leaves a gap at bottom/right.
+  var __m = null;
+  try { __m = (() => {
+  var STAMP = true;
+  var docEl = document.documentElement;
+  var doc = { width: docEl.scrollWidth, height: docEl.scrollHeight };
+
+  var ds = document.querySelector('deck-stage');
+  if (ds) {
+    var dw = Number(ds.getAttribute('width')) || 1920;
+    var dh = Number(ds.getAttribute('height')) || 1080;
+    var n = typeof ds.length === 'number' ? ds.length : ds.children.length;
+    var idx = typeof ds.index === 'number' ? ds.index : 0;
+    var frames = [];
+    for (var i = 0; i < n; i++) frames.push({ left: 0, top: 0, width: dw, height: dh });
+    return { kind: 'deck', source: 'declared', doc: doc, frames: frames,
+      authored: frames.map(function(){return{width:true,height:true}}),
+      deck: { width: dw, height: dh, slideCount: n, index: idx },
+      signals: { paperPage: false, pxPage: false } };
+  }
+
+  // Declared kind: a doc-page tag names the kind outright, so no signal
+  // heuristics run (like the deck branch above, signals report false —
+  // they describe inferred classifications only). The tag alone is not
+  // trusted: the element must have upgraded (shadowRoot present), so a
+  // leftover tag whose script was deleted falls through to the heuristics
+  // that handle plain markup.
+  var stageSx = window.scrollX || 0, stageSy = window.scrollY || 0;
+  var dp = document.querySelector('doc-page');
+  if (dp && dp.shadowRoot) {
+    // Crop to the sheet, not the host — the desk around it is screen-only
+    // chrome that must not land in PNG exports.
+    var sheet = dp.shadowRoot.querySelector('.sheet');
+    var sr = (sheet || dp).getBoundingClientRect();
+    return { kind: 'paper-doc', source: 'declared', doc: doc,
+      frames: [{ left: sr.left + stageSx, top: sr.top + stageSy,
+        width: sr.width, height: sr.height }],
+      authored: [{ width: false, height: false }],
+      signals: { paperPage: false, pxPage: false } };
+  }
+  var paperPage = false, pxPage = false;
+  var eachRule = function (fn) {
+    for (var s = 0; s < document.styleSheets.length; s++) {
+      var rs; try { rs = document.styleSheets[s].cssRules; } catch (e) { continue; }
+      for (var r = 0; r < rs.length; r++) {
+        fn(rs[r]);
+        if (rs[r].cssRules) for (var n = 0; n < rs[r].cssRules.length; n++) fn(rs[r].cssRules[n]);
+      }
+    }
+  };
+  eachRule(function (r) {
+    if (r.type !== 6) return;
+    var m = /\bsize\s*:\s*([^;}]+)/i.exec(r.cssText || '');
+    if (!m) return;
+    if (/\b(letter|a[3-5]|legal|ledger)\b/i.test(m[1])) paperPage = true;
+    if (/\d+(?:\.\d+)?px\b/i.test(m[1])) pxPage = true;
+  });
+  var signals = { paperPage: paperPage, pxPage: pxPage };
+
+  var pxVal = function (v) {
+    var m = /^(\d+(?:\.\d+)?)px$/.exec(v || ''); return m ? +m[1] : 0;
+  };
+  var authoredPx = function (el, prop) {
+    if (pxVal(el.style[prop])) return true;
+    var attr = el.getAttribute(prop);
+    if (attr && /^\d+$/.test(attr)) return true;
+    var hit = false;
+    eachRule(function (r) {
+      if (hit || r.type !== 1 || !r.style) return;
+      try { if (el.matches(r.selectorText) && pxVal(r.style[prop])) hit = true; } catch (e) {}
+    });
+    return hit;
+  };
+
+  var el = document.body, rootPxW = false;
+  for (;;) {
+    var kids = [];
+    for (var c = 0; c < el.children.length; c++) {
+      var t = el.children[c].tagName;
+      if (t !== 'SCRIPT' && t !== 'STYLE' && t !== 'TEMPLATE') kids.push(el.children[c]);
+    }
+    if (kids.length !== 1 || !(kids[0] instanceof HTMLElement)) break;
+    if (STAMP) el.setAttribute('data-om-frame-wrap', '');
+    el = kids[0];
+    rootPxW = authoredPx(el, 'width');
+    if (rootPxW) break;
+  }
+  if (!rootPxW) rootPxW = authoredPx(el, 'width');
+
+  // @page{size:letter} alone is a flowing doc; with a px-width root it's a
+  // fixed sheet pretending to be paper — fall through and size to render.
+  if (paperPage && !rootPxW) {
+    return { kind: 'paper-doc', source: 'inferred', doc: doc, signals: signals,
+      frames: [{ left: 0, top: 0, width: doc.width, height: doc.height }],
+      authored: [{ width: false, height: false }] };
+  }
+
+  var sx = window.scrollX || 0, sy = window.scrollY || 0;
+  var rectOf = function (e) {
+    var r = e.getBoundingClientRect();
+    var oy; try { oy = getComputedStyle(e).overflowY; } catch (err) {}
+    var h = oy === 'visible' ? Math.max(r.height, e.scrollHeight || 0) : r.height;
+    return { left: r.left + sx, top: r.top + sy, width: r.width, height: h };
+  };
+
+  // Multi-frame: ≥2 visible non-fixed children, each with authored px width
+  // AND height, all within ±2px of each other. Off unless the page opts in
+  // via data-om-multi-frame on the stop element — guards against card grids
+  // and pricing tables that match the geometry but aren't separate canvases.
+  if (el.hasAttribute('data-om-multi-frame')) {
+    var cands = [];
+    for (var k = 0; k < el.children.length; k++) {
+      var ch = el.children[k];
+      var cs; try { cs = getComputedStyle(ch); } catch (e) { continue; }
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'fixed') continue;
+      var rc = rectOf(ch);
+      if (rc.width < 2 || rc.height < 2) continue;
+      if (!authoredPx(ch, 'width') || !authoredPx(ch, 'height')) continue;
+      cands.push(rc);
+    }
+    if (cands.length >= 2) {
+      var w0 = cands[0].width, h0 = cands[0].height, ok = true;
+      for (var q = 1; q < cands.length; q++)
+        if (Math.abs(cands[q].width - w0) > 2 || Math.abs(cands[q].height - h0) > 2) ok = false;
+      if (ok) return { kind: 'multi-frame', source: 'inferred', doc: doc, signals: signals,
+        frames: cands, authored: cands.map(function(){return{width:true,height:true}}) };
+    }
+  }
+
+  if (STAMP) el.setAttribute('data-om-frame', '');
+  return { kind: 'single-canvas', source: 'inferred', doc: doc, signals: signals,
+    frames: [rectOf(el)],
+    authored: [{ width: rootPxW, height: authoredPx(el, 'height') }] };
+})(); } catch (e) {}
+  var frame = null;
+  if (__m && __m.kind === 'single-canvas') {
+    var f = __m.frames && __m.frames[0];
+    if (f && f.width >= 200 && f.height >= 200) {
+      frame = f;
+      var fst = document.createElement('style');
+      fst.textContent = '@media print{@page{size:' + Math.ceil(f.width) + 'px ' +
+        Math.ceil(f.height) + 'px;margin:0}' +
+        'html,body,[data-om-frame-wrap]{padding:0!important;margin:0!important;background:none!important}' +
+        '[data-om-frame]{margin:0!important}}';
+      document.body.appendChild(fst);
+    }
+  }
+  // Relax break-inside on oversized elements. An element taller than a
+  // printable page can't honor break-inside: avoid — browsers either overflow
+  // it or push it whole to the next page, leaving a blank gap, then break it
+  // anyway at an arbitrary point. After the final layout (content revealed,
+  // animations jumped), find elements taller than a page that still compute
+  // break-inside: avoid and reset them to auto, so the browser breaks them at
+  // their children's boundaries instead (children keep their own avoid). PAGE_PX
+  // is a conservative portrait estimate at 96 CSS px/in — Letter/A4 usable
+  // height minus our 0.5in margins — so only clearly-oversized elements are
+  // touched and under-page elements still stay whole. Skipped for decks (slides
+  // are sized to the page) and for fixed-size canvases (frame set, or an author
+  // px-based @page) — runs as before for flowing docs on letter/A4.
+  try {
+    if (!ds && !frame && !(__m && __m.signals && __m.signals.pxPage)) {
+      const PAGE_PX = 1024;
+      // Our print defaults add a real @page margin only when the source has
+      // no @page of its own; computed style can't tell us (it reports screen
+      // media), so read the injected rule directly.
+      const defaults = document.querySelector('style[data-omelette-print-defaults]');
+      const pageInset = /@page\s*\{[^}]*margin/.test(defaults ? defaults.textContent || '' : '');
+      const SEL = 'section,article,figure,table,pre,blockquote,[class~="card" i],[class~="page" i],[class~="sheet" i]';
+      for (const el of document.body.querySelectorAll(SEL)) {
+        if (el instanceof HTMLElement && el.offsetHeight > PAGE_PX) {
+          el.setAttribute('data-om-oversized', '');
+          // Fake-paged docs simulate sheets with over-tall break-after:page
+          // boxes; honoring the break spills half-blank pages and ends a
+          // colored box mid-sheet. Flow them, and (only when we own the page
+          // inset) drop the redundant padding/background via the rule below.
+          const cs = getComputedStyle(el);
+          if (cs.breakAfter === 'page' || cs.pageBreakAfter === 'always') {
+            el.setAttribute('data-om-fakepage', '');
+          }
+        }
+      }
+      const ost = document.createElement('style');
+      ost.textContent = '@media print{' +
+        '[data-om-oversized]{break-inside:auto !important;page-break-inside:auto !important}' +
+        '[data-om-fakepage]{break-after:auto !important;page-break-after:auto !important}' +
+        (pageInset ? '[data-om-fakepage]{padding:0 !important;background:none !important}' : '') +
+        '}';
+      document.head.appendChild(ost);
+    }
+  } catch (e) {}
+  // macOS Preview renders Skia-PDF Luminosity soft-masks as opaque grey boxes;
+  // swap the CSS that triggers them for Preview-safe forms.
+  try {
+    for (const el of document.body.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+
+      if (cs.boxShadow !== 'none' && cs.filter === 'none') {
+        const outs = [], kept = [];
+        for (const s of cs.boxShadow.split(/,(?![^(]*[)])/)) {
+          const t = s.trim();
+          const m = t.match(/^(rgba?[(][^)]+[)]) (-?[0-9.]+px) (-?[0-9.]+px) ([0-9.]+px) -?[0-9.]+px$/);
+          if (m && parseFloat(m[4]) > 0) outs.push('drop-shadow(' + m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[1] + ')');
+          else kept.push(t);
+        }
+        if (outs.length) {
+          el.style.setProperty('filter', outs.join(' '), 'important');
+          el.style.setProperty('box-shadow', kept.join(', ') || 'none', 'important');
+        }
+      }
+
+      const mask = cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage;
+      if (mask && mask !== 'none' && cs.filter === 'none') el.style.setProperty('filter', 'opacity(1)', 'important');
+    }
+  } catch (e) {}
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2977 @@
+# Source: 3811822.pdf
+# Title (best guess): AI Reasoning for Wireless Communications and Networking:
+# Pages: 38 · Words: 22143
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+AI Reasoning for Wireless Communications and Networking:
+A Survey and Perspectives
+HAOXIANG LUO, School of Information and Communication Engineering, University of Electronic
+Science and Technology of China, Chengdu, China
+YU YAN, School of Information and Communication Engineering, University of Electronic Science and
+Technology of China, Chengdu, China
+YANHUI BIAN, School of Information and Communication Engineering, University of Electronic Science
+and Technology of China, Chengdu, China
+WENJIAO FENG, School of Information and Communication Engineering, University of Electronic Science
+and Technology of China, Chengdu, China
+RUICHEN ZHANG, Nanyang Technological University, Singapore, Singapore
+YINQIU LIU, Nanyang Technological University, Singapore, Singapore
+JIACHENG WANG, Nanyang Technological University, Singapore, Singapore
+GANG SUN, School of Information and Communication Engineering, University of Electronic Science and
+Technology of China, Chengdu, China
+DUSIT (TAO) NIYATO, Nanyang Technological University, Singapore, Singapore
+HONGFANG YU, University of Electronic Science and Technology of China, Chengdu, China
+ABBAS JAMALIPOUR, The University of Sydney, Sydney, Australia
+SIWEN MAO, Auburn University, Auburn, United States
+
+Haoxiang Luo, Yu Yan, and Yanhui Bian contributed equally to this work.
+This research was supported by the Joint NTU-WeBank Research Centre on FinTech (Award No: WN-2025-03), Nanyang
+Technological University, Singapore, the Seatrium New Energy Laboratory, Singapore Ministry of Education (MOE) Tier 1
+(RT5/23 and RG24/24), the Nanyang Technological University (NTU) Centre for Computational Technologies in Finance
+(NTU-CCTF), and the Research Innovation and Enterprise (RIE) 2025 Industry Alignment Fund - Industry Collaboration
+Projects (IAF-ICP) (Award I2301E0026), administered by Agency for Science, Technology and Research (A*STAR).
+Authors’ Contact Information: Haoxiang Luo, School of Information and Communication Engineering, University of
+Electronic Science and Technology of China, Chengdu, Sichuan, China; e-mail: lhx991115@163.com; Yu Yan, School of
+Information and Communication Engineering, University of Electronic Science and Technology of China, Chengdu, Sichuan,
+China; e-mail: 17828358616@163.com; Yanhui Bian, School of Information and Communication Engineering, University of
+Electronic Science and Technology of China, Chengdu, Sichuan, China; e-mail: yhbian@std.uestc.edu.cn; Wenjiao Feng,
+School of Information and Communication Engineering, University of Electronic Science and Technology of China, Chengdu,
+Sichuan, China; e-mail: wenjiaofeng@std.uestc.edu.cn; Ruichen Zhang, Nanyang Technological University, Singapore,
+Computer Science, Singapore; e-mail: ruichen.zhang@ntu.edu.sg; Yinqiu Liu, Nanyang Technological University, Singapore,
+Singapore; e-mail: YINQIU001@e.ntu.edu.sg; Jiacheng Wang, Nanyang Technological University, Singapore, Singapore; email: jiacheng.wang@ntu.edu.sg; Gang Sun (corresponding author), School of Information and Communication Engineering,
+University of Electronic Science and Technology of China, Chengdu, China; e-mail: gangsun@uestc.edu.cn; Dusit (Tao)
+Niyato, Nanyang Technological University, Singapore, Singapore, Singapore; e-mail: DNIYATO@ntu.edu.sg; Hongfang Yu,
+University of Electronic Science and Technology of China, Chengdu, Sichuan, China; e-mail: yuhf@uestc.edu.cn; Abbas
+Jamalipour, The University of Sydney, Sydney, New South Wales, Australia; e-mail: a.jamalipour@ieee.org; Siwen Mao,
+Auburn University, Auburn, Alabama, United States; e-mail: smao@ieee.org.
+
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+© 2026 Copyright held by the owner/author(s).
+ACM 0360-0300/2026/06-ART334
+https://doi.org/10.1145/3811822
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:2
+
+H. Luo et al.
+
+Artificial Intelligence (AI) plays a pivotal role in optimizing wireless communication networks. However,
+traditional deep learning approaches often act as closed boxes, lacking the structured reasoning abilities
+needed to tackle complex, multi-step decision problems. This survey provides a comprehensive review and
+outlook of reasoning-enabled AI in wireless communication networks, with a focus on Large Language Models
+(LLMs) and other advanced reasoning paradigms. In particular, LLM-based agents can combine reasoning with
+long-term planning, memory, tool utilization, and autonomous cross-layer control to dynamically optimize
+network operations with minimal human intervention. We begin by outlining the evolution of intelligent
+wireless networking and the limitations of conventional AI methods. We then introduce emerging AI reasoning
+techniques. Furthermore, we establish a classification system applicable to wireless network tasks. We also
+present a layer-by-layer examination for AI reasoning, covering the physical, data link, network, transport,
+application, and security layers. For each part, we identify key challenges and illustrate how AI reasoning can
+improve wireless performance. Meanwhile, we also provide the actual deployment and cost analysis of AI
+reasoning. Finally, we discuss research directions for AI reasoning toward future wireless communication
+networks. By combining insights from both communications and AI, this survey aims at charting a path for
+integrating reasoning techniques into the next-generation wireless networks.
+CCS Concepts: • General and reference → Surveys and overviews; • Networks → Mobile networks; •
+Computing methodologies → Artificial intelligence;
+Additional Key Words and Phrases: Wireless communications and networks; large language models; AI
+reasoning; network optimization; AI for networks
+ACM Reference Format:
+Haoxiang Luo, Yu Yan, Yanhui Bian, Wenjiao Feng, Ruichen Zhang, Yinqiu Liu, Jiacheng Wang, Gang Sun,
+Dusit (Tao) Niyato, Hongfang Yu, Abbas Jamalipour, and Siwen Mao. 2026. AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives. ACM Comput. Surv. 58, 13, Article 334 (June 2026),
+38 pages. https://doi.org/10.1145/3811822
+
+1 Introduction
+1.1 Background
+Wireless communications and networking are entering an era of unprecedented complexity and
+intelligence requirements. Next-generation networks must support a massive scale of devices,
+diverse service requirements, and dynamic environments1 [1]. To meet these demands, intelligent
+wireless networking has emerged as a key technology, leveraging AI and Machine Learning (ML)
+for tasks ranging from physical-layer signal processing to network management [2]. Over the past
+decades, numerous successes have been reported in applying deep learning to wireless problems, for
+example, neural networks for channel decoding, traffic prediction, and routing [3]. These methods
+often outperform traditional handcrafted algorithms under specific conditions. Nonetheless, they
+also face fundamental limitations when deployed in complex, real-world networks.
+Conventional deep learning models in wireless networks typically function as closed boxes that
+map inputs to outputs without explicit reasoning. While being able to learn patterns from training
+data, they struggle with out-of-distribution generalization. However, wireless networks are highly
+variable [4, 5]. Channel conditions, user mobility, traffic loads, and network topology can change
+in unforeseen ways [6, 7]. A fixed neural model may fail to handle new interference scenarios or
+unseen network topologies, leading to performance degradation. Moreover, deep learning models
+lack interpretability [8]. Network operators struggle to understand or trust decisions made by AI,
+which is particularly problematic in mission-critical settings [9, 10]. For instance, if a deep learning
+model adjusts power levels or routing paths, operators need insight into why those actions are
+1 https://www.nokia.com/bell-labs/publications-and-media/white-papers/
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives
+
+334:3
+
+chosen. Additionally, traditional AI often requires large labeled datasets for training [11], which
+are scarce in specialized domains such as wireless. These shortcomings motivate the incorporation
+of reasoning capabilities into AI for wireless, to enable step-by-step logical decision making, better
+use of prior knowledge, and improved explainability [12].
+Recent advances in AI, particularly in LLMs, offer new opportunities to overcome the above
+limitations [13]. LLMs such as GPT-4 have demonstrated an ability to perform complex reasoning
+by breaking problems into intermediate steps, recalling factual knowledge, and planning actions
+[14, 15]. While developed mainly for natural language tasks, such capabilities are now being
+explored in the context of wireless networks [16]. The key idea is to imbue AI agents with reasoning
+strategies, so that they can handle the logical and combinatorial problems For example, an LLMbased network controller could parse a high-level goal into low-level configuration steps, namely
+Chain of Thought (CoT) [17] or consult an external Knowledge Base (KB) of protocols and past
+outcomes, that is, Retrieval-Augmented Generation (RAG) [18], before making a decision. By
+doing so, the AI’s decisions become more transparent and grounded in known principles, reducing
+failures due to hallucinations or logical errors [19]. Furthermore, reasoning allows integration of
+domain knowledge, such as symbolic rules and analytical models, which can be combined with
+learning for better reliability [20]. These developments mark a shift from treating wireless AI as
+purely a statistical function approximation, toward AI that can explain and incorporate knowledge.
+Several studies emphasize the importance of reasoning-aware AI in wireless. Wang et al. [21]
+demonstrated that applying CoT prompting significantly improves an LLM’s ability to handle multistep tasks in wireless scenarios, such as interference management and beamforming optimization.
+By making the model’s thought process explicit, CoT prompting not only boosted performance
+but also enhanced interpretability for network operators. Likewise, Zhou et al. [22] showed that
+LLM reasoning methods can enable network optimization and prediction tasks with minimal
+fine-tuning. It is attractive given the limited computing resources in many network devices. These
+early successes highlight a trend: LLM-empowered solutions that use reasoning are emerging as a
+promising approach to tackle wireless networking challenges.
+1.2
+
+Related Surveys
+
+We first position our article relative to existing surveys and tutorials in the field. Table 1 summarizes
+recent survey articles and perspectives on AI and LLMs for wireless networks or reasoning methods.
+While a few surveys have appeared, none to date has specifically focused on reasoning techniques
+and their layered applications in wireless networking. Regarding the surveys on AI for wireless
+communications and networks, several studies have begun to investigate the intersection of AI/LLMs
+and wireless networks. First, many works focus on applying LLMs or AI techniques to network
+management and operations [22, 27, 28]. These surveys collectively highlight the potential of LLMs
+to automate network configuration, monitoring, and optimization tasks. Second, other surveys
+explore the emergence of large-scale AI models in beyond-5G systems. Chen et al. [26] discussed
+the concept of wireless foundation models tailored for 6G networks, and Cui et al. [1] presented
+a broad perspective on integrating AI into 6G architectures, covering system-level visions such
+as AI-native network design and AI-as-a-service. Also, Golec et al. [25] summarized the method
+of using LLM to detect advanced persistent threats in 6G networks. Third, some works address
+techniques for adapting and optimizing AI/LLM usage in communications, such as transfer learning
+[24] and prompt engineering [23]. However, all these surveys do not specifically focus on the
+reasoning methods of LLM in wireless networks, nor do they explore how to utilize these reasoning
+capabilities across different network layers systematically. Only the [23] mentioned some reasoning
+methods. This is far from sufficient for the reasoning that is an important key to LLM and has the
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:4
+
+H. Luo et al.
+Table 1. Summary of Related Surveys
+
+Scope
+
+AI for Wireless
+
+AI reasoning
+
+Ref.
+
+Overview
+
+LLM
+
+Reasoning
+
+Wireless scenarios
+
+[1]
+
+A comprehensive overview on AI for network optimization, network for AI
+enablement, and AI-as-a-service in 6G
+
+3
+
+7
+
+3
+
+[23]
+
+An overview about the prompt engineering techniques for adapting LLMs to
+wireless networks
+
+3
+
+7
+
+3
+
+[24]
+
+A survey on transfer learning techniques for diverse wireless tasks, such as
+spectrum management, signal recognition, security, caching, and so on.
+
+7
+
+7
+
+3
+
+[25]
+
+A comprehensive systematic review and classification study on advanced
+persistent threats detection assisted by LLM in 6G networks
+
+3
+
+7
+
+3
+
+[26]
+
+An overview about foundation models for 6G wireless networks and advocating the design of wireless big AI models
+
+3
+
+7
+
+3
+
+[22]
+
+A survey introducing the LLM applications in telecom networks (6G and
+beyond) and identifying future challenges
+
+3
+
+Partially
+
+3
+
+[27]
+
+A survey on LLM development and capabilities for intelligent network operations and LLM-driven performance optimization
+
+3
+
+7
+
+3
+
+[28]
+
+A survey on LLM for network and service management across multiple
+domains, such as mobile, vehicular, cloud/edge
+
+3
+
+7
+
+3
+
+[29]
+
+A comprehensive review clarifying the fundamental principles, diverse applications, and key challenges of wireless large AI models for 6G
+
+3
+
+7
+
+3
+
+[30]
+
+A survey on a wide range of reasoning tasks and techniques enabled by large
+foundation models
+
+3
+
+3
+
+7
+
+[31]
+
+A comprehensive survey on the reasoning methods in multiple LLMs collaboration
+
+3
+
+3
+
+7
+
+[32]
+
+A survey on Natural Language Reasoning (NLR) in text-based tasks, focusing
+on single-modality unstructured text reasoning
+
+3
+
+3
+
+7
+
+[33]
+
+A survey focusing on neural-symbolic reasoning that combines symbolic
+logic and neural network learning for knowledge graphs
+
+7
+
+3
+
+7
+
+[34]
+
+A first systematic survey on multimodal LLMs reasoning, including evaluation
+protocols, benchmarks, and classifying reasoning-intensive tasks
+
+3
+
+3
+
+7
+
+[35]
+
+A survey introducing the native multimodal reasoning model (N-LMRM) used
+for autonomous planning, and the emerging reasoning technologies
+
+3
+
+3
+
+7
+
+[36]
+
+A review focusing on the gap between traditional AI reasoning methods and
+LLM reasoning methods, as well as the challenges posed by the latter
+
+3
+
+3
+
+7
+
+potential to solve wireless problems. Therefore, we immediately followed up with a summary of
+the relevant surveys on AI reasoning.
+These surveys cover diverse aspects of AI reasoning. The language-centered reasoning and the
+multimodal LLM reasoning involve two separate surveys, respectively. The former focuses on
+reasoning in natural language [30, 32], while the latter pays attention to reasoning capabilities in
+more widely applied scenarios such as vision [34, 35]. Additionally, there are studies on reasoning
+methods in multi-LLM systems [31], which emphasize the collaboration and complementarity
+among LLMs [37–39]. Meanwhile, in [33], the authors targeted neuro-symbolic reasoning on
+structured knowledge, bridging logical inference and neural methods for Knowledge Graphs
+(KGs). Then, Patil et al. [36] studied the trend of reasoning transformation from traditional AI to
+LLM. Notably, none of these surveys examines reasoning in wireless communications.
+To summarize, we have identified the following open issues in the current related surveys:
+— The current survey pays insufficient attention to reasoning methods. Reasoning is the core of
+how LLM solves network problems, but the existing research mostly focuses on application
+outcomes or system integration. This makes it difficult to understand the underlying path of
+LLM in solving network problems, limiting its application in complex scenarios.
+— These surveys lack discussions on each layer of the network. The challenges at different layers
+of wireless networks are significantly different, and the requirements for LLM reasoning
+capabilities also vary. Therefore, it is difficult to formulate a hierarchical optimization plan.
+— The surveys of LLM reasoning lack a deep integration with wireless communication networks.
+They mostly focus on general fields and fail to consider the particularities of wireless networks,
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives
+
+334:5
+
+such as dynamic topology and signals. This results in an unclear path for the implementation
+of reasoning capabilities and a lack of an operational framework.
+Our survey aims at filling the above gap and provides the following content: 1) A structured
+taxonomy of AI reasoning techniques suited for networking problems; 2) A sequential analysis from
+each layer of the network, highlighting how these reasoning technologies address the challenges.
+1.3
+
+Our Contributions
+
+This survey focuses on various layers of wireless communication networks, as well as security
+issues and cross-layer collaboration, to conduct in-depth discussions on advanced AI reasoning
+technologies. The advantage is that it can categorize and highlight the challenges and reasoning
+methods faced by each layer, forming a more practical and applicable panoramic view. After layerby-layer organization, it is observable how the reasoning chain is executed. This organization can
+further guide the design of future cross-layer AI architecture and promote the standardization of
+AI reasoning in wireless networks. The specific contributions are as follows:
+— First wireless-tailored systematic taxonomy of AI reasoning techniques: We establish
+the first structured classification of AI reasoning methods for wireless networks, grouping
+techniques into prompting strategies, architectural innovations, and learning paradigms,
+and mapping each method to applicable wireless tasks and network layers via a unified
+“method-function-scenario” framework.
+— Full-stack layered analysis with a consistent analytical framework: We conduct a
+detailed, protocol-aligned layer-by-layer examination across the entire wireless protocol
+stack, including physical layer, link layer, network layer, transport layer, application layer, and
+network security, following a consistent “core challenge-targeted solution-typical scenario”
+framework for each layer.
+— Practical deployment-focused guidance beyond theoretical analysis: Unlike existing
+purely theoretical surveys limited to descriptive method overviews, we bridge academic
+research and industrial practice via a controlled quantitative deployment cost analysis of
+mainstream reasoning methods. A practical technique selection guide for diverse wireless use
+cases can deliver actionable, engineering-ready guidance for wireless network practitioners.
+Figure 1 illustrates the organization of our survey. The remaining content is as follows: Section 2
+categorically introduces the AI reasoning methods. Sections 3 to 7 respectively discuss the enabling
+role of AI reasoning in the physical, link, network, transport, and application layers. Section 8
+denotes the function of AI reasoning in communication network security. Section 9 provides some
+discussions for AI reasoning methods, including practical selection guidance, comparison with
+traditional methods, and open-source tool libraries. Section 10 further outlines the future research
+directions. Finally, this survey is summarized in Section 11.
+2
+
+AI Reasoning Methods
+
+In Table 2, we present the reasoning methods that will be introduced.
+2.1
+
+Reasoning Method Classification
+
+(1) Prompting Strategy: Prompting-based reasoning methods leverage clever prompt designs to
+elicit step-by-step thinking from a model without modifying its architecture [57]. The core idea
+is to guide an LLM to “think out loud” in natural language, decomposing complex problems into
+intermediate steps before final answers [58]. For example, CoT prompting provides exemplars or
+cues that cause the model to generate a sequence of reasoning steps leading to a solution [59].
+Variants like Zero-Shot CoT [60], which simply instructs “Let’s think step by step,” and Few-Shot
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:6
+
+H. Luo et al.
+
+Fig. 1. Structure of our survey.
+Table 2. Summary of AI Reasoning Methods
+Method
+
+Ref.
+
+Taxonomy
+
+Functionality
+
+n
+n
+n
+
+ll
+ll
+ll
+
+Traffic demand forecasting and sequential resource planning, by step-by-step reasoning)
+
+ll
+llll
+llll
+
+Graph-based topology optimization, modeling network reasoning as graph synthesis
+
+CoT
+
+[17]
+
+Self-Consistency
+
+[40]
+
+Tree of Thought
+
+[41]
+
+Wireless Scenarios
+
+Ensemble reasoning to improve reliability, e.g., multi-run network fault classification
+Multi-path planning for complex resource allocation, exploring alternate solution
+branches
+
+Graph-of-Thought
+
+[42]
+
+Contextual Reasoning
+
+[43]
+
+Semantic Reasoning
+
+[44]
+
+n
+n
+n
+
+RAG
+
+[18]
+
+n
+
+ll
+
+Knowledge-grounded network diagnostics, retrieving configuration manuals or logs for
+interpretation
+
+ReAct
+
+[45]
+
+n
+
+lll
+
+Interactive network control with tool/API calls, e.g., querying routing databases during
+troubleshooting
+
+l
+ll
+l
+
+Automated physical-layer math, e.g., power allocation via code-based solving
+
+In terms of resource management, network optimization, and fault diagnosis, and so on
+Semantic perception resource allocation and optimization, intelligent interference management, user behavior prediction and traffic optimization, and so on
+
+PAL
+
+[46]
+
+Memory-Augmented
+
+[47]
+
+GNN
+
+[48]
+
+n
+n
+n
+
+Multi-LLM
+
+[49]
+
+n
+
+llll
+
+Through model scheduling optimization, avoiding idle or excessive allocation of computing resources on edge servers
+
+Neuro-Symbolic AI
+
+[50]
+
+n
+
+llll
+
+Steady signal detection, especially when dealing with complex semantic interpretation
+tasks, can maintain logical consistency
+
+Agentic Reasoning
+
+[51]
+
+n
+
+llll
+
+Intelligent decision-making, dynamic resource optimization and robustness enhancement in complex scenarios of wireless communication
+
+Self-Refinement
+
+[52]
+[53]
+
+RLHF
+
+[54]
+
+Self-Taught Reasoner
+
+[55]
+
+n
+n
+n
+n
+
+l
+l
+lll
+ll
+
+Iterative policy refinement, e.g., network configuration tuning
+
+CoT Distillation
+
+PickLLM
+
+[56]
+
+n
+
+ll
+
+Dynamic model selection for network queries, e.g., choosing a lightweight LLM for
+routine traffic prediction
+
+Long-term context retention, e.g., traffic pattern prediction
+Resource allocation and power control in dynamic environments by modeling the nodes
+and their connection relationships
+
+Compact model deployment, such as edge LLMs for network inference
+Aligning LLM outputs to operator intents, fine-tuning on network management feedback
+Self-improving network optimization, that is, LLM bootstraps its planning via generated
+reasoning
+
+Symbols: n: Prompting; n: Architectural; n: Learning; l: Generation; l: Classification; l: Optimization; l: Prediction
+
+CoT [61], which provides worked examples. They enable reasoning even without task-specific
+training for LLM. Similarly, Tree of Thought (ToT) prompting expands on this idea by exploring
+multiple reasoning paths in a search tree [41]. At each decision point, the model can branch
+into alternative thoughts, ultimately converging to the most promising answer [62]. Furthermore,
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives
+
+334:7
+
+there is the Self-Consistency CoT [40], which first randomly selects a series of different reasoning
+paths instead of merely following the most straightforward path in the CoT. Then, it selects
+the most consistent answer by disregarding the selected reasoning paths. In general, prompting
+strategies are useful as they require no model retraining. The tradeoff is that parsing long reasoning
+traces increases inference time and token usage, which can be problematic for latency-sensitive
+applications. Prompting strategies are most appropriate when quick adaptability and interpretability
+are needed, or when the users want to probe an existing model’s reasoning ability on a new problem
+without extensive fine-tuning [63].
+(2) Architectural Approach: In contrast to prompting, some reasoning methods introduce
+architectural modifications that augment an LLM with external tools, memory, or multi-module
+workflows [64]. The motivation here is to overcome the limitations of standalone LLM reasoning,
+e.g., mathematical precision, factual recall, or environmental interaction. For instance, ReAct is a
+paradigm that interweaves reasoning and acting in an interactive loop [45]. It allows the model to
+gather new information and update its plan [65]. Another is Program-Aided Language (PAL)
+modeling [46], which integrates a code execution tool into the reasoning loop. Here, the LLM
+translates a natural language problem into a Python program, as its CoT, and then offloads the
+actual computation to a Python interpreter [66]. Beyond these, architectural innovations include
+tool-use frameworks, where models call external APIs, search engines, or calculators, such as RAG
+[18]. Additionally, memory-augmented models can retain long-term working memory [47], and
+neuro-symbolic systems that combine neural nets with logic rules or KGs [67]. Also, the work
+involves combining multiple LLMs to collaboratively reason for a specific task [15]. Meanwhile,
+GNNs offer a structured framework specifically designed for processing graph-structured data
+[36]. All share a common design logic, extending the reasoning capabilities of the base model
+by structural means [68]. The tradeoffs often involve added complexity. For example, ReAct may
+require many interaction steps, and tool-augmented models depend on the reliability and speed of
+the external tools. They shine when a task can be naturally broken into subtasks, or when no single
+model can internally capture all the knowledge or skills needed [36]. However, designing these
+systems requires careful orchestration, deciding when the model should use the tool or how to
+format tool inputs/outputs. And each added component, including APIs, interpreters, and memory
+modules, can become a point of failure or delay.
+(3) Learning Paradigm: It focuses on how the model learns or improves its reasoning abilities
+[69]. One representative example is Self-Refinement [52], an approach in which the model iteratively
+improves its output by generating feedback and revising itself. The model is essentially learning
+from its mistakes. Sometimes called test-time learning or meta-reasoning [70]. Another learningoriented method is CoT Distillation (CoTD) [53], which moves the heavy lifting to the training
+phase. The idea behind CoTD is to teach a smaller or less capable model to perform reasoning by
+using a larger model’s reasoning traces as training data [71]. This paradigm is powerful for making
+reasoning widely deployable. Smaller models can be run at the network edge or on devices with
+limited compute, yet exhibit some of the CoT advantages of the large foundation models [15]. Other
+learning paradigm techniques include fine-tuning on rationales [72], where human or machinegenerated rationales are added to training sets to instill a habit of explaining. Reinforcement
+Learning (RL) for reasoning [54, 73], it rewards correct and well-justified reasoning paths, akin to
+how Reinforcement Learning from Human Feedback (RLHF) aligns user preferences. These
+measures aim at integrating the reasoning ability into the model’s usage pipeline, rather than relying
+solely on prompting at runtime. However, they require additional data preparation and computing
+upfront [74]. However, they may sacrifice some flexibility. Once a model is fine-tuned or distilled
+for a particular style of reasoning, it could be less general than an LLM prompted appropriately
+[75]. They trade initial development overhead for swift and reliable reasoning at runtime.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:8
+2.2
+
+H. Luo et al.
+Reasoning Method Functions
+
+In the wireless networking domain, we can identify four major classes of tasks: generation, classification, optimization, and prediction [76].
+(1) Generation Task: These tasks involve producing novel outputs. In wireless networks, this
+could mean translating a high-level intent into a concrete network configuration or policy, generating semantic content for network management [77]. Here, reasoning techniques can ensure that
+the generation is logically coherent and constraint-abiding. For instance, CoT prompting has been
+applied to intent translation problems, where an LLM takes a request like “Provide ultra-reliable
+low-latency service to Device 𝑋” and generates a sequence of actions or parameter settings for
+the network [9]. By reasoning step-by-step, the model can interpret the intent, map it to specific
+requirements [78]. Additionally, architectural approaches play a role in generation tasks. A toolaugmented method, such as PAL, can generate and execute network configuration scripts. The LLM
+writes a script to configure the network, and then an interpreter runs it to verify that it indeed
+produces the desired outcome [79]. This two-step approach catches errors. If the script fails or
+yields suboptimal results, the reasoning loop can adjust the code [80]. Such a framework was shown
+to successfully take a natural language intent [77], such as a deployment request, and produce a
+detailed network configuration plan.
+(2) Classification Task: Classification tasks in networking might include classifying the current
+network state, identifying interference sources, and recognizing traffic categories. Reasoning
+produces a classification along with a rationale, which is useful in wireless domains for validation
+[81]. For example, an LLM can be asked not just “Is this link high quality or low quality?” but “Explain
+whether this link is high or low quality and why.” A prompting strategy can then yield an answer
+like: “The link is low quality because the Signal-to-Noise Ratio (SNR) is 5 dB, below the 10 dB
+threshold, and there have been two handoffs in the last minute, indicating an unstable connection.”
+This CoT justification allows a network controller to understand the basis of the classification
+[82]. Meanwhile, in safety-critical or performance-critical networks, such transparency is crucial.
+It helps operators verify the decision logic and catch mistakes. Moreover, ReAct can enhance
+classification-type tasks by allowing the model to query external data before finalizing a decision
+[83]. For example, consider a fault diagnosis task. A ReAct agent could perform actions, including
+checking recent logs or reading a KB in between its reasoning, such as whether a router was
+down, or if a power event occurred [84]. Then, it can decide whether the failure is due to a power
+interruption or a configuration error. Also, architectural methods that maintain a working memory
+can ensure consistency in decisions [85]. For example, a memory-augmented LLM might remember
+past classifications to ensure current ones don’t contradict historical trends.
+(3) Optimization Task: Wireless networks abound with optimization problems, including
+allocating channels, scheduling users, and so on [51]. These tasks often require strategic reasoning
+and vision, making them suitable for reasoning methods [12]. ToT, for example, is practically
+designed for optimization. In a resource allocation scenario, a ToT approach might consider multiple
+ways to assign resources to users, reason about the interference or throughput in each scenario,
+prune suboptimal branches, and converge on an allocation that maximizes a utility function. Such
+a method is reported to drastically reduce computation versus brute force search while achieving
+near-optimal performance [86]. Another example could be an RL augmented CoT where the LLM
+plans a sequence of network actions and is guided by a reward signal [87]. The reasoning helps
+break down the long-horizon planning into feasible steps addressing the complexity incrementally,
+such as first optimizing coverage, then interference. Empirical results in recent research underscore
+the benefits. When an LLM is used with CoT reasoning as a planning module for network slicing,
+it produces interpretable, fine-grained decisions and achieves significant performance gains [28].
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives
+
+334:9
+
+These improvements come from the model’s ability to systematically consider constraints and
+multi-objective tradeoffs via reasoning. Moreover, planning-type reasoning can incorporate domain
+knowledge or rules at intermediate steps [88]. For instance, during optimization, a reasoning LLM
+can explicitly recall a rule like “do not allocate adjacent channels to close-by transmitters” as part
+of its thought process, thereby injecting domain-specific optimality criteria.
+(4) Prediction Task: Prediction tasks refer to forecasting future values or events based on
+current and past data. Common examples in wireless include predicting traffic load in the future,
+estimating user mobility patterns, or forecasting channel quality for proactive resource allocation
+[89]. Traditional time-series models or ML regressors often treat the problem as a pure pattern
+recognition task [90]. An LLM with reasoning abilities can approach prediction more like a human
+expert, by recalling relevant context, accounting for causal factors [91]. For instance, models such
+as ReAct or those with long-term memory architectures can first retrieve network performance
+data from a certain time when a similar event occurs. Then, they can reason based on the comparison of these conditions with the current situation, thereby predicting the traffic situation for
+tomorrow [92]. Moreover, techniques such as CoT can help the model explain its prediction, which
+is useful for decision-makers [93]. A predicted value like “Channel quality will drop to 𝑋” might be
+accompanied by a CoT: “The user is moving at 50 km/h and rain is expected; high speed plus rain
+fade typically causes a 5 − 10 dB SNR drop, so I predict a drop in quality.” This rationale increases
+confidence in the prediction. In research, there are examples of using CoT reasoning in multimodal
+Integrated Sensing and Communication (ISAC) tasks [94]. The model predicts something like
+a beamforming vector from both radio and visual data in such tasks.
+2.3
+
+Lessons Learned
+
+The above taxonomy and functional perspectives provide a high-level understanding of how AI
+reasoning can be leveraged in wireless networking. We observe that the choice of reasoning strategy
+depends on the desired balance of transparency, computational efficiency, and task complexity, as
+well as the nature of the task in the networks [95]. Equipped with this understanding, we next
+delve into protocol-layer-specific reasoning.
+3
+
+AI Reasoning for Physical Layer
+
+The physical layer serves as the foundation of wireless communication architectures, orchestrating
+signal transmission, modulation/demodulation, and channel coding. The physical layer protocols
+and mechanisms encounter critical challenges, including channel fading, multi-path interference,
+and noise. These factors directly impact the performance and reliability of communication systems.
+The physical layer protocols demonstrate several key characteristics [96]. First, these systems
+exhibit strict real-time requirements that demand signal processing to be completed within milliseconds. Furthermore, these systems operate within dynamic environments where wireless channel
+conditions vary rapidly across both time and spatial dimensions, making predictability extremely
+challenging. Additionally, the systems must handle high-dimensional data complexity that involves
+time, frequency, and spatial domains simultaneously. Moreover, they face stringent optimization
+constraints that require achieving optimal performance while operating under severe limitations
+in terms of power consumption, available bandwidth, and hardware capabilities. Consequently,
+these characteristics render traditional rule-based and mathematical model-based approaches inadequate when dealing with complex real-world scenarios. Thereby, we need the development of
+more intelligent and adaptive solutions. As illustrated in Figure 2, artificial intelligence reasoning methods provide a promising avenue for addressing these challenges in the physical layer
+implementation.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:10
+
+H. Luo et al.
+
+(A) Prompting Strategy
+
+(B) Architectural Approach
+Learning
+
+Define the Target
+Neuro-Symbolic
+AI Reasoning
+
+CoT
+Reasoning
+
+Input Parameters
+
+Water-Filling
+Algorithm
+
+Causal Structure
+Behind the Data
+
+Semantic
+Communication
+
+Solve Complex
+Mathematical
+Problems
+Step by Step
+
+Optimizing
+
+Signal Encoding
+and Decoding
+Model
+as
+Graph
+
+Input
+
+GNN
+Generate
+
+PAL
+
+Improve Spectral
+Efficiency
+
+Executable
+Matlab Code
+
+Typical Scenarios
+
+Identify Objects
+
+Classifying
+Unknown
+Signals
+
+Retrieval
+
+RAG
+Analyze
+Trajectories
+ISAC
+Multimodal Data
+Association
+Feature
+Extraction
+
+Beam
+Prediction
+
+Typical Scenarios
+Collaboration
+Between
+Communication
+and Sensing
+
+Intelligent
+Transportation
+
+Retrieval
+
+Signal Databases
+GPS
+Radar Cameras
+
+Optimize the
+Beam Direction
+
+Fig. 2. AI reasoning methods in the physical layer. (A) The prompting strategy employs CoT reasoning to solve
+complex mathematical problems and utilizes PAL to generate executable MATLAB code, thereby improving
+spectral efficiency [97]. (B) The architectural approach combines Neuro-Symbolic AI reasoning for semantic
+communication, optimizing signal encoding and decoding by learning causal structures [98]. The GNN model
+utilizes graph communication to enhance understanding and interaction between different elements [48].
+The RAG method classifies unknown signals by retrieving typical scenarios from extensive signal databases,
+facilitating intelligent transportation optimization [97].
+
+3.1
+
+AI Reasoning Solutions
+
+(1) Solutions for Beamforming and MIMO Optimization: Beamforming and MIMO optimization
+techniques are fundamental for enhancing capacity and coverage in modern wireless communication
+systems. In massive MIMO and millimeter-wave scenarios,2 systems must achieve optimal beam
+design under complex multi-path environments and power constraints. Traditional methods use
+convex optimization and iterative algorithms [48], such as water-filling and Weighted Minimum
+Mean Square Error (WMMSE). However, they exhibit significant limitations when dealing with
+complex non-convex problems, such as high computational complexity, a tendency to converge
+to local optima, and difficulty in handling discrete constraints. To overcome these optimization
+bottlenecks and capture the intricate nature of beamforming problems, recent research has shifted
+its focus to AI reasoning frameworks capable of decomposing and tackling large-scale tasks. Among
+them, CoT reasoning and GNN paradigms have become the dominant approaches, delivering
+near-optimal solutions under strict latency budgets.
+— CoT Reasoning and PAL: It addresses the high-dimensional optimization challenges in
+beamforming design through systematic mathematical decomposition [99]. Shao et al. [97]
+demonstrate the application of a CoT-guided workflow in the OFDM beamforming powerallocation case, splitting the objective of “maximize sum-rate” into a four-link thought
+chain: (1) CoT first restates the goal of maximizing aggregate capacity given the total power
+available across ten tones. (2) It takes as input the per-subcarrier gains and the noise-floor
+from the channel estimator. (3) It recalls the water-filling algorithm, which allocates power
+to subcarriers based on their channel quality, prioritizing those with better gains. A bisection
+2 https://portal.3gpp.org/desktopmodules/Specifications/SpecificationDetails.aspx?specificationId=1382
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:11
+loop is then used to find the optimal power distribution that utilizes the total available power.
+(4) The resulting optimal power distribution is embedded into an LLM-generated, runnable
+MATLAB cell to generate the exact power pattern for upload to the scheduler. Proof-ofconcept runs increase spectral efficiency by 50% at 2.4 GHz. The experiment validates the
+efficacy of the CoT approach for beamforming and MIMO optimization.
+— GNN: Wireless communication network optimization is inherently a topological optimization
+problem for multiple nodes, and GNNs are well-suited to address this class of problems
+[100]. Shen et al. [48] proposed a beamforming optimization scheme based on GNN. This
+approach frames the beamforming problem on a graph to overcome the scalability and
+generalization limits of prior neural architectures. The wireless systems are modeled as
+bipartite graphs where nodes represent transmit symbols and antennas, thus reformulating
+the task as a graph optimization problem. The GNN architecture is designed via deep unrolling,
+mimicking the message-passing schemes of traditional optimization algorithms. This method
+yields significant performance gains in Massive MIMO Beamforming, finding near-optimal
+beamformers for thousands of users in milliseconds and demonstrating robust generalization.
+A GNN trained on a 50-user network achieves near-optimal performance in a 1000-user
+network, far surpassing traditional beamforming methods.
+(2) Solutions for Interference Suppression and Signal Detection: Interference suppression
+and signal detection are crucial for communication quality in dense wireless networks [101]. In
+these heterogeneous networks, interference is highly complex and dynamic due to limited spectrum
+and higher network density. Traditional methods like Zero-Forcing (ZF) and Minimum Mean
+Square Error (MMSE) rely on fixed models and parameters. Owing to their limited adaptability
+to nonlinear interference and their lack of learning from historical data, these methods exhibit
+unsatisfactory performance under dynamic conditions. To overcome the limitations of traditional
+approaches in interference suppression and signal detection, researchers have recently achieved
+breakthroughs in various AI reasoning paradigms, mainly in Neuro-Symbolic AI Reasoning.
+— Neuro-Symbolic AI Reasoning: It combines neural learning capabilities with symbolic
+reasoning for intent-based semantic communication [50]. Thomas et al. [98] pioneered the
+application of a Neuro-Symbolic AI framework to wireless systems, which leverages it to
+learn the causal structure behind observed data. The symbolic component is represented
+by a KB that contains high-level semantic representations, while the neural component,
+particularly Generative Flow Networks, learns the data’s causal structure and the optimal
+encoding/decoding functions. The learned causal relationships are utilized to optimize signal
+encoding and decoding. After testing, this method reduced the semantic representation length
+by 23% and decreased redundant transmissions compared to the implicit semantic communication architecture, while also improving semantic reliability by 63%, which significantly
+suppressed the impact of interference on wireless communication.
+(3) Solutions for Modulation Recognition and Signal Classification: Modulation recognition
+and signal classification are essential for wireless communication systems. These technologies
+enable spectrum sharing and dynamic spectrum access by identifying modulation formats despite
+unknown signal parameters. Traditional methods use statistical features and decision theory [102],
+such as maximum likelihood estimation and feature extraction. However, owing to their reliance
+on extensive prior knowledge and their high sensitivity to SNR and channel variations, they deliver
+sub-par performance in real-world wireless communication systems [103]. To more accurately
+recognize different modulation schemes, an LLM must be equipped with a more comprehensive
+KB. RAG was specifically designed to address this by augmenting LLMs with domain-specific
+knowledge to bolster their problem-solving capabilities.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:12
+
+H. Luo et al.
+
+— RAG Method: It enhances modulation recognition by combining retrieval mechanisms with
+generative reasoning capabilities. This approach bears conceptual similarity to traditional
+look-up table methods [104, 105], but demonstrates significantly enhanced intelligence and
+adaptability. Unlike static look-up tables, RAG dynamically retrieves relevant modulation patterns from large-scale signal databases and leverages generative models to classify unknown
+signals, thereby addressing the challenge of extensive prior knowledge requirements. In the
+wireless domain, external knowledge may encompass an extensive array of sources, including
+device instruction manuals, algorithm textbooks, and wireless standards. The generative
+component of RAG draws upon this KB to acquire information regarding modulation schemes
+and channel coding. By leveraging such data, it constructs coherent and contextually relevant
+content. This, in turn, enhances the LLM’s comprehension of various signal modulation modes.
+As a result, it enables more precise identification and categorization of unknown channel
+states. Moreover, based on the identification outcomes, the model can select appropriate
+demodulation schemes [97], enhancing the signal demodulation efficiency.
+3.2
+
+Typical Scenarios
+
+(1) Integrated Sensing and Communications (ISAC): ISAC is a core vision for 6G communication
+technology. CoT reasoning can filter out irrelevant semantic information, model spatiotemporal
+continuity, and enable dynamic cross-modal feature extraction. In an end-to-end ISAC architecture
+based on a Multimodal LLM (MLLM), the CoT mechanism uses structured instructions and
+distributed reasoning to decompose complex beam prediction. It progressively correlates the
+semantics of multimodal data, for example, identifying obstacles in an image and analyzing target
+interference in radar data. By using this method, based on the preliminary experiments by the
+authors in [106], the architecture achieved a Top-3 beam prediction accuracy of 70% and 95% in
+two ISAC tasks, significantly outperforming baseline methods.
+(2) Intelligent Transportation and Vehicular Networking: ENWAR [107] leverages MLLM
+and RAG method to provide crucial environmental awareness for next-generation wireless communication networks. The framework’s core functionality is to integrate multimodal data from various
+sensors, such as GPS, LiDAR, and cameras. It converts this data into textual descriptions that can be
+understood by an LLM, which are then used to build a domain-specific KB. For a vehicle’s surrounding environment perception, the LLM directly retrieves from this KB and enhances the accuracy
+of its generated perception results based on the retrieved information. This perceptual capability
+directly empowers the physical layer of wireless communication. ENWAR can accurately identify
+obstacles and assess line-of-sight connectivity between vehicles, information that is essential for
+beamforming and blockage mitigation in high-frequency communications. In terms of performance,
+the framework demonstrates significant advantages over traditional LLMs, achieving up to 70%
+relevance, 80% correctness, and 86% faithfulness in its answers. This proves its effectiveness in
+providing precise interpretations and making decisions in complex, dynamic environments.
+3.3
+
+Lessons Learned
+
+AI reasoning (e.g., CoT, RAG) effectively addresses the physical layer’s dynamic channel and
+high-dimensional data challenges. It outperforms traditional mathematical models in transmission
+efficiency and adaptability, and lays a foundation for data link layer communication optimization.
+4
+
+AI Reasoning for Data Link Layer
+
+Building upon the reliable point-to-point transmission at the physical layer, the data link layer
+serves as the bridge connecting to network-level communication protocols. It orchestrates essential
+functionalities such as medium access control, error detection and correction, and flow control.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:13
+(A) Prompting Strategy
+
+(B) Architectural Approach
+
+Data Packets
+Different
+Potential
+Paths
+
+Pruning
+Branch 1 High Rew ard
+
+Branch 1
+
+GNN
+Typical Scenario
+
+Branch 2 Low Rew ard
+
+Branch 2
+
+Rew ard Per Second
+
+Branch 3
+
+Branch 3 High Rew ard
+Branch 4 Low Rew ard
+
+Branch 4
+
+Model as Graph
+......
+
+Analogy
+
+LLMs
+User 1
+
+......
+......
+
+Access Status 1
+User 2
+
+......
+
+User 1
+
+......
+
+ToT
+Access Status 2
+
+......
+User 2
+
+......
+......
+
+Knowledge
+Base
+
+Device
+Manuals
+
+Wireless link
+scheduling
+
+Building
+
+Wireless
+Standards
+
+Algorithms
+Textbooks
+
+Global State
+Awareness
+
+Reduce
+Retransmissions
+
+Optimal Scheduling
+Power Allocation
+
+Exchanging
+Information
+
+GNN Update
+Status
+
+Learn the Optimal
+Scheduling Policy
+
+Output
+
+RAG
+
+Retrieval
+
+Multi-Source
+Heterogeneous Sensors
+Error Packet
+
+Error Correction
+
+Vehicular
+Communications
+
+Environment Changes
+Typical Scenario
+
+Database
+
+Retrieval
+
+Output
+
+LLMs
+
+Fig. 3. AI reasoning methods for the data link layer. (A) The prompting strategy outlines a method employing
+a ToT approach to manage data packets for evaluating the access status of multiple users [110]. (B) The
+architectural approach emphasizes the use of GNNs to model communication as a graph, enabling global state
+awareness and optimal power allocation scheduling [48, 111]. Additionally, RAG leverages a KB constructed
+from device manuals, algorithms, and wireless standards to detail the error correction process in data
+transmission [112].
+
+In a complex and heterogeneous wireless environment, the data link layer is characterized by
+numerous challenges, including inter-user interference, dynamic channel conditions, and diverse
+QoS requirements [108]. Consequently, these characteristics render traditional fixed protocol
+designs and static resource allocation schemes inadequate for handling dynamic multi-user scenarios
+[109], necessitating solutions capable of rapid adaptation to dynamic environments. As illustrated
+in Figure 3, AI reasoning methods provide an efficient solution to these issues.
+4.1
+
+AI Reasoning Solutions
+
+(1) Solutions for Error Control and Retransmission: The optimization of error control and
+retransmission algorithms aims at ensuring reliable data transmission over unreliable wireless
+channels by balancing reliability, spectral efficiency, and latency. Traditional methods primarily
+employ fixed coding schemes and static retransmission policies, such as stop-and-wait ARQ [113].
+They are unable to adapt coding redundancy and retransmission methods to time-varying channel
+conditions [114]. And they also lack cross-layer optimization capabilities, making it difficult to
+align error control with higher-layer application requirements [115]. However, current research
+has ingeniously addressed these issues by leveraging AI reasoning methods like RAG.
+— RAG Method: An approach for Automatic Speech Recognition (ASR) error correction, proposed by Robatian et al. [112], utilizes RAG. It constructs a KB that retrieves ASR predictions
+with their corresponding ground truths. These retrieved examples are used as input for
+in-context learning, which enables an LLM to generate a corrected transcription based on
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:14
+
+H. Luo et al.
+
+identified error patterns. This paradigm can be analogously applied to error control and
+retransmission in wireless communication. A channel coding KB can be established, storing
+typical data packet error patterns that occur under various channel conditions, along with
+their corresponding correct packets. Upon receiving a corrupted packet, the receiver would
+not immediately request a retransmission. Instead, it would first employ a similarity metric
+to retrieve the “error pattern” from the KB that is most similar to the corrupted packet.
+Subsequently, a lightweight LLM would utilize this “error pattern” and the retrieved “correct data” as input to intelligently infer and generate the original, correct data packet. This
+“retrieval-augmented correction” paradigm has the potential to reduce the frequency of full
+retransmissions, thereby enhancing data transmission efficiency and system throughput.
+(2) Solutions for Link Adaptation and Rate Control: It requires the dynamic adjustment of
+transmission parameters based on instantaneous channel conditions to maximize spectral efficiency
+and ensure reliability. Traditional methods primarily rely on threshold-based switching mechanisms
+[116] and static lookup tables [117]. These methods are static, and they struggle to cope with nonstationary channel statistics and interference patterns, and are also unable to adjust strategies
+in real-time to adapt to dynamic environments. Therefore, current researchers are beginning to
+explore more dynamic AI reasoning methods to solve these problems.
+— GNN: GNNs first model wireless networks as graphs. In this graph, nodes can represent users,
+antennas, or access points, while edges denote their connections or interference relationships.
+These node and edge features are used as inputs to the GNN. Lu et al. [111] propose that by
+maximizing key metrics such as the total network throughput and rate, GNNs can predict
+throughput performance under different network configurations and provide a basis for
+link adaptation decisions. Regarding rate control, Shen et al. [48] demonstrate how GNNs
+employ distributed message-passing mechanisms by exchanging messages between nodes
+to learn and output optimal power allocation schemes. This approach makes GNNs an ideal
+choice for rate control in dynamic wireless environments. In summary, the powerful learning
+and generalization capabilities of GNNs provide both theoretical foundations and practical
+frameworks for addressing core issues in wireless networks.
+— RAG Method: RAG addresses the challenges of link adaptation and rate control by leveraging
+external knowledge sources to bridge the gap between domain-specific context and general
+knowledge. In wireless scenarios, RAG retrieves information from external databases, such
+as device manuals, algorithm textbooks, and wireless standards, to construct coherent and
+contextually relevant content. This enables RAG to enhance the understanding of relationships
+among physical components in wireless systems. For example, RAG can utilize knowledge
+about modulation schemes and channel coding to perform more accurate link adaptation in
+response to varying channel states [97]. Furthermore, with its adaptive feedback mechanism,
+RAG continuously refines its outputs based on new data, user interactions, and updated
+protocols, ensuring high accuracy and credibility for knowledge-intensive tasks like link
+adaptation and rate control.
+(3) Solutions for Multi-User Access and Scheduling: Multi-user access and scheduling aim at
+efficiently coordinating simultaneous multi-user access to maximize system throughput. This is a
+particularly challenging problem in modern wireless networks with a proliferation of devices and
+diverse application requirements. Traditional methods such as Time Division Multiple Access
+(TDMA), Frequency Division Multiple Access (FDMA), and Code Division Multiple Access
+(CDMA) [118, 119] rely on pre-determined resource allocation schemes. This fixed mode is unable
+to adapt to dynamic changes in user demands and channel conditions, leading to low resource
+utilization and a lack of intelligence in handling the dynamic QoS requirements of different users
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:15
+[109]. Therefore, emerging AI reasoning methods offer promising solutions to more effectively
+address this issue.
+— ToT Reasoning: While no research directly applies the ToT framework to multi-user access
+and scheduling problems, some existing methods share a similar core design philosophy with
+it. The method proposed by Raviv et al. [110] exemplifies this approach, relying on a decisionmaking process that involves multi-path exploration, proactive evaluation, and pruning.
+Unlike traditional single-path algorithms, Reward Per Second (RPS) is more exploratory. It
+explores a limited “window” of 𝐾 packets, generating multiple potential decision paths. For
+each packet, RPS proactively evaluates its “Reward Per Unit Time” to quantify each path’s
+value. It then prunes unviable paths by assigning a zero reward to packets that will miss their
+deadlines. Finally, RPS selects the packet with the highest “reward per unit time” from the
+window for transmission. This multi-step, quantitative evaluation process is fundamentally
+similar to the ToT framework, which advances a decision by evaluating multiple branches
+and selecting the most promising path. In the future, abstracting complex decision logic from
+algorithms like RPS into “thoughts” and leveraging the inference capabilities of LLMs could
+lead to more efficient and flexible optimization for these problems.
+4.2
+
+Typical Scenarios
+
+(1) Wireless Link Scheduling: Lee et al. [120] proposed modeling a wireless network topology as a
+graph. The objective of the link scheduling problem is to determine which edges in the graph can be
+activated simultaneously to maximize network throughput while avoiding interference. Each device
+in the graph needs to decide its state and link quality based on its own features and those of its
+neighbors. In the inference phase, each device uses its local GNN model and exchanges information
+with its neighbors to make decentralized decisions about its link activation state. In this manner,
+GNNs enable devices to make real-time, decentralized link scheduling decisions without a central
+controller, thereby avoiding issues such as severe traffic congestion, computational limitations, and
+single points of failure that can occur in large-scale wireless systems.
+(2) Vehicle-to-Vehicle (V2V) communication: Mohsin et al. [121] proposed using a RAG
+framework to integrate multimodal data, thereby optimizing applications for the multi-user access
+in V2V communication. The framework leverages real-time data from diverse sensors to provide
+a unified and comprehensive environmental awareness for an LLM. First, camera images are
+converted into detailed text descriptions using an image-to-text model (such as GPT-4o). Then,
+GPS data is used to calculate the distance and azimuth between vehicles. Finally, LiDAR and YOLO
+object detection models are employed to identify and count vehicles and other obstacles within
+the images. This information is also added to the text description. All of this pre-processed textual
+information is stored in a vector database. When a response for wireless channel access control
+is required, the system performs a vector search to retrieve the most relevant context from the
+KB. This retrieved information, combined with a structured prompt, is used to generate the final
+response, enabling the LLM to make real-time, environment-based decisions.
+4.3
+
+Lessons Learned
+
+AI reasoning (e.g., GNN, ToT, RAG) addresses the dynamic channel and multi-user access challenges
+of the data link layer. It outperforms traditional fixed protocols in scheduling efficiency and
+transmission reliability, and provides support for global resource optimization at the network layer.
+5
+
+AI Reasoning for Network Layer
+
+While the data link layer addresses the efficiency of local, single-hop communication, the network
+layer serves as the pivotal orchestrator on a global scale. It is responsible for end-to-end data
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:16
+
+H. Luo et al.
+(B) Architectural Approach
+
+(A) Prompting Strategy
+Mirrors
+Network
+Engineers'
+Way of
+Thinking
+
+Situation
+Alternatives
+Decision
+
+Step 1
+
+CoT
+Service Demand
+
+Step 2
+
+Resource Availability
+
+Graph
+
+Think
+Step
+by
+Step
+
+GNN
+
+Network
+Resource
+Allocation
+Strategy
+
+Router
+Server
+
+Typical Scenario
+
+Step 3
+
+Routing Policies
+
+Sw itch
+
+Station
+
+Virtualization Strategy
+Typical Scenario
+
+VisionLLM
+Enterprise
+Network
+Topology
+Configuration
+
+Step
+by
+Step
+
+Retrieval
+
+Edge
+
+Cisco Template
+Library
+
+Network Link
+Space-Air- GNN
+Ground
+Networks
+
+Check Ports
+
+Attr
+
+Actor
+Network
+
+CPU Headroom
+Attr
+RL
+
+Attr
+
+TransDelay
+
+Allocate Rules
+
+Validated
+Patterns
+
+Typical Scenario
+
+Experience
+Database
+RAG
+External Expert
+Knowledge
+Base
+
+Fine-Tuning
+Topology
+Figure
+
+Relevant
+Snippets
+Cisco
+CLI/YAML
+
+Next
+Hop
+
+available bandwidth
+
+Propose Solutions
+
+Tool-Use
+
+GPT-4-Version
+
+Text Description
+OpenAI
+Assistants API
+
+Training
+
+O-RAN
+Dataset
+
+Expert
+Model
+
+Topology
+reconfiguration
+Real-time
+Technical Tips
+
+Fig. 4. AI reasoning methods for the network layer. (A) The prompt strategy employs CoT reasoning to
+reflect the cognitive process of network engineers through a systematic three-step methodology: situation
+analysis, evaluation of alternatives, service demand assessment and decision-making, resource availability
+evaluation, and virtualization strategy development [124]. (B) The architectural approach leverages GNNs to
+process network topology information, enabling intelligent routing strategies and network resource allocation
+policies [125]. Furthermore, the tool-use method employs GPT-4-Vision to generate textual descriptions from
+topology images, enhancing the multimodal capabilities for topology reconfiguration [172]. Fine-tuning is
+conducted using the O-RAN dataset to refine the model into an expert-level model, providing more specialized
+recommendations [126]. Additionally, RAG incorporates the experience database to offer empirical guidance
+for topology design and network management [127].
+
+transmission path planning, global resource coordination, and network topology management [122].
+Within the increasingly intricate wireless networks, the network layer confronts unprecedented
+challenges, including encompassing dynamic routing selection, topology reconfiguration, and
+network virtualization across multiple dimensions. These challenges, characterized by their highly
+dynamic nature, high-dimensional complexity, and strict real-time requirements, render traditional
+simplified rule-based models less effective in such scenarios [123]. To address these challenges,
+researchers have recently explored a wide range of AI reasoning methods, as shown in Figure 4
+hoping to adapt to the emerging demands of the network layer.
+5.1 AI Reasoning Solutions
+(1) Solutions for Network Topology Reconfiguration and Node Scheduling: Network topology
+reconfiguration and node scheduling are vital network layer challenges. They involve dynamically
+adjusting network structures and optimizing node operations to match traffic demands and node
+conditions. With the rise of green and intelligent networks, the focus has shifted to maximizing
+energy efficiency while maintaining service quality [128]. Traditional topology management relies
+on a “peak capacity planning” model, which uses static configurations to handle maximum load.
+While this guarantees performance during peak times, it leads to significant resource waste during
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:17
+off-peak periods, and fails to handle the inherent spatial and temporal non-uniformity of network
+traffic [128]. As a result, researchers are now actively exploring the integration of AI reasoning
+methods, such as tool-use and RAG, to address these challenges and achieve intelligent, automated
+network operations.
+— Tool-Use Approach: GeNet [172] used a tool-use approach to solve network-layer topology
+reconfiguration problems. This framework achieves its functionality through the collaboration of two core modules. The topology understanding module utilizes GPT-4 as a tool
+to convert an input network topology image into a detailed textual description. The intent
+realization module employs the OpenAI assistants API as a tool to execute more complex
+tasks. It receives the user’s natural language intent and performs reasoning based on the
+topology’s textual description and the device configuration files. The task of this tool is
+precisely defined: if a topology change is required, it updates the topology’s textual description file; simultaneously, it configures all newly added components and updates the device
+configuration files accordingly. By working in series, these two modules enable GeNet to
+first understand the network topology from an image and then update the topology’s textual
+description and device configurations based on the user’s intent.
+— RAG Method: Zhao et al. [127] proposed using an RAG approach to optimize network
+topology reconfiguration. The core idea of their method is to combine a traditional endto-end generative model with an external KB to enhance the accuracy and scalability of
+command generation in resource-constrained environments. First, CONFPILOT utilizes a
+parser to extract semi-structured configuration information from various vendor device
+manuals. This information is then standardized into a JSON format and stored in a searchable
+Configuration Library, which provides the model with a rich source of external knowledge.
+Next, in the syntax retrieval stage, upon receiving a natural language configuration intent,
+CONFPILOT’s retriever identifies and precisely matches the most relevant command syntax
+from the ConfLib. Finally, in the command generation stage, the generator takes the user’s
+intent and the retrieved syntax as input and uses a pointer-generator network to produce
+the final command sequence. By learning to generate configuration commands directly
+from device manuals, this framework significantly reduces the manual effort of engineers in
+consulting documentation, which greatly enhances configuration efficiency.
+(2) Solutions for Network Slicing and Virtualization: Network slicing and virtualization are
+crucial for creating isolated virtual network instances on shared physical infrastructure, delivering
+customized services to different users and applications. The growth of diverse industries has
+made it essential to achieve both efficient resource sharing and strict performance isolation [129].
+Traditional virtualization, often tied to specific hardware and static resource allocation, is limited
+in its ability to handle varied service demands. These methods lack the flexibility for rapid network
+function deployment and fail to provide guaranteed performance isolation, which is particularly
+challenging in multi-tenant environments where true resource collaboration is difficult [130]. To
+address the issues mentioned above, researchers have proposed various AI reasoning strategies,
+such as RAG, and fine-tuning.
+— RAG Method and Fine-Tuning: Lotfi et al. [126] proposed the ORAN-GUIDE framework,
+which uses RAG and fine-tuning to address network slicing challenges in Open Radio
+Access Networks (O-RAN).3 The framework’s core is its dual-LLM architecture, which
+decouples domain knowledge generation from task execution. First, a lightweight LLM called
+ORANSight is trained on O-RAN-specific data, such as slicing policies and configuration
+3 https://rimedolabs.com/blog/ml-framework-in-o-ran/
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:18
+
+H. Luo et al.
+
+logs. This model acts as a “domain expert”, receiving structured network state snapshots
+in real-time and dynamically generating technical prompts. This process follows a RAG
+paradigm, aiming at combining learned system knowledge with real-time observational
+data. Next, the prompts generated by ORANSight are fused with learnable prompts and
+input into a fixed, general-purpose GPT model. This GPT model translates these prompts
+into high-level semantic representations, which are used to augment a DRL agent. The DRL
+agent then leverages these representations to guide its decisions on network slicing. This
+framework overcomes the low sample efficiency and weak generalization challenges faced
+by traditional DRL methods in dynamic, high-dimensional O-RAN environments, providing
+a unified approach for intelligent decision-making in complex wireless systems.
+(3) Solutions for Dynamic Routing Selection: Routing is a core challenge in the network layer,
+focused on selecting optimal data transmission paths [131]. The rise of mobile devices and dynamic
+topologies in modern wireless networks creates a need for smarter routing. Traditional protocols
+such as OSPF and BGP, which use static link weights or hop counts, fail to model multi-dimensional
+link quality and struggle with multi-objective optimization [131]. However, routing selection is a
+multi-step problem that can be effectively addressed by CoT reasoning, making it highly suitable
+for optimization using CoT.
+— CoT Reasoning: Djuhera et al. [124] proposed a solution for dynamic routing planning
+in wireless communication. Their approach, called Strategic CoT (SCoT), utilizes CoT to
+decompose complex problems into a series of intermediate reasoning steps: (1) Coarse Path
+Generation. The LLM quickly generates a rough, feasible initial routing based on high-level
+user commands and basic environmental information, intentionally overlooking some finegrained wireless communication constraints. (2) Region-of-Interest Refinement. In this phase,
+the LLM focuses on critical areas within the generated path. By analyzing detailed wireless
+environment data in these regions, it optimizes the routing to avoid areas with poor communication quality while ensuring major performance requirements are met. (3) Fine-Grained
+Optimization. This final stage involves the LLM making more granular adjustments. It considers all remaining complex constraints, such as real-time traffic, energy consumption, and
+latency requirements, to fine-tune the routing path for optimal communication performance
+and resource utilization efficiency. This phased, structured reasoning approach allows SCoT
+to reduce the search space for dynamic planning.
+5.2
+
+Typical Scenarios
+
+(1) Dynamic Service Function Chain (SFC) Mapping in Space-Air-Ground Networks: In
+large-scale SAGIN environments characterized by dynamic topology and heterogeneous resource
+constraints, Graph Pointer Neural Network (GPNN) combined with policy-gradient reinforcement learning have been leveraged to optimize SFC deployment [125]. The GPNN encoder extracts
+spatio-temporal features from the network graph, including node CPU, link bandwidth, and propagation delay, while the RL agent learns a stochastic policy that jointly minimizes end-to-end latency
+and maximizes resource utilization. Notably, the GPNN’s graph-convolution layers enable global
+awareness of inter-satellite and terrestrial links, allowing the agent to adaptively reroute SFCs
+when LEO satellites drift or gateway congestion occurs.
+(2) Enterprise Network Topology and Configuration Co-Pilot: In enterprise campus networks
+where engineers must rapidly respond to intents such as “add three PCs to Lab-3 with full Internet
+reachability”, a multimodal LLM co-pilot named GeNet integrates CoT and RAG to jointly update
+topology diagrams and device configurations [172]. Given a topology image and a natural-language
+intent, GPT-4 Vision first converts the diagram into a structured textual graph, then the system
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:19
+(A) Prompting Strategy
+
+(B) Architectural Approach
+Evaluate Delay Stability
+
+Retrieve
+
+Enhance Context
+Awareness
+
+RAG
+Database
+
+CoT Reasoning
+
+Increase Congestion
+Window
+
+Estimated Available Bandwidth
+
+Reliable Semantic
+Transmission
+
+RTT & Congestion & ACK
+Solve Problems
+
+Knowledge Graph
+
+Step by Step
+
+Effect of Adding Windows
+
+Extension
+
+Build
+
+Selective Compression
+& Preserved Semantics
+
+GNN + KG
+
+Multiple Reasoning
+Branches
+
+ToT Reasoning
+
+Multivariable Reasoning
+Neuro-Symbolic
+AI Reasoning
+
+Map to
+Symbolic Structure
+
+(C) Learning Paradigm
+
+Self-Supervised
+Learning
+
+Cross-Scenario
+Congestion Control
+
+Link Indicators
+RTT
+
+Unlabeled
+Traffic Data
+
+URLLC
+
+Adaptation to Dynamic
+Conditions
+
+Automation
+& Low latency
+
+Contrastive
+Learning
+
+Loss
+
+Scenario
+Semantic Image
+Transmission in 6G Urban
+
+State Classification
+
+Scenario
+
+Delay
+
+……
+
+LLM Semantic Extraction
+Deep Symbolic Regression
+
+No Costly Annotations
+Required
+
+Salient Region Tags
+
+Generalization
+
+Symbol Prioritization
+
+Closed-form
+Window Control
+
+Semantic Fidelity & Efficiency
+
+Steady & Bursty Traffic
+
+Predictive Accuracy
+& Delay Resilience
+
+Fig. 5. AI reasoning methods for the transport layer. (A) Prompting strategies such as CoT and ToT support
+step-by-step and multibranch reasoning [41, 132], enabling adaptive congestion control. (B) Architecturally,
+RAG retrieves historical signals for context [134], neuro-symbolic methods enable symbolic logic inference
+[135], and GNN+KG improves semantic structuring [136]. (C) In learning paradigms, SSL helps models adapt
+to unknown network states [137].
+
+retrieves candidate configuration snippets from a curated Cisco template store. Via explicit CoT
+reasoning “identify switch port exhaustion, propose daisy chain switch, assign new subnet”, GeNet
+generates topology edits and IOS commands that achieve 92% successful re-configuration and 72%
+correct setup of newly added components at low temperature.
+5.3
+
+Lessons Learned
+
+AI reasoning (e.g., CoT, Tool-Use, RAG) overcomes the network layer’s high-dimensional complexity
+and dynamic topology challenges. It outperforms rule-based models in routing adaptability and
+resource allocation accuracy, and paves the way for transport layer performance optimization.
+6
+
+AI Reasoning for Transport Layer
+
+The transport layer ensures end-to-end data scheduling, congestion control, and reliable delivery. It
+directly impacts throughput, stability, and user experience (QoS/QoE). With rising user density
+and diverse service demands, especially in latency-sensitive scenarios such as Multi-access Edge
+Computing (MEC), AR/VR, and industrial IoT, the transport layer must intelligently coordinate
+upper-layer requirements with fluctuating lower-layer link conditions. The wireless transport layer
+exhibits distinct characteristics that make it well-suited for AI reasoning-based optimization. First,
+it involves strong temporal dependencies and causal chains, with decisions heavily influenced
+by sequential feedback such as Round-Trip Time (RTT), Acknowledge character (ACK)
+timing, and packet loss [132]. Second, the layer operates under high dynamics, with link quality
+and bandwidth fluctuating frequently, which limits the effectiveness of static strategies. Lastly,
+decision-making in this context requires the fusion of multi-source data across layers, and the
+ability to generalize across various topologies and deployment contexts [133]. These features define
+the transport layer as a complex sequential decision task, making it highly compatible with AI
+reasoning. Figure 5 illustrates AI reasoning methods applied to the transport layer.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:20
+6.1
+
+H. Luo et al.
+
+AI Reasoning Solutions
+
+(1) Solutions for Congestion Control: Congestion control has become a critical issue in wireless
+environments with the advent of 5G and 6G, driven by increasing user density, traffic volume, and
+pressure on limited bandwidth resources [138]. Dynamic traffic patterns and unpredictable channel
+conditions necessitate mechanisms that balance link utilization and packet loss to ensure energy
+efficiency and reliable delivery [139]. Traditional algorithms, such as standard TCP, struggle in these
+environments, as they assume stable conditions, fail to estimate available bandwidth effectively,
+and react slowly to changes. This often results in high latency, packet loss, reduced throughput, and
+inefficient resource utilization, as demonstrated by studies comparing TCP performance in wireless
+channels [140, 141]. To overcome these limitations, researchers have directed efforts toward AI
+reasoning paradigms tailored to transport-layer adaptation. This emerging direction encompasses
+methods such as CoT and ToT reasoning, along with neuro-symbolic reasoning, all of which
+introduce structured mechanisms for more effective congestion control.
+— CoT and ToT reasoning: CoT and ToT reasoning support interpretable decision-making
+in dynamic transport environments. CoT enables LLMs to analyze time-series metrics such
+as RTT and packet loss in a sequential manner, breaking down complex actions, such as
+congestion window adjustment, into logical steps [132]. ToT further enhances this capability
+by evaluating multiple control strategies in parallel, including aggressive pacing, conservative pacing, and adaptive variations, and then selecting the most appropriate one based
+on simulated utility scores [41]. These structured reasoning processes are consistent with
+transport protocol design and significantly improve responsiveness to wireless conditions.
+— Neuro-Symbolic AI Reasoning: It integrates symbolic logic and neural representations
+to model packet behaviors, such as retransmissions, queue buildup, and ACK delays [135].
+Specifically, this method begins by training a reinforcement learning policy tailored to
+congestion control in front-haul networks. Experience in the form of state-action pairs is then
+collected from this baseline policy, and deep symbolic regression is applied to the gathered
+dataset. This process results in closed-form expressions that approximate the performance
+of the baseline policy, such as link utilization, delay, and fairness, and these expressions
+can be directly implemented in any programming language, overcoming limitations during
+inference. The integration of neuro-symbolic AI offers a novel approach to congestion control
+in wireless networks, balancing performance, interpretability, and deployment efficiency.
+(2) Solutions for End-to-End Reliability and Latency Guarantee: Modern wireless systems
+must support mission-critical applications such as industrial automation, remote healthcare, and
+vehicular communications, which demand ultra-high reliability and extremely low latency, making
+URLLC a cornerstone of 6G services [142]. Traditional model-based approaches, while analytically
+tractable, rely on idealized assumptions that often fail under real-world wireless conditions [138]. Existing transport protocols, including TCP, Quick UDP Internet Connections (QUIC), and Hybrid
+Automatic Repeat Request (HARQ), exhibit inherent limitations: TCP prioritizes throughput
+over latency, QUIC lacks adaptability to dynamic radio environments, and HARQ’s reliance on
+retransmissions introduces variable delays that hinder reliability guarantees [133, 143]. Operating
+within static, rule-based frameworks, these protocols cannot dynamically adapt to bursty traffic,
+fluctuating channels, or stringent timing constraints, leaving them ill-suited for URLLC scenarios.
+To address these shortcomings, recent research has turned to AI reasoning approaches for adaptive
+reliability and latency control. These approaches encompass methods, such as Self-Supervised
+Learning (SSL), which enable responsive and explainable adaptation in URLLC scenarios.
+— Self-Supervised Learning: It has emerged as a pivotal technique in wireless networks to
+address challenges related to end-to-end reliability and latency guarantees. By leveraging
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:21
+unlabeled traffic data, SSL models can discern subtle patterns in network behavior, enhancing
+the system’s ability to adapt to dynamic conditions without the need for extensive labeled
+datasets [137]. By distinguishing stable from unstable network states, these models improve
+generalization to unseen channel fluctuations or congestion bursts. This capability is crucial
+for maintaining predictive accuracy and delay resilience in real-time low-latency applications,
+such as autonomous driving or industrial automation, where timely and reliable communication is paramount. The ability to learn from unlabeled data eliminates the need for costly
+annotations and accelerates the deployment of adaptive communication systems, making
+SSL an efficient solution for dynamic wireless environments.
+(3) Solutions for Semantic Communication: Semantic communication has emerged as a key
+enabler for future wireless networks by transmitting not only raw data but also the underlying
+intent and contextual meaning, thereby reducing redundancy, improving resource allocation, and
+supporting intelligent interaction in dynamic environments [144, 145]. As 6G systems approach the
+limits of conventional modulation, coding, and compression, particularly under strict reliability and
+latency constraints, semantic communication offers a path to enhanced efficiency and situational
+awareness. However, existing methods often restrict semantics to predefined label sets, neglecting
+implicit or unstructured meaning [146], while traditional machine learning frameworks struggle
+with scalability and contextual reasoning in complex, dynamic settings [147]. Addressing these
+gaps is critical for building flexible, robust, and reasoning-aware semantic communication systems.
+To tackle these limitations, researchers have investigated AI reasoning approaches for semantic
+communication. These include RAG and KG-based reasoning with GNNs, both of which enhance
+contextual understanding and adaptability in dynamic wireless environments.
+— RAG Method: RAG enhances semantic communication by combining parametric and nonparametric memory. This integration allows models to retrieve external knowledge, such
+as semantic structures or domain-specific ontologies, during both encoding and decoding.
+In wireless communication, RAG helps optimize transmission strategies by referencing
+previous encoding methods that maintained object recognizability under similar network
+conditions. This retrieval mechanism improves contextual relevance and enables adaptive,
+history-aware transmission, enhancing the reliability and quality of communication under
+dynamic channel conditions. For instance, during video transmission over unreliable links,
+RAG’s ability to reference past successful strategies ensures efficient encoding and minimizes
+packet loss, even in fluctuating environments [134]. By integrating retrieval-based strategies
+with generation, RAG ensures that transmitted data aligns with user intent and network
+dynamics, offering a scalable and efficient approach to semantic communication in wireless
+networks.
+— KG-GNN: GNNs combined with domain-specific KGs provide a powerful framework for
+semantic dependency reasoning within transmitted content. When applied at the transport
+layer, it can model inter-entity relationships such as temporal causality, spatial containment, or functional relevance. For example, in a real-time surveillance video, the GNN can
+identify that the presence of a person near a door is more semantically important than
+background motion. The model then prioritizes the transmission of features related to these
+entities, guided by KG-based reasoning [136]. This selective compression and transmission
+process preserves the semantic integrity of the content while reducing spectral overhead,
+and is particularly suited for 6G applications involving multimodal, real-time semantic
+flows.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:22
+6.2
+
+H. Luo et al.
+
+Typical Scenarios
+
+(1) Cross-Scenario Congestion Control: In heterogeneous wireless environments such as 5G, WiFi, and satellite communications, neuro symbolic reasoning has been applied to enable interpretable
+and generalizable congestion control strategies. By modeling the relationship between key link
+performance indicators such as RTT, packet loss rate, and queuing delay, and the resulting transmission behavior, deep symbolic regression methods can automatically derive closed-form control
+expressions for window adjustment [135]. These symbolic expressions are directly deployable on
+network nodes, providing transparent and lightweight decision-making across diverse transport
+scenarios. The neuro-symbolic framework integrates neural representation learning with symbolic
+logic, allowing the system to adapt to varied network conditions while preserving interpretability.
+This approach has demonstrated superior steady-state performance and responsiveness to burst
+traffic compared with traditional TCP variants and reinforcement learning-based methods. It is
+particularly well suited for large-scale deployments involving edge devices and mobile terminals,
+where low complexity and adaptive congestion control is essential.
+(2) Semantic Image Transmission in Urban Macrocell Environments: In 6G urban macrocell
+scenarios, real-time image transmission is constrained by limited uplink bandwidth and variable
+channel conditions. A recent semantic communication framework integrates LLMs with neurosymbolic reasoning to enhance transmission efficiency and robustness [148]. While semantic
+extraction occurs at the application layer, the transport layer adjusts the redundancy of symbolic
+representations based on real-time link metrics such as SNR and subcarrier quality. This enables
+adaptive compression and symbol prioritization tailored to network conditions. Neuro-symbolic
+reasoning supports interpretable transport decisions by selecting essential semantic entities and
+structuring them into compressible symbolic formats, while neural components provide generalization across channel dynamics. The system achieves compression ratios over 4250 to 1, with better
+semantic reconstruction than traditional methods. This approach highlights how AI reasoning can
+guide adaptive scheduling and redundancy control in the transport layer, ensuring semantic fidelity
+and efficiency under bandwidth-constrained wireless environments.
+6.3
+
+Lessons Learned
+
+AI reasoning (e.g., CoT, Neuro-Symbolic AI, SSL) addresses the transport layer’s temporal dependency and dynamic link challenges. It outperforms traditional transmission protocols in congestion
+control and latency, and lays a foundation for application layer QoS/QoE improvement.
+7
+
+AI Reasoning for Application Layer
+
+As the top layer of the communication stack, the application layer connects users and services,
+serving as the final gateway for delivering network value. Beyond data presentation and user
+interaction, it plays an active role in content control, quality of experience modeling, and task
+scheduling. The application layer exhibits distinct characteristics, such as semantic complexity
+in functions like compression, summarization, and task scheduling, which require a deep understanding of user behavior, multimodal inputs, and content structure. Additionally, operational
+heterogeneity arises from managing diverse application types, device capabilities, and service
+demands. Dynamic adaptability is crucial to adjust to changes in user intent, device status, and
+network feedback. These challenges make static rule-based systems and shallow learning techniques inadequate [149]. AI reasoning methods, such as LLM agents, neuro-symbolic inference, and
+self-supervised reinforcement learning, offer the necessary capabilities for intelligent and contextaware application-layer control. Figure 6 illustrates AI reasoning methods for the application
+layer.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:23
+(A) Prompting Strategy
+
+(C) Learning Paradigm
+Learned Policy & Outcome
+
+Contextual
+Reasoning
+
+Cache Replacement
+Policy
+
+DRL Agent
+
+Cache Hit
+Latency
+
+Implicit Causal
+Model
+
+Causal Reasoning
+Agent (PPO)
+
+Task Scheduling
+& Offloading
+
+LLM + Prompting
+
+Multi-node
+Coordination
+
+Feedback
+Reward & Effect
+
+Adaptive Bitrate
+Control
+Optimized QoE
+
+Task Decomposition
+
+Unlabeled
+Traffic Data
+
+Scenario
+
+Contrastive Learning
+
+Visual
+Input
+
+Device Logs
+Edge-Assisted
+Driving Networks
+
+Self-Supervised
+Learning
+
+Output
+
+Learning Scheduling
+Strategies
+
+Motion
+
+Structured Inputs
+
+(B) Architectural Approach
+
+Behavior
+Prediction
+
+User Requests
+
+Semantic Understanding
+& Decision Making
+
+Contextual Data
+
+Scenario
+Knowledge Graph
+
+Build
+
+Adaptive Scheduling
+in Edge Intelligence
+
+No Labels or Rewards
+Needed
+
+Enhances Stability
+& Adaptation
+
+Historical Policy
+Distillation
+
+SSL Framework
+
+Semantic-Aware
+Clustering
+
+GNN + KG
+
+Scenario
+Access Frequency
+
+Multi-Edge
+Wireless Networks
+
+Capture
+Features
+
+Demand
+Forecasting Content
+Requirements
+
+Preference Similarity
+
+Spatiotemporal Locality
+KG
+
+GNN
+
+Trend
+
+Temporal Pattern
+Learning
+
+Real-Time Scheduling
+& Resource
+
+Device
+Behavior
+
+Fig. 6. AI reasoning methods for the application layer. (A) Prompting strategies, such as contextual reasoning,
+support context-aware decision making [150, 151], enabling semantic reasoning in caching and edge intelligence. (B)Architecturally, KG-GNN captures spatiotemporal and preference relations [152], while structured
+inputs and multimodal fusion support real-time behavior understanding. (C) In learning paradigms, SSL
+enhances adaptability and scheduling stability in dynamic environments [153], while causal reasoning truly
+shapes user experience over time [154].
+
+7.1
+
+AI Reasoning Solutions
+
+(1) Content Distribution and Caching: With the increasing demand for bandwidth-intensive
+services like video streaming, AR/VR, and immersive communications, modern wireless networks
+face challenges in content availability, speed, and reliability. Edge caching has become a key solution
+to reduce dependence on centralized servers and alleviate backhaul congestion, ensuring lowlatency access near users [152]. However, traditional methods such as heuristic and optimizationbased strategies struggle with scalability or high computational costs, limiting their real-time use
+[152]. Fixed-rule caching policies also fail to adapt to dynamic user behavior and spatiotemporal
+content shifts, and lack semantic awareness, making it difficult to account for popularity trends,
+user intent, and contextual relevance [149, 155]. To address these challenges, AI reasoning has
+been introduced, enabling semantic-aware scheduling, mobility-aware content migration, and
+collaborative prefetching based on learned patterns [156]. Such methods enable semantic-aware
+scheduling, mobility-aware content migration, and collaborative prefetching based on learned
+patterns. These solutions leverage advanced techniques as follows:
+— KG-GNN: A reasoning approach based on GNN and KGs has been proposed to enhance
+cooperative caching in MEC-enabled wireless systems. The system constructs a KG that
+captures semantic relationships among users, content, and edge locations, incorporating
+features such as access frequency, preference similarity, and spatiotemporal locality [152].
+GNN operates on this structured representation to infer latent user-content affinities and
+predict future content demand across edge regions. By embedding user behavior and content
+metadata into graph nodes, the model enables semantic-aware content clustering, proactive
+replication, and collaborative cache prefetching. This graph-based reasoning improves caching
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:24
+
+H. Luo et al.
+
+coordination, ultimately enhancing content availability and reducing latency in dynamic and
+heterogeneous wireless environments.
+— Contextual Reasoning: Adaptive Contextual Caching (ACC) method is introduced as
+a solution to optimize content caching in mobile-edge LLMs. In mobile-edge LLM services,
+ACC utilizes DRL to dynamically optimize cache replacement policies [43]. By considering
+factors such as semantic similarity, user behavior, and the frequency of content updates, the
+ACC framework proactively determines what to cache and when to replace cached content.
+For example, in scenarios like autonomous driving, where the edge LLM needs to respond
+to real-time queries, ACC predicts and stores traffic or legal data based on previous user
+interactions, reducing retrieval latency and computational overhead.
+(2) Distributed Applications Collaboration: In edge intelligence, industrial automation, and the
+IoT, distributed devices must collaboratively handle tasks like real-time sensing, multimodal fusion,
+and task offloading. These tasks are often heterogeneous and dynamic, with varying user preferences
+and service demands. Without intelligent coordination, systems face degraded performance and
+inefficient resource use [150]. Traditional heuristic-based scheduling methods emphasize local
+optimization but lack global perspective, limiting their ability to support multi-device collaboration
+under dynamic workloads [157]. They often ignore user intent, context, and semantic dependencies,
+resulting in poor generalization and suboptimal resource allocation. These challenges underscore
+the need for AI reasoning frameworks that incorporate logic inference, contextual awareness, and
+task decomposition to support scalable and adaptive scheduling in distributed wireless systems. To
+address these challenges, recent research has proposed several AI reasoning methods for distributed
+applications collaboration. These methods include contextual reasoning, both of which enhance
+coordination efficiency and task allocation across distributed devices.
+— Contextual Reasoning: In-context generation reasoning enables LLM-based agents to adapt
+to dynamic task offloading scenarios without requiring parameter fine tuning. Rather than
+learning fixed policies, the model receives context rich prompts that encode task attributes,
+service demands, network load, and device capabilities, then generates scheduling or placement decisions accordingly [150]. This method belongs to the prompting strategy category
+and leverages the LLM’s latent reasoning ability to decompose high level task specifications
+into executable actions. It is particularly suitable for edge cloud environments where workload patterns and service types are highly variable. By interpreting prompts that resemble
+historical offloading traces, the model can dynamically align its decisions with real time
+system conditions. In the context of distributed applications collaboration, this reasoning
+paradigm enhances coordination efficiency and responsiveness by enabling prompt based,
+context aware decision making across multiple edge and cloud nodes.
+(3) Appropriate Perception of QoE: Application-layer services like video conferencing, online
+gaming, and AR/VR are highly sensitive to user-perceived QoE, which is influenced by factors
+such as delay, bandwidth variation, compression quality, and scene complexity [158]. However,
+QoE modeling is challenging due to the variability of user satisfaction across different contexts.
+Traditional methods, including heuristics and regression, assume simple linear relationships and
+fail to capture the complex interactions among visual, auditory, and behavioral signals. These
+models struggle with the high-dimensional, dynamic nature of QoE. Furthermore, conventional
+scheduling policies like Buffer Based (BB), Buffer Occupancy-based Lyapunov Algorithm
+(BOLA), and Rate-based (RB) often lack semantic awareness, leading to poor adaptability and
+inaccurate predictions [153, 154]. These issues highlight the need for advanced reasoning methods
+that can interpret multimodal semantics and user preferences in a context-aware manner. To address
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:25
+these challenges, recent approaches leverage AI reasoning frameworks to enhance QoE perception,
+with causal reasoning offering promising solutions.
+— Causal Reasoning: In dynamic control systems, causal reasoning involves learning the
+consequences of interventions to steer the system toward a desired state. This principle is
+powerfully demonstrated in adaptive bitrate streaming. Here, an agent implementing the PPO
+method must reason about how its decisions will causally affect future Quality of Experience
+or QoE [154]. The agent performs a series of interventions by selecting a bitrate based on
+observed conditions like network bandwidth and playback buffer. The critical step is learning
+the cause-and-effect relationship by understanding how a specific bitrate choice impacts
+subsequent QoE metrics like video smoothness and rebuffering duration. Its key advantage
+in addressing the appropriate perception of QoE challenge is that the resulting policy moves
+beyond simple metric correlation to embody a deep, context-aware understanding of how
+control actions truly shape user experience over time.
+7.2
+
+Typical Scenarios
+
+(1) Multi-Edge Caching Networks: In MEC enabled heterogeneous wireless networks, collaborative caching among edge nodes plays a critical role in improving content availability and reducing
+access latency. This is especially important in scenarios such as video-on-demand and real-time
+news dissemination, where content popularity shifts dynamically and user requests are spatially
+distributed. A recent approach combines KG-based semantic reasoning with deep reinforcement
+learning to support intelligent caching coordination [152]. The system constructs a KG representing
+relationships among users, content, and edge nodes, encoding factors such as access frequency,
+user preferences, and spatial locality. Based on this structured representation, a Dueling DQN
+agent learns content migration and replacement strategies by interacting with the graph over
+time. This reasoning framework enables edge nodes to share caching states, reason over content
+semantics, and jointly optimize storage usage, highlighting the effectiveness of graph-based and
+learning-driven reasoning in application-layer edge intelligence.
+(2) Edge-Assisted Driving Networks: In application layer scenarios involving intelligent driving
+and vehicular services, systems must interpret real-time behavior and environmental dynamics
+beyond data transmission.4 A reasoning framework based on LLMs with multimodal prompting has
+been proposed to support edge-side behavior understanding and semantic decision-making. This
+approach deploys LLMs on roadside edge units (RSUs), where models receive structured inputs
+combining visual, motion, and contextual data from cameras and radar sensors [151]. Using prompts
+that encode environment, objects, and actions, the LLM performs real-time reasoning to narrate
+driving behaviors. This enables a closed-loop system where inference and interaction occur locally,
+reducing reliance on cloud resources and improving latency. The method has proven effective
+in autonomous driving, traffic monitoring, and assisted decision making, where low latency and
+interpretability are essential. Contextual prompting with LLM reasoning enhances adaptability to
+diverse traffic contexts and supports semantic services at the edge.
+7.3
+
+Lessons Learned
+
+AI reasoning (e.g., Contextual Reasoning, KG-GNN, Causal Reasoning) tackles the application
+layer’s semantic complexity and heterogeneous service challenges. It outperforms static rule-based
+methods in content caching efficiency and collaborative scheduling adaptability.
+4 https://www.huaweiupdate.com/5g-and-6g-development-roadmaps-huaweis-vision-for-the-future/
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:26
+
+H. Luo et al.
+
+(A) Prompting Strategy
+
+(B) Architectural Approach
+
+Step by Step
+
+Knowledge Base
+
+Infer the Threat
+Component
+
+CoT Reasoning
+
+Infer Attack Stages
+
+Attack Patterns
+Retrieve
+
+RAG
+
+Input
+
+Canning
+Behavior
+Network Logs
+
+Privilege
+Escalation
+
+Support Analysis
+of Attacks
+
+Historical Anomalies
+
+Lateral
+Movement
+
+CVE Descriptions
+
+Alerts
+Interaction Modeling
+
+Different Threat
+Assumption Paths
+Consider
+
+Identify Threats &
+Device Authentication
+
+GNN + KG
+Branching-Based
+Reasoning
+
+ToT Reasoning
+Various of
+Aggressive Behavior
+
+Neuro-Symbolic
+AI Reasoning
+
+Neural
+Encoding
+
+Transform to
+Symbolic Graph
+
+(C) Learning Paradigm
+
+SSL-Causal
+Reasoning
+
+Causal Graphs
+
+Without Requiring
+Adversarial Labels
+
+Identify Abnormal
+Causal Pathways
+
+Scenario
+
+Adversarial Defense
+in AI Systems
+
+Scenario
+
+Causal
+Dependency Shift
+
+Identify Abnormal
+Pathway
+
+Dynamic Wireless
+Networks
+
+Convert to
+Symbolic Graphs
+
+Semantic
+Representation Module
+
+Detect Behavioral
+Anomalies
+
+Adversarial
+Behavior Detection
+
+Generates Diagnostic
+Hypotheses
+
+Neural Reasoning
+
+Causal Graph
+Construction
+
+Complex Intelligence
+Analysis
+
+Scenario
+Wireless Data
+Centers
+
+Flow Graph
+Construction
+Counterfactual
+Information
+
+LLM
+
+LLM Agent
+
+Extract Latent
+Threat Embeddings
+Zero-Day
+Threat Detection
+
+Verification
+& Analysis
+
+Neuro-Symbolic
+
+Fig. 7. AI reasoning methods for security. (A) Prompting strategies such as CoT support multi-step and branching inference for threat reconstruction [159]. (B) Architecturally, Neuro-Symbolic AI Reasoning integrates
+symbolic logic with neural encoding for fault analysis [160], and GNN+KG structures enable threat-aware
+authentication and topology reasoning [161, 162], while RAG enhances anomaly interpretation via threat
+knowledge retrieval [163]. (C) In learning paradigms, self-supervised causal reasoning supports robust adversarial detection without labels [164], enabling explainable and generalizable defense in dynamic environments.
+
+8
+
+AI Reasoning for Communication Networks Security
+
+The security spans all layers and ensures trust through functions such as threat detection, authentication, and encryption. With the development of 5G and 6G toward cloud-based, edge-aware,
+and decentralized designs, security threats have become more complex and faster to spread. As a
+result, security is no longer passive protection but a core enabler of system reliability, especially
+in multi-tenant, edge-intensive, and IoT-rich networks. The security layer in dynamic wireless
+environments faces several challenges. Topology changes and evolving attack surfaces create
+instability, weakening traditional defenses. Limited observability from edge devices and signal
+corruption increases uncertainty. Adaptive adversaries take advantage of static policies, requiring
+more predictive and flexible responses. Additionally, multi-source and cross-layer correlations
+add complexity beyond the capabilities of rule-based methods [160, 164]. AI reasoning offers a
+promising solution by enabling logical inference, causal analysis, real-time adaptation, and robust
+decision-making under uncertainty. Figure 7 shows AI reasoning methods for communication
+networks security.
+8.1
+
+AI Reasoning Solutions
+
+(1) Threat Detection and Situation Awareness: With the expansion of 6G networks, cyberattacks
+have become more frequent, stealthy, and complex. Evolving threats such as data exfiltration and
+protocol-aware attacks pose serious risks to network integrity and availability [161]. Effective
+detection requires modeling of temporal, semantic, and relational features beyond simple traffic
+classification. Traditional IDS systems depend on predefined signatures or labeled datasets, limiting
+their ability to detect novel or structurally complex attacks. They also lack interpretability, reducing
+analyst trust in decisions [163]. Many Network Intrusion Detection Systems (NIDS) approaches
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:27
+ignore network flow topology, despite its role in distinguishing normal from malicious behavior
+[161]. Moreover, fixed architectures struggle with dynamic threat contexts due to limited adaptability
+to semantic variations [165]. Recent research has introduced AI-driven reasoning methods to tackle
+these challenges, including CoT reasoning and RAG techniques.
+— CoT Reasoning: CoT prompting enables LLMs to conduct multistage reasoning over network
+logs and anomalous traffic, thereby supporting the reconstruction of intrusion events. It
+sequentially infers threat components such as scanning behavior, privilege escalation, and
+lateral movement based on input indicators of compromise. This structured prompting
+enhances interpretability and facilitates transparent incident triage and forensics analysis
+[159]. This reasoning approach addresses the challenge of identifying stealthy and evolving
+threats by modeling multi-step attack paths and supporting explainable detection outcomes
+that are difficult to achieve with static classifiers.
+— RAG Method: RAG combines pretrained neural models with external threat intelligence
+bases to generate contextualized explanations for alert events. When applied to intrusion
+detection systems, RAG enables the model to retrieve related attack patterns, historical
+anomalies, or CVE descriptions that clarify why a certain flow or session was classified as
+malicious [163]. This method supports dynamic threat interpretation and augments lowconfidence detections with semantic context, thereby improving situational awareness and
+supporting analysts in responding to novel or ambiguous attacks.
+(2) Complex Intelligence Analysis: Modern 5G and 6G wireless networks are highly cross-layer
+and multimodal, requiring security operation centers to process heterogeneous data such as logs,
+traffic records, and user behavior for effective threat analysis. The rapid growth of sensor-equipped
+devices further increases the complexity of security tasks. While Artificial Intelligence for
+IT Operations (AIOps) offers automation potential, current models depend on domain-specific
+training and labeled data, which are often limited [160]. Transferring models across deployments
+incurs overhead due to inconsistent data formats and behavior patterns. Analysts also struggle with
+fragmented inputs and lack multi-step reasoning tools, resulting in slow responses and frequent
+false alarms. To address these issues, neuro-symbolic AI reasoning frameworks have emerged as a
+promising solution. One such approach is:
+— Neuro-Symbolic AI Reasoning: This framework integrates neural encoding of heterogeneous telemetry with symbolic rule evaluation for cross-domain fault analysis. In this
+architecture, network metrics such as topology states and protocol anomalies are transformed
+into symbolic graphs, and a LLM generates diagnostic hypotheses which are verified through
+logic-based policy constraints [160]. This method addresses the challenge of complex intelligence analysis by enabling automated reasoning across modalities and systems, supporting
+interpretable fault localization in dynamic wireless infrastructures.
+(3) Equipment Certification and Trust Management: In 6G-based IoT and edge systems, the
+rapid growth of heterogeneous devices makes trust management increasingly complex. Common
+issues include device impersonation, weak inter-node trust, and excessive authentication overhead
+in dynamic environments. Traditional methods such as certificate-based verification and shared
+key encryption lack flexibility and fail to support real-time evaluation. Frequent and large-scale
+device access demands intelligent assessment of both identity and behavior. However, cloud-centric
+frameworks introduce latency, and without historical or contextual reasoning, trust estimation
+remains inaccurate and prone to misclassification [162]. To address these challenges, recent advancements have turned to distributed reasoning frameworks, particularly those leveraging KG
+completion, to enhance trust management in dynamic environments.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:28
+
+H. Luo et al.
+
+— KG-GNN: A distributed reasoning framework that trusts relationships among users, devices,
+and access policies using edge-deployed KGs. The system encodes behavioral records and interaction logs into structured representations, and applies lightweight completion algorithms
+to infer missing or ambiguous trust states [162]. This approach reduces misclassification and
+enhances real-time trust evaluation by enabling interpretable and low-overhead identity
+verification across dynamic wireless topologies.
+(4) Attacks on AI systems: AI models in communication systems are increasingly exposed
+to attacks such as adversarial examples, data poisoning, and model extraction. Their closed -box
+nature makes them vulnerable to subtle input perturbations that can mislead outputs without
+human-detectable changes [15]. Although most adversarial attacks are white-box, transferability
+enables them to be effective in closed -box settings as well [166], leading to critical errors in
+modules like scheduling and intrusion detection. Existing defense techniques like gradient masking
+and adversarial training are mostly vision-oriented. While adversarial training improves targeted
+robustness, it often reduces accuracy on clean data and remains weak against unseen closed -box
+attacks, especially in communication domains [164]. These methods also lack causal interpretability,
+limiting their ability to detect or explain attacks. To address these shortcomings, recent research
+has focused on introducing causal reasoning frameworks, which provide more robust defense
+mechanisms. Among these, causal inference-based reasoning methods have emerged as dominant
+approaches, enabling the detection of adversarial inputs and ensuring the reliability of AI systems.
+— Causal Reasoning: CausAdv applies causal inference principles to detect adversarial attacks by analyzing whether input perturbations influence core semantic features in neural
+activations. It builds causal graphs over filter-level outputs and uses counterfactual analysis to identify abnormal causal pathways without requiring adversarial labels [164]. This
+reasoning framework addresses the challenge of AI-targeted attacks by enabling robust, generalizable detection of imperceptible adversarial inputs, ensuring the reliability of AI-driven
+communication modules under adversarial conditions.
+8.2 Typical Scenarios
+(1) Zero-Day Threat Detection in Wireless Data Centers: In wireless-enabled data center environments, zero-day threats (ZDTs) pose significant challenges due to their unknown signatures
+and dynamic propagation characteristics. Traditional signature-based methods often fail to detect such novel attacks, resulting in blind spots and delayed response. An architecture leverages
+a dual-autoencoder neural reasoning combined with graph-structured data to enable real-time
+ZDT detection [167]. It constructs flow graphs from network traffic probes and asset topology,
+encoding inter-device and service port relationships. The first autoencoder identifies behavioral
+anomalies, while the second detects novel threat patterns using latent embeddings. This reasoning
+architecture supports cross-layer traffic analysis, causal anomaly inference, and interpretable threat
+classification. Its ability to capture causal interactions and structural deviations enables timely and
+accurate detection of ZDTs in wireless data centers.
+(2) Semantic Fault Diagnosis in Dynamic Wireless Networks: In dynamic wireless environments such as urban mobile networks and edge-enabled infrastructures, fault diagnosis becomes
+increasingly challenging due to diverse and unlabeled failure patterns. Traditional rule-based and
+signature-driven systems often fail to adapt to unseen faults or changing topologies. A framework
+introduces a neuro-symbolic reasoning approach that integrates LLMs with symbolic logic for
+semantic-aware fault diagnosis across multiple networks [160]. The system first uses a network
+semantic generation module to transform heterogeneous telemetry data, such as traffic patterns,
+topology states, and performance indicators, into unified symbolic semantic representations. The
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:29
+LLM agent then generates diagnostic hypotheses and verifies them through symbolic reasoning
+rules. This iterative neuro-symbolic architecture enables plug-and-play deployment without retraining, allowing fast adaptation to new domains and topologies. It significantly enhances explainability
+and adaptability in cross-domain network fault detection.
+8.3
+
+Lessons Learned
+
+AI reasoning (e.g., CoT, RAG, Causal Reasoning) addresses the security layer’s dynamic threat
+and adapts to adversary challenges. It outperforms traditional static defense in threat detection
+accuracy and anti-attack robustness, and ensures the reliability of full-layer network operations.
+9
+9.1
+
+Practical Deployment and Evaluation of AI Reasoning
+Practical Technique Selection Guide
+
+As illustrated in Table 3 in Appendix A, we provide a practical technical selection guideline for
+reasoning methods in wireless networks. The detailed content is shown in Appendix A.
+9.2
+
+Comparisons with Classical Methods
+
+To highlight the advantages of AI reasoning over traditional approaches in wireless scenarios, we
+conduct a systematic comparison across different network layers and the security domain. The
+detailed content is shown in Appendix B.
+9.3
+
+Research Toolkit
+
+This toolkit integrates open-source tools, code libraries, and deployment frameworks to support
+the implementation of the AI reasoning. The detailed components are shown in Appendix C.
+9.4
+
+Ablation and Deployment Cost Analysis
+
+We select five AI reasoning methods and conduct an ablation study and cost test in wireless. The
+detailed content is shown in Appendix D. The preliminary results can quantify and compare to
+evaluate the performance gains and deployment costs of mainstream AI reasoning methods in
+typical wireless communication tasks. This not only provides empirical support for the practical
+technique selection guide in Section 9.1, but also fills the gap in existing reviews that lack unified
+quantitative comparisons.
+9.5
+
+Limitations and Practical Barriers
+
+AI reasoning-enabled LLMs demonstrate significant potential to address long-standing challenges
+in wireless network optimization and management. However, their real-world deployment faces
+practical constraints. This part provides a discussion of the core barriers to widespread industry
+adoption. It is shown in Appendix E.
+10 Future Research Directions
+10.1 Agentic AI Reasoning
+The increasing complexity of future wireless networks drives demand for autonomous LLM-based
+agents that can execute real-time network management without constant human oversight. The core
+research direction is to build agent systems that integrate reasoning with action via frameworks like
+CoT and ReAct, enabling adaptive, proactive network orchestration through multi-step planning
+and closed-loop environmental interaction.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:30
+10.2
+
+H. Luo et al.
+Data-Efficient Learning and Generalization
+
+The scarcity of domain-specific labeled training data in wireless environments remains a key
+bottleneck for AI reasoning deployment. Future research should focus on leveraging the in-context
+learning capabilities of LLMs to enable few-shot/zero-shot adaptation to diverse wireless scenarios,
+reducing reliance on large annotated datasets while improving out-of-distribution generalization.
+10.3
+
+Efficient Deployment and Collaboration of Large Models
+
+The high resource overhead of advanced reasoning models poses challenges for wireless edge
+deployment. Future work should explore workload partitioning and hierarchical edge-cloud collaborative reasoning architectures, which are tailored to the latency heterogeneity of 6G networks.
+Its core principle revolves around edge-side early reasoning and candidate scoring, paired with
+cloud-side heavy planning and global synthesis.
+10.4
+
+Safe and Reliable AI Reasoning
+
+Reliability and trustworthiness are critical for AI reasoning in mission-critical wireless communication systems. The core research priority is to mitigate LLM hallucinations and cascading logical
+errors in multi-step reasoning, while developing verifiable, interpretable reasoning frameworks
+with uncertainty quantification to ensure operator trust and system robustness.
+11
+
+Conclusion
+
+This survey comprehensively reviewed the emerging role of AI reasoning in next-generation wireless
+communications and networks. We systematically categorized reasoning-aware AI techniques into
+prompting, architectural, and learning paradigms, and examined their layered applications from
+the physical layer up to security. The survey reveals that traditional closed -box AI struggles
+with dynamic environments, interpretability, and generalization. In contrast, AI reasoning offers
+transparent, step-by-step decision-making, seamless integration of domain knowledge, and robust
+adaptation to unseen conditions. Looking forward, four key research directions are identified. By
+bridging AI and communications perspectives, this survey charts a practical path toward cognitive,
+self-driving future networks that continuously reason, learn, and optimize in real-time.
+References
+[1] Qimei Cui, Xiaohu You, Ni Wei, Guoshun Nan, Xuefei Zhang, Jianhua Zhang, Xinchen Lyu, Ming Ai, Xiaofeng Tao,
+Zhiyong Feng, Ping Zhang, Qingqing Wu, Meixia Tao, Yongming Huang, Chongwen Huang, Guangyi Liu, Chenghui
+Peng, Zhiwen Pan, Tao Sun, Dusit Niyato, Tao Chen, Muhammad Khurram Khan, Abbas Jamalipour, Mohsen Guizani,
+and Chau Yuen. 2025. Overview of AI and communication for 6G network: Fundamentals, challenges, and future
+research opportunities. Science China Information Sciences 68, 7 (2025), 171301.
+[2] Ruijin Sun, Nan Cheng, Changle Li, Wei Quan, Haibo Zhou, Ying Wang, Wei Zhang, and Xuemin Shen. 2025. A
+comprehensive survey of knowledge-driven deep learning for intelligent wireless network optimization in 6G. IEEE
+Communications Surveys & Tutorials 28 (2025), 1099–1135.
+[3] Qian Mao, Fei Hu, and Qi Hao. 2018. Deep learning for intelligent wireless networks: A comprehensive survey. IEEE
+Communications Surveys and Tutorials 20, 4 (2018), 2595–2621.
+[4] Haoxiang Luo, Xiangyue Yang, Hongfang Yu, Gang Sun, Bo Lei, and Mohsen Guizani. 2023. Performance analysis
+and comparison of nonideal wireless PBFT and RAFT consensus networks in 6G communications. IEEE Internet of
+Things Journal 11, 6 (2023), 9752–9765.
+[5] Haoxiang Luo, Yifan Wu, Gang Sun, Hongfang Yu, and Mohsen Guizani. 2024. ESCM: An efficient and secure
+communication mechanism for UAV networks. IEEE Transactions on Network and Service Management 21, 3 (2024),
+3124–3139.
+[6] Haoxiang Luo, Gang Sun, Cheng Chi, Hongfang Yu, and Mohsen Guizani. 2025. Convergence of symbiotic communications and blockchain for sustainable and trustworthy 6G wireless networks. IEEE Wireless Communications 32, 2
+(2025), 18–25.
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:31
+[7] Haoxiang Luo, Qianqian Zhang, Gang Sun, Hongfang Yu, and Dusit Niyato. 2024. Symbiotic blockchain consensus:
+Cognitive backscatter communications-enabled wireless blockchain consensus. IEEE/ACM Transactions on Networking
+32, 6 (2024), 5372–5387.
+[8] Yu Zhang, Peter Tiňo, Aleš Leonardis, and Ke Tang. 2021. A survey on neural network interpretability. IEEE Transactions
+on Emerging Topics in Computational Intelligence 5, 5 (2021), 726–742.
+[9] Mingfei Zeng, Ming Xie, Xixi Zheng, Chunhai Li, Chuan Zhang, and Liehuang Zhu. 2025. Large language model-driven
+security assistant for Internet of Things via chain-of-thought. IEEE Internet of Things Journal 12, 24 (2025).
+[10] Jiacheng Wang, Hongyang Du, Dusit Niyato, Jiawen Kang, Shuguang Cui, Xuemin Shen, and Ping Zhang. 2024.
+Generative AI for integrated sensing and communication: Insights from the physical layer perspective. IEEE Wireless
+Communications 31, 5 (2024), 246–255.
+[11] Yuji Roh, Geon Heo, and Steven Euijong Whang. 2019. A survey on data collection for machine learning: A big data-ai
+integration perspective. IEEE Transactions on Knowledge and Data Engineering 33, 4 (2019), 1328–1347.
+[12] Christo Kurisummoottil Thomas, Christina Chaccour, Walid Saad, Merouane Debbah, and Choong Seon Hong. 2024.
+Causal reasoning: Charting a revolutionary course for next-generation AI-native wireless networks. IEEE Vehicular
+Technology Magazine 19, 1 (2024), 16–31.
+[13] Haoxiang Luo, Jian Luo, and Athanasios V. Vasilakos. 2024. BC4LLM: A perspective of trusted artificial intelligence
+when blockchain meets large language models. Neurocomputing 599 (2024), 128089.
+[14] Ruixiang Tang, Yu-Neng Chuang, and Xia Hu. 2024. The science of detecting LLM-generated text. Communications of
+the ACM 67, 4 (2024), 50–59.
+[15] Haoxiang Luo, Yinqiu Liu, Ruichen Zhang, Jiacheng Wang, Gang Sun, Dusit Niyato, Hongfang Yu, Zehui Xiong,
+Xianbin Wang, and Xuemin Shen. 2025. Toward edge general intelligence with multiple-large language model
+(Multi-LLM): architecture, trust, and orchestration. IEEE Transactions on Cognitive Communications and Networking
+(2025).
+[16] Minrui Xu, Dusit Niyato, Jiawen Kang, Zehui Xiong, Shiwen Mao, Zhu Han, Dong In Kim, and Khaled B. Letaief.
+2024. When large language model agents meet 6G networks: Perception, grounding, and alignment. IEEE Wireless
+Communications 31, 6 (2024), 63–71.
+[17] Xiangbo Gao, Yuheng Wu, Rujia Wang, Chenxi Liu, Yang Zhou, and Zhengzhong Tu. 2025. Langcoop: Collaborative
+driving with language. In Proceedings of the Computer Vision and Pattern Recognition Conference. 4226–4237.
+[18] Ruichen Zhang, Hongyang Du, Yinqiu Liu, Dusit Niyato, Jiawen Kang, Sumei Sun, Xuemin Shen, and H. Vincent
+Poor. 2024. Interactive AI with retrieval-augmented generation for next generation networking. IEEE Network 38, 6
+(2024), 414–424.
+[19] Yinqiu Liu, Guangyuan Liu, Ruichen Zhang, Dusit Niyato, Zehui Xiong, Dong In Kim, Kaibin Huang, and Hongyang Du.
+2026. Hallucination-aware optimization for large language model-empowered communications. IEEE Communications
+Magazine 63, 3 (2026), 24–31.
+[20] Yashrajsinh Chudasama, Hao Huang, Disha Purohit, and Maria-Esther Vidal. 2025. Toward interpretable hybrid AI:
+integrating knowledge graphs and symbolic reasoning in medicine. IEEE Access 13 (2025), 39489–39509.
+[21] Jiacheng Wang, Hongyang Du, Yinqiu Liu, Geng Sun, Dusit Niyato, Shiwen Mao, Dong In Kim, and Xuemin Shen.
+2025. Generative AI based secure wireless sensing for ISAC networks. IEEE Transactions on Information Forensics and
+Security 20 (2025), 5195–5210.
+[22] Hao Zhou, Chengming Hu, Ye Yuan, Yufei Cui, Yili Jin, Can Chen, Haolun Wu, Dun Yuan, Li Jiang, Di Wu, Xue Liu,
+Charlie Zhang, Xianbin Wang, and Jiangchuan Liu. 2024. Large language model (LLM) for telecommunications: A
+comprehensive survey on principles, key techniques, and opportunities. IEEE Communications Surveys & Tutorials 27,
+3 (2024), 1955–2005.
+[23] Hao Zhou, Chengming Hu, Dun Yuan, Ye Yuan, Di Wu, Xi Chen, Hina Tabassum, and Xue Liu. 2025. Large language
+models for wireless networks: An overview from the prompt engineering perspective. IEEE Wireless Communications
+32, 4 (2025), 98–106.
+[24] Cong T. Nguyen, Nguyen Van Huynh, Nam H. Chu, Yuris Mulya Saputra, Dinh Thai Hoang, Diep N. Nguyen, QuocViet Pham, Dusit Niyato, Eryk Dutkiewicz, and Won-Joo Hwang. 2022. Transfer learning for wireless networks: A
+comprehensive survey. In Proceedings of the IEEE 110, 8 (2022), 1073–1115.
+[25] Muhammed Golec, Yaser Khamayseh, Suhib Bani Melhem, and Abdulmalik Alwarafy. 2025. LLM-driven APT detection
+for 6G wireless networks: A systematic review and taxonomy. IEEE Access 13 (2025), 145271–145288.
+[26] Zirui Chen, Zhaoyang Zhang, and Zhaohui Yang. 2024. Big AI models for 6G wireless networks: Opportunities,
+challenges, and research directions. IEEE Wireless Communications 31, 5 (2024), 164–172.
+[27] Sifan Long, Jingjing Tan, Bomin Mao, Fengxiao Tang, Yangfan Li, Ming Zhao, and Nei Kato. 2025. A survey on
+intelligent network operations and performance optimization based on large language models. IEEE Communications
+Surveys & Tutorials 27, 6 (2025), 3915–3949.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:32
+
+H. Luo et al.
+
+[28] Gordon Owusu Boateng, Hani Sami, Ahmed Alagha, Hanae Elmekki, Ahmad Hammoud, Rabeb Mizouni, Azzam
+Mourad, Hadi Otrok, Jamal Bentahar, Sami Muhaidat, Chamseddine Talhi, Zbigniew Dziong, and Mohsen Guizani.
+2025. A survey on large language models for communication, network, and service management: Application insights,
+challenges, and future directions. IEEE Communications Surveys and Tutorials (2025).
+[29] Fenghao Zhu, Xinquan Wang, Siming Jiang, Xinyi Li, Maojun Zhang, Yixuan Chen, Chongwen Huang, Zhaohui
+Yang, Xiaoming Chen, Zhaoyang Zhang, Richeng Jin, Yongming Huang, Wei Feng, Tingting Yang, Baoming Bai,
+Feifei Gao, Kun Yang, Yuanwen Liu, Sami Muhaidat, Chau Yuen, Kaibin Huang, Kai-Kit Wong, Dusit Niyato, and
+Mérouane Debbah. 2025. Wireless large AI model: Shaping the AI-native future of 6G and beyond. arXiv preprint
+arXiv:2504.14653 (2025).
+[30] Jiankai Sun, Chuanyang Zheng, Enze Xie, Zhengying Liu, Ruihang Chu, Jianing Qiu, Jiaqi Xu, Mingyu Ding, Hongyang
+Li, Mengzhe Geng, Yue Wu, Wenhai Wang, Junsong Chen, Zhangyue Yin, Xiaozhe Ren, Jie Fu, Junxian He, Yuan Wu,
+Qi Liu, Xihui Liu, Yu Li, Hao Dong, Yu Cheng, Ming Zhang, Pheng Ann Heng, Jifeng Dai, Ping Luo, Jingdong Wang,
+Ji-Rong Wen, and Xipeng Qiu. 2025. A survey of reasoning with foundation models: Concepts, methodologies, and
+outlook. ACM Computing Surveys 57, 11 (2025), 1–43.
+[31] Zhijun Chen, Jingzheng Li, Pengpeng Chen, Zhuoran Li, Kai Sun, Yuankai Luo, Qianren Mao, Ming Li, Likang Xiao,
+Dingqi Yang, Hailong Sun, and Philip S. Yu. 2025. Harnessing multiple large language models: A survey on LLM
+ensemble. arXiv preprint arXiv:2502.18036 (2025).
+[32] Fei Yu, Hongbo Zhang, Prayag Tiwari, and Benyou Wang. 2024. Natural language reasoning, a survey. ACM Computing
+Surveys 56, 12 (2024), 1–39.
+[33] Lauren Nicole DeLong, Ramon Fernández Mir, and Jacques D. Fleuriot. 2024. Neurosymbolic AI for reasoning over
+knowledge graphs: A survey. IEEE Transactions on Neural Networks and Learning Systems 36, 5 (2024), 7822–7842.
+[34] Yiqi Wang, Wentao Chen, Xiaotian Han, Xudong Lin, Haiteng Zhao, Yongfei Liu, Bohan Zhai, Jianbo Yuan, Quanzeng
+You, and Hongxia Yang. 2024. Exploring the reasoning abilities of multimodal large language models (MLLMs): A
+comprehensive survey on emerging trends in multimodal reasoning. arXiv preprint arXiv:2401.06805 (2024).
+[35] Yunxin Li, Zhenyu Liu, Zitao Li, Xuanyu Zhang, Zhenran Xu, Xinyu Chen, Haoyuan Shi, Shenyuan Jiang, Xintong
+Wang, Jifang Wang, Shouzheng Huang, Xinping Zhao, Borui Jiang, Lanqing Hong, Longyue Wang, Zhuotao Tian,
+Baoxing Huai, Wenhan Luo, Weihua Luo, Zheng Zhang, Baotian Hu, and Min Zhang. 2025. Perception, reason, think,
+and plan: A survey on large multimodal reasoning models. arXiv preprint arXiv:2505.04921 (2025).
+[36] Avinash Patil and Aryan Jadon. 2025. Advancing reasoning in large language models: Promising methods and
+approaches. arXiv preprint arXiv:2502.03671 (2025).
+[37] Haoxiang Luo, Gang Sun, Yinqiu Liu, Dusit Niyato, Hongfang Yu, Mohammed Atiquzzaman, and Schahram Dustdar.
+2026. A Trustworthy agentic multi-LLM network: Challenges, solutions, and a use case. IEEE Wireless Communications
+(2026).
+[38] Haoxiang Luo, Gang Sun, Yinqiu Liu, Dongcheng Zhao, Dusit Niyato, Hongfang Yu, and Schahram Dustdar. 2025.
+A weighted byzantine fault tolerance consensus driven trusted multiple large language models network. IEEE
+Transactions on Cognitive Communications and Networking (2025).
+[39] Adarsh Prasad Behera, Jaya Prakash Champati, Roberto Morabito, Sasu Tarkoma, and James Gross. 2025. Towards
+efficient multi-LLM inference: Characterization and analysis of LLM routing and hierarchical techniques. arXiv
+preprint arXiv:2506.06579 (2025).
+[40] Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc Le, Ed Chi, Sharan Narang, Aakanksha Chowdhery, and Denny
+Zhou. 2022. Self-consistency improves chain of thought reasoning in language models. arXiv preprint arXiv:2203.11171
+(2022).
+[41] Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Tom Griffiths, Yuan Cao, and Karthik Narasimhan. 2023. Tree of
+thoughts: Deliberate problem solving with large language models. Advances in Neural Information Processing Systems
+36 (2023), 11809–11822.
+[42] Yao Yao, Zuchao Li, and Hai Zhao. 2024. GoT: Effective graph-of-thought reasoning in language models. In Findings
+of the Association for Computational Linguistics: NAACL 2024. 2901–2921.
+[43] Guangyuan Liu, Yinqiu Liu, Jiacheng Wang, Hongyang Du, Dusit Niyato, Jiawen Kang, and Zehui Xiong. 2025.
+Adaptive contextual caching for mobile-edge large language model service: A proposed framework. IEEE Vehicular
+Technology Magazine (2025).
+[44] Azuka Chiejina, Subhramoy Mohanti, and Vijay K. Shah. 2025. ACCORD: Application context-aware cross-layer
+optimization and resource design for 5G/NextG machine-centric applications. In ICC 2025-IEEE International Conference
+on Communications. IEEE, 5846–5852.
+[45] Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, and Yuan Cao. 2022. React: Synergizing
+reasoning and acting in language models. arXiv preprint arXiv:2210.03629 (2022).
+[46] Luyu Gao, Aman Madaan, Shuyan Zhou, Uri Alon, Pengfei Liu, Yiming Yang, Jamie Callan, and Graham Neubig. 2023.
+Pal: Program-aided language models. In International Conference on Machine Learning. PMLR, 10764–10799.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:33
+[47] Ching-Yun Ko, Sihui Dai, Payel Das, Georgios Kollias, Subhajit Chaudhury, and Aurelie Lozano. 2024. MemReasoner:
+A memory-augmented LLM architecture for multi-hop reasoning. In The First Workshop on System-2 Reasoning at
+Scale, NeurIPS’24.
+[48] Yifei Shen, Jun Zhang, S. H. Song, and Khaled B. Letaief. 2022. Graph neural networks for wireless communications:
+From theory to practice. IEEE Transactions on Wireless Communications 22, 5 (2022), 3554–3569.
+[49] Qineng Wang, Zihao Wang, Ying Su, Hanghang Tong, and Yangqiu Song. 2024. Rethinking the bounds of LLM
+reasoning: Are multi-agent discussions the key? In Proceedings of the 62nd Annual Meeting of the Association for
+Computational Linguistics (Volume 1: Long Papers). 6106–6131.
+[50] Christo Kurisummoottil Thomas and Walid Saad. 2023. Neuro-symbolic causal reasoning meets signaling game for
+emergent semantic communications. IEEE Transactions on Wireless Communications 23, 5 (2023), 4546–4563.
+[51] Yinqiu Liu, Guangyuan Liu, Jiacheng Wang, Ruichen Zhang, Dusit Niyato, Geng Sun, Zehui Xiong, and Zhu Han.
+2025. Lameta: Intent-aware agentic network optimization via a large ai model-empowered two-stage approach. IEEE
+Journal on Selected Areas in Communications (2025).
+[52] Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao, Sarah Wiegreffe, Uri Alon, Nouha Dziri,
+Shrimai Prabhumoye, Yiming Yang, Shashank Gupta, Bodhisattwa Prasad Majumder, Katherine Hermann, Sean
+Welleck, Amir Yazdanbakhsh, and Peter Clark. 2023. Self-refine: Iterative refinement with self-feedback. Advances in
+Neural Information Processing Systems 36 (2023), 46534–46594.
+[53] Xiang Li, Shizhu He, Jiayu Wu, Zhao Yang, Yao Xu, Yang jun Jun, Haifeng Liu, Kang Liu, and Jun Zhao. 2024.
+Mode-cotd: Chain-of-thought distillation for complex reasoning tasks with mixture of decoupled lora-experts. In
+Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation
+(LREC-COLING’24). 11475–11485.
+[54] Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu Zhang, Shirong Ma,
+Xiao Bi, Xiaokang Zhang, Xingkai Yu, Yu Wu, Zhenhua Wu, Zhibin Gou, Zhihong Shao, Zhuoshu Li, Ziyi Gao, Aixin
+Liu, Bing Xue, Bingxuan Wang, and Wenfeng Liang. 2025. DeepSeek-R1 incentivizes reasoning in LLMs through
+reinforcement learning. Nature 645, 8081 (2025), 633–638.
+[55] Eric Zelikman, Yuhuai Wu, Jesse Mu, and Noah Goodman. 2022. Star: Bootstrapping reasoning with reasoning.
+Advances in Neural Information Processing Systems 35 (2022), 15476–15488.
+[56] Dimitrios Sikeridis, Dennis Ramdass, and Pranay Pareek. 2025. Pickllm: Context-aware rl-assisted large language
+model routing. In International Workshop on AI for Transportation. Springer, 227–239.
+[57] Ruixin Hong, Xinyu Pang, and Changshui Zhang. 2024. Advances in reasoning by prompting large language models:
+A survey. Cybernetics and Intelligence (2024).
+[58] Seong Yeub Chu, Jong Woo Kim, and Mun Yong Yi. 2025. Think together and work better: Combining humans’ and
+LLMs’ think-aloud outcomes for effective text evaluation. In Proceedings of the 2025 CHI Conference on Human Factors
+in Computing Systems. 1–23.
+[59] Jia Li, Ge Li, Yongmin Li, and Zhi Jin. 2025. Structured chain-of-thought prompting for code generation. ACM
+Transactions on Software Engineering and Methodology 34, 2 (2025), 1–23.
+[60] Takeshi Kojima, Shixiang Shane Gu, Machel Reid, Yutaka Matsuo, and Yusuke Iwasawa. 2022. Large language models
+are zero-shot reasoners. Advances in Neural Information Processing Systems 35 (2022), 22199–22213.
+[61] Seungone Kim, Se Joo, Doyoung Kim, Joel Jang, Seonghyeon Ye, Jamin Shin, and Minjoon Seo. 2023. The cot collection:
+Improving zero-shot and few-shot learning of language models via chain-of-thought fine-tuning. In Proceedings of the
+2023 Conference on Empirical Methods in Natural Language Processing. 12685–12708.
+[62] Alan Boyle, Isha Gupta, Sebastian Hönig, Lukas Mautner, Kenza Amara, Furui Cheng, and Mennatallah El-Assady.
+2024. iToT: An interactive system for customized tree-of-thought generation. arXiv preprint arXiv:2409.00413 (2024).
+[63] Jiankai Sun, Chuanyang Zheng, Enze Xie, Zhengying Liu, Ruihang Chu, Jianing Qiu, Jiaqi Xu, Mingyu Ding, Hongyang
+Li, Mengzhe Geng, et al. 2025. A survey of reasoning with foundation models: Concepts, methodologies, and outlook.
+ACM Computing Surveys 57, 11 (2025), 1–43.
+[64] Xiyu Zhou, Ruiyin Li, Peng Liang, Beiqi Zhang, Mojtaba Shahin, Zengyang Li, and Chen Yang. 2025. Using LLMs
+in generating design rationale for software architecture decisions. ACM Transactions on Software Engineering and
+Methodology (2025).
+[65] Haotian Sun, Yuchen Zhuang, Lingkai Kong, Bo Dai, and Chao Zhang. 2023. Adaplanner: Adaptive planning from
+feedback with language models. Advances in Neural Information Processing Systems 36 (2023), 58202–58245.
+[66] Dayu Yang, Tianyang Liu, Daoan Zhang, Antoine Simoulin, Xiaoyi Liu, Yuwei Cao, Zhaopu Teng, Xin Qian, Grey
+Yang, Jiebo Luo, and Julian McAuley. 2025. Code to think, think to code: A survey on code-enhanced reasoning and
+reasoning-driven code intelligence in llms. In Proceedings of the 2025 Conference on Empirical Methods in Natural
+Language Processing. 2586–2616.
+[67] Maaike De Boer, Quirine Smit, Michael van Bekkum, André Meyer-Vitali, and Thomas Schmid. 2025. Design patterns for
+large language model based neuro-symbolic systems. Neurosymbolic Artificial Intelligence 1 (2025), 29498732251377500.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:34
+
+H. Luo et al.
+
+[68] Mohd Ariful Haque, Justin Williams, Sunzida Siddique, Md Hujaifa Islam, Hasmot Ali, Kishor Datta Gupta, and Roy
+George. 2025. Advanced tool learning and selection system (ATLASS): A closed-loop framework using LLM. In 2025
+IEEE International Conference on Service-Oriented System Engineering (SOSE). IEEE, 64–73.
+[69] Yingzhe Peng, Gongrui Zhang, Miaosen Zhang, Zhiyuan You, Jie Liu, Qipeng Zhu, Kai Yang, Xingzhong Xu, Xin Geng,
+and Xu Yang. 2025. LMM-R1: Empowering 3B LMMs with strong reasoning abilities through two-stage rule-based RL.
+arXiv preprint arXiv:2503.07536 (2025).
+[70] Yuan Sui, Yufei He, Tri Cao, Simeng Han, Yulin Chen, and Bryan Hooi. 2025. Meta-reasoner: Dynamic guidance for
+optimized inference-time reasoning in large language models. arXiv preprint arXiv:2502.19918 (2025).
+[71] Xunyu Zhu, Jian Li, Yong Liu, Can Ma, and Weiping Wang. 2024. Distilling mathematical reasoning capabilities into
+small language models. Neural Networks 179 (2024), 106594.
+[72] Chiwei Zhu, Benfeng Xu, An Yang, Junyang Lin, Quan Wang, Chang Zhou, and Zhendong Mao. 2025. Rationales
+are not silver bullets: Measuring the impact of rationales on model performance and reliability. In Findings of the
+Association for Computational Linguistics: ACL 2025. 5808–5835.
+[73] Ruichen Zhang, Changyuan Zhao, Hongyang Du, Dusit Niyato, Jiacheng Wang, Suttinee Sawadsitang, Xuemin Shen,
+and Dong In Kim. 2025. Embodied AI-enhanced vehicular networks: An integrated vision language models and
+reinforcement learning method. IEEE Transactions on Mobile Computing (2025).
+[74] Robert R. Underwood, Sheng Di, Sian Jin, Md Hasanur Rahman, Arham Khan, and Franck Cappello. 2023. Libpressiopredict: Flexible and fast infrastructure for inferring compression performance. In Proceedings of the SC’23 Workshops
+of The International Conference on High Performance Computing, Network, Storage, and Analysis. 272–280.
+[75] Yue Zheng, Yuhao Chen, Bin Qian, Xiufang Shi, Yuanchao Shu, and Jiming Chen. 2025. A review on edge large
+language models: Design, execution, and applications. ACM Computing Surveys 57, 8 (2025), 1–35.
+[76] Fahime Khoramnejad and Ekram Hossain. 2025. Generative AI for the optimization of next-generation wireless
+networks: Basics, state-of-the-art, and open challenges. IEEE Communications Surveys and Tutorials 27, 6 (2025),
+3483–3525.
+[77] Qing Li, Yanxu Xiong, Zonghang Li, Chongxi Ma, Hongfang Yu, Gang Sun, Long Luo, and Zhaofeng Zhang. 2024.
+KlonetAI: Automating (Com) 2 Nets management with human language intents. IEEE Network 39, 3 (2024), 12–19.
+[78] Yao Wang, Chungang Yang, Tong Li, Ying Ouyang, Xinru Mi, and Yanbo Song. 2025. A survey on intent-driven
+end-to-end 6G mobile communication system. IEEE Communications Surveys and Tutorials 28 (2025), 882–915.
+[79] Rajdeep Mondal, Alan Tang, Ryan Beckett, Todd Millstein, and George Varghese. 2023. What do llms need to synthesize
+correct router configurations? In Proceedings of the 22nd ACM Workshop on Hot Topics in Networks. 189–195.
+[80] Changjie Wang, Mariano Scazzariello, Alireza Farshin, Simone Ferlin, Dejan Kostić, and Marco Chiesa. 2024. Netconfeval: Can LLMs facilitate network configuration? In Proceedings of the ACM on Networking 2 CoNEXT2 (2024),
+1–25.
+[81] Wenyu Zhang, Yingxu He, Geyu Lin, Zhuohan Liu, Shuo Sun, Bin Wang, Xunlong Zou, Jeremy H. M. Wong, Qiongqiong
+Wang, Hardik Bhupendra Sailor, Chng Eng Siong, and Nancy F. Chen. 2025. Beyond classification: Towards speech
+emotion reasoning with multitask audioLLMs. In Proceedings of the 14th International Joint Conference on Natural
+Language Processing and the 4th Conference of the Asia-Pacific Chapter of the Association for Computational Linguistics.
+1132–1148.
+[82] Junjie Wang, Dan Yang, Binbin Hu, Yue Shen, Wen Zhang, and Jinjie Gu. 2024. Know your needs better: Towards
+structured understanding of marketer demands with analogical reasoning augmented LLMs. In Proceedings of the
+30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining. 5860–5871.
+[83] bibfieldauthorConnor D Flynn and Dingran Chang. 2024. Artificial intelligence in point-of-care biosensing: challenges
+and opportunities. Diagnostics 14, 11 (2024), 1100.
+[84] ChangHao Men, Yu Han, Ping Wang, JianYuan Tao, and Cheng-Geng Huang. 2025. The interpretable reasoning and
+intelligent decision-making based on event knowledge graph with LLMs in fault diagnosis scenarios. IEEE Transactions
+on Instrumentation and Measurement (2025).
+[85] Schaun Wheeler and Olivier Jeunen. 2025. Procedural memory is not all you need: Bridging cognitive gaps in llm-based
+agents. In Adjunct Proceedings of the 33rd ACM Conference on User Modeling, Adaptation and Personalization. 360–364.
+[86] Sajad Mousavi, Desik Rengarajan, Ashwin Ramesh Babu, Sahand Ghorbanpour, Vineet Gundecha, Avisek Naug, and
+Soumyendu Sarkar. Informed tree of thought: Cost-efficient problem solving with large language models. In Adaptive
+Foundation Models: Evolving AI for Personalized and Efficient Learning.
+[87] Masoud Shokrnezhad and Tarik Taleb. 2025. An autonomous network orchestration framework integrating large
+language models with continual reinforcement learning. IEEE Communications Magazine 63, 8 (2025), 78–84.
+[88] Bharath Muppasani, Nitin Gupta, Vishal Pallagani, Biplav Srivastava, Raghava Mutharaju, Michael N. Huhns, and
+Vignesh Narayanan. 2024. Building a plan ontology to represent and exploit planning knowledge and Its applications.
+In Eighth International Conference on Data Science and Management of Data (CODS-COMAD’24). India.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:35
+[89] Zhizhen Li, Mingzhe Chen, Gaolei Li, Xi Lin, and Yuchen Liu. 2024. Map-driven mmwave link quality prediction with
+spatial-temporal mobility awareness. IEEE Transactions on Mobile Computing 23, 12 (2024), 12161–12175.
+[90] Navid Mohammadi Foumani, Lynn Miller, Chang Wei Tan, Geoffrey I. Webb, Germain Forestier, and Mahsa Salehi.
+2024. Deep learning for time series classification and extrinsic regression: A current survey. ACM Computing Surveys
+56, 9 (2024), 1–45.
+[91] Teppo Felin and Matthias Holweg. 2024. Theory is all you need: AI, human cognition, and causal reasoning. Strategy
+Science 9, 4 (2024), 346–371.
+[92] Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu. 2024. Longmemeval: Benchmarking
+chat assistants on long-term interactive memory. arXiv preprint arXiv:2410.10813 (2024).
+[93] Zhiyu Huang, Peter Karkus, Boris Ivanovic, Yuxiao Chen, Marco Pavone, and Chen Lv. 2024. Dtpp: Differentiable joint
+conditional prediction and cost evaluation for tree policy planning in autonomous driving. In 2024 IEEE International
+Conference on Robotics and Automation (ICRA). IEEE, 6806–6812.
+[94] Haoyun Li, Ming Xiao, Kezhi Wang, Robert Schober, Dong In Kim, and Yong Liang Guan. 2025. Joint user association
+and beamforming design for ISAC networks with large language models. IEEE Open Journal of the Communications
+Society 6 (2025), 7620–7644. DOI:https://doi.org/10.1109/OJCOMS.2025.3606812
+[95] Sicheng Feng, Gongfan Fang, Xinyin Ma, and Xinchao Wang. 2025. Efficient reasoning models: A survey. arXiv
+preprint arXiv:2504.10903 (2025).
+[96] Andrea Goldsmith. 2005. Wireless Communications. Cambridge university press.
+[97] Jiawei Shao, Jingwen Tong, Qiong Wu, Wei Guo, Zijian Li, Zehong Lin, and Jun Zhang. 2024. WirelessLLM: Empowering
+large language models towards wireless intelligence. arXiv preprint arXiv:2405.17053 (2024).
+[98] Christo Kurisummoottil Thomas and Walid Saad. 2022. Neuro-symbolic artificial intelligence (AI) for intent based
+semantic communication. In GLOBECOM 2022-2022 IEEE Global Communications Conference. IEEE, 2698–2703.
+[99] Feibo Jiang, Cunhua Pan, Li Dong, Kezhi Wang, Merouane Debbah, Dusit Niyato, and Zhu Han. 2026. A comprehensive
+survey of large AI models for future communications: Foundations, applications, and challenges. IEEE Communications
+Surveys & Tutorials 28 (2026), 4731–4764. DOI:https://doi.org/10.1109/COMST.2026.3660844
+[100] Zhaohui Huang, Zhaocheng Wang, and Zhu Han. 2025. Graph neural network empowered wireless communications:
+Fundamentals, state-of-the-art, challenges, and opportunities. IEEE Wireless Communications 32, 5 (2025), 162–168.
+DOI:https://doi.org/10.1109/MWC.002.2400327
+[101] Mary A. Adedoyin and Olabisi E. Falowo. 2020. Combination of ultra-dense networks and other 5G enabling technologies: A survey. IEEE Access 8 (2020), 22893–22932.
+[102] Dhamyaa H. Al-Nuaimi, Ivan A. Hashim, Intan S. Zainal Abidin, Laith B. Salman, and Nor Ashidi Mat Isa. 2019.
+Performance of feature-based techniques for automatic digital modulation recognition and classification—A review.
+Electronics 8, 12 (2019), 1407.
+[103] Timothy J O’Shea, Johnathan Corgan, and T. Charles Clancy. 2016. Convolutional radio modulation recognition
+networks. In International Conference on Engineering Applications of Neural Networks. Springer, 213–226.
+[104] David J. Gesbert, Severine E. Catreux, and Robert W. Heath Jr. 2007. Mode lookup tables for data transmission in
+wireless communication channels based on statistical parameters. (March 13 2007). US Patent 7,191,381.
+[105] AlaaEddin Loulou, Juha Yli-Kaakinen, Toni Levanen, Vesa Lehtinen, Frank Schaich, Thorsten Wild, Markku Renfors, and Mikko Valkama. 2019. Look-up table based implementation of ultra-low complexity narrowband OFDM
+transmitters. In 2019 16th International Symposium on Wireless Communication Systems (ISWCS). IEEE, 127–132.
+[106] Xudong Wang, Jian Zhu, Ruichen Zhang, Lei Feng, Dusit Niyato, Jiacheng Wang, Hongyang Du, Shiwen Mao, and
+Zhu Han. 2025. Chain-of-thought for large language model-empowered wireless communications. arXiv preprint
+arXiv:2505.22320 (2025).
+[107] Ahmad M. Nazar, Abdulkadir Celik, Mohamed Y. Selim, Asmaa Abdallah, Daji Qiao, and Ahmed M. Eltawil. 2026.
+ENWAR: A RAG-empowered multi-modal LLM framework for wireless environment perception. IEEE Communications
+Magazine. 1–8. DOI:https://doi.org/10.1109/MCOM.001.2500261
+[108] Emmanuel Plascencia, Hongyu Guan, Luc Chassagne, Olivier Barrois, Oyunchimeg Shagdar, and Alin-Mihai Căilean.
+2023. A comprehensive investigation on multi-user interference effects in vehicular visible light communications.
+Sensors 23, 5 (2023), 2553.
+[109] Yanghao Xie, Yuyang Kong, Lin Huang, Sheng Wang, Shizhong Xu, Xiong Wang, and Jing Ren. 2022. Resource
+allocation for network slicing in dynamic multi-tenant networks: A deep reinforcement learning approach. Computer
+Communications 195 (2022), 476–487.
+[110] Li-on Raviv and Amir Leshem. 2019. Scheduling for multi-user multi-input multi-output wireless networks with
+priorities and deadlines. Future Internet 11, 8 (2019), 172.
+[111] Yang Lu, Yuhang Li, Ruichen Zhang, Wei Chen, Bo Ai, and Dusit Niyato. 2024. Graph neural networks for wireless
+networks: Graph representation, architecture and evaluation. IEEE Wireless Communications 32, 1 (2024), 150–156.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:36
+
+H. Luo et al.
+
+[112] Amin Robatian, Mohammad Hajipour, Mohammad Reza Peyghan, Fatemeh Rajabi, Sajjad Amini, Shahrokh Ghaemmaghami, and Iman Gholampour. 2025. Gec-rag: Improving generative error correction via retrieval-augmented
+generation for automatic speech recognition systems. arXiv preprint arXiv:2501.10734 (2025).
+[113] Mohammed Rajhi and Hatim Madkhali. 2020. Comparison between automatic repeat request (ARQ) protocols and
+solving the buffer problem. In 2020 International Conference on Computational Science and Computational Intelligence
+(CSCI). IEEE, 195–201.
+[114] Mallanagouda Patil and Rajashekhar C. Biradar. 2017. Dynamic and channel adaptive error control scheme in wireless
+sensor networks. Global J. Comput. Sci. Technol. (2017).
+[115] Melike Yigit, Pinar Sarisaray Boluk, and V. Cagri Gungor. 2019. A new efficient error control algorithm for wireless
+sensor networks in smart grid. Computer Standards and Interfaces 63 (2019), 27–42.
+[116] Jayeeta Saha, Suvra Sekhar Das, and Sandeep Mukherjee. 2018. Link adaptation using dynamically allocated thresholds
+and power control. Wireless Personal Communications 103, 3 (2018), 2259–2283.
+[117] Mahmoud Ramezani-Mayiami, Jafar Mohammadi, Silvio Mandelli, and Andreas Weber. 2021. Cqi prediction via hidden
+markov model for link adaptation in ultra reliable low latency communications. In WSA 2021; 25th International ITG
+Workshop on Smart Antennas. VDE, 1–5.
+[118] Eduardo Castaneda, Adao Silva, Atilio Gameiro, and Marios Kountouris. 2016. An overview on resource allocation
+techniques for multi-user MIMO systems. IEEE Communications Surveys and Tutorials 19, 1 (2016), 239–284.
+[119] Yuanwei Liu, Chongjun Ouyang, Zhiguo Ding, and Robert Schober. 2024. The road to next-generation multiple access:
+A 50-year tutorial review. In Proceedings of the IEEE 112, 9 (2024), 1100–1148.
+[120] Mengyuan Lee, Guanding Yu, and Huaiyu Dai. 2021. Decentralized inference with graph neural networks in wireless
+communication systems. IEEE Transactions on Mobile Computing 22, 5 (2021), 2582–2598.
+[121] Muhammad Ahmed Mohsin, Ahsan Bilal, Sagnik Bhattacharya, and John M. Cioffi. 2025. Retrieval augmented
+generation with multi-modal LLM framework for wireless environments. In 2025 IEEE International Conference on
+Communications Workshops (ICC Workshops). IEEE, 184–189.
+[122] Shuai Zhang, Bo Yin, Weiyi Zhang, and Yu Cheng. 2022. Topology aware deep learning for wireless network
+optimization. IEEE Transactions on Wireless Communications 21, 11 (2022), 9791–9805.
+[123] Qingwei Tang, Wei Sun, Zhi Liu, Qiyue Li, and Xiaohui Yuan. 2025. Multi-agent reinforcement learning based dynamic
+self-coordinated topology optimization for wireless mesh networks. Journal of Network and Computer Applications
+239 (2025), 104177.
+[124] Aladin Djuhera, Vlad C. Andrei, Amin Seffo, Holger Boche, and Walid Saad. 2024. SCoTT: Wireless-aware path
+planning with vision language models and strategic chains-of-thought. arXiv e-prints (2024), arXiv–2411.
+[125] Peiying Zhang, Yilin Li, Athanasios V. Vasilakos, Konstantin Igorevich Kostromitin, Jianyong Zhang, and Mohsen
+Guizani. 2024. Optimizing network resource allocation with graph pointer neural network in large-scale AI systems.
+Digital Communications and Networks (2024).
+[126] Fatemeh Lotfi, Hossein Rajoli, and Fatemeh Afghah. 2025. ORAN-GUIDE: RAG-driven prompt learning for LLMaugmented reinforcement learning in o-ran network slicing. arXiv preprint arXiv:2506.00576 (2025).
+[127] Jinyu Zhao, Haifeng Sun, Jingyu Wang, Qi Qi, Zirui Zhuang, Shimin Tao, and Jianxin Liao. 2023. Confpilot: A pilot
+for faster configuration by learning from device manuals. In 2023 IEEE 43rd International Conference on Distributed
+Computing Systems (ICDCS). IEEE, 108–119.
+[128] Indushree Banerjee, Martijn Warnier, and Frances M. T. Brazier. 2020. Self-organizing topology for energy-efficient
+ad-hoc communication networks of mobile devices. Complex Adaptive Systems Modeling 8, 1 (2020), 7.
+[129] Alaa Awad Abdellatif, Amr Mohamed, Aiman Erbad, and Mohsen Guizani. 2022. Dynamic network slicing and
+resource allocation for 5G-and-beyond networks. In 2022 IEEE wireless communications and networking conference
+(WCNC). IEEE, 262–267.
+[130] Dileesh chandra Bikkasani. 2024. AI-driven 5G network optimization: A comprehensive review of resource allocation,
+traffic management, and dynamic network slicing. (2024).
+[131] Bin Dai, Yuanyuan Cao, Zhongli Wu, Zhewei Dai, Ruyi Yao, and Yang Xu. 2021. Routing optimization meets Machine
+Intelligence: A perspective for the future network. Neurocomputing 459 (2021), 44–58.
+[132] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed. Chi, Quoc V. Le, Denny Zhou, et al. 2022.
+Chain-of-thought prompting elicits reasoning in large language models. Advances in Neural Information Processing
+Systems 35 (2022), 24824–24837.
+[133] Mehdi Bennis, Mérouane Debbah, and H Vincent Poor. 2018. Ultrareliable and low-latency wireless communication:
+Tail, risk, and scale. In Proceedings of the IEEE 106, 10 (2018), 1834–1853.
+[134] Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler,
+Mike Lewis, Wen-tau Yih, Tim Rocktäschel, et al.. 2020. Retrieval-augmented generation for knowledge-intensive nlp
+tasks. Advances in Neural Information Processing Systems 33 (2020), 9459–9474.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+AI Reasoning for Wireless Communications and Networking: A Survey and Perspectives 334:37
+[135] Jean Martins, Igor Almeida, Ricardo Souza, and Silvia Lins. 2024. Closed-form congestion control via deep symbolic
+regression. arXiv preprint arXiv:2405.01435 (2024).
+[136] Shavbo Salehi, Melike Erol-Kantarci, and Dusit Niyato. 2025. Llm-enabled data transmission in end-to-end semantic
+communication. In 2025 IEEE Symposium on Computers and Communications (ISCC). IEEE, 1–6.
+[137] Josh Achiam, Steven Adler, Sandhini Agarwal, Lama Ahmad, Ilge Akkaya, Florencia Leoni Aleman, Diogo Almeida,
+Janko Altenschmidt, Sam Altman, Shyamal Anadkat, et al. 2023. Gpt-4 technical report. arXiv preprint arXiv:2303.08774
+(2023).
+[138] Changyang She, Rui Dong, Zhouyou Gu, Zhanwei Hou, Yonghui Li, Wibowo Hardjawana, Chenyang Yang, Lingyang
+Song, and Branka Vucetic. 2020. Deep learning for ultra-reliable and low-latency communications in 6G networks.
+IEEE Network 34, 5 (2020), 219–225.
+[139] Melchizedek Alipio and Miroslav Bures. 2025. A cache-aware congestion control mechanism using deep reinforcement
+learning for wireless sensor networks. Ad Hoc Networks 166 (2025), 103678.
+[140] Junyong Tang, Yufei Jiang, Xirong Dai, Xiangyang Liang, and Yanfang Fu. 2022. TCP-WBQ: A backlog-queue-based
+congestion control mechanism for heterogeneous wireless networks. Scientific Reports 12, 1 (2022), 3419.
+[141] Hari Balakrishnan, Venkata N. Padmanabhan, Srinivasan Seshan, and Randy H. Katz. 2002. A comparison of mechanisms for improving TCP performance over wireless links. IEEE/ACM Transactions on Networking 5, 6 (2002),
+756–769.
+[142] Wei Liu, Baozhu Yu, Xiangyu Liu, Xuefen Chi, and Jinyi Zhang. 2024. Bandwidth abstraction and service rate instantiation for latency-bounded reliability provisioning in 5th generation wireless networks. Computer Communications
+215 (2024), 120–129.
+[143] Weihang Ding and Mohammad Shikh-Bahaei. 2023. Harq delay minimization of 5G wireless network with imperfect
+feedback. In ICASSP 2023-2023 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP). IEEE,
+1–5.
+[144] Xuewen Luo, Hsiao-Hwa Chen, and Qing Guo. 2022. Semantic communications: Overview, open issues, and future
+research directions. IEEE Wireless Communications 29, 1 (2022), 210–219.
+[145] Chengsi Liang, Hongyang Du, Yao Sun, Dusit Niyato, Jiawen Kang, Dezong Zhao, and Muhammad Ali Imran.
+2024. Generative AI-driven semantic communication networks: Architecture, technologies, and applications. IEEE
+Transactions on Cognitive Communications and Networking 11, 1 (2024), 27–47.
+[146] Jingming Liang, Yong Xiao, Yingyu Li, Guangming Shi, and Mehdi Bennis. 2022. Life-long learning for reasoning-based
+semantic communication. In 2022 IEEE International Conference on Communications Workshops (ICC Workshops). IEEE,
+271–276.
+[147] Karthik Shivashankar, Ghadi Al Hajj, and Antonio Martini. 2025. Maintainability and scalability in machine learning:
+challenges and solutions. ACM Computing Surveys 57, 12 (2025), 1–36.
+[148] Senthil Kumar Jagatheesaperumal, Shehzad Ali, Aziz Alotaibi, Khan Muhammad, Victor Hugo C. De Albuquerque, and
+Mohsen Guizani. 2025. Generative AI-enhanced neuro-symbolic quantum architectures for secure communications
+and networking. IEEE Network 39, 5 (2025), 36–43. DOI:https://doi.org/10.1109/MNET.2025.3579680
+[149] Xianglin Wei, Jianwei Liu, Yangang Wang, Chaogang Tang, and Yongyang Hu. 2021. Wireless edge caching based on
+content similarity in dynamic environments. Journal of Systems Architecture 115 (2021), 102000.
+[150] Hao Zhou, Chengming Hu, Dun Yuan, Ye Yuan, Di Wu, Xue Liu, Zhu Han, and Jianzhong Zhang. 2024. Generative
+AI as a service in 6G edge-cloud: Generation task offloading by in-context learning. IEEE Wireless Communications
+Letters 14, 3 (2024), 711–715.
+[151] Yizhou Huang, Yihua Cheng, and Kezhi Wang. 2026. efficient driving behavior narration and reasoning on edge
+device using large language models. IEEE Transactions on Vehicular Technology 75, 1 (2026), 1563–1567. DOI:https:
+//doi.org/10.1109/TVT.2025.3591733
+[152] Dan Wang, Yalu Bai, and Bin Song. 2025. A knowledge graph-based reinforcement learning approach for cooperative
+caching in MEC-enabled heterogeneous networks. Digital Communications and Networks 11, 4 (2025), 1237–1245.
+DOI:https://doi.org/10.1016/j.dcan.2024.12.006
+[153] Mandan Naresh, Paresh Saxena, and Manik Gupta. 2023. Deep reinforcement learning with importance weighted a3c
+for qoe enhancement in video delivery services. In 2023 IEEE 24th International Symposium on a World of Wireless,
+Mobile and Multimedia Networks (WoWMoM). IEEE, 97–106.
+[154] Mandan Naresh, Paresh Saxena, and Manik Gupta. 2023. Ppo-abr: Proximal policy optimization based deep reinforcement learning for adaptive bitrate streaming. In 2023 International Wireless Communications and Mobile Computing
+(IWCMC). IEEE, 199–204.
+[155] Jiaxing Li, Chi Xu, Feng Wang, Isaac M. von Riedemann, Cong Zhang, and Jiangchuan Liu. 2024. SCALM: Towards
+semantic caching for automated chat services with large language models. In 2024 IEEE/ACM 32nd International
+Symposium on Quality of Service (IWQoS). IEEE, 1–10.
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+334:38
+
+H. Luo et al.
+
+[156] Yang Li, Xinzhi Wang, Jianshu Wang, Wei Wang, Xiangfeng Luo, and Shaorong Xie. 2020. Cooperative multi-agent
+reinforcement learning with hierarchical relation graph under partial observability. In 2020 IEEE 32nd International
+Conference on Tools with Artificial Intelligence (ICTAI). IEEE, 1–8.
+[157] Zhao Tong, Jiaxin Deng, Jing Mei, Yuanyang Zhang, and Keqin Li. 2024. Multi-objective DAG task offloading in MEC
+environment based on federated DQN with automated hyperparameter optimization. IEEE Transactions on Services
+Computing 17, 6 (2024), 3999–4012.
+[158] K. B. Ajeyprasaath and P. Vetrivelan. 2024. A hybrid machine learning approach for improvised QoE in video services
+over 5G wireless networks. Computers, Materials & Continua 78, 3 (2024).
+[159] Shuo Yang, Xinran Zheng, Xinchen Zhang, Jinfeng Xu, Jinze Li, Donglin Xie, Weicai Long, and Edith C. H. Ngai. 2025.
+Large language models for network intrusion detection systems: Foundations, implementations, and future directions.
+arXiv preprint arXiv:2507.04752 (2025).
+[160] Tiao Tan, Fengxiao Tang, Linfeng Luo, Xiaonan Wang, Zaijing Li, and Ming Zhao. 2025. Adapting network information
+into semantics for generalizable and plug-and-play multi-scenario network diagnosis. arXiv preprint arXiv:2501.16842
+(2025).
+[161] Evan Caville, Wai Weng Lo, Siamak Layeghy, and Marius Portmann. 2022. Anomal-E: A self-supervised network
+intrusion detection system based on graph neural networks. Knowledge-based Systems 258 (2022), 110030.
+[162] Fan Lu, Huaibin Qin, and Quan Qi. 2024. Edge-enabled anomaly detection and information completion for social
+network knowledge graphs. Wireless Networks 30, 9 (2024), 7483–7495.
+[163] Paul R. B. Houssel, Priyanka Singh, Siamak Layeghy, and Marius Portmann. 2024. Towards explainable network
+intrusion detection using large language models. In 2024 IEEE/ACM International Conference on Big Data Computing,
+Applications and Technologies (BDCAT). IEEE, 67–72.
+[164] Hichem Debbi. 2024. Causadv: A causal-based framework for detecting adversarial examples. arXiv preprint
+arXiv:2411.00839 (2024).
+[165] Han Zhang, Akram Bin Sediq, Ali Afana, and Melike Erol-Kantarci. 2024. Large language models in wireless application
+design: In-context learning-enhanced automatic network intrusion detection. In GLOBECOM 2024-2024 IEEE Global
+Communications Conference. IEEE, 2479–2484.
+[166] Khushnaseeb Roshan and Aasim Zafar. 2024. Black-box adversarial transferability: An empirical study in cybersecurity
+perspective. Computers and Security 141 (2024), 103853.
+[167] Christopher Redino, Dhruv Nandakumar, Robert Schiller, Kevin Choi, Abdul Rahman, Edward Bowen, Aaron Shaha,
+Joe Nehila, and Matthew Weeks. 2022. Zero day threat detection using graph and flow based security telemetry. In
+2022 International Conference on Computing, Communication, and Intelligent Systems (ICCCIS). IEEE, 655–662.
+[168] Songjie Yang, Zihang Wan, Yue Xiu, Boyu Ning, Yong Li, Yuanwei Liu, and Chau Yuen. 2025. Flexible WMMSE
+beamforming for MU-MIMO movable antenna communications. IEEE Transactions on Signal Processing 73 (2025),
+4479–4491.
+[169] Xing Dong, Jiaying Ju, Daduan Zhao, Quanjun Zhang, Zhicheng Wei, and Bo Sun. 2025. Multiple time scale cooperation
+optimization of regional multienergy systems based on distributed model predictive control. IEEE Transactions on
+Industrial Informatics 21, 9 (2025), 6990–7000. DOI:https://doi.org/10.1109/TII.2025.3574399
+[170] Mathy Vanhoef and Eyal Ronen. 2020. Dragonblood: Analyzing the dragonfly handshake of WPA3 and EAP-pwd. In
+2020 IEEE Symposium on Security and Privacy (SP). IEEE, 517–533.
+[171] An Braeken. 2025. Ultra lightweight post-quantum resistant 5G-AKA protocol. Computer Networks 270 (2025), 111444.
+DOI:https://doi.org/10.1016/j.comnet.2025.111444
+[172] Beni Ifland, Rubin Krief, Aviram Zilberman, Elad Duani, Miro Ohana, Andres Murillo, Ofir Manor, Ortal Lavi, Kenji
+Hikichi, Asaf Shabtai, et al. 2025. Genet: A multimodal LLM-based co-pilot for network topology and configuration.
+In 2025 IEEE 45th International Conference on Distributed Computing Systems Workshops (ICDCSW). IEEE, 117–122.
+
+Received 11 September 2025; revised 10 April 2026; accepted 19 April 2026
+
+ACM Comput. Surv., Vol. 58, No. 13, Article 334. Publication date: June 2026.
+
+

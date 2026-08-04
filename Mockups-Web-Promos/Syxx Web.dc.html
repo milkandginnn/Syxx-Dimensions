@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/colors.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/typography.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/effects.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/styles.css">
+<script src="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/_ds_bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;}
+  ::-webkit-scrollbar{width:12px;}
+  ::-webkit-scrollbar-thumb{background:#2a2154;border-radius:999px;border:3px solid #130d26;}
+  @keyframes syxxglow{0%,100%{opacity:1;}50%{opacity:.45;}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:radial-gradient(120% 80% at 50% -8%, #241a48, #0c0820 60%);color:#fff;font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--io-bg:#130d26;--io-surface:#1d1640;--io-surface-elevated:#2a2154;--io-border:#382c66;--io-text-secondary:#a99fc8;--io-blue:#8b5cf6;--io-electric:#b98cff;--io-accent-start:#f0ac38;--io-accent-end:#7c3aed;--font-sans:'Space Grotesk',-apple-system,sans-serif;--font-rounded:'Space Grotesk',-apple-system,sans-serif;--font-mono:'Space Mono',ui-monospace,'SF Mono',Menlo,monospace;">
+
+  <!-- ===== MINIMIZED BETA BANNERS ===== -->
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <div style="max-width:1120px;margin:0 auto;padding:12px 32px 0;">
+    <button onClick="{{ goBeta }}" style="width:100%;cursor:pointer;display:flex;align-items:center;gap:20px;padding:26px 32px;border-radius:20px;border:1px solid color-mix(in srgb,var(--io-electric) 34%, transparent);background:color-mix(in srgb,var(--io-electric) 12%, transparent);color:#e9deff;font-family:var(--font-sans);font-size:15px;line-height:1.35;transition:border-color .2s;" style-hover="border-color:var(--io-electric);">
+      <span style="display:flex;align-items:center;justify-content:center;gap:20px;width:80%;margin:0 auto;">
+      <span style="text-align:left;"><b style="color:#fff;">Nnyx</b> and <b style="color:#fff;">Zzyn</b>, the new standard for software and network security, coming to beta for macOS soon. Reserve your seat.</span>
+      <span aria-hidden="true" style="color:var(--io-electric);font-weight:700;font-size:30px;flex-shrink:0;">→</span>
+      </span>
+    </button>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+
+  <!-- ===== NAV ===== -->
+  <div style="position:sticky;top:0;z-index:20;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(19,13,38,.72);border-bottom:1px solid var(--io-border);">
+    <div style="max-width:1120px;margin:0 auto;padding:14px 32px;display:flex;align-items:center;gap:16px;">
+      <img src="assets/syxx-logo.png" width="34" height="34" alt="Syxx" style="display:block;border-radius:8px;">
+      <span style="font-family:var(--font-rounded);font-weight:700;font-size:19px;background:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx</span>
+      <div style="flex:1;"></div>
+      <a href="#features" style="font-size:14px;color:var(--io-text-secondary);text-decoration:none;padding:0 6px;">Features</a>
+      <a href="#console" style="font-size:14px;color:var(--io-text-secondary);text-decoration:none;padding:0 6px;">Console</a>
+      <a href="#pricing" style="font-size:14px;color:var(--io-text-secondary);text-decoration:none;padding:0 6px;">Pricing</a>
+      <a href="#download" style="text-decoration:none;margin-left:8px;font-size:14px;font-weight:600;color:#fff;background:var(--io-blue);padding:9px 18px;border-radius:8px;">Download</a>
+    </div>
+  </div>
+
+  <!-- ===== HERO ===== -->
+  <div style="max-width:840px;margin:0 auto;padding:72px 32px 40px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:22px;">
+    <img src="assets/syxx-logo.png" width="118" height="118" alt="Syxx" style="border-radius:27px;box-shadow:0 0 70px rgba(140,80,240,.4),0 14px 40px rgba(0,0,0,.55);">
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#f0a04a;margin-bottom:14px;">DNS Investigation Suite</div>
+      <h1 style="margin:0;font-family:var(--font-rounded);font-weight:700;font-size:66px;line-height:1.02;letter-spacing:-.01em;background:linear-gradient(100deg,#f0ac38 8%,#efe0ff 50%,#a96ad6 92%);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx Lyin' Eyes</h1>
+    </div>
+    <p style="margin:0;max-width:620px;font-size:18px;line-height:1.6;color:#cabfe6;">Every resolver tells a story. Syxx traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and shows you exactly which responses are lying.</p>
+
+    <div style="display:flex;gap:12px;width:100%;max-width:560px;margin-top:6px;">
+      <input placeholder="example.com" style="flex:1;background:var(--io-bg);border:1px solid var(--io-border);border-radius:10px;padding:14px 16px;color:#fff;font-family:var(--font-mono);font-size:15px;outline:none;" style-focus="border-color:var(--io-blue);"/>
+      <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" size="lg" hint-size="140px,50px">Investigate</x-import>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--io-text-secondary);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#f0a04a;animation:syxxglow 1.6s infinite;box-shadow:0 0 8px #f0a04a;"></span>
+      Passive DNS index live · 0 records
+    </div>
+  </div>
+
+  <!-- ===== CONSOLE ===== -->
+  <div id="console" style="max-width:1000px;margin:0 auto;padding:36px 32px 60px;">
+    <div style="border-radius:16px;overflow:hidden;border:1px solid var(--io-border);box-shadow:0 30px 80px rgba(0,0,0,.5);">
+      <div style="height:40px;display:flex;align-items:center;padding:0 16px;background:rgba(20,13,40,.9);border-bottom:1px solid var(--io-border);position:relative;">
+        <div style="display:flex;gap:8px;"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840;"></span></div>
+        <span style="position:absolute;left:0;right:0;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);pointer-events:none;">syxx-cages — duration 10</span>
+      </div>
+      <pre style="margin:0;padding:24px;background:#0c0820;font-family:var(--font-mono);font-size:13.5px;line-height:1.75;color:#cabfe6;white-space:pre-wrap;">you@syxx ~ % sudo syxx-cages --duration 10
+==================================================
+   Syxx Cages · DNS Query Capturer
+==================================================
+Target: Sniffing port 53 DNS Queries (IPv4 + IPv6)...
+<span style="color:#5cd6a8;">[SUCCESS]</span> Sniffer started. Capturing packet streams...
+· [06:53:00] Query captured: <span style="color:#f0ac38;">syxx.app</span> (via syxx | Rcode: NOERROR)
+· [06:53:02] Query captured: <span style="color:#f5405e;">exfil-chunk-b95f15.attacker.net</span> (via untrusted process | Rcode: NXDOMAIN)</pre>
+    </div>
+  </div>
+
+  <!-- ===== FEATURES ===== -->
+  <div id="features" style="max-width:1120px;margin:0 auto;padding:40px 32px;">
+    <div style="text-align:center;margin-bottom:36px;">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#f0a04a;">What Syxx sees</div>
+      <h2 style="margin:10px 0 0;font-family:var(--font-rounded);font-weight:700;font-size:36px;">Catch the resolvers that are lying</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;">
+      <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:14px;">
+        <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--io-blue) 16%,transparent);color:var(--io-electric);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <div style="font-family:var(--font-rounded);font-size:19px;font-weight:600;">Spoof Detection</div>
+        <div style="font-size:14px;line-height:1.55;color:var(--io-text-secondary);">Compare answers across resolvers and flag responses that don't match authoritative truth.</div>
+      </div>
+      <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:14px;">
+        <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--io-blue) 16%,transparent);color:var(--io-electric);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2.5"/></svg></div>
+        <div style="font-family:var(--font-rounded);font-size:19px;font-weight:600;">Tunnel Forensics</div>
+        <div style="font-size:14px;line-height:1.55;color:var(--io-text-secondary);">Spot exfiltration hidden in TXT and NULL records with entropy and cadence analysis.</div>
+      </div>
+      <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:14px;">
+        <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--io-blue) 16%,transparent);color:var(--io-electric);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></svg></div>
+        <div style="font-family:var(--font-rounded);font-size:19px;font-weight:600;">Resolver Timeline</div>
+        <div style="font-size:14px;line-height:1.55;color:var(--io-text-secondary);">Replay every hop of a lookup — cache hits, forwarders, and who answered first.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:44px;">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f0a04a;text-align:center;margin-bottom:20px;">Six canonical tools, one app</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        <sc-for list="{{ tools }}" as="t" hint-placeholder-count="6">
+          <div style="display:flex;gap:12px;align-items:flex-start;background:var(--io-bg);border:1px solid var(--io-border);border-radius:12px;padding:16px;">
+            <div style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--io-electric);padding-top:2px;">{{ t.n }}</div>
+            <div><div style="font-family:var(--font-rounded);font-size:15px;font-weight:600;">{{ t.name }}</div><div style="font-size:13px;color:var(--io-text-secondary);line-height:1.45;margin-top:2px;">{{ t.desc }}</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PRICING ===== -->
+  <div id="pricing" style="max-width:820px;margin:0 auto;padding:52px 32px;">
+    <div style="text-align:center;margin-bottom:30px;">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#f0a04a;">Pricing</div>
+      <h2 style="margin:10px 0 0;font-family:var(--font-rounded);font-weight:700;font-size:36px;">Free locally. $2 for the cloud.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;">
+      <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:14px;">
+        <div style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">Lite</div>
+        <div style="font-family:var(--font-rounded);font-size:34px;font-weight:700;">Free</div>
+        <div style="font-size:14px;color:var(--io-text-secondary);line-height:1.5;">All local diagnostic commands, forever — Prophet, Portal, Glutton, Cage &amp; Witness.</div>
+      </div>
+      <div style="background:linear-gradient(155deg, color-mix(in srgb,#f0ac38 11%,var(--io-surface)), color-mix(in srgb,#7c3aed 18%,var(--io-surface)));border:1px solid color-mix(in srgb,#a96ad6 46%,transparent);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:14px;box-shadow:0 0 26px rgba(140,80,240,.25);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">Pro</div>
+          <span style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#1a1030;padding:4px 9px;border-radius:6px;background:linear-gradient(135deg,#f0ac38,#a96ad6);">3-day free trial</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-family:var(--font-rounded);font-size:34px;font-weight:700;">$2</span><span style="font-size:15px;color:var(--io-text-secondary);">/ month</span></div>
+        <div style="font-size:14px;color:#cabfe6;line-height:1.5;">Remote-anchored proxy checks — <b>Syxx Warp</b> web structure matching and <b>Syxx Leak</b> DNS privacy logging — plus <b>Mirror</b> remote asset comparison, on dedicated VPS resources.</div>
+        <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" full-width="{{ true }}" hint-size="100%,44px">Start Pro Trial</x-import>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DOWNLOAD ===== -->
+  <div id="download" style="max-width:820px;margin:0 auto;padding:20px 32px 72px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px;">
+    <h2 style="margin:0;font-family:var(--font-rounded);font-weight:700;font-size:30px;">Get Syxx for your Mac or PC</h2>
+
+    <div style="display:flex;gap:14px;">
+      <a href="#" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px;background:#0c0820;border:1px solid var(--io-border);padding:12px 22px;border-radius:12px;transition:border-color .2s;" style-hover="border-color:var(--io-blue);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.9-3-.8c-1.5 0-3 .9-3.7 2.3-1.6 2.8-.4 6.9 1.1 9.2.8 1.1 1.6 2.4 2.8 2.3 1.1 0 1.6-.7 2.9-.7s1.7.7 3 .7 2-1.1 2.7-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.4-1-2.5-3.7zM14.2 6.3c.6-.8 1-1.8.9-2.9-.9 0-2 .6-2.6 1.3-.6.7-1.1 1.7-.9 2.7 1 .1 2-.5 2.6-1.1z"/></svg>
+        <span style="text-align:left;line-height:1.15;"><span style="display:block;font-size:11px;color:var(--io-text-secondary);">Download on the</span><span style="display:block;font-family:var(--font-rounded);font-size:18px;font-weight:600;color:#fff;">Mac App Store</span></span>
+      </a>
+      <a href="#" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px;background:#0c0820;border:1px solid var(--io-border);padding:12px 22px;border-radius:12px;transition:border-color .2s;" style-hover="border-color:var(--io-blue);">
+        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M3 5.5 10.5 4.4v7.1H3z" fill="#f25022"/><path d="M11.5 4.2 21 3v8.5h-9.5z" fill="#7fba00"/><path d="M3 12.5h7.5v7L3 18.5z" fill="#00a4ef"/><path d="M11.5 12.5H21V21l-9.5-1.3z" fill="#ffb900"/></svg>
+        <span style="text-align:left;line-height:1.15;"><span style="display:block;font-size:11px;color:var(--io-text-secondary);">Get it from</span><span style="display:block;font-family:var(--font-rounded);font-size:18px;font-weight:600;color:#fff;">Microsoft Store</span></span>
+      </a>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:14px;width:100%;max-width:420px;margin-top:4px;">
+      <span style="flex:1;height:1px;background:var(--io-border);"></span>
+      <span style="font-size:12px;letter-spacing:.04em;color:var(--io-text-secondary);">or download directly</span>
+      <span style="flex:1;height:1px;background:var(--io-border);"></span>
+    </div>
+
+    <div style="display:flex;gap:12px;">
+      <a href="#" style="text-decoration:none;display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:#fff;background:var(--io-surface-elevated);border:1px solid var(--io-border);padding:11px 20px;border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.9-3-.8c-1.5 0-3 .9-3.7 2.3-1.6 2.8-.4 6.9 1.1 9.2.8 1.1 1.6 2.4 2.8 2.3 1.1 0 1.6-.7 2.9-.7s1.7.7 3 .7 2-1.1 2.7-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.4-1-2.5-3.7zM14.2 6.3c.6-.8 1-1.8.9-2.9-.9 0-2 .6-2.6 1.3-.6.7-1.1 1.7-.9 2.7 1 .1 2-.5 2.6-1.1z"/></svg>macOS <span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">.dmg</span></a>
+      <a href="#" style="text-decoration:none;display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:#fff;background:var(--io-surface-elevated);border:1px solid var(--io-border);padding:11px 20px;border-radius:10px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.5 4.4v7.1H3zm0 13 7.5 1.1v-7H3zM11.5 4.2 21 3v8.5h-9.5zm0 8.3H21V21l-9.5-1.3z"/></svg>Windows <span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">.exe</span></a>
+    </div>
+
+    <div style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);margin-top:4px;">macOS Tahoe 26.x · Apple Silicon · Windows 11</div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <div style="border-top:1px solid var(--io-border);">
+    <div style="max-width:1120px;margin:0 auto;padding:24px 32px;display:flex;align-items:center;gap:12px;">
+      <img src="assets/syxx-logo.png" width="24" height="24" alt="Syxx" style="border-radius:6px;">
+      <span style="font-size:13px;color:var(--io-text-secondary);">Syxx Lyin' Eyes · MilkandGin</span>
+      <div style="flex:1;"></div>
+      <span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">macOS Tahoe 26.x · Apple Silicon</span>
+    </div>
+  </div>
+
+  </sc-if>
+
+  <!-- ===== BETA PAGE (second page) ===== -->
+  <sc-if value="{{ isBeta }}" hint-placeholder-val="{{ false }}">
+    <div style="min-height:100vh;display:flex;flex-direction:column;">
+      <!-- beta nav -->
+      <div style="max-width:1120px;width:100%;margin:0 auto;padding:14px 32px;display:flex;align-items:center;gap:16px;">
+        <button onClick="{{ goHome }}" style="cursor:pointer;background:transparent;border:none;padding:0;display:flex;align-items:center;gap:10px;">
+          <img src="assets/syxx-logo.png" width="34" height="34" alt="Syxx" style="display:block;border-radius:8px;">
+          <span style="font-family:var(--font-rounded);font-weight:700;font-size:19px;background:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx</span>
+        </button>
+        <div style="flex:1;"></div>
+        <button onClick="{{ goHome }}" style="cursor:pointer;font-size:14px;color:var(--io-text-secondary);background:transparent;border:none;display:inline-flex;align-items:center;gap:6px;">← Back to site</button>
+      </div>
+
+      <!-- header -->
+      <div style="max-width:900px;margin:0 auto;padding:44px 32px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#f0a04a;">From MilkandGin · Private Beta</div>
+        <h1 style="margin:0;font-family:var(--font-rounded);font-weight:700;font-size:52px;line-height:1.04;background:linear-gradient(100deg,#f0ac38 8%,#efe0ff 50%,#a96ad6 92%);-webkit-background-clip:text;background-clip:text;color:transparent;">Meet the rest of the family</h1>
+        <p style="margin:0;max-width:640px;font-size:17px;line-height:1.55;color:#cabfe6;">Syxx watches your DNS. <b style="color:#efe6ff;">Nnyx</b> hunts what's already on the machine, and <b style="color:#efe6ff;">Zzyn</b> governs what leaves it. Reserve your seat in each closed beta.</p>
+      </div>
+
+      <!-- signup divs -->
+      <div style="max-width:1000px;width:100%;margin:0 auto;padding:12px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+
+        <!-- NNYX signup -->
+        <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:18px;padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:center;">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;align-items:center;gap:13px;">
+              <img src="assets/nnyx-logo.png" width="46" height="46" alt="Nnyx" style="display:block;object-fit:contain;">
+              <div>
+                <div style="font-family:var(--font-rounded);font-size:23px;font-weight:700;">Nnyx</div>
+                <div style="font-size:13px;color:var(--io-text-secondary);">Malware &amp; rootkit scanner for macOS</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <sc-for list="{{ nnyxPoints }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;gap:9px;align-items:flex-start;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg><span style="font-size:13.5px;line-height:1.45;color:#cabfe6;">{{ p }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;background:var(--io-bg);border:1px solid var(--io-border);border-radius:14px;padding:14px;align-items:center;">
+            <img src="assets/nnyx-1.png" alt="Nnyx detections" style="flex:1.55;min-width:0;height:190px;object-fit:contain;border-radius:10px;border:1px solid var(--io-border);background:#0a1120;">
+            <img src="assets/nnyx-2.png" alt="Nnyx finding" style="flex:1;min-width:0;height:190px;object-fit:contain;border-radius:10px;border:1px solid var(--io-border);background:#0a1120;">
+          </div>
+        </div>
+
+        <!-- ZZYN signup -->
+        <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:18px;padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:center;">
+          <div style="display:flex;gap:12px;background:var(--io-bg);border:1px solid var(--io-border);border-radius:14px;padding:14px;align-items:center;order:1;">
+            <img src="assets/zzyn-1.png" alt="Zzyn activity" style="flex:1.4;min-width:0;height:190px;object-fit:contain;border-radius:10px;border:1px solid var(--io-border);background:#0a1120;">
+            <img src="assets/zzyn-2.png" alt="Zzyn connection alert" style="flex:1;min-width:0;height:190px;object-fit:contain;border-radius:10px;border:1px solid var(--io-border);background:#0a1120;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px;order:2;">
+            <div style="display:flex;align-items:center;gap:13px;">
+              <img src="assets/zzyn-logo.png" width="46" height="46" alt="Zzyn" style="display:block;object-fit:contain;">
+              <div>
+                <div style="font-family:var(--font-rounded);font-size:23px;font-weight:700;">Zzyn</div>
+                <div style="font-size:13px;color:var(--io-text-secondary);">Outbound connection firewall</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <sc-for list="{{ zzynPoints }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;gap:9px;align-items:flex-start;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg><span style="font-size:13.5px;line-height:1.45;color:#cabfe6;">{{ p }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <!-- SHARED SIGNUP -->
+        <div style="background:linear-gradient(120deg, color-mix(in srgb,#f0ac38 8%,var(--io-surface)), color-mix(in srgb,#7c3aed 16%,var(--io-surface)));border:1px solid color-mix(in srgb,#a96ad6 40%,transparent);border-radius:18px;padding:24px 28px;display:flex;flex-direction:column;gap:16px;">
+          <div style="font-family:var(--font-rounded);font-size:19px;font-weight:700;">I'm interested in…</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <label style="flex:1;min-width:220px;cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--io-bg);border:1px solid var(--io-border);border-radius:12px;padding:14px 16px;">
+              <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--io-blue);cursor:pointer;"/>
+              <span style="width:26px;height:26px;flex-shrink:0;"><img src="assets/nnyx-logo.png" width="26" height="26" alt="Nnyx" style="display:block;object-fit:contain;"></span>
+              <span style="font-size:14px;font-weight:600;">Nnyx <span style="font-weight:400;color:var(--io-text-secondary);">· malware scanner</span></span>
+            </label>
+            <label style="flex:1;min-width:220px;cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--io-bg);border:1px solid var(--io-border);border-radius:12px;padding:14px 16px;">
+              <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--io-blue);cursor:pointer;"/>
+              <span style="width:26px;height:26px;flex-shrink:0;"><img src="assets/zzyn-logo.png" width="26" height="26" alt="Zzyn" style="display:block;object-fit:contain;"></span>
+              <span style="font-size:14px;font-weight:600;">Zzyn <span style="font-weight:400;color:var(--io-text-secondary);">· firewall</span></span>
+            </label>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <input placeholder="you@example.com" style="flex:1;min-width:240px;background:var(--io-bg);border:1px solid var(--io-border);border-radius:10px;padding:13px 15px;color:#fff;font-family:var(--font-mono);font-size:14px;outline:none;" style-focus="border-color:var(--io-electric);"/>
+            <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" hint-size="200px,48px">Reserve your seat</x-import>
+          </div>
+        </div>
+      </div>
+
+      <!-- beta footer -->
+      <div style="border-top:1px solid var(--io-border);margin-top:auto;">
+        <div style="max-width:1120px;margin:0 auto;padding:24px 32px;display:flex;align-items:center;gap:12px;">
+          <img src="assets/syxx-logo.png" width="24" height="24" alt="Syxx" style="border-radius:6px;">
+          <span style="font-size:13px;color:var(--io-text-secondary);">Syxx Lyin' Eyes · MilkandGin</span>
+          <div style="flex:1;"></div>
+          <button onClick="{{ goHome }}" style="cursor:pointer;font-size:13px;color:var(--io-text-secondary);background:transparent;border:none;">← Back to site</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { page: "home" };
+  go(p) { this.setState({ page: p }); if (typeof window !== "undefined") window.scrollTo(0, 0); }
+  renderVals() {
+    const p = this.state.page;
+    return {
+      isHome: p === "home",
+      isBeta: p === "beta",
+      goBeta: () => this.go("beta"),
+      goHome: () => this.go("home"),
+      nnyxPoints: [
+        "'Omni-engine' scrapes macOS for signatures, heuristics, and behavioral fingerprints.",
+        "AI-driven triage to reduce false positives and negatives.",
+        "Privacy and configurability as design cornerstones.",
+      ],
+      zzynPoints: [
+        "Process-specific block/allow rules, based on a zero trust philosophy.",
+        "Features tiered by user skill level.",
+        "AI-driven triage, grounded in machine learning.",
+      ],
+      tools: [
+        { n: "01", name: "Prophet", desc: "Tests your DNS resolver for accuracy." },
+        { n: "02", name: "Mirror", desc: "Checks downloaded web content against a remote copy." },
+        { n: "03", name: "Portal", desc: "Maps your LAN state and the route to a domain." },
+        { n: "04", name: "Glutton", desc: "DNS leak test for vulnerable VPN connections." },
+        { n: "05", name: "Cage", desc: "Captures & evaluates the processes behind queries." },
+        { n: "06", name: "Witness", desc: "Trust analysis for your home or office environment." },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

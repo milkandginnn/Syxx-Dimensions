@@ -1,0 +1,20 @@
+{
+  "assets": [
+    {
+      "class": "CSS",
+      "state": "match",
+      "url": "https://example.test/main.css"
+    },
+    {
+      "class": "CSS_IMPORT",
+      "state": "match",
+      "url": "https://example.test/nested.css"
+    }
+  ],
+  "conclusion": "VERIFIED_MATCH",
+  "freshnessState": "fresh",
+  "htmlState": "match",
+  "manifestState": "parsed",
+  "notes": "signature verified against a pinned key, fresh, HTML and every asset matched.",
+  "signatureState": "verified"
+}

@@ -1,0 +1,19 @@
+content:
+  - heading: Syxx — Root Engineering Skill
+    body: This is the **top-most skill** for building **Syxx**, a DNS-integrity tool that investigates and detects DNS tampering, hijacking, spoofing, and censorship. Syxx ships a **macOS** client (SwiftUI), a **Windows** client (WinUI 3 / C#), and a **Python** server. Load this skill first to orient, then follow the routing table below to the specific per-platform skill for your task.
+    subsections:
+      - heading: When to Use
+        items:
+          - '**Use when:** coding the macOS or Windows client, designing its UI/UX or graphics, or doing networking / packet-capture work for Syxx.'
+          - '**Not for:** designing the DNS-integrity detection logic itself (that is the app''s problem domain, not these build skills), or any malware / offensive-security work (intentionally excluded from this tree).'
+      - heading: Routing — pick the skill for your task
+        body: Each child skill carries its own `## When to Use` and full technical depth. macOS skills use the `macos-tahoe-` prefix; Windows skills use the `windows-` prefix.
+        subsections:
+          - heading: macOS (SwiftUI client)
+            body: '| Skill | Load when | |---|---| | `macos-tahoe-crypto-signing` | Signing/notarizing the macOS build; Gatekeeper/notarization failures; verifying a macOS binary''s signature | | `macos-tahoe-native-runtimes` | Leaks/retain cycles/data races in Swift/Obj-C/C; dispatch, swizzling, dyld, Swift concurrency | | `macos-tahoe-managed-runtimes` | Embedding Python/Ruby/JS/JVM; interpreter or subprocess isolation | | `macos-tahoe-scripting-automation` | Shell/AppleScript, `launchd` agents/daemons, scheduled jobs | | `macos-tahoe-web-scripting` | `WKWebView`, JS↔Swift bridges, CSP/origin isolation | | `macos-tahoe-network-forensics` | BPF/libpcap DNS/packet capture for Cage; per-process attribution | | `macos-tahoe-xcode-tooling` | Xcode/SwiftPM/CocoaPods builds; `otool`/`nm`/`lipo` Mach-O inspection | | `macos-tahoe-ecosystem-tools` | Homebrew and CLI developer tooling | | `macos-tahoe-ui-ux` | SwiftUI/Liquid Glass UI, menu-bar/status-item, alerts, graphic design | | `macos-tahoe-network-protocols` | Sockets/TCP/UDP/DNS client, Network.framework, `URLSession` | | `macos-tahoe-swift-sdk-conventions` | Idiomatic Swift, API design, `async`/`await` conventions |'
+          - heading: Windows (WinUI 3 / C# client)
+            body: '| Skill | Load when | |---|---| | `windows-crypto-signing` | Authenticode signing/notarization; SmartScreen; verifying a Windows binary''s signature | | `windows-native-runtimes` | PE/Win32/C++, P/Invoke & COM interop, NativeAOT | | `windows-managed-runtimes` | .NET CLR/GC/JIT, assembly loading, runtime hosting | | `windows-scripting-automation` | PowerShell, Task Scheduler, WMI/CIM | | `windows-web-scripting` | WebView2, host↔JS interop, CSP | | `windows-network-forensics` | Npcap/WinDivert/pktmon/ETW DNS capture for Cage | | `windows-toolchain-tooling` | Visual Studio/MSBuild/`dotnet` CLI, NuGet supply-chain integrity | | `windows-ecosystem-tools` | winget/NuGet/Sysinternals/Windows Terminal | | `windows-ui-ux` | WinUI 3/XAML/Fluent Design, tray, toasts, alert dialogs | | `windows-network-protocols` | Winsock, IP Helper API, `DnsQuery`, WFP | | `windows-dotnet-sdk-conventions` | C#/.NET SDK conventions, nullable, `async`/`await` |'
+      - heading: Notes
+        items:
+          - The `depends:` list above declares the full skill hierarchy. The Windows child skills are being finalized; until then, only the `macos-tahoe-*` children resolve.
+          - '`_ROOT_.md` (also at the project root) is the human-facing / multi-tool navigation index; **this `SKILL.md`** is the Perplexity/Claude top-most *skill*.'

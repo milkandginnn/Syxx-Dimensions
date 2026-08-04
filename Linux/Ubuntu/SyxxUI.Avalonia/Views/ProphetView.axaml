@@ -1,0 +1,209 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             xmlns:kit="using:Syxx.Kit"
+             x:Class="SyxxUI.Avalonia.Views.ProphetView"
+             x:CompileBindings="True"
+             x:DataType="vm:ProphetViewModel">
+
+  <!-- Prophet pane: 1:1 translation of macOS ProphetView.swift (the gold standard).
+       Structure top-to-bottom: rune header, domain card, consensus result card, DNSSEC result
+       card (below the resolver card, NOT side-by-side), empty state. HONESTY: the strongest
+       DNSSEC posture rendered is "configured: signatures observed" (teal, never "validated" or
+       "secure"); a failed DNSSEC query renders as Inconclusive (text-secondary, NEVER red). -->
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="22" Margin="24">
+
+      <!-- 1. RUNE HEADER (HStack top-aligned, spacing 15): 54x54 teal rune tile + right VStack -->
+      <StackPanel Orientation="Horizontal" Spacing="15">
+        <!-- Rune tile: "ᚨ" in Cinzel-SemiBold 28, teal on teal-at-10% bg, 14pt corners, teal glow -->
+        <Border Width="54" Height="54" CornerRadius="14" Background="#1A2dd4bf"
+                BoxShadow="0 0 22 #592dd4bf" VerticalAlignment="Top">
+          <TextBlock Text="&#x16A8;" FontFamily="{StaticResource SyxDisplayFont}" FontSize="28"
+                     Foreground="{StaticResource SyxTealBrush}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+
+        <!-- Right VStack: eyebrow + title + lore subcaption + body paragraph -->
+        <StackPanel Spacing="4" MaxWidth="560" VerticalAlignment="Top">
+          <!-- Eyebrow: "THE SEER · RESOLVER ACCURACY" (Jost Medium bold, teal, tracking 0.26em) -->
+          <TextBlock Text="THE SEER &#x00B7; RESOLVER ACCURACY"
+                     FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
+                     LetterSpacing="3" Foreground="{StaticResource SyxTealBrush}" />
+
+          <!-- Title: "Prophet" (Cinzel-SemiBold 26) -->
+          <TextBlock Text="Prophet" FontFamily="{StaticResource SyxDisplayFont}" FontSize="26"
+                     Foreground="{StaticResource SyxTextBrush}" />
+
+          <!-- Lore subcaption (EB Garamond Italic 18, text-muted). VERBATIM owner copy,
+               matching the macOS gold standard (ProphetView.swift:53). -->
+          <TextBlock FontFamily="{StaticResource SyxLoreFont}" FontSize="18" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextMutedBrush}"
+                     Text="Thus the voyage began: The Prophet names each domain aright, so no false guise may be borne into view." />
+
+          <!-- Body paragraph (Cormorant Garamond 16, text-secondary). VERBATIM owner copy. -->
+          <TextBlock FontFamily="{StaticResource SyxTypeBody}" FontSize="16" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}"
+                     Text="Prophet compares twelve resolver answers to queries sent for the domain you identify. A match only indicates consistency and does not mean the answers are valid. Resolver answers can be spoofed. Prophet then checks for DNSSEC on the domain, which does communicate trustworthiness." />
+        </StackPanel>
+      </StackPanel>
+
+      <!-- 2. DOMAIN SELECTION CARD (VStack, padding 20, surface card) -->
+      <Border CornerRadius="14" Padding="20" Background="#08FFFFFF"
+              BorderBrush="#14FFFFFF" BorderThickness="1">
+        <StackPanel Spacing="10">
+          <!-- Lore line (EB Garamond Italic 18, text-muted). VERBATIM owner copy, matching the
+               macOS gold standard (ProphetView.swift:71). No wrapping quotation marks
+               (MEMORY.md:1795). -->
+          <TextBlock FontFamily="{StaticResource SyxLoreFont}" FontSize="18" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextMutedBrush}"
+                     Text="In what domain do voices agree, their truth brought forth in dawn, and by the sacred seal, their truth preserved." />
+
+          <!-- Body line (Cormorant Garamond 16). VERBATIM owner copy. -->
+          <TextBlock Text="Choose the domain you wish to check."
+                     FontFamily="{StaticResource SyxTypeBody}" FontSize="16"
+                     Foreground="{StaticResource SyxTextSecondaryBBrush}" />
+
+          <!-- HStack: domain TextBox + "Divine the address" Button (teal gradient) -->
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBox Grid.Column="0" PlaceholderText="a domain to divine&#x2026;"
+                     Text="{Binding Domain}" FontFamily="{StaticResource SyxMonoFont}" FontSize="14"
+                     Foreground="{StaticResource SyxTextBrush}"
+                     Background="{StaticResource SyxInputFillBrush}" CornerRadius="10" Padding="12"
+                     BorderBrush="#1FFFFFFF" BorderThickness="1"
+                     AutomationProperties.Name="Domain to test"
+                     AutomationProperties.HelpText="Enter a domain name to query multiple DNS resolvers and check for consensus" />
+            <Button Grid.Column="1" Content="Divine the address" Command="{Binding CheckCommand}"
+                    FontFamily="{StaticResource SyxTypeUiLabel}" FontSize="14"
+                    Foreground="#062B26" Background="{StaticResource SyxTealButtonBrush}"
+                    CornerRadius="10" Padding="22,12"
+                    AutomationProperties.Name="Divine the address"
+                    AutomationProperties.HelpText="Queries multiple DNS resolvers for the domain and checks whether they agree on the result" />
+          </Grid>
+
+          <!-- Error / D278 gate message (only visible when StatusLine is non-empty) -->
+          <TextBlock Text="{Binding StatusLine}" FontFamily="{StaticResource SyxTypeBody}"
+                     FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}"
+                     IsVisible="{Binding StatusLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
+      <!-- 3. RESULTS (only when ProphetConsensusResult != null) -->
+      <StackPanel Spacing="14" IsVisible="{Binding HasConsensusResult}">
+
+        <!-- 3a. RESOLVER CONSENSUS RESULT CARD -->
+        <Border CornerRadius="14" Padding="20"
+                Background="{Binding ConsensusCardBackground}"
+                BorderBrush="{Binding ConsensusBorderBrush}" BorderThickness="1">
+          <StackPanel Spacing="14">
+            <!-- Coloured dot + two-run consensus headline. Parity macOS ProphetView.swift:271-286:
+                 run 1 is Spectral Light 20 and run 2 Spectral Light 17, BOTH in the state colour.
+                 Run 2 exists only for the lore agree/disagree states; inconclusive and
+                 insufficient render run 1 alone and never borrow either voice. -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Ellipse Width="9" Height="9" Fill="{Binding ConsensusBrush}"
+                       VerticalAlignment="Center" />
+              <TextBlock Text="{Binding ConsensusHeadlinePrimary}"
+                         FontFamily="{StaticResource SyxTypeNavLabel}" FontSize="20"
+                         TextWrapping="Wrap" Foreground="{Binding ConsensusBrush}" />
+              <TextBlock Text="{Binding ConsensusHeadlineSecondary}"
+                         IsVisible="{Binding HasConsensusHeadlineSecondary}"
+                         FontFamily="{StaticResource SyxTypeNavLabel}" FontSize="17"
+                         TextWrapping="Wrap" VerticalAlignment="Bottom"
+                         Foreground="{Binding ConsensusBrush}" />
+            </StackPanel>
+
+            <!-- Consensus detail (EB Garamond Italic 14, text-muted) -->
+            <TextBlock Text="{Binding ConsensusDetail}" FontFamily="{StaticResource SyxLoreFont}"
+                       FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextMutedBrush}" />
+
+            <!-- Scrollable resolver list (12 rows: resolver name left / IP right) -->
+            <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding ResolverResponses}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="kit:ProphetResult+ResolverResponse">
+                    <Border BorderBrush="#0FFFFFFF" BorderThickness="0,0,0,1" Padding="0,9">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding Resolver}"
+                                   FontFamily="{StaticResource SyxTypeBody}" FontSize="15"
+                                   Foreground="{StaticResource SyxTextMutedBBrush}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Ip}"
+                                   FontFamily="{StaticResource SyxMonoFont}" FontSize="13"
+                                   Foreground="{StaticResource SyxTextBrush}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Consensus footer row (left label / right "N / N agree · Xms median") -->
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="Consensus"
+                         FontFamily="{StaticResource SyxTypeBody}" FontSize="15"
+                         Foreground="{StaticResource SyxTextMutedBBrush}" />
+              <TextBlock Grid.Column="1" Text="{Binding ConsensusFraction}"
+                         FontFamily="{StaticResource SyxMonoFont}" FontSize="13"
+                         Foreground="{Binding ConsensusBrush}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- 3b. DNSSEC RESULT CARD (only when DnssecStatus != null, rendered BELOW the resolver
+             card, NOT side-by-side). Duplicate of the resolver card structure with a
+             status.Description mono block and a "DNSSEC" footer row with a short status tag. -->
+        <Border CornerRadius="14" Padding="20" IsVisible="{Binding HasDnssecResult}"
+                Background="{Binding DnssecCardBackground}"
+                BorderBrush="{Binding DnssecBorderBrush}" BorderThickness="1">
+          <StackPanel Spacing="14">
+            <!-- Colored dot + DNSSEC title -->
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Ellipse Width="9" Height="9" Fill="{Binding DnssecBrush}" />
+              <TextBlock Text="{Binding DnssecTitle}" FontFamily="{StaticResource SyxDisplayFont}"
+                         FontSize="16" Foreground="{Binding DnssecBrush}" />
+            </StackPanel>
+
+            <!-- DNSSEC detail (EB Garamond Italic 14, text-muted) -->
+            <TextBlock Text="{Binding DnssecDetail}" FontFamily="{StaticResource SyxLoreFont}"
+                       FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextMutedBrush}" />
+
+            <!-- DNSSEC posture body: the typed status description (mono 13, text-secondary).
+                 Never a fabricated "secure"; the strongest positive state is
+                 "DNSSEC RECORDS OBSERVED, signature window valid (cryptographic validation not
+                 performed by this client)" from DNSSECVerifier.Describe. -->
+            <Border CornerRadius="10" Padding="12" Background="#05FFFFFF"
+                    BorderBrush="#0FFFFFFF" BorderThickness="1">
+              <TextBlock Text="{Binding DnssecDescription}" FontFamily="{StaticResource SyxMonoFont}"
+                         FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+            </Border>
+
+            <!-- DNSSEC footer row (left label / right short status tag) -->
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="DNSSEC"
+                         FontFamily="{StaticResource SyxTypeBody}" FontSize="15"
+                         Foreground="{StaticResource SyxTextMutedBBrush}" />
+              <TextBlock Grid.Column="1" Text="{Binding DnssecStatusLabel}"
+                         FontFamily="{StaticResource SyxMonoFont}" FontSize="13"
+                         Foreground="{Binding DnssecBrush}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- 4. EMPTY STATE (when ProphetConsensusResult == null): dashed-border placeholder.
+           NOTE: Avalonia 12 Border has no BorderDashArray property (unlike WPF). A solid subtle
+           border is used here; the dashed style is a macOS-only cosmetic that requires a custom
+           Shape overlay to replicate. Flagged as a minor cosmetic parity gap. -->
+      <Border CornerRadius="14" Padding="34" BorderBrush="#1FFFFFFF" BorderThickness="1"
+              IsVisible="{Binding !HasConsensusResult}">
+        <TextBlock HorizontalAlignment="Center" TextWrapping="Wrap"
+                   FontFamily="{StaticResource SyxLoreFont}" FontSize="15"
+                   Foreground="{StaticResource SyxTextFaintBBrush}"
+                   Text="The Prophet waits in silence. Name a city, and it shall divine." />
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

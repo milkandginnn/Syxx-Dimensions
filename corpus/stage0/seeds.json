@@ -1,0 +1,97 @@
+{
+  "_schema": "STAGE0-GOLDEN-VECTOR-CONTRACT.md (engine-boundary realization)",
+  "_note": "WS-B1 single source of truth for the Stage-0 golden corpus. Read by BOTH Windows/Syxx.Tests/Stage0GoldenCorpusTests.cs and macOS/Tests/SyxxKitTests/Stage0GoldenCorpusTests.swift. Enum string values are the Swift rawValue form: sections/statuses lowercase, evidenceId camelCase, expectedVerdict a Hypothesis rawValue (interception_transport / interception_onPath keep their underscore form). The Swift loader decodes these rawValues directly; the C# loader normalizes (lowercase, strip underscores) onto its PascalCase enums. sectionStatuses is the FULL resolved six-section map (equivalent to with(allNeg, overrides)). Edit vectors HERE ONLY; never re-hand-encode either harness. A tampering label must NEVER declare expectedVerdict clean (never-false-secure corpus invariant).",
+  "vectors": [
+    {
+      "id": "NE1-d1-dnssec-strip-washed",
+      "label": "dnssec_strip",
+      "evidence": [
+        { "section": "prophet", "evidenceId": "dnssecCanaryStripped", "source": "canaries", "clusterId": "prophet:dnssec" }
+      ],
+      "sectionStatuses": { "prophet": "positive", "mirror": "negative", "portal": "negative", "glutton": "negative", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 1,
+      "expectedVerdict": "inconclusive",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    },
+    {
+      "id": "NE1-d2-two-mechanism-inversion",
+      "label": "rewrite",
+      "evidence": [
+        { "section": "prophet", "evidenceId": "nxCanaryHijack", "source": "canaries", "clusterId": "prophet:nx" },
+        { "section": "prophet", "evidenceId": "dnssecCanaryStripped", "source": "canaries", "clusterId": "prophet:dnssec" }
+      ],
+      "sectionStatuses": { "prophet": "positive", "mirror": "negative", "portal": "negative", "glutton": "negative", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 3,
+      "expectedVerdict": "threatDetected",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    },
+    {
+      "id": "NE7-d1-critical-inconclusive-to-clean",
+      "label": "block",
+      "evidence": [
+        { "section": "prophet", "evidenceId": "resolverStatus" }
+      ],
+      "sectionStatuses": { "prophet": "inconclusive", "mirror": "negative", "portal": "negative", "glutton": "negative", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 1,
+      "expectedVerdict": "inconclusive",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    },
+    {
+      "id": "NE2-d5-invalidated-critical",
+      "label": "rewrite",
+      "evidence": [],
+      "sectionStatuses": { "prophet": "negative", "mirror": "invalidated", "portal": "negative", "glutton": "negative", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 1,
+      "expectedVerdict": "inconclusive",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    },
+    {
+      "id": "P12-degraded-critical-glutton",
+      "label": "leak",
+      "evidence": [],
+      "sectionStatuses": { "prophet": "negative", "mirror": "negative", "portal": "negative", "glutton": "degraded", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 1,
+      "expectedVerdict": "inconclusive",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    },
+    {
+      "id": "P17-lone-redirection",
+      "label": "rewrite",
+      "evidence": [
+        { "section": "mirror", "evidenceId": "redirection", "clusterId": "mirror:redir" }
+      ],
+      "sectionStatuses": { "prophet": "negative", "mirror": "positive", "portal": "negative", "glutton": "negative", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 1,
+      "expectedVerdict": "inconclusive",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    },
+    {
+      "id": "P15-positive-blocks-clean",
+      "label": "rewrite",
+      "evidence": [
+        { "section": "prophet", "evidenceId": "dnssecCanaryStripped", "source": "canaries", "clusterId": "prophet:dnssec" }
+      ],
+      "sectionStatuses": { "prophet": "positive", "mirror": "negative", "portal": "negative", "glutton": "negative", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 1,
+      "expectedVerdict": "inconclusive",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    },
+    {
+      "id": "benign-all-clean",
+      "label": "benign_clean",
+      "evidence": [],
+      "sectionStatuses": { "prophet": "negative", "mirror": "negative", "portal": "negative", "glutton": "negative", "cage": "negative", "witness": "negative" },
+      "greensAtPhase": 1,
+      "expectedVerdict": "clean",
+      "expectedReferral": true,
+      "knownFalseSecureUntilGate": false
+    }
+  ]
+}

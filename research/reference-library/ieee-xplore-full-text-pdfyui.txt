@@ -1,0 +1,37 @@
+# Source: IEEE Xplore Full-Text PDFyui.pdf
+# Title (best guess): Summary of DNS Over HTTPS Abuse
+# Pages: 1 · Words: 256
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+Received April 26, 2022, accepted May 11, 2022, date of publication May 16, 2022, date of current version May 26, 2022.
+Digital Object Identifier 10.1109/ACCESS.2022.3175497
+
+Summary of DNS Over HTTPS Abuse
+KAREL HYNEK 1,2 , DMITRII VEKSHIN 1,3 , JAN LUXEMBURK
+AND ARMIN WASICEK 3 , (Senior Member, IEEE)
+
+1,2 , TOMAS CEJKA
+
+1,2 ,
+
+1 Faculty of Information Technology, Czech Technical University in Prague (CTU), 160 00 Prague, Czech Republic
+2 CESNET z.s.p.o., 160 00 Prague, Czech Republic
+
+3 Avast Software s.r.o., 140 00 Prague, Czech Republic
+
+Corresponding author: Karel Hynek (hynekkar@cesnet.cz)
+This work was supported in part by the Ministry of Interior of the Czech Republic (Flow-Based Encrypted Traffic Analysis) under
+Grant VJ02010024, in part by the Grant Agency of the Czech Technical University in Prague (CTU) through Ministry of Education Youth
+and Sports (MEYS) of the Czech Republic under Grant SGS20/210/OHK3/3T/18, in part by the European Union’s Horizon 2020 Research
+and Innovation Program under Grant 833418, and in part by Avast Software s.r.o.
+
+ABSTRACT The Internet Engineering Task Force adopted the DNS over HTTPS protocol in 2018 to
+remediate privacy issues regarding the plain text transmission of the DNS protocol. According to our
+observations and the analysis described in this paper, protecting DNS queries using HTTPS entails security
+threats. This paper surveys DoH related research works and analyzes malicious and unwanted activities
+that leverage DNS over HTTPS and can be currently observed in the wild. Additionally, we describe three
+real-world abuse scenarios observed in the web environment that reveal how service providers intentionally
+
+

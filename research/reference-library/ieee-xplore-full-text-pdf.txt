@@ -1,0 +1,25 @@
+# Source: IEEE Xplore Full-Text PDF.pdf
+# Title (best guess): Detecting Network Scanning Through Monitoring
+# Pages: 1 · Words: 146
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+Received 17 January 2023, accepted 17 February 2023, date of publication 27 February 2023, date of current version 2 March 2023.
+Digital Object Identifier 10.1109/ACCESS.2023.3250106
+
+Detecting Network Scanning Through Monitoring
+and Manipulation of DNS Traffic
+JAFAR HAADI JAFARIAN , (Member, IEEE), MASOUMEH ABOLFATHI, (Member, IEEE),
+AND MAHSA RAHIMIAN
+Department of Computer Science and Engineering, University of Colorado (CU) Denver, Denver, CO 80204, USA
+
+Corresponding author: Jafar Haadi Jafarian (haadi.jafarian@ucdenver.edu)
+
+ABSTRACT In this paper, we propose an approach for detecting internal and external network scanning
+attacks on enterprise networks. In our approach, an inline scan detection system (SDS) monitors the ingress
+and egress flows of an enterprise network subnet and detects scanning probes based on the correlation of
+flows with preceding DNS query/responses and reducing TTL values of DNS Resource Records (RR).
+Through rigorous evaluation, we show that our method is effective against both external and internal
+
+

@@ -1,0 +1,232 @@
+
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Syxx macOS GUI Mockup</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width:100vw; height:100vh; min-height:600px;
+    background: radial-gradient(ellipse 900px 700px at 46% 48%, #07152e 0%, #040c1a 55%, #020810 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;
+    overflow:hidden;
+  }
+  .glow { position:fixed; pointer-events:none; border-radius:50%; }
+  .g1 { width:700px; height:480px; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:radial-gradient(ellipse at 50% 50%, rgba(140,92,245,0.32) 0%, rgba(232,245,60,0.18) 40%, transparent 68%);
+    filter:blur(60px); z-index:1; }
+  .g2 { width:320px; height:220px; top:28%; left:62%; transform:translate(-50%,-50%);
+    background:radial-gradient(ellipse at 50% 50%, rgba(232,245,60,0.40) 0%, transparent 65%);
+    filter:blur(36px); z-index:1; }
+  .g3 { width:280px; height:200px; top:74%; left:34%; transform:translate(-50%,-50%);
+    background:radial-gradient(ellipse at 50% 50%, rgba(140,92,245,0.45) 0%, transparent 65%);
+    filter:blur(34px); z-index:1; }
+  .g4 { width:180px; height:120px; top:18%; left:22%; transform:translate(-50%,-50%);
+    background:radial-gradient(ellipse at 50% 50%, rgba(199,169,255,0.25) 0%, transparent 70%);
+    filter:blur(28px); z-index:1; }
+
+  .rift-wrap { position:relative; z-index:2; width:660px; height:580px; flex-shrink:0; }
+
+  /* clip-path applied via inline style on the element — not here */
+  .rift-panel {
+    position:absolute; inset:0;
+    background:rgba(6,11,20,0.97);
+    overflow:hidden;
+  }
+  .rift-panel::before {
+    content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(ellipse 80% 28% at 50% 0%, rgba(232,245,60,0.07) 0%, transparent 65%),
+      radial-gradient(ellipse 60% 22% at 5% 90%, rgba(140,92,245,0.09) 0%, transparent 65%);
+  }
+  .inner {
+    position:relative; z-index:2; height:100%;
+    display:flex; flex-direction:column;
+    padding:54px 52px 38px 52px;
+  }
+  .wm-dots { position:absolute; top:24px; left:54px; display:flex; gap:8px; z-index:20; }
+  .wm-dot  { width:12px; height:12px; border-radius:50%; }
+  .wm-dot.r { background:#ef4444; box-shadow:0 0 7px rgba(239,68,68,.6); }
+  .wm-dot.y { background:#f59e0b; box-shadow:0 0 7px rgba(245,158,11,.5); }
+  .wm-dot.g { background:#22c55e; box-shadow:0 0 7px rgba(34,197,94,.5); }
+  .app-brand { position:absolute; top:18px; right:54px; display:flex; align-items:center; gap:10px; z-index:20; }
+  .brand-icon {
+    width:32px; height:32px; border-radius:8px; background:#0a1220;
+    border:1px solid rgba(255,255,255,0.1); display:grid; place-items:center;
+    box-shadow:0 0 12px rgba(232,245,60,.35), 0 0 20px rgba(140,92,245,.3);
+  }
+  .brand-name { font-size:13px; font-weight:700; letter-spacing:.06em; color:#E8ECF6; }
+  .drag-strip {
+    position:absolute; top:20px; left:50%; transform:translateX(-50%);
+    width:42px; height:4px; border-radius:2px; background:rgba(255,255,255,0.12); z-index:20; cursor:move;
+  }
+  .tab-bar {
+    display:flex; gap:3px; margin-bottom:14px;
+    background:rgba(255,255,255,0.04); border-radius:10px;
+    padding:3px; border:1px solid rgba(255,255,255,0.06);
+  }
+  .tab { flex:1; text-align:center; padding:7px 2px; border-radius:7px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#52637a; cursor:pointer; }
+  .tab.active { background:rgba(232,245,60,0.12); color:#E8F53C; border:1px solid rgba(232,245,60,0.2); }
+  .panel { flex:1; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+  .section-label { font-size:9px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:#52637a; margin-bottom:4px; }
+  .input-row { display:flex; gap:7px; align-items:center; }
+  .field { flex:1; padding:9px 12px; font-size:12.5px; font-family:ui-monospace,'SF Mono',Menlo,monospace; color:#E8ECF6; background:#0c1828; border:1px solid #1e3050; border-radius:8px; outline:none; }
+  .field-sm { width:82px; flex:none; }
+  select.field { appearance:none; cursor:pointer; }
+  .btn { padding:9px 16px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; white-space:nowrap; }
+  .btn-primary { background:linear-gradient(135deg,#E8F53C 0%,#8C5CF5 100%); color:#08111e; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .chip { display:flex; align-items:center; gap:7px; padding:5px 10px; background:#0c1828; border:1px solid #1e3050; border-radius:7px; font-size:11px; color:#9AA6C0; }
+  .tog { width:28px; height:15px; border-radius:8px; background:#1e3a5f; position:relative; border:1px solid #2a4a6e; flex-shrink:0; }
+  .tog.on { background:rgba(232,245,60,.22); border-color:rgba(232,245,60,.35); }
+  .tog::after { content:''; position:absolute; top:1px; left:1px; width:11px; height:11px; border-radius:50%; background:#3d5068; }
+  .tog.on::after { left:14px; background:#E8F53C; }
+  .results-box { flex:1; background:#040a14; border:1px solid #162840; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+  .results-header { background:#071525; padding:8px 14px; display:flex; align-items:center; gap:6px; border-bottom:1px solid #162840; }
+  .rdot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .rtitle { font-family:ui-monospace,'SF Mono',monospace; font-size:10px; color:#2e4460; margin:0 auto; }
+  .results-body { flex:1; padding:12px 14px; overflow-y:auto; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; line-height:1.7; }
+  .t-cmd  { color:#E8ECF6; }
+  .t-ok   { color:#E8F53C; }
+  .t-info { color:#3a5270; }
+  .t-sec  { color:#22c55e; }
+  .status-bar { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+  .status-pill { display:flex; align-items:center; gap:6px; font-size:10px; color:#3a5060; }
+  .pulse { width:6px; height:6px; border-radius:50%; background:#E8F53C; box-shadow:0 0 6px rgba(232,245,60,.7); animation:pulse 2.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .verdict { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; background:rgba(34,197,94,.13); color:#22c55e; border:1px solid rgba(34,197,94,.28); }
+  .footer { position:fixed; bottom:10px; left:0; right:0; text-align:center; font-size:10px; color:#111e2e; font-family:-apple-system,sans-serif; padding-top:8px; }
+</style>
+</head>
+<body>
+
+<div class="glow g1"></div>
+<div class="glow g2"></div>
+<div class="glow g3"></div>
+<div class="glow g4"></div>
+
+<div class="rift-wrap">
+
+  
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:6">
+    <defs>
+      
+        <path d="M330 8 C420 10,560 60,628 160 C666 218,652 290,648 340 C644 400,658 460,624 516 C588 570,490 590,390 584 C310 580,230 574,160 552 C90 530,22 490,12 420 C4 362,30 300,26 240 C22 178,-4 120,30 72 C62 26,150 4,230 6 C270 7,300 8,330 8Z"></path>
+      
+      
+        <stop offset="0%"></stop>
+        <stop offset="30%"></stop>
+        <stop offset="55%"></stop>
+        <stop offset="80%"></stop>
+        <stop offset="100%"></stop>
+      
+      
+        
+        
+        
+      
+    </defs>
+    
+    <path filter="url(#eg)" stroke="url(#sg)" stroke-width="1.8" fill="none" d="M330 8 C420 10,560 60,628 160 C666 218,652 290,648 340 C644 400,658 460,624 516 C588 570,490 590,390 584 C310 580,230 574,160 552 C90 530,22 490,12 420 C4 362,30 300,26 240 C22 178,-4 120,30 72 C62 26,150 4,230 6 C270 7,300 8,330 8Z"></path>
+  </svg>
+
+  
+  <div class="rift-panel" style="clip-path:url(#rc)">
+
+    <div class="wm-dots">
+      <div class="wm-dot r"></div>
+      <div class="wm-dot y"></div>
+      <div class="wm-dot g"></div>
+    </div>
+    <div class="drag-strip"></div>
+
+    <div class="app-brand">
+      <div class="brand-icon">
+        
+        <svg width="22" height="20">
+          <defs>
+            
+              <stop offset="0"></stop>
+              <stop offset="0.5"></stop>
+              <stop offset="1"></stop>
+            
+            
+              <stop offset="0"></stop>
+              <stop offset="1"></stop>
+            
+          </defs>
+          <path d="M4 50 C28 14,92 14,116 50 C92 86,28 86,4 50Z" fill="none" stroke="url(#eyeG)" stroke-width="5"></path>
+          <circle cx="60" cy="52" r="20" fill="url(#eyeG)" opacity="0.3"></circle>
+          <circle cx="60" cy="52" r="9" fill="#050e1c"></circle>
+          <path d="M60 44 C60 28,46 20,50 8" fill="none" stroke="url(#snkG)" stroke-width="8" stroke-linecap="round"></path>
+          <ellipse cx="51" cy="5" rx="9" ry="6" fill="#E8F53C" transform="rotate(-22,51,5)"></ellipse>
+          <circle cx="55" cy="2" r="1.4" fill="#0a1020"></circle>
+        </svg>
+      </div>
+      <span class="brand-name">SYXX</span>
+    </div>
+
+    <div class="inner">
+      <div class="tab-bar">
+        <div class="tab active">NSLook</div>
+        <div class="tab">Mirror</div>
+        <div class="tab">Key</div>
+        <div class="tab">Leak</div>
+        <div class="tab">Cages</div>
+        <div class="tab">Witness</div>
+      </div>
+
+      <div class="panel">
+        <div>
+          <div class="section-label">DNS Resolution &amp; Protocol Integrity</div>
+          <div class="input-row">
+            <input class="field" type="text" />
+            <select class="field field-sm">
+              <option>A</option><option>AAAA</option><option>MX</option>
+              <option>TXT</option><option>NS</option><option>DNSKEY</option>
+              <option>RRSIG</option><option>DS</option>
+            </select>
+            <input class="field field-sm" />
+            <button class="btn btn-primary">Resolve</button>
+          </div>
+          <div class="chips">
+            <div class="chip">DNSSEC<div class="tog on"></div></div>
+            <div class="chip">DoH<div class="tog"></div></div>
+            <div class="chip">Multi-transport<div class="tog"></div></div>
+            <div class="chip">Chain validation<div class="tog"></div></div>
+          </div>
+        </div>
+
+        <div class="results-box">
+          <div class="results-header">
+            <div class="rdot" style="background:#ef4444"></div>
+            <div class="rdot" style="background:#f59e0b"></div>
+            <div class="rdot" style="background:#22c55e"></div>
+            <div class="rtitle">syxx-nslook cloudflare.com A @8.8.8.8 --dnssec</div>
+          </div>
+          <div class="results-body">
+            <div class="t-cmd">% syxx-nslook cloudflare.com A @8.8.8.8 --dnssec</div>
+            <div class="t-info">Querying A records for cloudflare.com…</div>
+            <div class="t-info">UDP resolver: 8.8.8.8</div>
+            <div class="t-ok">cloudflare.com  TTL:289  A  104.16.133.229</div>
+            <div class="t-ok">cloudflare.com  TTL:289  A  104.16.132.229</div>
+            <div class="t-info" style="margin-top:5px">Checking DNSSEC…</div>
+            <div class="t-sec">✓ Signed — RRSIG present, DS validated</div>
+          </div>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-pill"><div class="pulse"></div>Passive DNS index live</div>
+          <div class="verdict">● Secure</div>
+          <div style="font-size:10px;color:#253545">2 records · 289ms</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">Made with IBM Bob</div>
+</body>
+</html>

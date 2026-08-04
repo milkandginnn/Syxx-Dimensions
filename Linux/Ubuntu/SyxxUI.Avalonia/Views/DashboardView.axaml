@@ -1,0 +1,288 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel">
+
+  <!-- Dashboard · The Watchtower (IMPLEMENTATION_GUIDE §2.2a / §3.6, warden theme).
+       HONESTY: the mockup's demo numbers ("4 of 6", "67%", "8% confidence") are NOT reproduced.
+       Trust is {Binding TrustScore} which the VM holds at a dash until a real scan runs; wardens read
+       "Not run"; the Council has "No conclusion yet". None of these claim a measured-good state.
+       NOTE (unwired, additive VM work owed): the four action controls are styled but not yet bound to
+       commands (the VM currently exposes none), and the Encrypted-DNS enable/disable is shown in its
+       conservative "already encrypted" state pending an additive availability signal. Flagged. -->
+
+  <StackPanel Margin="30,42,30,14" Spacing="10">
+
+    <TextBlock Text="THE WATCHTOWER · REALM OVERVIEW" FontSize="10.5" FontWeight="Bold"
+               LetterSpacing="2.7" Foreground="#8a6ef0" />
+    <TextBlock Text="The Vigil Holds" FontFamily="{StaticResource SyxDisplayFont}"
+               FontSize="27" FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}" />
+
+    <!-- Status banner: trust ring (dash at rest) + real resolver + honest health line -->
+    <Border CornerRadius="14" Padding="16,11" Background="{StaticResource SyxSurfaceFillBrush}"
+            BorderThickness="1" BorderBrush="#2E9478F6">
+      <Grid ColumnDefinitions="Auto,*">
+        <Panel Grid.Column="0" Width="70" Height="70" Margin="0,0,16,0">
+          <Ellipse Width="70" Height="70" Stroke="#269478F6" StrokeThickness="10" />
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding TrustScore}" FontFamily="{StaticResource SyxDisplayFont}" FontSize="18"
+                       Foreground="{Binding TrustBrush}" HorizontalAlignment="Center" />
+            <TextBlock Text="NOT RUN" FontFamily="{StaticResource SyxMonoFont}" FontSize="8"
+                       Foreground="{StaticResource SyxTextMutedBBrush}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Panel>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="No watch has been kept yet" FontFamily="{StaticResource SyxDisplayFont}"
+                       FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}"
+                       VerticalAlignment="Center" />
+            <Border CornerRadius="999" Padding="11,5" Background="#1A7c5cff" BorderThickness="1"
+                    BorderBrush="#4C7c5cff" VerticalAlignment="Center">
+              <TextBlock Text="{Binding Resolver}" FontFamily="{StaticResource SyxMonoFont}" FontSize="10.5"
+                         Foreground="#b9a9ff" />
+            </Border>
+          </StackPanel>
+          <Border Height="9" CornerRadius="999" Background="#249478F6" />
+          <TextBlock FontFamily="{StaticResource SyxLoreFont}" FontStyle="Italic" FontSize="13"
+                     Foreground="{StaticResource SyxTextMutedBrush}"
+                     Text="The wardens stand ready. Summon them to the roads to learn what watch can be kept." />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Primary action -->
+    <Border CornerRadius="12" Padding="16,11" Background="{StaticResource SyxPrimaryButtonBrush}"
+            BoxShadow="{StaticResource SyxActionShadow}">
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <TextBlock Text="⚔" FontSize="24" Foreground="White" VerticalAlignment="Center" />
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="Conduct All Scans" FontFamily="{StaticResource SyxDisplayFont}"
+                     FontSize="16" FontWeight="SemiBold" Foreground="White" />
+          <TextBlock Text="Summon all six wardens to the roads" FontSize="12" Foreground="#B8FFFFFF" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Secondary action row -->
+    <Grid ColumnDefinitions="*,*,*">
+      <Border Grid.Column="0" Margin="0,0,5,0" CornerRadius="11" Padding="13,8"
+              Background="{StaticResource SyxSurfaceFillBrush}" BorderThickness="1" BorderBrush="#4C2dd4bf">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Border Width="28" Height="28" CornerRadius="7" Background="#1F2dd4bf">
+            <TextBlock Text="≈" FontSize="15" Foreground="{StaticResource SyxTealBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Flush DNS Cache" FontSize="13" FontWeight="SemiBold"
+                       Foreground="{StaticResource SyxTextBrush}" />
+            <TextBlock Text="Clear the resolver cache" FontSize="10.5"
+                       Foreground="{StaticResource SyxTextMutedBBrush}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="1" Margin="5,0" CornerRadius="11" Padding="13,8"
+              Background="{StaticResource SyxSurfaceFillBrush}" BorderThickness="1" BorderBrush="#4C7c5cff">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Border Width="28" Height="28" CornerRadius="7" Background="#1F7c5cff">
+            <TextBlock Text="◈" FontSize="14" Foreground="{StaticResource SyxVioletBrightBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Enable Unbound DNS" FontSize="13" FontWeight="SemiBold"
+                       Foreground="{StaticResource SyxTextBrush}" />
+            <TextBlock Text="Run a local validating resolver" FontSize="10.5"
+                       Foreground="{StaticResource SyxTextMutedBBrush}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="2" Margin="5,0,0,0" CornerRadius="11" Padding="13,8" Opacity="0.5"
+              Background="#05FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Border Width="28" Height="28" CornerRadius="7" Background="#1A2dd4bf">
+            <TextBlock Text="⊝" FontSize="15" Foreground="{StaticResource SyxTealBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Enable Encrypted DNS" FontSize="13" FontWeight="SemiBold"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}" />
+            <TextBlock Text="Disabled — traffic already encrypted (VPN)" FontSize="10.5"
+                       Foreground="{StaticResource SyxTextMutedBBrush}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- Warden grid + Council/Chronicle -->
+    <Grid ColumnDefinitions="1.5*,1*" Margin="0,4,0,0">
+      <StackPanel Grid.Column="0" Margin="0,0,5,0" Spacing="8">
+        <TextBlock Text="THE SIX WARDENS" FontSize="10" FontWeight="Bold" LetterSpacing="2"
+                   Foreground="{StaticResource SyxTextMutedBBrush}" />
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
+          <Border Grid.Row="0" Grid.Column="0" Margin="0,0,4,4" CornerRadius="11" Padding="11,14"
+                  Background="#06FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Width="32" Height="32" CornerRadius="8" Background="#1A2dd4bf">
+                  <TextBlock Text="ᚨ" FontFamily="{StaticResource SyxDisplayFont}" FontSize="17"
+                             Foreground="{StaticResource SyxTealBrush}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Prophet" FontFamily="{StaticResource SyxDisplayFont}" FontSize="13.5"
+                             FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}" />
+                  <TextBlock Text="Resolver accuracy" FontFamily="{StaticResource SyxLoreFont}"
+                             FontStyle="Italic" FontSize="9.5" Foreground="{StaticResource SyxTextMutedBBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <TextBlock Text="NOT RUN" FontSize="8.5" FontWeight="SemiBold" LetterSpacing="0.4"
+                         Foreground="{StaticResource SyxTextMutedBBrush}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Row="0" Grid.Column="1" Margin="4,0,0,4" CornerRadius="11" Padding="11,14"
+                  Background="#06FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Width="32" Height="32" CornerRadius="8" Background="#1Fa78bff">
+                  <TextBlock Text="ᛞ" FontFamily="{StaticResource SyxDisplayFont}" FontSize="17"
+                             Foreground="{StaticResource SyxVioletBrightBrush}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Mirror" FontFamily="{StaticResource SyxDisplayFont}" FontSize="13.5"
+                             FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}" />
+                  <TextBlock Text="Remote vs local" FontFamily="{StaticResource SyxLoreFont}"
+                             FontStyle="Italic" FontSize="9.5" Foreground="{StaticResource SyxTextMutedBBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <TextBlock Text="LOCKED · PRO" FontSize="8.5" FontWeight="SemiBold" LetterSpacing="0.4"
+                         Foreground="{StaticResource SyxVioletBrightBrush}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="0" Margin="0,4,4,4" CornerRadius="11" Padding="11,14"
+                  Background="#06FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Width="32" Height="32" CornerRadius="8" Background="#1A2dd4bf">
+                  <TextBlock Text="ᛜ" FontFamily="{StaticResource SyxDisplayFont}" FontSize="17"
+                             Foreground="{StaticResource SyxTealBrush}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Portal" FontFamily="{StaticResource SyxDisplayFont}" FontSize="13.5"
+                             FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}" />
+                  <TextBlock Text="LAN &amp; route trace" FontFamily="{StaticResource SyxLoreFont}"
+                             FontStyle="Italic" FontSize="9.5" Foreground="{StaticResource SyxTextMutedBBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <TextBlock Text="NOT RUN" FontSize="8.5" FontWeight="SemiBold" LetterSpacing="0.4"
+                         Foreground="{StaticResource SyxTextMutedBBrush}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="1" Margin="4,4,0,4" CornerRadius="11" Padding="11,14"
+                  Background="#06FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Width="32" Height="32" CornerRadius="8" Background="#1Fff4d6d">
+                  <TextBlock Text="ᚦ" FontFamily="{StaticResource SyxDisplayFont}" FontSize="17"
+                             Foreground="{StaticResource SyxRedBrush}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Glutton" FontFamily="{StaticResource SyxDisplayFont}" FontSize="13.5"
+                             FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}" />
+                  <TextBlock Text="DNS leak test" FontFamily="{StaticResource SyxLoreFont}"
+                             FontStyle="Italic" FontSize="9.5" Foreground="{StaticResource SyxTextMutedBBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <TextBlock Text="LOCKED · PRO" FontSize="8.5" FontWeight="SemiBold" LetterSpacing="0.4"
+                         Foreground="{StaticResource SyxVioletBrightBrush}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Row="2" Grid.Column="0" Margin="0,4,4,0" CornerRadius="11" Padding="11,14"
+                  Background="#06FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Width="32" Height="32" CornerRadius="8" Background="#1F9b8ac9">
+                  <TextBlock Text="ᚾ" FontFamily="{StaticResource SyxDisplayFont}" FontSize="17"
+                             Foreground="#9b8ac9" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Cage" FontFamily="{StaticResource SyxDisplayFont}" FontSize="13.5"
+                             FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}" />
+                  <TextBlock Text="Live query capture" FontFamily="{StaticResource SyxLoreFont}"
+                             FontStyle="Italic" FontSize="9.5" Foreground="{StaticResource SyxTextMutedBBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <TextBlock Text="NOT RUN" FontSize="8.5" FontWeight="SemiBold" LetterSpacing="0.4"
+                         Foreground="{StaticResource SyxTextMutedBBrush}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Row="2" Grid.Column="1" Margin="4,4,0,0" CornerRadius="11" Padding="11,14"
+                  Background="#06FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Width="32" Height="32" CornerRadius="8" Background="#1Fa78bff">
+                  <TextBlock Text="ᛉ" FontFamily="{StaticResource SyxDisplayFont}" FontSize="17"
+                             Foreground="{StaticResource SyxVioletBrightBrush}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="Witness" FontFamily="{StaticResource SyxDisplayFont}" FontSize="13.5"
+                             FontWeight="SemiBold" Foreground="{StaticResource SyxTextBrush}" />
+                  <TextBlock Text="Environment trust" FontFamily="{StaticResource SyxLoreFont}"
+                             FontStyle="Italic" FontSize="9.5" Foreground="{StaticResource SyxTextMutedBBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <TextBlock Text="LOCKED · PRO" FontSize="8.5" FontWeight="SemiBold" LetterSpacing="0.4"
+                         Foreground="{StaticResource SyxVioletBrightBrush}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Margin="5,0,0,0" Spacing="11">
+        <Border CornerRadius="12" Padding="15,12" Background="#0Ff7931e" BorderThickness="1" BorderBrush="#3Df7931e">
+          <StackPanel Spacing="5">
+            <TextBlock Text="THE COUNCIL'S CONCLUSION" FontSize="10" FontWeight="Bold" LetterSpacing="2"
+                       Foreground="#c99a5a" />
+            <TextBlock Text="No conclusion yet" FontFamily="{StaticResource SyxDisplayFont}" FontSize="15"
+                       FontWeight="SemiBold" Foreground="{StaticResource SyxOrangeBrush}" />
+            <TextBlock FontSize="11" Foreground="{StaticResource SyxTextMutedBBrush}" TextWrapping="Wrap"
+                       Text="No testimony has been gathered. A conclusion is withheld until the wardens run; silence is not safety." />
+          </StackPanel>
+        </Border>
+        <Border CornerRadius="12" Padding="15,12" Background="{StaticResource SyxSurfaceFillBrush}"
+                BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
+          <StackPanel Spacing="7">
+            <TextBlock Text="THE CHRONICLE" FontSize="10" FontWeight="Bold" LetterSpacing="2"
+                       Foreground="{StaticResource SyxTextMutedBBrush}" />
+            <TextBlock FontFamily="{StaticResource SyxLoreFont}" FontStyle="Italic" FontSize="12.5"
+                       Foreground="{StaticResource SyxTextFaintBrush}" Text="No events recorded yet." />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- Pro Covenant banner -->
+    <Border CornerRadius="12" Padding="16,8" Background="{StaticResource SyxProCovenantBrush}"
+            BorderThickness="1" BorderBrush="#52a08cff">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Column="0" Text="✧" FontSize="24" VerticalAlignment="Center"
+                   Foreground="{StaticResource SyxVioletBrightBrush}" Margin="0,0,14,0" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Text="ASCEND TO THE PRO COVENANT" FontSize="10" FontWeight="SemiBold"
+                     LetterSpacing="2.2" Foreground="{StaticResource SyxVioletPaleBrush}" />
+          <TextBlock Text="Awaken the three Server Wardens — $2 / moon"
+                     FontFamily="{StaticResource SyxDisplayFont}" FontSize="15" FontWeight="SemiBold"
+                     Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+        <Border Grid.Column="2" CornerRadius="10" Padding="18,9" Background="{StaticResource SyxVioletBrush}"
+                BoxShadow="{StaticResource SyxPrimaryButtonShadow}" VerticalAlignment="Center">
+          <TextBlock Text="Begin the trial" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+        </Border>
+      </Grid>
+    </Border>
+
+  </StackPanel>
+</UserControl>

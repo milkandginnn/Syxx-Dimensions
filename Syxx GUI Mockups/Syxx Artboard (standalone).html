@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syxx — The Six Wardens · Artboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0518;font-family:system-ui,-apple-system,sans-serif;color:#c9c1e6}
+  a{color:#a78bff;text-decoration:none}
+  a:hover{color:#c4b3ff}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:rgba(124,92,255,.25);border-radius:8px}
+  select{appearance:none;-webkit-appearance:none}
+  @keyframes syxpulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .cursor{display:inline-block;width:8px;height:15px;background:#2dd4bf;vertical-align:-2px;animation:blink 1.1s step-end infinite}
+  .btn{cursor:pointer;transition:all .15s}
+  .btn:hover{filter:brightness(1.09);transform:translateY(-2px)}
+  .nav{cursor:pointer;transition:all .14s}
+  .nav:hover{color:#efeafe}
+  .page{display:none}
+  .page.on{display:block}
+  .cmd{cursor:pointer;transition:all .12s}
+  .cmd:hover{background:rgba(124,92,255,.16);border-color:#7c5cff}
+  input:focus{border-color:#7c5cff !important}
+  input::placeholder{color:#5f567f}
+</style>
+</head>
+<body>
+<div style="width:max-content;min-height:100vh;padding:52px 60px 130px;background:radial-gradient(130% 80% at 15% 0%,#1a0c33 0%,#0b0518 55%)">
+
+  <!-- Toast -->
+  <div id="toast" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 22px;border-radius:999px;background:rgba(28,17,52,.92);backdrop-filter:blur(20px);border:1px solid rgba(160,140,255,.35);box-shadow:0 16px 44px rgba(0,0,0,.5);font-family:'EB Garamond',serif;font-style:italic;font-size:15px;color:#d9d2f0"></div>
+
+  <!-- Header -->
+  <div style="margin-bottom:8px;max-width:560px">
+    <div style="font:700 11px system-ui;letter-spacing:.28em;text-transform:uppercase;color:#8a6ef0">Syxx · The Six Wardens · Design System Artboard</div>
+    <div style="font:600 27px 'Cinzel',serif;color:#efeafe;margin:7px 0 5px">Everything a UI coder needs to rebuild the console</div>
+    <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13.5px;color:#9a8fc0;max-width:540px">Dark, fantasy-themed "security console" for the Syxx DNS investigation app. All styling inline; no external CSS framework.</div>
+  </div>
+
+  <!-- ═══════════════ IMPLEMENTATION GUIDE ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:16px">&#10021;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">Implementation Guide · Style Reference</span></div>
+    <div style="width:1050px;box-sizing:border-box;border-radius:16px;background:linear-gradient(180deg,#170c2e,#0f0720);box-shadow:0 40px 120px rgba(0,0,0,.55),0 0 0 1px rgba(148,120,246,.14);padding:38px 44px;background-image:radial-gradient(90% 50% at 50% -5%,rgba(124,92,255,.16),transparent 55%)">
+      <div style="font:700 10.5px system-ui;letter-spacing:.28em;color:#8a6ef0;text-transform:uppercase">Syxx · The Six Wardens</div>
+      <div style="font:600 34px 'Cinzel',serif;color:#efeafe;margin:8px 0 4px">Implementation Guide</div>
+      <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:16px;color:#9a8fc0;margin-bottom:30px">Everything a UI coder needs to rebuild the console &mdash; dark, non-bundled, inline-styled.</div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:28px 40px">
+
+        <!-- PALETTE -->
+        <div>
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin-bottom:14px">Color Palette</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#0b0518;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Canvas</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#0b0518</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#7c5cff;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Violet</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#7c5cff</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#2dd4bf;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Teal</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#2dd4bf</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#d9a441;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Gold</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#d9a441</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#ff4d6d;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Red</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#ff4d6d</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#f7931e;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Orange</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#f7931e</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#efeafe;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Text</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#efeafe</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#c9c1e6;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Body</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#c9c1e6</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#9a8fc0;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Muted</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#9a8fc0</div></div>
+            <div style="width:118px"><div style="height:52px;border-radius:10px;background:#6f6597;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 12px rgba(0,0,0,.3)"></div><div style="font:600 12px system-ui;color:#efeafe;margin-top:7px">Faint</div><div style="font-family:ui-monospace,monospace;font-size:10.5px;color:#8f83b8">#6f6597</div></div>
+          </div>
+        </div>
+
+        <!-- GRADIENTS -->
+        <div>
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin-bottom:14px">Gradients</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div><div style="height:38px;border-radius:10px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);border:1px solid rgba(255,255,255,.06)"></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font:600 12px system-ui;color:#c9c1e6">Primary button</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#6f6597">120deg</span></div></div>
+            <div><div style="height:38px;border-radius:10px;background:linear-gradient(120deg,#2dd4bf,#14a89a);border:1px solid rgba(255,255,255,.06)"></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font:600 12px system-ui;color:#c9c1e6">Teal button</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#6f6597">120deg</span></div></div>
+            <div><div style="height:38px;border-radius:10px;background:linear-gradient(120deg,#ff4d6d,#d62a4c);border:1px solid rgba(255,255,255,.06)"></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font:600 12px system-ui;color:#c9c1e6">Red button</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#6f6597">120deg</span></div></div>
+            <div><div style="height:38px;border-radius:10px;background:linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff);border:1px solid rgba(255,255,255,.06)"></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font:600 12px system-ui;color:#c9c1e6">Wordmark / logo</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#6f6597">90deg</span></div></div>
+            <div><div style="height:38px;border-radius:10px;background:linear-gradient(180deg,#170c2e,#0f0720);border:1px solid rgba(255,255,255,.06)"></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font:600 12px system-ui;color:#c9c1e6">Window fill</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#6f6597">180deg</span></div></div>
+            <div><div style="height:38px;border-radius:10px;background:linear-gradient(180deg,#1d1240,#160c30);border:1px solid rgba(255,255,255,.06)"></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font:600 12px system-ui;color:#c9c1e6">Sidebar fill</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#6f6597">180deg</span></div></div>
+            <div><div style="height:38px;border-radius:10px;background:linear-gradient(90deg,#2dd4bf,#7c5cff);border:1px solid rgba(255,255,255,.06)"></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font:600 12px system-ui;color:#c9c1e6">Health meter fill</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#6f6597">90deg</span></div></div>
+          </div>
+        </div>
+
+        <!-- TYPOGRAPHY -->
+        <div>
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin-bottom:14px">Typography</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="border-bottom:1px solid rgba(148,120,246,.1);padding-bottom:12px"><div style="font:600 30px 'Cinzel',serif;color:#efeafe">Cinzel &mdash; Prophet</div><div style="font-family:ui-monospace,monospace;font-size:11px;color:#8f83b8;margin-top:4px">'Cinzel', serif &middot; headings, module names, numbers &middot; 600&ndash;700</div></div>
+            <div style="border-bottom:1px solid rgba(148,120,246,.1);padding-bottom:12px"><div style="font-family:'EB Garamond',serif;font-style:italic;font-size:19px;color:#c9c1e6">EB Garamond &mdash; the resolvers agreed.</div><div style="font-family:ui-monospace,monospace;font-size:11px;color:#8f83b8;margin-top:4px">'EB Garamond', serif italic &middot; lore / flavor &middot; 400&ndash;500</div></div>
+            <div style="border-bottom:1px solid rgba(148,120,246,.1);padding-bottom:12px"><div style="font:600 15px system-ui;color:#efeafe">system-ui &mdash; UI labels & body</div><div style="font-family:ui-monospace,monospace;font-size:11px;color:#8f83b8;margin-top:4px">system-ui &middot; buttons, body &middot; 500&ndash;600 &middot; eyebrows 700 / .26em UPPER</div></div>
+            <div><div style="font-family:ui-monospace,monospace;font-size:14px;color:#efeafe">ui-monospace &mdash; 140.82.121.4</div><div style="font-family:ui-monospace,monospace;font-size:11px;color:#8f83b8;margin-top:4px">ui-monospace &middot; paths, hashes, IPs, keys, timestamps</div></div>
+          </div>
+        </div>
+
+        <!-- SIZES + COMPONENTS -->
+        <div>
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin-bottom:14px">Sizes, Radii & Components</div>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:12.5px;color:#c9c1e6">
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(148,120,246,.08)"><span>Window</span><span style="font-family:ui-monospace,monospace;color:#a78bff">1050 x 700 &middot; r16</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(148,120,246,.08)"><span>Sidebar</span><span style="font-family:ui-monospace,monospace;color:#a78bff">236px wide</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(148,120,246,.08)"><span>Content padding</span><span style="font-family:ui-monospace,monospace;color:#a78bff">22 34 20</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(148,120,246,.08)"><span>Radii</span><span style="font-family:ui-monospace,monospace;color:#a78bff">badge6 &middot; card14 &middot; panel16 &middot; pill999</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(148,120,246,.08)"><span>Neutral surface / border</span><span style="font-family:ui-monospace,monospace;color:#a78bff">#fff .03 / violet .14</span></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px">
+            <span style="padding:11px 20px;border-radius:11px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 13px system-ui;box-shadow:0 10px 26px rgba(124,92,255,.4)">Primary</span>
+            <span style="padding:11px 20px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 13px system-ui">Ghost</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(45,212,191,.10);border:1px solid rgba(45,212,191,.3);font:600 11px system-ui;color:#2dd4bf"><span style="width:7px;height:7px;border-radius:50%;background:#2dd4bf"></span>Passed</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,77,109,.10);border:1px solid rgba(255,77,109,.3);font:600 11px system-ui;color:#ff4d6d">Failed</span>
+            <span style="width:44px;height:26px;border-radius:999px;background:#7c5cff;position:relative;box-shadow:0 0 12px rgba(124,92,255,.5)"><span style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span>
+          </div>
+        </div>
+
+        <!-- RUNES -->
+        <div style="grid-column:1 / -1">
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin-bottom:14px">Rune Iconography</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px">
+            <div style="flex:1;min-width:150px;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(148,120,246,.12)"><span style="width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font:600 22px 'Cinzel',serif;background:rgba(45,212,191,.10);color:#2dd4bf;box-shadow:0 0 12px rgba(45,212,191,.35)">&#5765;</span><div><div style="font:600 14px 'Cinzel',serif;color:#efeafe">Prophet</div><div style="font-size:11px;color:#8f83b8;font-family:'EB Garamond',serif;font-style:italic">Resolver accuracy</div></div></div>
+            <div style="flex:1;min-width:150px;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(148,120,246,.12)"><span style="width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font:600 22px 'Cinzel',serif;background:rgba(167,139,255,.12);color:#a78bff;box-shadow:0 0 12px rgba(167,139,255,.35)">&#5766;</span><div><div style="font:600 14px 'Cinzel',serif;color:#efeafe">Mirror</div><div style="font-size:11px;color:#8f83b8;font-family:'EB Garamond',serif;font-style:italic">Remote vs local (Pro)</div></div></div>
+            <div style="flex:1;min-width:150px;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(148,120,246,.12)"><span style="width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font:600 22px 'Cinzel',serif;background:rgba(45,212,191,.10);color:#2dd4bf;box-shadow:0 0 12px rgba(45,212,191,.35)">&#5772;</span><div><div style="font:600 14px 'Cinzel',serif;color:#efeafe">Portal</div><div style="font-size:11px;color:#8f83b8;font-family:'EB Garamond',serif;font-style:italic">LAN & route trace</div></div></div>
+            <div style="flex:1;min-width:150px;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(148,120,246,.12)"><span style="width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font:600 22px 'Cinzel',serif;background:rgba(255,77,109,.10);color:#ff4d6d;box-shadow:0 0 12px rgba(255,77,109,.35)">&#5798;</span><div><div style="font:600 14px 'Cinzel',serif;color:#efeafe">Glutton</div><div style="font-size:11px;color:#8f83b8;font-family:'EB Garamond',serif;font-style:italic">DNS leak test</div></div></div>
+            <div style="flex:1;min-width:150px;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(148,120,246,.12)"><span style="width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font:600 22px 'Cinzel',serif;background:rgba(124,92,255,.10);color:#a78bff;box-shadow:0 0 12px rgba(124,92,255,.35)">&#5800;</span><div><div style="font:600 14px 'Cinzel',serif;color:#efeafe">Cage</div><div style="font-size:11px;color:#8f83b8;font-family:'EB Garamond',serif;font-style:italic">Live query capture</div></div></div>
+            <div style="flex:1;min-width:150px;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(148,120,246,.12)"><span style="width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font:600 22px 'Cinzel',serif;background:rgba(124,92,255,.10);color:#a78bff;box-shadow:0 0 12px rgba(124,92,255,.35)">&#5817;</span><div><div style="font:600 14px 'Cinzel',serif;color:#efeafe">Witness</div><div style="font-size:11px;color:#8f83b8;font-family:'EB Garamond',serif;font-style:italic">Environment trust (signing)</div></div></div>
+          </div>
+          <div style="font-family:ui-monospace,monospace;font-size:11px;color:#6f6597;margin-top:12px">Nav &middot; What's New &#10022; &middot; Dashboard &#9641; &middot; Conclusion &#10000; &middot; Dimensions &#8853; &middot; Settings &#9881; &middot; License &#9871; &nbsp;|&nbsp; Actions &middot; scan &#9876; &middot; flush &asymp; &middot; copy &#10697; &middot; open &#8962; &middot; pro &#10023; &middot; warn &#9888;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SIDEBAR COMPONENT ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:15px">&#9776;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">WardenSidebar Component</span><span style="font-family:'EB Garamond',serif;font-style:italic;font-size:12px;color:#8f83b8">&mdash; 236px, full height, gradient fill</span></div>
+    <div style="display:flex;gap:0;border-radius:16px;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.55),0 0 0 1px rgba(148,120,246,.14)">
+      <div style="width:236px;min-width:236px;height:680px;box-sizing:border-box;display:flex;flex-direction:column;padding:46px 15px 16px;background:linear-gradient(180deg,#1d1240 0%,#160c30 100%);border-right:1px solid rgba(148,120,246,.14)">
+        <div style="display:flex;align-items:center;gap:11px;padding:0 4px">
+          <img src="uploads/syxx.svg" alt="Syxx" width="50" height="50" style="display:block;filter:drop-shadow(0 0 10px rgba(255,45,120,.3))">
+          <div>
+            <div style="font:700 27px/1 'Cinzel',serif;background:linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff);-webkit-background-clip:text;background-clip:text;color:transparent">Syxx</div>
+            <div style="font-size:9.5px;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin-top:5px;font-weight:600">The Six Wardens</div>
+          </div>
+        </div>
+        <div style="height:1px;background:rgba(148,120,246,.16);margin:15px 4px 11px"></div>
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:2px">
+          <!-- What's New -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;display:flex;justify-content:center;color:#8f83b8"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 5.6L19.5 9l-5.8 1.4L12 16l-1.7-5.6L4.5 9l5.8-1.4z"></path><circle cx="18.5" cy="17.5" r="1.7"></circle></svg></span><span style="flex:1">What's New</span></a>
+          <!-- Dashboard -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:9px 13px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;color:#fff;background:linear-gradient(90deg,#7c5cff,#6a49ef);box-shadow:0 8px 20px rgba(124,92,255,.4)"><span style="width:22px;display:flex;justify-content:center;color:#fff"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="13"></line><line x1="12" y1="20" x2="12" y2="8"></line><line x1="18" y1="20" x2="18" y2="4"></line></svg></span><span style="flex:1">Dashboard</span></a>
+          <!-- Gold divider -->
+          <div style="height:1px;background:#d9a441;opacity:.32;margin:11px 8px"></div>
+          <!-- Prophet -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;text-align:center;font-size:17px;color:#9b8ac9">&#5765;</span><span style="flex:1">Prophet</span></a>
+          <!-- Mirror (locked) -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;text-align:center;font-size:17px;color:#9b8ac9">&#5766;</span><span style="flex:1">Mirror</span><span style="display:inline-flex;align-items:center;gap:5px;color:#e0b45a;filter:drop-shadow(0 0 5px rgba(224,180,90,.55))"><svg width="17" height="20" viewBox="0 0 26 30" fill="none"><path d="M7 13 V10 a6 6 0 0 1 12 0 V13" stroke="currentColor" stroke-width="2.8" fill="none"></path><rect x="5" y="13" width="16" height="12.5" rx="3" fill="currentColor"></rect><circle cx="13" cy="18.5" r="1.9" fill="#160c30"></circle></svg><span style="font:700 10px system-ui;letter-spacing:.1em;color:#e0b45a">PRO</span></span></a>
+          <!-- Portal -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;text-align:center;font-size:17px;color:#9b8ac9">&#5772;</span><span style="flex:1">Portal</span></a>
+          <!-- Glutton (locked) -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;text-align:center;font-size:17px;color:#9b8ac9">&#5798;</span><span style="flex:1">Glutton</span><span style="display:inline-flex;align-items:center;gap:5px;color:#e0b45a;filter:drop-shadow(0 0 5px rgba(224,180,90,.55))"><svg width="17" height="20" viewBox="0 0 26 30" fill="none"><path d="M7 13 V10 a6 6 0 0 1 12 0 V13" stroke="currentColor" stroke-width="2.8" fill="none"></path><rect x="5" y="13" width="16" height="12.5" rx="3" fill="currentColor"></rect><circle cx="13" cy="18.5" r="1.9" fill="#160c30"></circle></svg><span style="font:700 10px system-ui;letter-spacing:.1em;color:#e0b45a">PRO</span></span></a>
+          <!-- Cage -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;text-align:center;font-size:17px;color:#9b8ac9">&#5800;</span><span style="flex:1">Cage</span></a>
+          <!-- Witness (locked) -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;text-align:center;font-size:17px;color:#9b8ac9">&#5817;</span><span style="flex:1">Witness</span><span style="display:inline-flex;align-items:center;gap:5px;color:#e0b45a;filter:drop-shadow(0 0 5px rgba(224,180,90,.55))"><svg width="17" height="20" viewBox="0 0 26 30" fill="none"><path d="M7 13 V10 a6 6 0 0 1 12 0 V13" stroke="currentColor" stroke-width="2.8" fill="none"></path><rect x="5" y="13" width="16" height="12.5" rx="3" fill="currentColor"></rect><circle cx="13" cy="18.5" r="1.9" fill="#160c30"></circle></svg><span style="font:700 10px system-ui;letter-spacing:.1em;color:#e0b45a">PRO</span></span></a>
+          <!-- Gold divider -->
+          <div style="height:1px;background:#d9a441;opacity:.32;margin:11px 8px"></div>
+          <!-- Conclusion -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;transition:all .14s;text-decoration:none;color:#b3a7d6" onmouseover="this.style.background='rgba(124,92,255,.10)';this.style.color='#efeafe'" onmouseout="this.style.background='';this.style.color='#b3a7d6'"><span style="width:22px;display:flex;justify-content:center;color:#8f83b8"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M9.3 14.2l1.8 1.8 3.4-4"></path></svg></span><span style="flex:1">Conclusion</span></a>
+          <!-- Gold divider -->
+          <div style="height:1px;background:#d9a441;opacity:.32;margin:11px 8px"></div>
+          <!-- Dimensions -->
+          <a href="#" style="display:flex;align-items:center;gap:13px;padding:8px 13px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;transition:all .14s;text-decoration:none;color:#e0b45a" onmouseover="this.style.background='rgba(217,164,65,.09)'" onmouseout="this.style.background=''"><span style="width:22px;display:flex;justify-content:center;color:#e0b45a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"></path></svg></span><span style="flex:1">Dimensions</span><span style="font-size:12px;opacity:.7">&#8599;</span></a>
+        </div>
+        <div style="padding-top:12px">
+          <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid rgba(217,164,65,.35);color:#e0b45a;font-size:12.5px;font-weight:500;cursor:pointer;transition:all .14s" onmouseover="this.style.background='rgba(217,164,65,.10)'" onmouseout="this.style.background=''"><span style="font-size:13px">&#10225;</span><span>Start your story anew</span></div>
+        </div>
+      </div>
+      <!-- Content preview -->
+      <div style="flex:1;height:680px;background:linear-gradient(180deg,#170c2e,#0f0720);background-image:radial-gradient(120% 70% at 72% -10%,rgba(124,92,255,.18),transparent 55%);display:flex;align-items:center;justify-content:center">
+        <div style="text-align:center">
+          <div style="font:600 27px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">The Vigil Holds</div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:15px;color:#9a8fc0">Content area &mdash; each warden pane fills this space</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TOGGLE COMPONENT ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:15px">&#9881;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">Toggle Component</span></div>
+    <div style="display:flex;gap:20px;align-items:center">
+      <!-- ON -->
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:44px;height:26px;border-radius:999px;background:#7c5cff;position:relative;box-shadow:0 0 12px rgba(124,92,255,.5);cursor:pointer"><span style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+        <span style="font:500 13px system-ui;color:#c9c1e6">ON</span>
+      </div>
+      <!-- OFF -->
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:44px;height:26px;border-radius:999px;background:rgba(148,120,246,.2);position:relative;cursor:pointer"><span style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#9a8fc0"></span></div>
+        <span style="font:500 13px system-ui;color:#9a8fc0">OFF</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STATUS CHIPS ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:15px">&#10003;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">Status Chips</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(45,212,191,.10);border:1px solid rgba(45,212,191,.3);font:600 11px system-ui;color:#2dd4bf"><span style="width:7px;height:7px;border-radius:50%;background:#2dd4bf"></span>Passed</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(255,77,109,.10);border:1px solid rgba(255,77,109,.3);font:600 11px system-ui;color:#ff4d6d"><span style="width:7px;height:7px;border-radius:50%;background:#ff4d6d"></span>Failed</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(148,120,246,.08);border:1px solid rgba(148,120,246,.2);font:600 11px system-ui;color:#9a8fc0"><span style="width:7px;height:7px;border-radius:50%;background:#9a8fc0"></span>Not run</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(247,147,30,.10);border:1px solid rgba(247,147,30,.3);font:600 11px system-ui;color:#f7931e"><span style="width:7px;height:7px;border-radius:50%;background:#f7931e"></span>Ambiguous</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(124,92,255,.10);border:1px solid rgba(124,92,255,.3);font:600 11px system-ui;color:#a78bff"><span style="width:7px;height:7px;border-radius:50%;background:#a78bff"></span>Signed</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CARD COMPONENTS ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:15px">&#9632;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">Card & Input Components</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- Card -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.14);border-radius:14px;padding:18px 20px">
+        <div style="font:700 10px system-ui;letter-spacing:.2em;color:#8f83b8;text-transform:uppercase;margin-bottom:8px">Standard Card</div>
+        <div style="font:600 15px 'Cinzel',serif;color:#efeafe;margin-bottom:6px">Card Title</div>
+        <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0">Card description in EB Garamond italic.</div>
+      </div>
+      <!-- Input -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.14);border-radius:14px;padding:18px 20px">
+        <div style="font:700 10px system-ui;letter-spacing:.2em;color:#8f83b8;text-transform:uppercase;margin-bottom:8px">Input Field</div>
+        <input placeholder="Enter a domain..." style="width:100%;box-sizing:border-box;padding:12px 15px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.2);color:#efeafe;font:14px ui-monospace,monospace;outline:none">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ BUTTON COMPONENTS ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:15px">&#9654;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">Button Components</span></div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <button style="padding:12px 22px;border-radius:11px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 14px system-ui;cursor:pointer;border:none;box-shadow:0 10px 26px rgba(124,92,255,.4)" onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter=''">Primary</button>
+      <button style="padding:12px 22px;border-radius:11px;background:linear-gradient(120deg,#2dd4bf,#14a89a);color:#062b26;font:600 14px system-ui;cursor:pointer;border:none;box-shadow:0 10px 26px rgba(45,212,191,.3)" onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter=''">Teal</button>
+      <button style="padding:12px 22px;border-radius:11px;background:linear-gradient(120deg,#ff4d6d,#d62a4c);color:#fff;font:600 14px system-ui;cursor:pointer;border:none;box-shadow:0 10px 26px rgba(255,77,109,.3)" onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter=''">Danger</button>
+      <button style="padding:12px 22px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 14px system-ui;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='rgba(255,255,255,.03)'">Ghost</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TRUST RING ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(45,212,191,.12);color:#2dd4bf;font-size:15px">&#9711;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">Trust Ring (Dashboard)</span></div>
+    <div style="display:flex;gap:40px;align-items:center">
+      <svg width="118" height="118" viewBox="0 0 118 118">
+        <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#7c5cff"/></linearGradient></defs>
+        <circle cx="59" cy="59" r="48" stroke="rgba(148,120,246,.15)" stroke-width="10" fill="none"/>
+        <circle cx="59" cy="59" r="48" stroke="url(#ringGrad)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="301" stroke-dashoffset="99" transform="rotate(-90 59 59)" style="filter:drop-shadow(0 0 6px rgba(124,92,255,.5))"/>
+        <text x="59" y="55" text-anchor="middle" fill="#efeafe" font-size="12" font-family="'Cinzel',serif" font-weight="600" letter-spacing="1">WARDED</text>
+        <text x="59" y="72" text-anchor="middle" fill="#8f83b8" font-size="10" font-family="ui-monospace,monospace">4 of 6</text>
+      </svg>
+      <div>
+        <div style="font:600 13px system-ui;color:#c9c1e6;margin-bottom:4px">Trust ring renders 118x118 SVG</div>
+        <div style="font-family:ui-monospace,monospace;font-size:11px;color:#8f83b8">stroke: 10-13px &middot; track: violet .15 &middot; fill: teal&rarr;violet gradient &middot; rotate(-90) &middot; drop-shadow glow</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ VERDICT CARD ═══════════════ -->
+  <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:56px">
+    <div style="display:flex;align-items:center;gap:11px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(247,147,30,.14);color:#f7931e;font-size:15px">&#9888;</span><span style="font:600 15px 'Cinzel',serif;color:#cfc6ea">Verdict Card (Dashboard sidebar)</span></div>
+    <div style="width:340px;background:rgba(247,147,30,.06);border:1px solid rgba(247,147,30,.24);border-radius:12px;padding:14px 18px">
+      <div style="font:700 10px system-ui;letter-spacing:.2em;color:#c99a5a;text-transform:uppercase;margin-bottom:7px">The Council's Verdict</div>
+      <div style="font:600 16px 'Cinzel',serif;color:#f7931e">DNS Interception</div>
+      <div style="display:flex;align-items:baseline;gap:7px;margin:5px 0 7px"><span style="font:600 22px 'Cinzel',serif;color:#efeafe">8%</span><span style="font-size:11px;color:#8f83b8">confidence &middot; hard-gated</span></div>
+      <a href="#" style="font:600 12px system-ui;color:#f7931e">Read the reckoning &rarr;</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

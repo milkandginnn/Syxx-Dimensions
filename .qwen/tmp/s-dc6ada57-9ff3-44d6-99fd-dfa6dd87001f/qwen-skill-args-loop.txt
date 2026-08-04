@@ -1,0 +1,1 @@
+Check if both background agents (restore-fonts and fix-structure) have completed. If so, build the app bundle, open it, and report all changes made.

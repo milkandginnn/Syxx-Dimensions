@@ -1,0 +1,44 @@
+# SwiftLint configuration for Syxx macOS sources.
+# Enforces safety rules critical to the tri-state honesty protocol.
+
+excluded:
+  - macOS/.build
+  - macOS/Tests
+  - macOS/Sources/CTls
+
+opt_in_rules:
+  - force_unwrapping
+  - force_cast
+  - force_try
+  - implicitly_unwrapped_optional
+  - empty_count
+  - first_where
+  - last_where
+  - operator_usage_whitespace
+  - sorted_first_last
+  - toggle_bool
+
+disabled_rules:
+  - trailing_whitespace
+  - todo  # Deltas contain TODO markers by design
+
+included:
+  - macOS/Sources
+
+# Rules tuned for the Syxx codebase
+force_cast: error
+force_try: error
+force_unwrapping: error
+implicitly_unwrapped_optional: warning
+line_length:
+  warning: 200
+  error: 300
+type_body_length:
+  warning: 500
+  error: 800
+function_body_length:
+  warning: 100
+  error: 200
+cyclomatic_complexity:
+  warning: 20
+  error: 35

@@ -1,0 +1,12 @@
+WARP_ASSEMBLY_V1
+
+===== WARP HTML https://example.test/ =====
+﻿<!doctype html>
+<html>
+<head><script src="app.js"></script></head>
+<body><p>CRLF and BOM</p></body>
+</html>
+
+===== WARP JS https://example.test/app.js =====
+﻿console.log("crlf");
+console.log("bom");

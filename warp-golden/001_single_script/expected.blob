@@ -1,0 +1,14 @@
+WARP_ASSEMBLY_V1
+
+===== WARP HTML https://example.test/ =====
+<!doctype html>
+<html>
+<head><title>Single Script</title></head>
+<body>
+<h1>Hello</h1>
+<script src="app.js"></script>
+</body>
+</html>
+
+===== WARP JS https://example.test/app.js =====
+console.log("app.js loaded");

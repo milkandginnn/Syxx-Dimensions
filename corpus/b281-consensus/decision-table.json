@@ -1,0 +1,18 @@
+{
+  "_comment": "B281 SHARED GOLDEN VECTOR. Both macOS (SyxxKitTests/CrossVantageConsensusGoldenVectorTests.swift) and Windows (Syxx.Tests/CrossVantageConsensusGoldenVectorTests.cs) load THIS file and assert CrossVantageConsensus.classifyPeerConsensus(vantages, trustedReference) == expected for every case. Any policy divergence between the platforms turns one suite red. A missing/empty file fails the test (no vacuous green). Outcomes: match | mismatch | inconclusive | insufficient | noData.",
+  "cases": [
+    { "name": "identical-single-address", "vantages": [["140.82.113.4"], ["140.82.113.4"], ["140.82.113.4"]], "trustedReference": [], "expected": "match" },
+    { "name": "identical-multi-address-order-independent", "vantages": [["140.82.113.3", "140.82.113.4"], ["140.82.113.4", "140.82.113.3"]], "trustedReference": [], "expected": "match" },
+    { "name": "owner-same-network-split-no-reference", "vantages": [["140.82.113.3"], ["140.82.113.4"], ["140.82.113.3"]], "trustedReference": [], "expected": "inconclusive" },
+    { "name": "p0c-different-multiaddress-sharing-first-element", "vantages": [["140.82.113.3", "140.82.113.4"], ["140.82.113.3", "9.9.9.9"]], "trustedReference": [], "expected": "inconclusive" },
+    { "name": "blocking-beside-routable", "vantages": [["127.0.0.1"], ["140.82.113.4"]], "trustedReference": [], "expected": "mismatch" },
+    { "name": "zero-usable", "vantages": [[], []], "trustedReference": [], "expected": "noData" },
+    { "name": "one-usable", "vantages": [["140.82.113.4"], []], "trustedReference": [], "expected": "insufficient" },
+    { "name": "different-network-no-reference", "vantages": [["140.82.113.3"], ["45.33.32.156"]], "trustedReference": [], "expected": "inconclusive" },
+    { "name": "divergence-same-network-with-trusted-reference", "vantages": [["140.82.113.3"], ["140.82.113.4"]], "trustedReference": ["140.82.113.4"], "expected": "inconclusive" },
+    { "name": "divergence-different-network-with-trusted-reference", "vantages": [["45.33.32.156"], ["140.82.113.4"]], "trustedReference": ["140.82.113.4"], "expected": "mismatch" },
+    { "name": "mixed-family-nat64-with-trusted-reference", "vantages": [["2606:50c0:8000::153"], ["140.82.113.4"]], "trustedReference": ["140.82.113.4"], "expected": "inconclusive" },
+    { "name": "ipv6-same-slash32-with-trusted-reference", "vantages": [["2606:50c0:8000::153"], ["2606:50c0:9000::200"]], "trustedReference": ["2606:50c0:9000::200"], "expected": "inconclusive" },
+    { "name": "ipv6-different-slash32-with-trusted-reference", "vantages": [["2001:4860:4860::8888"], ["2606:50c0:8000::153"]], "trustedReference": ["2606:50c0:8000::153"], "expected": "mismatch" }
+  ]
+}

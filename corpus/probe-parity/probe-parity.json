@@ -1,0 +1,197 @@
+{
+  "_note" : "Single source of truth for the standing probe-layer three-way parity harness. Read by BOTH Windows/Syxx.Tests/ProbeParityReplayTests.cs and macOS/Tests/SyxxKitTests/ProbeParityReplayTests.swift. Status strings are Swift DNSResponseStatus rawValues (camelCase); the C# loader normalizes onto its PascalCase enum. Each vector is a REAL capture or a content-free honest state; NEVER a synthetic mock. 'expected' is produced by the real evaluate() at capture time and must match on every platform.",
+  "_schema" : "probe-parity fixture v1 (WS-B5). VantageComparer.evaluate tri-state replay.",
+  "_todo" : [
+    "REWRITE-local-hijack: PENDING one real hijacked-resolver capture (a local resolver that rewrites an answer to a disjoint IP -> redirection=true). Cannot be authored by hand without fabricating the rewritten records (a synthetic mock, forbidden by the honesty spine). Capture on a network with a known DNS hijacker, then add the vector here. Tracked in corpus/probe-parity/REWRITE.TODO.md."
+  ],
+  "vectors" : [
+    {
+      "description" : "A local query was answered by a transparent on-path :53 interceptor with an answer that overlaps the public consensus. Contract: an answer overlapping the public union is AGREE (no redirection) — evaluate() must not cry wolf on a non-rewriting interceptor; a rewriting one is caught by the B010 DoH cross-check.",
+      "expected" : {
+        "degraded" : false,
+        "inconclusive" : false,
+        "redirection" : false
+      },
+      "id" : "AGREE-onpath-intercept-benign",
+      "localOutcome" : {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "104.20.23.154",
+            "ttl" : 30,
+            "type" : 1
+          },
+          {
+            "name" : "example.com",
+            "rdata" : "172.66.147.243",
+            "ttl" : 30,
+            "type" : 1
+          }
+        ],
+        "status" : "success"
+      },
+      "probe" : "VantageComparer.evaluate",
+      "provenance" : "REAL capture via DNSResolver.queryUDPDetailed on macOS. Local leg pointed at 192.0.2.1 (TEST-NET-1, RFC 5737, unroutable). This capture network transparently intercepts outbound UDP/53 and answered with example.com's real Cloudflare IPs; the public legs are live answers from 1.1.1.1 / 8.8.8.8 / 9.9.9.9.",
+      "publicOutcomes" : {
+        "Cloudflare" : {
+          "records" : [
+            {
+              "name" : "example.com",
+              "rdata" : "172.66.147.243",
+              "ttl" : 30,
+              "type" : 1
+            },
+            {
+              "name" : "example.com",
+              "rdata" : "104.20.23.154",
+              "ttl" : 30,
+              "type" : 1
+            }
+          ],
+          "status" : "success"
+        },
+        "Google" : {
+          "records" : [
+            {
+              "name" : "example.com",
+              "rdata" : "104.20.23.154",
+              "ttl" : 30,
+              "type" : 1
+            },
+            {
+              "name" : "example.com",
+              "rdata" : "172.66.147.243",
+              "ttl" : 30,
+              "type" : 1
+            }
+          ],
+          "status" : "success"
+        },
+        "Quad9" : {
+          "records" : [
+            {
+              "name" : "example.com",
+              "rdata" : "104.20.23.154",
+              "ttl" : 30,
+              "type" : 1
+            },
+            {
+              "name" : "example.com",
+              "rdata" : "172.66.147.243",
+              "ttl" : 30,
+              "type" : 1
+            }
+          ],
+          "status" : "success"
+        }
+      }
+    },
+    {
+      "description" : "The local resolver leg timed out (no response) while the three public baselines answered. Contract: a timeout is INCONCLUSIVE, never collapsed to a clean 'no redirection' verdict.",
+      "expected" : {
+        "degraded" : false,
+        "inconclusive" : true,
+        "redirection" : false
+      },
+      "id" : "TIMEOUT-local-timeout",
+      "localOutcome" : {
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      },
+      "probe" : "VantageComparer.evaluate",
+      "provenance" : "Local leg is the content-free timeout state (a timeout carries zero response bytes: {status: timeout, records: []}). Public legs are REAL live captures from 1.1.1.1 / 8.8.8.8 / 9.9.9.9 for example.com. No fabricated record content.",
+      "publicOutcomes" : {
+        "Cloudflare" : {
+          "records" : [
+            {
+              "name" : "example.com",
+              "rdata" : "172.66.147.243",
+              "ttl" : 30,
+              "type" : 1
+            },
+            {
+              "name" : "example.com",
+              "rdata" : "104.20.23.154",
+              "ttl" : 30,
+              "type" : 1
+            }
+          ],
+          "status" : "success"
+        },
+        "Google" : {
+          "records" : [
+            {
+              "name" : "example.com",
+              "rdata" : "104.20.23.154",
+              "ttl" : 30,
+              "type" : 1
+            },
+            {
+              "name" : "example.com",
+              "rdata" : "172.66.147.243",
+              "ttl" : 30,
+              "type" : 1
+            }
+          ],
+          "status" : "success"
+        },
+        "Quad9" : {
+          "records" : [
+            {
+              "name" : "example.com",
+              "rdata" : "104.20.23.154",
+              "ttl" : 30,
+              "type" : 1
+            },
+            {
+              "name" : "example.com",
+              "rdata" : "172.66.147.243",
+              "ttl" : 30,
+              "type" : 1
+            }
+          ],
+          "status" : "success"
+        }
+      }
+    },
+    {
+      "description" : "Every leg timed out (a fully UDP/53-blocked network). Contract: no baseline and a timed-out local leg is INCONCLUSIVE, never clean.",
+      "expected" : {
+        "degraded" : false,
+        "inconclusive" : true,
+        "redirection" : false
+      },
+      "id" : "TIMEOUT-all-legs",
+      "localOutcome" : {
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      },
+      "probe" : "VantageComparer.evaluate",
+      "provenance" : "Content-free honest state: a timeout carries zero response bytes, so every outcome is {status: timeout, records: []}. Reproducible on any network that blocks UDP/53; no fabricated record content.",
+      "publicOutcomes" : {
+        "Cloudflare" : {
+          "records" : [
+
+          ],
+          "status" : "timeout"
+        },
+        "Google" : {
+          "records" : [
+
+          ],
+          "status" : "timeout"
+        },
+        "Quad9" : {
+          "records" : [
+
+          ],
+          "status" : "timeout"
+        }
+      }
+    }
+  ]
+}

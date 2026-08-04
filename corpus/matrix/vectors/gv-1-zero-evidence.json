@@ -1,0 +1,52 @@
+{
+  "expected" : {
+    "diagnoses" : [
+
+    ],
+    "explanation" : "Inconclusive: the evidence does not affirmatively resolve to clean or to any threat.",
+    "state" : "inconclusive",
+    "suppressed" : [
+
+    ]
+  },
+  "input" : {
+    "indicators" : [
+
+    ],
+    "sections" : [
+      {
+        "section" : "prophet",
+        "status" : "passed",
+        "trusted" : true
+      },
+      {
+        "section" : "mirror",
+        "status" : "passed",
+        "trusted" : true
+      },
+      {
+        "section" : "portal",
+        "status" : "passed",
+        "trusted" : true
+      },
+      {
+        "section" : "glutton",
+        "status" : "passed",
+        "trusted" : true
+      },
+      {
+        "section" : "cage",
+        "status" : "passed",
+        "trusted" : true
+      },
+      {
+        "section" : "witness",
+        "status" : "passed",
+        "trusted" : true
+      }
+    ]
+  },
+  "name" : "GV-1: zero evidence → inconclusive, empty diagnoses",
+  "spec" : "default",
+  "why" : "Pins the dead uniform-12% behavior forever. MATRIX-MIGRATION-PLAN.md §6."
+}

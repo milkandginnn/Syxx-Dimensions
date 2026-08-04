@@ -1,0 +1,61 @@
+/* ============================================================
+   Nnyx — Color tokens ("Io" palette)
+   Source of truth: Sources/NnyxApp/Views/Components/IoDesignSystem.swift
+   A premium dark, slate-based security console. Electric cyan is the
+   brand action color; violet is the secondary accent. Semantic colors
+   map 1:1 to threat severity.
+   ============================================================ */
+
+:root {
+  /* ---- Brand / accent ---- */
+  --io-blue: #05b5d4;          /* Electric Cyan — primary action, links, focus */
+  --io-deep-blue: #0066cc;     /* Deep blue — gradient leg, pressed states */
+  --io-electric: #8c5cf5;      /* Violet — secondary accent, gradient end */
+  --io-accent-start: #05b5d4;  /* Brand gradient start (cyan) */
+  --io-accent-end: #8c5cf5;    /* Brand gradient end (violet) */
+
+  /* ---- Semantic / severity ---- */
+  --io-critical: #f5405e;      /* Crimson rose — Critical severity */
+  --io-high: #fa7317;          /* Coral sunset — High severity */
+  --io-warning: #f59e0a;       /* Amber glow — Medium severity, warnings */
+  --io-orange: #f97316;        /* Orange — Medium accent variant */
+  --io-success: #0d9487;       /* Teal frost — Low severity, healthy / OK */
+  --io-info: #8c5cf5;          /* Violet — Info severity */
+
+  /* ---- Neutral slate ladder (HSL 222) ---- */
+  --io-bg: #0f1629;            /* App background — deepest slate */
+  --io-surface: #1a2138;       /* Card / panel surface */
+  --io-surface-elevated: #26304a; /* Elevated surface, secondary buttons, chips */
+  --io-border: #334561;        /* Subtle borders, dividers */
+  --io-text: #ffffff;          /* Primary text */
+  --io-text-secondary: #94a3bf;/* Secondary / muted text, captions */
+
+  /* ---- Code-signing source palette ---- */
+  --io-sign-apple: #666f80;    /* Apple System */
+  --io-sign-appstore: #1a73f2; /* Mac App Store */
+  --io-sign-developer: #8040f2;/* Developer ID */
+  --io-sign-dev: #1ab380;      /* Development build */
+  --io-sign-unsigned: #f24040; /* Unsigned */
+
+  /* ---- Logo gradient (shield tile) ---- */
+  --io-logo-1: #0d214d;
+  --io-logo-2: #0a5c9e;
+  --io-logo-3: #1aa8d9;
+  --io-logo-stroke: #0a4d8c;
+  --io-logo-lens: #e63340;
+
+  /* ---- Translucency helpers (over dark surfaces) ---- */
+  --io-tint-08: rgba(255, 255, 255, 0.08);
+  --io-tint-10: rgba(255, 255, 255, 0.10);
+  --io-hairline: rgba(255, 255, 255, 0.10);
+
+  /* ---- Semantic aliases (use these in product code) ---- */
+  --surface-app: var(--io-bg);
+  --surface-card: var(--io-surface);
+  --surface-raised: var(--io-surface-elevated);
+  --border-subtle: var(--io-border);
+  --text-primary: var(--io-text);
+  --text-muted: var(--io-text-secondary);
+  --accent: var(--io-blue);
+  --accent-2: var(--io-electric);
+}

@@ -1,0 +1,271 @@
+<Page
+    x:Class="SyxxUI.Views.DashboardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SyxxUI.Views"
+    Background="Transparent">
+
+    <ScrollViewer>
+    <Grid Padding="32">
+        <StackPanel Spacing="16">
+
+            <!-- Header (parity with macOS DashboardView). -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="OVERVIEW"
+                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                           Foreground="{StaticResource IoBlueBrush}" CharacterSpacing="60" />
+                <TextBlock Text="Dashboard"
+                           FontFamily="{StaticResource IoFontDisplay}" FontSize="28" FontWeight="Bold"
+                           Foreground="{StaticResource IoTextBrush}" />
+                <TextBlock Text="Every resolver tells a story. Here's what yours has been saying."
+                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
+                           Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- System status card: header + resolver line + 5-stat grid (parity with macOS). -->
+            <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="16"
+                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                <StackPanel Spacing="12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="SYSTEM STATUS"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoAccentStartBrush}" CharacterSpacing="50"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <TextBlock Text="Resolver:"
+                                       FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                       Foreground="{StaticResource IoTextSecondaryBrush}" VerticalAlignment="Center" />
+                            <!-- E158: resolver address is an observation, not a graded result.
+                                 Use neutral text brush; reserve green for graded state only. -->
+                            <TextBlock x:Name="ResolverText" Text="—"
+                                       FontFamily="{StaticResource IoFontMono}" FontSize="12"
+                                       Foreground="{StaticResource IoTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Result card: shows the matrix engine's result state (Clean/Threat/Inconclusive/Untested).
+                             Renamed from CONFIDENCE after the matrix cutover removed confidence scores. -->
+                        <Border x:Name="ResultCard" Grid.Column="0" Background="{StaticResource IoBackgroundDarkBrush}"
+                                CornerRadius="12" Padding="0,16" BorderThickness="1"
+                                AutomationProperties.Name="Network conclusion">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <TextBlock x:Name="ResultText" Text="—"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="32" FontWeight="Bold"
+                                           Foreground="{StaticResource IoTextBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="CONCLUSION"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                           Foreground="{StaticResource IoTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="AlertsCard" Grid.Column="1" Background="{StaticResource IoBackgroundDarkBrush}"
+                                CornerRadius="12" Padding="0,16" BorderThickness="1"
+                                AutomationProperties.Name="Alerts today">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <TextBlock x:Name="AlertsText" Text="—"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="32" FontWeight="Bold"
+                                           Foreground="{StaticResource IoTextBrush}" HorizontalAlignment="Center" />
+                                <!-- E159: Advisory has no timestamp; the data cannot support a daily count.
+                                     Label renamed from "ALERTS TODAY" to match what the data actually is. -->
+                                <TextBlock Text="ADVISORIES"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                           Foreground="{StaticResource IoTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="ResolversCard" Grid.Column="2" Background="{StaticResource IoBackgroundDarkBrush}"
+                                CornerRadius="12" Padding="0,16" BorderThickness="1"
+                                AutomationProperties.Name="Active resolvers">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <TextBlock x:Name="ResolversText" Text="—"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="32" FontWeight="Bold"
+                                           Foreground="{StaticResource IoTextBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="RESOLVERS"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                           Foreground="{StaticResource IoTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="LeakCard" Grid.Column="3" Background="{StaticResource IoBackgroundDarkBrush}"
+                                CornerRadius="12" Padding="0,16" BorderThickness="1"
+                                AutomationProperties.Name="Leak found">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <TextBlock x:Name="LeakText" Text="—"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="32" FontWeight="Bold"
+                                           Foreground="{StaticResource IoTextBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="LEAK FOUND"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                           Foreground="{StaticResource IoTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="QueriesCard" Grid.Column="4" Background="{StaticResource IoBackgroundDarkBrush}"
+                                CornerRadius="12" Padding="0,16" BorderThickness="1"
+                                AutomationProperties.Name="Queries seen">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <TextBlock x:Name="QueriesText" Text="—"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="32" FontWeight="Bold"
+                                           Foreground="{StaticResource IoTextBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="QUERIES SEEN"
+                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                           Foreground="{StaticResource IoTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Why pay / info cards (parity with macOS). -->
+            <Grid ColumnSpacing="14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="16"
+                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border CornerRadius="8" Width="30" Height="30" VerticalAlignment="Center">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{StaticResource IoBlueColor}" Opacity="0.14" />
+                                </Border.Background>
+                                <FontIcon Glyph="&#xE8F1;" FontSize="15"
+                                          Foreground="{StaticResource IoBlueBrush}" />
+                            </Border>
+                            <TextBlock Text="Local tools, free forever"
+                                       FontFamily="{StaticResource IoFontGrotesk}" FontSize="16" FontWeight="Medium"
+                                       Foreground="{StaticResource IoTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="Everything that runs on your own machine — resolver accuracy, route tracing, leak tests, live capture and trust analysis — is included at no cost."
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="16"
+                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border CornerRadius="8" Width="30" Height="30" VerticalAlignment="Center">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{StaticResource IoBlueColor}" Opacity="0.14" />
+                                </Border.Background>
+                                <FontIcon Glyph="&#xE774;" FontSize="15"
+                                          Foreground="{StaticResource IoBlueBrush}" />
+                            </Border>
+                            <TextBlock Text="Backed by syxx.app"
+                                       FontFamily="{StaticResource IoFontGrotesk}" FontSize="16" FontWeight="Medium"
+                                       Foreground="{StaticResource IoTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="The Pro checks — Mirror, Warp &amp; Leak — send their heavy lifting to Syxx's remote server, which fetches a clean reference copy of a site and compares it against what reached you."
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Support blurb (parity with macOS). -->
+            <Border CornerRadius="12" Padding="18" BorderThickness="1">
+                <Border.Background>
+                    <SolidColorBrush Color="{StaticResource IoBlueColor}" Opacity="0.08" />
+                </Border.Background>
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="{StaticResource IoBlueColor}" Opacity="0.3" />
+                </Border.BorderBrush>
+                <StackPanel Orientation="Horizontal" Spacing="14">
+                    <FontIcon Glyph="&#xEB51;" FontSize="18"
+                              Foreground="{StaticResource IoElectricBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                    <TextBlock FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap">
+                        <Run Text="Syxx is built by " /><Run Text="MilkandGin" FontWeight="Bold" /><Run Text=" — a solo developer and early disability retiree. Paying for Pro doesn't fund a company; it pays for the server space the remote checks depend on and keeps the lights on." />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Upgrade cards: Pro Monthly + Permanent.
+                 PRICING/PLANS ARE A PENDING USER DECISION (commerce is in flux) and diverge from
+                 macOS ($2/mo + $10 permanent). Left unchanged deliberately — not a GUI-parity call;
+                 the prices/plan names must be settled by the user before these are aligned. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Pro card -->
+                <Border Grid.Column="0" Background="{StaticResource IoSurfaceDarkBrush}"
+                        CornerRadius="12" Padding="22"
+                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <!-- Updated pricing per Phase 6 hardening: $3.95/mo. -->
+                        <TextBlock Text="Pro — $3.95 / month"
+                                   FontFamily="{StaticResource IoFontGrotesk}"
+                                   FontSize="18" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextBrush}" />
+                        <TextBlock Text="Unlock Mirror, signed attestation, and remote vantage checks."
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <!-- E151: removed unreferenced x:Name="ProUpgradeBtn" -->
+                        <HyperlinkButton NavigateUri="https://syxx.app"
+                                         Background="{StaticResource IoBlueBrush}"
+                                         Foreground="{StaticResource IoTextBrush}"
+                                         HorizontalAlignment="Left"
+                                         AutomationProperties.Name="Start Pro trial"
+                                         AutomationProperties.HelpText="Opens the checkout page to begin a Pro trial">
+                            <TextBlock Text="Start Pro Trial" FontFamily="{StaticResource IoFontGrotesk}" />
+                        </HyperlinkButton>
+                    </StackPanel>
+                </Border>
+
+                <!-- Permanent card -->
+                <Border Grid.Column="2" CornerRadius="12" Padding="22">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="{StaticResource IoAccentStartColor}" Offset="0" />
+                            <GradientStop Color="{StaticResource IoAccentEndColor}" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <StackPanel Spacing="12">
+                        <!-- Updated pricing per Phase 6 hardening: $19.95/yr. -->
+                        <TextBlock Text="Pro Yearly — $19.95 / year"
+                                   FontFamily="{StaticResource IoFontGrotesk}"
+                                   FontSize="18" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextBrush}" />
+                        <TextBlock Text="Everything in Pro, two months free, 3 activations."
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                                   Foreground="{StaticResource IoTextBrush}" Opacity="0.85"
+                                   TextWrapping="Wrap" />
+                        <HyperlinkButton NavigateUri="https://syxx.app"
+                                         Background="Transparent"
+                                         BorderBrush="{StaticResource IoTextBrush}"
+                                         BorderThickness="1"
+                                         Foreground="{StaticResource IoTextBrush}"
+                                         HorizontalAlignment="Left"
+                                         AutomationProperties.Name="Get Pro Yearly"
+                                         AutomationProperties.HelpText="Opens the checkout page for a yearly Pro subscription">
+                            <TextBlock Text="Get Pro Yearly"
+                                       FontFamily="{StaticResource IoFontGrotesk}" />
+                        </HyperlinkButton>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+        </StackPanel>
+    </Grid>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,52 @@
+/* ============================================================
+   Nnyx — Radii, borders, shadows & glow tokens
+   Source: IoCard, GlassPanel, IoGlow, IoStatCard in the codebase.
+   The signature effect is the "ioGlow" — a soft double drop-shadow
+   in an accent/semantic color, used on the logo, threat ring,
+   status pills and key icons.
+   ============================================================ */
+
+:root {
+  /* ---- Corner radii ---- */
+  --radius-badge: 4px;     /* signing/status pills, tiny chips */
+  --radius-chip: 6px;      /* severity badge, filter chips */
+  --radius-button: 8px;    /* IoButton, sidebar item, toggle card */
+  --radius-card: 12px;     /* IoCard, stat card, status card */
+  --radius-panel: 16px;    /* GlassPanel container */
+  --radius-pill: 999px;    /* capsules: worker badge, count pills */
+
+  /* ---- Borders ---- */
+  --border-width: 1px;
+  --border-hairline: 1px solid var(--io-hairline);   /* glass panel edge */
+  --border-card: 1px solid var(--io-border);         /* card / divider */
+
+  /* ---- Shadows ---- */
+  --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.20);   /* IoCard */
+  --shadow-panel: 0 4px 8px rgba(0, 0, 0, 0.15);  /* GlassPanel */
+  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.35);   /* dialogs / popovers */
+
+  /* ---- Glow recipe (IoGlow) ----
+     Apply two stacked color shadows; tune <color> per context.
+     box-shadow: 0 0 var(--glow-r) rgba(color, .30),
+                 0 0 calc(var(--glow-r) * 1.5) rgba(color, .20);
+  */
+  --glow-radius: 8px;
+  --glow-radius-lg: 12px;
+
+  /* Pre-mixed glows for the common accents */
+  --glow-blue: 0 0 8px rgba(5, 181, 212, 0.30), 0 0 12px rgba(5, 181, 212, 0.20);
+  --glow-success: 0 0 8px rgba(13, 148, 135, 0.30), 0 0 12px rgba(13, 148, 135, 0.20);
+  --glow-critical: 0 0 8px rgba(245, 64, 94, 0.30), 0 0 12px rgba(245, 64, 94, 0.20);
+
+  /* ---- Motion ---- */
+  /* SwiftUI spring feel */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* @kind other */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --dur-fast: 0.15s; /* @kind other */
+  --dur-base: 0.2s; /* @kind other */
+  --dur-slow: 0.8s; /* @kind other */
+
+  /* Hover lift values seen across components */
+  --hover-scale: 1.02; /* @kind other */
+  --hover-scale-lg: 1.05; /* @kind other */
+}

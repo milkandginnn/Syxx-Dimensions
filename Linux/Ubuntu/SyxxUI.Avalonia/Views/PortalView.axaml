@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.PortalView"
+             x:DataType="vm:PortalViewModel">
+  <StackPanel Spacing="20">
+    <StackPanel Spacing="6">
+      <TextBlock Text="PORTAL • LOCAL NETWORK &amp; ROUTE" FontSize="12" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="A Portal carried the traveler to a distant land, tracing the path of a hidden interceptor that had reached into the stream."
+                 FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+      <TextBlock Text="Portal maps local network interfaces and gateways, and traces the route to a chosen domain to find path anomalies, specifically highlighting where transparent proxies or middleboxes intercept queries."
+                 FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </StackPanel>
+
+    <Button Content="Run Portal" Command="{Binding RunCommand}" IsEnabled="{Binding !IsRunning}" HorizontalAlignment="Left" />
+
+    <StackPanel Spacing="16" IsVisible="{Binding HasResult}">
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="RESOLVERS" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="{Binding ResolversLine}" FontFamily="monospace" FontSize="13" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+      </Border>
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="ACTIVE INTERFACES" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <ItemsControl ItemsSource="{Binding Interfaces}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" FontFamily="monospace" FontSize="13" Margin="0,1"
+                           Foreground="{StaticResource SyxTextBrush}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding VpnLine}" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        </StackPanel>
+      </Border>
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="GATEWAY / ROUTER" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="{Binding GatewayLine}" FontSize="13" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

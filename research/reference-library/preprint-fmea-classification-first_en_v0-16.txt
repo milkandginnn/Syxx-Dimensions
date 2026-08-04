@@ -1,0 +1,893 @@
+# Source: preprint-fmea-classification-first_en_v0-16.pdf
+# Title (best guess): Classification First: FMEA as a Cognitive Diagnostic System in
+# Pages: 10 · Words: 5905
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+Classification First: FMEA as a Cognitive Diagnostic System in
+STEM
+locating the failure mode in reasoning, an approach drawn from reliability engineering
+
+Robert Antonio Ramiarina, M.Sc.
+Reta Razão, Rio de Janeiro, Brazil. Independent researcher.
+(M.Sc. in Biomedical Engineering, COPPE/UFRJ; Licensed in Mathematics.)
+
+Abstract
+This work proposes a diagnostic system that applies principles from reliability engineering to cognitive error in STEM.
+It decomposes problem-solving into discrete reasoning steps, classifies each failure mode against a typified catalog,
+and prioritizes intervention according to its actual impact, measured by a Risk Priority Number (RPN = S × O × D).
+The approach is a direct transposition of Failure Mode and Effects Analysis (FMEA), a well-established reliability
+method, to the domain of student reasoning.
+The central contribution is classification itself. Before any scoring or intervention, classifying an error converts it from
+an ephemeral event into structured, countable, and comparable data. This single act generates the diagnosis, produces
+a map of the failure landscape, and reveals that weaknesses that appeared unrelated often stem from a single underlying
+mechanism. The RPN does more than rank failures: its factorization prescribes the most effective intervention in each
+case, whether to prevent occurrence, improve detection, or reduce severity. The catalog organizes failure modes into
+layers of cognitive complexity, while the continuous qualification of empirical data closes the learning loop. This
+qualification grounds occurrence in observed data, turns the RPN into an evolving trajectory, and enables the catalog
+to refine itself. The framework is presented as the formalization of a diagnostic practice developed and refined over
+more than a decade, within a two-decade trajectory extending from biomedical reliability engineering to educational
+diagnostics.
+Keywords: FMEA; diagnostic assessment; STEM education; mathematics education; cognitive diagnostics; risk
+priority number; error classification; reliability engineering.
+transposes that method to student reasoning, producing
+a reproducible diagnostic system rather than a metaphor.
+1. Introduction
+Remediation in STEM still operates like pre-diagnostic
+medicine: it identifies that a student is struggling and
+simply prescribes more of the same content, without
+ever locating the precise point of failure. Faced with
+poor performance, the teacher repeats material: the
+aggregate symptom is treated without isolating the
+mechanism of the error, the exact link in the chain of
+reasoning where the student stops producing the correct
+step. The determining deficit, often a single link of low
+visibility, remains untouched, hidden behind correct
+answers that simulate mastery. The problem is not the
+amount of remediation, but the absence of precise
+localization.
+Reliability engineering has solved a structurally
+analogous problem for decades. With finite mitigation
+resources, effort must be directed to the failures that
+combine high severity, high frequency, and low
+detectability, and its canonical instrument for this is
+FMEA (Failure Mode and Effects Analysis). This work
+
+This adaptation is the most recent stage of a continuous
+trajectory that runs from reliability in health care to
+education. It originates in the modeling of hospital cost
+from patient characteristics [1, 5] and in the
+quantification of risk by diagnostic classification,
+notably the Charlson Comorbidity Index adapted to
+ICD-10 [2, 3, 4]. The conceptual axis, to quantify risk
+from a structured decomposition of states in order to
+prioritize intervention, is exactly the one that reappears,
+now transposed, in educational FMEA.
+That earlier experience carries a lesson that guides all
+that follows: ICD-10 treats no one. Its value is to make
+morbidity codable, countable, comparable, and
+communicable, and it is on that classification that the
+Charlson Index is built. This primacy of classification,
+and not the priority number that follows from it, is what
+constitutes the foundational gain of cognitive FMEA
+(Section 3).
+Yet the antecedent goes beyond a mere precedent of
+classification. The study that adapts the Charlson Index
+
+Preprint. Not peer-reviewed. Deposited on EdArXiv (Center for Open Science).
+© 2026 Robert Antonio Ramiarina. Licensed under CC BY 4.0.
+
+to the ICD-10 coding scheme [3] executes, in full, the
+same conceptual architecture transposed here: it starts
+from the clinical conditions of the original index,
+reconstructs the classification, weights each condition
+by its severity, aggregates those weights into a risk
+scalar, and validates the result against an external
+outcome. The S axis of cognitive FMEA is therefore not
+a novelty of the transposition; it was already present in
+the antecedent, as the Charlson weight. FMEA inherits
+from that lineage the classification, the weighting by
+severity, and the composite scalar, and adds the axes of
+occurrence (O) and detectability (D). Its original
+contribution is the notion of detection as control
+(Section 5), since a comorbidity index has no detection
+axis. In both cases, however, the core is the same: coding
+against a structured scheme is what makes risk
+quantifiable.
+
+2. The FMEA framework applied to
+cognition
+Industrial FMEA [6, 7] decomposes a system into
+functions and, for each one, enumerates failure modes,
+effects, and causes, scoring each mode by severity (S),
+occurrence (O), and detectability (D). The transposition
+keeps the architecture and redefines the objects: the
+"system" is the procedure for solving a type of problem;
+the "functions" are the reasoning steps; a "failure mode"
+is the typified way in which a step fails to be executed,
+not the generic error but the named, catalogable one.
+• Severity (S): how far the failure compromises the
+result.
+• Occurrence (O): how often the student commits
+the failure mode, frequently conditional on the
+context that triggers it, estimated by systematic
+diagnosis.
+• Detectability (D): how hard the failure is to
+identify. This is an inverted axis: the more the
+failure goes unnoticed, or is misdiagnosed by
+conventional instruments, the higher the score.
+Each axis is scored on an ordinal scale from 1 to 10,
+anchored by descriptors, and it is this anchoring that
+makes the scoring reproducible across raters rather than
+a free judgment. For severity, low values correspond to
+failures that alter only a recoverable detail of the result;
+intermediate values, to failures that change the answer
+but in a way still correctable downstream; high values,
+to failures that invert or invalidate the answer.
+Occurrence is anchored in the observed frequency of the
+mode, and detectability in the fraction of times the
+failure escapes the conventional instrument.
+
+The final product orders the failure modes by
+remediation priority. The result is not a global judgment
+about the student, but an ordered map of specific targets.
+
+3. Classification as the primary gain
+Before any score or intervention, there is an act that
+produces value on its own: classifying the error,
+assigning it to a typified failure mode in the catalog. The
+previous preprint treated this act as a step in the pipeline.
+It is more than that: it is the ground on which everything
+else rests, and it returns value the instant it happens.
+The central argument is direct: classification converts
+the error from an event into data. An unclassified error
+is consumed the moment it occurs; it may be corrected
+ad hoc, but it leaves no structured information behind. A
+classified error becomes an instance of a named type,
+and therefore countable, comparable, communicable,
+and accumulable. Every later analysis depends entirely
+on this conversion: estimating occurrence, computing
+the RPN, choosing the intervention lever, and tracking
+improvement. Without classification there is no data;
+without data there is no FMEA. Classification is not a
+step toward value; it is the substrate of all value.
+Aerospace reliability engineering has operated under
+this same primacy for decades. In Fault Tree Analysis (a
+method created in 1962, during the development of the
+Minuteman missile), the structured enumeration and
+naming of each failure event precedes any quantification
+of probability, and the qualitative tree itself, still without
+numbers, already constitutes a relevant engineering
+deliverable [11].
+Four gains follow from classification, all independent of
+any remediation.
+The diagnostic space becomes bounded. Without a
+catalog, diagnosis is open inference, with countless
+possible explanations for the same error. Classifying
+against a finite, typified catalog turns diagnosis into
+recognition within a known set of possibilities. This is
+what makes the process tractable and reproducible, and
+it is also the structural basis of inter-rater agreement
+(Section 4): because the catalog fixes the vocabulary and
+anchors the criteria to a defined set, rather than leaving
+them to each rater's free judgment, two professionals
+who apply the same catalog to the same data tend to
+reach the same classification.
+Classification produces the collapse "one mode, not
+three." The recognition that three manifestations in
+three disciplines are instances of a single failure mode
+(Section 7) is a result of classification, not of
+intervention. The moment that recognition happens, the
+
+Ramiarina, R. A. Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 2
+
+diagnosis is already made; everything that follows acts
+on a structure the classification has already revealed.
+Classification gives the student a nameable target. To
+say "you got three things wrong" is diffuse and
+demoralizing. To say "you carry a specific mechanism,
+you process the stimulus halfway, and it surfaces here,
+here, and here" offers a single, identifiable, attackable
+target. This change in the student's relationship to the
+error is a real gain that costs neither RPN nor complex
+intervention: it costs only the act of naming.
+Classification resolves the error on two axes: mode
+and topic. The mode axis identifies the cognitive
+mechanism behind the error; the topic axis locates,
+under canonical codes, the specific content where the
+failure occurred. The cross-tabulation of the two (mode
+× topic) is the system's full diagnostic resolution.
+Without the topic axis the failure cannot be located;
+without the mode axis the mechanism cannot be
+generalized. It is exactly the crossing of the two that
+distinguishes "the student is weak in this content" from
+"the student carries this cognitive mechanism, which
+happens to surface in this content," and that is the
+distinction the framework exists to make. The fully
+completed classification sheet becomes, in itself, a
+classified inventory of failure modes: a deliverable
+relevant to the decision before any decision, just as the
+industrial FMEA sheet is a result independent of the
+mitigations that derive from it.
+
+4. Inputs, outputs, and the diagnostic loop
+The system has well-defined operating boundaries. The
+input is the set of the student's responses to diagnostic
+instruments, that is, questions designed, from the
+failure-mode catalog itself, to elicit and discriminate
+specific reasoning steps. These instruments are defined
+by their diagnostic content, not by their channel:
+applying them in writing or in an oral session does not
+change their validity. The output is an ordered map of
+the failure modes present, each with its RPN, and the
+priority remediation target that follows from it.
+Between input and output, the cycle is: decompose the
+resolution into steps, classify the failure mode of each
+step against the catalog, score S, O, and D, order by
+RPN, and direct remediation to the top of the order.
+What makes the structure a system, rather than a
+sequence of isolated judgments, is that this cycle closes
+on the catalog. The same catalog serves three coupled
+functions: it designs the diagnostic instruments (each
+question is built to elicit a step and discriminate its
+failure mode), classifies the observed responses, and
+supplies the axis against which occurrence is
+accumulated over time. The full circuit is therefore:
+catalog, instrument, captured response, classification,
+empirical occurrence, RPN, directed remediation, new
+captured response, feeding back the occurrence estimate
+(Figure 1). This closure is the subject of Section 8.
+
+Ramiarina, R. A. Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 3
+
+Figure 1. The closed diagnostic loop. The catalog designs the instruments, classifies the captured responses, and supplies the axis
+against which occurrence is accumulated; each pass re-feeds the occurrence estimate (Sections 4 and 8).
+
+5. RPN, the three levers, and what the
+factorization prescribes
+RPN = S × O × D
+
+(1)
+
+Modes with a high RPN receive mitigation first. But the
+RPN is more than a priority number: its factorization
+says what kind of intervention to apply. The RPN can be
+reduced along three distinct paths, each corresponding
+to a mode of action.
+Reduce O (prevent). Make the failure occur less often.
+This is classic remediation: eliminate the cause of the
+failure mode through directed teaching. It suits
+eliminable modes, typically conceptual ones.
+Reduce D (detect). See the failure when it occurs. This
+is the principle that distinguishes this work: an
+instrument designed to isolate a failure mode changes
+the D score. A failure that was invisible, or
+misdiagnosed (high D), becomes detected and
+unambiguously attributed (low D), and the RPN drops
+by construction, before any intervention on the student.
+This drop becomes a direct measure of the instrument's
+value: it need not fix the student, only make visible and
+
+correctly attributable what was invisible. In the terms of
+classic FMEA, this instrument is the method's detection
+control, and improving it is, literally, a recommended
+RPN-reduction action, which confirms that the
+transposition is faithful to the method, not a loose
+analogy. Detection-as-control is the central axis of the
+diagnostic, and it holds primacy among the three levers,
+because it is also the act that carries out the classification
+of Section 3.
+Two senses of "risk" are worth distinguishing here.
+Lowering D through the instrument reduces the mode's
+priority for the tutor, because the failure, once invisible,
+becomes locatable and interceptable; but it does not, by
+itself, reduce the probability that the student will err on
+the exam. That probability falls only when intervention,
+on O or on S, follows detection. Detection enables
+directed action; it does not replace it.
+A good detection control is measured along two faces.
+The first is sensitivity, that is, capturing the failure mode
+when it is present, which is what the reduction of D
+above describes. The second is specificity, that is, not
+firing when the mode is absent, correctly returning a true
+negative. An instrument that flagged the mode also in
+
+Ramiarina, R. A.· Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 4
+
+someone who does not carry it would have poor
+diagnostic value, since part of the drop in D it produced
+would be false alarm. A clinical-grade diagnostic must
+show both faces: it detects what is there and
+discriminates what is not.
+Reduce S (contain). The failure still fires, but it is
+contained before it reaches the final result. This is the
+cognitive analogue of graceful degradation: teaching the
+student to catch the slip before it compromises the
+answer. Through self-checking, rereading protocols, or
+metacognitive checklists, the mode keeps occurring (O
+unchanged), but the final answer comes out correct. It is
+especially useful for modes resistant to elimination,
+typically the low-visibility slips that no student
+eliminates entirely.
+The factorization of the RPN therefore prescribes the
+following: when the RPN is dominated by D, the
+problem is visibility, and the response is to build the
+instrument; when dominated by O, the problem is
+prevalence, and the response is to remedy the mode;
+when dominated by S, the problem is consequence, and
+the response is to teach the student to contain the slip.
+This rule is standard practice in reliability engineering;
+the contribution here is to transpose it to the educational
+context, giving the teacher a clear, principled criterion
+for deciding what kind of intervention to apply, instead
+of always falling back on reinforcing content.
+A note on rigor: whether self-checking reduces S or O
+depends on where one draws the boundary between
+mode and effect. If we define the mode as "committing
+the slip" and the effect as "wrong answer," self-checking
+breaks the link between mode and effect, which is a
+reduction of S. If, instead, we define the mode as "an
+uncaught slip that reaches the final answer," selfchecking reduces O. The choice of this boundary is an
+explicit modeling decision, and the framework forces
+the researcher to make it consciously, an obligation that
+is a source of precision, not of ambiguity.
+Finally, the RPN admits two further uses. As an
+allocator of a finite resource: given the scarcity of
+tutoring time, the ordering by RPN indicates where it is
+worth investing, which is the metric's original purpose
+in industry. And as a longitudinal trajectory: the RPN
+profile across diagnostic cycles becomes a quantitative
+measure of progress, made possible by the systematic
+qualification of the data (Section 8).
+
+6. The layers of cognitive complexity
+The catalog is not a flat list of failure modes; it organizes
+them into layers of cognitive complexity, from the
+processing of input information to integration and
+
+evaluation. Each layer groups modes of its own nature
+and, decisively, requires its own detection instruments:
+detecting an input failure is not the same problem as
+detecting an evaluation failure.
+• Input layer: registering and fully processing the
+stimulus. Failures here are failures of capture, since
+decisive elements of the prompt are ignored before
+reasoning even begins.
+• Integration layer: relating the captured elements,
+translating between representations, and applying
+relations within their domain of validity. Failures
+here are failures of processing, since the material
+was read but combined or applied incorrectly.
+• Evaluation layer: judging the plausibility of the
+result, verifying, and criticizing one's own product.
+Failures here are failures of closure, since an absurd
+result is accepted for lack of verification.
+This layered view of cognitive failure has a direct
+precedent in the reliability literature on human error.
+Reason's distinction between slips and lapses (failures of
+execution and attention) and mistakes (failures of
+intention and judgment) already separates error by
+cognitive stage [12]; the slip, in particular, is the inputlayer failure whose containment (the S lever)
+corresponds to what Reason calls error recovery. That
+the reliability theory of human error maps onto the
+layers reinforces that importing reliability engineering
+into cognition is not a metaphor.
+The integration layer deserves particular note, because it
+houses a failure mode well documented in mathematicseducation research: the failure of conversion between
+registers of semiotic representation [8]. In Duval's
+theory, a mathematical object is not directly accessible,
+since it exists for the student only through signs. To
+reason mathematically is therefore to carry out
+transformations within a single register (treatment) and,
+above all, between distinct registers (conversion): from
+the verbal to the algebraic, from the algebraic to the
+graphical, from the graphical to the tabular. Conversion
+is the cognitively costly point, and its failure (solving the
+equation correctly but being unable to read the
+corresponding graph, or failing to translate the prompt
+into a model) is a failure mode distinct from undue
+generalization (Section 7.2), though both belong to the
+same layer. This failure has a dual anchorage in the
+literature: what Duval theorizes as conversion, the
+approach of Lesh and colleagues treats on the
+instructional plane, under the concept of translation
+between representations (real situations, concrete
+models, figures, language, and symbols) [10]. The two
+lines converge on the point this framework exploits:
+
+Ramiarina, R. A. Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 5
+
+conversion between registers is, at once, a detectable
+failure mode and a target for teaching. In contexts where
+the student moves between curricula in different
+languages (SAT, IB, international schools), the verbal
+register itself becomes bilingual, and the standardization
+of mathematical terminology across languages [9]
+becomes direct instructional support for that translation.
+
+Under FMEA, this is not three distinct problems but a
+single failure mode with a high RPN. The baseline is S
+= 8, O = 7, and D = 9, the last of these high precisely
+because the failure disguises itself as a weakness
+specific to each subject, or as mere inattention, and
+escapes conventional diagnosis; the RPN is therefore
+504.
+
+The catalog of modes is complemented by a typology of
+incorrect responses (distractors), treated in separate
+work, which classifies the observable errors into
+families and subtypes under formal Latin nomenclature:
+12 families and 41 subtypes. One example is the family
+Ampliatio, which gathers the errors of undue extension
+of a rule's scope, precisely the mechanism that the undue
+generalization of Section 7.2 instantiates. Mode, layer,
+and distractor together form the diagnostic vocabulary
+against which each error is classified.
+
+The first lever applied is detection. A diagnostic
+instrument designed to separate command of the concept
+from processing of the prompt reduces D from 9 to 3,
+and does so before any contact with the student. The
+RPN falls to 8 × 7 × 3 = 168, a value that directly
+measures the diagnostic gain.
+
+The layer also informs the likely lever (Section 5): input
+failures, resistant to elimination, tend to call for
+containment (S); integration failures, being conceptual,
+tend to call for prevention (O); evaluation failures tend
+to call for installing habits of verification. The link is not
+deterministic, but it guides the choice, and it is what the
+following illustration makes concrete.
+
+7. Illustration: two modes, two layers, two
+levers
+Consider two failure modes from distinct layers. The
+scores come from real diagnoses in practice,
+anonymized, on an ordinal scale from 1 to 10.
+
+7.1 Input layer: incomplete processing of the
+stimulus (S lever)
+The student processes only part of the information
+presented and ignores elements decisive for the answer,
+typically a single word that carries, on its own, the
+information that settles the question and that is not fully
+extracted. It is a single failure mode that, by manifesting
+differently in each discipline, is usually diagnosed as
+three separate weaknesses. In physics, it is inattention to
+the weight of a term that silently fixes a condition (in
+free fall, "maximum height" imposes zero velocity at the
+highest point), and the student continues the calculation
+with a v that the prompt had already nullified, even with
+the concept fully understood. In reading comprehension,
+it is the omission of a negation or a qualifier that changes
+the direction of the prompt's meaning, even reversing it
+at the limit. In economics, it is swapping "marginal"
+(cost, revenue, or utility) for the total or the average,
+even while mastering marginal analysis.
+
+The intervention recognizes that this failure mode resists
+elimination, since no student stops skipping a word now
+and then. The high-impact lever is therefore not the
+reduction of occurrence (O) but the containment of
+severity (S), through a self-checking protocol that
+contains the slip. With S reduced from 8 to 3, the final
+RPN is 3 × 7 × 3 = 63.
+The fall of the RPN from 504 to 63 shows the gain in
+precision that comes from treating the failure mode as a
+single entity with specific levers: by correctly
+identifying that severity, not occurrence, was the
+highest-impact lever, the problem moves from high
+priority to controlled risk with modest resources.
+
+7.2 Integration layer: undue generalization (O
+lever)
+The student applies a valid relation outside its domain of
+validity. In mathematics, the student linearizes the
+nonlinear: (a+b)2 = a2 + b2, √(a+b) = √a + √b, log(a+b)
+= log a + log b. In physics or chemistry, the student
+treats a gas as ideal where the approximation does not
+hold, or applies relations of uniform motion to
+accelerated motion. Where the conventional instructor
+reads these errors as isolated gaps in content ("doesn't
+know special products," "doesn't know radicals,"
+"doesn't understand gases") and prescribes three
+separate reinforcements, FMEA identifies a single
+failure mode of unambiguous mechanism: extending a
+rule beyond its domain of validity.
+The baseline is S = 9 (the failure produces a confident
+error), O = 6, and D = 8 (read as distinct content gaps);
+the RPN is therefore 432. The detection instrument
+reduces D from 8 to 3, and the RPN falls to 9 × 6 × 3 =
+162. The intervention then exploits that this mode is
+eliminable: by teaching the student to state explicitly the
+domain of validity of a rule and to check whether the
+instance fits it before applying it, occurrence falls from
+
+Ramiarina, R. A. Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 6
+
+6 to 2 (pure prevention). The final RPN is 9 × 2 × 3 =
+54.
+
+7.3 What the illustration shows
+Two modes, in two layers, requiring two distinct levers:
+input calls for containment (S), integration for
+prevention (O), with detection (D) common to both as
+the diagnostic act that precedes intervention.
+
+Conventional remediation would treat, in all, six
+weaknesses across six topics, every one of them
+bypassing the two causes. FMEA identifies two modes
+and two directed levers. And what made all of this
+possible was, first, the act of classification that
+recognized two mechanisms beneath six symptoms
+(Section 3).
+
+Table 1. RPN trajectory for two failure modes from distinct layers. Detection (D) precedes intervention in both, and the
+factorization of the RPN prescribes a distinct lever for each mode: containment (S) in the input layer, prevention (O) in the
+integration layer.
+Failure mode
+Incomplete processing of the
+stimulus
+
+Undue generalization
+
+Layer
+
+Input
+
+Integration
+
+Stage
+
+S
+
+O
+
+D
+
+RPN
+
+Lever
+
+Baseline
+
+8
+
+7
+
+9
+
+504
+
+(reference)
+
+After detection control
+
+8
+
+7
+
+3
+
+168
+
+D (detect)
+
+After intervention
+
+3
+
+7
+
+3
+
+63
+
+S (contain)
+
+Baseline
+
+9
+
+6
+
+8
+
+432
+
+(reference)
+
+After detection control
+
+9
+
+6
+
+3
+
+162
+
+D (detect)
+
+After intervention
+
+9
+
+2
+
+3
+
+54
+
+O (prevent)
+
+8. Continuous improvement through data
+qualification
+Classifying converts error into data (Section 3);
+capturing and classifying systematically, over time,
+converts data into qualified data, typified by mode,
+located by topic, situated by layer. This qualification is
+what closes the loop of Section 4 and enables what no
+point-in-time assessment reaches.
+Occurrence becomes empirical. The frequency of each
+failure mode stops being a desk estimate and becomes
+derived from accumulated real responses. The O of the
+RPN gains a measurable origin, what distinguishes
+cognitive FMEA from a sophisticated rubric.
+
+progressively increasing their discriminating power.
+The classification the instruments produce feeds back
+into the design of the instruments that follow.
+This continuous qualification is also what turns the
+value hierarchy into a living system rather than a static
+scheme. At order zero is classification (the map). At the
+first order is the RPN (the route through the map, under
+a resource constraint). At the second order are the
+intervention levers (the vehicle). The three levels are
+nested and non-redundant, and each turn of the loop
+refines all three (Figure 2).
+
+9. The methodology as consolidated
+practice
+
+The catalog becomes self-refining. When an error fits
+no existing mode, this is a sign that the catalog is
+incomplete. The classification gap itself comes to guide
+the creation of new modes and the revision of existing
+criteria. Data qualification thus does not only feed the
+catalog; it audits it continuously.
+
+The framework is not a desk proposal. It is the
+formalization of a diagnostic practice developed and
+applied continuously over more than a decade, with
+students preparing for university-entrance exams
+(vestibular), the SAT, IB curricula, and international
+exams. Three pillars sustain it: a versioned canonical
+corpus of dated definitions, templates, and classification
+criteria that stabilizes application across cases; the
+catalog of failure modes organized by layers of
+cognitive complexity (Section 6); and a data substrate
+that systematically captures and qualifies the students'
+responses (Section 8).
+
+Instrument design becomes evidence-driven. By
+identifying which modes show a high RPN and in which
+topics they most surface, it becomes possible to design
+the next instruments with precise focus on those modes,
+
+The phrase "more than a decade" deserves a concrete
+figure, stated honestly. The practice of data-based,
+measurable, categorized diagnosis and correction, which
+is the core of what is formalized here, has been applied,
+
+The RPN becomes a trajectory. With qualified data
+across cycles, the RPN profile, aggregate or by mode, is
+a quantifiable curve of progress. The system stops being
+merely an instantaneous diagnosis and becomes a
+longitudinal instrument of follow-up.
+
+Ramiarina, R. A. Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 7
+
+over the author's teaching trajectory, to roughly 2,100
+students, though under a different name: the term FMEA
+and the formal vocabulary that accompanies it are the
+recent crystallization of a diagnostic routine much older
+than them. From that routine, the apparatus consolidated
+today comprises a catalog of failure modes organized in
+three layers, a distractor typology of 12 families and 41
+subtypes under Latin nomenclature, and a diagnostic
+instrument that, in its current form, captures between
+2,500 and 3,500 data points per student.
+These pillars reflect the maturity of prolonged use and
+empirical refinement over the years. They should be
+distinguished from the formal quantitative validation of
+diagnostic accuracy against external standards (Section
+10): a practice can be consolidated by more than a
+decade of application and calibration and still have its
+statistical validation as an open program. The two
+dimensions do not substitute for each other. And the
+foundational gain, classification itself (Section 3), is
+immune to this caveat: it delivers value the instant the
+error is classified, regardless of whether the RPN scale
+is formally validated.
+
+10. Automating classification at scale
+With the advance of today's language models, the
+preliminary classification of failure modes from written
+responses can be automated at scale. This is no longer a
+speculative possibility: assigning an error to a mode
+within a finite, typified catalog is exactly the kind of
+classification-against-a-defined-taxonomy task these
+models perform reliably. And it is the classification-first
+architecture itself (Section 3) that makes this automation
+viable, since a structured catalog exists to classify
+against and the model operates on a well-posed target,
+unlike the open, unbounded diagnosis of "what is wrong
+with this student."
+What remains with the specialist is not a reserve of
+caution but a structural division of labor: the calibration
+of severity (the axis that most demands judgment among
+S, O, and D), the diagnostic closure, and the governance
+of the catalog. Automation covers the classification; the
+specialist decides what it means, clinically and
+pedagogically, and what to do about it. The substrate of
+qualified data (Section 8) also serves as the training and
+
+calibration material that makes the automatic
+classification progressively more precise, closing the
+improvement loop at this level too.
+
+11. Contribution
+The contribution of this work is not a metaphor but an
+operational protocol: it takes educational diagnosis, still
+done today by global impression, and converts it into a
+localization of the error that is at once precise and
+prioritizable. This protocol is organized in three nested
+levels, and the force of the argument is that each level
+rests on the one before.
+At the foundational level is classification. It converts the
+error from an ephemeral event into data, and from this
+single act come the diagnosis, a classified inventory of
+failure modes, and the recognition that symptoms
+scattered across several disciplines are in fact
+manifestations of a single mechanism. Classification
+operates on two axes at once: the mode axis, which
+identifies the cognitive mechanism, and the topic axis,
+which locates the content; and it is the crossing of the
+two that gives the diagnosis its resolution.
+On this base rises the second level, the risk priority
+number. Its factorization into severity, occurrence, and
+detectability does more than order the failures by
+urgency: it indicates the most effective action in each
+case. The third level, that of the intervention levers, is
+what this indication sets in motion: preventing
+occurrence, improving detection, or reducing severity.
+And here is the most original point of the framework:
+when detection comes to function as a control, the very
+fall of the risk it produces directly measures the value of
+the diagnostic instrument.
+Sustaining the three levels is the substrate that closes the
+loop: a catalog organized in layers of cognitive
+complexity and the continuous qualification of the data.
+This qualification is what makes occurrence, the
+trajectory of progress, and the catalog itself empirical
+and capable of refining themselves. None of this is
+offered as an isolated theoretical exercise: it is the
+formalization of a diagnostic practice consolidated over
+more than a decade, within a two-decade trajectory that
+runs from biomedical reliability to educational
+diagnostics.
+
+Ramiarina, R. A.· Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 8
+
+Figure 2. The three nested levels of value. Classification (order zero) is the substrate on which the risk priority number (order
+one) and the intervention levers (order two) rest; the continuous qualification of data refines all three (Sections 8 and 11).
+
+12. Limits and directions for future work
+The formal quantitative validation follows two steps.
+The first, and more tractable, is inter-rater reliability: the
+agreement between two independent raters who apply
+the same catalog to the same data, measurable by a
+coefficient such as Cohen's or Fleiss's κ. This is the
+validation that the classification-first architecture
+(Sections 3 and 4) implicitly promises, and the natural
+next step. The second is predictive accuracy against
+independent educational outcomes; while the conceptual
+and methodological framework for this validation is
+already consolidated in both the reliability lineage and
+the biomedical antecedent, its specific application to
+cognitive FMEA has not yet been carried out.
+The scale of severity, occurrence, and detectability is
+ordinal and calibrated empirically to practice, following
+the tradition of industrial FMEA itself; its formal
+standardization across cohorts is a direction for
+refinement. The system does not use the RPN as a final
+metric measure but as an internal prioritization
+mechanism that feeds a reading by bands and prescribed
+
+actions, aligning with the current movement in the field,
+which has shifted to Action Priority tables.
+The detailed characterization of the failure modes,
+including the taxonomy by layers of cognitive
+complexity and the typology of distractors, is the subject
+of complementary work in the same program.
+
+References
+1. Ramiarina, R. A.; Almeida, R. M. V. R.; Pereira, W. C.
+A. Hospital costs estimation and prediction as a
+function of patient and admission characteristics.
+International Journal of Health Planning and
+Management, 2007. DOI: 10.1002/hpm.911.
+2. Ramiarina, R. A.; Ramiarina, B. L.; Almeida, R. M. V.
+R.; Pereira, W. C. A. Comorbidity adjustment index
+for the International Classification of Diseases, 10th
+revision. Revista de Saúde Pública, 42(4):590-597,
+2008.
+3. Ramiarina, R. A. et al. Adapting the Charlson Comorbidity Index to the ICD-10 Coding Scheme.
+Methods of Information in Medicine (accepted;
+acceptance letter received).
+4. Ramiarina, R. A. et al. O Índice de Comorbidade de
+Charlson em Modelos Empíricos para a Determinação
+
+Ramiarina, R. A.· Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 9
+
+do Tempo de Estadia em Unidades Hospitalares de
+Grande Porte. III CLAEB / XIX CBEB, João Pessoa,
+2004.
+5. Ramiarina, R. A. et al. Determinação e Predição do
+Custo de Internação e sua Relação com as
+Características dos Pacientes. XX CBEB, São Paulo,
+2006.
+6. Stamatis, D. H. Failure Mode and Effect Analysis:
+FMEA from Theory to Execution. 2nd ed. Milwaukee:
+ASQ Quality Press, 2003.
+7. U.S. Department of Defense. MIL-STD-1629A:
+Procedures for Performing a Failure Mode, Effects
+and Criticality Analysis. 1980.
+8. Duval, R. Understanding the Mathematical Way of
+Thinking
+—
+The
+Registers
+of
+Semiotic
+Representations. T. M. M. Campos (Ed.). Cham:
+Springer, 2017.
+9. Ramiarina, R. A. Math Bridge: A Bilingual Dictionary
+of Mathematical Terms in English and Portuguese.
+2025. ISBN 978-65-01-29032-4.
+10. Lesh, R.; Post, T.; Behr, M. Representations and
+translations among representations in mathematics
+learning and problem solving. In: Janvier, C. (Ed.).
+Problems of Representation in the Teaching and
+Learning of Mathematics. Hillsdale, NJ: Lawrence
+Erlbaum Associates, 1987. p. 33-40.
+11. Stamatelatos, M.; Vesely, W. et al. Fault Tree
+Handbook with Aerospace Applications, Version 1.1.
+Washington, DC: NASA Office of Safety and Mission
+Assurance, 2002.
+12. Reason, J. Human Error. Cambridge: Cambridge
+University Press, 1990.
+
+Ramiarina, R. A.· Classification First: FMEA as a Cognitive Diagnostic System in STEM
+
+p. 10
+
+

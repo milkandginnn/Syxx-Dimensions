@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#0a0f1e">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0a0f1e"/>
+    <rect x="470" y="300" width="260" height="200" rx="48" fill="#f0ac38"/>
+    <path d="M500 400 Q600 320 700 400 Q600 480 500 400 Z" fill="#0a0f1e"/>
+    <circle cx="600" cy="400" r="42" fill="none" stroke="#0a0f1e" stroke-width="18"/>
+    <circle cx="600" cy="400" r="10" fill="#a96ad6"/>
+    <text x="600" y="580" font-family="Space Grotesk, sans-serif" font-size="64" font-weight="700" fill="#efe6ff" text-anchor="middle">Syxx</text>
+  </svg>
+</template>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/colors.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/typography.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/effects.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/styles.css">
+<script src="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/_ds_bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  .syxx-scroll::-webkit-scrollbar{width:10px;height:10px;}
+  .syxx-scroll::-webkit-scrollbar-thumb{background:var(--io-surface-elevated);border-radius:999px;border:2px solid var(--io-bg);}
+  @keyframes syxxpulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+</style>
+</helmet>
+<div style="{{ rootStyle }}">
+
+  <sc-if value="{{ cageHidden }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:60;background:var(--io-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:40px;">
+      <img src="assets/syxx-logo.png" width="64" height="64" alt="Syxx" style="display:block;object-fit:contain;opacity:.9;">
+      <div style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">The Cage is hidden</div>
+      <div style="font-size:14px;color:var(--io-text-secondary);max-width:360px;line-height:1.5;">Syxx-Cage is capturing quietly in the background. This window returns when the timer runs out.</div>
+      <div style="font-family:var(--font-mono);font-size:40px;font-weight:700;color:var(--io-electric);">{{ cageRemain }}s</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isMac }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 70% at 50% -12%, var(--syxx-glow), transparent 62%);"></div>
+  </sc-if>
+
+  <!-- ===== TITLE BAR ===== -->
+  <sc-if value="{{ isMac }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:2;height:44px;flex-shrink:0;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--io-border);background:var(--syxx-chrome);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);">
+      <div style="display:flex;gap:8px;">
+        <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></span>
+        <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></span>
+        <span style="width:12px;height:12px;border-radius:50%;background:#28c840;"></span>
+      </div>
+      <div style="position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;pointer-events:none;">Syxx — Lyin' Eyes</div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isWin }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:2;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--io-border);background:var(--syxx-chrome);">
+      <div style="display:flex;align-items:center;gap:9px;padding-left:14px;">
+        <img src="assets/syxx-logo.png" width="16" height="16" alt="Syxx" style="display:block;border-radius:4px;">
+        <span style="font-size:12px;font-weight:500;color:var(--io-text-secondary);">Syxx — Lyin' Eyes</span>
+      </div>
+      <div style="display:flex;height:100%;">
+        <button style="width:46px;height:100%;border:none;background:transparent;color:var(--io-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--io-surface);"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1"><line x1="2" y1="6" x2="10" y2="6"></line></svg></button>
+        <button style="width:46px;height:100%;border:none;background:transparent;color:var(--io-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--io-surface);"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="2" width="8" height="8"></rect></svg></button>
+        <button style="width:46px;height:100%;border:none;background:transparent;color:var(--io-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--io-critical);color:#fff;"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.2"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"></line><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"></line></svg></button>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:relative;z-index:1;flex:1;display:flex;min-height:0;">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside style="width:258px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--io-border);background:var(--syxx-sidebar);">
+      <div style="padding:18px 16px 14px;display:flex;align-items:center;gap:11px;">
+        <img src="assets/syxx-logo.png" width="38" height="38" alt="Syxx" style="display:block;border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.4);">
+        <div style="display:flex;flex-direction:column;gap:2px;line-height:1;">
+          <span style="font-family:var(--font-rounded);font-weight:700;font-size:19px;letter-spacing:.01em;background:linear-gradient(100deg,var(--io-accent-start),var(--io-accent-end));-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx</span>
+          <span style="font-size:11px;color:var(--io-text-secondary);">DNS Investigation</span>
+        </div>
+      </div>
+      <div style="height:1px;background:var(--io-border);margin:0 16px;"></div>
+
+      <nav class="syxx-scroll" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:18px;">
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <sc-for list="{{ navTop }}" as="item" hint-placeholder-count="1">
+            <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.SidebarItem" label="{{ item.label }}" icon="{{ item.icon }}" selected="{{ item.selected }}" on-click="{{ item.onClick }}" badge="{{ item.badge }}" style="width:100%;" hint-size="100%,40px"></x-import>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--syxx-label);padding:0 12px 4px;">Diagnostics</div>
+          <sc-for list="{{ navDiag }}" as="item" hint-placeholder-count="6">
+            <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.SidebarItem" label="{{ item.label }}" icon="{{ item.icon }}" selected="{{ item.selected }}" on-click="{{ item.onClick }}" badge="{{ item.badge }}" style="width:100%;" hint-size="100%,40px"></x-import>
+          </sc-for>
+        </div>
+        <div style="height:2px;background:var(--syxx-label);border-radius:2px;margin:2px 12px;opacity:.85;"></div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.SidebarItem" label="{{ conclusionItem.label }}" icon="{{ conclusionItem.icon }}" selected="{{ conclusionItem.selected }}" on-click="{{ conclusionItem.onClick }}" style="width:100%;" hint-size="100%,40px"></x-import>
+        </div>
+        <div style="height:2px;background:var(--syxx-label);border-radius:2px;margin:2px 12px;opacity:.85;"></div>
+        <a href="https://syxx.app" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--io-text);font-size:14px;transition:background .15s;" style-hover="background:var(--io-surface);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--syxx-label);"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z"/></svg>
+          <span style="flex:1;">Dimensions</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--io-text-secondary);"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+        </a>
+        <div style="height:2px;background:var(--syxx-label);border-radius:2px;margin:2px 12px;opacity:.85;"></div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--syxx-label);padding:0 12px 4px;">Account</div>
+          <sc-for list="{{ navAccount }}" as="item" hint-placeholder-count="2">
+            <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.SidebarItem" label="{{ item.label }}" icon="{{ item.icon }}" selected="{{ item.selected }}" on-click="{{ item.onClick }}" badge="{{ item.badge }}" style="width:100%;" hint-size="100%,40px"></x-import>
+          </sc-for>
+        </div>
+      </nav>
+
+      <div style="padding:12px 16px 16px;border-top:1px solid var(--io-border);display:flex;align-items:center;gap:8px;">
+        <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.StatusPill" label="LITE VERSION" color="warning" glow="{{ true }}" hint-size="110px,24px"></x-import>
+        <span style="flex:1;"></span>
+        <button title="Toggle theme" onClick="{{ toggleTheme }}" style="width:26px;height:26px;background:var(--io-surface);border:1px solid var(--io-border);border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--io-text-secondary);"><sc-if value="{{ isDark }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if><sc-if value="{{ isLight }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if></button>
+        <button title="Help" style="width:26px;height:26px;background:var(--io-surface);border:1px solid var(--io-border);border-radius:6px;cursor:pointer;font-size:12px;line-height:1;">💡</button>
+        <button title="Open Logs" style="width:26px;height:26px;background:var(--io-surface);border:1px solid var(--io-border);border-radius:6px;cursor:pointer;font-size:12px;line-height:1;">📁</button>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN PANE ===== -->
+    <main class="syxx-scroll" style="flex:1;min-width:0;overflow-y:auto;">
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:26px 32px;display:flex;flex-direction:column;gap:16px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Overview</div>
+            <div style="font-size:28px;font-weight:600;margin-top:6px;">Dashboard</div>
+            <div style="font-size:14px;color:var(--io-text-secondary);margin-top:4px;">Every resolver tells a story. Here's what yours has been saying.</div>
+          </div>
+
+          <!-- ALERTS / STATS (flat row) -->
+          <div style="padding:16px 18px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 4px 8px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">System status</div>
+              <div style="font-size:12px;color:var(--io-text-secondary);">Resolver: <span style="font-family:var(--font-mono);color:var(--io-success);">1.1.1.1</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.StatCard" value="88" label="Trust score" color="success" hint-size="auto,96px"></x-import>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.StatCard" value="2" label="Alerts today" color="critical" hint-size="auto,96px"></x-import>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.StatCard" value="4" label="Resolvers" color="blue" hint-size="auto,96px"></x-import>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.StatCard" value="1" label="Leak found" color="high" hint-size="auto,96px"></x-import>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.StatCard" value="1.4k" label="Queries seen" color="success" hint-size="auto,96px"></x-import>
+            </div>
+          </div>
+
+          <sc-if value="{{ isMac }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+          <!-- WHY IT MATTERS TO PAY (macOS only — Windows covers this on Welcome) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:30px;height:30px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--io-blue) 14%,transparent);color:var(--io-blue);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
+                <div style="font-family:var(--font-rounded);font-size:16px;font-weight:600;">Local tools, free forever</div>
+              </div>
+              <div style="font-size:12.5px;color:var(--io-text-secondary);line-height:1.5;">Everything that runs on your own machine — resolver accuracy, route tracing, leak tests, live capture and trust analysis — is included at no cost.</div>
+            </div>
+            <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:30px;height:30px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--io-blue) 14%,transparent);color:var(--io-blue);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z"></path><path d="M2 12h20"></path><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z"></path></svg></div>
+                <div style="font-family:var(--font-rounded);font-size:16px;font-weight:600;">Backed by syxx.app</div>
+              </div>
+              <div style="font-size:12.5px;color:var(--io-text-secondary);line-height:1.5;">The Pro checks — Mirror, Warp &amp; Leak — send their heavy lifting to Syxx's remote server, which fetches a clean reference copy of a site and compares it against what reached you.</div>
+            </div>
+          </div>
+
+          <div style="background:color-mix(in srgb,var(--io-blue) 8%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-blue) 30%, transparent);border-radius:12px;padding:20px;display:flex;gap:14px;align-items:flex-start;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"></path></svg>
+            <div style="font-size:13px;line-height:1.6;color:var(--io-text-secondary);">Syxx is built by <b style="color:var(--io-text);">MilkandGin</b> — a solo developer and early disability retiree. Paying for Pro doesn't fund a company; it pays for the server space the remote checks depend on and keeps the lights on.</div>
+          </div>
+
+          <!-- UPGRADE (moved to bottom) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font-family:var(--font-rounded);font-size:18px;font-weight:700;">Pro · Monthly</span><span style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">$2<span style="font-size:13px;color:var(--io-text-secondary);font-weight:400;">/mo</span></span></div>
+              <div style="font-size:12.5px;color:var(--io-text-secondary);line-height:1.5;">Unlocks all server-backed checks. Cancel anytime · 3-day free trial.</div>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" on-click="{{ goLicense }}" full-width="{{ true }}" hint-size="100%,42px">Upgrade to Pro · $2/mo</x-import>
+            </div>
+            <div style="background:linear-gradient(150deg, color-mix(in srgb,var(--io-accent-start) 12%, var(--io-surface)), color-mix(in srgb,var(--io-accent-end) 16%, var(--io-surface)));border:1px solid color-mix(in srgb,var(--io-accent-end) 42%, transparent);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 0 14px color-mix(in srgb,var(--io-accent-end) 22%, transparent);">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font-family:var(--font-rounded);font-size:18px;font-weight:700;">Permanent License</span><span style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">$10<span style="font-size:13px;color:var(--io-text-secondary);font-weight:400;"> once</span></span></div>
+              <div style="font-size:12.5px;color:var(--io-text-secondary);line-height:1.5;">Pay once, keep Pro forever on this machine. The best way to support a one-person shop.</div>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" on-click="{{ goLicense }}" full-width="{{ true }}" hint-size="100%,42px">Buy Permanent · $10</x-import>
+            </div>
+          </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ isWin }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <!-- DNS FACT CAROUSEL -->
+            <div style="position:relative;border-radius:12px;padding:16px 22px;background:linear-gradient(120deg, color-mix(in srgb,var(--io-accent-start) 13%, var(--io-surface)), color-mix(in srgb,var(--io-accent-end) 17%, var(--io-surface)));border:1px solid color-mix(in srgb,var(--io-accent-end) 34%, transparent);overflow:hidden;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--syxx-label);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>Did you know? · DNS facts</div>
+                <div style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">{{ factNum }} / 20</div>
+              </div>
+              <div style="font-family:var(--font-rounded);font-size:17px;font-weight:600;line-height:1.4;min-height:48px;">{{ factText }}</div>
+              <div style="display:flex;gap:4px;margin-top:10px;">
+                <sc-for list="{{ factDots }}" as="d" hint-placeholder-count="20">
+                  <span style="height:4px;flex:1;border-radius:2px;background:{{ d.on }};transition:background .4s;"></span>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- NETWORK OVERVIEW -->
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Network overview</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-size:11px;color:var(--io-text-secondary);text-transform:uppercase;letter-spacing:.04em;">Firewall</div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:var(--io-success);"><span style="width:8px;height:8px;border-radius:50%;background:var(--io-success);box-shadow:0 0 8px var(--io-success);"></span>On · Active</div>
+                  <div style="font-size:11px;color:var(--io-text-secondary);">Windows Defender Firewall</div>
+                </div>
+                <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-size:11px;color:var(--io-text-secondary);text-transform:uppercase;letter-spacing:.04em;">Router IP</div>
+                  <div style="font-family:var(--font-mono);font-size:16px;font-weight:600;">192.168.1.1</div>
+                  <div style="font-size:11px;color:var(--io-text-secondary);">Default gateway</div>
+                </div>
+                <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-size:11px;color:var(--io-text-secondary);text-transform:uppercase;letter-spacing:.04em;">External IP</div>
+                  <div style="font-family:var(--font-mono);font-size:16px;font-weight:600;">73.162.44.9</div>
+                  <div style="font-size:11px;color:var(--io-text-secondary);">Seen by the internet</div>
+                </div>
+                <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-size:11px;color:var(--io-text-secondary);text-transform:uppercase;letter-spacing:.04em;">ISP</div>
+                  <div style="font-size:16px;font-weight:600;">Comcast Xfinity</div>
+                  <div style="font-size:11px;color:var(--io-text-secondary);">AS7922 · Denver, CO</div>
+                </div>
+                <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-size:11px;color:var(--io-text-secondary);text-transform:uppercase;letter-spacing:.04em;">DNS server</div>
+                  <div style="font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--io-success);">1.1.1.1</div>
+                  <div style="font-size:11px;color:var(--io-text-secondary);">Cloudflare · encrypted (DoH)</div>
+                </div>
+                <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-size:11px;color:var(--io-text-secondary);text-transform:uppercase;letter-spacing:.04em;">Connection</div>
+                  <div style="font-size:16px;font-weight:600;">Ethernet</div>
+                  <div style="font-size:11px;color:var(--io-text-secondary);">1 Gbps · Realtek NIC</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===================== PROPHET ===================== -->
+      <sc-if value="{{ isProphet }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:32px;display:flex;flex-direction:column;gap:24px;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+            <div>
+              <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Prophet · Resolver Accuracy</div>
+              <div style="font-size:28px;font-weight:600;margin-top:6px;">What domain would you like to check?</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input default-value="github.com" placeholder="github.com" style="background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:9px 12px;color:var(--io-text);font-family:var(--font-mono);font-size:13px;width:200px;outline:none;" style-focus="border-color:var(--io-blue);">
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" on-click="{{ runProphet }}" hint-size="120px,40px">Check</x-import>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;max-width:820px;">
+            <div style="font-family:var(--font-rounded);font-size:17px;font-weight:500;font-style:italic;line-height:1.5;color:var(--io-text);">“The Prophet stood at the edge of the network and foretold which DNS records could be trusted, naming the ones that matched the chain of truth and warning against the rest.”</div>
+            <div style="font-size:13.5px;color:var(--io-text-secondary);line-height:1.6;">Prophet (syxx-dnsresolver, syxx-dnssecverifier, syxx-resolverlatencyprobe, syxx-answerstabilityprobe, syxx-wildcardsynthesisprobe, syxx-denialofexistenceprobe, syxx-dualstackprobe &amp; syxx-nslook) tests your DNS resolver for accuracy, as well as tests for protocol integrity.</div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-radius:12px;background:color-mix(in srgb,var(--io-warning) 10%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-warning) 34%, transparent);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--io-warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <div style="flex:1;font-size:14px;"><b>Records returned, but unverified.</b> <span style="color:var(--io-text-secondary);">Your resolver answered over an unencrypted transport and github.com's zone is unsigned — nothing cryptographically guarantees these records are authentic.</span></div>
+          </div>
+
+          <div style="position:relative;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+            <sc-if value="{{ prophetRunning }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:-6px;z-index:3;border-radius:12px;background:color-mix(in srgb,var(--io-bg) 70%, transparent);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:13px;color:var(--io-blue);">Querying resolver…</div>
+            </sc-if>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <!-- OUTPUT 1: local DNS server -->
+              <div style="padding:18px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 4px 8px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:12px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-text-secondary);">Current local DNS server</div>
+                <div style="font-family:var(--font-mono);font-size:16px;">2601:2c4:4100:7a50::1</div>
+                <div style="font-size:12px;color:var(--io-text-secondary);">Interface en0 · Wi-Fi · assigned by DHCP</div>
+              </div>
+              <!-- OUTPUT 2: encryption status -->
+              <div style="padding:18px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 4px 8px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:12px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-text-secondary);">System DNS encryption status</div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--io-warning);"><span style="width:9px;height:9px;border-radius:50%;background:var(--io-warning);box-shadow:0 0 8px var(--io-warning);"></span>Unencrypted (Do53)</div>
+                <div style="font-size:12px;color:var(--io-text-secondary);line-height:1.5;">Queries travel in cleartext on port 53. No DoH or DoT is configured — your network and ISP can see and alter every lookup.</div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <!-- OUTPUT 3: domain records -->
+              <div style="padding:18px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 4px 8px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:10px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-text-secondary);">Returned domain records · github.com</div>
+                <sc-for list="{{ domainRecords }}" as="r" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:11px 13px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid var(--io-success);">
+                    <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--io-electric);">{{ r.type }}</span>
+                    <span style="font-family:var(--font-mono);font-size:13px;">{{ r.value }}</span>
+                    <span style="font-family:var(--font-mono);font-size:11px;color:var(--io-text-secondary);">TTL {{ r.ttl }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <!-- OUTPUT 4: DNSSEC records -->
+              <div style="padding:18px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 4px 8px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:10px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-text-secondary);">Returned DNSSEC records</div>
+                <div style="display:flex;align-items:center;gap:10px;padding:14px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid var(--io-warning);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--io-warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><line x1="12" y1="9" x2="12" y2="13"></line></svg>
+                  <div style="font-size:13px;"><b>No DNSSEC records.</b> <span style="color:var(--io-text-secondary);">github.com returned no RRSIG or DS records — the zone is unsigned, so answers can't be validated against a chain of trust.</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== MIRROR ===================== -->
+      <sc-if value="{{ isMirror }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:32px;display:flex;flex-direction:column;gap:24px;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-electric);">Mirror · Censorship &amp; Tampering</div>
+                <span style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;padding:2px 7px;border-radius:4px;background:linear-gradient(135deg,var(--io-accent-start),var(--io-accent-end));">Pro</span>
+              </div>
+              <div style="font-size:28px;font-weight:600;margin-top:6px;">What domain would you like to check?</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input default-value="github.com" placeholder="github.com" style="background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:9px 12px;color:var(--io-text);font-family:var(--font-mono);font-size:13px;width:200px;outline:none;" style-focus="border-color:var(--io-blue);">
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" hint-size="120px,40px">Check</x-import>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;max-width:820px;">
+            <div style="font-family:var(--font-rounded);font-size:17px;font-weight:500;font-style:italic;line-height:1.5;color:var(--io-text);">“The Mirror answered by showing whether the records born locally matched the ones seen far away, and the witness swore that the same names should not change their faces every time they were asked.”</div>
+            <div style="font-size:13.5px;color:var(--io-text-secondary);line-height:1.6;">Mirror tests your DNS resolver for signs of tampering or censorship by resolving a given domain both locally and remotely, comparing the hashes for static web components, e.g., external JavaScript files.</div>
+          </div>
+
+          <!-- SECTION 1: resolver comparison -->
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Comparing locally pulled DNS resolvers against remotely pulled resolvers:</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="padding:16px 18px;border-radius:10px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--io-text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20"></path><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z"></path></svg>Remote resolver</div>
+                <div style="font-family:var(--font-mono);font-size:16px;">140.82.112.3</div>
+                <div style="font-size:11px;color:var(--io-text-secondary);">Off-network vantage · Syxx VPS (Frankfurt)</div>
+              </div>
+              <div style="padding:16px 18px;border-radius:10px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--io-text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>Local resolver</div>
+                <div style="font-family:var(--font-mono);font-size:16px;">140.82.112.3</div>
+                <div style="font-size:11px;color:var(--io-text-secondary);">This device · en0 · Wi-Fi</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:10px;background:color-mix(in srgb,var(--io-success) 10%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-success) 32%, transparent);">
+              <span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-success);">Result:</span>
+              <span style="font-size:13.5px;"><b>Resolvers agree.</b> <span style="color:var(--io-text-secondary);">The address seen locally is identical to the one seen off-network — no DNS-level redirection detected.</span></span>
+            </div>
+          </div>
+
+          <!-- SECTION 2: static content matching -->
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Static web content matching:</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="padding:16px 18px;border-radius:10px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:11px;font-weight:700;color:var(--io-text-secondary);">Remote hash (SHA-256)</div>
+                <div style="font-family:var(--font-mono);font-size:13px;word-break:break-all;color:var(--io-text-secondary);">9f2c1a…e7b40d</div>
+              </div>
+              <div style="padding:16px 18px;border-radius:10px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:11px;font-weight:700;color:var(--io-text-secondary);">Local hash (SHA-256)</div>
+                <div style="font-family:var(--font-mono);font-size:13px;word-break:break-all;color:var(--io-text-secondary);">9f2c1a…e7b40d</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:10px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid var(--io-success);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--io-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span style="font-size:13.5px;font-weight:600;color:var(--io-success);">Hashes match</span>
+              <span style="font-size:12px;color:var(--io-text-secondary);">— static content is byte-for-byte identical.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:10px;background:color-mix(in srgb,var(--io-success) 10%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-success) 32%, transparent);">
+              <span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-success);">Result:</span>
+              <span style="font-size:13.5px;"><b>No evidence of tampering or censorship.</b> <span style="color:var(--io-text-secondary);">What reached this device matches what the off-network vantage received.</span></span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== PORTAL ===================== -->
+      <sc-if value="{{ isPortal }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:18px 30px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+            <div>
+              <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Portal · Local Network &amp; Route</div>
+              <div style="font-size:28px;font-weight:600;margin-top:6px;">What domain would you like to check?</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input default-value="github.com" placeholder="github.com" style="background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:9px 12px;color:var(--io-text);font-family:var(--font-mono);font-size:13px;width:200px;outline:none;" style-focus="border-color:var(--io-blue);">
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" hint-size="120px,40px">Check</x-import>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:5px;max-width:900px;">
+            <div style="font-family:var(--font-rounded);font-size:14.5px;font-weight:500;font-style:italic;line-height:1.4;color:var(--io-text);">“A Portal carried the traveler to a distant land, tracing the path of a hidden interceptor that had reached into the stream.”</div>
+            <div style="font-size:12.5px;color:var(--io-text-secondary);line-height:1.5;">Portal maps local network interfaces, gateways, and geolocates route hops via structured traceroutes (syxx-route) to find path anomalies, specifically highlighting where transparent proxies or middleboxes intercept queries.</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;">
+            <!-- Resolvers -->
+            <div style="padding:13px 14px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:9px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Resolvers:</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;"><span style="color:var(--io-text-secondary);">DNS server (IPv4)</span><span style="font-family:var(--font-mono);font-size:12px;">88.208.57.223</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;"><span style="color:var(--io-text-secondary);">DNS server (IPv6)</span><span style="font-family:var(--font-mono);font-size:12px;">2601:2c4:4100:7a50::1</span></div>
+            </div>
+            <!-- Interfaces + VPN -->
+            <div style="padding:13px 14px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:9px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Active interfaces:</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="font-family:var(--font-mono);">en0 · Wi-Fi</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">10.0.1.162</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="font-family:var(--font-mono);">utun4 · VPN</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">10.2.0.2</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="font-family:var(--font-mono);">lo0 · loopback</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">127.0.0.1</span></div>
+              </div>
+              <div style="height:1px;background:var(--io-border);"></div>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">VPN:</span><span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--io-success);"><span style="width:8px;height:8px;border-radius:50%;background:var(--io-success);box-shadow:0 0 8px var(--io-success);"></span>Yes · active utun4</span></div>
+            </div>
+          </div>
+
+          <!-- Devices -->
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Devices on your network segment: <span style="color:var(--io-text-secondary);">6 seen</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+              <sc-for list="{{ devices }}" as="d" hint-placeholder-count="6">
+                <div style="display:flex;flex-direction:column;gap:1px;padding:7px 10px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);">
+                  <div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-family:var(--font-mono);font-size:12px;">{{ d.ip }}</span><span style="font-family:var(--font-mono);font-size:11px;color:var(--io-text-secondary);">{{ d.mac }}</span></div>
+                  <div style="font-size:11px;color:var(--io-text-secondary);">{{ d.note }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- Route -->
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);padding:0 4px 2px;">Route to chosen domain:</div>
+            <sc-for list="{{ hops }}" as="h" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:52px 1fr auto 84px;gap:12px;align-items:center;padding:8px 14px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid {{ h.sevColor }};">
+                <div style="font-family:var(--font-rounded);font-weight:700;font-size:14px;color:var(--io-text-secondary);">{{ h.n }}</div>
+                <div><div style="font-family:var(--font-mono);font-size:13px;">{{ h.host }}</div><div style="font-size:12px;color:var(--io-text-secondary);">{{ h.label }}</div></div>
+                <div style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">{{ h.ms }}</div>
+                <div style="justify-self:end;"><x-import component-from-global-scope="NnyxDesignSystem_cfde7e.SeverityBadge" severity="{{ h.sev }}" hint-size="72px,22px"></x-import></div>
+              </div>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-top:4px;background:color-mix(in srgb,var(--io-high) 10%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-high) 32%, transparent);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--io-high)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              <div style="font-size:13px;"><span style="color:var(--io-text-secondary);">If the trace stops early, the last responding hop is where possible interception/blocking begins.</span> <b>Here the route goes dark after hop 2 (10.28.49.147)</b> — <span style="color:var(--io-text-secondary);">consistent with upstream filtering hiding the true path to github.com.</span></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== GLUTTON ===================== -->
+      <sc-if value="{{ isGlutton }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:32px;display:flex;flex-direction:column;gap:24px;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+            <div>
+              <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Glutton · DNS Leak &amp; Encryption</div>
+              <div style="font-size:28px;font-weight:600;margin-top:6px;">DNS Leak &amp; Encryption Test</div>
+            </div>
+            <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" on-click="{{ runGlutton }}" hint-size="150px,40px">Check for Leaks</x-import>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;max-width:820px;">
+            <div style="font-family:var(--font-rounded);font-size:17px;font-weight:500;font-style:italic;line-height:1.5;color:var(--io-text);">“Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished.”</div>
+            <div style="font-size:13.5px;color:var(--io-text-secondary);line-height:1.6;">Glutton probes whether unencrypted DNS queries leak outside encrypted VPN tunnels (syxx-leakdetector), catching when queries bypass configured tunnels and making them visible. This test is only meaningful if you're connected to the internet via a VPN or using a DNS encryption profile. It will be skipped if no VPN or DNS encryption is detected.</div>
+          </div>
+
+          
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+            <div style="padding:18px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:8px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Feature Status:</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--io-warning);"><span style="font-size:14px;">⏳</span>Trial · unlocked</div>
+              <div style="font-size:12px;color:var(--io-text-secondary);">45 hours remaining in your free trial.</div>
+            </div>
+            <div style="padding:18px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:8px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">VPN / DNS Encryption status:</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--io-success);"><span style="width:9px;height:9px;border-radius:50%;background:var(--io-success);box-shadow:0 0 8px var(--io-success);"></span>Yes · encrypted</div>
+              <div style="font-size:12px;color:var(--io-text-secondary);">Active tunnel interface: <span style="font-family:var(--font-mono);color:var(--io-text);">utun4</span></div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Test Label:</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);word-break:break-all;">16666a8899384836abdda5c9f5f6d3e7.leak.syxx.app</span></div>
+            <sc-for list="{{ gluttonProbes }}" as="g" hint-placeholder-count="2">
+              <div style="display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:13px 14px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid var(--io-text-secondary);">
+                <span style="font-size:12px;color:var(--io-text-secondary);">Probe via</span>
+                <span style="font-family:var(--font-mono);font-size:13px;">{{ g.via }}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--io-text-secondary);">{{ g.result }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="border-radius:12px;overflow:hidden;border:1px solid var(--io-border);">
+            <div style="padding:10px 14px;background:#100826;border-bottom:1px solid var(--io-border);font-family:var(--font-mono);font-size:11px;color:var(--io-text-secondary);">$ syxx-leak --collector https://syxx.app --key ••••-••••-••••</div>
+            <div style="padding:16px 18px;background:var(--io-surface);display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Collector result</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--io-text-secondary);">Base domain</span><span style="font-family:var(--font-mono);font-size:12px;">leak.syxx.app</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--io-text-secondary);">Resolvers</span><span style="font-family:var(--font-mono);font-size:12px;">1 · via tunnel</span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid var(--io-success);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--io-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span style="font-size:13.5px;font-weight:600;color:var(--io-success);">No Leak</span>
+                <span style="font-size:12px;color:var(--io-text-secondary);">— your DNS stayed inside the encrypted tunnel.</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;"><span style="color:var(--io-text-secondary);">Collector receipt</span><span style="font-family:var(--font-mono);color:var(--io-text-secondary);">rcpt_9f2c1a…e7b40d · verified ✓</span></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== CAGE ===================== -->
+      <sc-if value="{{ isCage }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:32px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+            <div>
+              <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Cage · DNS Capture</div>
+              <div style="font-size:28px;font-weight:600;margin-top:6px;">Live Query Capture</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="number" min="1" max="480" default-value="60" placeholder="Seconds" onInput="{{ setCageDuration }}" style="background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:9px 12px;color:var(--io-text);font-family:var(--font-mono);font-size:11px;width:118px;outline:none;" style-focus="border-color:var(--io-blue);">
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" on-click="{{ toggleCapture }}" hint-size="150px,40px">Close the Cages</x-import>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" variant="secondary" on-click="{{ hideCage }}" hint-size="150px,40px">Hide the Cages</x-import>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;max-width:820px;">
+            <div style="font-family:var(--font-rounded);font-size:17px;font-weight:500;font-style:italic;line-height:1.5;color:var(--io-text);">“The Cage trapped the DNS queries so they could be inspected without escape, their headers and answers laid bare for judgment.”</div>
+            <div style="font-size:13.5px;color:var(--io-text-secondary);line-height:1.6;">Cage (syxx-cage / DNSCapture) performs live packet capture, extracting DNS header flags, transaction IDs, query entropy, and query rates to detect exfiltration, beaconing, or DNS tunneling.</div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;">
+            <sc-if value="{{ capturing }}" hint-placeholder-val="{{ false }}">
+              <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:color-mix(in srgb,var(--io-critical) 15%, transparent);box-shadow:var(--glow-critical);"><span style="width:8px;height:8px;border-radius:50%;background:var(--io-critical);animation:syxxpulse 1s infinite;"></span><span style="font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--io-critical);">CAPTURING</span></span>
+            </sc-if>
+            <sc-if value="{{ notCapturing }}" hint-placeholder-val="{{ true }}">
+              <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:var(--io-surface-elevated);"><span style="width:8px;height:8px;border-radius:50%;background:var(--io-text-secondary);"></span><span style="font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--io-text-secondary);">IDLE</span></span>
+            </sc-if>
+            <div style="font-size:13px;color:var(--io-text-secondary);">Events captured: <span style="font-family:var(--font-mono);color:var(--io-text);font-weight:600;">{{ capCount }}</span></div>
+          </div>
+
+          <pre class="syxx-scroll" style="font-family:var(--font-mono);font-size:12px;line-height:1.65;color:var(--io-text-secondary);background:#100826;border:1px solid var(--io-border);border-radius:12px;padding:16px;margin:0;overflow:auto;max-height:150px;white-space:pre-wrap;">you@syxx ~ % sudo syxx-cages --duration 10
+==================================================
+   Syxx Cages · DNS Query Capturer
+==================================================
+Target: sniffing port 53 DNS queries (IPv4 + IPv6)…
+<span style="color:var(--io-success);">[SUCCESS]</span> Sniffer started. Capturing packet streams…</pre>
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:grid;grid-template-columns:80px 1.5fr 1.3fr 90px 96px;gap:12px;padding:0 14px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-text-secondary);">
+              <div>Time</div><div>Domain</div><div>Process · PID</div><div>Resolver</div><div style="text-align:right;">Verdict</div>
+            </div>
+            <sc-for list="{{ capRows }}" as="r" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:80px 1.5fr 1.3fr 90px 96px;gap:12px;align-items:center;padding:13px 14px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid {{ r.sevColor }};">
+                <div style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">{{ r.t }}</div>
+                <div><div style="font-family:var(--font-mono);font-size:13px;">{{ r.domain }}</div><div style="font-size:11px;color:var(--io-text-secondary);">{{ r.note }}</div></div>
+                <div style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">{{ r.proc }}</div>
+                <div style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);">{{ r.res }}</div>
+                <div style="justify-self:end;"><x-import component-from-global-scope="NnyxDesignSystem_cfde7e.SeverityBadge" severity="{{ r.sev }}" hint-size="72px,22px"></x-import></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== WITNESS ===================== -->
+      <sc-if value="{{ isWitness }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:32px;display:flex;flex-direction:column;gap:22px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Witness · Signed Resolution</div>
+            <div style="font-size:28px;font-weight:600;margin-top:6px;">Witness Testimony</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;max-width:820px;">
+            <div style="font-family:var(--font-rounded);font-size:17px;font-weight:500;font-style:italic;line-height:1.5;color:var(--io-text);">“And the Witness testified: when local and remote records matched, when they held steady over time, and when no leak betrayed the encrypted path, the DNS was healthy. When they did not, the network, and its eyes, were lying indeed.”</div>
+            <div style="font-size:13.5px;color:var(--io-text-secondary);line-height:1.6;">Witness (syxx-witnesssigner, syxx-sentinel, and syxx-Answerledger) is the environment's trust baseline. It registers snapshots, monitors configuration drift, checks historical stability (“holding steady over time”), and cryptographically signs a tamper-proof ‘testimony’ of the network state.</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px;max-width:640px;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label style="font-size:12px;color:var(--io-text-secondary);">What domain would you like to check?</label>
+              <input default-value="github.com" placeholder="github.com" style="background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:10px 13px;color:var(--io-text);font-family:var(--font-mono);font-size:13px;outline:none;" style-focus="border-color:var(--io-blue);">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label style="font-size:12px;color:var(--io-text-secondary);">Tell the witnesses a secret that you can remember so you know their signatures were not forged (essentially, a password):</label>
+              <input type="password" default-value="correct-horse-battery" placeholder="Your secret…" style="background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:10px 13px;color:var(--io-text);font-family:var(--font-mono);font-size:13px;outline:none;" style-focus="border-color:var(--io-blue);">
+            </div>
+            <div style="display:flex;gap:10px;">
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" on-click="{{ witnessTestify }}" hint-size="180px,40px">Witness Testimony</x-import>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" variant="secondary" on-click="{{ witnessVerify }}" hint-size="180px,40px">Verify Testimony</x-import>
+            </div>
+          </div>
+
+          <!-- TESTIMONY OUTPUT -->
+          <sc-if value="{{ showTestimony }}" hint-placeholder-val="{{ true }}">
+            <div style="border-radius:12px;overflow:hidden;border:1px solid var(--io-border);max-width:820px;">
+              <div style="padding:16px 18px;background:var(--io-surface);display:flex;flex-direction:column;gap:12px;">
+                <div style="font-size:13.5px;">Creating signed Witness Testimony for <span style="font-family:var(--font-mono);color:var(--io-electric);">github.com</span> via <span style="font-family:var(--font-mono);color:var(--io-electric);">140.82.112.3</span>.</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);">
+                  <span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Snapshot signature</span>
+                  <span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);word-break:break-all;">3045…a9f1e7 · ed25519</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--io-text-secondary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--io-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Saved to <span style="font-family:var(--font-mono);">~/Documents/Testimony.txt</span></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- VALIDATION REPORT -->
+          <sc-if value="{{ showValidation }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:12px;overflow:hidden;border:1px solid var(--io-border);max-width:820px;">
+              <div style="padding:16px 18px;background:var(--io-surface);display:flex;flex-direction:column;gap:12px;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Testimony Validation Report:</div>
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;">
+                  <span style="color:var(--io-text-secondary);">File:</span><span style="font-family:var(--font-mono);font-size:12px;">~/Documents/Testimony.txt</span>
+                  <span style="color:var(--io-text-secondary);">Domain:</span><span style="font-family:var(--font-mono);font-size:12px;">github.com</span>
+                  <span style="color:var(--io-text-secondary);">Timestamp:</span><span style="font-family:var(--font-mono);font-size:12px;">2026-07-05 23:00:46 +0000</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid var(--io-success);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--io-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span style="font-size:13px;">Testimony <b style="color:var(--io-success);">validated</b> based on no redirections <span style="color:var(--io-text-secondary);">[Redirections Detected: False]</span>.</span>
+                </div>
+                <div style="font-size:13px;">Validation was <b>conclusive</b>.</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);">
+                  <span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Witness Signature on File:</span>
+                  <span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);word-break:break-all;">3045…a9f1e7</span>
+                </div>
+                <div style="font-size:13px;">Signature <b style="color:var(--io-success);">valid</b> with no evidence of tampering.</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- FREE THE WITNESSES -->
+          <div style="margin-top:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" variant="secondary" on-click="{{ witnessFree }}" hint-size="180px,40px">Free the Witnesses</x-import>
+            <span style="font-size:12px;color:var(--io-text-secondary);">Free the Witnesses to reset your DNS cache.</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== CONCLUSION ===================== -->
+      <sc-if value="{{ isConclusion }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px 30px;display:flex;flex-direction:column;gap:14px;">
+
+          <!-- HEADER -->
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+            <div>
+              <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Verdict · github.com</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:5px;flex-wrap:wrap;">
+                <div style="font-size:28px;font-weight:600;line-height:1;">Conclusion</div>
+                <button onClick="{{ toggleAbout }}" style="font-size:11px;color:var(--io-text-secondary);background:var(--io-surface);border:1px solid var(--io-border);border-radius:6px;padding:3px 9px;cursor:pointer;">About &#9662;</button>
+                <div style="display:flex;gap:5px;margin-left:2px;">
+                  <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="2">
+                    <button onClick="{{ tb.onClick }}" style="font-size:11px;font-weight:600;border:1px solid var(--io-border);border-radius:6px;padding:3px 10px;cursor:pointer;background:{{ tb.bg }};color:{{ tb.fg }};">{{ tb.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="text-align:right;line-height:1.5;">
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--io-text-secondary);">Generated {{ generatedAt }}</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-top:3px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--io-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--io-success);">Bundle signed · {{ signedBy }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ABOUT (collapsible) -->
+          <sc-if value="{{ showAbout }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:16px 18px;border-radius:10px;background:var(--io-surface);border:1px solid var(--io-border);max-width:840px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--syxx-label);margin-bottom:8px;">About Syxx</div>
+              <div style="font-family:var(--font-rounded);font-size:14px;font-style:italic;line-height:1.45;color:var(--io-text);margin-bottom:12px;">“When all the tales were told, the Conclusion weighed them together and pronounced whether the network’s eyes could be believed.”</div>
+              <div style="display:flex;flex-direction:column;gap:10px;font-size:12.5px;color:var(--io-text-secondary);line-height:1.6;">
+                <div>This app was inspired by <b style="color:var(--io-text);">DNS Monitor</b> by Patrick Wardle at Objective-See. In my own suspicions that my network had been compromised, I couldn’t help but wish I had a tool that could actually (and quickly) interpret those reports for me. I was working on two larger products at the time and sadly had to put them aside, and during June 2026, began the journey to tell this story.</div>
+                <div>Big things are on the horizon as we chisel out the long-term purpose of the web-server component. We’re currently planning for it to serve as an authoritative ground-truth oracle, an inside/outside differential (“diff”) endpoint, a DNS trace/hierarchy diagnostic, a historical drift tool, an outside-in resolver check, and a crowd-intelligence source.</div>
+                <div>While I did not use his products or code, I want to thank Mr. Wardle for his efforts in creating and distributing such great network security at no cost. (I endeavored to do the same; alas, I’m poor and server space is expensive.) And I want to thank all of you for giving this product a try. Use the app, visit us on <span style="color:var(--io-electric);">Syxx.app</span>, and be a part of our story so that we can be a part of yours.</div>
+                <div style="font-family:var(--font-rounded);font-weight:700;color:var(--io-text);">—MilkandGin</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- VERDICT + CONFIDENCE -->
+          <div style="display:flex;gap:18px;align-items:center;padding:18px 20px;border-radius:12px;background:color-mix(in srgb,{{ sevColor }} 10%, var(--io-surface));border:1px solid color-mix(in srgb,{{ sevColor }} 28%, transparent);">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="{{ sevColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <div style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">{{ verdict }}</div>
+                <span style="font-size:11px;font-weight:600;color:var(--io-text-secondary);background:var(--io-bg);border:1px solid var(--io-border);border-radius:999px;padding:2px 10px;">{{ verdictFlavor }}</span>
+                <span style="font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:{{ sevColor }};padding:2px 8px;border-radius:4px;">{{ verdictSevLabel }}</span>
+              </div>
+              <div style="font-size:12.5px;color:var(--io-text-secondary);margin-top:5px;line-height:1.5;">{{ verdictSubtext }}</div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:11px;">
+                <div style="flex:1;height:7px;border-radius:999px;background:var(--io-bg);overflow:hidden;"><div style="width:{{ confidenceW }};height:100%;background:{{ sevColor }};border-radius:999px;"></div></div>
+                <span style="font-family:var(--font-mono);font-size:12px;color:{{ sevColor }};font-weight:700;">{{ confidence }}% confidence</span>
+              </div>
+              <div style="font-size:10px;color:var(--io-text-secondary);margin-top:6px;line-height:1.4;">Confidence = how much we trust the evidence that ran — not the odds of any single hypothesis (those are in the distribution below).</div>
+            </div>
+            <sc-if value="{{ hasHardGate }}" hint-placeholder-val="{{ true }}">
+              <div style="text-align:center;padding-left:16px;border-left:1px solid var(--io-border);max-width:152px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--syxx-label)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <div style="font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Incomplete run</div>
+                <div style="font-size:10px;color:var(--io-text-secondary);line-height:1.35;">Witness baseline-drift check skipped — can’t certify clean (bundle still signed).</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- DISTRIBUTION + STATUS GRID -->
+          <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start;">
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Hypothesis distribution</div>
+              <div style="font-size:10px;color:var(--io-text-secondary);margin-top:3px;">The engine’s seven hypotheses · share of evidence weight</div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px;">
+                <sc-for list="{{ hypotheses }}" as="hyp" hint-placeholder-count="7">
+                  <div style="display:grid;grid-template-columns:1fr 38px;gap:10px;align-items:center;">
+                    <div>
+                      <div style="font-size:12px;margin-bottom:4px;color:{{ hyp.labelColor }};font-weight:{{ hyp.labelWeight }};">{{ hyp.h }}</div>
+                      <div style="height:6px;border-radius:999px;background:var(--io-bg);overflow:hidden;"><div style="width:{{ hyp.pct }};height:100%;background:{{ hyp.barColor }};border-radius:999px;"></div></div>
+                    </div>
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);text-align:right;">{{ hyp.pct }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Discipline status</div>
+              <div style="font-size:10px;color:var(--io-text-secondary);margin-top:3px;">Derived from each discipline’s strongest finding</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+                <sc-for list="{{ sectionStatuses }}" as="st" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid {{ st.color }};">
+                    <span style="font-size:12px;font-weight:600;">{{ st.section }}</span>
+                    <span style="font-size:11px;font-weight:600;color:{{ st.color }};">{{ st.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px 12px;margin-top:11px;">
+                <sc-for list="{{ statusLegend }}" as="lg" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:{{ lg.color }};"></span><span style="font-size:10px;color:var(--io-text-secondary);">{{ lg.label }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <!-- EVIDENCE -->
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Evidence · strongest first</div>
+              <sc-if value="{{ hasWeak }}" hint-placeholder-val="{{ true }}"><button onClick="{{ toggleWeak }}" style="font-size:10px;font-weight:600;color:var(--io-electric);background:var(--io-surface);border:1px solid var(--io-border);border-radius:6px;padding:3px 10px;cursor:pointer;"><sc-if value="{{ weakCollapsed }}" hint-placeholder-val="{{ true }}">+{{ weakCount }} weak signals &#9662;</sc-if><sc-if value="{{ showWeak }}" hint-placeholder-val="{{ false }}">Hide weak signals &#9652;</sc-if></button></sc-if>
+            </div>
+
+            <div onClick="{{ leadFinding.open }}" style="margin-top:11px;padding:13px 15px;border-radius:10px;background:color-mix(in srgb,{{ leadFinding.color }} 8%, var(--io-bg));border:1px solid color-mix(in srgb,{{ leadFinding.color }} 30%, transparent);border-left:3px solid {{ leadFinding.color }};cursor:pointer;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:{{ leadFinding.color }};">Strongest signal</span>
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--io-electric);font-weight:700;">{{ leadFinding.id }}</span>
+                <span style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:{{ leadFinding.color }};border-radius:4px;padding:1px 6px;">{{ leadFinding.weight }}</span>
+                <span style="flex:1;"></span>
+                <span style="font-size:11px;color:var(--io-electric);">Open {{ leadFinding.section }} ↗</span>
+              </div>
+              <div style="font-size:13px;color:var(--io-text);margin-top:6px;line-height:1.45;">{{ leadFinding.obs }}</div>
+              <div style="font-size:11.5px;color:var(--io-text-secondary);margin-top:4px;line-height:1.45;">{{ leadFinding.rationale }}</div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;">
+                <span style="font-size:10px;color:var(--io-text-secondary);">Supports:</span>
+                <sc-for list="{{ leadFinding.supports }}" as="sup" hint-placeholder-count="2">
+                  <span style="font-family:var(--font-mono);font-size:10px;color:var(--io-text-secondary);background:var(--io-surface);border:1px solid var(--io-border);border-radius:4px;padding:1px 7px;">{{ sup }}</span>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:13px;margin-top:13px;">
+              <sc-for list="{{ evidenceGroups }}" as="g" hint-placeholder-count="6">
+                <div>
+                  <button onClick="{{ g.open }}" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;padding:0;cursor:pointer;margin-bottom:7px;">
+                    <span style="font-family:var(--font-rounded);font-size:13px;font-weight:700;color:var(--io-text);">{{ g.section }}</span>
+                    <span style="font-size:10px;color:var(--io-electric);">open ↗</span>
+                    <span style="flex:1;height:1px;background:var(--io-border);"></span>
+                  </button>
+                  <sc-if value="{{ g.note }}" hint-placeholder-val="">
+                    <div style="font-size:12px;color:var(--io-text-secondary);font-style:italic;margin-bottom:6px;">{{ g.note }}</div>
+                  </sc-if>
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    <sc-for list="{{ g.strong }}" as="f" hint-placeholder-count="1">
+                      <div style="padding:10px 13px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid {{ f.wColor }};">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                          <span style="font-family:var(--font-mono);font-size:11.5px;color:var(--io-electric);font-weight:700;">{{ f.id }}</span>
+                          <span style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:{{ f.wColor }};border:1px solid {{ f.wColor }};border-radius:4px;padding:1px 6px;">{{ f.weight }}</span>
+                        </div>
+                        <div style="font-size:12.5px;color:var(--io-text);margin-top:5px;line-height:1.45;">{{ f.obs }}</div>
+                        <div style="font-size:11.5px;color:var(--io-text-secondary);margin-top:4px;line-height:1.45;">{{ f.rationale }}</div>
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;">
+                          <span style="font-size:10px;color:var(--io-text-secondary);">Supports:</span>
+                          <sc-for list="{{ f.supports }}" as="sup" hint-placeholder-count="2">
+                            <span style="font-family:var(--font-mono);font-size:10px;color:var(--io-text-secondary);background:var(--io-surface);border:1px solid var(--io-border);border-radius:4px;padding:1px 7px;">{{ sup }}</span>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ showWeak }}" hint-placeholder-val="{{ false }}">
+                      <sc-for list="{{ g.weak }}" as="f" hint-placeholder-count="1">
+                        <div style="padding:10px 13px;border-radius:8px;background:var(--io-bg);border:1px solid var(--io-border);border-left:3px solid {{ f.wColor }};opacity:.82;">
+                          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-family:var(--font-mono);font-size:11.5px;color:var(--io-electric);font-weight:700;">{{ f.id }}</span>
+                            <span style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:{{ f.wColor }};border:1px solid {{ f.wColor }};border-radius:4px;padding:1px 6px;">{{ f.weight }}</span>
+                          </div>
+                          <div style="font-size:12.5px;color:var(--io-text);margin-top:5px;line-height:1.45;">{{ f.obs }}</div>
+                          <div style="font-size:11.5px;color:var(--io-text-secondary);margin-top:4px;line-height:1.45;">{{ f.rationale }}</div>
+                          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;">
+                            <span style="font-size:10px;color:var(--io-text-secondary);">Supports:</span>
+                            <sc-for list="{{ f.supports }}" as="sup" hint-placeholder-count="2">
+                              <span style="font-family:var(--font-mono);font-size:10px;color:var(--io-text-secondary);background:var(--io-surface);border:1px solid var(--io-border);border-radius:4px;padding:1px 7px;">{{ sup }}</span>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- NEXT STEPS -->
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);">Next steps</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:11px;">
+              <sc-for list="{{ nextSteps }}" as="ns" hint-placeholder-count="4">
+                <div style="display:flex;gap:10px;font-size:12.5px;color:var(--io-text-secondary);line-height:1.45;"><span style="color:var(--syxx-label);flex-shrink:0;font-weight:700;">&rarr;</span><span>{{ ns }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- REFERRAL -->
+          <sc-if value="{{ referralTriggered }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:16px 18px;border-radius:12px;background:color-mix(in srgb,var(--io-electric) 9%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-electric) 30%, transparent);display:flex;flex-direction:column;gap:11px;">
+              <div style="display:flex;align-items:center;gap:9px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <div style="font-family:var(--font-rounded);font-size:15px;font-weight:700;">Get a second opinion</div>
+              </div>
+              <div style="font-size:12.5px;color:var(--io-text-secondary);line-height:1.55;">Whether this report confirms that evidence of suspicious behavior exists, fear that your network has been compromised is real. We recommend that everyone speak to a human professional prior to making final decisions about their network security. This application is just a tool, and this one, like most others, ought to be just one in your tool belt.</div>
+              <div style="font-size:12.5px;color:var(--io-text-secondary);line-height:1.55;">Print your report and take it to a local professional, or copy the report to the below-referenced subreddits for additional assistance. <b style="color:var(--io-text);text-decoration:underline;">Only copy and paste the designated portion to a subreddit until asked to provide more.</b></div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <sc-for list="{{ referral.subreddits }}" as="sub" hint-placeholder-count="4">
+                  <span style="font-family:var(--font-mono);font-size:11px;color:var(--io-electric);background:color-mix(in srgb,var(--io-electric) 13%, transparent);border-radius:999px;padding:3px 11px;">{{ sub }}</span>
+                </sc-for>
+              </div>
+              <div>
+                <div style="font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--syxx-label);margin-bottom:6px;">Designated portion &mdash; safe to share</div>
+                <div style="position:relative;background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:12px 13px;">
+                  <div id="syxx-referral-post" style="font-size:11.5px;color:var(--io-text-secondary);font-family:var(--font-mono);line-height:1.55;padding-right:52px;">{{ referral.prefilledPost }}</div>
+                  <button onClick="{{ copyReferral }}" style="position:absolute;top:9px;right:9px;font-size:10px;font-weight:700;color:var(--io-electric);background:var(--io-surface);border:1px solid var(--io-border);border-radius:6px;padding:4px 10px;cursor:pointer;">Copy</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===================== LICENSE ===================== -->
+      <sc-if value="{{ isLicense }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:32px;display:flex;flex-direction:column;gap:24px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Account · Licensing</div>
+            <div style="font-size:28px;font-weight:600;margin-top:6px;">License &amp; Registration</div>
+            <div style="font-size:14px;color:var(--io-text-secondary);margin-top:4px;">All local diagnostics are free forever. Pro unlocks the server-backed checks.</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;">
+            <div style="padding:22px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-family:var(--font-rounded);font-size:20px;font-weight:700;">Lite</div>
+                <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.StatusPill" label="CURRENT" color="warning" hint-size="90px,24px"></x-import>
+              </div>
+              <div style="font-family:var(--font-rounded);font-size:30px;font-weight:700;">Free</div>
+              <div style="height:1px;background:var(--io-border);"></div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-success);">✓</span><span>Prophets · resolver accuracy</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-success);">✓</span><span>Portals · LAN &amp; route trace</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-success);">✓</span><span>Gluttons · DNS leak test</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-success);">✓</span><span>Cages · live query capture</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-success);">✓</span><span>Witnesses · environment trust</span></div>
+              </div>
+            </div>
+
+            <div style="padding:22px;border-radius:12px;background:linear-gradient(150deg, color-mix(in srgb,var(--io-accent-start) 12%, var(--io-surface)), color-mix(in srgb,var(--io-accent-end) 16%, var(--io-surface)));border:1px solid color-mix(in srgb,var(--io-accent-end) 42%, transparent);display:flex;flex-direction:column;gap:14px;box-shadow:0 0 14px color-mix(in srgb,var(--io-accent-end) 26%, transparent);">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-family:var(--font-rounded);font-size:20px;font-weight:700;">Pro</div>
+                <span style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;padding:3px 8px;border-radius:4px;background:linear-gradient(135deg,var(--io-accent-start),var(--io-accent-end));">3-day free trial</span>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-family:var(--font-rounded);font-size:30px;font-weight:700;">$2</span><span style="font-size:14px;color:var(--io-text-secondary);">/ month</span></div>
+              <div style="height:1px;background:var(--io-border);"></div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-blue);">✓</span><span>Everything in Lite, plus:</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-blue);">✓</span><span>Mirrors · remote-vs-local asset comparison</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-blue);">✓</span><span>Remote static-file hash verification</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-blue);">✓</span><span>Syxx Warp · web structure matching</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-blue);">✓</span><span>Syxx Leak · DNS privacy logging</span></div>
+                <div style="display:flex;gap:9px;font-size:13px;"><span style="color:var(--io-blue);">✓</span><span>Dedicated VPS resources</span></div>
+              </div>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" full-width="{{ true }}" hint-size="100%,44px">Start Pro Trial</x-import>
+            </div>
+          </div>
+
+          <div style="padding:22px;border-radius:12px;background:var(--io-surface);border:1px solid var(--io-border);display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:16px;font-weight:600;">Activate a License Key</div>
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--io-text-secondary);display:flex;align-items:center;gap:8px;">🔑 Local license key found. Verifying with Keygen… <span style="color:var(--io-warning);font-weight:700;">🔴 LITE VERSION</span></div>
+            <div style="display:flex;gap:10px;">
+              <input default-value="SYXX-XXXX-XXXX-XXXX-XXXX" style="flex:1;background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:11px 14px;color:var(--io-text);font-family:var(--font-mono);font-size:14px;letter-spacing:.05em;outline:none;" style-focus="border-color:var(--io-blue);">
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" hint-size="120px,44px">Activate</x-import>
+            </div>
+            <div style="font-size:12px;color:var(--io-text-secondary);">Machine ID <span style="font-family:var(--font-mono);color:var(--io-text);">7F3A-C1D9-4E20</span> · 1 of 3 activations used · macOS Tahoe 26.x · Apple Silicon</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== WELCOME (Windows) ===================== -->
+      <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:32px;display:flex;flex-direction:column;gap:22px;">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <img src="assets/syxx-logo.png" width="56" height="56" alt="Syxx" style="display:block;object-fit:contain;">
+            <div>
+              <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--io-blue);">Welcome to Syxx</div>
+              <div style="font-size:28px;font-weight:700;margin-top:3px;font-family:var(--font-rounded);">Lyin' Eyes for Windows</div>
+            </div>
+          </div>
+
+          <div style="font-size:15px;line-height:1.55;color:var(--io-text-secondary);max-width:720px;">Syxx is a DNS investigation suite. It watches the lookups your PC makes and shows you which answers can be trusted — catching spoofed records, poisoned caches, VPN leaks, and processes quietly phoning home. Six focused tools (Prophet, Mirror, Portal, Glutton, Cage &amp; Witness) cover it end to end.</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;">
+              <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--io-blue) 14%,transparent);color:var(--io-blue);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
+              <div style="font-family:var(--font-rounded);font-size:16px;font-weight:600;">Local tools, free forever</div>
+              <div style="font-size:13px;color:var(--io-text-secondary);line-height:1.5;">Everything that runs on your own machine — resolver accuracy, route tracing, leak tests, live capture and trust analysis — is included at no cost.</div>
+            </div>
+            <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;">
+              <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--io-blue) 14%,transparent);color:var(--io-blue);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z"></path><path d="M2 12h20"></path><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z"></path></svg></div>
+              <div style="font-family:var(--font-rounded);font-size:16px;font-weight:600;">Backed by syxx.app</div>
+              <div style="font-size:13px;color:var(--io-text-secondary);line-height:1.5;">The Pro checks — Mirror, Warp &amp; Leak — send their heavy lifting to Syxx's remote server, which fetches a clean reference copy of a site and compares it against what reached you. That's the part that needs a subscription.</div>
+            </div>
+          </div>
+
+          <div style="background:color-mix(in srgb,var(--io-blue) 8%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-blue) 30%, transparent);border-radius:12px;padding:20px;display:flex;gap:14px;align-items:flex-start;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"></path></svg>
+            <div style="font-size:13.5px;line-height:1.6;color:var(--io-text-secondary);">Syxx is built by <b style="color:var(--io-text);">MilkandGin</b> — a solo developer and early disability retiree. The <b style="color:var(--io-text);">$2/month</b> Pro subscription doesn't fund a company; it pays for the server space the remote checks depend on. If a subscription isn't your thing, a <b style="color:var(--io-text);">one-time $10 permanent license</b> unlocks Pro for good and helps keep the lights on.</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div style="background:var(--io-surface);border:1px solid var(--io-border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font-family:var(--font-rounded);font-size:18px;font-weight:700;">Pro · Monthly</span><span style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">$2<span style="font-size:13px;color:var(--io-text-secondary);font-weight:400;">/mo</span></span></div>
+              <div style="font-size:13px;color:var(--io-text-secondary);line-height:1.5;">Unlocks all server-backed checks. Cancel anytime. Includes a 3-day free trial.</div>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" full-width="{{ true }}" hint-size="100%,42px">Start Pro Trial</x-import>
+            </div>
+            <div style="background:linear-gradient(150deg, color-mix(in srgb,var(--io-accent-start) 12%, var(--io-surface)), color-mix(in srgb,var(--io-accent-end) 16%, var(--io-surface)));border:1px solid color-mix(in srgb,var(--io-accent-end) 42%, transparent);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 0 14px color-mix(in srgb,var(--io-accent-end) 22%, transparent);">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font-family:var(--font-rounded);font-size:18px;font-weight:700;">Permanent License</span><span style="font-family:var(--font-rounded);font-size:22px;font-weight:700;">$10<span style="font-size:13px;color:var(--io-text-secondary);font-weight:400;"> once</span></span></div>
+              <div style="font-size:13px;color:var(--io-text-secondary);line-height:1.5;">Pay once, keep Pro forever on this machine. The best way to support a one-person shop.</div>
+              <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" full-width="{{ true }}" hint-size="100%,42px">Buy Permanent · $10</x-import>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===================== BETA / WHAT'S NEW ===================== -->
+      <sc-if value="{{ isBeta }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:0;background:#0a1120;height:100%;display:flex;flex-direction:column;">
+          <div style="padding:22px 32px 16px;background:linear-gradient(180deg, #0c1526, #0a1120);border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;">
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--io-electric);">From MilkandGin · Private Beta</div>
+            <div style="font-size:24px;font-weight:700;margin-top:5px;color:#eaf0ff;font-family:var(--font-rounded);">Meet the rest of the family</div>
+            <div style="font-size:13px;color:#93a2c4;margin-top:4px;max-width:660px;line-height:1.45;">Syxx watches your DNS. <b style="color:#c7d3ee;">Nnyx</b> hunts what's already on the machine, and <b style="color:#c7d3ee;">Zzyn</b> governs what leaves it. Both are entering closed beta — reserve your seat below.</div>
+          </div>
+
+          <div style="padding:16px 32px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;">
+
+            <!-- NNYX -->
+            <div style="border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:#0d1626;box-shadow:0 8px 24px rgba(0,0,0,.4);flex:1;min-height:0;">
+              <div style="display:grid;grid-template-columns:1.05fr 1fr;height:100%;">
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px;justify-content:center;border-right:1px solid rgba(255,255,255,.06);">
+                  <div style="display:flex;align-items:center;gap:11px;">
+                    <img src="assets/nnyx-logo.png" width="34" height="34" alt="Nnyx" style="display:block;object-fit:contain;">
+                    <div>
+                      <div style="font-family:var(--font-rounded);font-size:18px;font-weight:700;color:#eaf0ff;">Nnyx</div>
+                      <div style="font-size:12px;color:#8093b8;">Malware &amp; rootkit scanner for macOS</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px;align-self:center;">
+                    <sc-for list="{{ nnyxPoints }}" as="p" hint-placeholder-count="3">
+                      <div style="display:flex;gap:9px;align-items:flex-start;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span style="font-size:13px;line-height:1.4;color:#b8c4de;">{{ p }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="padding:14px;display:flex;gap:9px;background:#08101f;align-items:center;">
+                  <img src="assets/nnyx-1.png" alt="Nnyx detections" style="flex:1.55;min-width:0;height:100%;max-height:230px;object-fit:contain;object-position:center;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:#0a1120;">
+                  <img src="assets/nnyx-2.png" alt="Nnyx finding" style="flex:1;min-width:0;height:100%;max-height:230px;object-fit:contain;object-position:center;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:#0a1120;">
+                </div>
+              </div>
+            </div>
+
+            <!-- ZZYN -->
+            <div style="border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:#0d1626;box-shadow:0 8px 24px rgba(0,0,0,.4);flex:1;min-height:0;">
+              <div style="display:grid;grid-template-columns:1fr 1.05fr;height:100%;">
+                <div style="padding:14px;display:flex;gap:9px;background:#08101f;align-items:center;order:1;">
+                  <img src="assets/zzyn-1.png" alt="Zzyn activity" style="flex:1.4;min-width:0;height:100%;max-height:230px;object-fit:contain;object-position:center;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:#0a1120;">
+                  <img src="assets/zzyn-2.png" alt="Zzyn connection alert" style="flex:1;min-width:0;height:100%;max-height:230px;object-fit:contain;object-position:center;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:#0a1120;">
+                </div>
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px;justify-content:center;border-left:1px solid rgba(255,255,255,.06);order:2;">
+                  <div style="display:flex;align-items:center;gap:11px;">
+                    <img src="assets/zzyn-logo.png" width="34" height="34" alt="Zzyn" style="display:block;object-fit:contain;">
+                    <div>
+                      <div style="font-family:var(--font-rounded);font-size:18px;font-weight:700;color:#eaf0ff;">Zzyn</div>
+                      <div style="font-size:12px;color:#8093b8;">Outbound connection firewall</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px;align-self:center;">
+                    <sc-for list="{{ zzynPoints }}" as="p" hint-placeholder-count="3">
+                      <div style="display:flex;gap:9px;align-items:flex-start;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--io-electric)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span style="font-size:13px;line-height:1.4;color:#b8c4de;">{{ p }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SIGN-UP STRIP -->
+            <div style="border-radius:14px;padding:14px 18px;background:linear-gradient(120deg, rgba(154,108,255,.16), rgba(238,240,74,.08));border:1px solid rgba(154,108,255,.35);display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:220px;">
+                <div style="font-family:var(--font-rounded);font-size:16px;font-weight:700;color:#eaf0ff;">Get on the beta list</div>
+                <div style="font-size:12.5px;color:#a7b4d4;margin-top:2px;">One list, both apps. We'll email your invite when each build opens.</div>
+              </div>
+              <div style="display:flex;gap:9px;min-width:300px;flex:1;">
+                <input placeholder="you@example.com" style="flex:1;background:#0a1120;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:10px 13px;color:#eaf0ff;font-family:var(--font-mono);font-size:13px;outline:none;" style-focus="border-color:var(--io-electric);">
+                <x-import component-from-global-scope="NnyxDesignSystem_cfde7e.Button" hint-size="150px,42px">Reserve my seat</x-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:800},&quot;platform&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;mac&quot;,&quot;win&quot;],&quot;default&quot;:&quot;mac&quot;,&quot;tsType&quot;:&quot;'mac' | 'win'&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark' | 'light'&quot;}}">
+class Component extends DCLogic {
+  state = { section: null, capturing: false, cap: 24711, prophetRunning: false, gluttonRunning: false, cageHidden: false, cageRemain: 0, showTestimony: true, showValidation: false, factIdx: 0 };
+
+  go(s) { this.setState({ section: s }); }
+
+  toggleTheme() {
+    const cur = this.state.theme || (this.props.theme === "light" ? "light" : "dark");
+    this.setState({ theme: cur === "dark" ? "light" : "dark" });
+  }
+
+  toggleCapture() {
+    if (this.state.capturing) { clearInterval(this._t); this.setState({ capturing: false }); return; }
+    this.setState({ capturing: true, cap: 24711 });
+    clearInterval(this._t);
+    this._t = setInterval(() => this.setState(st => ({ cap: st.cap + (2 + Math.floor(Math.random() * 6)) })), 800);
+  }
+
+  setCageDuration(e) { const v = parseInt(e.target.value, 10); this._dur = isNaN(v) ? 60 : Math.min(480, Math.max(1, v)); }
+  hideCage() {
+    const dur = this._dur || 60;
+    if (!this.state.capturing) this.toggleCapture();
+    this.setState({ cageHidden: true, cageRemain: dur });
+    clearInterval(this._hide);
+    this._hide = setInterval(() => this.setState(st => {
+      const r = st.cageRemain - 1;
+      if (r <= 0) { clearInterval(this._hide); return { cageHidden: false, cageRemain: 0 }; }
+      return { cageRemain: r };
+    }), 1000);
+  }
+
+  run(which) {
+    this.setState({ [which + "Running"]: true });
+    clearTimeout(this["_" + which]);
+    this["_" + which] = setTimeout(() => this.setState({ [which + "Running"]: false }), 1100);
+  }
+
+  componentDidMount() { this._facts = setInterval(() => this.setState(s => ({ factIdx: (s.factIdx + 1) % 20 })), 6500); }
+  componentWillUnmount() { clearInterval(this._t); clearInterval(this._facts); clearTimeout(this._prophet); clearTimeout(this._glutton); }
+
+  icon(kids) {
+    const E = React.createElement;
+    return E("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      kids.map((k, i) => E(k[0], Object.assign({ key: i }, k[1]))));
+  }
+
+  sevColor(sev) {
+    return { low: "var(--io-success)", high: "var(--io-high)", medium: "var(--io-warning)", critical: "var(--io-critical)", info: "var(--io-info)" }[sev] || "var(--io-info)";
+  }
+
+  dnsFacts() {
+    return [
+      "DNS — the Domain Name System — translates names like example.com into IP addresses.",
+      "DNS is often called the phonebook of the Internet.",
+      "DNS was invented in 1983 by Paul Mockapetris.",
+      "The first registered domain name was Symbolics.com, back in 1985.",
+      "DNS is hierarchical: root, TLD, and authoritative layers.",
+      "There are 13 root server identities at the root of the DNS namespace.",
+      "DNS splits into two roles: recursive resolvers and authoritative servers.",
+      "DNS doesn't just map websites — it also publishes mail-server records and other service data.",
+      "Early DNS used .arpa, .gov, .edu, .mil, .org and .net before .com came to dominate.",
+      "Each label in a domain name is limited to 63 characters.",
+      "DNS is a distributed system — not one giant central database.",
+      "DNSSEC adds cryptographic validation to protect DNS integrity and authenticity.",
+      "DNS queries can be hijacked, which is why DNSSEC stripping is a real concern.",
+      "The famous 404 Not Found error is often tied to name-resolution problems.",
+      "DNS can be abused for tunneling — hiding data inside subdomains and query patterns.",
+      "High-entropy subdomains are a common signal used to detect DNS tunneling.",
+      "Unencrypted DNS is visible to every network and intermediary along the path.",
+      "Captive portals often use DNS or HTTP redirection to force you to a login page.",
+      "DNS records are kept on primary and secondary servers for redundancy.",
+      "Nearly every online app depends on DNS to locate the services it needs.",
+    ];
+  }
+
+  renderVals() {
+    const isWin = this.props.platform === "win";
+    const s = this.state.section || this.props.section || (isWin ? "welcome" : "beta");
+    const theme = this.state.theme || (this.props.theme === "light" ? "light" : "dark");
+    const isDark = theme !== "light";
+    const F = { "--font-sans": "'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", "--font-rounded": "'Space Grotesk',-apple-system,system-ui,sans-serif", "--font-mono": "'Space Mono',ui-monospace,'SF Mono',Menlo,monospace" };
+    const darkT = { "--io-bg":"#130d26","--io-surface":"#1d1640","--io-surface-elevated":"#2a2154","--io-border":"#382c66","--io-text":"#ffffff","--io-text-secondary":"#a99fc8","--io-blue":"#8b5cf6","--io-electric":"#b98cff","--io-accent-start":"#f0ac38","--io-accent-end":"#7c3aed","--syxx-label":"#f2ba4a","--syxx-chrome":"rgba(20,13,40,.74)","--syxx-sidebar":"rgba(20,13,40,.5)","--syxx-glow":"rgba(140,80,240,.20)" };
+    const lightT = { "--io-bg":"#d3c0f2","--io-surface":"#e6d8fb","--io-surface-elevated":"#dbc9f7","--io-border":"#cbb4ee","--io-text":"#2a134d","--io-text-secondary":"#6a4fa0","--io-blue":"#7827e0","--io-electric":"#9333ea","--io-accent-start":"#f0b000","--io-accent-end":"#7827e0","--syxx-label":"#9a6b00","--syxx-chrome":"rgba(245,238,255,.85)","--syxx-sidebar":"linear-gradient(180deg,#f1e6ff,#e8d9fc)","--syxx-glow":"rgba(170,110,255,.3)" };
+    const shellBg = isDark ? "var(--io-bg)" : "linear-gradient(140deg,#e7d9fb 0%,#dcc9f7 52%,#f4e4c2 100%)";
+    const shellShadow = isDark ? "0 30px 90px rgba(0,0,0,.55)" : "0 24px 70px rgba(96,60,180,.32)";
+    const rootStyle = Object.assign({ position:"relative", width:1180, height: this.props.vh ? Number(this.props.vh) : 800, overflow:"hidden", border:"1px solid var(--io-border)", borderRadius: isWin?8:12, boxShadow:shellShadow, display:"flex", flexDirection:"column", background:shellBg, color:"var(--io-text)", fontFamily:"var(--font-sans)" }, F, isDark?darkT:lightT);
+    const go = k => () => this.go(k);
+    const I = k => this.icon(k);
+
+    const icons = {
+      dashboard: [["rect", { x: 3, y: 3, width: 7, height: 9, rx: 1 }], ["rect", { x: 14, y: 3, width: 7, height: 5, rx: 1 }], ["rect", { x: 14, y: 12, width: 7, height: 9, rx: 1 }], ["rect", { x: 3, y: 16, width: 7, height: 5, rx: 1 }]],
+      prophet: [["path", { d: "M12 7v14" }], ["path", { d: "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" }]],
+      mirror: [["rect", { x: 8, y: 8, width: 13, height: 13, rx: 2 }], ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }]],
+      portal: [["circle", { cx: 6, cy: 19, r: 3 }], ["circle", { cx: 18, cy: 5, r: 3 }], ["path", { d: "M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" }]],
+      glutton: [["path", { d: "M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" }], ["path", { d: "M7 2v20" }], ["path", { d: "M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" }]],
+      cage: [["rect", { x: 3, y: 3, width: 18, height: 18, rx: 3 }], ["line", { x1: 9, y1: 3, x2: 9, y2: 21 }], ["line", { x1: 15, y1: 3, x2: 15, y2: 21 }]],
+      witness: [["path", { d: "M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" }], ["circle", { cx: 12, cy: 12, r: 3 }]],
+      license: [["circle", { cx: 7.5, cy: 15.5, r: 5.5 }], ["path", { d: "m11.5 11.5 8.5-8.5" }], ["path", { d: "m16 6 3 3" }]],
+      conclusion: [["path", { d: "m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" }], ["path", { d: "m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" }], ["path", { d: "M7 21h10" }], ["path", { d: "M12 3v18" }], ["path", { d: "M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" }]],
+      welcome: [["path", { d: "M3 9.5 12 3l9 6.5" }], ["path", { d: "M5 10v10h14V10" }], ["path", { d: "M9 20v-6h6v6" }]],
+      beta: [["path", { d: "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" }], ["path", { d: "m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" }], ["path", { d: "M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" }], ["path", { d: "M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" }]],
+    };
+    const nav = (k, label, badge) => ({ key: k, label, badge: badge || 0, icon: I(icons[k]), selected: s === k, onClick: go(k) });
+    const withColor = arr => arr.map(r => Object.assign({}, r, { sevColor: this.sevColor(r.sev) }));
+
+    const conclusionVals = (() => {
+      const cleanView = !!this.state.cleanView;
+      const showWeak = !!this.state.showWeak;
+      const tabs = [
+        { label: "Suspicious", onClick: () => this.setState({ cleanView: false }), bg: cleanView ? "var(--io-surface)" : "var(--io-blue)", fg: cleanView ? "var(--io-text-secondary)" : "#fff" },
+        { label: "Clean", onClick: () => this.setState({ cleanView: true }), bg: cleanView ? "var(--io-success)" : "var(--io-surface)", fg: cleanView ? "#fff" : "var(--io-text-secondary)" },
+      ];
+      const susp = {
+        verdict: "DNS interception", verdictFlavor: "transparent proxy", verdictSevLabel: "HIGH", sevColor: "var(--io-high)",
+        verdictSubtext: "A transparent proxy on the local path is intercepting DNS — encrypted transports are blocked, answers fall back to cleartext, and SVCB records are stripped in transit.",
+        confidence: 82, confidenceW: "82%", hasHardGate: true, hasWeak: true, weakCount: 4,
+        hypotheses: [
+          { h: "Interception", pct: "52%", barColor: "var(--io-high)", labelColor: "var(--io-text)", labelWeight: "700" },
+          { h: "Censorship", pct: "14%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Spoofing", pct: "10%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Content tampering", pct: "9%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Local compromise", pct: "8%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Privacy leak", pct: "4%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Clean", pct: "3%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+        ],
+        sectionStatuses: [
+          { section: "Prophet", label: "Finding", color: "var(--io-high)" },
+          { section: "Mirror", label: "Finding", color: "var(--io-high)" },
+          { section: "Portal", label: "Finding", color: "var(--io-high)" },
+          { section: "Glutton", label: "Clean", color: "var(--io-success)" },
+          { section: "Cage", label: "Degraded", color: "var(--io-warning)" },
+          { section: "Witness", label: "Untested", color: "var(--io-text-secondary)" },
+        ],
+        leadFinding: { id: "encryptedDnsBlocked", section: "Portal", color: "var(--io-high)", weight: "Strong", obs: "DoH & DoT handshakes to 1.1.1.1 / 9.9.9.9 timed out; port 853 is filtered.", supports: ["Interception", "Censorship"], rationale: "An on-path device that forces cleartext DNS is the defining signature of interception.", open: go("portal") },
+        evidenceGroups: [
+          { section: "Portal", note: "", open: go("portal"), strong: [ { id: "dnsUnencrypted", obs: "System fell back to cleartext Do53 on port 53.", supports: ["Interception"], weight: "Moderate", wColor: "var(--io-warning)", rationale: "Cleartext is the prerequisite for transparent rewriting." } ], weak: [] },
+          { section: "Mirror", note: "", open: go("mirror"), strong: [ { id: "svcbStripped", obs: "HTTPS / SVCB records present at the remote vantage, absent locally.", supports: ["Content tampering", "Interception"], weight: "Moderate", wColor: "var(--io-warning)", rationale: "Stripping SVCB downgrades the client to plaintext discovery." } ], weak: [ { id: "ttlLockstep", obs: "Every A / AAAA answer returned an identical 300s TTL.", supports: ["Interception"], weight: "Weak", wColor: "var(--io-text-secondary)", rationale: "Uniform TTLs indicate a normalizing cache in the path." } ] },
+          { section: "Prophet", note: "", open: go("prophet"), strong: [ { id: "resolverBannerAnomaly", obs: "CHAOS version.bind returned a forwarder banner from a public-resolver IP.", supports: ["Interception"], weight: "Moderate", wColor: "var(--io-warning)", rationale: "A forwarder banner on a public IP means something local is answering." } ], weak: [ { id: "dnssecCanaryExpired", obs: "DNSSEC canary resolved, but its signature validation had expired.", supports: ["Spoofing", "Interception"], weight: "Weak", wColor: "var(--io-text-secondary)", rationale: "Interceptors often cannot maintain valid signatures." }, { id: "ednsBlocked", obs: "EDNS0 options were echoed back stripped.", supports: ["Censorship"], weight: "Weak", wColor: "var(--io-text-secondary)", rationale: "Middleboxes commonly drop EDNS options." } ] },
+          { section: "Cage", note: "One weak signal — expand to view.", open: go("cage"), strong: [], weak: [ { id: "responseSizeAnomaly", obs: "Captured response payloads clustered at a single byte length.", supports: ["Interception"], weight: "Weak", wColor: "var(--io-text-secondary)", rationale: "A proxy re-emitting answers tends to normalize packet sizes." } ] },
+          { section: "Glutton", note: "No leak — DNS stayed inside the encrypted tunnel.", open: go("glutton"), strong: [], weak: [] },
+          { section: "Witness", note: "Untested — the baseline-drift diagnostic did not run this session.", open: go("witness"), strong: [], weak: [] },
+        ],
+        nextSteps: [
+          "Re-run Prophet + Portal from a trusted network with an encrypted resolver (DoH / DoT).",
+          "Run Witness to establish a signed baseline — this section was skipped this run.",
+          "If encrypted DNS stays blocked, treat the local network as hostile and route through a VPN with its own resolver.",
+          "Capture with Cage for five minutes to confirm whether response-size uniformity persists.",
+        ],
+        prefilledPost: "Syxx flagged likely transparent-proxy DNS interception on my network: DoH/DoT blocked (port 853 filtered), cleartext Do53 fallback, SVCB stripped, TTL lockstep, DNSSEC canary expired. Anyone seen this pattern on their ISP? Full signed report attached.",
+      };
+      const cleanData = {
+        verdict: "No interference detected", verdictFlavor: "healthy path", verdictSevLabel: "CLEAR", sevColor: "var(--io-success)",
+        verdictSubtext: "Every discipline that ran came back consistent — encrypted DNS is active, local and remote answers agree, and nothing points to interference.",
+        confidence: 94, confidenceW: "94%", hasHardGate: false, hasWeak: false, weakCount: 0,
+        hypotheses: [
+          { h: "Clean", pct: "86%", barColor: "var(--io-success)", labelColor: "var(--io-text)", labelWeight: "700" },
+          { h: "Interception", pct: "4%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Censorship", pct: "3%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Spoofing", pct: "3%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Content tampering", pct: "2%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Privacy leak", pct: "1%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+          { h: "Local compromise", pct: "1%", barColor: "var(--io-electric)", labelColor: "var(--io-text-secondary)", labelWeight: "400" },
+        ],
+        sectionStatuses: [
+          { section: "Prophet", label: "Clean", color: "var(--io-success)" },
+          { section: "Mirror", label: "Clean", color: "var(--io-success)" },
+          { section: "Portal", label: "Clean", color: "var(--io-success)" },
+          { section: "Glutton", label: "Clean", color: "var(--io-success)" },
+          { section: "Cage", label: "Clean", color: "var(--io-success)" },
+          { section: "Witness", label: "Clean", color: "var(--io-success)" },
+        ],
+        leadFinding: { id: "dnssecCanarySecure", section: "Prophet", color: "var(--io-success)", weight: "Verified", obs: "DNSSEC canary validated end-to-end; the chain of trust is intact.", supports: ["Clean"], rationale: "A valid signature chain is strong evidence the answers were not altered in transit.", open: go("prophet") },
+        evidenceGroups: [
+          { section: "Prophet", note: "", open: go("prophet"), strong: [ { id: "nxCanaryClean", obs: "The NXDOMAIN canary returned an authentic, signed non-existence answer.", supports: ["Clean"], weight: "Verified", wColor: "var(--io-success)", rationale: "Authenticated denial-of-existence rules out fabricated redirects." } ], weak: [] },
+          { section: "Mirror", note: "Local and remote resolvers agree; static-content hashes match byte-for-byte.", open: go("mirror"), strong: [], weak: [] },
+          { section: "Portal", note: "", open: go("portal"), strong: [ { id: "dnsEncrypted", obs: "DoH is active to 1.1.1.1; port 853 reachable with no forced downgrade.", supports: ["Clean"], weight: "Verified", wColor: "var(--io-success)", rationale: "An intact encrypted path leaves no room for transparent rewriting." } ], weak: [] },
+          { section: "Glutton", note: "No leak — every probe stayed inside the encrypted tunnel.", open: go("glutton"), strong: [], weak: [] },
+          { section: "Cage", note: "No beaconing, tunneling, or exfiltration across a five-minute capture.", open: go("cage"), strong: [], weak: [] },
+          { section: "Witness", note: "Baseline signed; no configuration drift since the last snapshot.", open: go("witness"), strong: [], weak: [] },
+        ],
+        nextSteps: [
+          "Re-run periodically — a clean result is a snapshot, not a guarantee.",
+          "Keep encrypted DNS (DoH / DoT) enabled to preserve this posture.",
+          "Sign a fresh Witness baseline so any future drift is caught automatically.",
+        ],
+        prefilledPost: "Syxx reported a clean DNS posture on my network: encrypted DNS (DoH) active, local and remote resolvers agree, content hashes match, DNSSEC validated, no leak or beaconing detected. Sharing for a sanity check — anything you'd double-check?",
+      };
+      const D = cleanView ? cleanData : susp;
+      return Object.assign({}, D, {
+        clean: cleanView, tabs,
+        generatedAt: "Jul 6, 2026 · 14:22 MDT",
+        signedBy: "WitnessSigner · ed25519",
+        showAbout: !!this.state.showAbout,
+        toggleAbout: () => this.setState(st => ({ showAbout: !st.showAbout })),
+        showWeak, weakCollapsed: !showWeak,
+        toggleWeak: () => this.setState(st => ({ showWeak: !st.showWeak })),
+        statusLegend: [
+          { label: "Clean", color: "var(--io-success)" },
+          { label: "Finding", color: "var(--io-high)" },
+          { label: "Degraded", color: "var(--io-warning)" },
+          { label: "Inconclusive", color: "var(--io-blue)" },
+          { label: "Untested", color: "var(--io-text-secondary)" },
+          { label: "Invalidated", color: "var(--io-electric)" },
+        ],
+        referralTriggered: true,
+        referral: { subreddits: ["r/AskNetSec", "r/NetSecStudents", "r/DNS", "r/HomeNetworking"], prefilledPost: D.prefilledPost },
+        copyReferral: () => { try { navigator.clipboard.writeText(document.getElementById("syxx-referral-post").innerText); } catch (e) {} },
+      });
+    })();
+
+    return {
+      isWin, isMac: !isWin,
+      isDark, isLight: !isDark, rootStyle, toggleTheme: () => this.toggleTheme(),
+      radius: isWin ? "8px" : "12px",
+      appFont: isWin ? '"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif' : "var(--font-sans)",
+      trustProgress: 0.12,
+      witnessProgress: 0.26,
+
+      navTop: isWin ? [nav("welcome", "Welcome"), nav("dashboard", "Dashboard")] : [nav("beta", "What's New"), nav("dashboard", "Dashboard")],
+      navDiag: [nav("prophet", "Prophet"), nav("mirror", "Mirror"), nav("portal", "Portal"), nav("glutton", "Glutton"), nav("cage", "Cage"), nav("witness", "Witness")],
+      conclusionItem: nav("conclusion", "Conclusion"),
+      navAccount: [nav("license", "License")],
+
+      isDashboard: s === "dashboard", isProphet: s === "prophet", isMirror: s === "mirror", isPortal: s === "portal",
+      isGlutton: s === "glutton", isCage: s === "cage", isWitness: s === "witness", isLicense: s === "license", isBeta: s === "beta", isWelcome: s === "welcome", isConclusion: s === "conclusion",
+      ...conclusionVals,
+
+      goLicense: go("license"),
+      factNum: String(this.state.factIdx + 1).padStart(2, "0"),
+      factText: this.dnsFacts()[this.state.factIdx],
+      factDots: this.dnsFacts().map((_, i) => ({ on: i === this.state.factIdx ? "var(--io-accent-start)" : "var(--io-border)" })),
+      showTestimony: this.state.showTestimony,
+      showValidation: this.state.showValidation,
+      witnessTestify: () => this.setState({ showTestimony: true, showValidation: false }),
+      witnessVerify: () => this.setState({ showValidation: true }),
+      witnessFree: () => this.setState({ showTestimony: false, showValidation: false }),
+
+      launchCards: [
+        { name: "Prophets", tag: "Resolver", desc: "Test resolver accuracy against authoritative truth.", icon: I(icons.prophet), onClick: go("prophet") },
+        { name: "Mirrors", tag: "Pro", desc: "Compare downloaded web content against a remote copy.", icon: I(icons.mirror), onClick: go("mirror") },
+        { name: "Portals", tag: "Network", desc: "Inspect LAN state and the route to a chosen domain.", icon: I(icons.portal), onClick: go("portal") },
+        { name: "Gluttons", tag: "Privacy", desc: "DNS leak test — find VPN tunnels that leak queries.", icon: I(icons.glutton), onClick: go("glutton") },
+        { name: "Cages", tag: "Capture", desc: "Capture live DNS and attribute queries to processes.", icon: I(icons.cage), onClick: go("cage") },
+        { name: "Witnesses", tag: "Trust", desc: "Trust analysis for your home or office environment.", icon: I(icons.witness), onClick: go("witness") },
+      ],
+
+      domainRecords: [
+        { type: "A", value: "140.82.112.3", ttl: "60s" },
+        { type: "A", value: "140.82.113.3", ttl: "60s" },
+        { type: "AAAA", value: "—", ttl: "—" },
+      ],
+      nnyxPoints: [
+        "'Omni-engine' scrapes macOS for signatures, heuristics, and behavioral fingerprints.",
+        "AI-driven triage to reduce false positives and negatives.",
+        "Privacy and configurability as design cornerstones.",
+      ],
+      zzynPoints: [
+        "Process-specific block/allow rules, based on a zero trust philosophy.",
+        "Features tiered by user skill level.",
+        "AI-driven triage, grounded in machine learning.",
+      ],
+      mirrorRows: withColor([
+        { path: "/index.html", local: "a1b2c4…9f", remote: "a1b2c4…9f", sev: "low" },
+        { path: "/assets/app.js", local: "7c4e10…02", remote: "e91a8b…d7", sev: "high" },
+        { path: "/assets/style.css", local: "3d90ff…1a", remote: "3d90ff…1a", sev: "low" },
+        { path: "/vendor/lib.js", local: "b5f2ac…cc", remote: "b5f2ac…cc", sev: "low" },
+      ]),
+      procs: [
+        { name: "trustd", pid: "188", dns: "ocsp.apple.com", icon: "🔐", label: "Apple System", color: "var(--io-sign-apple)" },
+        { name: "Safari", pid: "901", dns: "www.apple.com", icon: "🔐", label: "Apple System", color: "var(--io-sign-apple)" },
+        { name: "Syxx Helper", pid: "640", dns: "api.syxx.app", icon: "📜", label: "Developer ID", color: "var(--io-sign-developer)" },
+        { name: "com.unknown.agent", pid: "8841", dns: "a3f9k2q.exfil-cdn.io", icon: "⚠️", label: "Unsigned", color: "var(--io-sign-unsigned)" },
+      ],
+      vantage: withColor([
+        { name: "Local resolver", ip: "88.208.57.223", note: "Your DNS server", sev: "low" },
+        { name: "Cloudflare", ip: "88.208.57.223", note: "Matches", sev: "low" },
+        { name: "Google", ip: "88.208.57.223", note: "Matches", sev: "low" },
+        { name: "Quad9", ip: "88.208.57.223", note: "Matches", sev: "low" },
+      ]),
+
+      hops: withColor([
+        { n: "1", host: "*", label: "no response", ms: "—", sev: "info" },
+        { n: "2", host: "10.28.49.147", label: "responded", ms: "16.7 ms", sev: "low" },
+        { n: "3–15", host: "*", label: "no response — trace stops here", ms: "—", sev: "high" },
+      ]),
+
+      devices: [
+        { ip: "10.0.1.1", mac: "20:6d:31:1:d6:a8", note: "Private unicast · a DNS resolver" },
+        { ip: "10.0.1.129", mac: "2:27:83:8e:19:bb", note: "Private unicast" },
+        { ip: "10.0.1.162", mac: "7c:a:3f:1e:2b:9f", note: "Private unicast" },
+        { ip: "10.0.1.210", mac: "f8:e4:3b:ea:52:b4", note: "Private unicast" },
+        { ip: "10.0.1.255", mac: "ff:ff:ff:ff:ff:ff", note: "Broadcast" },
+        { ip: "224.0.0.251", mac: "1:0:5e:0:0:fb", note: "Multicast · mDNS" },
+      ],
+
+      gluttonProbes: withColor([
+        { via: "2601:2c4:4100:7a50::1", result: "failed", sev: "high" },
+        { via: "10.0.1.1", result: "failed", sev: "high" },
+      ]),
+
+      capRows: withColor([
+        { t: "14:22:07", domain: "telemetry.example.net", proc: "helperd · 412", res: "1.1.1.1", note: "Routine telemetry", sev: "low" },
+        { t: "14:22:09", domain: "a3f9k2q.exfil-cdn.io", proc: "com.unknown.agent · 8841", res: "8.8.8.8", note: "Beaconing — 5s cadence, high-entropy TXT", sev: "high" },
+        { t: "14:22:11", domain: "ocsp.apple.com", proc: "trustd · 188", res: "1.1.1.1", note: "Certificate check", sev: "low" },
+      ]),
+
+      capturing: this.state.capturing,
+      notCapturing: !this.state.capturing,
+      capCount: this.state.cap.toLocaleString(),
+      capBtnLabel: this.state.capturing ? "Stop Capture" : "Start Capture",
+      toggleCapture: () => this.toggleCapture(),
+      setCageDuration: (e) => this.setCageDuration(e),
+      hideCage: () => this.hideCage(),
+      cageHidden: this.state.cageHidden,
+      cageRemain: this.state.cageRemain,
+
+      prophetRunning: this.state.prophetRunning, runProphet: () => this.run("prophet"),
+      gluttonRunning: this.state.gluttonRunning, runGlutton: () => this.run("glutton"),
+    };
+  }
+}
+</script>
+</body>
+</html>

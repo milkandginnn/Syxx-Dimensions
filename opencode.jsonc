@@ -1,0 +1,32 @@
+// Syxx × opencode — active config.
+//
+// Created from .opencode/opencode.jsonc.sample. References + skill permissions
+// take effect from this file in the project root.
+//
+// Docs: https://opencode.ai/docs/config · /references · /skills · /permissions
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ---- References: external dirs/repos the agents may consult -------------
+  "references": {
+    "opencode": {
+      "repository": "anomalyco/opencode",
+      "branch": "dev",
+      "description": "opencode's own source — consult when writing agents, plugins, skills, or debugging opencode behavior"
+    }
+  },
+
+  // ---- Skill permissions --------------------------------------------------
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "syxx-*": "allow"
+    }
+  }
+
+  // ---- Optional: pin a default model for primary agents -------------------
+  // Subagents inherit the invoking agent's model. The neural agent files carry
+  // `model: opencode/big-pickle` (Big Pickle, an OpenCode Zen model — connect Zen
+  // via `/connect` in the TUI). Set a global default here to override them all.
+  // "model": "opencode/big-pickle"
+}

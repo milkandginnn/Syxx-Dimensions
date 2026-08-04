@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    UNVERIFIED SCAFFOLDING — no Windows/.NET WinUI3 toolchain was available to restore, build, or
+    run this project (see AppViewModelWitnessTests.cs header and the task's final report). Every
+    property below was chosen by reading Windows/SyxxUI/SyxxUI.csproj and copying what it already
+    requires, NOT confirmed by a real `dotnet restore`/`dotnet build`.
+
+    This is a NEW, Windows-only sibling to Windows/Syxx.Tests, not an addition to it. AppViewModel.cs
+    lives in SyxxUI.csproj, which targets net10.0-windows10.0.26100.0 with UseWinUI=true and cannot
+    restore off Windows (Windows/Syxx.Linux.slnf explicitly excludes SyxxUI.csproj — see the comment
+    at .github/workflows/ci.yml's "Build Linux solution filter" step: "the full Windows/Syxx.sln
+    cannot restore off Windows (SyxxUI is net10.0-windows)"). Windows/Syxx.Tests.csproj targets plain
+    net10.0 and is exercised on ALL THREE .NET CI legs — windows-x64, ubuntu-x64, ubuntu-arm64 (see
+    ci.yml's "Test the shared reasoning core (Syxx.Tests)" step, gated only on `matrix.kind ==
+    'dotnet'`, no OS restriction). Adding a ProjectReference from Syxx.Tests to SyxxUI would either
+    fail to restore on the two Linux legs, or (if conditioned away) still likely fail the TFM
+    compatibility check between a plain net10.0 consumer and a net10.0-windows/UseWinUI dependency.
+    A dedicated project matching SyxxUI's own TFM/UseWinUI is the standard, documented pattern for
+    unit-testing a WinUI 3 app's view-models, and mirrors — at the project-structure level — what the
+    Ubuntu port did when it had no test project at all (Ubuntu/SyxxUI.Avalonia.Tests); the Avalonia
+    case did not need a Windows-specific TFM, so this project is unavoidably heavier than that one.
+
+    NOT done here (flagged, not fixed): this project is not wired into .github/workflows/ci.yml. A
+    windows-x64-only step (e.g. `dotnet test Windows/SyxxUI.Tests/SyxxUI.Tests.csproj -c Release
+    -p:Platform=x64`, mirroring the existing "Build Windows GUI (SyxxUI, x64)" step) remains owed
+    before these tests run anywhere automatically. See DELTAS.md D101.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+    <Platforms>x86;x64;arm64</Platforms>
+    <UseWinUI>true</UseWinUI>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SyxxUI\SyxxUI.csproj" />
+  </ItemGroup>
+
+</Project>

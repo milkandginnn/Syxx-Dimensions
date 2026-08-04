@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Syxx</AssemblyName>
+    <ApplicationIcon>syxx.ico</ApplicationIcon>
+    <!-- Ubuntu port (UBUNTU-PORT-PLAN.md WS-A1/WS-A2): the unified `syxx` CLI is the
+         cheapest honest-output harness for the shared Syxx.Kit engine on Linux. Declare
+         the two Linux RIDs (matching the user ISO's linux-arm64) plus win-x64 so the
+         four-runtime CI matrix can self-contained-publish per RID. Do NOT add
+         PublishTrimmed/NativeAOT here: NSec and the DNS reflection paths are trim-hostile
+         (a trimming drop is the "green build that lies" class). Keep untrimmed. -->
+    <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Sentry" Version="4.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Syxx.Kit\Syxx.Kit.csproj" />
+    <ProjectReference Include="..\Syxx.Telemetry\Syxx.Telemetry.csproj" />
+  </ItemGroup>
+</Project>

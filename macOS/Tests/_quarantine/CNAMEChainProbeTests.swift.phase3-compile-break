@@ -1,0 +1,67 @@
+import XCTest
+@testable import SyxxKit
+
+/// Offline tests for the CNAME-chain cross-vantage datapoint (Workstream H · F7).
+final class CNAMEChainProbeTests: XCTestCase {
+
+    func testReconstructChainFollowsCNAMEs() {
+        let recs = [
+            DNSRecord(name: "www.example.com", type: 5, ttl: 60, rdata: "edge.cdn.net"),
+            DNSRecord(name: "edge.cdn.net", type: 5, ttl: 60, rdata: "pop1.cdn.net"),
+            DNSRecord(name: "pop1.cdn.net", type: 1, ttl: 60, rdata: "1.2.3.4"),
+        ]
+        let chain = CNAMEChainProbe.reconstructChain(domain: "www.example.com", records: recs)
+        XCTAssertEqual(chain, ["www.example.com", "edge.cdn.net", "pop1.cdn.net"])
+    }
+
+    func testReconstructChainStopsOnLoop() {
+        let recs = [
+            DNSRecord(name: "a.com", type: 5, ttl: 60, rdata: "b.com"),
+            DNSRecord(name: "b.com", type: 5, ttl: 60, rdata: "a.com"),
+        ]
+        let chain = CNAMEChainProbe.reconstructChain(domain: "a.com", records: recs)
+        XCTAssertEqual(chain, ["a.com", "b.com"])   // loop back to a.com is not re-appended
+    }
+
+    func testConsistentWhenTestMatchesReference() {
+        let r = CNAMEChainProbe.classify(testChain: ["w.example.com", "edge.cdn.net"],
+                                         referenceChains: [["w.example.com", "edge.cdn.net"], ["w.example.com", "edge.cdn.net"]])
+        XCTAssertEqual(r.status, .consistent)
+    }
+
+    func testDivergentWhenReferencesAgreeButTestDiffers() {
+        let r = CNAMEChainProbe.classify(testChain: ["w.example.com", "evil.cdn.net"],
+                                         referenceChains: [["w.example.com", "edge.cdn.net"], ["w.example.com", "edge.cdn.net"]])
+        XCTAssertEqual(r.status, .divergent)
+    }
+
+    func testInconclusiveWhenReferencesDisagree() {
+        // Geo variance: the two references themselves differ → no consensus → inconclusive, not FP.
+        let r = CNAMEChainProbe.classify(testChain: ["w.example.com", "us.cdn.net"],
+                                         referenceChains: [["w.example.com", "eu.cdn.net"], ["w.example.com", "ap.cdn.net"]])
+        XCTAssertEqual(r.status, .inconclusive)
+    }
+
+    func testNoCNAMEWhenDirectA() {
+        let r = CNAMEChainProbe.classify(testChain: ["example.com"],
+                                         referenceChains: [["example.com"], ["example.com"]])
+        XCTAssertEqual(r.status, .noCNAME)
+    }
+
+    func testInconclusiveWhenNoReferences() {
+        XCTAssertEqual(CNAMEChainProbe.classify(testChain: ["a"], referenceChains: []).status, .inconclusive)
+    }
+
+    func testProbeDetectsDivergenceViaMock() async {
+        // References return edge.cdn.net; the resolver-under-test returns evil.cdn.net.
+        let query: CNAMEChainProbe.QueryFn = { q in
+            let target = q.server == "192.168.1.1" ? "evil.cdn.net" : "edge.cdn.net"
+            return DNSResponse(status: .success, records: [
+                DNSRecord(name: q.name, type: 5, ttl: 60, rdata: target),
+                DNSRecord(name: target, type: 1, ttl: 60, rdata: "1.2.3.4"),
+            ])
+        }
+        let r = await CNAMEChainProbe.probe(domain: "www.example.com", resolverUnderTest: "192.168.1.1", query: query)
+        XCTAssertEqual(r.status, .divergent)
+    }
+}

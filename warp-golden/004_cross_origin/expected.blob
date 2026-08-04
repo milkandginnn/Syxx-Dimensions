@@ -1,0 +1,17 @@
+WARP_ASSEMBLY_V1
+
+===== WARP HTML https://example.test/ =====
+<!doctype html>
+<html>
+<head>
+<script src="app.js"></script>
+<script src="https://cdn.example.com/x.js"></script>
+</head>
+<body><p>Cross-origin</p></body>
+</html>
+
+===== WARP JS https://example.test/app.js =====
+console.log("local app.js");
+
+===== WARP JS https://cdn.example.com/x.js =====
+console.log("cross-origin x.js");

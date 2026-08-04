@@ -1,0 +1,5 @@
+# Syxx collector server — test/dev dependencies.
+pytest>=8.0.0
+coverage>=7.4.0
+ruff>=0.6.0
+bandit>=1.7.0

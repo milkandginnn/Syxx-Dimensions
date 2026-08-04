@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+    <RootNamespace>SyxxUI</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;arm64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <EnablePreviewMsixTooling>true</EnablePreviewMsixTooling>
+    <!-- Unpackaged (loose .exe) deployment. The SDK's auto-generated Main does NOT
+         initialize the Windows App SDK runtime, so we supply our own entry point in
+         Program.cs and suppress the generated one. Without an explicit bootstrap init,
+         an unpackaged app crashes at first XAML activation with 0x80073D54
+         APPMODEL_ERROR_NO_PACKAGE ("the process has no package identity"). -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <Nullable>enable</Nullable>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <AssemblyName>SyxxUI</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" PrivateAssets="all" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3719.77" />
+    <PackageReference Include="OpenTelemetry" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+    <PackageReference Include="Sentry" Version="4.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Syxx.Kit\Syxx.Kit.csproj" />
+    <ProjectReference Include="..\Syxx.Telemetry\Syxx.Telemetry.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\**" />
+    <Content Include="Assets\**" Exclude="Assets\fallback-motd.html;Assets\fallback-win.html" />
+    <!-- MOTD five-second timeout fallback. Embedded so it cannot be missing at runtime.
+         Canonical resource name ends with fallback-motd.html (never motd-local / fallback-win). -->
+    <EmbeddedResource Include="Assets\fallback-motd.html" />
+    <!-- Legacy generic offline letter, retained only for non-MOTD surfaces that still reference it. -->
+    <EmbeddedResource Include="Assets\fallback-win.html" Condition="Exists('Assets\fallback-win.html')" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "expired",
+  "htmlState": "notEvaluated",
+  "manifestState": "parsed",
+  "notes": "manifest older than freshness window.",
+  "signatureState": "verified"
+}

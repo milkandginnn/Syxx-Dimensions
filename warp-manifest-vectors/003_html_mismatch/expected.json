@@ -1,0 +1,25 @@
+{
+  "assets": [
+    {
+      "class": "JS",
+      "state": "match",
+      "url": "https://example.test/app.js"
+    },
+    {
+      "class": "CSS",
+      "state": "match",
+      "url": "https://example.test/styles.css"
+    },
+    {
+      "class": "JS",
+      "state": "match",
+      "url": "https://cdn.example.test/vendor.js"
+    }
+  ],
+  "conclusion": "TAMPERING_DETECTED",
+  "freshnessState": "fresh",
+  "htmlState": "mismatch",
+  "manifestState": "parsed",
+  "notes": "verified+fresh manifest, but a raw-byte hash mismatch was found.",
+  "signatureState": "verified"
+}

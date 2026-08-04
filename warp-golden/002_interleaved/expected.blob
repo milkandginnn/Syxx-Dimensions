@@ -1,0 +1,25 @@
+WARP_ASSEMBLY_V1
+
+===== WARP HTML https://example.test/ =====
+<!doctype html>
+<html>
+<head>
+<script src="a.js"></script>
+<link rel="stylesheet" href="a.css">
+<script src="b.js"></script>
+<link rel="stylesheet" href="b.css">
+</head>
+<body><p>Interleaved</p></body>
+</html>
+
+===== WARP JS https://example.test/a.js =====
+console.log("a.js");
+
+===== WARP JS https://example.test/b.js =====
+console.log("b.js");
+
+===== WARP CSS https://example.test/a.css =====
+body{color:#0a0;}
+
+===== WARP CSS https://example.test/b.css =====
+p{margin:0;}

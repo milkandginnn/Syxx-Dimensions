@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="doc">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  @page{ size:8.5in 11in; margin:0; }
+  @media print{
+    .desk{ padding:0 !important; gap:0 !important; background:#120b24 !important; }
+    .page{ box-shadow:none !important; border-radius:0 !important; }
+  }
+</style>
+</helmet>
+<div class="desk" style="background:#0a0713;padding:40px;display:flex;flex-direction:column;align-items:center;gap:40px;font-family:'Space Grotesk',-apple-system,sans-serif;--wm:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);">
+
+  <!-- ===================== COVER ===================== -->
+  <div class="page" style="width:816px;height:1056px;flex-shrink:0;position:relative;overflow:hidden;background:#120b24;color:#fff;border-radius:6px;box-shadow:0 40px 90px rgba(0,0,0,.6);">
+    <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 55% at 50% -8%, #2c1e56, transparent 60%);"></div>
+    <div style="position:relative;z-index:1;height:100%;padding:60px 60px 48px;display:flex;flex-direction:column;justify-content:space-between;">
+
+      <!-- brand + platform badge -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:13px;">
+          <img src="assets/syxx-logo.png" width="54" height="54" alt="Syxx" style="display:block;border-radius:13px;box-shadow:0 4px 16px rgba(0,0,0,.5);">
+          <div style="display:flex;flex-direction:column;gap:2px;line-height:1;">
+            <span style="font-family:'Space Grotesk';font-weight:700;font-size:22px;background:var(--wm);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx</span>
+            <span style="font-size:12px;color:#a99fc8;">DNS Investigation</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#1d1640;border:1px solid #382c66;border-radius:999px;padding:9px 17px 9px 14px;">
+          <sc-if value="{{ isMacDoc }}" hint-placeholder-val="{{ true }}">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="#efe6ff"><path d="M16.365 1.43c0 1.14-.417 2.2-1.11 2.98-.84.95-2.2 1.68-3.34 1.6-.13-1.1.42-2.27 1.1-3.02.77-.86 2.14-1.5 3.35-1.56zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-.99 1.57-2.39 3.52-4.12 3.53-1.54.02-1.94-1-4.03-.99-2.09.01-2.53 1.01-4.07.99-1.73-.02-3.05-1.78-4.04-3.35C.66 15.82.29 11.06 2.02 8.53c1.16-1.71 2.99-2.71 4.71-2.71 1.75 0 2.85 1 4.29 1 1.4 0 2.25-1 4.28-1 1.53 0 3.15.83 4.31 2.27-3.79 2.08-3.17 7.48.29 8.93z"></path></svg>
+          </sc-if>
+          <sc-if value="{{ isWinDoc }}" hint-placeholder-val="{{ false }}">
+            <svg viewBox="0 0 24 24" width="20" height="20"><rect x="1" y="1" width="10" height="10" fill="#4aa3f0"></rect><rect x="13" y="1" width="10" height="10" fill="#4aa3f0"></rect><rect x="1" y="13" width="10" height="10" fill="#4aa3f0"></rect><rect x="13" y="13" width="10" height="10" fill="#4aa3f0"></rect></svg>
+          </sc-if>
+          <span style="font-size:13.5px;font-weight:600;">{{ platformLabel }}</span>
+        </div>
+      </div>
+
+      <!-- hero -->
+      <div>
+        <div style="font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#f2ba4a;font-weight:700;">DNS Investigation Suite</div>
+        <div style="font-family:'Space Grotesk';font-size:104px;font-weight:700;line-height:.92;background:var(--wm);-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:10px;">Syxx</div>
+        <div style="font-size:27px;font-weight:600;color:#efe6ff;margin-top:8px;">&ldquo;Lyin&rsquo; Eyes&rdquo;</div>
+        <div style="font-size:14.5px;color:#c3b6e0;margin-top:16px;max-width:600px;line-height:1.65;">{{ overview }}</div>
+        <div style="font-family:'Space Mono';font-size:12px;color:#a99fc8;margin-top:18px;">MilkandGin &middot; milkandgin.com &middot; {{ platformSub }}</div>
+      </div>
+
+      <!-- differentiators + strip -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:14px;">What makes Syxx different</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <sc-for list="{{ diffs }}" as="d" hint-placeholder-count="3">
+            <div style="background:#1d1640;border:1px solid #382c66;border-radius:12px;padding:16px 15px;">
+              <div style="font-family:'Space Grotesk';font-size:13.5px;font-weight:700;color:#f0ac38;line-height:1.3;margin-bottom:8px;">{{ d.title }}</div>
+              <div style="font-size:11.5px;color:#a99fc8;line-height:1.55;">{{ d.text }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:22px;">
+          <span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a99fc8;">Six diagnostics</span>
+          <sc-for list="{{ diagNames }}" as="nm" hint-placeholder-count="6">
+            <span style="font-family:'Space Mono';font-size:11.5px;color:#e9deff;background:#20153a;border:1px solid #382c66;border-radius:999px;padding:4px 12px;">{{ nm }}</span>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== PANE PAGES ===================== -->
+  <sc-for list="{{ panes }}" as="p" hint-placeholder-count="8">
+    <div class="page" style="width:816px;height:1056px;flex-shrink:0;break-before:page;position:relative;overflow:hidden;background:#120b24;color:#fff;border-radius:6px;box-shadow:0 40px 90px rgba(0,0,0,.6);">
+      <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 40% at 50% -12%, #241a48, transparent 58%);"></div>
+      <div style="position:relative;z-index:1;height:100%;padding:52px 56px 40px;display:flex;flex-direction:column;">
+
+        <!-- header -->
+        <div style="display:flex;align-items:flex-start;gap:16px;">
+          <div style="font-family:'Space Mono';font-size:13px;font-weight:700;color:#0c0820;background:#f0ac38;border-radius:8px;padding:6px 10px;">{{ p.n }}</div>
+          <div style="flex:1;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;">{{ p.eyebrow }}</div>
+            <div style="display:flex;align-items:center;gap:11px;margin-top:4px;">
+              <div style="font-family:'Space Grotesk';font-size:30px;font-weight:700;line-height:1;">{{ p.title }}</div>
+              <sc-if value="{{ p.pro }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;padding:3px 9px;border-radius:5px;background:linear-gradient(135deg,#f0ac38,#7c3aed);">Pro</span>
+              </sc-if>
+            </div>
+            <sc-if value="{{ p.diag }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:13.5px;font-style:italic;color:#d9cef2;line-height:1.5;margin-top:9px;border-left:2px solid #f0ac38;padding-left:13px;">{{ p.story }}</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- screenshot / preview -->
+        <div style="width:696px;height:472px;overflow:hidden;border-radius:14px;border:1px solid #382c66;box-shadow:0 22px 55px rgba(0,0,0,.55);margin:18px auto 20px;flex-shrink:0;background:#130d26;">
+          <sc-if value="{{ p.app }}" hint-placeholder-val="{{ true }}">
+            <div style="width:1180px;height:800px;transform:scale(0.59);transform-origin:top left;">
+              <dc-import name="SyxxApp" platform="{{ platform }}" section="{{ p.section }}" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+            </div>
+          </sc-if>
+          <sc-if value="{{ p.web }}" hint-placeholder-val="{{ false }}">
+            <div style="width:696px;height:472px;display:flex;flex-direction:column;background:#0f0a1f;">
+              <div style="height:38px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px;background:#1a1330;border-bottom:1px solid #2a2150;">
+                <div style="display:flex;gap:6px;"><span style="width:9px;height:9px;border-radius:50%;background:#ff5f57;"></span><span style="width:9px;height:9px;border-radius:50%;background:#febc2e;"></span><span style="width:9px;height:9px;border-radius:50%;background:#28c840;"></span></div>
+                <div style="flex:1;display:flex;align-items:center;gap:7px;background:#0f0a1f;border:1px solid #2a2150;border-radius:7px;padding:5px 11px;margin-left:8px;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#7fd6b0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  <span style="font-family:'Space Mono';font-size:11px;color:#c7bce6;">https://syxx.app</span>
+                </div>
+              </div>
+              <div style="flex:1;position:relative;overflow:hidden;background:#0c0820;">
+                <div style="position:absolute;top:0;left:0;width:1280px;transform:scale(0.544);transform-origin:top left;">
+                  <dc-import name="Syxx Web" style="width:1280px;" hint-size="1280px,800px"></dc-import>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- what it does -->
+        <div style="font-size:13.5px;line-height:1.62;color:#e0d6f4;">{{ p.body }}</div>
+
+        <sc-if value="{{ p.diag }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:26px;margin-top:18px;">
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#f2ba4a;margin-bottom:10px;">Under the hood</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <sc-for list="{{ p.components }}" as="c" hint-placeholder-count="4">
+                  <span style="font-family:'Space Mono';font-size:11px;color:#e9deff;background:#1d1640;border:1px solid #382c66;border-radius:6px;padding:3px 8px;">{{ c }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#f2ba4a;margin-bottom:10px;">Command line</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <sc-for list="{{ p.clis }}" as="cl" hint-placeholder-count="1">
+                  <span style="font-family:'Space Mono';font-size:11px;color:#f0ac38;background:rgba(240,172,56,.1);border:1px solid rgba(240,172,56,.35);border-radius:6px;padding:3px 8px;">{{ cl }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ p.web }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:18px;">
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#f2ba4a;margin-bottom:10px;">Available now</div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <sc-for list="{{ p.nowFeatures }}" as="f" hint-placeholder-count="3">
+                  <div style="display:flex;gap:9px;font-size:12.5px;color:#cabfe6;line-height:1.4;"><span style="color:#0d9487;flex-shrink:0;">&#9656;</span><span>{{ f }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#f2ba4a;margin-bottom:10px;">On the roadmap</div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <sc-for list="{{ p.soonFeatures }}" as="f" hint-placeholder-count="2">
+                  <div style="display:flex;gap:9px;font-size:12.5px;color:#8073a6;line-height:1.4;"><span style="color:#8073a6;flex-shrink:0;">&#9657;</span><span>{{ f }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- footer -->
+        <div style="margin-top:auto;padding-top:18px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #26203f;">
+          <span style="font-family:'Space Mono';font-size:11px;color:#8073a6;">Syxx &middot; Lyin&rsquo; Eyes &middot; {{ platformLabel }}</span>
+          <span style="font-family:'Space Mono';font-size:11px;color:#8073a6;">{{ p.n }} / 10</span>
+        </div>
+
+      </div>
+    </div>
+  </sc-for>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const platform = "win";
+    const isMac = platform === "mac";
+
+    const raw = [
+      { diag:false, section:"dashboard", eyebrow:"Overview", title:"Dashboard", body:"The command center. The Dashboard doesn't run a test of its own \u2014 it reads the state your diagnostics have already gathered and lays it out at a glance: a live trust score, today's alerts, how many resolvers answered, any leak that surfaced, and the volume of queries seen. It's where you take the temperature of your network and launch any of the six checks." },
+      { diag:true, section:"prophet", eyebrow:"DNS Resolution & Protocol Integrity", title:"Prophet",
+        story:"The Prophet stood at the edge of the network and foretold which DNS records could be trusted, naming the ones that matched the chain of truth and warning against the rest.",
+        body:"Prophet sees whether your resolver is telling the truth. It asks for a domain's records, then reads the answer for signs of deception \u2014 whether it chains to a valid DNSSEC signature, whether repeated queries hold steady, whether nonexistent names and wildcards are answered honestly, and whether the resolver keeps its story straight across IPv4 and IPv6. It also catches what a resolver won't admit: a stripped EDNS0 option, or a version.bind banner that betrays a local forwarder wearing a public resolver's face. Known-truth canaries \u2014 a name that must not exist, a name that must be signed \u2014 give Prophet an honest baseline to read your real domain against, so what comes back is whether a record can be believed, not merely whether it resolved.",
+        components:["DNSResolver","DNSSECVerifier","DNSCanaries","ResolverLatencyProbe","AnswerStabilityProbe","WildcardSynthesisProbe","DenialOfExistenceProbe","DualStackProbe","EDNS0Probe","VersionBindProbe","StubEntropyProbe"], clis:["SyxxNSLook.exe"] },
+      { diag:true, pro:true, section:"mirror", eyebrow:"Tampering & Censorship Detection", title:"Mirror",
+        story:"The Mirror answered by showing whether the records born locally matched the ones seen far away, and the witness swore that the same names should not change their faces every time they were asked.",
+        body:"Mirror holds what you see up against what an untampered vantage sees. It resolves your domain from two sides at once \u2014 locally, and from an off-network vantage that shares none of your network's interference \u2014 then reflects one answer against the other: the addresses, the CNAME chain, the TTLs, the HTTPS/SVCB records, and the domain's own authoritative nameservers. It fetches the site's static components \u2014 JavaScript, CSS, markup \u2014 from both sides and reduces each to a hash. Where the two images match, the content that reached you is byte-for-byte the original; where they diverge, something in the middle rewrote what you asked for.",
+        components:["VantageComparer","ContentWarp","AuthoritativeVantage","SVCBProbe","TTLAnomalyProbe","CNAMEChainProbe","TextDiff"], clis:["SyxxMirror.exe","SyxxWarp.exe"] },
+      { diag:true, section:"portal", eyebrow:"Network & Path Diagnostics", title:"Portal",
+        story:"A Portal carried the traveler to a distant land, tracing the path of a hidden interceptor that had reached into the stream.",
+        body:"Portal maps the ground you stand on and the road ahead. It charts your local interfaces, gateways and resolvers, catalogs every device on-link, then traces the route toward your chosen domain and compares where the path should go against where it actually does. It reads the hosting cohort your answer lands in \u2014 the CDNs and networks a domain is normally served from \u2014 and checks whether your resolver even offers an encrypted road out. Where the terrain doesn't match the map, Portal pinpoints exactly where a transparent proxy or middlebox has stepped into the path to intercept your queries.",
+        components:["NetworkKeyState","IPClassifier","LANCartographer","NetworkCohort","EncryptedTransportProbe"], clis:["SyxxKey.exe","SyxxRoute.exe","SyxxLan.exe"] },
+      { diag:true, section:"glutton", eyebrow:"Privacy Leak Detection", title:"Glutton",
+        story:"Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished.",
+        body:"Glutton feeds on encrypted DNS \u2014 and refuses to be satisfied while a single query escapes the tunnel. It dispatches signed, one-time probes through your system resolvers and confirms with the syxx.app collector whether any slipped outside your VPN or DNS-encryption profile, making every leaked query visible. It also watches for a subtler give-away: a resolver that forwards your client subnet (ECS) to the servers it asks, leaking where you are even when the query itself stays home. Because it needs a tunnel to test, Glutton only runs when a VPN or DNS encryption is active, and skips itself when none is present.",
+        components:["LeakDetector","ECSProbe"], clis:["SyxxLeak.exe"] },
+      { diag:true, section:"cage", eyebrow:"Capture, Forensics & Attribution", title:"Cage",
+        story:"The Cage trapped the DNS queries so they could be inspected without escape, their headers and answers laid bare for judgment.",
+        body:"Cage captures DNS traffic on the wire and holds each query still long enough to lay it bare \u2014 its header flags, transaction ID, query entropy, response size and rate. It pins every packet to the process behind it, then runs the whole caged population through forensics: the fingerprints of exfiltration, the cadence of beaconing, the shape of DNS tunneling, and any name matched against known-bad reputation. What it can't watch live, it ingests \u2014 a saved capture or an external DNS-monitor log \u2014 and feeds the same population straight into the determinative engine.",
+        components:["DNSCapture","DNSCaptureReportGenerator","BeaconAnalyzer","ExfilAnalyzer","ResponseSizeProbe","MonitorReportAnalyzer","DNSLogAnalyzer","SieveBlocklistLoader"], clis:["SyxxCage.exe","SyxxForensics.exe"] },
+      { diag:true, section:"witness", eyebrow:"Trust Infrastructure \u00b7 Evidence & Identity", title:"Witness",
+        story:"And the Witness testified: when local and remote records matched, when they held steady over time, and when no leak betrayed the encrypted path, the DNS was healthy. When they did not, the network, and its eyes, were lying indeed.",
+        body:"Witness is your environment's sworn record. It takes signed snapshots of your network's state, watches for configuration drift, tests whether things have held steady over time, and seals each finding into a tamper-proof testimony you can verify later with a secret only you hold. Its answer ledger keeps what your trusted resolvers said before, so a later contradiction can be proven \u2014 letting you always answer whether this is still the environment you trusted.",
+        components:["WitnessSigner","Sentinel","AnswerLedger","LicenseManager"], clis:["SyxxWitness.exe","SyxxSentinel.exe"] },
+      { web:true, section:"web", eyebrow:"Platform \u00b7 Source of Truth", title:"syxx.app", body:"Several of Syxx's checks lean on a remote server at syxx.app \u2014 a clean, off-network vantage that acts as a source of truth. It resolves your chosen domain from outside your network so local and remote answers can be compared, receives Glutton's signed probes as a leak collector, and pulls a remotely generated copy of a site's content so you can manually compare it against your local result. Still in active development, the platform will grow to add proxy services and full DNS path tracing.", nowFeatures:["Local vs. remote resolver comparison","Leak-detection collector for signed probes","Remotely generated web content to compare locally"], soonFeatures:["Proxy services","DNS path tracing"] },
+      { diag:false, section:"conclusion", eyebrow:"Signed Verdict", title:"Conclusion", body:"Conclusion is where the six diagnostics converge. It doesn't run a probe of its own \u2014 it reconciles what Prophet, Mirror, Portal, Glutton, Cage and Witness each found, weighs corroborating evidence against contradiction, and pronounces a single confidence-scored verdict: whether the network's eyes can be believed, the mechanism behind any interference, and exactly what you should do next." },
+      { diag:false, section:"license", eyebrow:"Account", title:"License", body:"Where Lite becomes Pro. The License panel activates and manages your plan: the local tools stay free forever, while a $2 / month subscription (with a 3-day trial) or a one-time $10 permanent license unlocks the server-backed checks \u2014 Mirror, Warp and Leak. Enter a key to activate; Syxx stores the credential, tracks activations, and binds the license to this machine." },
+    ];
+    const panes = raw.map((p, i) => Object.assign({ n: String(i + 1).padStart(2, "0"), app: !p.web }, p));
+
+    return {
+      platform,
+      isMacDoc: isMac, isWinDoc: !isMac,
+      platformLabel: isMac ? "for macOS" : "for Windows",
+      platformSub: isMac ? "macOS 26 \u00b7 Liquid Glass" : "Windows 11 \u00b7 Fluent",
+      overview: "Syxx is a DNS investigation suite \u2014 a security control plane for the one protocol every connected app depends on. Where most tools stop at raw datapoints, Syxx reasons across them: six focused diagnostics, weighed together, return a confidence-scored verdict on whether your DNS \u2014 and the eyes watching it \u2014 can be trusted.",
+      diffs: [
+        { title: "Resolver Provenance Confidence", text: "Fuses resolver discovery, LAN cartography and capture destinations to score who is really answering your DNS \u2014 your router, an off-LAN upstream, or an unexpected on-link device." },
+        { title: "Tamper Mechanism Fingerprint", text: "Cross-references RCODEs, local-vs-public divergence, fetch/block status and route patterns to name how you're interfered with: poisoning, censorship, proxying, or path blocking." },
+        { title: "Evidence Confidence Score", text: "Combines witness signing, baseline drift, leak attestation and capture attribution into one 'how much can I trust this?' signal \u2014 keeping uncertainty visible, never hidden." },
+      ],
+      diagNames: ["Prophet", "Mirror", "Portal", "Glutton", "Cage", "Witness"],
+      panes,
+    };
+  }
+}
+</script>
+</body>
+</html>

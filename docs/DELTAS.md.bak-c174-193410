@@ -1,0 +1,1819 @@
+# Syxx Deltas
+
+Comprehensive source-grounded defect audit. A **delta** is a bug that impairs the app's mission
+to **investigate and detect DNS tampering, hijacking, spoofing, and censorship** — i.e. anything
+that causes a missed detection, a false "secure/clear" verdict, a false positive, a crash/hang on
+hostile input, or unreliable/forgeable evidence.
+
+## Delta Analysis Instructions
+
+When asked to perform `delta analysis`, systematically audit the macOS, Windows, and Server codebases to identify defects or omissions that prevent Syxx from meeting its mission: **investigating and detecting DNS tampering, hijacking, spoofing, and censorship**, and producing evidence an end user can actually trust.
+
+### Scope & Approach
+
+**Read the entire codebase** — macOS client (`macOS/Sources`), Windows client (`Windows/`), and server (`Server/`). Focus on code paths that:
+- Produce verdicts (secure/tampered/inconclusive)
+- Generate or sign evidence
+- Handle credentials, keys, or authentication
+- Make platform-specific API calls (Darwin/Win32)
+- Process untrusted input (DNS packets, HTML, subprocess arguments)
+
+Do not try to read every file line-by-line — instead, **trace critical paths**:
+1. Start at CLI entry points (`SyxxCLI.swift`, `Program.cs`) and follow to verdict synthesis
+2. Read all synthesis/aggregation logic (`SynthesisEngine.swift`, `Synthesizer.cs`, `Synthesizer.swift`)
+3. Audit all security-critical modules (LicenseManager, DNSSECVerifier, WitnessSigner, NetworkKeyState)
+4. Compare macOS vs Windows implementations for behavioral divergence
+5. Review server endpoints for security, efficacy, and efficiency
+
+### Technical Domains
+
+All deltas must be filed under exactly one of the following six technical domains:
+
+A. **Server Components:** Deltas arising from the Python server (`Server/`) — risky, harmful, ineffective, or inefficient server code, including the DNS-leak collector, content-integrity proxy, or collector-attested evidence endpoints.
+
+B. **Detection Efficacy:** Deltas that cause missed detections, false negatives, false positives, or structural inability to catch the tampering/censorship they target. Includes tools that fail to run at all, probes that return wrong results, or comparisons that use attacker-controlled baselines.
+
+C. **Verdict & Evidence Integrity:** Deltas that produce false "secure/clean" or false "tampered/malicious" verdicts, forgeable evidence, suppress warranted Reddit referrals, or violate the Honesty Protocol (§1 no-verdict-before-evidence, §3 zero-data confidence, §4 mocked output). This is the highest-priority category — any delta that can cause false confidence belongs here.
+
+D. **Platform Integration & Resource Safety:** Deltas involving OS-specific APIs (Darwin/Win32), interface detection, privilege handling, resource leaks, crashes on hostile input, or failures to ensure platform parity (macOS vs Windows behavioral divergence).
+
+E. **Security & Hardening:** Deltas involving credential management, HMAC secrets, key handling, authentication bypass, input validation, fuzzing failures, or exploitable attack surface.
+
+F. **Miscellaneous:** Documentation errors, typos, performance optimizations that don't affect efficacy, or deltas that clearly don't fit categories 1–5. This category should be used sparingly. **If more than 10% of your deltas are filed here, you're likely miscategorizing and need to ask the user for guidance.**
+
+### Severity Ordering (for multi-domain deltas)
+
+If a delta spans multiple domains, file it under the **most severe** applicable domain. The order of severity is:
+
+1. **Verdict & Evidence Integrity** (highest priority for client code)
+2. **Server Components** (separate pipeline, always severe)
+3. **Detection Efficacy**
+4. **Security & Hardening**
+5. **Platform Integration**
+6. **Miscellaneous**
+
+### Delta Numbers 
+
+When recording identified delties, take its sequence order (3-digit format) and then append it to its domain code. For instance, a delta that would be the fourth listed in the Server Components domain would be numbered A004. A delta involving Verdict and Evidence Integrity that would be the 127th recorded delta in its domain would be number B127. Each Monday, renumber deltas sequentially within each domain to fill gaps left by fixed or archived deltas. For example, if A003 and A007 are fixed, the former A008 becomes the new A003, A009 becomes A004, etc. Update all cross-references accordingly. Mark any deltas that should not be renumbered by appending `HOLD -` followed by your tool name inside of brackets above the delta number--e.g., `[HOLD - OPENCODE]` or `[HOLD - CLAUDE]`. Brackets cause XCode to set text    off in red so it is easily readable to the user. 
+
+Priority can be inferred from delta numbering, whereas A- and B-numbered deltas are the highest priority and E- and F-numbered deltas are the lowest priority.
+
+### Template
+
+Report findings in `DELTAS.md` format:
+
+---
+
+- **[Delta Number]**    [Delta Short Description/Name]
+- **Criticality:**      Indicate `Critical / Non-critical`; whether the delta is critical and user was made aware.
+- **Location:**         Filename and line numbers (e.g., `SynthesisEngine.swift:78-84`)
+- **Issue:**            Clear description of what's wrong and why it matters
+- **Cross-ref. Delta:** Note if this is already tracked (e.g., "Partially covered by DSN-002 but not the specific math gap")
+- **Fix(es):**          Brief suggestion for how to fix (not full implementation)
+
+- **Code Sample:**      [
+                        
+                        Paste an example of the defective code.
+                        For more complex involvement, choose the most severe code example(s) to paste.
+                        For more simple code examples, just paste the whole thing.
+
+                        ]
+---
+---
+
+In the location field,separate multiple lines within a file with a comma (e.g., `SynthesisEngine.swift:78-84, 123-127`); separate multiple lines in multiple files with a semicolon (e.g., `SynthesisEngine.swift: 78-84, 123-127; Conclusion.swift: 46-52`).
+
+Example:
+
+---
+---
+
+[HOLD - IBM BOB]
+Here's the **fully rewritten, production-ready version** with all fixes applied:
+
+### Indentation & Alignment (Required)
+
+Every delta field aligns to a fixed value column at character 24 (columns 0–23 hold the label + padding; the value and all wrapped lines begin at column 24).
+
+- **Alignment Rules**
+
+Pad each label so its value starts at column 24. The longest label, `- **Cross-ref. Delta:**` (23 chars), gets one trailing space; shorter labels get more. Never butt a value against its label.
+
+Hard-wrap long values at ~column 100; every continuation line is indented exactly 24 spaces. Do not rely on the editor's soft-wrap (it wraps to column 0 and looks ragged).
+
+- **Fix(es):** — each `[Fix N]` on its own line starting at column 24; wrapped continuations also at column 24.
+- **Code Sample:** — opening `[` on the label line at column 24, then a blank line, then each code line indented 24 spaces (preserve the code's own relative indentation on top of that), then a blank line, then `]` at column 24. Never word-wrap code — only indent it.
+
+Wrap each delta in `---` delimiters.
+
+If alignment is wrong (or you inherited un-aligned entries), don't hand-fix — run:
+
+```bash
+python3 scripts/reflow-deltas.py DELTAS.md
+```
+
+It re-indents every delta field to column 24 and touches only the A–F ledger (instructions, template, worked example, and the Delta-of-the-Week section are left untouched). Column and wrap width are the `VALUE_COL = 24` / `WIDTH = 100` constants at the top of the script.
+
+
+## Delta Evaluation Instructions
+
+When asked to `evaluate` deltas, you are asked to visit this document and critique the deltas submitted by your peers, i.e., peer vetting. Read each and decide:
+
+- whether you **agree** with the delta or **disagree** with the delta.
+
+- if you **disagree** with the delta, you are asked to explain the basis of your disagreement. 
+
+Disagreement can be based on any of three grounds:
+
+1. You believe that a delta should be overruled as a false positive or false detection (an alleged delta is, in fact, not a delta at all),
+
+2. You agree that the delta is a legitimate concern but disagree on its stated basis (the issue is a legitimate delta but for other reasons), or
+
+3. You agree that the delta is a legitimate concern but disagree on the proposed fix(es).
+
+### Commenting Template
+
+When evaluating deltas, you are asked to make comments inline to the comment you're referencing. When doing so, follow the instructions for recording new deltas, except the row labels should be indented to column (character) 24 and each line of text, other than the row label, should be indented to column (character) 48. Delta comments are written immediately after the referenced delta but within the `---` wrap delimiters, using the following row labels and matching this format:
+
+                       - **Tool Name**            [Opencode]
+                       - **Date**                 7-8-2026
+                       - **Agree / Disagree**     Disagree
+                       - **Disagree Basis**       I disagree on the basis that the proposed fixes would introduce new deltas by...
+                       - **Proposed Revisions**   I proposed the following fixes, which would not introduce new deltas.
+                       - **Proposed Code**        [
+                                                    // SynthesisEngine.swift:78-84
+                                                    if degradedCount == 0 && inconclusiveCount == 0 {
+                                                        confidence = 1.0 // 100% with zero evidence
+                                                        // different code here.
+                                                    }
+                                                  ]
+                                                  
+    Likewise, you can respond to a comment by indenting your response further so that the row labels begin on column (or character) no. 48, with each line being left justified to column (or character) no. 72. The row labels for comments to comments are: `- **Tool Name**`, `- **Date**`, `- **Agree/Disagree**`, `- **Disagree Basis**`, `- **Proposed Revision**`, and `- **Proposed Coded**`.
+
+---
+---
+
+
+### Criticality
+
+**Automatic client-side criticality enhancement:**
+
+    1. Any delta involving silent fallback to a public resolver when system resolver undetectable is automatically enhanced to critical status.
+    2. Any delta involving a reliance on forgeable evidence is automatically enhanced to critical status.
+    
+**Automatic server-side criticality enhancement:**
+
+    1. Any delta that downs or exposes the server to malicious attack is automatically enhanced to critical status.
+    2. Any delta involving a DNS-leak collector that doesn't validate input (RCE risk via injection) is automatically enhanced to critical status.
+    3. Any delta involving a content-integrity proxy that accepts forged collector-attested evidence is automatically enhanced to critical status.
+    4. Any delta that involves PII retention and release is automatically enhanced to critical status. 
+    5. Any delta involving payments or transfers of funds is automatically enhanced to critical status.
+    6. Any delta involving server endpoints that don't authenticate requests (anyone can submit fake evidence) is automatically enhanced to critical status.
+
+These are not static, nor are they inflexible. These are illustrative. **If a delta ought to be considered critical but does not fit these categories, it too is automatically enhanced to critical status.**
+
+#### Quick decision guide
+
+If you're unsure whether a delta is Critical, ask:
+
+1. Can this cause a false "secure" or false "tampered" verdict? → Critical
+
+2. Can this cause real tampering/censorship to go undetected? → Critical
+
+3. Can this evidence be forged or altered by an attacker? → Critical
+
+4. Does this violate the Honesty Protocol (no verdict before evidence, no mocked output, no zero-data confidence)? → Critical
+
+5. Does this silently hide a failure from the user? → Critical
+
+If you ask yourself, "Can this wait?" and the answer is, "No," it's critical. It is automatically enhanced to critical status.
+
+If none of the above apply, it's probably High or Medium, not Critical.
+
+#### Reporting Requirement
+
+Stop and report to the user immediately if:
+- You find a **Critical-severity defect** (false confidence risk, false verdict, forgeable evidence) — report immediately, don't wait for the full audit. This is critical for all, as many of you do not have persistent context and user has limited usage for all of you.
+- You hit a network/dependency failure (per AGENTS.md "Pause and Report" rules)
+- You're unsure whether a pattern is a bug or intentional design — ask before logging
+
+Do not call the analysis "complete" until you've covered all critical paths above, even if you haven't read every file in the codebase.
+## **A. Server Components**
+
+---
+- **[A001]**            Server passivedns.py leaks SQLite database connection on query exception
+- **Status:**           **ALREADY FIXED** — passivedns.py no longer opens its own SQLite
+                        connections. The query path was refactored to delegate to
+                        db.passive_query() (db.py:695-722), which uses try/finally to ensure
+                        conn.close() on every path. The original direct sqlite3.connect() code
+                        cited in this delta no longer exists.
+- **Criticality:**      Critical; unhandled exception during passive DNS query leaks database
+                        connection file descriptors causing resource exhaustion and service failure.
+- **Location:**         Server/syxx_server/passivedns.py:45-82
+- **Issue:**            lookup_domain() opens a database connection via sqlite3.connect() inside a
+                        try block but lacks a context manager or finally: cleanup block. If JSON
+                        parsing or row processing raises an exception, conn.close() is bypassed,
+                        leading to descriptor leakage under hostile or malformed input.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Wrap sqlite3.connect() in a with context manager or try...finally
+                        block ensuring conn.close() executes on exception.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/passivedns.py:45-52
+                        conn = sqlite3.connect(DB_PATH)
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT query_name, rdata, rtype, first_seen, last_seen FROM passive_dns WHERE query_name = ?", (domain,))
+                        rows = cursor.fetchall()
+
+                        ]
+---
+---
+- **[A031]**            licensing.py HMAC column name mismatch makes DB-backed offline licenses
+                        permanently fail
+- **Status:**           **OPEN** — Verified in source. licensing.py:289 still reads
+                        `row.get("hmac")`, but db.license_lookup() pops `row_hmac` from the dict
+                        before returning (db.py:465). The key "hmac" never exists in the returned
+                        dict, so stored_hmac is always None and every DB-backed offline license is
+                        rejected. This is the identical issue to A229 — A031 and A229 are the same
+                        delta filed under different audit streams.
+- **Criticality:**      Critical; DB license row lookup returns row_hmac while _validate_offline
+                        reads row.get("hmac"), causing false rejection of valid offline licenses.
+- **Location:**         Server/syxx_server/licensing.py:289-291; Server/syxx_server/db.py:466
+- **Issue:**            db.license_lookup() pops row_hmac before returning the dictionary, and the
+                        column is named row_hmac in the schema. However, _validate_offline()
+                        attempts to read row.get("hmac"), which always returns None, triggering an
+                        invalid HMAC error and rejecting valid offline licenses.
+- **Cross-ref. Delta:** **Same issue as A229.** Remove one to avoid duplicate tracking.
+- **Fix(es):**          [Fix 1] Remove redundant HMAC check in _validate_offline() as
+                        db.license_lookup() already verifies the HMAC and returns None on failure.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/licensing.py:289-291
+                        stored_hmac = row.get("hmac")
+                        if not stored_hmac:
+                            logging_util.warn("offline_license_missing_hmac", msg="DB license row has no HMAC signature — rejecting as untrusted")
+                            return None
+
+                        ]
+---
+---
+- **[A032]**            Passive DNS drift boolean fallback collapses tri-state
+- **Status:**           **OPEN** — Verified in source. passivedns.py:123 still emits
+                        `"driftSuspected": drift == "suspected"`. The comment says "backward-compat
+                        bool alongside tri-state" (A117), but legacy clients reading only the
+                        boolean cannot distinguish "insufficient-data" from "none" — both collapse
+                        to false, violating the no-result-before-evidence rule the comment itself
+                        cites.
+- **Criticality:**      Non-critical; API response JSON includes legacy driftSuspected boolean
+                        alongside tri-state drift string.
+- **Location:**         Server/syxx_server/passivedns.py:121
+- **Issue:**            baseline() computes a tri-state drift string ("insufficient-data",
+                        "suspected", "none"), but then collapses it into a boolean driftSuspected
+                        field in response JSON, turning "insufficient-data" and "none" into false
+                        for legacy clients.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Remove driftSuspected boolean from API response JSON forcing clients
+                        to handle tri-state drift string.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/passivedns.py:121
+                        "driftSuspected": drift == "suspected",
+
+                        ]
+---
+---
+- **[A262]**            _route_checkout uses raw socket peer for idempotency key; all
+                        users behind nginx share one Stripe checkout session
+- **Criticality:**      High; behind the shipped reverse-proxy topology (deploy.sh nginx →
+                        localhost), every checkout idempotency key is keyed on 127.0.0.1,
+                        so two users buying the same SKU within the same hour window are
+                        redirected to the SAME Stripe Checkout Session; the second buyer
+                        sees the first buyer's session, and the first buyer's success_url
+                        with the second buyer's session id.
+- **Location:**         Server/syxx_server/app.py:1168
+- **Issue:**            _route_checkout() builds the Stripe idempotency key from
+                        `self.client_address[0]` (the raw socket peer, always 127.0.0.1
+                        behind nginx) instead of `self._client_ip()` (which reads
+                        X-Real-IP / X-Forwarded-For when the peer is loopback). Every
+                        other route that needs the real client IP uses `_client_ip()`;
+                        the checkout route alone uses the raw socket peer, making all
+                        users behind the same proxy share a single idempotency key per
+                        (sku, hour_window).
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace `self.client_address[0]` with `self._client_ip()`
+                        at line 1168 so the idempotency key is scoped to the real client.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/app.py:1166-1169
+                        window = int(time.time()) // 3600
+                        client_ip = self.client_address[0]
+                        idem_key = "checkout-%s-%s-%d" % (sku, hashlib.sha256(client_ip.encode()).hexdigest()[:16], window)
+
+                        ]
+---
+---
+- **[A263]**            _route_create_monitor default checks value "prophet" is not valid
+                        JSON, so monitors created without explicit checks silently fail
+- **Criticality:**      Medium; a monitor created via POST /api/monitors with no `checks`
+                        field in the body gets the default string "prophet", which is not
+                        a JSON array. The scheduler calls `json.loads("prophet")` which
+                        raises JSONDecodeError every tick; the monitor is created and
+                        appears healthy but never runs a single check, silently.
+- **Location:**         Server/syxx_server/app.py:2433;
+                        Server/syxx_server/scheduler.py:63
+- **Issue:**            _route_create_monitor() defaults `checks` to the bare string
+                        `"prophet"` when the caller omits the field. The scheduler's
+                        `_run_one()` calls `json.loads(monitor.get("checks", "[]"))`;
+                        `json.loads("prophet")` raises `JSONDecodeError` (the string is
+                        not quoted, so it's not valid JSON). The exception is caught by the
+                        scheduler's catch-all, logged as `monitor_tick_error`, and the
+                        monitor silently fails every tick forever. The user sees the
+                        monitor in their list and has no indication it is broken.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Change the default from `"prophet"` to `'["investigate"]'`
+                        (valid JSON array) so a monitor created with no explicit checks
+                        runs the investigate check.
+                        [Fix 2] Validate that `checks` is valid JSON before storing it,
+                        returning 400 if not.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/app.py:2433
+                        checks = payload.get("checks", "prophet")
+
+                        // Server/syxx_server/scheduler.py:63
+                        checks = json.loads(monitor.get("checks", "[]"))
+
+                        ]
+---
+---
+- **[A264]**            Signed appcast manifest ships with empty package SHA-256 and size
+- **Criticality:**      Critical; a signed update manifest with no package integrity data allows
+                        package substitution to go undetected.
+- **Location:**         Server/syxx_server/appcast.py:98-103, 117-120
+- **Issue:**            build_appcast() returns a manifest whose packages[0] has sha256 ""
+                        and size 0. The comment says these are populated by
+                        publish_package(), but publish_package() is never wired into the
+                        production /api/appcast path. The manifest is then Ed25519-signed
+                        at lines 117-120, so the client receives a cryptographically valid
+                        attestation for a package whose integrity it cannot verify. If the
+                        file server or CDN hosting the package is compromised, the client has
+                        no hash to detect the tampering. This defeats the Witness update-trust
+                        mission: the signature is present, but the package evidence it signs is
+                        empty. The current state should be inconclusive or no update available
+                        until real package hashes are published.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Integrate publish_package() into the release pipeline and
+                        persist the computed SHA-256, size, and URL so build_appcast()
+                        returns real data.
+                        [Fix 2] Until real hashes are available, return None from
+                        build_appcast() so /api/appcast returns 404 instead of signing a
+                        placeholder.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/appcast.py:94-120
+                        # Build the package entry
+                        # In production, the URL would point to the actual download location.
+                        # The SHA-256 would be computed when the package is published.
+                        # For now, we return the update URL as a placeholder.
+                        packages = [{
+                            "url": update_url,
+                            "sha256": "",  # Populated when package is published
+                            "size": 0,
+                            "type": pkg_type,
+                        }]
+
+                        manifest = {
+                            "platform": platform,
+                            "version": version,
+                            "build": "",  # Could be derived from git
+                            "minVersion": "1.0.0",  # Minimum version that can update to this
+                            "critical": False,  # Critical updates bypass user opt-out
+                            "releaseNotes": "Update available.",
+                            "packages": packages,
+                            "publishedAt": int(time.time()),
+                        }
+
+                        # Sign the manifest (everything except "signature")
+                        payload = _canon(manifest)
+                        import base64
+                        sig = _COLLECTOR_PRIV_KEY.sign(payload)
+                        manifest["signature"] = base64.b64encode(sig).decode("ascii")
+
+                        ]
+---
+---
+- **[A265]**            DOM-based XSS via unescaped DNS record values in index.html terminal
+- **Criticality:**      Critical; DNS TXT record values are rendered as HTML without escaping.
+- **Location:**         Server/index.html:686, 698-701, 761, 765
+- **Issue:**            fmtRecords() (lines 698-701) concatenates raw r.value strings from
+                        DNS records into a terminal string, and mrun() (line 686) appends
+                        that string to innerHTML. DNS TXT records can contain arbitrary
+                        attacker-controlled text, including HTML and JavaScript. A user who
+                        queries a domain with a malicious TXT payload can execute the
+                        attacker's script in the origin of syxx.app. Because the session
+                        token is stored in localStorage (A244), this can lead to session
+                        theft or privileged API calls. The rendered output should be clean
+                        only after escaping or encoding; until then it must be treated as
+                        tampered and not injected into the DOM.
+- **Cross-ref. Delta:** Related to A237-A240 (XSS in leaktest.html pages), but the
+                        vulnerable surface is in index.html and the vector is DNS record
+                        values, not resolver IPs.
+- **Fix(es):**          [Fix 1] Escape HTML special characters in fmtRecords() before
+                        concatenating values, or build the rows with DOM methods that set
+                        textContent instead of innerHTML.
+                        [Fix 2] Make mrun() use textContent insertion for untrusted output,
+                        or escape the entire out argument before assigning it to innerHTML.
+- **Code Sample:**      [
+
+                        // Server/index.html:686
+                        function mrun(typed,out){const t=mel();t.innerHTML+=MP+typed+'\n'+out+'\n\n';t.scrollTop=t.scrollHeight;}
+
+                        // Server/index.html:698-701
+                        function fmtRecords(records){
+                          if(!records||!records.length) return D('  (no records)');
+                          return records.map(r=>{ const v = typeof r.value==='object' ? JSON.stringify(r.value) : r.value; return '  '+(r.ttl||300)+'\t'+(r.type||'?')+'\t'+v; }).join('\n');
+                        }
+
+                        // Server/index.html:761
+                        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',data.server+'#53\n\n'+(data.rcodeName==='NOERROR'?G(';; '+data.rcodeName):Y(';; '+data.rcodeName))+'\n'+fmtRecords(data.records)); }catch(e){ mrun('',R('lookup failed: '+e.message)); }
+
+                        ]
+---
+---
+- **[A266]**            Monitor notification email stored in plaintext, contradicting zero-knowledge
+                        privacy claims
+- **Criticality:**      Critical; PII is retained in plaintext in the same database the privacy
+                        policy claims holds only blind indexes and ciphertext.
+- **Location:**         Server/syxx_server/app.py:2435; Server/syxx_server/db.py:1028
+- **Issue:**            _route_create_monitor() (app.py:2435) accepts notify_email from the
+                        request body and passes it directly to db.monitor_create(), which
+                        inserts it into the monitors table as plain TEXT (db.py:1028). The
+                        public privacy page at Server/index.html:407-408 states that a
+                        database dump reveals no emails, only blind indexes and ciphertext,
+                        and that the operator has no decryption key and cannot read your
+                        identity. The monitor email is stored in the same SQLite database in
+                        plaintext, making those guarantees false for any Pro user who
+                        creates a monitor. This is a PII retention issue that erodes the
+                        trust infrastructure the Witness discipline depends on. The privacy
+                        state should be tampered while the server holds readable PII it claims
+                        not to hold; it should only become clean after the email is stored as
+                        a blind index or ciphertext, or the policy is updated to disclose and
+                        justify plaintext retention.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Store a one-way blind index or encrypted blob for the monitor
+                        email, decrypting only inside the mailer path with a key not held by
+                        the app server.
+                        [Fix 2] Remove notify_email storage until the privacy architecture
+                        supports it; or update the privacy policy to explicitly disclose that
+                        monitor notification emails are retained in plaintext and validate the
+                        email format.
+                        [Fix 3] Add a retention policy and purge monitors and monitor_results
+                        after the user-specified need expires.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/app.py:2435
+                        notify_email = (payload.get("notify_email") or "").strip() or None
+
+                        // Server/syxx_server/db.py:1026-1028
+                        conn.execute(
+                            "INSERT INTO monitors(id,subject,domain,checks,interval_hours,notify_email,created_at,next_run) "
+                            "VALUES(?,?,?,?,?,?,?,?)",
+                            (monitor_id, subject, domain, checks, interval_hours, notify_email, now, now + interval_hours * 3600),
+                        )
+
+                        ]
+---
+
+---
+- **[A267]**            /api/monitors create — unbounded interval + no monitor cap + unvalidated
+                        domain → outbound-fetch amplification / self-DoS
+- **Criticality:**      Critical (auto-enhanced: unbounded resource use / DoS + server-as-
+                        amplifier);
+                        user NOT made aware. Gated behind a paid entitlement, but one leaked/trial key
+                        is sufficient to weaponize.
+- **Location:**         Server/syxx_server/app.py:2418-2447 (esp. 2432-2434, 2439);
+                        Server/syxx_server/scheduler.py:60-70, 138-155;
+                        Server/syxx_server/db.py:1020-1028, 1060-1078
+- **Issue:**            _route_create_monitor() has three compounding gaps every other authenticated
+                        route guards against: (1) interval_hours=int(payload.get("interval_hours",24))
+                        has no try/except and no clamp — interval_hours=0/negative makes next_run<=now
+                        (db.py:1074) so monitors_due re-selects the monitor every 60s tick forever; a
+                        non-numeric value throws → 500. (2) No per-subject monitor cap and no dedicated
+                        rate limit (create_api_key/bulk/lookalike each have explicit budgets), so a
+                        caller can persist thousands of monitors that survive restarts. (3) domain is
+                        never validated (valid_domain() never called) — arbitrary strings flow into
+                        investigate.investigate(domain) and warp.build_baseline each tick. Combined: N
+                        attacker-chosen monitors × interval=0 ⇒ N full multi-vantage investigations +
+                        N outbound HTTPS fetches every 60s indefinitely. SSRF pinning protects
+                        destinations but nothing bounds volume/cadence.
+- **Cross-ref. Delta:** Same route as A263 (checks default) and A266 (notify_email PII); NEW and
+                        distinct — neither covers interval bounds, the missing per-subject cap, nor the
+                        missing valid_domain gate.
+- **Fix(es):**          [Fix 1] Clamp: try: interval_hours = max(1, min(int(...),8760)) except
+                        (ValueError,TypeError,OverflowError): return 400 — mirror A153 pattern used two
+                        routes above.
+                        [Fix 2] if not domain or not investigate.valid_domain(domain) or len>253: 400.
+                        [Fix 3] Enforce per-subject monitor cap (db.monitor_count → 409/429) and/or a
+                        dedicated ratelimit budget, consistent with the other write routes.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:2432-2439
+                        domain = (payload.get("domain") or "").strip()
+                        checks = payload.get("checks", "prophet")
+                        interval_hours = int(payload.get("interval_hours", 24))   # no try/except, no bounds
+                        notify_email = (payload.get("notify_email") or "").strip() or None
+                        if not domain:                                            # valid_domain() never called
+                            return self._json_error(400, "missing domain")
+                        db.monitor_create(monitor_id, ent.subject, domain, checks, interval_hours, notify_email)
+
+                        ]
+---
+
+## **B. Detection Efficacy**
+
+---
+- **[B270]**            dnsSpoofing and localCompromise require the witness section, which is
+                        .untested
+                        on every first run — a decisive spoof is force-downgraded to inconclusive on a
+                        fresh install (both platforms)
+- **Criticality:**      Non-critical; systematic first-run missed-CONFIRMATION (result is
+                        honest-inconclusive with an overhang, not a false clean — no false confidence).
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/SyxxMatrixIntegration.swift:112, 196;
+                        macOS/Sources/SyxxCLI/SyxxCLI.swift:869-873;
+                        Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs:252, 336
+- **Issue:**            The witness adapter returns .untested (unusable) when both drifts and
+                        configChanges are nil, which the CLI passes on the first run (no trusted baseline
+                        yet, B160/B087). Because dnsSpoofing and localCompromise list witness as a
+                        required section, the required-section hard gate (fail-closed) suppresses both
+                        diagnoses on every first run — even when dnsSpoofing's decisive
+                        authoritativeMismatch (weight 1.20) fires from a real cross-vantage divergence.
+                        The gated diagnosis reaches the overhang and the result is .inconclusive, never
+                        .threatDetected. SAFE direction, but over-conservative for a decisive standalone
+                        signal; identical on both platforms (spec issue, not divergence).
+- **Cross-ref. Delta:** Related to B160/B087 (witness untested-on-no-baseline wiring, intentional).
+                        New:
+                        the interaction of that wiring with requiredSections gating on the two
+                        witness-dependent threat diagnoses.
+- **Fix(es):**          [Fix 1] Reconsider whether witness should be a hard-REQUIRED section for
+                        dnsSpoofing/localCompromise given their decisive indicators come from
+                        Prophet/Mirror/Cage — demote witness to a corroborating (non-gating) input, or
+                        let a decisive-class support indicator satisfy the gate. Route to
+                        syxx-neural-engineer.
+                        [Fix 2] If the gate is intentional, make the first-run overhang copy explicitly
+                        tell the user "establish a baseline and re-scan to confirm."
+---
+
+## **C. Verdict & Evidence Integrity**
+
+---
+- **[C001]**            NetworkStateReport collapses tri-state .unknown VPN and CaptivePortal to
+                        boolean false
+- **Status:**           **OPEN** — Verified in source on both platforms. macOS
+                        NetworkKeyState.swift:702-703 still has `vpnActive: vpn.state == .yes` and
+                        `captivePortalDetected: captive.state == .yes`. Windows
+                        NetworkKeyState.cs:657-658 still has `VpnActive = vpn.State == ...Yes` and
+                        `CaptivePortalDetected = captive.State == ...Yes`. Both platforms do expose
+                        typed ConditionState views (Vpn/CaptivePortal fields) alongside the legacy
+                        booleans, but any caller reading the boolean properties gets the collapsed
+                        tri-state. Related to D139 (parity audit).
+- **Criticality:**      Critical; user was made aware. Timed-out or failed VPN/captive portal probes
+                        collapse to boolean false, rendering false clean verdicts on degraded
+                        networks.
+- **Location:**         macOS/Sources/SyxxKit/NetworkKeyState.swift:702-703;
+                        Windows/dotNET/Syxx.Kit/NetworkKeyState.cs:694-696
+- **Issue:**            NetworkStateReport.generateReport() evaluates vpnActive as vpn.state == .yes
+                        and captivePortalDetected as captive.state == .yes. When a probe returns
+                        .unknown due to timeout or network error, it collapses to boolean false ("No
+                        VPN" / "No Captive Portal"), presenting a false clean/secure verdict on
+                        missing evidence.
+- **Cross-ref. Delta:** Related to D139 (ConditionState tri-state vs Bool parity finding).
+- **Fix(es):**          [Fix 1] Preserve ConditionState tri-state (.yes / .no / .unknown) on
+                        NetworkStateReport on both platforms.
+                        [Fix 2] Update callers in AppModel.swift and AppViewModel.cs to treat .unknown as inconclusive rather than false.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/NetworkKeyState.swift:702-703
+                        vpnActive: vpn.state == .yes,
+                        captivePortalDetected: captive.state == .yes,
+
+                        ]
+---
+---
+- **[C002]**            DashboardView returns hardcoded PASSED while MirrorView reports TAMPERING
+                        DETECTED for identical run data
+- **Status:**           **OPEN** — Verified in source. DashboardView.swift:357-362 now checks
+                        `isInconclusive` and `isDegraded` before returning "PASSED", but does NOT
+                        check `isRedirectionDetected`. A mirror result with redirection detected
+                        (but neither inconclusive nor degraded) falls through to "PASSED". Meanwhile
+                        MirrorView.swift:309 correctly returns "TAMPERING DETECTED" when
+                        `isRedirectionDetected` is true. The contradictory verdict persists.
+- **Criticality:**      Critical; user was made aware. Contradictory verdicts across GUI views where
+                        main dashboard renders clean on tampered runs.
+- **Location:**         macOS/Sources/SyxxApp/DashboardView.swift:357-362;
+                        macOS/Sources/SyxxApp/MirrorView.swift:309
+- **Issue:**            DashboardView returns a hardcoded "PASSED" string for the Mirror module chip
+                        without checking comparison.isRedirectionDetected or validating cross-
+                        vantage data completeness. MirrorView returns "TAMPERING DETECTED" for the
+                        exact same comparison output, violating Protocol Section 5 (no
+                        mocked/contradictory production output).
+- **Cross-ref. Delta:** Related to DOCDELTAS J001.
+- **Fix(es):**          [Fix 1] Refactor DashboardView Mirror chip evaluation to derive status
+                        directly from comparison.isRedirectionDetected and comparison.status.
+                        [Fix 2] Return "INCONCLUSIVE" when vantage comparison data is incomplete.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxApp/DashboardView.swift:357-362
+                        guard model.isPro else { return "LOCKED · PRO" }
+                        return "PASSED"
+
+                        ]
+---
+---
+- **[C003]**            Empty KeygenPublicKeyHex causes valid license signatures to fail and return
+                        NetworkError
+- **Status:**           **ALREADY FIXED** — KeygenPublicKeyDerHex is now populated with a 91-byte
+                        P-256 ECDSA SubjectPublicKeyInfo DER key (182 hex chars) at
+                        LicenseManager.cs:420. The key was migrated from Ed25519 to P-256 ECDSA
+                        and populated. VerifyKeygenSignature now performs full ECDSA-SHA256
+                        verification with Date header freshness check. macOS twin
+                        (LicenseManager.swift:72) has the same key. Note: E185 in the crypto audit
+                        appears stale — it cites an empty Ed25519 key that no longer exists.
+- **Criticality:**      Critical; user was made aware. Hardcoded empty public key string causes
+                        signature verification to always fail, rejecting valid subscriptions.
+- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:420-430, 526-535
+- **Issue:**            KeygenPublicKeyHex is hardcoded to an empty string (""). When a valid
+                        license is checked (meta.valid == true), it triggers VerifyKeygenSignature,
+                        which returns false due to the empty key string, causing the application to
+                        return LicenseValidationResult.NetworkError for valid licenses.
+- **Cross-ref. Delta:** E185 (crypto audit) cites same empty-key issue but appears stale.
+- **Fix(es):**          [Fix 1] Populate KeygenPublicKeyHex with the production Keygen Ed25519
+                        public key.
+                        [Fix 2] Handle unconfigured key state explicitly without misclassifying signature failure as a network error.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:420-430
+                        private static readonly string KeygenPublicKeyHex = "";
+                        private static bool VerifyKeygenSignature(...) {
+                            if (string.IsNullOrEmpty(KeygenPublicKeyHex)) return false;
+
+                        ]
+---
+---
+- **[C161]**            Windows default matrix spec omits mappableIndicators
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:359-385;
+                        Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs:340-365;
+                        macOS/Sources/SyxxKit/Synthesis/SyxxMatrixIntegration.swift:206-237
+- **Issue:**            macOS MatrixSpec carries a mappableIndicators set (B156) and the builder
+                        populates it from SynthesisEngine.indicatorMapping. The engine then
+                        normalizes coverage over only the rules whose indicators can actually be
+                        observed. Windows MatrixSpec has no MappableIndicators property and
+                        SyxxMatrixBuilder.BuildDefaultSpec returns a spec built only from diagnoses
+                        and thresholds. The engine therefore divides observedSupportWeight by the
+                        total weight of every support rule, including unmapped rules such as
+                        routeClean, trustedWitnessOK, and localEvidenceSealValid. This permanently
+                        caps coverage below the probable and conclusive thresholds, so a threat that
+                        reaches the reporting tier on macOS can fall below tier on Windows. The
+                        result can be a false inconclusive or, when the suppressed threat leaves no
+                        overhang, a false clean.
+- **Cross-ref. Delta:** Related to B156 (fixed in macOS; Windows twin still missing). Related to
+                        C158-C160 (cross-platform parity audit).
+- **Fix(es):**          [Fix 1] Add a MappableIndicators property to MatrixSpec and expose it in
+                        DefaultSpecJson.
+                        [Fix 2] Populate MappableIndicators in SyxxMatrixBuilder.BuildDefaultSpec
+                        from the set of indicators reachable via SynthesisEngine.indicatorMapping.
+                        [Fix 3] In MatrixDeterminativeEngine.ComputeRawScore, compute
+                        totalSupportWeight from only the mappable support rules.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:359-385
+                        public sealed record MatrixSpec
+                        {
+                            [JsonPropertyName("diagnoses")] public IReadOnlyList<DiagnosisSpec> Diagnoses { get; init; }
+                            [JsonPropertyName("thresholds")] public ThresholdProfile Thresholds { get; init; }
+                            [JsonPropertyName("knownSections")] public IReadOnlySet<SectionId> KnownSections { get; init; }
+                        }
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs:340-365
+                        return new MatrixSpec(
+                            diagnoses: new[]
+                            {
+                                clean,
+                                dnsSpoofing,
+                                censorshipBlocking,
+                                transportDowngrade,
+                                dnsInterception,
+                                contentTampering,
+                                dnsPrivacyLeak,
+                                localCompromise,
+                            },
+                            thresholds: new ThresholdProfile(...));
+
+                        // macOS/Sources/SyxxKit/Synthesis/SyxxMatrixIntegration.swift:206-237
+                        let mappableIndicators = Set(
+                            SynthesisEngine.indicatorMapping.values.map { $0.0.id }
+                        )
+                        return MatrixSpec(
+                            diagnoses: [...],
+                            thresholds: ThresholdProfile(...),
+                            mappableIndicators: mappableIndicators
+                        )
+
+                        ]
+---
+---
+- **[C162]**            Windows raw scoring ignores producing-section usability for indicators
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:924-980;
+                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:780-846
+- **Issue:**            macOS rawScore checks sectionByID for each indicator and skips any support
+                        or
+                        exclusionary observation whose producing section is invalidated, untested, or
+                        locked. Windows ComputeRawScore looks up indicators only by indicatorById and
+                        never consults the section that produced them. An indicator from a failed or
+                        invalidated section can still support a diagnosis, contradict a rival, or even
+                        hard-exclude a diagnosis. This violates the fail-closed contract: a required
+                        section may gate a diagnosis while the diagnosis still receives support from
+                        that same failed section, producing a false threatDetected or a false clean.
+- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
+- **Fix(es):**          [Fix 1] In the support-rule loop, the exclude-rule loop, and the hard-
+                        exclusion
+                        loop, require the producing section to exist and be usable before the
+                        observation contributes.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:924-951
+                        foreach (var rule in supportRules)
+                        {
+                            if (!indicatorById.TryGetValue(rule.IndicatorId, out var obs) || obs.ObservedStrength is not { } s) { continue; }
+                            observedSupportWeight += rule.Weight;
+                            var alignment = rule.ExpectedStrength > 0 ? Math.Min(1.0, s / rule.ExpectedStrength) : s;
+                            var aligned = Math.Pow(alignment, rule.DecayExponent);
+                            var effective = aligned * Clamp01(obs.Quality);
+                            var contribution = rule.Weight * effective;
+                            if (obs.Contradictory)
+                            {
+                                contradictionMass += contribution;
+                            }
+                            else
+                            {
+                                alignedSupport += contribution;
+                                if (effective > 0)
+                                {
+                                    groups.Add(rule.IndependenceGroup);
+                                    r.SupportingIndicators.Add(rule.IndicatorId);
+                                    if (rule.EvidenceClass == EvidenceClass.Decisive) { r.HasDecisive = true; }
+                                    if (rule.EvidenceClass == EvidenceClass.Major) { r.MajorCount += 1; }
+                                }
+                            }
+                        }
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:971-980
+                        foreach (var exId in d.ExclusionaryIndicators)
+                        {
+                            if (indicatorById.TryGetValue(exId, out var obs) && obs.ObservedStrength is { } s
+                                && !obs.Contradictory && s >= ExclusionFiringThreshold)
+                            {
+                                r.HardExclusion = exId;
+                                break;
+                            }
+                        }
+
+                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:780-785
+                        for rule in supportRules {
+                            guard let obs = indicatorByID[rule.indicatorID], let s = obs.observedStrength else { continue }
+                            if let producing = sectionByID[obs.section], !producing.status.isUsable { continue }
+                            observedSupportWeight += rule.weight
+                            ...
+                        }
+
+                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:840-846
+                        for exID in d.exclusionaryIndicators {
+                            if let obs = indicatorByID[exID], let s = obs.observedStrength,
+                               !obs.contradictory, s >= Self.exclusionFiringThreshold,
+                               obs.quality >= Self.exclusionQualityFloor,
+                               sectionByID[obs.section]?.status.isUsable ?? false {
+                                r.hardExclusion = exID
+                                break
+                            }
+                        }
+
+                        ]
+---
+---
+- **[C163]**            Windows raw scoring omits completed-observation quality floor
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:928-930;
+                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:797-799
+- **Issue:**            macOS clamps the effective quality of a completed observation to at least
+                        the
+                        minimumFitForProbable threshold, so a thin-but-completed section still
+                        contributes enough fit to reach the probable tier. Windows uses the raw
+                        quality directly with no floor. A decisive observation on a 50% complete
+                        section yields effective = aligned * 0.5 and fit can fall below 0.62, so the
+                        diagnosis is suppressed as belowTier or absent. The same evidence reaches a
+                        confirmed threat on macOS. This produces a false inconclusive or a false
+                        clean when a real threat signal fires.
+- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
+- **Fix(es):**          [Fix 1] In ComputeRawScore, compute qualityFloor = minimumFitForProbable
+                        when
+                        obs.Quality > 0, then effectiveQuality = max(Clamp01(obs.Quality), qualityFloor).
+                        Use effectiveQuality in the support-rule effective value.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:928-930
+                        var aligned = Math.Pow(alignment, rule.DecayExponent);
+                        var effective = aligned * Clamp01(obs.Quality);
+                        var contribution = rule.Weight * effective;
+
+                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:797-799
+                        let qualityFloor = spec.thresholds.minimumFitForProbable
+                        let effectiveQuality = max(clamp01(obs.quality), obs.quality > 0 ? qualityFloor : 0)
+                        let effective = aligned * effectiveQuality
+
+                        ]
+---
+---
+- **[C164]**            Windows hard-exclusion path lacks quality and section-usability guards
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:728-741,
+                        971-980;
+                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:596-600,
+                        840-846
+- **Issue:**            macOS requires an exclusionary indicator to clear an exclusionQualityFloor
+                        of
+                        0.5 and requires its producing section to be usable before it can hard-exclude
+                        a diagnosis. Windows only checks that the observed strength is at least
+                        ExclusionFiringThreshold (0.5) and that the observation is not contradictory. A
+                        degraded, low-quality, or untrusted exclusionary observation can therefore rule
+                        out a threat diagnosis on Windows. This suppresses real threats and can license
+                        a false clean when the only evidence against a diagnosis was unreliable.
+- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
+- **Fix(es):**          [Fix 1] Add const double ExclusionQualityFloor = 0.5 in
+                        MatrixDeterminativeEngine.
+                        [Fix 2] In the hard-exclusion loop, require obs.Quality >=
+                        ExclusionQualityFloor and the producing section to be usable.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:728-741
+                        private const double ExclusionFiringThreshold = 0.5;
+                        private const double OverhangFloor = 0.30;
+                        private static readonly DiagnosisId CleanId = new("clean");
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:971-980
+                        foreach (var exId in d.ExclusionaryIndicators)
+                        {
+                            if (indicatorById.TryGetValue(exId, out var obs) && obs.ObservedStrength is { } s
+                                && !obs.Contradictory && s >= ExclusionFiringThreshold)
+                            {
+                                r.HardExclusion = exId;
+                                break;
+                            }
+                        }
+
+                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:596-600
+                        private static let exclusionQualityFloor = 0.5
+
+                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:840-846
+                        for exID in d.exclusionaryIndicators {
+                            if let obs = indicatorByID[exID], let s = obs.observedStrength,
+                               !obs.contradictory, s >= Self.exclusionFiringThreshold,
+                               obs.quality >= Self.exclusionQualityFloor,
+                               sectionByID[obs.section]?.status.isUsable ?? false {
+                                r.hardExclusion = exID
+                                break
+                            }
+                        }
+
+                        ]
+---
+---
+- **[C165]**            Windows margin computation treats gated and hard-excluded diagnoses as
+                        rivals
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:792-873;
+                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:653-691
+- **Issue:**            macOS builds an emittableIDs set after applying required-section gates and
+                        hard
+                        exclusions, then uses only emittable diagnoses as rivals when computing margins.
+                        Windows computes the margin in Pass 3 before checking gates and hard
+                        exclusions, and CompetitorBestStrength includes every diagnosis except self and
+                        allowed co-occurrences. A diagnosis that is gated because its required section
+                        is missing or invalidated, or a diagnosis that is hard-excluded, can therefore
+                        outrank a real diagnosis and steal its margin. This drops the real diagnosis
+                        below the probable tier on Windows while macOS emits it, producing a false
+                        inconclusive or false clean.
+- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
+- **Fix(es):**          [Fix 1] Restructure Evaluate to classify emittable diagnoses before
+                        computing
+                        margins. Exclude gated and hard-excluded diagnoses from the competitor set.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:792-802
+                        double CompetitorBestStrength(DiagnosisSpec d)
+                        {
+                            var allowed = new HashSet<DiagnosisId>(d.AllowedCooccurrenceWith);
+                            var best = 0.0;
+                            foreach (var other in Spec.Diagnoses)
+                            {
+                                if (other.Id == d.Id || allowed.Contains(other.Id)) { continue; }
+                                best = Math.Max(best, raws.TryGetValue(other.Id, out var r) ? r.Strength : 0);
+                            }
+                            return best;
+                        }
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:847-873
+                        foreach (var d in Spec.Diagnoses)
+                        {
+                            if (ct.IsCancellationRequested) { return CancelledResult; }
+                            if (!raws.TryGetValue(d.Id, out var raw)) { continue; }
+                            var margin = MatrixRounding.Round6(raw.Strength - CompetitorBestStrength(d));
+                            if (raw.Gate is { } gate) { ... continue; }
+                            if (raw.HardExclusion is { } ex) { ... continue; }
+                            ...
+                        }
+
+                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:653-691
+                        var emittableIDs = Set<DiagnosisID>()
+                        var suppressed: [SuppressedDiagnosis] = []
+                        for d in spec.diagnoses {
+                            guard let raw = raws[d.id] else { continue }
+                            if let gate = raw.gate { ... continue }
+                            if let ex = raw.hardExclusion { ... continue }
+                            emittableIDs.insert(d.id)
+                        }
+                        func competitorBestStrength(for d: DiagnosisSpec) -> Double {
+                            let allowed = Set(d.allowedCooccurrenceWith)
+                            var best = 0.0
+                            for other in spec.diagnoses where other.id != d.id && !allowed.contains(other.id) && emittableIDs.contains(other.id) {
+                                best = max(best, raws[other.id]?.strength ?? 0)
+                            }
+                            return best
+                        }
+
+                        ]
+---
+---
+- **[C166]**            Windows assemble filters hard-excluded entries from the clean-blocking
+                        overhang
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1080-1120;
+                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:936-972
+- **Issue:**            macOS keeps hardExcluded suppressed entries in the overhang used to block
+                        clean
+                        because a degraded, low-quality exclusion must not license a clean result. It
+                        only filters them from the user-visible surfaceSuppressed list. Windows filters
+                        HardExcluded out of the overhang check in Assemble and also returns the full
+                        suppressed list without the surfaceSuppressed filter. A Windows run with only a
+                        low-quality exclusion can therefore emit clean while macOS reports inconclusive.
+                        It also surfaces ruled-out diagnoses as unverified threats to consumers.
+- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
+- **Fix(es):**          [Fix 1] Compute the clean-blocking overhang from the full suppressed list
+                        without filtering HardExcluded.
+                        [Fix 2] Return a surfaceSuppressed list that excludes HardExcluded so
+                        downstream surfaces do not display ruled-out diagnoses as unverified threats.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1105-1117
+                        var overhang = suppressed
+                            .Where(s => s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded && s.RawSupport >= OverhangFloor)
+                            .ToList();
+                        if (emitted.TryGetValue(CleanId, out var clean) && overhang.Count == 0)
+                        {
+                            var cleanEmitted = clean.Score;
+                            return new DeterminativeResult(
+                                DeterminativeState.Clean,
+                                new List<DiagnosisScore> { cleanEmitted },
+                                suppressed,
+                                $"No tampering was detected...");
+                        }
+
+                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:943-967
+                        let surfaceSuppressed = suppressed.filter { $0.reason != .hardExcluded }
+                        let threats = emitted
+                            .filter { $0.key != cleanID }
+                            .map { $0.value.0 }
+                            .sorted { rankOrder($0, $1) }
+                        ...
+                        let overhang = suppressed.filter { $0.rawSupport >= Self.overhangFloor }
+                        if let cleanEmitted = emitted[cleanID]?.0, overhang.isEmpty {
+                            return DeterminativeResult(
+                                state: .clean,
+                                diagnoses: [cleanEmitted],
+                                suppressed: surfaceSuppressed,
+                                explanation: "No tampering was detected...")
+                        }
+
+                        ]
+---
+---
+- **[C167]**            Windows Mirror warp adapter ignores most content-warp mismatch signals
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:417-429;
+                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:309-341
+- **Issue:**            macOS mirror(warp:) inspects inline script identity, script hashes, script
+                        structure, stylesheet structure, and iframe structure. Any detected structural
+                        difference produces a scriptMismatch evidence item with Positive section
+                        status, mapped to the liveQueryContentRewrite indicator that feeds the
+                        contentTampering diagnosis. Windows Mirror only checks
+                        IsScriptStructureIdentical and emits a single Inconclusive evidence item when
+                        it differs. Style, iframe, inline-injection, and hash-mismatch attacks are
+                        therefore ignored, and even a script-structure mismatch is treated as weaker
+                        evidence than on macOS. The contentTampering diagnosis cannot fire from warp
+                        evidence on Windows, producing a false clean or false inconclusive.
+- **Cross-ref. Delta:** Related to WSK-029 (fixed in macOS; Windows twin still missing). Related to
+                        C158-C160 (cross-platform parity audit).
+- **Fix(es):**          [Fix 1] Port the macOS warp logic to Synthesizer.cs: inspect all mismatch
+                        fields, emit detailed EvidenceItem.ScriptMismatch evidence, and use Positive
+                        section status for detected tampering.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:417-429
+                        if (warp is not null)
+                        {
+                            if (string.IsNullOrEmpty(warp.LocalHtml) || string.IsNullOrEmpty(warp.RemoteHtml)) subs.Add(SectionStatus.Invalidated);
+                            else if (!warp.IsScriptStructureIdentical)
+                            {
+                                ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.ScriptMismatch,
+                                    "Fetched page's script structure differs from the reference copy",
+                                    "Scripts injected / removed between you and the server may indicate on-path content tampering, but script changes can also result from benign causes such as ad rotation, A/B tests, or CDN variations. This observation requires corroboration from other sources before reaching any conclusion."));
+                                subs.Add(SectionStatus.Inconclusive);
+                            }
+                            else subs.Add(SectionStatus.Negative);
+                        }
+
+                        // macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:309-341
+                        if let w = warp {
+                            if w.localHTML.isEmpty || w.remoteHTML.isEmpty { subs.append(.invalidated) }
+                            else if !w.isSecure {
+                                let detail: String
+                                if !w.isInlineScriptIdentical { detail = "Inline script content differs between local and reference copies" }
+                                else if !w.mismatchedScriptHashes.isEmpty { detail = "Script hash mismatch: \(w.mismatchedScriptHashes.prefix(2).joined(separator: ", "))" }
+                                else if !w.isScriptStructureIdentical { detail = "Script structure differs between local and reference copies" }
+                                else if !w.isStylesheetStructureIdentical { detail = "Stylesheet structure differs between local and reference copies" }
+                                else if !w.isIframeStructureIdentical { detail = "Iframe structure differs between local and reference copies" }
+                                else { detail = "Content integrity check detected differences" }
+                                ev.append(EvidenceItem(section: .mirror, evidenceId: .scriptMismatch, observation: detail, rationale: "Content differences between local and reference copies may indicate on-path tampering, but can also result from benign causes such as CDN variations or A/B tests. Requires corroboration."))
+                                subs.append(.positive)
+                            } else { subs.append(.negative) }
+                        }
+
+                        ]
+---
+---
+- **[C168]**            runAllWardens() misrepresents timed-out probes as completed
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:493-560
+- **Issue:**            runAllWardens() appends each tool name to the ran list unconditionally
+                        after the timeout guard, even when the withTimeout result is nil because the
+                        probe timed out or failed. The defer then prints `Completed: Prophet, Mirror, ...`
+                        listing the tool as having run and produced evidence. This violates the Honesty
+                        Protocol: the GUI output falsely claims a discipline completed when it actually
+                        produced no data. The per-tool timeout message is also overwritten by the final
+                        completion line. Timed-out or failed probes should be reported separately from
+                        genuinely completed probes, and the completion message must not count them as
+                        evidence-producing runs.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Only append a tool name to ran when the withTimeout outcome is
+                        non-nil (i.e., the probe actually completed and returned a result).
+                        [Fix 2] Collect timed-out or failed tools into a separate list and include it in
+                        the completion message, e.g., `Completed: X. Timed out: Y. Skipped: Z.`
+                        [Fix 3] Preserve the per-tool timeout or failure output in the dashboard log so
+                        the user can see which disciplines failed instead of a single misleading summary.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxApp/AppModel.swift:493-497
+                        defer {
+                            // B236: emit an honest completion message listing what actually ran.
+                            let proSkipped = skipped.isEmpty ? "" : " Skipped: \(skipped.joined(separator: ", "))."
+                            self.selection = .dashboard
+                            self.output = "Completed: \(ran.joined(separator: ", ")).\(proSkipped)"
+                            SentrySDK.addBreadcrumb({ let b = Breadcrumb(level: .info, category: "gui.state"); b.message = "Wardens scan complete: \(ran.joined(separator: ","))"; return b }())
+                            self.runningTool = nil
+                            self.scanCorrelationId = nil
+                        }
+
+                        // macOS/Sources/SyxxApp/AppModel.swift:504-519
+                        let prophetOutcome = await Self.withTimeout(seconds: Self.timeout(for: .prophet)) { [weak self] in
+                            await self?.runLookup() ?? ""
+                        }
+                        guard !Task.isCancelled else { return }
+                        ran.append("Prophet")
+                        if prophetOutcome == nil { self.output = "Prophet timed out." }
+                        // Mirror (Pro only)
+                        if isPro {
+                            selection = .mirror
+                            output = "Running Mirror…"
+                            let mirrorOutcome = await Self.withTimeout(seconds: Self.timeout(for: .mirror)) { [weak self] in
+                                await self?.runCompare() ?? ""
+                            }
+                            guard !Task.isCancelled else { return }
+                            ran.append("Mirror")
+                            if mirrorOutcome == nil { self.output = "Mirror timed out." }
+                        } else {
+                            skipped.append("Mirror")
+                        }
+
+                        ]
+---
+---
+- **[C169]**            Windows FirstRunScan falls back to 8.8.8.8 and grades the public resolver as
+                        the user's network
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/FirstRunScan.cs:62-66
+- **Issue:**            When NetworkKeyState.GetSystemDNSServers() returns no resolvers,
+                        FirstRunScan.RunAsync
+                        prints a single-line warning and substitutes 8.8.8.8 as the local resolver. All
+                        Prophet, Mirror, Portal, and Glutton-local probes are then run against Google's
+                        public resolver, not the user's actual DNS path. The resulting Conclusion and
+                        ReportCard can award the user's network an A or B grade with the headline "This
+                        network looks clean," even though the user's network was never measured. The
+                        warning is not carried into the ReportCard headline, reasons, or FirstRunCommand
+                        results screen, so a fallback scan is indistinguishable from a real clean scan
+                        in the final output.
+- **Cross-ref. Delta:** Related to E169 (macOS hardcoded default resolver) and D145 (FirstRunScan
+                        resolver-substitution tracking). Distinct because it is the Windows first-run scan
+                        path that produces the false letter grade.
+- **Fix(es):**          [Fix 1] If no system resolver is detectable, do not substitute a public
+                        resolver;
+                        return Grade.Ungraded with a top reason such as "the system DNS resolver could not
+                        be detected, so the network was not measured."
+                        [Fix 2] If a fallback is required for a partial scan, append a permanent caveat to
+                        the ReportCard headline and reasons stating the result was measured against
+                        8.8.8.8, not the user's resolver.
+                        [Fix 3] Record the resolver-substitution fact in SectionInputs/FirstRunResult so
+                        every downstream surface (CLI, GUI, signed reports) is forced to disclose it before
+                        rendering a clean grade.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/FirstRunScan.cs:62-66
+                        if (localResolver == null)
+                        {
+                            Console.WriteLine("⚠️ System resolver undetectable — falling back to 8.8.8.8");
+                            localResolver = "8.8.8.8";
+                        }
+
+                        ]
+---
+
+---
+- **[C170]**            Invalidated sibling sub-probe silently erases a decisive threat indicator
+                        from
+                        the determination (adversarially-triggerable dampener)
+- **Criticality:**      Critical; user NOT made aware. Latent false-clean + current silent drop of a
+                        real, fired threat indicator. Attacker-triggerable.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:75-83;
+                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:785, 823, 840-846
+- **Issue:**            combine() collapses a section's heterogeneous sub-statuses into ONE status,
+                        and
+                        per the B062 fix .invalidated now wins over .positive. That collapsed status is
+                        reused as the per-indicator usability gate: rawScore skips every indicator whose
+                        producing section is not usable. So if one sub-probe returns .invalidated while
+                        an independent sibling fires a real .positive, the section collapses to
+                        .invalidated and the positive's indicator is dropped from scoring — contributes 0
+                        to observedSupport, not even admitted to the honesty overhang. Concrete: Mirror
+                        warp returns empty HTML (.invalidated) while authoritative diverges (.positive →
+                        authoritativeMismatch, decisive, weight 1.20); Mirror collapses to .invalidated,
+                        authoritativeMismatch is skipped in both the support loop and the hard-exclusion
+                        loop. Today → generic .inconclusive (decisive spoof de-specified); becomes an
+                        outright false .clean once the affirmative-clean indicators are wired. Attacker
+                        hides an authoritative divergence by also breaking the content fetch.
+- **Cross-ref. Delta:** Goes beyond B062 (fixed 2026-07-30, closed as "no known scenario emits both"
+                        —
+                        a concrete scenario now exists). Interacts with B162/B163; distinct from the
+                        Windows combine-order gap below.
+- **Fix(es):**          [Fix 1] Decouple per-indicator usability from the collapsed section status:
+                        key
+                        an indicator's usability on the validity of the datapoint that produced it, not
+                        the section-wide combine() result.
+                        [Fix 2] If section-level collapse is retained, ensure any mapped .positive whose
+                        observation fired is still admitted to the overhang (counts toward
+                        observedSupport) so it can only be downgraded to "seen but unconfirmed," never
+                        erased. Route to syxx-neural-engineer; must land on both platforms.
+- **Code Sample:**      [
+
+                        // Synthesizer.swift:75-83
+                        static func combine(_ subs: [SectionStatus]) -> SectionStatus {
+                            let ran = subs.filter { $0 != .untested }
+                            if ran.isEmpty { return .untested }
+                            if ran.contains(.invalidated) { return .invalidated }   // one invalidated probe...
+                            if subs.contains(.positive) { return .positive }          // ...suppresses this positive
+                        }
+                        // MatrixDeterminativeEngine.swift:785
+                        if let producing = sectionByID[obs.section], !producing.status.isUsable { continue }
+
+                        ]
+---
+
+---
+- **[C171]**            Windows Prophet treats a Truncated response as a clean Negative; macOS
+                        treats it
+                        as Invalidated (false clean-support + parity divergence)
+- **Criticality:**      Critical; user NOT made aware. A truncated/unusable answer becomes clean-
+                        support
+                        on Windows and inflates Prophet completeness; diverges from macOS.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:63-65, 143-154;
+                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:115
+- **Issue:**            Windows DidFail enumerates Timeout, TransportError, MalformedResponse,
+                        ResponseIdMismatch but NOT DNSResponseStatus.Truncated (which exists —
+                        DNSResolver.cs:100). In the Prophet resolution arm a Truncated status fails
+                        DidFail, is not NXDomain/Refused/ServFail, and falls through to
+                        subs.Add(SectionStatus.Negative) — a conclusive clean datapoint that also counts
+                        toward DatapointCompleteness. macOS maps .truncated to .invalidated (B161).
+                        Identical truncated response ⇒ macOS Prophet .invalidated (blocks clean),
+                        Windows .negative (clean support, higher completeness). Truncation is a known
+                        interference/censorship primitive; an attacker sets TC to force "unusable" on
+                        macOS but "clean" on Windows.
+- **Cross-ref. Delta:** Sibling to B161 (macOS truncated→invalidated); not covered by B257 or
+                        C161-C167.
+- **Fix(es):**          [Fix 1] Add DNSResponseStatus.Truncated to Windows DidFail so truncated →
+                        Invalidated, matching Synthesizer.swift:115 / B161.
+                        [Fix 2] Add a golden vector for a truncated response asserting Prophet
+                        Invalidated on both platforms.
+- **Code Sample:**      [
+
+                        // Synthesizer.cs:63-65
+                        private static bool DidFail(DNSResponse r) =>
+                            r.Status is DNSResponseStatus.Timeout or DNSResponseStatus.TransportError
+                                     or DNSResponseStatus.MalformedResponse or DNSResponseStatus.ResponseIdMismatch;
+                        // Synthesizer.cs:143-154
+                        if (DidFail(resolution)) subs.Add(SectionStatus.Invalidated);
+                        else if (resolution.Status is ...NXDomain or ...Refused or ...ServFail) { ...Inconclusive; }
+                        else subs.Add(SectionStatus.Negative);   // Truncated lands here
+
+                        ]
+---
+
+---
+- **[C172]**            Windows combine() checks Positive before Invalidated — B062 fix never
+                        ported;
+                        section status diverges from macOS on identical evidence
+- **Criticality:**      Critical; user NOT made aware. Same evidence yields a different section
+                        status
+                        (and thus different verdict) across platforms.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:104-116, 118-130;
+                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:78-79
+- **Issue:**            macOS combine() was corrected under B062 so .invalidated takes precedence
+                        over
+                        .positive. Both Windows combine helpers still evaluate Positive FIRST
+                        (subs.Contains(Positive) at :109 and :123) and check Invalidated afterward. For a
+                        section holding both .invalidated and .positive sub-statuses, macOS returns
+                        Invalidated and Windows returns Positive. This propagates into the matrix
+                        engine's EvidenceUsability (positive→usable vs invalidated→not-usable), changing
+                        hard-gating and the final determination on byte-identical evidence. Compounded by
+                        C170: neither platform's current behavior is correct, so the parity fix must be
+                        coordinated with the C170 design decision, not a blind B062 port.
+- **Cross-ref. Delta:** B062 (macOS, fixed) — Windows twin never landed. Interacts with C170
+                        (resolve
+                        together). Not covered by C161-C167 (those are MatrixDeterminativeEngine.cs).
+- **Fix(es):**          [Fix 1] Reorder both Windows combine helpers to check Invalidated before
+                        Positive, matching Synthesizer.swift:78-79 — pending the C170 design decision so
+                        both platforms adopt the same per-datapoint-aware resolution.
+                        [Fix 2] Add a parity golden vector for a section with mixed {invalidated,
+                        positive} sub-statuses.
+- **Code Sample:**      [
+
+                        // Synthesizer.cs:109-112 (and 123-126)
+                        if (subs.Contains(SectionStatus.Positive)) return new SectionEvidence(SectionStatus.Positive, ...); // FIRST
+                        var ran = subs.Where(s => s != SectionStatus.Untested).ToList();
+                        if (ran.Contains(SectionStatus.Invalidated)) return ...Invalidated;   // too late
+                        // Synthesizer.swift:78-79 (B062 order)
+                        if ran.contains(.invalidated) { return .invalidated }
+                        if subs.contains(.positive) { return .positive }
+
+                        ]
+---
+
+---
+- **[C173]**            GUI Mirror/Witness/Testify paths silently substitute a public resolver as
+                        "local" → false "no tampering" + signed misleading evidence
+- **Criticality:**      Critical (auto-enhanced twice: silent fallback to a public resolver when the
+                        system resolver is undetectable; substituted answer feeds cryptographically
+                        signed witness/testify evidence). User NOT made aware (Windows has an explicit
+                        // TODO acknowledging the missing notice).
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:86, 433, 949, 966-978 (974), 1173,
+                        1829;
+                        Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:447-452, 715-720;
+                        (correct contrast: SyxxKit/Synthesis/FirstRunScan.swift:61-76;
+                        SyxxCLI/Commands/SyxxWitness.swift:172-177)
+- **Issue:**            When getSystemDNSServers() returns empty (VPN kill-switch, captive portal,
+                        scutil/interface enumeration failure), these GUI view-model paths silently
+                        substitute a public resolver (macOS server default 8.8.8.8; Windows literal
+                        1.1.1.1) and pass it to VantageComparer.compareVantagePoints(localServer:).
+                        Because the substitute is itself public, it agrees with the public vantage set →
+                        isRedirectionDetected == false → panel prints "✅ No tampering detected" labeled
+                        Local (8.8.8.8). In runWitness/runTestify (macOS) and the Witness seal (Windows)
+                        that same comparison is cryptographically signed — a valid, verifiable
+                        WitnessSnapshot attesting "no redirection" about a public resolver mislabeled as
+                        the user's local resolver. No local resolver was ever measured. AppModel.swift
+                        sets resolverSubstituted nowhere (grep-confirmed), so the B174 mitigation
+                        (Synthesizer caps Mirror at .degraded when the flag is set) never engages.
+- **Cross-ref. Delta:** NOT covered. B174 (fixed) added resolverSubstituted only to FirstRunScan;
+                        MACX-158/WIN-116 (fixed) fixed the CLI witness; WINX-126 (fixed) fixed CLI
+                        guided-Prophet fallback. The GUI ViewModel layer was untouched; the runWitness
+                        line cited in DELTAS-fixed.md (:497-554) is stale — current runWitness is at
+                        :1160-1180, confirming live, uncovered code.
+- **Fix(es):**          [Fix 1] When getSystemDNSServers().first is nil, do NOT substitute a public
+                        resolver on Mirror/Witness/Testify. Either refuse (as runLeak() at :990-996
+                        already does) or substitute AND set resolverSubstituted=true so the B174 cap and
+                        substitution disclosure engage.
+                        [Fix 2] Thread resolverWasSubstituted into compareVantagePoints/ComparisonResult
+                        so a substituted comparison can never render as a clean localOutcome, and
+                        WitnessTestifyPlanner.seal refuses to sign (or marks the snapshot inconclusive)
+                        when local was substituted.
+                        [Fix 3] Resolve the Windows // TODO: Add UI notification for fallback
+                        (AppViewModel.cs:451) as part of Fix 1.
+- **Code Sample:**      [
+
+                        // macOS AppModel.swift:949 (runCompare) — no resolverSubstituted set anywhere here
+                        let local = NetworkKeyState.getSystemDNSServers().first ?? server   // server default "8.8.8.8"
+                        else { summary = "✅ No tampering detected" }                        // :974 false clean
+                        // macOS AppModel.swift:1173 (runWitness) — substitute flows into a SIGNED snapshot
+                        let local = NetworkKeyState.getSystemDNSServers().first ?? server
+                        // Windows AppViewModel.cs:447-452
+                        var local = NetworkKeyState.GetSystemDNSServers().FirstOrDefault();
+                        if (local == null) { local = "1.1.1.1"; /* TODO: Add UI notification for fallback */ }
+
+                        ]
+---
+
+## **D. Platform Integration & Resource Safety**
+
+---
+- **[D001]**            Windows retains orphaned VerdictAction.cs symbol contradicting macOS
+                        ResultAction.swift parity
+- **Status:**           **ALREADY FIXED** — VerdictAction.cs has been renamed to ResultAction.cs.
+                        The file now declares `record ResultAction` and `static class ResultActions`
+                        (lines 23-25). The header comment correctly references
+                        macOS/Sources/SyxxKit/Synthesis/ResultAction.swift. Grep for "VerdictAction"
+                        across the entire Windows codebase returns zero matches. Also resolves D143
+                        (parity audit: "Windows has duplicate ResultAction.cs AND VerdictAction.cs").
+- **Criticality:**      Non-critical; platform naming and symbol parity divergence between macOS
+                        Swift and Windows C#.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/VerdictAction.cs:7-8
+- **Issue:**            macOS/Sources/SyxxKit/Synthesis/VerdictAction.swift was renamed to
+                        ResultAction.swift to comply with the project rule prohibiting the word
+                        verdict in code. Windows retains VerdictAction.cs, declaring record
+                        VerdictAction and class VerdictActions while citing the deleted macOS file
+                        in its header comment.
+- **Cross-ref. Delta:** D143 (parity audit duplicate file finding) — also resolved by this fix.
+- **Fix(es):**          [Fix 1] Rename Windows/dotNET/Syxx.Kit/Synthesis/VerdictAction.cs to
+                        ResultAction.cs.
+                        [Fix 2] Rename record VerdictAction to record ResultAction and static class VerdictActions to static class ResultActions matching macOS.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/VerdictAction.cs:7-8
+                        // macOS/Sources/SyxxKit/Synthesis/VerdictAction.swift
+                        public record VerdictAction
+
+                        ]
+---
+
+## **E. Security & Hardening**
+
+---
+- **[E001]**            LicenseManager Unprotect swallows DPAPI decryption exceptions as null
+- **Status:**           **OPEN** — Verified in source. LicenseManager.cs:181-184 still has
+                        `catch { return null; }` around the DPAPI DecryptLegacy call. Keystore
+                        corruption or OS permission failures remain indistinguishable from "no key
+                        stored". E166 (crypto audit: "DpapiSecretStore does not zero decrypted
+                        plaintext") is related but distinct.
+- **Criticality:**      Non-critical; tri-state violation collapsing keystore or permission error
+                        into empty state.
+- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:175-185
+- **Issue:**            Unprotect function uses a bare catch { return null; } block around DPAPI
+                        decryption. Keystore corruption or OS permission failures are swallowed,
+                        making system errors indistinguishable from no key stored.
+- **Cross-ref. Delta:** Related to E166 (DPAPI plaintext not zeroed) — distinct but in same area.
+- **Fix(es):**          [Fix 1] Surface decryption failures as a distinct tri-state/Result error
+                        state rather than returning null.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:175-185
+                        catch { return null; }
+
+                        ]
+---
+---
+- **[E002]**            SyncTrialAnchorWithServerAsync swallows network exceptions silently
+- **Status:**           **OPEN** — Verified in source. LicenseManager.cs:248-249 still has
+                        `catch { }` followed by `return null;` in SyncTrialAnchorWithServerAsync.
+                        All network exceptions (timeout, DNS failure, TLS error, HTTP errors) are
+                        silently swallowed. The caller cannot distinguish "server unreachable" from
+                        "server returned an error" from "no trial anchor exists".
+- **Criticality:**      Non-critical; tri-state violation hiding network connectivity errors during
+                        trial sync.
+- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:232-250
+- **Issue:**            SyncTrialAnchorWithServerAsync catches and swallows all network exceptions
+                        with catch { } return null;. Connectivity errors are treated as an empty
+                        state instead of surfacing the network failure.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Log and propagate network exceptions as an explicit error outcome.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:232-250
+                        catch { } return null;
+
+                        ]
+---
+---
+- **[E200]**            DimensionService live control-content fetch lacks certificate pinning
+- **Criticality:**      Critical; user not yet made aware.
+- **Location:**         macOS/Sources/SyxxApp/DimensionService.swift:84-88, 121-126
+- **Issue:**            DimensionService fetches startup, broadcast, and whats-new control content
+                        over
+                        URLSession.shared with only HTTPS host allow-listing. The default session trusts
+                        the system root store and any installed certificate, so a MITM with a compromised
+                        CA can serve a malicious Broadcast containing a url that the GUI presents as a
+                        vendor action link. The cached response is HMAC-protected (D037), but the live fetch
+                        path is not pinned, so a force refresh or first launch can install a malicious
+                        broadcast or update pointer. This is a trust-infrastructure/control-content attack that
+                        can redirect users to phishing or malware URLs. The broadcast should be treated as
+                        untrusted and not rendered as a clickable vendor action until the transport is pinned
+                        to the real server key.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Pin the server certificate/SPKI for the approved HTTPS hosts
+                        (*.syxx.app, syxx.app) and reject the connection if the presented certificate
+                        does not match the pinned key.
+                        [Fix 2] Until pinning is in place, do not present Broadcast.url as a trusted
+                        vendor action link; render it as plain text and require the user to copy/paste it.
+                        [Fix 3] Validate that Broadcast.url is an HTTPS URL on an approved host before
+                        using it, and default to no action if validation fails.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxApp/DimensionService.swift:84-88
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        let decoded = try JSONDecoder().decode(StartupResponse.self, from: data)
+                        cacheResponse(decoded)
+                        return decoded
+
+                        // macOS/Sources/SyxxApp/DimensionService.swift:121-126
+                        guard let url = URL(string: "\(baseURL)/api/broadcast") else { return nil }
+                        do {
+                            let (data, _) = try await URLSession.shared.data(from: url)
+                            let wrapper = try JSONDecoder().decode([String: Broadcast?].self, from: data)
+                            return wrapper["broadcast"] ?? nil
+                        }
+
+                        ]
+---
+
+## **F. Miscellaneous**
+
+---
+
+
+
+# Linux/Ubuntu Infrastructure Security Audit (2026-07-30)
+
+Source: security-auditor + linux-infra-admin persona audit of all deployment scripts, CI, and packaging.
+
+**[D128]** CRITICAL — Installer-template runs as root with secrets in inline Environment= lines
+**Location:** `scripts/installer-template.sh:~87`
+**Issue:** Systemd unit runs as root and embeds every secret as inline `Environment=` directives. Any local user can read them via `systemctl show syxx-server`. Contradicts `deploy.sh` which uses a dedicated user and 0600 env file.
+**Fix:** Mirror deploy.sh pattern: create syxx service user, write secrets to /etc/syxx/syxx.env with chmod 600, reference via EnvironmentFile.
+
+**[D129]** HIGH — Installer-template missing systemd hardening directives
+**Location:** `scripts/installer-template.sh:~87`
+**Issue:** Lacks 20+ hardening directives that deploy.sh applies (CapabilityBoundingSet, NoNewPrivileges, ProtectSystem=strict, ProtectHome, MemoryDenyWriteExecute, etc.)
+
+**[D130]** HIGH — Silent firewall-cmd failures mask exposed ports
+**Location:** `scripts/installer-template.sh:~130`
+**Issue:** All firewall-cmd commands use `|| true`, silently continuing if firewalld isn't running.
+
+**[D131]** MEDIUM — syxx cage non-functional under strict snap confinement
+**Location:** `Linux/snap/snapcraft.yaml:33-36`
+**Issue:** CAP_NET_RAW cannot be granted to strictly-confined snap. Cage always reports "untested."
+
+**[D132]** MEDIUM — Sentry auth token passed as CLI argument (process-listing leak)
+**Location:** `.github/workflows/ci.yml:~155`
+**Issue:** `--auth-token` readable via /proc/<pid>/cmdline on shared CI runners.
+
+**[D133]** MEDIUM — eval used to execute dynamically constructed SSH/SCP commands
+**Location:** `scripts/install-cert-remote.sh:~100,110,120`
+**Issue:** eval in deployment scripts is a dangerous pattern.
+
+**[D134]** MEDIUM — No payload integrity verification in self-contained installer
+**Location:** `scripts/installer-template.sh:~end`
+**Issue:** Base64-encoded tarball has no checksum. Tampering goes undetected.
+
+**[D135]** HIGH — Nginx missing client_body_buffer_size limit
+**Location:** `scripts/deploy.sh:~380`
+
+**[D136]** MEDIUM — Installer nginx config missing all MOTD subdomains
+**Location:** `scripts/installer-template.sh:~110`
+
+**[D137]** MEDIUM — Sentry API token with excessive scopes persisted indefinitely
+**Location:** `scripts/deploy-sentry.sh:~145`
+
+**[D138]** HIGH — systemctl show leaks non-secret operational Environment values
+**Location:** `scripts/deploy.sh:~200`
+
+*Plus 18 additional findings (L004, L007-L009, L012-L020, L025-L030) — full report in agent output.*
+
+---
+
+# Windows Client Security Audit (2026-07-30)
+
+Source: security-auditor + csharp-developer persona audit of 165 .cs files across Syxx.Kit, Syxx, SyxxUI, Syxx.Tests.
+
+**Overall assessment:** Strong defense-in-depth posture. Findings are residual risks, not critical vulnerabilities.
+
+**[E163]** MEDIUM — LinuxSecretStore pinned schema never freed, raw P/Invoke struct layout risk
+**Location:** `Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs:~270-310`
+**Issue:** 64-byte pinned managed memory block with hand-written offsets. GCHandle and StringToCoTaskMemUTF8 allocations never freed. Struct layout may differ across libsecret versions.
+
+**[E164]** LOW-MEDIUM — LinuxSecretStore file-fallback chmod 0600 is best-effort with silent failure
+**Location:** `Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs:~165`
+**Issue:** chmod subprocess wrapped in try/catch that swallows failure. File may remain 0644.
+
+**[E165]** LOW — PortalView.RunTracert target interpolated without SystemToolPath resolution
+**Location:** `SyxxUI/Views/PortalView.xaml.cs:~160`
+**Issue:** `tracert` launched by name, not resolved to absolute path under SystemDirectory.
+
+**[E166]** LOW-MEDIUM — DpapiSecretStore does not zero decrypted plaintext from memory
+**Location:** `Windows/dotNET/Syxx.Kit/DpapiSecretStore.cs:~75-85`
+**Issue:** Decrypted byte array never explicitly zeroed; persists in managed heap until GC.
+
+**[E167]** LOW — DoH template URL not validated as HTTPS before netsh registration
+**Location:** `Windows/dotNET/Syxx.Kit/EncryptedDNSConfigurator.cs:~75`
+
+*Positive: Ed25519 update verification, DNS spoofing detection, WebView2 lockdown, SystemToolPath hardening, telemetry redaction, file permission hardening all confirmed strong.*
+
+---
+
+# macOS Client Security Audit (2026-07-30)
+
+Source: security-auditor + swift-expert persona audit of 46+ Swift files.
+
+**[E168]** CRITICAL — DNSCryptProxyConfig: PATH/which fallback for root-executed binary
+**Location:** `macOS/Sources/SyxxKit/DNSCryptProxyConfig.swift:157-164`
+**Issue:** Falls back to `/usr/bin/which dnscrypt-proxy` — attacker controlling PATH injects malicious binary running as root. Homebrew candidates are admin-writable.
+
+**[E169]** MEDIUM — DNS leakage via hardcoded default resolver 8.8.8.8
+**Location:** `macOS/Sources/SyxxKit/DNSResolver.swift:41`
+
+**[E170]** MEDIUM — Hardcoded Cloudflare DoH for all secure resolution
+**Location:** `macOS/Sources/SyxxKit/DNSResolver.swift:~250`
+
+**[E171]** MEDIUM — DNSCrypt bootstrap resolvers hardcoded as plaintext DNS
+**Location:** `macOS/Sources/SyxxKit/DNSCryptProxyConfig.swift:105`
+
+**[E172]** HIGH — DeepSyxx XPC: installPfRules accepts arbitrary client rules without content validation
+**Location:** `macOS/Sources/DeepSyxx/main.swift:96-107`
+
+**[E173]** HIGH — DeepSyxx XPC: setDNSServers accepts arbitrary server list without format validation
+**Location:** `macOS/Sources/DeepSyxx/main.swift:133-202`
+
+**[E174]** HIGH — WKContentRuleList compilation failure silently drops external resource block
+**Location:** `macOS/Sources/SyxxApp/RemoteContentView.swift:~195-210`
+
+**[E175]** MEDIUM — loadHTMLString with baseURL enables relative URL loading
+**Location:** `macOS/Sources/SyxxApp/RemoteContentView.swift:~310`
+
+**[E176]** MEDIUM — keygenPublicKeyHex empty — license response signatures not verified
+**Location:** `macOS/Sources/SyxxKit/LicenseManager.swift:74`
+
+**[E177]** MEDIUM — AppcastVerifier pinnedPublicKeysBase64 empty — no update can verify
+**Location:** `macOS/Sources/SyxxKit/UpdateService.swift:~237`
+
+**[E178]** LOW — DeepSyxx PF temp file in NSTemporaryDirectory with default umask
+**[E179]** LOW — Sentry auto-breadcrumb tracking captures interaction patterns
+**[E180]** LOW — telemetryEnabled defaults to true in init()
+**[E181]** LOW — DNSCrypt state directory may have overly broad permissions
+**[E182]** LOW — TracerouteRunner: no input validation on target parameter
+
+*Positive: XPC code-signing validation, Keychain accessibility, Cage capture file security, ContentWarp SSRF, telemetry redaction, update signature verification, RemoteUrlPolicy, witness verification all confirmed strong.*
+
+---
+
+# Cross-Platform Parity Audit (2026-07-30)
+
+Source: code-reviewer + network-engineer persona audit comparing macOS Swift vs Windows C# implementations.
+
+**[C158]** CRITICAL — authoritativeDivergesConfirmed strength: 0.80 (macOS) vs 0.95 (Windows)
+**macOS:** `SynthesisEngine.swift:~195` → 0.80
+**Windows:** `SynthesisEngine.cs:~263` → 0.95
+**Fix:** Align Windows to 0.80 (B092 rationale is load-bearing).
+
+**[C159]** HIGH — DenialOfExistence.NotADenial: skip (macOS) vs .negative (Windows)
+**Fix:** Align Windows to macOS — break/skip the datapoint (B061 rationale correct).
+
+**[C160]** CRITICAL — DNSSEC expired RRSIG: .inconclusive (macOS) vs .positive (Windows)
+**macOS:** `DNSCanaries.swift` → .inconclusive (clock skew undecidable)
+**Windows:** `DNSCanaries.cs` → .positive (threat)
+**Fix:** Align Windows to .inconclusive. False-positive threat on Windows.
+
+**[D139]** CRITICAL — Sentinel DnsEncrypted: ConditionState tri-state (macOS) vs Bool (Windows)
+**Fix:** Change Windows to ConditionState. C090 explicitly calls out this defect class.
+
+**[D140]** HIGH — NXDOMAIN canary missing CNAME-hijack and both-answered detection on Windows
+**Fix:** Port C071 checks to Windows NxdomainHijackAsync.
+
+**[D141]** MEDIUM — IsUsableDNSServer: link-local NOT excluded (macOS) vs excluded (Windows)
+**Fix:** Remove LinkLocal exclusion from Windows per RFC 8106.
+
+**[D142]** HIGH — MergedDatapoint.IsConflicting: pairwise (macOS) vs anchored-on-first (Windows)
+**Fix:** Replace Windows with macOS pairwise algorithm (B170 fix).
+
+**[D143]** MEDIUM — Windows has duplicate ResultAction.cs AND VerdictAction.cs
+**[D144]** MEDIUM — PlainExplanation: macOS truncates despite with "+N more"; Windows drops silently
+**[D145]** MEDIUM — FirstRunScan: Glutton tracking and resolverSubstituted divergence
+
+*Plus 35 additional findings (P002-P049) in agent output.*
+
+---
+
+# DNS Protocol Correctness Audit (2026-07-30)
+
+Source: network-engineer + all language specialists persona audit comparing macOS/Windows/Python DNS implementations.
+
+**Overall pattern:** macOS is most hardened. Windows missing 12 distinct hardening features across capture and probe layers.
+
+**[B255]** HIGH — Windows CLASS filter hardcoded to IN — breaks CHAOS queries
+**Location:** `Windows/dotNET/Syxx.Kit/DNSResolver.cs:~908`
+**Issue:** `if (r.Cls != 1) continue;` — macOS correctly compares against queried QCLASS (C057 fix).
+
+**[B256]** MEDIUM-HIGH — Windows off-name filter omits DNSSEC record types (RRSIG/DNSKEY)
+**Location:** `Windows/dotNET/Syxx.Kit/DNSResolver.cs:~912`
+**Issue:** Only checks A/AAAА. macOS also checks RRSIG(46)/DNSKEY(48) — prevents attacker injecting signed records from unrelated zones.
+
+**[B257]** MEDIUM — Windows missing RcodeOther status — non-standard RCODEs collapse to TransportError
+**Location:** `Windows/dotNET/Syxx.Kit/DNSResolver.cs:~863`
+
+**[B258]** HIGH — Windows IPv6 extension headers not walked — DNS packets invisible behind Hop-by-Hop/Routing/Fragment
+**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~358-365`
+
+**[B259]** MEDIUM-HIGH — Windows TCP DNS on port 53 not captured
+**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~336,358`
+
+**[B260]** MEDIUM — Windows IPv6 addresses rendered as uncompressed hex — never match system resolver list
+**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~369-371`
+
+**[B261]** MEDIUM — Windows dnsPayloadLength from buffer tail, not UDP length — counts Ethernet padding as DNS
+**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~341`
+
+**[B262]** HIGH — Windows DNSSECVerifier missing C059 owner/signer binding and C125 DNSKEY field validation
+**Location:** `Windows/dotNET/Syxx.Kit/DNSSECVerifier.cs:~130-145`
+**Issue:** Attacker can substitute valid DNSKEY+RRSIG from any signed zone to defeat stripping canary.
+
+**[B263]** MEDIUM — Windows amplification probe missing EDNS0 + TCP-fallback detection
+**[B264]** MEDIUM — Windows FilteringProbe missing control-resolver validation — globally nonexistent domains reported as "filtered"
+**[B265]** MEDIUM — Windows CNAMEChainProbe missing loop/cap/conflict detection
+**[B266]** LOW-MEDIUM — Windows DNSCapture missing isPartial field
+**[B267]** MEDIUM — Windows ResponseQuestionMatches omits QDCOUNT and QCLASS validation
+**[B268]** MEDIUM — Windows DNSResponse missing spoofedPacketCount and attemptCount
+**[B269]** LOW-MEDIUM — Python server _parse_response lacks class filtering and ANCOUNT validation
+
+---
+
+# Python Server Security Audit (2026-07-30)
+
+Source: security-auditor + python-pro persona audit of 33 .py files, 2 .sh files, 9 scripts, 14 HTML files, CI config.
+
+**Overall assessment:** Exceptionally thorough security engineering. SSRF protection, SQL parameterization, timing-safe HMAC, rate limiting, path traversal guards, DNS spoofing defenses all confirmed strong.
+
+**[A229]** CRITICAL — licensing.py HMAC column name mismatch makes DB-backed offline licenses permanently fail
+**Location:** `Server/syxx_server/licensing.py` (`_validate_offline`)
+**Issue:** `row.get("hmac")` but column is `row_hmac` (popped by db.license_lookup). Every DB-backed offline license silently rejected.
+
+**[A230]** MEDIUM — HSTS set on untrusted X-Forwarded-Proto from non-proxy sources
+**Location:** `Server/syxx_server/app.py` (`_security_headers`)
+**Issue:** Not gated on loopback peer, unlike `_client_ip()`.
+
+**[A231]** MEDIUM — PTR hostnames attacker-influenced, outside Ed25519 signature
+**Location:** `Server/syxx_server/leak.py` (`_enrich_observations_with_hostnames`)
+
+**[A232]** MEDIUM — Keygen webhooks lack timestamp validation, allowing indefinite replay
+**Location:** `Server/syxx_server/app.py` (`_route_keygen_webhook`)
+
+**[A233]** MEDIUM — deploy.sh SYXX_DB_PATH shell-interpolated into Python string literal (code injection)
+**Location:** `Server/scripts/deploy.sh:~76`
+
+**[A234]** LOW-MEDIUM — DNS rate-limiter bucket dict has no cardinality cap
+**[A235]** LOW — Keygen API response body read without size limit
+**[A236]** LOW — Static asset files read entirely into memory without size limit
+
+---
+
+# Cryptographic Audit (2026-07-30)
+
+Source: security-auditor + penetration-tester persona audit of all crypto operations across all 3 platforms.
+
+**[E183]** CRITICAL — Windows signature verification order inverted (time checks before Ed25519)
+**Location:** `Windows/dotNET/Syxx.Kit/WitnessSigner.cs:VerifySnapshotDetailed`
+**Issue:** Expired/future-dated/trust checks run BEFORE signature verification. Fabricated snapshot with past expiresAt returns `.Expired` not `.InvalidSignature`. macOS correctly verifies signature FIRST (B184).
+
+**[E184]** CRITICAL — Windows IntegrityTag HMAC key stored as raw unencrypted bytes on disk
+**Location:** `Windows/dotNET/Syxx.Kit/Trust/Trust.cs:IntegrityTag.LoadOrCreateKey`
+**Issue:** `File.WriteAllBytes(path, key)` — no DPAPI, no ACL. Docs claim "DPAPI-protected" but implementation is raw bytes.
+
+**[E185]** HIGH — Keygen Ed25519 public key empty on all 3 platforms
+**Location:** macOS/Windows/Server LicenseManager
+**Issue:** Anti-MITM defense against compromised CA is inert. Fail-safe but security feature not deployed.
+
+**[E186]** HIGH — macOS LicenseManager Keychain items use weak accessibility class
+**Location:** `macOS/Sources/SyxxKit/LicenseManager.swift`
+**Issue:** `kSecAttrAccessibleAfterFirstUnlock` without `ThisDeviceOnly` or `kSecUseDataProtectionKeychain`. WitnessKeyManager uses the correct stronger class.
+
+**[E187]** MEDIUM — DPAPI blobs in Roaming profile (should be Local)
+**[E188]** MEDIUM — Collector vs witness key ID scheme inconsistent
+**[E189]** MEDIUM — Windows IntegrityTag key file has no ACL
+**[E190]** MEDIUM — macOS witness private key cached as non-zeroizable String
+**[E191]** LOW — v1 license row HMAC uses pipe-delimited format
+**[E192]** MEDIUM — Witness trust set loaded without integrity verification
+**[E193]** MEDIUM — Trial HMAC key derivable from leaked backup + public UUID
+**[E194]** LOW — Leak tokens use 128-bit entropy (convention is 256-bit)
+**[E195]** MEDIUM — IntegrityTag docs claim DPAPI, implementation uses raw file
+**[E196]** LOW — Unpinned collector transport accepted without rejection
+**[E197]** HIGH — macOS LicenseManager missing kSecUseDataProtectionKeychain flag
+**[E198]** LOW — Session tokens valid 60min after license revocation
+**[E199]** MEDIUM — Witness key ID uses only 64 bits
+
+*Positive: Ed25519 throughout, cryptographic RNG everywhere, constant-time comparison, fail-closed defaults, save-time key validation, canonical signing format, SPKI pinning, HMAC integrity on DB rows.*
+
+---
+
+# Test Integrity Audit (2026-07-30)
+
+Source: qa-expert + code-reviewer persona audit of 90 Swift, 47 C#, 25 Python test files + 2 gate scripts.
+
+**Overall assessment:** Exceptionally well-engineered. No CRITICAL or HIGH defects. Mutation proofs pervasive. No mock-only DNS tests. No production DB writes.
+
+**[F049]** LOW — [done] Stale "verdict" in test_scheduler.py:82 docstring
+**[F050]** LOW — [done] Stale "verdict" in test_payments.py:727 comment
+**[F051]** MEDIUM — [done] Vacuous test: testD083_TamperedDisplayFormatVersion asserts nothing
+**[F052]** MEDIUM — Known B252 gap: DoH outcomes not covered by Ed25519 signature
+**[F053]** LOW — Honesty-coverage-gate covers 7/~78 guards (gap disclosed)
+**[F054]** LOW — Windows DNS capture attribution owed a real elevated-host run
+**[F055]** LOW — AppModelWitnessTests rely on real network for core assertions
+**[F056]** LOW — testRapidReTestify has acknowledged probabilistic detection power
+**[F057]** LOW — C# SkippableFact silently passes on non-Windows
+**[F058]** LOW — Parity gate SIGNED_PAYLOAD_KEYS validation is narrow (1 key)
+**[F059]** LOW — [done] test_scheduler backup test has conditional directory assertion
+**[F060]** LOW — [done] test_scheduler run_one test has conditional result assertion
+**[F061]** CRITICAL — [done] Vacuous assertion on truncated packet handling in Server/tests/test_dns_authoritative.py:57-58
+**[F062]** HIGH — [done] Missing response-drop assertions on malformed DNS inputs in Server/tests/test_dns_authoritative.py:82, 94
+**[F063]** MEDIUM — [done] HtmlAssetParserTests.cs:10-58 lacks negative/failure test cases for malformed HTML and dangerous URI schemes
+**[F064]** MEDIUM — [done] AgreementResourceTests.swift:5 lacks negative test verifying tampered contract text or hash mismatch is rejected
+
+
+
+
+---
+
+# Server HTML Frontend Audit (2026-07-31)
+
+Source: security-auditor persona audit of 15 HTML files (4,334 lines).
+
+**[A237]** HIGH — DOM-based XSS: resolver IP/hostname in innerHTML unescaped (leaktest.html:305)
+**[A238]** HIGH — DOM-based XSS: attestation keyId in innerHTML unescaped (leaktest.html:312)
+**[A239]** HIGH — Same as A237 (duplicate page leak-test.html:315)
+**[A240]** HIGH — Same as A238 (duplicate page leak-test.html:322)
+**[A241]** HIGH — CSRF: checkout GET lacks CSRF token (index.html:630)
+**[A242]** MEDIUM — Production server IP 198.71.60.193 hardcoded in Warp demo
+**[A243]** LOW — Private IP in demo UI
+**[A244]** HIGH — Session token in localStorage (XSS-accessible) (index.html:667)
+**[A245]** MEDIUM — XOR obfuscation presented as "encryption" (index.html:617)
+**[A246]** LOW — Duplicate leak-test pages now in sync but cosmetically diverged
+**[A247]** MEDIUM — Green "safe" result when test cannot confirm safety (leaktest.html:275)
+**[A248]** MEDIUM — Same as A247 (duplicate page)
+**[A249]** MEDIUM — No CSP or X-Frame-Options meta tag on leak-test pages
+**[A250]** MEDIUM — Same as A249 (duplicate page)
+**[A251]** MEDIUM — Legal pages (terms/privacy/refund) lack clickjacking protection
+**[A252]** LOW — Stripe session_id reflected in DOM (purchase-success.html:76)
+**[A253]** MEDIUM — terms.html is DRAFT with [OWNER DECISION] placeholders
+**[A254]** MEDIUM — privacy.html is DRAFT pending owner approval
+**[A255]** LOW — purchase-cancel.html missing X-Frame-Options
+**[A256]** MEDIUM — Unresolved [OWNER DECISION] in refund-policy.html:80 (live-served)
+**[A257]** LOW — Internal telemetry endpoints named in docs/help.html
+**[A258]** LOW — Inline onclick in docs/api.html breaks under strict CSP
+**[A259]** LOW — beta_ack.html references unrelated products (Nnyx, Zzyn)
+**[A260]** LOW — {{BASE}} template variable in served email template
+**[A261]** LOW — Hardcoded fallback DNS zone could mask server misconfiguration
+
+# Corpus Generation Infrastructure Audit (2026-07-31)
+
+Source: qa-expert persona audit of 10 corpus files cross-referenced against live engine code.
+
+**[F065]** CRITICAL — seeds.json uses "expectedVerdict" but test loader expects "expectedResult" — entire Stage0 golden corpus suite broken
+**Location:** `corpus/stage0/seeds.json` (all 11 vectors)
+**Issue:** Swift `VectorDTO` declares `expectedResult` but JSON key is `expectedVerdict`. Decoding throws `keyNotFound`. Both platforms affected.
+**Fix:** Rename `"expectedVerdict"` → `"expectedResult"` in all 11 vectors.
+
+**[F066]** CRITICAL — witness golden vectors still use "verdict" wire key — both cross-platform test suites broken
+**Location:** `corpus/witness-crossplatform/witness-macos-degraded.json:77`, `witness-macos-answers.json:191`
+**Issue:** JSON uses `"verdict"` in `comparisonResult` but both platforms now expect `"conclusion"` (E011 rename). Swift throws on decode, C# silently defaults to empty string causing signature mismatch.
+**Fix:** Regenerate both fixtures with current code (`SYXX_GENERATE_FIXTURES=1 swift test --filter WitnessCrossPlatformFixtureGenerator`). Re-sign required.
+
+**[F067]** LOW — Degraded fixture predates B098 fields (stale shape, optional so non-breaking). Subsumed by F066 fix.
+
+**[F068]** MEDIUM — Matrix engine has 8 diagnoses but only 3 golden vectors cover 1 diagnosis pathway
+**Location:** `corpus/matrix/vectors/`
+**Issue:** Missing golden vectors for: clean state, suppressed diagnoses, co-occurring diagnoses, exclusion firing, threshold boundaries, untested state, multi-section evidence.
+
+**[F069]** MEDIUM — No redirection=true probe parity vector — DNS hijack detection has no golden vector
+**Location:** `corpus/probe-parity/probe-parity.json`
+**Issue:** Only AGREE and TIMEOUT vectors exist. The probe layer's primary contract (detecting hijacks) is unverified by golden corpus. Requires real capture on intercepted network.
+
+**[F070]** LOW — Stale line reference in generate.py docstring (appcast.py:56-58 → 57-59)

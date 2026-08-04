@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.WitnessView"
+             x:DataType="vm:WitnessViewModel">
+  <StackPanel Spacing="20">
+    <StackPanel Spacing="6">
+      <TextBlock Text="WITNESS • SIGNED RESOLUTION" FontSize="12" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="And the Witness testified: when local and remote records matched, when they held steady over time, and when no leak betrayed the encrypted path, the DNS was healthy. When they did not, the network, and its eyes, were lying indeed."
+                 FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+      <TextBlock Text="Witness registers a snapshot of the network's resolution for a name and cryptographically signs a tamper-proof testimony of it. Alter a single character afterward and the seal breaks."
+                 FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </StackPanel>
+
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBox Grid.Column="0" Watermark="Domain (e.g., github.com)" Text="{Binding Domain}" />
+        <Button Grid.Column="1" Content="Witness Testimony" Command="{Binding SignCommand}" IsEnabled="{Binding !IsRunning}" />
+      </Grid>
+    </Border>
+
+    <StackPanel Spacing="12" IsVisible="{Binding HasResult}">
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding SignatureLine}" FontFamily="monospace" FontSize="13" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextBrush}" />
+          <TextBlock Text="{Binding IdentityLine}" FontFamily="monospace" FontSize="12" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="{Binding VerifyLine}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"
+                     Foreground="{Binding VerifyBrush}" />
+        </StackPanel>
+      </Border>
+      <Border CornerRadius="10" Padding="14" Background="{StaticResource SyxSurfaceDarkBrush}"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <TextBlock Text="{Binding PersistenceNote}" FontSize="13" TextWrapping="Wrap"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </Border>
+    </StackPanel>
+
+    <!-- Verify a testimony sealed elsewhere: paste its JSON and check the signature. Renders into the
+         same VerifyLine/VerifyBrush the self-verify path uses. -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="VERIFY A TESTIMONY" FontSize="12" FontWeight="Bold"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBlock Text="Paste a signed testimony (JSON) sealed on any device to check whether its signature holds."
+                   FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBox Text="{Binding ExternalSnapshotJson}" AcceptsReturn="True" TextWrapping="Wrap"
+                 MinHeight="96" FontFamily="monospace" FontSize="12"
+                 Watermark="{}{ &quot;targetDomain&quot;: &quot;github.com&quot;, &quot;signature&quot;: … }" />
+        <Button Content="Verify Testimony" Command="{Binding VerifyExternalCommand}"
+                HorizontalAlignment="Left" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

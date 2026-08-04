@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SyxxUI.Avalonia.Views.CageView">
+  <StackPanel Spacing="20">
+    <StackPanel Spacing="6">
+      <TextBlock Text="CAGE • DNS CAPTURE" FontSize="12" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="Live Query Capture" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
+      <TextBlock Text="The Cage trapped the DNS queries so they could be inspected without escape, their headers and answers laid bare for judgment."
+                 FontSize="16" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" FontWeight="Bold" />
+      <TextBlock Text="Cage performs live packet capture, extracting DNS header flags, transaction IDs, query entropy, and query rates to detect exfiltration, beaconing, or DNS tunneling."
+                 FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </StackPanel>
+
+    <!-- Honest state: live capture needs root + raw sockets. The GUI does not fake a capture; it
+         points the user at the elevated CLI, exactly as the macOS and Windows clients do. Graphical
+         elevation (pkexec) is the Linux capture path (G17), still to be wired. -->
+    <Border CornerRadius="12" Padding="18" Background="{StaticResource SyxSurfaceDarkBrush}"
+            BorderBrush="{StaticResource SyxOrangeBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="LIVE CAPTURE" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxOrangeBrush}" />
+        <TextBlock Text="Live packet capture needs elevated privileges and raw sockets, which this window does not hold. Run the command below in a terminal, then browse and use your apps as normal so DNS queries are produced. A capture on its own is not a security conclusion."
+                   FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+        <Border Background="{StaticResource SyxCanvasBrush}" CornerRadius="6" Padding="12">
+          <TextBlock Text="sudo syxx cage --duration 30" FontFamily="monospace" FontSize="14"
+                     Foreground="{StaticResource SyxTealBrush}" />
+        </Border>
+        <TextBlock Text="Graphical elevation (pkexec) for one-click capture on Linux is planned but not yet wired."
+                   FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

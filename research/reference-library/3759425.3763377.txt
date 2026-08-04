@@ -1,0 +1,494 @@
+# Source: 3759425.3763377.pdf
+# Title (best guess): Reasoning as a Resource: Optimizing Fast and Slow
+# Pages: 5 · Words: 3702
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+Reasoning as a Resource: Optimizing Fast and Slow
+Thinking in Code Generation Models
+Zongjie Li
+
+Shuai Wang∗
+
+zligo@cse.ust.hk
+Hong Kong University of Science and Technology
+Hong Kong, China
+
+shuaiw@cse.ust.hk
+Hong Kong University of Science and Technology
+Hong Kong, China
+
+Abstract
+
+1
+
+This position paper proposes a fundamental shift in designing code generation models: treating reasoning depth as a
+controllable resource. Rather than being an incidental byproduct of prompting, we argue that the trade-off between
+rapid, direct answers (“fast thinking”) and elaborate, chainof-thought deliberation (“slow thinking”) must be explicitly
+managed. We contend that optimizing reasoning budgets
+across the entire model lifecycle—from synthetic data creation and benchmarking to real-world deployment—can unlock superior trade-offs among accuracy, latency, and cost.
+This paper outlines how adaptive control over reasoning can
+enrich supervision signals, motivate new multi-dimensional
+benchmarks, and inform cost-aware, security-conscious deployment policies. By viewing fast and slow thinking as
+complementary modes to be scheduled, we envision coding
+agents that think deep when necessary and act fast when
+possible.
+
+Large language models (LLMs) trained on code now exceed
+human-written baselines on benchmarks such as HumanEval
+and MBPP [2, 3]. Their practical utility, however, is constrained by a three-way tension among correctness, latency,
+and token cost. Recent hybrid models, exemplified by Qwen3, expose explicit “fast” and “slow” modes that fuse direct
+answers with chain-of-thought traces, giving developers finegrained control over reasoning at inference time [1]. This
+development signals an important trend: reasoning depth is
+becoming a configurable parameter.
+In this paper, we use the term reasoning depth to refer
+to the extent of deliberate, step-by-step problem-solving
+a model engages in before producing a solution. Chainof-thought (CoT) traces—the externalized reasoning processes—serve as both the primary mechanism for implementing deeper reasoning and the measurable artifact that quantifies this depth in terms of token length and computational
+cost.
+While adaptive schedulers like AdaCoT [19] and AdaptThink [36] can learn when deeper reasoning is warranted on
+a per-prompt basis, cutting inference budgets significantly
+without harming success rates, the broader research culture
+still optimizes reasoning depth in isolation. Synthetic-data
+pipelines often favor maximal CoT regardless of cost; benchmark suites measure only end-to-end accuracy; and production deployments seldom map service objectives to thinking budgets. Moreover, recent work on intellectual-property
+leakage in multi-agent systems reveals that unconstrained
+CoT can itself become an attack surface [25].
+We take the position that reasoning depth must be treated
+as a first-class design parameter throughout the entire lifecycle of code LLMs. Specifically, we contend that (i) syntheticdata generation should schedule CoT length to balance supervision richness against token economy, (ii) evaluation
+frameworks must report latency and token budgets alongside correctness, and (iii) deployment stacks require policy
+engines that allocate thinking budgets according to task difficulty and security constraints. In the following sections,
+we elaborate on each of these claims and outline concrete
+research opportunities. Figure 1 provides a schematic of our
+proposed framework, illustrating how a central reasoning
+depth controller actively manages the trade-offs across the
+entire model lifecycle.
+
+CCS Concepts: • Computing methodologies → Machine
+learning; • Security and privacy → Software and application security.
+Keywords: Large Language Model; Reasoning Model
+ACM Reference Format:
+Zongjie Li and Shuai Wang. 2025. Reasoning as a Resource: Optimizing Fast and Slow Thinking in Code Generation Models. In
+Proceedings of the 1st ACM SIGPLAN International Workshop on
+Language Models and Programming Languages (LMPL ’25), October 12–18, 2025, Singapore, Singapore. ACM, New York, NY, USA,
+5 pages. https://doi.org/10.1145/3759425.3763377
+∗ Corresponding author.
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. Copyrights
+for components of this work owned by others than the author(s) must
+be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee. Request permissions from permissions@acm.org.
+LMPL ’25, Singapore, Singapore
+© 2025 Copyright held by the owner/author(s). Publication rights licensed
+to ACM.
+ACM ISBN 979-8-4007-2148-9/25/10
+https://doi.org/10.1145/3759425.3763377
+
+1
+
+Introduction
+
+LMPL ’25, October 12–18, 2025, Singapore, Singapore
+
+Reasoning Depth Controller
+Input
+User
+
+Question
+
+Fast Thinking
+
+Zongjie Li and Shuai Wang
+
+Slow Thinking
+
+LLM – Thinking
+Assistant
+Fast
+
+techniques enrich the supervision signal by guiding synthesis towards goals like improved API coverage [17], correcting specification misunderstandings [23], incorporating
+structured information from compilers [12], or even using
+adversarial setups to improve generation and search models synergistically [27]. Instruction-tuned models like Code
+Llama confirm that longer contexts mixing natural-language
+intent with step-wise rationale yield superior results [22].
+However, this pedagogical richness comes at a significant
+cost. Reasoning depth directly inflates token budgets for data
+synthesis and subsequent model training. Reinforcement
+learning controllers like AdaCoT and AdaptThink address
+this by treating the decision to generate CoT as a learned
+action, invoking it only when beneficial [19, 36]. Their success—recovering baseline accuracy with 50–70% fewer tokens—demonstrates a Pareto improvement that could directly lower synthesis costs. Furthermore, long reasoning
+traces introduce security and IP risks. Each CoT may inadvertently reveal proprietary algorithms, test cases, or implicit
+specifications. Audits of multi-agent systems confirm that
+such traces can leak sensitive information even when final
+outputs are filtered [25].
+These observations imply that data-curation pipelines
+must move beyond a “more is better” approach to CoT. Scheduling reasoning depth as a curriculum variable, generating
+short traces for pattern-matching tasks but longer, detailed
+ones for complex algorithmic or security-critical examples,
+offers a principled path forward. This defines a concrete optimization target for the next generation of synthetic data
+systems.
+
+LLM – Response
+
+<think>
+
+Content
+
+</think>
+
+Answer
+
+Null
+
+Slow
+
+Block1
+
+Block2
+
+<|eos|>
+Block3
+
+Model Lifecycle
+Stage 1: Synthetic Data Generation
+Problem: Uncontrolled CoT generation.
+Proposal: Schedule reasoning depth as a curriculum variable.
+
+Stage 2: Benchmarking & Evaluation
+Problem: Single-metric evaluation.
+Proposal: Multi-dimensional evaluation (Accuracy, Latency, Cost).
+
+Stage 3: Deployment & Applications
+Problem: Static, one-size-fits-all inference policy.
+Proposal: Adaptive policy control for reasoning budgets.
+
+Figure 1. An overarching framework for treating reasoning
+as a controllable resource. The top panel illustrates how the
+Reasoning Depth Controller modulates model behavior
+by choosing between “Fast Thinking” (direct answer generation) and “Slow Thinking” (generating an explicit chain
+of thought). The bottom panel depicts how this controller
+is applied to three critical stages of the Model Lifecycle:
+(1) strategically scheduling reasoning depth during Synthetic Data Generation; (2) enabling multi-dimensional
+evaluation—including accuracy, latency, and cost—during
+Benchmarking & Evaluation; and (3) implementing adaptive reasoning budgets aligned with task and security policies
+during Deployment & Applications.
+
+2
+
+3
+
+Inference-Time Testing & Benchmarking
+
+We assert that code LLM evaluation frameworks must expand beyond pass@k metrics to report multi-dimensional
+trade-offs across accuracy, latency, and token usage, thereby
+capturing the full performance envelope.
+The evaluation culture for code LLMs remains dominated
+by end-to-end correctness metrics like pass@k, popularized
+by HumanEval and MBPP [2, 3]. While convenient, these
+scalar measures are insufficient because they mask the how
+and the cost of producing a solution. Two models can achieve
+identical scores even if one provides a concise, efficient answer while the other requires a lengthy, expensive chain
+of thought. This is a critical omission, as recent work on
+inference-time scaling laws shows that accuracy rises predictably with token count, implying a continuous trade-off
+between quality, latency, and budget [34]. Taxonomies of
+code generation errors further reveal that failures often have
+complex root causes that simple pass/fail tests cannot capture [31]. Yet, no mainstream code benchmark systematically
+reports on the reasoning process itself.
+To expose these hidden performance dimensions, we propose that evaluation frameworks must log and report on the
+
+Synthetic Code Data Generation
+
+We argue that synthetic data generation for code LLMs must
+explicitly optimize reasoning depth as a curriculum variable,
+balancing pedagogical richness against token economy and
+intellectual property protection.
+The finite and uneven nature of publicly available source
+code has made synthetic data a necessity. Leading open models such as StarCoder are already trained on corpora where
+over half the tokens are machine-generated [10, 20]. This
+reliance on synthetic data is not a fringe practice but a prerequisite for scaling code LLMs beyond current limits.
+To provide robust supervision, many pipelines embed reasoning traces into the synthetic data, as code snippets alone
+are often insufficient. This approach has proven highly effective. Self-Instruct demonstrated that models can bootstrap
+their own instruction-response pairs for richer coverage [29].
+For code, distillation methods that preserve intermediate
+problem-solving steps successfully transfer competence from
+large “tutor” models to smaller “student” models [7]. Further
+
+2
+
+Reasoning as a Resource: Optimizing Fast and Slow Thinking in Code Generation Models
+
+CoT traces. This enables a more nuanced analysis, as categorized in our diagnostic framework in Table 1. This matrix
+distinguishes between valid reasoning and correct solutions,
+providing deeper insights. The ideal case is when correct reasoning leads to a correct solution. However, other quadrants
+are highly informative: correct reasoning that produces an
+incorrect solution may signal execution errors, while incorrect reasoning that coincidentally yields a correct solution
+points to potential overfitting or memorization—a critical
+concern for model robustness.
+
+align thinking budgets with task complexity, service-level
+objectives, and security constraints.
+Enterprise adoption has moved code LLMs into latencycritical and high-stakes environments, including IDE extensions, CI pipelines, and multi-agent systems. The applications are diverse and demanding, ranging from core software
+engineering tasks like automated program repair [4, 26],
+decompilation [32, 33], and mutation testing, to securitycritical goals like repository-level auditing [6], fuzzing [37],
+and even offensive security exercises [8]. In these settings,
+every token of reasoning incurs tangible GPU and monetary costs, making adaptive control of CoT a direct business
+concern [34]. Controllers like AdaCoT and AdaptThink
+provide the mechanism for this, learning per-prompt policies
+that invoke CoT selectively to save tokens while preserving
+accuracy [19, 36].
+The heterogeneity of tasks demands dynamic reasoning
+budgets. Generating a complex algorithm or a security exploit warrants deep deliberation, whereas autocompleting
+boilerplate code requires a near-instant response [2]. Adaptive schedulers thus function as policy engines, mapping
+service-level objectives (e.g., 95th-percentile latency, max
+cost-per-request) to an appropriate CoT budget [9].
+Security considerations add a critical second dimension.
+The MasLeak framework shows that unconstrained CoT
+can leak proprietary logic in multi-agent systems [25]. This
+threat is compounded by risks such as training data extraction attacks [18] and model-stealing via imitation [14]. A
+robust deployment strategy must therefore treat CoT as a potential liability. Defensive measures should include not only
+prompt filtering but also CoT-aware sanitization, selective
+disclosure policies, and techniques like code watermarking to
+trace IP theft [16, 22]. This must be part of a holistic security
+posture that also defends against adversarial inputs [28, 30]
+and mitigates ethical inconsistencies or biases [21, 24].
+In sum, production-grade code LLMs demand a joint optimization of accuracy, latency, cost, and confidentiality. This
+cannot be achieved without elevating reasoning depth from
+an implicit behavior to a controllable resource, managed
+actively throughout the software lifecycle.
+
+Table 1. Diagnostic matrix for analyzing reasoning quality
+(via CoT traces) alongside solution correctness.
+Reasoning Quality
+
+Solution Correctness
+Correct Solution
+
+Correct CoT
+Incorrect CoT
+
+Incorrect Solution
+
+Sound understanding and Under-generalization or exeimplementation (ideal case) cution error
+Overfitting, memorization, Comprehensive failure
+or coincidental correctness
+
+This diagnostic framework allows researchers to differentiate models that genuinely solve problems from those that
+succeed on benchmarks through less reliable means. It also
+accounts for known issues in evaluation, such as position bias
+in LLM-based evaluators [15] or subtle inconsistency failures in code completion [13]. Techniques like oracle-guided
+program selection, which intelligently rank multiple candidates, further underscore the need for evaluation beyond a
+single-pass answer [5].
+Recent research reinforces the need for such reasoningaware diagnostics. For instance, structured prompting (e.g.,
+SCoT), which encodes control flow into CoT, boosts accuracy
+with modest token overhead, proving that reasoning content,
+not just length, matters [9]. Similarly, verify-and-edit frameworks can correct reasoning chains post-hoc, but this is only
+possible if the chains are retained and exposed [38]. Studies on self-invoking generation also highlight the latencyaccuracy trade-off inherent in longer traces [35].
+Finally, as adaptive controllers like AdaCoT show, it is
+possible to match baseline pass@k with up to 70% fewer
+tokens [19]. Without latency-aware benchmarks, these crucial Pareto improvements remain invisible. Just as traditional
+SAST tools are rigorously evaluated for their blind spots [11],
+we must adopt a multi-dimensional perspective for code
+LLMs. We advocate for a new generation of evaluation suites
+that log timing, token counts, and reasoning traces by default, enabling us to quantify not only if an answer is right,
+but how efficiently and robustly it was produced.
+
+4
+
+LMPL ’25, October 12–18, 2025, Singapore, Singapore
+
+5
+
+Conclusion
+
+This position paper has argued that reasoning depth in code
+LLMs is not an incidental artifact but a first-class design
+parameter that must be managed across data generation,
+evaluation, and deployment. We have contended that by actively scheduling chain-of-thought during data synthesis,
+reporting multi-dimensional trade-offs in benchmarks, and
+enforcing policy-driven reasoning controls in production,
+the field can build models that are both more capable and
+more efficient. The goal is to enable coding agents that think
+deep when necessary and act fast when possible. We invite the
+
+Deployment and Downstream
+Applications
+
+We maintain that production deployments of code generation
+models require adaptive reasoning-depth controllers that
+
+3
+
+LMPL ’25, October 12–18, 2025, Singapore, Singapore
+
+Zongjie Li and Shuai Wang
+IEEE/ACM 44th International Conference on Software Engineering, ICSE
+2022, Pittsburgh, PA, USA, May 25-27, 2022. ACM.
+[13] Zongjie Li, Chaozheng Wang, Zhibo Liu, Haoxuan Wang, Dong Chen,
+Shuai Wang, and Cuiyun Gao. 2023. CCTEST: Testing and Repairing
+Code Completion Systems. In 45th IEEE/ACM International Conference
+on Software Engineering, ICSE 2023, Melbourne, Australia, May 14-20,
+2023. IEEE, 1238–1250.
+[14] Zongjie Li, Chaozheng Wang, Pingchuan Ma, Chaowei Liu, Shuai
+Wang, Daoyuan Wu, and Cuiyun Gao. 2023. On the feasibility of
+specialized ability stealing for large language code models. (2023).
+[15] Zongjie Li, Chaozheng Wang, Pingchuan Ma, Daoyuan Wu, Shuai
+Wang, Cuiyun Gao, and Yang Liu. 2024. Split and Merge: Aligning
+Position Biases in LLM-based Evaluators. In Proceedings of the 2024
+Conference on Empirical Methods in Natural Language Processing, Yaser
+Al-Onaizan, Mohit Bansal, and Yun-Nung Chen (Eds.). Association for
+Computational Linguistics, Miami, Florida, USA.
+[16] Zongjie Li, Chaozheng Wang, Shuai Wang, and Gao Cuiyun. 2023.
+Protecting Intellectual Property of Large Language Model-Based Code
+Generation APIs via Watermarks. In Proceedings of the 2023 ACM
+SIGSAC Conference on Computer and Communications Security, CCS
+2023, Copenhagen, Denmark, November 26-30, 2023.
+[17] Zongjie Li, Daoyuan Wu, Shuai Wang, and Zhendong Su. 2025. Apiguided dataset synthesis to finetune large code models. Proceedings of
+the ACM on Programming Languages 9, OOPSLA1 (2025), 786–815.
+[18] Zongjie Li, Daoyuan Wu, Shuai Wang, and Su Zhendong. 2025.
+Differentiation-Based Extraction of Proprietary Data from Fine-tuned
+LLMs. In Proceedings of the 2025 ACM SIGSAC Conference on Computer
+and Communications Security, CCS 2025, Taipei, Taiwan, October 13-17,
+2025.
+[19] Chenwei Lou, Zewei Sun, Xinnian Liang, Meng Qu, Wei Shen, Wenqi
+Wang, Yuntao Li, Qingping Yang, and Shuangzhi Wu. 2025. AdaCoT:
+Pareto-Optimal Adaptive Chain-of-Thought Triggering via Reinforcement Learning. arXiv preprint arXiv:2505.11896 (2025).
+[20] Anton Lozhkov, Raymond Li, Loubna Ben Allal, Federico Cassano,
+Joel Lamy-Poirier, Nouamane Tazi, Ao Tang, Dmytro Pykhtar, Jiawei
+Liu, Yuxiang Wei, et al. 2024. StarCoder 2 and The Stack v2: The Next
+Generation. arXiv preprint arXiv:2402.19173 (2024).
+[21] Pingchuan Ma, Zhaoyu Wang, Zongjie Li, Zhenlan Ji, Ao Sun, Juergen
+Rahmel, and Shuai Wang. 2025. Reeq: Testing and Mitigating Ethically
+Inconsistent Suggestions of Large Language Models with Reflective
+Equilibrium. (2025). https://doi.org/10.1145/3722554
+[22] Baptiste Roziere, Jonas Gehring, Fabian Gloeckle, Sten Sootla, Itai Gat,
+Xiaoqing Ellen Tan, Yossi Adi, Jingyu Liu, Tal Remez, Jérémy Rapin,
+et al. 2023. Code llama: Open foundation models for code. arXiv
+preprint arXiv:2308.12950 (2023).
+[23] Zhao Tian, Junjie Chen, and Xiangyu Zhang. 2025. Fixing Large Language Models’ Specification Misunderstanding for Better Code Generation. In Proceedings of the 47th IEEE/ACM International Conference on
+Software Engineering (ICSE). arXiv:2309.16120.
+[24] Chaozheng Wang, Zongjie Li, Cuiyun Gao, Wenxuan Wang, Ting
+Peng, Hailiang Huang, Yuetang Deng, Shuai Wang, and Michael R Lyu.
+2024. Exploring Multi-Lingual Bias of Large Code Models in Code
+Generation. arXiv preprint arXiv:2404.19368 (2024).
+[25] Liwen Wang, Yuanyuan Yuan, Ao Sun, Zongjie Li, Pingchuan Ma,
+Daoyuan Wu, and Shuai Wang. 2024. Benchmarking Multi-Modal
+LLMs for Testing Visual Deep Learning Systems Through the Lens of
+Image Mutation. arXiv preprint arXiv:2404.13945 (2024).
+[26] Ruoke Wang, Zongjie Li, Chaozheng Wang, Yang Xiao, and Cuiyun
+Gao. 2024. NAVRepair: Node-type Aware C/C++ Code Vulnerability
+Repair. arXiv preprint arXiv:2405.04994 (2024).
+[27] Shangwen Wang, Bo Lin, Zhensu Sun, Ming Wen, Yepang Liu, Yan Lei,
+and Xiaoguang Mao. 2023. Two Birds with One Stone: Boosting Code
+Generation and Code Search via a Generative Adversarial Network.
+Proc. ACM Program. Lang. 7, OOPSLA2, Article 239 (oct 2023), 30 pages.
+
+programming languages and machine learning communities to embrace reasoning-budget awareness in future tools,
+frameworks, and optimization techniques, thereby unlocking
+a new Pareto frontier for practical and reliable code generation.
+
+References
+[1] [n. d.]. qwen3blog. https://qwenlm.github.io/blog/qwen3.
+[2] Jacob Austin, Augustus Odena, Maxwell Nye, Maarten Bosma, Henryk
+Michalewski, David Dohan, Ellen Jiang, Carrie Cai, Michael Terry,
+Quoc Le, et al. 2021. Program synthesis with large language models.
+arXiv preprint arXiv:2108.07732 (2021).
+[3] Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde
+de Oliveira Pinto, Jared Kaplan, Harri Edwards, Yuri Burda, Nicholas
+Joseph, Greg Brockman, Alex Ray, Raul Puri, Gretchen Krueger,
+Michael Petrov, Heidy Khlaaf, Girish Sastry, Pamela Mishkin, Brooke
+Chan, Scott Gray, Nick Ryder, Mikhail Pavlov, Alethea Power, Lukasz
+Kaiser, Mohammad Bavarian, Clemens Winter, Philippe Tillet, Felipe Petroski Such, Dave Cummings, Matthias Plappert, Fotios
+Chantzis, Elizabeth Barnes, Ariel Herbert-Voss, William Hebgen Guss,
+Alex Nichol, Alex Paino, Nikolas Tezak, Jie Tang, Igor Babuschkin,
+Suchir Balaji, Shantanu Jain, William Saunders, Christopher Hesse, Andrew N. Carr, Jan Leike, Josh Achiam, Vedant Misra, Evan Morikawa,
+Alec Radford, Matthew Knight, Miles Brundage, Mira Murati, Katie
+Mayer, Peter Welinder, Bob McGrew, Dario Amodei, Sam McCandlish,
+Ilya Sutskever, and Wojciech Zaremba. 2021. Evaluating Large Language Models Trained on Code. (2021). arXiv:2107.03374 [cs.LG]
+[4] Hadeel Eladawy, Claire Le Goues, and Yuriy Brun. 2024. Automated
+Program Repair, What Is It Good For? Not Absolutely Nothing!. In
+Proceedings of the 46th International Conference on Software Engineering
+(ICSE). 84:1–84:13.
+[5] Zequan Fan, Hao Ruan, Sergey Mechtaev, and Abhik Roychoudhury.
+2024. Oracle-guided Program Selection from Large Language Models.
+In Proceedings of the 33rd ACM SIGSOFT International Symposium on
+Software Testing and Analysis (ISSTA ’24). ACM, 628–640.
+[6] Jinyao Guo, Chengpeng Wang, Xiangzhe Xu, Zian Su, and Xiangyu
+Zhang. 2025. RepoAudit: An Autonomous LLM-Agent for RepositoryLevel Code Auditing. In International Conference on Machine Learning
+(ICML). arXiv:2501.18160.
+[7] Cheng-Yu Hsieh, Chun-Liang Li, Chih-Kuan Yeh, Hootan Nakhost,
+Yasuhisa Fujii, Alexander Ratner, Ranjay Krishna, Chen-Yu Lee, and
+Tomas Pfister. 2023. Distilling step-by-step! outperforming larger
+language models with less training data and smaller model sizes. arXiv
+preprint arXiv:2305.02301 (2023).
+[8] Zimo Ji, Daoyuan Wu, Wenyuan Jiang, Pingchuan Ma, Zongjie Li,
+and Shuai Wang. 2025. Measuring and Augmenting Large Language
+Models for Solving Offensive Security Challenges. In Proceedings of
+the 2025 ACM SIGSAC Conference on Computer and Communications
+Security, CCS 2025, Taipei, Taiwan, October 13-17, 2025.
+[9] Jia Li, Ge Li, Yongmin Li, and Zhi Jin. 2025. Structured chain-ofthought prompting for code generation. ACM Transactions on Software
+Engineering and Methodology 34, 2 (2025), 1–23.
+[10] Raymond Li, Loubna Ben Allal, Yangtian Zi, Niklas Muennighoff, Denis
+Kocetkov, Chenghao Mou, Marc Marone, Christopher Akiki, Jia Li,
+Jenny Chim, et al. 2023. StarCoder: may the source be with you! arXiv
+preprint arXiv:2305.06161 (2023).
+[11] Zongjie Li, Zhibo Liu, Wai Kin Wong, Pingchuan Ma, and Shuai Wang.
+2024. Evaluating C/C++ Vulnerability Detectability of Query-Based
+Static Application Security Testing Tools. IEEE Transactions on Dependable and Secure Computing (2024).
+[12] Zongjie Li, Pingchuan Ma, Huaijin Wang, Shuai Wang, Qiyi Tang, Sen
+Nie, and Shi Wu. 2022. Unleashing the Power of Compiler Intermediate Representation to Enhance Neural Program Embeddings. In 44th
+
+4
+
+Reasoning as a Resource: Optimizing Fast and Slow Thinking in Code Generation Models
+
+LMPL ’25, October 12–18, 2025, Singapore, Singapore
+
+[33] Wai Kin Wong, Daoyuan Wu, Huaijin Wang, Zongjie Li, Zhibo Liu,
+Shuai Wang, Qiyi Tang, Sen Nie, and Shi Wu. 2025. DecLLM: LLMAugmented Recompilable Decompilation for Enabling Programmatic
+Use of Decompiled Code. In Proceedings of the 34th ACM SIGSOFT
+International Symposium on Software Testing and Analysis.
+[34] Yangzhen Wu, Zhiqing Sun, Shanda Li, Sean Welleck, and Yiming
+Yang. 2024. Inference scaling laws: An empirical analysis of computeoptimal inference for problem-solving with language models. arXiv
+preprint arXiv:2408.00724 (2024).
+[35] Zhaojian Yu, Yilun Zhao, Arman Cohan, and Xiao-Ping Zhang. 2024.
+HumanEval Pro and MBPP Pro: Evaluating Large Language Models
+on Self-invoking Code Generation. arXiv preprint arXiv:2412.21199
+(2024).
+[36] Jiajie Zhang, Nianyi Lin, Lei Hou, Ling Feng, and Juanzi Li. 2025.
+Adaptthink: Reasoning models can learn when to think. arXiv preprint
+arXiv:2505.13417 (2025).
+[37] Kunpeng Zhang, Zongjie Li, Daoyuan Wu, Shuai Wang, and Xin Xia.
+2025. Low-Cost and Comprehensive Non-textual Input Fuzzing with
+LLM-Synthesized Input Generators. arXiv preprint arXiv:2501.19282
+(2025).
+[38] Ruochen Zhao, Xingxuan Li, Shafiq Joty, Chengwei Qin, and Lidong
+Bing. 2023. Verify-and-edit: A knowledge-enhanced chain-of-thought
+framework. arXiv preprint arXiv:2305.03268 (2023).
+
+doi:10.1145/3622815
+[28] Xunguang Wang, Wenxuan Wang, Zhenlan Ji, Zongjie Li, Pingchuan
+Ma, Daoyuan Wu, and Shuai Wang. 2025. STShield: Single-Token
+Sentinel for Real-Time Jailbreak Detection in Large Language Models.
+arXiv preprint arXiv:2503.17932 (2025).
+[29] Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc V. Le, Ed H. Chi,
+Sharan Narang, Aakanksha Chowdhery, and Denny Zhou. 2023. SelfConsistency Improves Chain of Thought Reasoning in Language Models. In The Eleventh International Conference on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023.
+[30] Xunguang Wang, Daoyuan Wu, Zhenlan Ji, Zongjie Li, Pingchuan Ma,
+Shuai Wang, Yingjiu Li, Yang Liu, Ning Liu, and Juergen Rahmel. 2024.
+SelfDefend: LLMs Can Defend Themselves against Jailbreaking in a
+Practical Manner. arXiv preprint arXiv:2406.05498 (2024).
+[31] Zhijie Wang, Zijie Zhou, Da Song, Yuheng Huang, Shengmai Chen,
+Lei Ma, and Tianyi Zhang. 2025. Towards Understanding the Characteristics of Code Generation Errors Made by Large Language Models.
+In Proceedings of the 47th IEEE/ACM International Conference on Software Engineering (ICSE ’25). arXiv:2406.08731. The first three authors
+contributed equally..
+[32] Wai Kin Wong, Huaijin Wang, Zongjie Li, Zhibo Liu, Shuai Wang, Qiyi
+Tang, Sen Nie, and Shi Wu. 2023. Refining decompiled c code with
+large language models. arXiv preprint arXiv:2310.06530 (2023).
+
+Received 2025-06-10; accepted 2025-08-08
+
+5
+
+

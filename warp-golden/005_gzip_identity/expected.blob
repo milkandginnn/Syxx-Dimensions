@@ -1,0 +1,13 @@
+WARP_ASSEMBLY_V1
+
+===== WARP HTML https://example.test/ =====
+<!doctype html>
+<html>
+<head><title>Gzip vs Identity</title></head>
+<body>
+<script src="app.js"></script>
+</body>
+</html>
+
+===== WARP JS https://example.test/app.js =====
+console.log("delivered gzipped OR identity - same bytes");

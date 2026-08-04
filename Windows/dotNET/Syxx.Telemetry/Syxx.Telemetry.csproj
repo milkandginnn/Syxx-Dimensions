@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Sentry-backed diagnostic sink, shared by every .NET surface: the WinUI client, the CLI, and the
+    Avalonia client on Linux.
+
+    WHY A SEPARATE PROJECT. Syxx.Kit must NOT link Sentry — the core reports through a
+    vendor-neutral interface so it stays testable without a reporting vendor, and so a test can
+    install a recording sink and assert that a failure WAS reported. But the implementation of that
+    interface has to live somewhere all three apps can reach. Putting it in SyxxUI stranded it:
+    the CLI cannot reference a WinUI project, so CLI captures dropped silently, and nothing in
+    SyxxUI can be tested on a non-Windows host.
+
+    This project depends only on Sentry and Syxx.Kit, so it builds and is testable everywhere.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <!--
+    OpenTelemetry is pinned to the SAME version as SyxxUI (1.16.0). It was 1.9.0 here, and that
+    split was not cosmetic: this project is the ONLY OTel path the Avalonia (Linux) client has, so
+    the first-ship platform resolved OpenTelemetry.Api/Exporter 1.9.0 while the Windows GUI
+    resolved 1.16.0 — and `dotnet restore` reports 1.9.0 as carrying known moderate-severity
+    advisories GHSA-g94r-2vxg-569j and GHSA-4625-4j76-fww9. Keep these two pins equal to SyxxUI's.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Sentry" Version="4.13.0" />
+    <PackageReference Include="OpenTelemetry" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Syxx.Kit\Syxx.Kit.csproj" />
+  </ItemGroup>
+
+</Project>

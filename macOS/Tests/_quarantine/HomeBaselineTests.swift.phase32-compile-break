@@ -1,0 +1,68 @@
+import XCTest
+@testable import SyxxKit
+
+/// C5 — home network baseline. Each test names its fail state; the changelog mutation matrix
+/// demonstrates each reds under the matching defect.
+final class HomeBaselineTests: XCTestCase {
+
+    private func snap(resolvers: [String], vpn: Bool = false, enc: Bool = false,
+                      ifaces: [String] = ["en0"]) -> NetworkConfigSnapshot {
+        NetworkConfigSnapshot(resolvers: resolvers, activeInterfaces: ifaces,
+                              vpnActive: vpn, dnsEncrypted: enc)
+    }
+
+    /// The acceptance bar: a different network lists the REAL deltas from home.
+    /// Fail state: don't diff → "matches home" on a network that plainly differs (false clean).
+    func testDifferentNetworkListsDeltas() {
+        let home = snap(resolvers: ["192.168.1.1"], enc: true)
+        let cafe = snap(resolvers: ["10.0.0.1"], enc: false)
+        let c = HomeBaseline.compare(home: home, current: cafe)
+        XCTAssertTrue(c.hasBaseline)
+        XCTAssertFalse(c.matchesHome, "a café with a different resolver + encryption must not match home")
+        XCTAssertEqual(c.differences.count, 2, "resolver change + encryption change = 2 deltas")
+        XCTAssertTrue(c.summary.contains("2 ways"))
+    }
+
+    /// An identical network matches home.
+    func testIdenticalNetworkMatchesHome() {
+        let home = snap(resolvers: ["192.168.1.1"], enc: true)
+        let c = HomeBaseline.compare(home: home, current: home)
+        XCTAssertTrue(c.matchesHome)
+        XCTAssertTrue(c.differences.isEmpty)
+    }
+
+    /// No baseline ⇒ cannot judge — NEVER "matches home". Fail state: report matchesHome true when
+    /// home is nil → an un-profiled machine claims every network is home (the false-clean class).
+    func testNoBaselineIsUnknownNeverMatch() {
+        let c = HomeBaseline.compare(home: nil, current: snap(resolvers: ["10.0.0.1"]))
+        XCTAssertFalse(c.hasBaseline)
+        XCTAssertFalse(c.matchesHome, "no home baseline must never read as a match")
+        XCTAssertTrue(c.differences.isEmpty)
+        XCTAssertTrue(c.summary.lowercased().contains("no home baseline"))
+    }
+
+    /// A single delta is summarized in the singular ("1 way", not "1 ways").
+    func testSingleDeltaSummarySingular() {
+        let home = snap(resolvers: ["192.168.1.1"])
+        let current = snap(resolvers: ["192.168.1.1"], vpn: true)
+        let c = HomeBaseline.compare(home: home, current: current)
+        XCTAssertEqual(c.differences.count, 1)
+        XCTAssertTrue(c.summary.contains("1 way."), "one delta must read '1 way', got: \(c.summary)")
+    }
+
+    /// Round-trip persistence: a saved baseline loads back identically and compares as a match.
+    /// Fail state: a save/load that drops a field would make the reloaded baseline mismatch itself.
+    func testSaveLoadRoundTripMatches() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("syxx-home-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("home.json")
+        let home = snap(resolvers: ["192.168.1.1", "192.168.1.2"], vpn: true, enc: true, ifaces: ["en0", "utun0"])
+        try HomeBaseline.save(home, to: url)
+        let loaded = HomeBaseline.load(from: url)
+        XCTAssertNotNil(loaded)
+        let c = HomeBaseline.compare(home: loaded, current: home)
+        XCTAssertTrue(c.matchesHome, "a round-tripped baseline must match the network it was captured on")
+    }
+}

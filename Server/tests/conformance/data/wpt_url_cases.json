@@ -1,0 +1,84 @@
+{
+  "_meta": {
+    "purpose": "WARP_MANIFEST_V1 §10 conformance — measure where the server's URL resolver (urllib.parse.urljoin, used by warp._resolve) diverges from the WHATWG URL Standard that a browser applies when resolving asset URLs.",
+    "derived_from": "web-platform-tests url/ (resources/urltestdata.json). Cases are hand-distilled to (base, input, expected_href) triples relevant to subresource URL resolution; they are NOT the verbatim upstream file.",
+    "upstream_license": "BSD-3-Clause / W3C-Software (web-platform-tests)",
+    "coverage_note": "expected_href is the WHATWG-resolved URL (spec ground truth). xfail=true marks a KNOWN divergence of urllib.parse.urljoin from that ground truth — the honest coverage gap. xfail=false cases MUST match or the resolver regressed. failure=true means the WHATWG parser rejects the input (no href)."
+  },
+  "cases": [
+    {
+      "name": "relative_path",
+      "base": "https://example.test/a/b",
+      "input": "c",
+      "expected_href": "https://example.test/a/c",
+      "xfail": false
+    },
+    {
+      "name": "dot_dot_segment",
+      "base": "https://example.test/a/b/c",
+      "input": "../d",
+      "expected_href": "https://example.test/a/d",
+      "xfail": false
+    },
+    {
+      "name": "absolute_url",
+      "base": "https://example.test/a",
+      "input": "https://other.test/x",
+      "expected_href": "https://other.test/x",
+      "xfail": false
+    },
+    {
+      "name": "query_only_reference",
+      "base": "https://example.test/a?old",
+      "input": "?new",
+      "expected_href": "https://example.test/a?new",
+      "xfail": false
+    },
+    {
+      "name": "fragment_only_reference",
+      "base": "https://example.test/a",
+      "input": "#frag",
+      "expected_href": "https://example.test/a#frag",
+      "xfail": false
+    },
+    {
+      "name": "protocol_relative",
+      "base": "https://example.test/a",
+      "input": "//other.test/x",
+      "expected_href": "https://other.test/x",
+      "xfail": false
+    },
+    {
+      "name": "backslash_treated_as_slash_special_scheme",
+      "base": "https://example.test/a/b",
+      "input": "c\\d",
+      "expected_href": "https://example.test/a/c/d",
+      "xfail": true,
+      "divergence": "For special schemes the WHATWG parser treats \\ as /. urljoin keeps the backslash literal."
+    },
+    {
+      "name": "tab_stripped_from_url",
+      "base": "https://example.test/",
+      "input": "pa\tth",
+      "expected_href": "https://example.test/path",
+      "xfail": false,
+      "note": "CONFORMANT: modern CPython urlsplit removes ASCII tab/newline/CR from the URL before parsing (bpo-43882), matching the WHATWG pre-processing."
+    },
+    {
+      "name": "leading_spaces_stripped",
+      "base": "https://example.test/a",
+      "input": "   https://other.test/x",
+      "expected_href": "https://other.test/x",
+      "xfail": false,
+      "note": "CONFORMANT: modern CPython urlsplit strips leading/trailing C0-control and space, recovering the absolute URL as the WHATWG parser does."
+    },
+    {
+      "name": "uppercase_host_lowercased",
+      "base": "https://example.test/a",
+      "input": "https://OTHER.test/X",
+      "expected_href": "https://other.test/X",
+      "xfail": true,
+      "divergence": "The WHATWG host parser lowercases the host. urljoin preserves host case."
+    }
+  ]
+}

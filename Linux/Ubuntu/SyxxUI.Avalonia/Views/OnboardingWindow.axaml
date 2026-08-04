@@ -1,0 +1,336 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+        x:Class="SyxxUI.Avalonia.Views.OnboardingWindow"
+        x:DataType="vm:FirstRunViewModel"
+        Title="Syxx First Run"
+        Width="1050"
+        Height="700"
+        MinWidth="900"
+        MinHeight="620"
+        Background="{StaticResource SyxCanvasBrush}">
+
+  <Window.Styles>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{StaticResource SyxPrimaryButtonBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontFamily" Value="{StaticResource SyxUiFont}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Padding" Value="20,10" />
+      <Setter Property="CornerRadius" Value="{StaticResource SyxRadiusButton}" />
+    </Style>
+    <Style Selector="Button.quiet">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{StaticResource SyxTextSecondaryBrush}" />
+      <Setter Property="FontFamily" Value="{StaticResource SyxUiFont}" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+    <Style Selector="TextBlock.section-label">
+      <Setter Property="FontFamily" Value="{StaticResource SyxUiFont}" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="2.2" />
+      <Setter Property="Foreground" Value="{StaticResource SyxVioletBrightBrush}" />
+    </Style>
+    <Style Selector="TextBlock.setting-title">
+      <Setter Property="FontFamily" Value="{StaticResource SyxUiFont}" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Foreground" Value="{StaticResource SyxTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.setting-detail">
+      <Setter Property="FontFamily" Value="{StaticResource SyxUiFont}" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{StaticResource SyxTextMutedBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+  </Window.Styles>
+
+  <Grid>
+    <Border Background="{StaticResource SyxWindowFillBrush}">
+      <Border.Background>
+        <RadialGradientBrush Center="72%,-8%" GradientOrigin="72%,-8%" RadiusX="0.85" RadiusY="0.7">
+          <GradientStop Color="#2E7c5cff" Offset="0" />
+          <GradientStop Color="#007c5cff" Offset="0.55" />
+        </RadialGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <ProgressBar IsVisible="{Binding IsLoadingVisible}"
+                 IsIndeterminate="True"
+                 Width="260"
+                 VerticalAlignment="Center"
+                 HorizontalAlignment="Center" />
+
+    <Border IsVisible="{Binding IsAgreementVisible}"
+            Width="620"
+            MaxHeight="610"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            CornerRadius="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}"
+            BorderThickness="1"
+            Background="{StaticResource SyxSurfaceDarkBrush}"
+            BoxShadow="{StaticResource SyxWindowShadow}">
+      <Grid RowDefinitions="Auto,1,*,Auto,1,Auto">
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Spacing="5" Margin="24,16,24,14">
+          <TextBlock Text="⚖" FontSize="30" HorizontalAlignment="Center" />
+          <TextBlock Text="End-User License Agreement"
+                     FontFamily="{StaticResource SyxDisplayFont}"
+                     FontSize="22"
+                     FontWeight="SemiBold"
+                     Foreground="{StaticResource SyxTextBrush}"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="Please read these terms before continuing."
+                     FontFamily="{StaticResource SyxLoreFont}"
+                     FontSize="14"
+                     Foreground="{StaticResource SyxTextMutedBrush}"
+                     HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="{StaticResource SyxHairlineBrush}" />
+
+        <ScrollViewer Grid.Row="2"
+                      MaxHeight="330"
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="30,20">
+          <TextBlock Text="{Binding AgreementText}"
+                     FontFamily="{StaticResource SyxUiFont}"
+                     FontSize="14"
+                     LineHeight="22"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+        </ScrollViewer>
+
+        <CheckBox x:Name="AgreementCheckbox"
+                  Grid.Row="3"
+                  Content="I have read and agree to the terms above."
+                  IsChecked="False"
+                  IsCheckedChanged="AgreementCheckbox_IsCheckedChanged"
+                  FontFamily="{StaticResource SyxUiFont}"
+                  FontSize="14"
+                  Foreground="{StaticResource SyxTextBrush}"
+                  Margin="30,8,30,14" />
+
+        <Border Grid.Row="4" Background="{StaticResource SyxHairlineBrush}" />
+
+        <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto" Margin="30,14">
+          <Button Grid.Column="0"
+                  Classes="quiet"
+                  Content="Decline"
+                  Click="Decline_Click" />
+          <Button Grid.Column="2"
+                  Classes="primary"
+                  Content="Agree &amp; Continue →"
+                  Click="AgreeContinue_Click" />
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Border IsVisible="{Binding IsSetupVisible}"
+            Width="960"
+            Height="585"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            CornerRadius="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}"
+            BorderThickness="1"
+            Background="{StaticResource SyxSurfaceDarkBrush}"
+            BoxShadow="{StaticResource SyxWindowShadow}">
+      <Grid RowDefinitions="Auto,1,*,1,Auto">
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Spacing="5" Margin="24,12">
+          <Image Source="avares://Syxx/Assets/syxx-logo-source.png"
+                 Width="42"
+                 Height="42"
+                 Stretch="Uniform" />
+          <TextBlock Text="Welcome to Syxx"
+                     FontFamily="{StaticResource SyxDisplayFont}"
+                     FontSize="26"
+                     FontWeight="SemiBold"
+                     Foreground="{StaticResource SyxTextBrush}"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="A first-run setup takes about a minute. You can change anything later."
+                     FontFamily="{StaticResource SyxLoreFont}"
+                     FontSize="15"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}"
+                     HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="{StaticResource SyxHairlineBrush}" />
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="30,14" Spacing="13">
+            <TextBlock Classes="section-label" Text="STEP 1 · CHOOSE YOUR EXPERIENCE" />
+
+            <Grid ColumnDefinitions="*,12,*">
+              <Border Grid.Column="0"
+                      CornerRadius="12"
+                      BorderBrush="{StaticResource SyxNeutralBorderBrush}"
+                      BorderThickness="1"
+                      Background="{StaticResource SyxInputFillBrush}"
+                      Padding="14">
+                <RadioButton GroupName="Experience"
+                             IsChecked="True"
+                             IsCheckedChanged="StoryMode_Checked">
+                  <StackPanel Spacing="7" Margin="5,0,0,0">
+                    <TextBlock Text="Story Mode"
+                               FontFamily="{StaticResource SyxDisplayFont}"
+                               FontSize="17"
+                               Foreground="{StaticResource SyxTextBrush}" />
+                    <TextBlock Text="Six wardens, lore, and quest framing guide every check."
+                               FontFamily="{StaticResource SyxDeckFont}"
+                               FontSize="14"
+                               Foreground="{StaticResource SyxTextSecondaryBrush}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </RadioButton>
+              </Border>
+
+              <Border Grid.Column="2"
+                      CornerRadius="12"
+                      BorderBrush="{StaticResource SyxNeutralBorderBrush}"
+                      BorderThickness="1"
+                      Background="{StaticResource SyxInputFillBrush}"
+                      Padding="14">
+                <RadioButton GroupName="Experience"
+                             IsCheckedChanged="GeneralMode_Checked">
+                  <StackPanel Spacing="7" Margin="5,0,0,0">
+                    <TextBlock Text="General Mode"
+                               FontFamily="{StaticResource SyxDisplayFont}"
+                               FontSize="17"
+                               Foreground="{StaticResource SyxTextBrush}" />
+                    <TextBlock Text="Standard technical English, with plain labels and no storybook framing."
+                               FontFamily="{StaticResource SyxDeckFont}"
+                               FontSize="14"
+                               Foreground="{StaticResource SyxTextSecondaryBrush}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </RadioButton>
+              </Border>
+            </Grid>
+
+            <TextBlock Classes="section-label"
+                       Text="STEP 2 · CONFIRM YOUR DEFAULTS"
+                       Margin="0,6,0,0" />
+
+            <Grid ColumnDefinitions="*,30,*">
+              <StackPanel Grid.Column="0" Spacing="8">
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="setting-title" Text="Resolver" />
+                  <ComboBox ItemsSource="{Binding Resolvers}"
+                            SelectedIndex="{Binding ResolverIndex, Mode=TwoWay}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="setting-title" Text="Encrypted transport" />
+                  <StackPanel Orientation="Horizontal" Spacing="18">
+                    <RadioButton GroupName="Transport"
+                                 Content="DoH (HTTPS)"
+                                 IsChecked="True"
+                                 IsCheckedChanged="Doh_Checked" />
+                    <RadioButton GroupName="Transport"
+                                 Content="DoT (TLS)"
+                                 IsCheckedChanged="Dot_Checked" />
+                  </StackPanel>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="setting-title" Text="Encrypt all DNS queries" />
+                    <TextBlock Classes="setting-detail" Text="Recommended when DNS is cleartext" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                IsChecked="{Binding EncryptedDnsEnabled, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="setting-title" Text="Notify me on trust changes" />
+                    <TextBlock Classes="setting-detail" Text="Alerts when the network's trust changes" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                IsChecked="{Binding NotificationsEnabled, Mode=TwoWay}" />
+                </Grid>
+              </StackPanel>
+
+              <StackPanel Grid.Column="2" Spacing="12">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="setting-title" Text="Check for updates automatically" />
+                    <TextBlock Classes="setting-detail"
+                               Text="Contacts syxx.app after setup to check for updates and news" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                IsChecked="{Binding UpdateCheckEnabled, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="setting-title" Text="Send crash reports" />
+                    <TextBlock Classes="setting-detail"
+                               Text="Shares diagnostics after setup when enabled" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                IsChecked="{Binding CrashReportingEnabled, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="setting-title" Text="Send anonymous usage statistics" />
+                    <TextBlock Classes="setting-detail"
+                               Text="Shares app operation telemetry after setup when enabled" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                IsChecked="{Binding TelemetryEnabled, Mode=TwoWay}" />
+                </Grid>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="3" Background="{StaticResource SyxHairlineBrush}" />
+
+        <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" Margin="30,12">
+          <Button Grid.Column="0"
+                  Classes="quiet"
+                  Content="Skip: use defaults"
+                  Click="SkipSetup_Click" />
+          <Button Grid.Column="2"
+                  Classes="primary"
+                  Content="Begin →"
+                  Click="BeginSetup_Click" />
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Border IsVisible="{Binding IsFailureVisible}"
+            Width="540"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            CornerRadius="16"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}"
+            BorderThickness="1"
+            Background="{StaticResource SyxSurfaceDarkBrush}"
+            Padding="30"
+            BoxShadow="{StaticResource SyxWindowShadow}">
+      <StackPanel Spacing="18" HorizontalAlignment="Center">
+        <TextBlock Text="⚠"
+                   FontSize="32"
+                   Foreground="{StaticResource SyxGoldTextBrush}"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding FailureMessage}"
+                   FontFamily="{StaticResource SyxUiFont}"
+                   FontSize="15"
+                   Foreground="{StaticResource SyxTextBrush}"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   MaxWidth="460" />
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="12">
+          <Button Classes="quiet" Content="Quit Syxx" Click="Quit_Click" />
+          <Button Classes="primary" Content="Try Again" Click="Retry_Click" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

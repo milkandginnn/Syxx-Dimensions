@@ -1,0 +1,3021 @@
+# IMPLEMENTATION PLAN
+
+## 1. Summary
+
+- **Total active deltas:** 523
+- **Stale / duplicate count:** 36
+- **Complexity breakdown:** S=190, M=325, L=44
+- **Fixed count:** 233
+- **Rejected count:** 114
+
+## 2. Batch Sequencing Table
+
+| Batch | Name | Deltas | Critical | High | Medium | Low | Complexity | Cross-Platform Pairs |
+|-------|------|--------|----------|------|--------|-----|------------|---------------------|
+| B1 | Shared Libraries (Synthesis) | 66 | 22 | 8 | 9 | 13 | S=19 M=44 L=3 | 0 |
+| B2 | Server Core & Tests | 132 | 35 | 47 | 38 | 10 | S=43 M=79 L=10 | 4 |
+| B3 | macOS Client Core (SyxxKit) | 101 | 20 | 40 | 29 | 10 | S=12 M=79 L=10 | 15 |
+| B4 | Windows Client Core (Syxx.Kit) | 42 | 11 | 19 | 11 | 1 | S=9 M=28 L=5 | 0 |
+| B5 | GUI Surfaces | 80 | 19 | 24 | 20 | 16 | S=44 M=33 L=3 | 0 |
+| B6 | CLI Surfaces | 102 | 38 | 24 | 27 | 7 | S=41 M=51 L=10 | 0 |
+
+## 3. Per-batch Delta Listing — Shared Libraries (Synthesis)
+
+- **B035** — Synthesis tests use broad verdict whitelists
+  - Criticality: High
+  - Files: SynthesizerTests.swift:16-22; SynthesisScenarioTests.swift:37-52
+  - Complexity: M
+  - Scope: Server
+- **B039** — ReportTests covers only local_resolver; target_answer untested
+  - Criticality: High
+  - Files: ReportTests.swift:22-48; Report.swift:68-99
+  - Complexity: M
+  - Scope: Server
+- **B040** — target_answer set-valued but merged as scalar — false DISCREPANCY
+  - Criticality: Critical
+  - Files: Report.swift:34; Report.cs:18
+  - Complexity: M
+  - Scope: Server
+- **B041** — renderText drops conclusion.advisories
+  - Criticality: Non-critical
+  - Files: Report.swift:111-155; Report.cs:92-135
+  - Complexity: M
+  - Scope: Server
+- **B042** — renderText drops conflict and uncertainty signals
+  - Criticality: Non-critical
+  - Files: Conclusion.swift:26-30; Report.swift:111-123; Report.cs:92-103
+  - Complexity: M
+  - Scope: Server
+- **B043** — Windows Glutton drops ECS leak signal via early return
+  - Criticality: Critical
+  - Files: Synthesizer.cs:566-604; Synthesizer.swift:412-442
+  - Complexity: M
+  - Scope: Server
+- **B086** — Stage-5 completeness counts inconclusive sections as fully observed
+  - Criticality: Critical
+  - Files: SynthesisEngine.swift:371-387; SynthesisEngine.cs:352-364
+  - Complexity: M
+  - Scope: Server
+- **B087** — Witness launchers convert config changes to fake answer drift
+  - Criticality: Critical
+  - Files: SyxxCLI.swift:671-699; Program.cs:707-743; Synthesizer.swift:490-508
+  - Complexity: M
+  - Scope: Server
+- **B093** — macOS GUI Witness converts inconclusive comparison to clean evidence
+  - Criticality: Critical
+  - Files: AppModel.swift:880-892; Synthesizer.swift:490-508
+  - Complexity: M
+  - Scope: Server
+- **B130** — Decisive act suppresses referral gate unconditionally
+  - Criticality: Critical
+  - Files: SynthesisEngine.swift:375; SynthesisEngine.cs:366-373
+  - Complexity: M
+  - Scope: Server
+- **B133** — Dampeners apply at reliability 1.0 while evidence discounted to 0.5
+  - Criticality: Critical
+  - Files: SynthesisEngine.swift:247; SynthesisEngine.cs:213
+  - Complexity: M
+  - Scope: Server
+- **B134** — fullData and 6-of-6 completeness emitted when all sections inconclusive
+  - Criticality: Critical
+  - Files: SynthesisEngine.swift:444; Conclusion.swift:442
+  - Complexity: M
+  - Scope: Server
+- **B135** — SignedIncidentReport prints MATCHES for empty comparison
+  - Criticality: Critical
+  - Files: SignedIncidentReport.swift:59-67; SignedIncidentReport.cs:66
+  - Complexity: M
+  - Scope: Server
+- **B138** — Synthetic ECS option promoted to user-subnet leak claim
+  - Criticality: Critical
+  - Files: ECSProbe.swift:39-59; ECSProbe.cs:19-43; Synthesizer.cs:670-679
+  - Complexity: M
+  - Scope: Server
+- **B147** — Windows empty-field AnswerDrift fabricates spurious Witness evidence
+  - Criticality: Critical
+  - Files: Program.cs:842; Synthesizer.cs:760-766
+  - Complexity: M
+  - Scope: Server
+- **B156** — Unmapped indicators put matrix coverage floor out of reach
+  - Criticality: Critical
+  - Files: SynthesisEngine.swift:241-266; SyxxMatrixIntegration.swift:118-130,212-227
+  - Complexity: L
+  - Scope: Server
+- **B157** — quality=fixed-catalog completeness multiplies fit, demotes confirmed measurement
+  - Criticality: Critical
+  - Files: MatrixDeterminativeEngine.swift:748-751,780; SynthesisEngine.swift:196-219
+  - Complexity: L
+  - Scope: Server
+- **B158** — Mutual-exclusion resolution iterates Dictionary — order-dependent results
+  - Criticality: Critical
+  - Files: MatrixDeterminativeEngine.swift:844-867
+  - Complexity: M
+  - Scope: Server
+- **B159** — Margin competition includes hard-gated/excluded rivals that can never emit
+  - Criticality: Critical
+  - Files: MatrixDeterminativeEngine.swift:629-643
+  - Complexity: S
+  - Scope: Server
+- **B160** — Witness with no baseline reports .negative at 100% completeness
+  - Criticality: Critical
+  - Files: Synthesizer.swift:579-598; SyxxCLI.swift:766-769
+  - Complexity: M
+  - Scope: Server
+- **B161** — REFUSED/SERVFAIL classified .invalidated, censorship evidence unreachable
+  - Criticality: Critical
+  - Files: Synthesizer.swift:89-101
+  - Complexity: M
+  - Scope: Server
+- **B162** — combine() returns .positive before .invalidated; engine ignores indicator section
+  - Criticality: Critical
+  - Files: Synthesizer.swift:69-77; MatrixDeterminativeEngine.swift:745-746,796-814
+  - Complexity: M
+  - Scope: Server
+- **B163** — Hard exclusion ignores observation quality/section usability; stripped from clean-blocking overhang
+  - Criticality: Critical
+  - Files: MatrixDeterminativeEngine.swift:786-793,664-673,894
+  - Complexity: M
+  - Scope: Server
+- **B164** — No collector configured recorded as Glutton .invalidated
+  - Criticality: Critical
+  - Files: Synthesizer.swift:471-483; ProbePlan.swift:214-216
+  - Complexity: M
+  - Scope: Server
+- **B165** — SectionStatusEntry decoding defaults completeness to 1.0, skips clamp
+  - Criticality: Non-critical
+  - Files: Conclusion.swift:161-174
+  - Complexity: S
+  - Scope: Server
+- **B166** — Required-section gate break's on first missing section, skips remaining
+  - Criticality: Non-critical
+  - Files: MatrixDeterminativeEngine.swift:796-814
+  - Complexity: S
+  - Scope: Server
+- **B167** — Surfaces present hardExcluded suppressions as unverified threat signal
+  - Criticality: Non-critical
+  - Files: VerdictAction.swift:62-69; PlainExplanation.swift:83,128; Report.swift:147-150
+  - Complexity: M
+  - Scope: Server
+- **B168** — clean diagnosis can enter overhang as possible threat signal (Clean)
+  - Criticality: Non-critical
+  - Files: MatrixDeterminativeEngine.swift:655-673,682,894,906-926
+  - Complexity: S
+  - Scope: Server
+- **B169** — pct() prints absolute value — negative margin renders as positive percentage
+  - Criticality: Non-critical
+  - Files: MatrixDeterminativeEngine.swift:968-970
+  - Complexity: S
+  - Scope: Server
+- **B170** — isConflicting false-fires on benign multi-A rotation
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxKit/Synthesis/Report.swift:39-52
+  - Complexity: S
+  - Scope: macOS
+- **B171** — merge drops openResolver finding
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxKit/Synthesis/FirstRunScan.swift:92-118
+  - Complexity: S
+  - Scope: macOS
+- **B172** — ran/skipped ignores leak for Glutton tracking
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxKit/Synthesis/FirstRunScan.swift:136-139
+  - Complexity: M
+  - Scope: macOS
+- **B173** — Prophet completeness capped below 1.0 by unfillable catalog slot
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:225-230,612-624
+  - Complexity: S
+  - Scope: macOS
+- **B174** — 8.8.8.8 fallback not recorded in evidence
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxKit/Synthesis/FirstRunScan.swift:61-67
+  - Complexity: M
+  - Scope: macOS
+- **B175** — despite truncation drops honesty-critical section gaps
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxKit/Synthesis/PlainExplanation.swift:82-88,123-133
+  - Complexity: S
+  - Scope: macOS
+- **B176** — dead re-check redundant term discarded ev silent section default
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:894;ReportCard.swift:78-85;Synthesizer.swift:464;SynthesisEngine.swift:74,213
+  - Complexity: M
+  - Scope: macOS
+- **B179** — report verdict gated on unsigned legacy fields
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/SignedIncidentReport.swift:63-64,74-75
+  - Complexity: M
+  - Scope: macOS
+- **B191** — Windows collapses Invalidated into Inconclusive for invalid/errored leak
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:658-676
+  - Complexity: S
+  - Scope: Windows
+- **B193** — Unreachable hard-gates Prophet on Windows Slow reads as clean
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:175-191
+  - Complexity: M
+  - Scope: Windows
+- **B194** — Windows IsConflicting inverted genuine cross-vantage disagreement suppressed
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Report.cs:21-35
+  - Complexity: S
+  - Scope: Windows
+- **B195** — Windows drops inconclusive/notADenial sub-statuses macOS records
+  - Criticality: Medium-High
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:207-209,260-262,280-282
+  - Complexity: M
+  - Scope: Windows
+- **B196** — Windows renders gate-only metrics PascalCase labels omits advisories
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Report.cs:136,176-181,142,165-171
+  - Complexity: M
+  - Scope: Windows
+- **B197** — EvidenceId serializes as integer ordinal on Windows camelCase string on macOS
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Conclusion.cs:73-112
+  - Complexity: M
+  - Scope: Windows
+- **B198** — ~10 evidence items have different observation/rationale copy across platforms
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:199-201
+  - Complexity: M
+  - Scope: Windows
+- **B199** — Windows Warning vs macOS info for open-resolver advisory detail reconstructed
+  - Criticality: Medium-Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:618-639
+  - Complexity: S
+  - Scope: Windows
+- **B200** — Windows emits no telemetry span verdict state never reaches collector
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:41-62
+  - Complexity: M
+  - Scope: Windows
+- **B201** — Windows silent on invariant breaks macOS logs as defects
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:185-196;PlainExplanation.cs:131-134
+  - Complexity: M
+  - Scope: Windows
+- **B202** — Windows default arm would absorb future DeterminativeVerdict silently
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/PlainExplanation.cs:151-155,67
+  - Complexity: M
+  - Scope: Windows
+- **B203** — IsInconclusive returns true for null determination missing accessors
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Conclusion.cs:42-43,33-35
+  - Complexity: S
+  - Scope: Windows
+- **B204** — True/False on Windows vs true/false on macOS for attribution_complete
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:932
+  - Complexity: S
+  - Scope: Windows
+- **B205** — Windows uses empty separator where Swift uses U+0001 for composite key
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Report.cs:53,61
+  - Complexity: S
+  - Scope: Windows
+- **B206** — Windows drops [0,1] completeness clamp Swift applies at construction
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:10;Conclusion.cs:181-190
+  - Complexity: M
+  - Scope: Windows
+- **B207** — Windows emits PascalCase enum name macOS emits rawValue for dnssec
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Report.cs:96-97
+  - Complexity: S
+  - Scope: Windows
+- **B208** — break exits whole loop when HardGateOnMissingRequiredSections false
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:968-978
+  - Complexity: M
+  - Scope: Windows
+- **B209** — engine and spec rebuilt and re-validated on every Evaluate
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs:405-409
+  - Complexity: S
+  - Scope: Windows
+- **B210** — Windows emits versionBind evidence with null banner rendering as empty
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:315-323
+  - Complexity: S
+  - Scope: Windows
+- **B221** — omitting telemetryEnabled silently re-grants consent fail-open vs macOS
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/SyxxSettings.cs:31,47-51,52-61
+  - Complexity: S
+  - Scope: Windows
+- **B222** — Unknown tri-state collapsed to boolean first run resolves to Granted
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/SyxxDiagnostics.cs:244-249,264-271,274
+  - Complexity: M
+  - Scope: Windows
+- **B223** — non-atomic write manufactures truncation no 0600 on Linux vs macOS
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Kit/SyxxSettings.cs:65-75
+  - Complexity: M
+  - Scope: Windows
+- **B224** — Sentry tags unredacted no license-key pattern RFC1918 /16 not /12
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Telemetry/SentryDiagnosticSink.cs:85-88,89,96-105
+  - Complexity: M
+  - Scope: Windows
+- **B227** — SignDecisiveActs/VerifyDecisiveActs no callers no macOS twin sign over stub
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Kit/WitnessSigner.cs:103-122,124-146;Conclusion.cs:296-311
+  - Complexity: M
+  - Scope: Windows
+- **C010** — version.bind Windows section-gates from spoofable banner (macOS tilt-only)
+  - Criticality: Critical
+  - Files: Windows/Syxx.Kit/Synthesis/Synthesizer.cs:269-283
+  - Complexity: M
+  - Scope: Windows
+- **C066** — ProbeRunner.run collapses untested/inconclusive/invalidated into single nil
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/ProbeRunner.swift:39-62
+  - Complexity: L
+  - Scope: macOS
+- **C071** — NXDOMAIN-hijack canary only detects hijacks sharing a single IP
+  - Criticality: Moderate
+  - Files: macOS/Sources/SyxxKit/Synthesis/DNSCanaries.swift:60-78
+  - Complexity: M
+  - Scope: macOS
+- **E016** — Resolver-latency status mapping diverges macOS vs Windows (Slow grants clean on Windows)
+  - Criticality: Low-Medium
+  - Files: macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:109-115; Windows/Syxx.Kit/Synthesis/Synthesizer.cs:123-141
+  - Complexity: M
+  - Scope: both
+- **E017** — Answer-stability sub-signal diverges (TTL-anomaly evidence omitted both platforms; Inconclusive dropped on Windows)
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:118-131; Windows/Syxx.Kit/Synthesis/Synthesizer.cs:144-168
+  - Complexity: M
+  - Scope: both
+
+## 3.(continued) Per-batch Delta Listing — Server Core & Tests
+
+- **A025** — Stripe customer-license single-slot overwrite lockout
+  - Criticality: Critical
+  - Files: Server/syxx_server/fulfillment.py:97-98, 114-118
+  - Complexity: M
+  - Scope: Server
+- **A026** — /api/diff false tampered on legit cross-host third-party scripts
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:95-101, 132
+  - Complexity: M
+  - Scope: Server
+- **A028** — resolve_authoritative no work budget + unbounded ThreadingHTTPServer DoS
+  - Criticality: Critical
+  - Files: Server/syxx_server/resolver.py:384-456; Server/syxx_server/app.py:730-762, 1016
+  - Complexity: L
+  - Scope: Server
+- **A031** — beta_signups PII never purged, unbounded growth + weekly re-email
+  - Criticality: Critical
+  - Files: Server/syxx_server/db.py:421-456; Server/syxx_server/config.py:130-137
+  - Complexity: S
+  - Scope: Server
+- **A034** — collector :53 no rate limit / fresh conn per packet / no dedup write DoS
+  - Criticality: Critical
+  - Files: Server/syxx_server/dns_authoritative.py:175-190; Server/syxx_server/leak.py:110-122; Server/syxx_server/db.py:272-282
+  - Complexity: M
+  - Scope: Server
+- **A035** — /api/checkout public unauth mints fresh Stripe session per request
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:456-473; Server/syxx_server/stripe_checkout.py:80-81
+  - Complexity: S
+  - Scope: Server
+- **A041** — DNSSEC posture stops at first reachable vantage (false not-observed)
+  - Criticality: Critical
+  - Files: Server/syxx_server/investigate.py:117-135
+  - Complexity: M
+  - Scope: Server
+- **A042** — server RRSIG window check ignores signature inception
+  - Criticality: Critical
+  - Files: Server/syxx_server/investigate.py:102-114
+  - Complexity: S
+  - Scope: Server
+- **A043** — server accepts any RRSIG as covering DNSKEY RRset
+  - Criticality: Critical
+  - Files: Server/syxx_server/investigate.py:120-131
+  - Complexity: S
+  - Scope: Server
+- **A044** — investigation consensus drops reachable empty vantages (censorship hidden)
+  - Criticality: Critical
+  - Files: Server/syxx_server/investigate.py:67-84
+  - Complexity: M
+  - Scope: Server
+- **A045** — investigation marks SERVFAIL/REFUSED responses as ok
+  - Criticality: Critical
+  - Files: Server/syxx_server/investigate.py:48-64
+  - Complexity: M
+  - Scope: Server
+- **A048** — warp baseline silently deletes invalid UTF-8 bytes (errors=ignore)
+  - Criticality: Critical
+  - Files: Server/syxx_server/warp.py:84-86
+  - Complexity: S
+  - Scope: Server
+- **A049** — failed remote script fetch serialized as comparable hash (magic-string contract)
+  - Criticality: Medium
+  - Files: Server/syxx_server/warp.py:88-105; macOS/Sources/SyxxKit/ContentWarp.swift:232-259
+  - Complexity: M
+  - Scope: macOS
+- **A050** — warp baseline erases duplicate asset references (set vs ordered list)
+  - Criticality: High
+  - Files: Server/syxx_server/warp.py:40-57; macOS/Sources/SyxxKit/ContentWarp.swift:218-226
+  - Complexity: M
+  - Scope: macOS
+- **A051** — regex tag scanner terminates on > inside quoted attributes
+  - Criticality: High
+  - Files: Server/syxx_server/warp.py:16-20, 40-57
+  - Complexity: M
+  - Scope: Server
+- **A053** — /api/diff fetch error message leaked to client (info disclosure)
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:73-74
+  - Complexity: S
+  - Scope: Server
+- **A058** — authoritative DNS server lacks IPv6 support (collector blind spot)
+  - Criticality: High
+  - Files: Server/syxx_server/dns_authoritative.py:127-151
+  - Complexity: M
+  - Scope: Server
+- **A073** — server DNS client lacks EDNS0 capability support
+  - Criticality: High
+  - Files: Server/syxx_server/resolver.py:55
+  - Complexity: S
+  - Scope: Server
+- **A085** — webhook fulfillment lacks subscription reactivation handlers
+  - Criticality: Medium
+  - Files: Server/syxx_server/fulfillment.py:103
+  - Complexity: M
+  - Scope: Server
+- **A094** — warp comment stripping JS parsing errors (altered hash baseline)
+  - Criticality: Medium
+  - Files: Server/syxx_server/warp.py:71
+  - Complexity: M
+  - Scope: Server
+- **A095** — investigate path passive DNS ingestion inflation (overstated, needs cardinality cap)
+  - Criticality: High
+  - Files: Server/syxx_server/investigate.py:58
+  - Complexity: M
+  - Scope: Server
+- **A097** — leak observation stores plaintext egress IPs (mirrors into passive_dns)
+  - Criticality: Critical
+  - Files: Server/syxx_server/leak.py:51
+  - Complexity: M
+  - Scope: Server
+- **A107** — insecure TLS settings allowed in production SMTP (escape hatch, not default)
+  - Criticality: High
+  - Files: Server/syxx_server/mailer.py:54
+  - Complexity: S
+  - Scope: Server
+- **A111** — leak verification not atomic one-time (concurrent receipts, missing->clean)
+  - Criticality: High
+  - Files: Server/syxx_server/leak.py:125-170; Server/syxx_server/app.py:873-884; Server/syxx_server/db.py:244-269
+  - Complexity: M
+  - Scope: Server
+- **A114** — collector pubkey endpoint omits rotation contract marked shipped
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:427-438; ROADMAP.md:368-440
+  - Complexity: M
+  - Scope: Server
+- **A116** — email-regex recipient-count injection on /api/beta/reserve
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:55; Server/syxx_server/mailer.py:42
+  - Complexity: S
+  - Scope: Server
+- **A118** — no test asserts 402 on any paid route (Protocol §3)
+  - Criticality: Critical
+  - Files: Server/tests/test_routes.py:53-54; Server/tests/test_warp_raw.py:23; Server/syxx_server/app.py:363-375
+  - Complexity: M
+  - Scope: Server
+- **A119** — DoT TLS handshake blocks sole accept loop before connection limits
+  - Criticality: Critical
+  - Files: Server/syxx_server/dot_listener.py:37-46, 59-65, 139-151; Server/tests/test_dot.py:55-80
+  - Complexity: M
+  - Scope: Server
+- **A120** — deployment masks critical dependency and backup failures, declares success
+  - Criticality: Critical
+  - Files: scripts/deploy.sh:122-155, 479-515
+  - Complexity: M
+  - Scope: Server
+- **A121** — deployed DoT service user never added to certificate ACL group
+  - Criticality: High
+  - Files: scripts/deploy.sh:189-204, 304-345, 452-468
+  - Complexity: S
+  - Scope: Server
+- **A122** — fatal authoritative-socket errors spin forever while health stays listening
+  - Criticality: High
+  - Files: Server/syxx_server/dns_authoritative.py:167-196; Server/syxx_server/listeners.py:26-53
+  - Complexity: M
+  - Scope: Server
+- **A123** — NS/CNAME except Exception swallows name decode errors into hex (false tamper)
+  - Criticality: Medium
+  - Files: Server/syxx_server/resolver.py:185-193
+  - Complexity: S
+  - Scope: Server
+- **A124** — DoH JSON /dns-query?name= queries single resolver, no 2-of-3 corroboration
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:1237-1243
+  - Complexity: M
+  - Scope: Server
+- **A125** — data.get("meta") after try/finally crashes 500 on non-dict Keygen JSON
+  - Criticality: Medium
+  - Files: Server/syxx_server/licensing.py:267, 289
+  - Complexity: S
+  - Scope: Server
+- **A126** — DoH JSON returns Status:2 for all upstream failures (indistinguishable from SERVFAIL)
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:1242
+  - Complexity: S
+  - Scope: Server
+- **A127** — passive DNS drift thresholds hardcoded, no config path (CDN blind spot)
+  - Criticality: Low
+  - Files: Server/syxx_server/passivedns.py:53-54
+  - Complexity: S
+  - Scope: Server
+- **A128** — Stripe webhook timestamp tolerance lacks NTP-skew defense
+  - Criticality: Medium
+  - Files: Server/syxx_server/stripe_checkout.py:130
+  - Complexity: M
+  - Scope: Server
+- **A130** — _verify_validate_key_response collapses 7+ failure modes into bare False (tri-state)
+  - Criticality: Critical
+  - Files: Server/syxx_server/licensing.py:119-229
+  - Complexity: M
+  - Scope: Server
+- **A131** — _b() fails open on unrecognized value (one typo disables paywall)
+  - Criticality: Critical
+  - Files: Server/syxx_server/config.py:11-15; Server/syxx_server/app.py:1174, 1195, 1235, 1251, 1982
+  - Complexity: M
+  - Scope: Server
+- **A132** — /metrics raises NameError on every authenticated request (hmac not imported)
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:1081, 15-30, 958
+  - Complexity: S
+  - Scope: Server
+- **A133** — /api/leaktest/check reads and destroys paid users' leak attestations (cross-tenant)
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:1511-1523, 1479-1484, 1486-1497
+  - Complexity: M
+  - Scope: Server
+- **A134** — error path writes second HTTP response on keep-alive (response-queue desync)
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:645-649, 684-686, 701-703, 1496-1497, 1522-1523, 502-526
+  - Complexity: M
+  - Scope: Server
+- **A135** — /api/benchmark aggregate deadline checked only between servers, inner loop unbounded
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:1603-1670, 1616-1619, 1627-1632, 1634-1649
+  - Complexity: M
+  - Scope: Server
+- **A136** — nested per-request thread pools escape _MAX_WORKERS semaphore (free-tier DoS)
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:1725-1740, 310-326, 375-408, 145
+  - Complexity: M
+  - Scope: Server
+- **A137** — absolute per-request deadline only shuts down socket, thread/slot never reclaimed
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:419-444, 146-151, 387-408
+  - Complexity: L
+  - Scope: Server
+- **A138** — unbounded metric cardinality: unique request paths create permanent counters (OOM)
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:446-465; Server/syxx_server/logging_util.py:15, 59-61
+  - Complexity: M
+  - Scope: Server
+- **A139** — CSP permits unsafe-inline + /fetch_script serves arbitrary remote content as same-origin JS
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:485-494, 1234-1247, 746-747; Server/index.html
+  - Complexity: L
+  - Scope: Server
+- **A140** — gzip responses never send Vary: Accept-Encoding (cache corruption on public routes)
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:512-516, 468-474, 1043, 849, 1021-1022
+  - Complexity: M
+  - Scope: Server
+- **A141** — /api/firewall-test and /api/lookup unauth arbitrary-destination DNS probes (scanner)
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:1806-1827, 1527-1573, 1415-1462
+  - Complexity: M
+  - Scope: Server
+- **A142** — /api/diff reports reference:authoritative when authoritative verdict was unusable
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:1330-1347, 1372
+  - Complexity: S
+  - Scope: Server
+- **A143** — _client_ip() returns unvalidated unbounded header content (rate-limit key, audit, subject)
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:555-576; scripts/deploy.sh:399-401
+  - Complexity: M
+  - Scope: Server
+- **A144** — _body() ignores Transfer-Encoding and duplicate Content-Length (smuggling primitive)
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:586-606, 412; scripts/deploy.sh:394-404
+  - Complexity: M
+  - Scope: Server
+- **A145** — EXPOSURE_RATE_CAPACITY/REFILL_MILLIS defined and never applied (6x intended rate)
+  - Criticality: Medium
+  - Files: Server/syxx_server/config.py:445-447; Server/syxx_server/app.py:1420-1421, 578-584
+  - Complexity: S
+  - Scope: Server
+- **A146** — HSTS emitted only when Python process terminates TLS (never sent behind nginx)
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:499-500, 2250-2257; scripts/deploy.sh:394-404; Server/syxx_server/config.py:268-270
+  - Complexity: M
+  - Scope: Server
+- **A147** — do_HEAD delegates to do_GET, executes every side effect (Stripe session on HEAD)
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:632-633, 525-526, 904-933, 1603-1670, 1689-1773
+  - Complexity: M
+  - Scope: Server
+- **A148** — unauth un-rate-limited routes perform DB work and 1MiB HMAC (/healthz, /readyz, /api/stats, webhooks)
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:723-730, 1046-1064, 935-952, 954-994
+  - Complexity: M
+  - Scope: Server
+- **A149** — Allow-Methods omits DELETE + Vary:Origin only on allowed branch
+  - Criticality: Medium
+  - Files: Server/syxx_server/app.py:468-477, 625-630, 688-703, 1863-1877, 1943-1953
+  - Complexity: S
+  - Scope: Server
+- **A150** — host-header routing discards path, matches leaktest. by prefix (content confusion)
+  - Criticality: Low
+  - Files: Server/syxx_server/app.py:706-718; Server/syxx_server/config.py:66-70
+  - Complexity: S
+  - Scope: Server
+- **A151** — extra_headers duplicates headers already emitted by _security_headers
+  - Criticality: Low
+  - Files: Server/syxx_server/app.py:502-524, 479-500, 847-851
+  - Complexity: S
+  - Scope: Server
+- **A152** — /api/trace unwrapped resolve_authoritative becomes 500
+  - Criticality: Low
+  - Files: Server/syxx_server/app.py:1393-1394
+  - Complexity: S
+  - Scope: Server
+- **A153** — unguarded int() on ttlDays/maxPermutations, no floor
+  - Criticality: Low
+  - Files: Server/syxx_server/app.py:1848,1927
+  - Complexity: S
+  - Scope: Server
+- **A154** — _i()/_env_int() silent default for malformed numeric config
+  - Criticality: Low
+  - Files: Server/syxx_server/config.py:18-22
+  - Complexity: M
+  - Scope: Server
+- **A155** — RCODE int-vs-string comparison crash, no vantage can be ok
+  - Criticality: Critical
+  - Files: Server/syxx_server/investigate.py:82-93
+  - Complexity: M
+  - Scope: Server
+- **A156** — UnboundLocalError on denial-of-existence path
+  - Criticality: Critical
+  - Files: Server/syxx_server/dnssec_validator.py:361-381
+  - Complexity: S
+  - Scope: Server
+- **A157** — unsigned NSEC reported as authenticated denial
+  - Criticality: High
+  - Files: Server/syxx_server/dnssec_validator.py:415-452
+  - Complexity: L
+  - Scope: Server
+- **A158** — answer RRSIG not bound to DS-validated key
+  - Criticality: High
+  - Files: Server/syxx_server/dnssec_validator.py:246-256,352-354
+  - Complexity: M
+  - Scope: Server
+- **A159** — "open" verdict from all-inconclusive measurements
+  - Criticality: High
+  - Files: Server/syxx_server/firewall_test.py:187-190
+  - Complexity: M
+  - Scope: Server
+- **A160** — decompression amplification 64KB to 2.2s/67MB
+  - Criticality: High
+  - Files: Server/syxx_server/resolver.py:117-149
+  - Complexity: M
+  - Scope: Server
+- **A161** — RDAP TOCTOU DNS-rebinding SSRF, first hop unchecked
+  - Criticality: High
+  - Files: Server/syxx_server/whois_lookup.py:93-128,139-172
+  - Complexity: M
+  - Scope: Server
+- **A162** — aggregate deadlines not threaded into sub-queries
+  - Criticality: High
+  - Files: Server/syxx_server/dnssec_validator.py:274
+  - Complexity: L
+  - Scope: Server
+- **A163** — non-timeout OSError escapes as 500 not inconclusive
+  - Criticality: Medium-High
+  - Files: Server/syxx_server/resolver.py:282-299
+  - Complexity: M
+  - Scope: Server
+- **A164** — slow-drip thread pinning, no aggregate deadline
+  - Criticality: Medium-High
+  - Files: Server/syxx_server/fetcher.py:137-153
+  - Complexity: M
+  - Scope: Server
+- **A165** — read-after-close returns zero subdomains always
+  - Criticality: Medium
+  - Files: Server/syxx_server/subdomain_enum.py:85-111
+  - Complexity: S
+  - Scope: Server
+- **A166** — deadline-skipped subdomains rendered as resolves:false
+  - Criticality: Medium
+  - Files: Server/syxx_server/subdomain_enum.py:69-76
+  - Complexity: S
+  - Scope: Server
+- **A167** — observed:false on unqueried DNSSEC, bool not tri-state
+  - Criticality: Medium
+  - Files: Server/syxx_server/investigate.py:214-258
+  - Complexity: M
+  - Scope: Server
+- **A168** — authoritative verdict on empty/partial-parse answers
+  - Criticality: Medium
+  - Files: Server/syxx_server/resolver.py:534-559,707-725
+  - Complexity: M
+  - Scope: Server
+- **A169** — silent UDP truncation at 4096 bytes returned as complete
+  - Criticality: Medium
+  - Files: Server/syxx_server/resolver.py:362
+  - Complexity: M
+  - Scope: Server
+- **A170** — unbounded WHOIS read + "No Match" text returned as data
+  - Criticality: Medium
+  - Files: Server/syxx_server/whois_lookup.py:247-264,267-310
+  - Complexity: M
+  - Scope: Server
+- **A171** — failed fetch sentinel as comparable hash + lossy UTF-8 decode
+  - Criticality: Medium
+  - Files: Server/syxx_server/warp.py:112-118
+  - Complexity: M
+  - Scope: Server
+- **A172** — 6to4/RFC8215 NAT64 range coverage interpreter-dependent
+  - Criticality: Low
+  - Files: Server/syxx_server/netutil.py:12-44
+  - Complexity: S
+  - Scope: Server
+- **A173** — backup_database() AttributeError, in-process job dead
+  - Criticality: Critical
+  - Files: Server/syxx_server/scheduler.py:120-128
+  - Complexity: S
+  - Scope: Server
+- **A174** — age-purge prevents license suspension after 90 days
+  - Criticality: Critical
+  - Files: Server/syxx_server/db.py:939-943
+  - Complexity: S
+  - Scope: Server
+- **A175** — webhook revokes by wrong id, zero rows, claims revoked
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:983-991
+  - Complexity: M
+  - Scope: Server
+- **A176** — leaked to queriesObserved rename breaks both clients
+  - Criticality: High
+  - Files: Server/syxx_server/leak.py:210,218-236
+  - Complexity: M
+  - Scope: Server
+- **A177** — fresh deploy world-readable DB sidecars and backups
+  - Criticality: High
+  - Files: Server/syxx_server/db.py:236-250,657-667
+  - Complexity: M
+  - Scope: Server
+- **A178** — free attestation not subject-bound, token consumable by stranger
+  - Criticality: High
+  - Files: Server/syxx_server/leak.py:179-194,234-249
+  - Complexity: M
+  - Scope: Server
+- **A179** — unknown Keygen status collapses to revoke-all-keys
+  - Criticality: High
+  - Files: Server/syxx_server/licensing.py:356-360
+  - Complexity: S
+  - Scope: Server
+- **A180** — refunds and chargebacks silently ignored, license forever
+  - Criticality: High
+  - Files: Server/syxx_server/fulfillment.py:73,152-153,170
+  - Complexity: M
+  - Scope: Server
+- **A181** — processing lock no lease, crash strands paid unfulfilled order
+  - Criticality: High
+  - Files: Server/syxx_server/fulfillment.py:84-95,135-147
+  - Complexity: M
+  - Scope: Server
+- **A182** — message construction outside try, can raise despite contract
+  - Criticality: Medium
+  - Files: Server/syxx_server/mailer.py:40-52
+  - Complexity: S
+  - Scope: Server
+- **A183** — logging_util NameError on backup failure path
+  - Criticality: Medium
+  - Files: Server/syxx_server/db.py:666-670
+  - Complexity: S
+  - Scope: Server
+- **A184** — no license_upsert caller, silent reject, session-secret coupled
+  - Criticality: Medium
+  - Files: Server/syxx_server/db.py:339-385
+  - Complexity: M
+  - Scope: Server
+- **A185** — beta_signups retained forever, weekly full CSV export off-host
+  - Criticality: Medium
+  - Files: Server/syxx_server/db.py:118-124,907-964
+  - Complexity: M
+  - Scope: Server
+- **A186** — scopes stored and listed but never enforced
+  - Criticality: Medium
+  - Files: Server/syxx_server/db.py:131-145,licensing.py:384-397
+  - Complexity: M
+  - Scope: Server
+- **A187** — silent truncation at 500 rows, verdicts from partial window
+  - Criticality: Low-Medium
+  - Files: Server/syxx_server/passivedns.py:46,71-77
+  - Complexity: M
+  - Scope: Server
+- **A188** — SMTP exception text logged and exported with recipient PII
+  - Criticality: Low
+  - Files: Server/syxx_server/mailer.py:72-73
+  - Complexity: M
+  - Scope: Server
+- **A189** — unearned "No leak detected" verdict from resolver count
+  - Criticality: Critical
+  - Files: Server/leak-test.html:150-154
+  - Complexity: M
+  - Scope: Server
+- **A190** — mock subdomain fallback plus null forEach crash
+  - Criticality: Critical
+  - Files: Server/leak-test.html:169-190,214-227
+  - Complexity: M
+  - Scope: Server
+- **A191** — two pages contradictory thresholds and certainty
+  - Criticality: High
+  - Files: Server/leak-test.html:150-153 vs leaktest.html:263-274
+  - Complexity: M
+  - Scope: Server
+- **A192** — clients discard server inconclusive, print green on zero
+  - Criticality: Critical
+  - Files: Server/leak-test.html:220,227,151
+  - Complexity: M
+  - Scope: Server
+- **A193** — free page calls gated paid endpoints, always fails
+  - Criticality: Critical
+  - Files: Server/leak-test.html:65,174-177
+  - Complexity: S
+  - Scope: Server
+- **A194** — robots/sitemap/canonical contradictions across pages
+  - Criticality: High
+  - Files: Server/robots.txt:8-14,sitemap.xml:8-11
+  - Complexity: M
+  - Scope: Server
+- **A195** — OTel import broken, error telemetry permanently dead
+  - Criticality: Critical
+  - Files: Server/syxx_server/app.py:58-93
+  - Complexity: S
+  - Scope: Server
+- **A196** — healthz checks nothing, readyz collapses unknown to ready
+  - Criticality: High
+  - Files: Server/syxx_server/app.py:723-724,1046-1064
+  - Complexity: M
+  - Scope: Server
+- **A197** — hardcoded "ok" verdict on warp and baseline checks
+  - Criticality: High
+  - Files: Server/syxx_server/scheduler.py:76
+  - Complexity: M
+  - Scope: Server
+- **A198** — malformed emergency broadcast silently discarded unlogged
+  - Criticality: Medium
+  - Files: Server/syxx_server/broadcast.py:42-53
+  - Complexity: M
+  - Scope: Server
+- **A199** — unapproved DRAFT privacy and terms indexed by crawlers
+  - Criticality: High
+  - Files: Server/privacy.html:2-3,48,terms.html:2,48
+  - Complexity: M
+  - Scope: Server
+- **A200** — seo.py re-asserts C076 overclaim at serve time, overwrites disk
+  - Criticality: High
+  - Files: Server/syxx_server/seo.py:119-138,141-159
+  - Complexity: M
+  - Scope: Server
+- **A201** — Hostname column never populated, no reverse-DNS in path
+  - Criticality: Medium
+  - Files: Server/leak-test.html:89,144,leaktest.html:292,294
+  - Complexity: M
+  - Scope: Server
+- **A214** — 6 test modules write to real repo DB, eager DB_PATH bind
+  - Criticality: Critical
+  - Files: Server/syxx_server/config.py:45
+  - Complexity: M
+  - Scope: Server
+- **A215** — signature test passes with encoder path deleted
+  - Criticality: High
+  - Files: Server/tests/test_leak_signature.py:16-43
+  - Complexity: S
+  - Scope: Server
+- **A216** — honesty guards after __main__ invisible under bare invocation
+  - Criticality: High
+  - Files: Server/tests/test_leak.py:115-116
+  - Complexity: S
+  - Scope: Server
+- **A217** — Keygen-sig tests short-circuited by Date guard, verify untested
+  - Criticality: High
+  - Files: Server/tests/test_licensing.py:201-224
+  - Complexity: S
+  - Scope: Server
+- **A218** — preflight ratifies 4-byte Keygen key as fully configured
+  - Criticality: High
+  - Files: Server/tests/test_preflight.py:58-63,159-164
+  - Complexity: S
+  - Scope: Server
+- **A219** — 9 tests guard unreachable dns_sim.py, shipped path untested
+  - Criticality: High
+  - Files: Server/tests/dns_sim.py:1-171
+  - Complexity: M
+  - Scope: Server
+- **A220** — 5 of 22 gated routes have no 402 test
+  - Criticality: High
+  - Files: Server/tests/test_routes.py:381-469
+  - Complexity: S
+  - Scope: Server
+- **A221** — DoT cap flood test closes connections before asserting
+  - Criticality: Medium
+  - Files: Server/tests/test_dot.py:109-124
+  - Complexity: S
+  - Scope: Server
+- **A222** — gate sound but covers ~9 percent of honesty spine
+  - Criticality: Medium
+  - Files: scripts/honesty-coverage-gate.py:44-80
+  - Complexity: M
+  - Scope: Server
+- **A223** — scheduler 7 entry points 1 test, backup job calls nonexistent fn
+  - Criticality: High
+  - Files: Server/tests/test_backup.py:31-57
+  - Complexity: M
+  - Scope: Server
+- **A224** — hostile-packet tests assert only no-exception not outcome
+  - Criticality: Medium
+  - Files: Server/tests/test_dns_authoritative.py:68-73,87-94
+  - Complexity: S
+  - Scope: Server
+- **A225** — duplicate test plus weak assertions inflate breadth
+  - Criticality: Low
+  - Files: Server/tests/test_licensing.py:336-348
+  - Complexity: S
+  - Scope: Server
+- **B145** — _zone_is_signed only checks answers section for RRSIGs
+  - Criticality: Medium
+  - Files: Server/syxx_server/resolver.py:589-594
+  - Complexity: S
+  - Scope: Server
+- **B181** — server emits no leaked field every collector test returns inconclusive
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/LeakDetector.swift:214-232,363-371;Server/syxx_server/leak.py:206-248
+  - Complexity: M
+  - Scope: macOS
+- **C031** — Collector protocol calls every recursive lookup a DNS leak (foundational)
+  - Criticality: Critical
+  - Files: Server/syxx_server/leak.py:138-151
+  - Complexity: L
+  - Scope: Server
+- **C121** — Three IDNA implementations produce three different QNAMEs for same input **cross-platform pair**
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:572-604; Windows/dotNET/Syxx.Kit/DNSResolver.cs:1047-1064; Server/syxx_server/resolver.py:92-99
+  - Complexity: L
+  - Scope: both
+- **C122** — Undecodable label silently mutated on all 3 platforms; forges question-match guard **cross-platform pair**
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:1198-1201; Windows/dotNET/Syxx.Kit/DNSResolver.cs:1028-1029; Server/syxx_server/resolver.py:145
+  - Complexity: L
+  - Scope: both
+- **C123** — Server ground-truth oracle has neither class nor owner-name injection defence
+  - Criticality: HIGH
+  - Files: Server/syxx_server/resolver.py:183-199,534-559,707-725
+  - Complexity: M
+  - Scope: Server
+- **C124** — Server authoritative walker does not follow CNAME; empty answer stamped authoritative
+  - Criticality: HIGH
+  - Files: Server/syxx_server/resolver.py:707-725
+  - Complexity: M
+  - Scope: Server
+- **C125** — RRSIG signer name and DNSKEY protocol/zone-flag/algorithm never validated; dead types **cross-platform pair**
+  - Criticality: MEDIUM-HIGH
+  - Files: macOS/Sources/SyxxKit/DNSSECVerifier.swift:4-29,89-126; Windows/dotNET/Syxx.Kit/DNSSECVerifier.cs:8-27,85-134; Server/syxx_server/resolver.py:643-685
+  - Complexity: L
+  - Scope: both
+- **C133** — Name-typed RDATA decoded without RDLENGTH bound on all 3 platforms **cross-platform pair**
+  - Criticality: LOW-MEDIUM
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:1100-1105,918-920; Windows/dotNET/Syxx.Kit/DNSResolver.cs:810-814,704-708; Server/syxx_server/resolver.py:220-266
+  - Complexity: L
+  - Scope: both
+- **C134** — Server no 255-octet name limit; bounds failure truncates answer list into success
+  - Criticality: MEDIUM
+  - Files: Server/syxx_server/resolver.py:92-99,183-199,534-559
+  - Complexity: M
+  - Scope: Server
+- **F030** — Server route test setup leaks global auth stub when socket bind fails
+  - Criticality: Medium
+  - Files: Server/tests/test_routes.py:45-67; Server/tests/test_server_hardening.py:48-62
+  - Complexity: S
+  - Scope: Server
+
+## 3.(continued) Per-batch Delta Listing — macOS Client Core (SyxxKit)
+
+- **B177** — attacker-chosen key renders VALID trust set dead in prod
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/WitnessSigner.swift:205-209
+  - Complexity: M
+  - Scope: macOS
+- **B180** — leak verdict from unsigned outer JSON not signed payload
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/LeakDetector.swift:214-258,286-300,363-371
+  - Complexity: M
+  - Scope: macOS
+- **B182** — canonicalization failure verifies against empty Data not malformedInput
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/WitnessSigner.swift:236-240
+  - Complexity: S
+  - Scope: macOS
+- **B183** — no production signer sets expiresAt no verifier passes maxAge
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/WitnessSigner.swift:99,152,175-180,188-196
+  - Complexity: M
+  - Scope: macOS
+- **B184** — forged snapshot labelled EXPIRED before signature validates
+  - Criticality: Medium-High
+  - Files: macOS/Sources/SyxxKit/WitnessSigner.swift:187-201
+  - Complexity: S
+  - Scope: macOS
+- **B185** — collector trust anchor TOFU over unpinned session syncTrustedSigningKey zero callers
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/LeakDetector.swift:493-504,516-541,546-548,105-112,160
+  - Complexity: M
+  - Scope: macOS
+- **B187** — trusts unsigned Keygen meta.valid 401/404 collapsed to invalid
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/LicenseManager.swift:409-423,271-273
+  - Complexity: M
+  - Scope: macOS
+- **B188** — kSecUseDataProtectionKeychain never set LicenseManager sets no accessibility
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxKit/WitnessKeyManager.swift:4-13,104-111;macOS/Sources/SyxxKit/LicenseManager.swift:74-80,115-136
+  - Complexity: M
+  - Scope: macOS
+- **B190** — trial anchor accepts unauthenticated server body blocks on semaphore
+  - Criticality: Low-Medium
+  - Files: macOS/Sources/SyxxKit/LicenseManager.swift:161-188,209-235,237-239
+  - Complexity: M
+  - Scope: macOS
+- **B228** — GUI Mirror always content-checks github.com whatever domain user typed
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:84,757,365-375
+  - Complexity: M
+  - Scope: macOS
+- **B229** — GUI Prophet always audits 8.8.8.8 server has no UI binding
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:82,675,685-686,699,706-707,372
+  - Complexity: M
+  - Scope: macOS
+- **B230** — consensus verdict from count not comparison 100% by construction
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:47-52,724-748
+  - Complexity: M
+  - Scope: macOS
+- **B231** — median latency multiplied by 1000 ms as us defaults to fake 0ms
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:722
+  - Complexity: S
+  - Scope: macOS
+- **B237** — CaptureProcessBox.store never called Stop is no-op capture keeps running
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:296-300,394-397,1055-1065,1104-1123,1626-1634
+  - Complexity: M
+  - Scope: macOS
+- **B238** — flushDNSCache reports success without reading exit status does not flush
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:459-473
+  - Complexity: M
+  - Scope: macOS
+- **B243** — Cage tail O(n) copy plus JSON decode on main actor every 400ms unbounded memory
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:1108-1147,1226-1268
+  - Complexity: M
+  - Scope: macOS
+- **B244** — hideCage untracked countdown Task two calls halve displayed time
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:1067-1078
+  - Complexity: S
+  - Scope: macOS
+- **B245** — startTraceroute untracked task stale trace overwrites reset state newer target
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:902-917
+  - Complexity: S
+  - Scope: macOS
+- **B247** — notification authorization and delivery errors both discarded
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:175-189;SyxxApp.swift:22
+  - Complexity: M
+  - Scope: macOS
+- **B250** — recordType and target never bound GUI Prophet can only query A
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:83,85,361,672-674,699,373
+  - Complexity: M
+  - Scope: macOS
+- **B252** — dohOutcomes not signed nor display-guarded rewriting still reads VALID **cross-platform pair**
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/SignedEvidencePayload.swift:33-36,190;Windows/dotNET/Syxx.Kit/SignedEvidencePayload.cs:38-44,175
+  - Complexity: L
+  - Scope: both
+- **C015** — Same-CDN-provider softening erases real authoritative divergence
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/AuthoritativeVantage.swift:166-172
+  - Complexity: M
+  - Scope: macOS
+- **C017** — CNAME comparison uses raw wire hex instead of decoded names
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:762-767
+  - Complexity: M
+  - Scope: macOS
+- **C023** — Capture parser returns partial reports when DNS counts unmet
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:255-297
+  - Complexity: M
+  - Scope: macOS
+- **C024** — Capture uses buffer tail not UDP length as DNS payload
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCage/SyxxCage.swift:221-227
+  - Complexity: M
+  - Scope: macOS
+- **C025** — Vantage baseline queried over plaintext UDP (attacker-controllable)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/VantageComparer.swift:170-173
+  - Complexity: M
+  - Scope: macOS
+- **C029** — DNS telemetry reports ethernet padding as DNS payload size
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:253,355
+  - Complexity: M
+  - Scope: macOS
+- **C033** — Cage GUI and raw-query export reintroduce unbounded whole-capture memory
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:647-699
+  - Complexity: M
+  - Scope: macOS
+- **C036** — Exfil analyzer uses last-two-labels registrable-domain heuristic
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/Forensics/ExfilAnalyzer.swift:43-88
+  - Complexity: M
+  - Scope: macOS
+- **C040** — macOS Cage drops JSON-encoding failures without loss counter
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxCage/SyxxCage.swift:255-262
+  - Complexity: S
+  - Scope: macOS
+- **C042** — Cage infers direction/resolver identity from attacker-controlled DNS QR
+  - Criticality: High
+  - Files: macOS/Sources/SyxxCage/SyxxCage.swift:239-260
+  - Complexity: M
+  - Scope: macOS
+- **C043** — Cage blind to encrypted DNS but presents general DNS-capture coverage
+  - Criticality: High
+  - Files: macOS/Sources/SyxxCage/SyxxCage.swift:117
+  - Complexity: M
+  - Scope: macOS
+- **C044** — macOS Cage capture error falls through to normal partial report
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCage/SyxxCage.swift:146-165
+  - Complexity: M
+  - Scope: macOS
+- **C045** — Exfil analyzer turns real single signal into false benign/clean
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/Forensics/ExfilAnalyzer.swift:61-89
+  - Complexity: M
+  - Scope: macOS
+- **C055** — CNAME RDATA classified as blocking answer (every CNAME domain reports redirection)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/VantageComparer.swift:198-206
+  - Complexity: M
+  - Scope: macOS
+- **C056** — detectUnanimousTampering returns confirmed positive on missing evidence
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/VantageComparer.swift:286-300
+  - Complexity: M
+  - Scope: macOS
+- **C057** — Answer-CLASS filter hardcoded to IN (every CHAOS response emptied)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:954-972
+  - Complexity: M
+  - Scope: macOS
+- **C058** — 2.5s per-probe cap below every transport timeout (arriving evidence discarded)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/ProbeBudget.swift:32-38
+  - Complexity: L
+  - Scope: macOS
+- **C059** — DNSSEC evidence not bound to queried name (any valid-window RRSIG defeats canary)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/DNSSECVerifier.swift:79-108
+  - Complexity: L
+  - Scope: macOS
+- **C060** — Authoritative cross-check compares CNAME rdata vs address-only auth set
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/AuthoritativeVantage.swift:79-165
+  - Complexity: M
+  - Scope: macOS
+- **C061** — Nameserver-IP discovery has no consensus despite claiming one
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/AuthoritativeVantage.swift:90-126
+  - Complexity: M
+  - Scope: macOS
+- **C062** — Detected spoof evidence overwritten by UDP timeout
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:385-419
+  - Complexity: M
+  - Scope: macOS
+- **C063** — TCP fallback skips KDNS-02 question-section check
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:395-403
+  - Complexity: M
+  - Scope: macOS
+- **C064** — Undecodable labels silently dropped from parsed names (B070 bypass)
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:1194-1204
+  - Complexity: M
+  - Scope: macOS
+- **C065** — Name-type RDATA parsed without RDLENGTH bound (over-read widens owner allow-list)
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:915-923
+  - Complexity: M
+  - Scope: macOS
+- **C067** — ECS probe declares privacy-preserving when resolver echoes no ECS option
+  - Criticality: Moderate
+  - Files: macOS/Sources/SyxxKit/ECSProbe.swift:50-59
+  - Complexity: M
+  - Scope: macOS
+- **C068** — Amplification factor measured over whatever transport answered (incl TCP fallback)
+  - Criticality: Moderate
+  - Files: macOS/Sources/SyxxKit/OpenResolverProbe.swift:74-87
+  - Complexity: M
+  - Scope: macOS
+- **C069** — Unknown RCODEs (FORMERR/NOTIMP/BADVERS) reported as transportError
+  - Criticality: Moderate
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:831-844
+  - Complexity: M
+  - Scope: macOS
+- **C070** — Internal UDP retry hides packet loss as latency (degraded rarely fires)
+  - Criticality: Moderate
+  - Files: macOS/Sources/SyxxKit/ResolverLatencyProbe.swift:55-67
+  - Complexity: M
+  - Scope: macOS
+- **C072** — Conflicting CNAMEs for one owner silently last-wins in chain map
+  - Criticality: Low-Moderate
+  - Files: macOS/Sources/SyxxKit/CNAMEChainProbe.swift:66-79
+  - Complexity: M
+  - Scope: macOS
+- **C073** — FilteringProbe.probe declares timeout parameter and never uses it
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxKit/FilteringProbe.swift:75-95
+  - Complexity: S
+  - Scope: macOS
+- **C077** — Capture renders IPv6 uncompressed (every IPv6 system resolver falsely off-system)
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:378-383
+  - Complexity: M
+  - Scope: macOS
+- **C078** — parseName silently deletes non-UTF-8 labels in capture parser (laundered name)
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:504-512
+  - Complexity: M
+  - Scope: macOS
+- **C080** — Endpoint analyzers emit nothing-stands-out over zero events; missing signing read as untrusted
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/Forensics/EndpointLogAnalyzer.swift:96-105
+  - Complexity: M
+  - Scope: macOS
+- **C081** — Attacker-controlled DNS labels reach terminal and report unsanitised (ANSI/control injection)
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:504-509
+  - Complexity: M
+  - Scope: macOS
+- **C082** — ~50-domain hardcoded stubs presented as NextDNS Default/Strict; blocklist leg no evaluated tri-state
+  - Criticality: Medium-High
+  - Files: macOS/Sources/SyxxKit/Forensics/SieveBlocklistLoader.swift:13-19
+  - Complexity: M
+  - Scope: macOS
+- **C083** — normalizeDomain silently discards underscore/non-ASCII/single-label names from forensic tallies
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxKit/Forensics/DNSLogAnalyzer.swift:263-275
+  - Complexity: S
+  - Scope: macOS
+- **C084** — IPv4 fragments not detected; IPv6 extension headers not walked (fail into uncounted .skipped)
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:347-391
+  - Complexity: M
+  - Scope: macOS
+- **C085** — pidCache grows without bound and returns stale identity on PID reuse
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:519-565
+  - Complexity: M
+  - Scope: macOS
+- **C086** — streamLines buffers entire newline-free file; detect() bounded peek scans whole file
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxKit/Forensics/EndpointLogAnalyzer.swift:41-79
+  - Complexity: M
+  - Scope: macOS
+- **C087** — Report top-lists non-deterministic for tied counts (same capture renders differently)
+  - Criticality: Low-Medium
+  - Files: macOS/Sources/SyxxKit/DNSCaptureReportGenerator.swift:131-138
+  - Complexity: S
+  - Scope: macOS
+- **C088** — Minor capture-path: 12-byte DNS header rejected, doubled newlines, final record withheld
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxKit/DNSCapture.swift:398
+  - Complexity: M
+  - Scope: macOS
+- **C089** — Continuous monitor answer-drift alerts never reach user (state stays .noChange)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:178-185
+  - Complexity: M
+  - Scope: macOS
+- **C090** — isDNSEncrypted/isVPNActive bool shims discard .unknown (false encrypted-DNS-stopped alert)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:420-422
+  - Complexity: L
+  - Scope: macOS
+- **C091** — vpnStatus() never returns .unknown (getifaddrs failure reads as no-VPN)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:306-329
+  - Complexity: M
+  - Scope: macOS
+- **C092** — encryptedDNSStatus DoH/DoT parse branch dead (guard components.count >= 3 wrong)
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:197-204
+  - Complexity: M
+  - Scope: macOS
+- **C093** — loadSnapshot collapses corrupt/absent into nil; re-baselines tampered baseline file
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/Trust/Sentinel.swift:90-93
+  - Complexity: L
+  - Scope: macOS
+- **C094** — Baseline write unchecked; monitor reports recorded forever without persisting
+  - Criticality: High
+  - Files: macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:176
+  - Complexity: M
+  - Scope: macOS
+- **C095** — sampleDNSAndRecord returns [] for all failure modes (false-clean tick)
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:196-232
+  - Complexity: M
+  - Scope: macOS
+- **C096** — runProcess blocks full timeout; ~25s dead wall clock per report
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:101-120
+  - Complexity: M
+  - Scope: macOS
+- **C097** — CommandRunner 5.0s timeout double per-probe budget; kill stops at SIGINT
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/LAN/CommandRunner.swift:43,56-65
+  - Complexity: M
+  - Scope: macOS
+- **C098** — TracerouteRunner pipe-buffer deadlock; truncated trace presented as complete
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/TracerouteRunner.swift:25-33
+  - Complexity: M
+  - Scope: macOS
+- **C099** — LANCartographer.diff traps on duplicate MAC keys (Fatal error)
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/LAN/LANCartographer.swift:122
+  - Complexity: S
+  - Scope: macOS
+- **C100** — LAN change-over-time capability not implemented; no persist, no diff call
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/LAN/LANCartographer.swift:70-79,115-140
+  - Complexity: L
+  - Scope: macOS
+- **C102** — CDN round-robin makes answer-drift alert fire on every tick
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:77,216,217-225
+  - Complexity: M
+  - Scope: macOS
+- **C103** — AnswerLedger.record returns nil for stable/first-seen/evicted alike
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/Trust/AnswerLedger.swift:59-72,88-100
+  - Complexity: M
+  - Scope: macOS
+- **C104** — CommandRunner timeout indistinguishable from failure; stderr contaminates parse
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/LAN/CommandRunner.swift:9-21,32-33,68-70
+  - Complexity: M
+  - Scope: macOS
+- **C107** — Witness drift previous answer from random Dictionary order (D100 not applied to twin)
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/Trust/WitnessTestifyPlanner.swift:69-73
+  - Complexity: M
+  - Scope: macOS
+- **C108** — gateway probe error becomes "admin not reachable"; false isDNS when gateway unknown
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:495-496,474-476,490-491
+  - Complexity: M
+  - Scope: macOS
+- **C110** — AnswerLedger no network identity, no cross-process lock, broken injection seam
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/Trust/AnswerLedger.swift:10-28,52-54,113-116,124-147
+  - Complexity: L
+  - Scope: macOS
+- **C111** — Scheduler drops ticks silently; no timestamp; loses change latch on restart
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/Trust/MonitorScheduler.swift:23-28,51-53,62,79-86,97
+  - Complexity: M
+  - Scope: macOS
+- **C112** — FileHandle closed from timer thread while read in flight (uncatchable exception)
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:105-117
+  - Complexity: M
+  - Scope: macOS
+- **C113** — scutil --dns parsing flattens sections, drops mDNS, never models Supplemental
+  - Criticality: LOW
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:176-217,131-140
+  - Complexity: M
+  - Scope: macOS
+- **C114** — Directed broadcast classified as probeable; ARP field extraction validates nothing
+  - Criticality: LOW
+  - Files: macOS/Sources/SyxxKit/LAN/NetworkAddressClassifier.swift:30-32; ARPTableParser.swift:48-50,67-73,82-84
+  - Complexity: M
+  - Scope: macOS
+- **C115** — Answer filter hard-wired CLASS=IN empties every CHAOS response; version.bind dead **cross-platform pair**
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:954-973; Windows/dotNET/Syxx.Kit/DNSResolver.cs:740-764
+  - Complexity: M
+  - Scope: both
+- **C117** — CNAME/RRSIG rdata fed to isBlockingAnswer produces false tampering on every CDN name
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/VantageComparer.swift:200,203-204; IPClassifier.swift:17-24,27-36
+  - Complexity: M
+  - Scope: macOS
+- **C118** — TCP fallback skips responseQuestionMatches; DNSSEC path validated less than UDP **cross-platform pair**
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:395-403; Windows/dotNET/Syxx.Kit/DNSResolver.cs:231-254
+  - Complexity: M
+  - Scope: both
+- **C120** — Unmeasurable amplification factor collapses to 0 rendered as "~0.0x"; macOS drops responseByteLength
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/OpenResolverProbe.swift:84-87; DNSResolver.swift:836-840,846-859
+  - Complexity: M
+  - Scope: macOS
+- **C126** — NSEC/NSEC3 presence graded nsecProven; short-circuits SOA-ancestry bypass **cross-platform pair**
+  - Criticality: MEDIUM-HIGH
+  - Files: macOS/Sources/SyxxKit/DenialOfExistenceProbe.swift:71,89-97; Windows/dotNET/Syxx.Kit/DenialOfExistenceProbe.cs:46,66-73
+  - Complexity: M
+  - Scope: both
+- **C127** — NXDOMAIN and NODATA collapsed; NODATA graded bareDenial/injected-block **cross-platform pair**
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/DenialOfExistenceProbe.swift:79-80,104; Windows/dotNET/Syxx.Kit/DenialOfExistenceProbe.cs:54-57,82
+  - Complexity: M
+  - Scope: both
+- **C128** — SERVFAIL/REFUSED/TRUNCATED discard EDNS/AD/RA/byte-length; ednsMalformed reset; unhandled RCODEs mislabelled transportError **cross-platform pair**
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:792-794,833,841,842-843; Windows/dotNET/Syxx.Kit/DNSResolver.cs:599-631
+  - Complexity: L
+  - Scope: both
+- **C129** — responseQuestionMatches validates QNAME/QTYPE but not QCLASS or QDCOUNT **cross-platform pair**
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:1213-1230; Windows/dotNET/Syxx.Kit/DNSResolver.cs:513-532
+  - Complexity: M
+  - Scope: both
+- **C130** — macOS whitespace validate-trimmed/encode-untrimmed split; UInt8 narrowing traps
+  - Criticality: LOW-MEDIUM
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:745-760,520,525
+  - Complexity: S
+  - Scope: macOS
+- **C132** — Legacy makeQueryPacket returns empty Data for invalid name instead of signalling failure **cross-platform pair**
+  - Criticality: LOW
+  - Files: macOS/Sources/SyxxKit/DNSResolver.swift:494-497; Windows/dotNET/Syxx.Kit/DNSResolver.cs:416-424
+  - Complexity: S
+  - Scope: both
+- **C144** — Corrupt-baseline handler overwrites damaged file; macOS can't detect corrupt baseline **cross-platform pair**
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/Trust/ContinuousMonitor.cs:130-145; macOS/Sources/SyxxKit/Trust/Sentinel.swift:90-93, ContinuousMonitor.swift:168
+  - Complexity: M
+  - Scope: both
+- **C145** — No network identity in Trust layer; network change reported as tampering-shaped change to one network **cross-platform pair**
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/Trust/Trust.cs:164-187,240-241,299-309; ContinuousMonitor.cs:62,73,83,99-101,117; macOS/Sources/SyxxKit/Trust/Sentinel.swift:7-31,77-80
+  - Complexity: L
+  - Scope: both
+- **C146** — Resolver priority computed then destroyed by ordinal sort; primary change invisible to Sentinel **cross-platform pair**
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/Trust/Trust.cs:174-177,225-227; NetworkKeyState.cs:113-125; macOS/Sources/SyxxKit/Trust/Sentinel.swift:26-27
+  - Complexity: M
+  - Scope: both
+- **C147** — Windows AnswerLedger no lock, non-atomic world-readable writes (macOS KTRU-12 not twinned) **cross-platform pair**
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/Trust/Trust.cs:34-91,114-121,243-248,314-319; macOS/Sources/SyxxKit/Trust/AnswerLedger.swift:52-91,123-134
+  - Complexity: M
+  - Scope: both
+- **C151** — LAN diff keyed solely on MAC; ARP spoofing signature silently discarded; macOS traps on duplicate **cross-platform pair**
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:376-399; macOS/Sources/SyxxKit/LAN/LANCartographer.swift:115-140
+  - Complexity: M
+  - Scope: both
+- **C153** — Rolling baseline absorbs hostile config on detection tick; alert only in volatile memory **cross-platform pair**
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/Trust/ContinuousMonitor.cs:146-148; MonitorScheduler.cs:29-34,88-92; macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:176, MonitorScheduler.swift:27,65
+  - Complexity: L
+  - Scope: both
+- **C154** — Windows WitnessTestifyPlanner nondeterministic previous answer + cross-vantage disagreement recorded as temporal drift **cross-platform pair**
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/Trust/WitnessTestifyPlanner.cs:72-90; macOS/Sources/SyxxKit/Trust/WitnessTestifyPlanner.swift:63-77
+  - Complexity: M
+  - Scope: both
+
+## 3.(continued) Per-batch Delta Listing — Windows Client Core (Syxx.Kit)
+
+- **B211** — Windows attacker-chosen key renders VALID trust set dead in prod
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx.Kit/WitnessSigner.cs:154-155,166-167,209-212
+  - Complexity: M
+  - Scope: Windows
+- **B212** — Windows decodes server inconclusive as clean NotDetected fail-open
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx.Kit/LeakDetector.cs:489-503,408-409,430-443
+  - Complexity: M
+  - Scope: Windows
+- **B213** — Windows DTO requires leaked field server no longer signs Confirmed unreachable
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx.Kit/LeakDetector.cs:349-355,362-375,390-403
+  - Complexity: M
+  - Scope: Windows
+- **B214** — errorMessage in signed bytes platform-divergent v3 remedy half-shipped
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/SignedEvidencePayload.cs:106,113,123,94-102
+  - Complexity: L
+  - Scope: Windows
+- **B215** — E011 vector bypasses Build omits TTL/type fields parity unproven
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Tests/SignedEvidencePayloadTests.cs:17-18,28-46,48-53
+  - Complexity: M
+  - Scope: Windows
+- **B216** — outer/signed mismatch check unreachable because DTO never parses
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/LeakDetector.cs:396-403,392-395
+  - Complexity: M
+  - Scope: Windows
+- **B217** — DPAPI Protect throws DllNotFoundException on Linux aborts Mirror
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx.Kit/LicenseManager.cs:580,221,336,532,370
+  - Complexity: L
+  - Scope: Windows
+- **B218** — Windows 401/404 collapses to Invalid bypasses E-7 offline grace
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/LicenseManager.cs:477-480,536-539
+  - Complexity: M
+  - Scope: Windows
+- **B219** — Windows trial anchor accepts unauthenticated unpinned server response
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/LicenseManager.cs:236-257,309-322,132
+  - Complexity: M
+  - Scope: Windows
+- **B220** — HMAC silently degrades to empty key when fingerprint Unavailable
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Kit/LicenseManager.cs:402,259-270,297,272-276
+  - Complexity: M
+  - Scope: Windows
+- **B225** — DriftIfRedirected picks arbitrary Dictionary entry as forensic baseline
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx.Kit/Trust/WitnessTestifyPlanner.cs:77-80,85
+  - Complexity: M
+  - Scope: Windows
+- **B226** — answer ledger/sentinel/baseline world-readable 0644 non-atomic on Linux
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/Trust/Trust.cs:114-121,241-248,312-319
+  - Complexity: M
+  - Scope: Windows
+- **C027** — Windows ParseDNSPacket never sets PayloadBytes (F9 dead)
+  - Criticality: High
+  - Files: Windows/Syxx.Kit/DNSCapture.cs:369-381
+  - Complexity: S
+  - Scope: Windows
+- **C035** — Endpoint forensics consumes 400-line budget on invalid lines
+  - Criticality: High
+  - Files: Windows/Syxx.Kit/Forensics/EndpointLogAnalyzer.cs:47-65
+  - Complexity: M
+  - Scope: Windows
+- **C041** — Windows Cage capture exception falls through to ordinary reporting
+  - Criticality: Critical
+  - Files: Windows/SyxxCage/Program.cs:89-167
+  - Complexity: M
+  - Scope: Windows
+- **C046** — Unanimous-tampering detector bails out on the two conditions that prove interception
+  - Criticality: Critical
+  - Files: Windows/Syxx.Kit/VantageComparer.cs:229-247
+  - Complexity: L
+  - Scope: Windows
+- **C051** — Windows VantageComparer Verdict uses three independent bools not tri-state enum
+  - Criticality: Critical
+  - Files: Windows/Syxx.Kit/VantageComparer.cs:8-19
+  - Complexity: M
+  - Scope: Windows
+- **C116** — Windows MakeQueryPacket corrupt QTYPE/QCLASS for trailing-dot FQDN
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/DNSResolver.cs:447-460,1073
+  - Complexity: M
+  - Scope: Windows
+- **C119** — Windows OpenResolverProbe redefines DidFail omitting SERVFAIL/REFUSED/TRUNCATED
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/OpenResolverProbe.cs:79-81
+  - Complexity: S
+  - Scope: Windows
+- **C131** — Windows packet construction throws out of query paths where macOS returns .malformedResponse
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/DNSResolver.cs:197-209,362,1060-1063,1066-1087
+  - Complexity: M
+  - Scope: Windows
+- **C135** — Windows TracerouteRunner.cs does not compile: GetTracerouteCommand missing
+  - Criticality: CRITICAL
+  - Files: Windows/dotNET/Syxx.Kit/TracerouteRunner.cs:32
+  - Complexity: S
+  - Scope: Windows
+- **C136** — Windows TickOnce records nothing: no DNS sampling, no AnswerLedger writes
+  - Criticality: CRITICAL
+  - Files: Windows/dotNET/Syxx.Kit/Trust/ContinuousMonitor.cs:128-149
+  - Complexity: L
+  - Scope: Windows
+- **C137** — Unreadable adapter list rendered as definite loss of protection (bool collapse)
+  - Criticality: CRITICAL
+  - Files: Windows/dotNET/Syxx.Kit/Trust/Trust.cs:172-186; NetworkKeyState.cs:330-340,403-425,577; ContinuousMonitor.cs:94-118
+  - Complexity: L
+  - Scope: Windows
+- **C138** — EncryptedDNS Unknown escape hatch gated on Linux; Windows unreadable registry renders plain UDP/53
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/NetworkKeyState.cs:535-548,558-574
+  - Complexity: M
+  - Scope: Windows
+- **C139** — Windows SystemCommandRunner.Run no timeout/exit-code/stderr; LAN deadline decorative
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:318-337,348-364
+  - Complexity: M
+  - Scope: Windows
+- **C140** — Empty ARP parse rendered as complete zero-device LAN snapshot
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:366-373,280-290
+  - Complexity: M
+  - Scope: Windows
+- **C141** — Windows ARP parser asserts Reachable for unrecognized types; Unknown/Incomplete dead code
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:144-152,211,248,287-288
+  - Complexity: M
+  - Scope: Windows
+- **C142** — Windows tick finishing after Stop() still counted/latched/delivered (macOS fix not ported)
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/Trust/MonitorScheduler.cs:64-95,86-94,132-138
+  - Complexity: M
+  - Scope: Windows
+- **C143** — Windows MonitorScheduler thread-safety claim false; onTick fires UI writes off UI thread
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/Trust/MonitorScheduler.cs:24-25,28-35,69-72,86-94; SyxxUI/ViewModels/AppViewModel.cs:78-108
+  - Complexity: M
+  - Scope: Windows
+- **C148** — Config changes fabricated into AnswerDrift records with all fields blank; shipped to synthesis
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx/Program.cs:950-951
+  - Complexity: S
+  - Scope: Windows
+- **C150** — Windows tick throw kills loop silently; IsRunning stays true with stale LastTick forever
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/Trust/MonitorScheduler.cs:76-83,104-129
+  - Complexity: M
+  - Scope: Windows
+- **C152** — Windows TracerouteRunner returns truncated trace indistinguishable from complete; CLI hints interception
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/TracerouteRunner.cs:44-61; Syxx/Program.cs:664-673; Syxx/Commands/RouteCommand.cs:33-44
+  - Complexity: M
+  - Scope: Windows
+- **C155** — Windows LANSnapshot.IsPartial has zero consumers; failed scan rendered as benign empty LAN
+  - Criticality: HIGH
+  - Files: Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:278-284,361,364,372; Syxx/Commands/LanCommand.cs:29-56; Syxx/Program.cs:641-652
+  - Complexity: M
+  - Scope: Windows
+- **C156** — Windows PlannedProbes populated but never executed; dead plan hidden from serialization
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:189-215,225-229,241
+  - Complexity: S
+  - Scope: Windows
+- **C157** — Windows MonitorScheduler CTS disposed under live consumer; Start/Stop can run two loops; not IDisposable
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx.Kit/Trust/MonitorScheduler.cs:104-138
+  - Complexity: M
+  - Scope: Windows
+- **E012** — Console.OutputEncoding empty catch swallowed across all Windows CLIs
+  - Criticality: Low
+  - Files: Windows/Syxx/Program.cs:15
+  - Complexity: S
+  - Scope: Windows
+- **E047** — Windows CLI Cage prints unconditional [SUCCESS] before any packet — no no-packet signal
+  - Criticality: Medium
+  - Files: Windows/Syxx/Commands/CageCommand.cs:72
+  - Complexity: S
+  - Scope: Windows
+- **E050** — Windows LicenseManager.ValidateLicenseAsync bool wrapper hides timeout/network error at startup
+  - Criticality: Medium
+  - Files: Windows/Syxx/Program.cs:105; Windows/Syxx.Kit/LicenseManager.cs:492-496
+  - Complexity: S
+  - Scope: Windows
+- **E056** — Two snap confinement gaps: network-observe not auto-connected, no home plug
+  - Criticality: Critical
+  - Files: Linux/snap/snapcraft.yaml:16-19; Windows/Syxx/Commands/CageCommand.cs:251-256
+  - Complexity: M
+  - Scope: Windows
+- **E082** — syxx unbound disable claims restoration that structurally cannot happen on Linux
+  - Criticality: Medium-High
+  - Files: Windows/dotNET/Syxx/Commands/UnboundCommand.cs:66-71; Windows/dotNET/Syxx.Kit/UnboundManager.cs:100-102,288-295
+  - Complexity: M
+  - Scope: Windows
+- **E085** — syxx lan returns no devices on every Linux box — WindowsArpParser rejects Linux rows
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx/Commands/LanCommand.cs:53-57; Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:352-361
+  - Complexity: M
+  - Scope: Windows
+- **E088** — syxx firstrun --help runs a multi-minute scan instead of printing help
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx/Commands/FirstRunCommand.cs:13-26; Windows/dotNET/Syxx.Kit/SyxxConfig.cs:19-42
+  - Complexity: S
+  - Scope: Windows
+
+## 3.(continued) Per-batch Delta Listing — GUI Surfaces
+
+- **B053** — WitnessView conflates signature-validity with clean network verdict
+  - Criticality: High
+  - Files: WitnessView.swift:131-145
+  - Complexity: S
+  - Scope: Server
+- **B066** — Glutton shows green valid signature without showing key trust
+  - Criticality: Critical
+  - Files: GluttonView.swift:188-197; LeakDetector.swift:215-230
+  - Complexity: S
+  - Scope: Server
+- **B067** — Glutton colors notDetected green when collector pinning unconfigured
+  - Criticality: Critical
+  - Files: GluttonView.swift:173-203; LeakDetector.swift:145-153
+  - Complexity: S
+  - Scope: Server
+- **B088** — Dashboard trust score reassures on threat verdicts
+  - Criticality: Critical
+  - Files: DashboardView.swift:239-250; DashboardView.xaml.cs:31-33
+  - Complexity: M
+  - Scope: Server
+- **B090** — Invalid Stage-5 data does not suppress legacy verdict surface
+  - Criticality: Critical
+  - Files: ConclusionsView.swift:23-31; OverallVerdictView.swift:16-45; ConclusionsView.xaml.cs:33-46
+  - Complexity: M
+  - Scope: Server
+- **B096** — Windows Prophet record-type picker is decorative, always audits A
+  - Criticality: High
+  - Files: ProphetView.xaml:32-39; ProphetView.xaml.cs:36-44; AppViewModel.cs:127-153; ProbePlan.cs:36-45
+  - Complexity: M
+  - Scope: Server
+- **B141** — Ubuntu Mirror Lite invokes Windows DPAPI, discards completed comparison
+  - Criticality: Critical
+  - Files: Ubuntu/MirrorViewModel.cs:37-48; ProbePlan.cs:85-153; LicenseManager.cs:16-73
+  - Complexity: L
+  - Scope: Linux
+- **B186** — signatureKeyTrusted tri-state never rendered nil renders as INVALID
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/GluttonView.swift:212-222;macOS/Sources/SyxxCLI/Commands/SyxxLeak.swift:96-102
+  - Complexity: M
+  - Scope: macOS
+- **B235** — default return empty makes run print timeout that never happened
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:488-503,530-540,507-513
+  - Complexity: M
+  - Scope: macOS
+- **B236** — all scans complete after 2 of 6 wardens run-all has no timeout
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:412-456
+  - Complexity: M
+  - Scope: macOS
+- **B246** — leakTestSubdomain overwritten with resolver IP rendered under Test Label
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:210,811,817;GluttonView.swift:124-135
+  - Complexity: M
+  - Scope: macOS
+- **C032** — Windows Glutton shows rows from different test than collector verdict
+  - Criticality: High
+  - Files: Windows/SyxxUI/ViewModels/AppViewModel.cs:208-220
+  - Complexity: M
+  - Scope: Windows
+- **C048** — Ubuntu Glutton fabricates DNS encryption state from VPN state
+  - Criticality: Critical
+  - Files: Ubuntu/SyxxUI.Avalonia/ViewModels/GluttonViewModel.cs:34-50
+  - Complexity: M
+  - Scope: Linux
+- **C049** — macOS Prophet discards user-selected resolver from displayed/synthesized evidence
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/ProphetView.swift:54-56
+  - Complexity: M
+  - Scope: macOS
+- **C052** — macOS DashboardView leakLabel shows No (green) when no leak data collected
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:274-281
+  - Complexity: S
+  - Scope: macOS
+- **E028** — isPro never set true on either GUI — Windows Mirror never runs, macOS Warp locked
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:73; Windows/SyxxUI/AppViewModel.cs:23,160
+  - Complexity: M
+  - Scope: both
+- **E089** — ProphetView renders resolvers-agree from reachability count — no answer comparison performed
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/ProphetView.swift:118-128,155-163; macOS/Sources/SyxxApp/AppModel.swift:47-52,744-747
+  - Complexity: M
+  - Scope: macOS
+- **E090** — DashboardView Warden tiles render PASSED from mere non-nil-ness of result
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:388-398
+  - Complexity: M
+  - Scope: macOS
+- **E091** — GluttonView renders green signature-valid without signer trust, verdict coloured before signature check
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/GluttonView.swift:197-228
+  - Complexity: M
+  - Scope: macOS
+- **E092** — WitnessView prints fabricated github.com domain and 1.1.1.1 resolver when unmeasured
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/WitnessView.swift:163-172
+  - Complexity: S
+  - Scope: macOS
+- **E093** — DashboardView Trust Ring: progress is ran-count, number inside is a threats strength (95% hijack shows 95)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:51-57,400-415,417-428
+  - Complexity: M
+  - Scope: macOS
+- **E094** — DashboardView banner hardcodes Four wardens keep watch contradicting live counters
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:96-98
+  - Complexity: S
+  - Scope: macOS
+- **E095** — DashboardView Enable Encrypted DNS tile is dead UI permanently asserting already-encrypted-via-VPN
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:199-223
+  - Complexity: M
+  - Scope: macOS
+- **E096** — DashboardView transport pill: green for plaintext DNS, Do53-clear asserted when encryption never measured
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:65,430-432
+  - Complexity: S
+  - Scope: macOS
+- **E097** — DashboardView displays 1.1.1.1 as Your Resolver when no resolver was discovered
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:67-73,434-439
+  - Complexity: S
+  - Scope: macOS
+- **E098** — DashboardView headlines The Vigil Holds because a check ran not because it came back clean
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:42-44,61-63
+  - Complexity: S
+  - Scope: macOS
+- **E101** — LicenseView advertises Glutton/Witness as free while ContentView and DashboardView lock them behind Pro
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/LicenseView.swift:66-72; ContentView.swift:186-213; DashboardView.swift:391-395
+  - Complexity: M
+  - Scope: macOS
+- **E102** — CageView renders shared model.output as capture result — any tools message appears as Cage finding
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/CageView.swift:113-122
+  - Complexity: M
+  - Scope: macOS
+- **E103** — DashboardView Cage ticker shows cageEventsCount % 1000 — 1000 captures renders Captures: 0
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/DashboardView.swift:352-361
+  - Complexity: S
+  - Scope: macOS
+- **E104** — OverallVerdictView paints CLEAN determinations diagnosis with critical-red confidence pill
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/Views/Components/OverallVerdictView.swift:216-227
+  - Complexity: S
+  - Scope: macOS
+- **E105** — ConclusionsView marks module Complete with green check on non-nil input, declares All Modules Complete in green
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/ConclusionsView.swift:7-16,119-126,148-168,226-249
+  - Complexity: M
+  - Scope: macOS
+- **E106** — ConclusionsView counts resolvers that failed to answer as checked
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/ConclusionsView.swift:195-198
+  - Complexity: S
+  - Scope: macOS
+- **E107** — ConclusionsView Glutton evidence row states observation count without the qualifying verdict
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/ConclusionsView.swift:202-204
+  - Complexity: S
+  - Scope: macOS
+- **E108** — ProphetView localDomain shadows model.domain and clobbers it with empty string
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/ProphetView.swift:6,53,64-66,128
+  - Complexity: S
+  - Scope: macOS
+- **E109** — ProphetView result card is unconditionally success-tinted regardless of result
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/ProphetView.swift:118-126,155-168
+  - Complexity: S
+  - Scope: macOS
+- **E110** — MirrorView promises cryptographic hash comparison to users who cannot run it, never renders mismatchedScriptHashes
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/MirrorView.swift:44-47,74-77,176-235
+  - Complexity: M
+  - Scope: macOS
+- **E115** — SettingsView encrypted-DNS toggle stays ON when system refused the change
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/SettingsView.swift:44-47,63,164-172,179-192
+  - Complexity: S
+  - Scope: macOS
+- **E116** — SettingsView asserts Not enabled before any measurement
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/SettingsView.swift:15,137,174-176
+  - Complexity: S
+  - Scope: macOS
+- **E117** — GluttonView renders unresolved license check as red failure
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/GluttonView.swift:6,73-81,248-252
+  - Complexity: S
+  - Scope: macOS
+- **E118** — GluttonView probe table colours sent green — dispatch success in verdict palette
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/GluttonView.swift:142-152
+  - Complexity: S
+  - Scope: macOS
+- **E119** — PortalView lists cached resolvers while DashboardView prefers portal report — two panes can disagree
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/PortalView.swift:81; macOS/Sources/SyxxApp/DashboardView.swift:435-437
+  - Complexity: S
+  - Scope: macOS
+- **E120** — OverallVerdictView section badges render raw enum jargon — POSITIVE (red) means tampering found
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/Views/Components/OverallVerdictView.swift:368-384
+  - Complexity: S
+  - Scope: macOS
+- **E121** — ConclusionsView Reset Analysis clears verdict but leaves evidence
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/ConclusionsView.swift:100-105
+  - Complexity: S
+  - Scope: macOS
+- **E123** — Five design-system components defined and never rendered
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/Views/Components/IoDesignSystem.swift:87-101,289-346,449-476,585-611; PurpleScrollView.swift:10-70
+  - Complexity: S
+  - Scope: macOS
+- **E124** — ConclusionsView still renders retired DST verdict/confidence/referral fields — compile break
+  - Criticality: Critical
+  - Files: Windows/dotNET/SyxxUI/Views/ConclusionsView.xaml.cs:40-46
+  - Complexity: S
+  - Scope: Windows
+- **E125** — Text() builder called eight times and defined nowhere — compile break
+  - Criticality: Critical
+  - Files: Windows/dotNET/SyxxUI/Views/ConclusionsView.xaml.cs:274,277,284,288,299,302,310,313
+  - Complexity: S
+  - Scope: Windows
+- **E126** — SyxxSettings.NotificationsEnabled read as static but is instance property — compile break
+  - Criticality: Critical
+  - Files: Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:94
+  - Complexity: S
+  - Scope: Windows
+- **E128** — navUri used where not definitely assigned — security guard compile break
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/RemoteContentPanel.xaml.cs:180-184
+  - Complexity: S
+  - Scope: Windows
+- **E129** — UpdatePanel renders Syxx is up to date green for a check that never succeeded
+  - Criticality: Critical
+  - Files: Windows/dotNET/SyxxUI/Views/UpdatePanel.xaml.cs:35-48,52-80,117-139
+  - Complexity: M
+  - Scope: Windows
+- **E130** — Mirror Check is silent no-op without Pro then reports Run a check
+  - Criticality: Critical
+  - Files: Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:303; Views/MirrorView.xaml.cs:31-39
+  - Complexity: M
+  - Scope: Windows
+- **E131** — Glutton prints 1 resolver observed without consulting observed list — fabricated value in green
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/GluttonView.xaml.cs:149-153
+  - Complexity: S
+  - Scope: Windows
+- **E132** — Probe that ran and FAILED is indistinguishable from one that never ran — tri-state collapsed across 5 panes
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:276-290,315-325,344-350,374-390
+  - Complexity: L
+  - Scope: Windows
+- **E133** — Encrypted-DNS toggle: Encryption is off asserted without turning anything off
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/SettingsView.xaml.cs:42-51,88-96
+  - Complexity: M
+  - Scope: Windows
+- **E134** — Dashboard QUERIES SEEN card is unconditionally green including when it reads dash
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/DashboardView.xaml.cs:81-82
+  - Complexity: S
+  - Scope: Windows
+- **E135** — Dashboard card labelled CONFIDENCE now shows a verdict word not a confidence
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/DashboardView.xaml:57-72; Views/DashboardView.xaml.cs:45-60
+  - Complexity: S
+  - Scope: Windows
+- **E136** — License activation never unlocks Pro in the running session
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/LicenseView.xaml.cs:50-92
+  - Complexity: M
+  - Scope: Windows
+- **E137** — catch IsPro=false collapses unreachable into not licensed silently
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:231-247,24
+  - Complexity: M
+  - Scope: Windows
+- **E138** — Sentry and OpenTelemetry ship unconditionally — privacy toggle controls nothing
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/App.xaml.cs:22-66; Views/SettingsView.xaml.cs:67-71
+  - Complexity: M
+  - Scope: Windows
+- **E139** — Conclusions shows stale evidence cards and No checks have been run yet after Reset
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/ConclusionsView.xaml.cs:64-161
+  - Complexity: M
+  - Scope: Windows
+- **E140** — Witness announces fabricated domain and re-derived resolver as the sealed ones
+  - Criticality: Medium-High
+  - Files: Windows/dotNET/SyxxUI/Views/WitnessView.xaml.cs:105-107
+  - Complexity: M
+  - Scope: Windows
+- **E141** — Free the witness to reset your DNS cache — no cache is reset
+  - Criticality: Medium-High
+  - Files: Windows/dotNET/SyxxUI/Views/WitnessView.xaml:143-148; AppViewModel.cs:559-575
+  - Complexity: M
+  - Scope: Windows
+- **E142** — Capture that produced nothing clears status line to empty string — failed run reads as idle
+  - Criticality: Medium-High
+  - Files: Windows/dotNET/SyxxUI/Views/CageView.xaml.cs:168-186
+  - Complexity: M
+  - Scope: Windows
+- **E143** — Prophet renders timeout or transport error as No records were returned for this domain
+  - Criticality: Medium-High
+  - Files: Windows/dotNET/SyxxUI/Views/ProphetView.xaml.cs:67-76
+  - Complexity: S
+  - Scope: Windows
+- **E144** — DNSSEC Inconclusive renders critical red contradicting app severity rule
+  - Criticality: Medium
+  - Files: Windows/dotNET/SyxxUI/Views/ProphetView.xaml.cs:110-114
+  - Complexity: S
+  - Scope: Windows
+- **E146** — Prophet record-type picker is decorative — every lookup is A/AAAA regardless
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/ProphetView.xaml:53-60; AppViewModel.cs:21,35-36,416
+  - Complexity: M
+  - Scope: Windows
+- **E147** — async void event handlers with no try/catch — any probe exception kills the process
+  - Criticality: High
+  - Files: Windows/dotNET/SyxxUI/Views/ProphetView.xaml.cs:49-59; MirrorView.xaml.cs:31-39; PortalView.xaml.cs:36-45; GluttonView.xaml.cs:22-36; WitnessView.xaml.cs:40-51; LicenseView.xaml.cs:31-37
+  - Complexity: M
+  - Scope: Windows
+- **E148** — UpdatePanel hard-codes a fourth divergent severity palette
+  - Criticality: Medium
+  - Files: Windows/dotNET/SyxxUI/Views/UpdatePanel.xaml.cs:141-145
+  - Complexity: S
+  - Scope: Windows
+- **E150** — Portal collects three signals and renders none of them
+  - Criticality: Medium
+  - Files: Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:344-350; Views/PortalView.xaml.cs:47-72
+  - Complexity: M
+  - Scope: Windows
+- **E151** — Dead UI: WelcomeView, its click handler, and three view-model properties
+  - Criticality: Medium
+  - Files: Windows/dotNET/SyxxUI/Views/WelcomeView.xaml; MainWindow.xaml.cs:169-183; AppViewModel.cs:75,152-154
+  - Complexity: S
+  - Scope: Windows
+- **E153** — Cage rebuilds entire display collection on every captured packet — O(n-squared)
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/SyxxUI/Views/CageView.xaml.cs:291-301
+  - Complexity: S
+  - Scope: Windows
+- **E154** — Glutton is badged PRO in sidebar but has no entitlement gate
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/SyxxUI/MainWindow.xaml:183-191; AppViewModel.cs:360-398
+  - Complexity: S
+  - Scope: Windows
+- **E155** — Panes refresh only on navigation — no PropertyChanged subscription anywhere
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/SyxxUI/Views/*.xaml.cs OnNavigatedTo
+  - Complexity: L
+  - Scope: Windows
+- **E156** — Prices disagree across three surfaces, one inside a status verdict
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/SyxxUI/Views/DashboardView.xaml:214,243; Views/LicenseView.xaml:78,80; LicenseManager.cs:534
+  - Complexity: S
+  - Scope: Windows
+- **E157** — Stage-5 reasoning prints CLR enum identifiers to the user
+  - Criticality: Low
+  - Files: Windows/dotNET/SyxxUI/Views/ConclusionsView.xaml.cs:302,313
+  - Complexity: S
+  - Scope: Windows
+- **E158** — Resolver addresses painted success-green on two panes regardless of state
+  - Criticality: Low
+  - Files: Windows/dotNET/SyxxUI/Views/DashboardView.xaml:42-44; Views/ProphetView.xaml:17-20
+  - Complexity: S
+  - Scope: Windows
+- **E159** — Dashboard ALERTS TODAY is not time-scoped and is dash vs 0 on null conclusion
+  - Criticality: Low
+  - Files: Windows/dotNET/SyxxUI/Views/DashboardView.xaml.cs:62-65
+  - Complexity: S
+  - Scope: Windows
+- **E161** — RemoteContentPanel OnNavigatedTo is empty override carrying stale promise
+  - Criticality: Low
+  - Files: Windows/dotNET/SyxxUI/Views/RemoteContentPanel.xaml.cs:206-211
+  - Complexity: S
+  - Scope: Windows
+- **F013** — Feature lock banner has ugly presentation — emoji, red styling, parsing issues
+  - Criticality: Non-critical
+  - Files: macOS/Sources/SyxxApp/ (GluttonView, MirrorView feature locks)
+  - Complexity: S
+  - Scope: macOS
+- **F016** — LicenseView fabricated machine ID, activation count, and hardcoded CURRENT pill
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/LicenseView.swift:129,31
+  - Complexity: S
+  - Scope: macOS
+- **F024** — RemoteContentView WKWebView static cache never evicts — memory leak
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/RemoteContentView.swift:25,63
+  - Complexity: S
+  - Scope: macOS
+
+## 3.(continued) Per-batch Delta Listing — CLI Surfaces
+
+- **B047** — RRSIG validity judged vs local wall clock — attacker-controllable spoofing
+  - Criticality: Critical
+  - Files: DNSSECVerifier.swift:77,100
+  - Complexity: M
+  - Scope: Server
+- **B056** — CLI mixes local resolver into known-modern SVCB/TTL set
+  - Criticality: Med
+  - Files: SyxxCLI.swift:290,293; SVCBProbe.swift:11-13
+  - Complexity: S
+  - Scope: Server
+- **B057** — Wildcard reference can equal resolver-under-test — nxHijack invisible
+  - Criticality: Med
+  - Files: WildcardSynthesisProbe.swift:74-78; SyxxCLI.swift:204
+  - Complexity: S
+  - Scope: Server
+- **B064** — DNSSEC back-compat bool reports expired signatures as true
+  - Criticality: High
+  - Files: DNSSECVerifier.swift:68-73; DNSSECVerifier.cs:54-59
+  - Complexity: M
+  - Scope: Server
+- **B074** — One SVCB responder can produce clean present/absent result
+  - Criticality: Critical
+  - Files: SVCBProbe.swift:64-78; SVCBProbe.cs:49-64
+  - Complexity: M
+  - Scope: Server
+- **B075** — CNAME loops and hop-cap exhaustion returned as ordinary chains
+  - Criticality: Critical
+  - Files: CNAMEChainProbe.swift:65-80; CNAMEChainProbe.cs:54-69
+  - Complexity: M
+  - Scope: Server
+- **B076** — Identical zero TTLs labeled independent caching
+  - Criticality: High
+  - Files: TTLAnomalyProbe.swift:67-79; TTLAnomalyProbe.cs:50-61
+  - Complexity: M
+  - Scope: Server
+- **B077** — Two identical nonzero TTLs reported as TTLs vary
+  - Criticality: Medium
+  - Files: TTLAnomalyProbe.swift:74-79; TTLAnomalyProbe.cs:57-61
+  - Complexity: M
+  - Scope: Server
+- **B078** — Answer stability ignores intermediate TTL increases
+  - Criticality: High
+  - Files: AnswerStabilityProbe.swift:81-87; AnswerStabilityProbe.cs:66-73
+  - Complexity: M
+  - Scope: Server
+- **B079** — Legitimate disjoint CDN rotations classified unstable
+  - Criticality: Critical
+  - Files: AnswerStabilityProbe.swift:89-96; AnswerStabilityProbe.cs:75-84
+  - Complexity: M
+  - Scope: Server
+- **B080** — Failed amplification measurement becomes recursiveLowAmp
+  - Criticality: Critical
+  - Files: OpenResolverProbe.swift:74-92; OpenResolverProbe.cs:49-71
+  - Complexity: M
+  - Scope: Server
+- **B084** — SSRF validation in ContentWarp blocks CNAME resolving hosts
+  - Criticality: Critical
+  - Files: ContentWarp.swift:325-347; ContentWarp.cs:327-349
+  - Complexity: M
+  - Scope: Server
+- **B095** — Windows endpoint indicators bypassed by case variation
+  - Criticality: High
+  - Files: EndpointLogAnalyzer.cs:18-38,153-154,220-224
+  - Complexity: S
+  - Scope: Server
+- **B100** — Windows Witness displays VALID without network-evidence quality state
+  - Criticality: High
+  - Files: SyxxWitness/Program.cs:76-87,112-125; SyxxWitness.swift:90-101
+  - Complexity: M
+  - Scope: Server
+- **B137** — macOS CLI never sets non-zero exit code
+  - Criticality: Critical
+  - Files: SyxxCLI/**
+  - Complexity: L
+  - Scope: Server
+- **B139** — Filtering probe treats ordinary NXDOMAIN/NODATA as active enforcement
+  - Criticality: Critical
+  - Files: FilteringProbe.swift:45-102; FilteringProbe.cs:31-88; SyxxFilter.swift:37-56
+  - Complexity: M
+  - Scope: Server
+- **B140** — Lookalike detector claims transposition support but misses adjacent swaps
+  - Criticality: High
+  - Files: LookalikeDetector.swift:79-101; LookalikeDetector.cs:57-76
+  - Complexity: M
+  - Scope: Server
+- **B146** — Windows IsDNSEncrypted() false stub kills Sentinel and configurator
+  - Criticality: Critical
+  - Files: NetworkKeyState.cs:383; Trust.cs:159,173,223-225; EncryptedDNSConfigurator.cs:58-64
+  - Complexity: L
+  - Scope: Server
+- **B148** — Windows ContentWarp.IsInlineScriptIdentical defaults to true
+  - Criticality: Critical
+  - Files: ContentWarp.cs:41,240,249
+  - Complexity: S
+  - Scope: Server
+- **B189** — Ed25519 private key accepted on argv key file written before restricted
+  - Criticality: Medium-High
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxWitness.swift:53-57,66-71,23-33
+  - Complexity: M
+  - Scope: macOS
+- **B232** — every syxx invocation exits 2 including --help --version confirmed tamper
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCLI/SyxxCLI.swift:8,15,28-55,46-49,196-203
+  - Complexity: M
+  - Scope: macOS
+- **B233** — blocked network turns Pro user into LITE tells them key is invalid
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCLI/SyxxCLI.swift:104-107,119,158-164;LicenseManager.swift:427-429
+  - Complexity: M
+  - Scope: macOS
+- **B234** — 2.5s probe budget turns valid Pro license into license check failed and upsell
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCLI/SyxxCLI.swift:453-457,561-568
+  - Complexity: M
+  - Scope: macOS
+- **B239** — --local parsed documented discarded domain never canonicalized isPro never passed
+  - Criticality: High
+  - Files: macOS/Sources/SyxxCLI/Synthesis/FirstRunScan.swift:24,35-37,44-53,72
+  - Complexity: M
+  - Scope: macOS
+- **B240** — --verbose/--json in unreachable code -v means two things version string diverges
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxCLI/SyxxCLI.swift:28-55,58-61,46-49;SyxxConfig.swift:48-73
+  - Complexity: M
+  - Scope: macOS
+- **B241** — baseline saved printed over discarded try? writes false success
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxSentinel.swift:24,43,48,63;SyxxCLI.swift:771
+  - Complexity: M
+  - Scope: macOS
+- **B242** — hardcoded 1 resolver observed for 0 or N never says LEAK
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxLeak.swift:78-89
+  - Complexity: S
+  - Scope: macOS
+- **B248** — syxx warp claims completely secure asserts cause not observed
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxWarp.swift:74-86,16
+  - Complexity: S
+  - Scope: macOS
+- **B249** — --gen-keypair silently overwrites existing private key no prompt no backup
+  - Criticality: Low-Medium
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxWitness.swift:23-39
+  - Complexity: S
+  - Scope: macOS
+- **B253** — witness verify exits 0 on Windows for tampered macOS exits 2 for everything
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx/Commands/WitnessCommand.cs:246-300;macOS/Sources/SyxxCLI/SyxxCLI.swift:7-8,15,196-202
+  - Complexity: M
+  - Scope: both
+- **B254** — witness report renders evidence it never verified and exits 0
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxWitness.swift:289-323;Windows/dotNET/Syxx/Commands/WitnessCommand.cs:399-448
+  - Complexity: M
+  - Scope: both
+- **C074** — Raw capture deleted after replacement-queries export silently fails (both artifacts lost)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxCage.swift:293-325
+  - Complexity: M
+  - Scope: macOS
+- **C075** — Capture-loss counters never reach saved report; .skipped swallows parse/encode failures
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxCage.swift:195-248
+  - Complexity: M
+  - Scope: macOS
+- **C076** — D065 symlink-race fix incomplete (fd closed, path-based privileged ops, unvalidated --output/--owner-uid)
+  - Criticality: Critical
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxCage.swift:174-190
+  - Complexity: L
+  - Scope: macOS
+- **C101** — Empty/partial ARP result rendered as benign "nothing here"
+  - Criticality: HIGH
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxLan.swift:18-21
+  - Complexity: M
+  - Scope: macOS
+- **C105** — "resolvers off-LAN" definite claim from stale ARP cache
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxLan.swift:38-46
+  - Complexity: M
+  - Scope: macOS
+- **C106** — ARP/MAC evidence presented with no unauthenticated-forgery caveat
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxLan.swift:26-46
+  - Complexity: M
+  - Scope: macOS
+- **C109** — Sentinel CLI prints tri-state as bare "no"; "stable" from failed samples; rolls baseline
+  - Criticality: MEDIUM
+  - Files: macOS/Sources/SyxxCLI/Commands/SyxxSentinel.swift:17-20,52-54,62-63
+  - Complexity: M
+  - Scope: macOS
+- **C149** — Windows Sentinel CLI renders tri-state facts as binary certainties; "stable" from failed reads
+  - Criticality: MEDIUM
+  - Files: Windows/dotNET/Syxx/Commands/SentinelCommand.cs:38-41,99-102; Program.cs:938-941
+  - Complexity: M
+  - Scope: Windows
+- **E037** — Windows raw socket captures all IP traffic — no kernel-level packet filter
+  - Criticality: Medium
+  - Files: Windows/SyxxCage/Program.cs:219-223
+  - Complexity: L
+  - Scope: Windows
+- **E041** — macOS route trace lacks streaming and partial-output-on-timeout (deadlock empirically bounded)
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxRoute/SyxxRoute.swift:37-63; Windows/SyxxRoute/Program.cs:50-77
+  - Complexity: M
+  - Scope: both
+- **E046** — Windows DNS capture process attribution always fails due to incorrect netstat regex
+  - Criticality: High
+  - Files: Windows/Syxx.Kit/DNSCapture.cs:494
+  - Complexity: M
+  - Scope: Windows
+- **E048** — macOS activation overwrites known-good credential before validation
+  - Criticality: High
+  - Files: macOS/Sources/SyxxApp/AppModel.swift:326-369,513-537
+  - Complexity: M
+  - Scope: macOS
+- **E049** — Windows LeakDetector.Verify bool collapses 4 distinct failure modes into false
+  - Criticality: Medium
+  - Files: Windows/Syxx.Kit/LeakDetector.cs:295-314
+  - Complexity: M
+  - Scope: Windows
+- **E051** — macOS isVPNActive() bool wrapper collapses unknown — used by Sentinel snapshot
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxKit/NetworkKeyState.swift:331-334; macOS/Sources/SyxxKit/Trust/Sentinel.swift:28
+  - Complexity: M
+  - Scope: macOS
+- **E054** — snapcraft.yaml command points at Syxx.CLI which does not exist
+  - Criticality: Critical
+  - Files: Linux/snap/snapcraft.yaml:13-15
+  - Complexity: S
+  - Scope: Linux
+- **E055** — snapcraft.yaml missing build-snaps for dotnet-sdk, invalid project-path key, no platforms stanza
+  - Criticality: Critical
+  - Files: Linux/snap/snapcraft.yaml:21-31
+  - Complexity: M
+  - Scope: Linux
+- **E057** — Ubuntu build_deb.sh cannot produce a package — four independent defects
+  - Criticality: Critical
+  - Files: Ubuntu/build_deb.sh:6,9,13,29-31,67-69,78
+  - Complexity: M
+  - Scope: Linux
+- **E058** — Nothing in CI ever compiles the Linux GUI
+  - Criticality: Critical
+  - Files: Ubuntu/SyxxUI.Avalonia.Tests/; Windows/Syxx.Linux.slnf:4-8
+  - Complexity: M
+  - Scope: Windows
+- **E059** — deploy.sh silent fallback to root user with success banner
+  - Criticality: Critical
+  - Files: scripts/deploy.sh:191-204,319
+  - Complexity: S
+  - Scope: Server
+- **E060** — deploy.sh inner dependency-check exit 1 thrown away by outer || echo
+  - Criticality: Critical
+  - Files: scripts/deploy.sh:137,150-154
+  - Complexity: S
+  - Scope: Server
+- **E061** — Linux snap and deb packaging inputs untracked in git
+  - Criticality: High
+  - Files: Linux/snap/snapcraft.yaml; Ubuntu/build_deb.sh
+  - Complexity: S
+  - Scope: Linux
+- **E062** — Sentry CI steps permanently skipped due to env evaluation order
+  - Criticality: High
+  - Files: .github/workflows/ci.yml:148-149,156-157,168-169,180-181
+  - Complexity: S
+  - Scope: Server
+- **E063** — deploy.sh reports daemon success without verifying it started
+  - Criticality: High
+  - Files: scripts/deploy.sh:365-368
+  - Complexity: M
+  - Scope: Server
+- **E064** — deploy.sh backup: false claim of taken backup plus unhardened root-run service
+  - Criticality: High
+  - Files: scripts/deploy.sh:493-520
+  - Complexity: M
+  - Scope: Server
+- **E065** — deploy.sh syxx-server.service hardening is a partial set
+  - Criticality: High
+  - Files: scripts/deploy.sh:312-363
+  - Complexity: M
+  - Scope: Server
+- **E066** — deploy-sentry.sh admin password generated and never recoverable
+  - Criticality: High
+  - Files: scripts/deploy-sentry.sh:177-181,296
+  - Complexity: S
+  - Scope: Server
+- **E067** — deploy-sentry.sh API token created with scopes=0, errors reported as already-exists
+  - Criticality: High
+  - Files: scripts/deploy-sentry.sh:191-201,232-236,244-250
+  - Complexity: M
+  - Scope: Server
+- **E068** — deploy.sh sentry-sdk install failure downgraded to warning with success banner
+  - Criticality: Medium
+  - Files: scripts/deploy.sh:741-745
+  - Complexity: S
+  - Scope: Server
+- **E069** — deploy.sh certbot failure downgraded, site left on plaintext HTTP with success banner
+  - Criticality: Medium
+  - Files: scripts/deploy.sh:412-416,483-485
+  - Complexity: M
+  - Scope: Server
+- **E070** — deploy.sh vs syxx-backup.sh env file format mismatch (shell-sourcing systemd file)
+  - Criticality: Medium
+  - Files: scripts/deploy.sh:214-306; Server/scripts/syxx-backup.sh:17-21
+  - Complexity: S
+  - Scope: Server
+- **E071** — Four labels assert untrue things (snap version, session secret, sentry domain, CI step name)
+  - Criticality: Medium
+  - Files: Linux/snap/snapcraft.yaml:2,9; scripts/deploy.sh:158-161; scripts/deploy-sentry.sh:118-128; .github/workflows/ci.yml:66
+  - Complexity: S
+  - Scope: Linux
+- **E072** — Linux CLI does not compile — GetTracerouteCommand method does not exist
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx.Kit/TracerouteRunner.cs:32
+  - Complexity: M
+  - Scope: Windows
+- **E073** — Every scripted Linux CLI invocation returns exit 0 regardless of verdict
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx/Program.cs:15
+  - Complexity: L
+  - Scope: Windows
+- **E074** — syxx leak exit codes wrong in both directions (confirmed leak exits 0, error exits 1)
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx/Commands/LeakCommand.cs:116-128,163-172
+  - Complexity: M
+  - Scope: Windows
+- **E075** — syxx cage can never capture a single packet on Linux — SIO_RCVALL is Windows-only
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx/Commands/CageCommand.cs:251-285
+  - Complexity: L
+  - Scope: Windows
+- **E076** — Guided Cage unreachable on Linux — IsElevated always false, Windows error number shown
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx/Program.cs:896-906,801-825
+  - Complexity: M
+  - Scope: Windows
+- **E077** — Cage capture files world-readable on Linux (no SetUnixFileMode)
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx/Commands/CageCommand.cs:49-57,83,211
+  - Complexity: S
+  - Scope: Windows
+- **E078** — Witness private key briefly world-readable then chmod; false failure message on chmod throw
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx/Commands/WitnessCommand.cs:39-56,405-422
+  - Complexity: M
+  - Scope: Windows
+- **E079** — Silent fallback to 8.8.8.8 in 3 CLI paths — measures Google not the user resolver
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx/Program.cs:397-403,493-499; Windows/dotNET/Syxx/Commands/WitnessCommand.cs:106-111
+  - Complexity: M
+  - Scope: Windows
+- **E080** — Non-interactive syxx spins forever at EOF — no null/EOF exit path
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx/Program.cs:50-53,170-263,189
+  - Complexity: S
+  - Scope: Windows
+- **E081** — Every Pro-gated CLI path throws DllNotFoundException on Linux (crypt32.dll DPAPI)
+  - Criticality: Medium-High
+  - Files: Windows/dotNET/Syxx.Kit/LicenseManager.cs:22-42,578-582
+  - Complexity: L
+  - Scope: Windows
+- **E083** — Windows-only instructions and Windows paths shown to Linux users
+  - Criticality: Medium
+  - Files: Windows/dotNET/Syxx/Commands/SentinelCommand.cs:31; CageCommand.cs:74; Program.cs:807,104; UnboundCommand.cs:61
+  - Complexity: S
+  - Scope: Windows
+- **E084** — syxx firstrun banner box does not close — mis-counted cell widths
+  - Criticality: Low
+  - Files: Windows/dotNET/Syxx/Commands/FirstRunCommand.cs:39-43
+  - Complexity: S
+  - Scope: Windows
+- **E086** — Entire shipped Linux surface has zero tests — CLI unreferenced, Linux GUI tests never run by CI
+  - Criticality: Critical
+  - Files: Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj:15-17; .github/workflows/ci.yml:74-115
+  - Complexity: L
+  - Scope: Windows
+- **E087** — Passive-DNS history and home-network baseline world-readable on Linux
+  - Criticality: High
+  - Files: Windows/dotNET/Syxx.Kit/Trust/Trust.cs:105,241,312
+  - Complexity: M
+  - Scope: Windows
+- **E111** — UpdatePanel reports Last checked: Never after checks have run — view-local @State shadowing service
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/UpdatePanel.swift:9,32-38,177-184
+  - Complexity: S
+  - Scope: macOS
+- **E112** — UpdatePanel Update available has no install path — downloadAndInstall defined and never called
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/UpdatePanel.swift:72-94,186-190
+  - Complexity: S
+  - Scope: macOS
+- **E114** — AboutPanel and UpdatePanel synthesise todays date as build number
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/AboutPanel.swift:87-93; macOS/Sources/SyxxApp/UpdatePanel.swift:160-164
+  - Complexity: S
+  - Scope: macOS
+- **E122** — NSPanelManager will silently construct throwaway AppModel for Settings and License panels
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/NSPanelManager.swift:30-52
+  - Complexity: S
+  - Scope: macOS
+- **E127** — Image.Effect and DropShadowEffect do not exist in WinUI 3 — XAML compile break on main window
+  - Criticality: Critical
+  - Files: Windows/dotNET/SyxxUI/MainWindow.xaml:47-54
+  - Complexity: S
+  - Scope: Windows
+- **E149** — Warning and High are the same colour — two severity tiers indistinguishable
+  - Criticality: Medium
+  - Files: Windows/dotNET/SyxxUI/Styles/IoDesignSystem.xaml:39,41
+  - Complexity: S
+  - Scope: Windows
+- **E152** — Dimensions nav item stays selected while content pane shows something else
+  - Criticality: Low-Medium
+  - Files: Windows/dotNET/SyxxUI/MainWindow.xaml.cs:160-168
+  - Complexity: S
+  - Scope: Windows
+- **E160** — CheckLicenseAsync fires twice at launch; OnSuspending never runs unpackaged
+  - Criticality: Low
+  - Files: Windows/dotNET/SyxxUI/App.xaml.cs:69-82; MainWindow.xaml.cs:58-60
+  - Complexity: S
+  - Scope: Windows
+- **F021** — macOS Early Access update toggle is disconnected
+  - Criticality: Low
+  - Files: macOS/Sources/SyxxApp/UpdatePanel.swift:9,46-61,155-166
+  - Complexity: S
+  - Scope: macOS
+- **F022** — Shipped EULA is explicitly a placeholder
+  - Criticality: Medium
+  - Files: macOS/Sources/SyxxApp/EULAPanel.swift:81-110
+  - Complexity: S
+  - Scope: macOS
+- **F025** — Windows startup dialog race can permanently lose a critical broadcast
+  - Criticality: High
+  - Files: Windows/SyxxUI/MainWindow.xaml.cs:30-41,44-57,65-101
+  - Complexity: M
+  - Scope: Windows
+- **F033** — Windows FirstRunScan Track(bool) conflates inconclusive with produced
+  - Criticality: Non-critical
+  - Files: Windows/Syxx.Kit/FirstRunScan.cs:126-129,135-138
+  - Complexity: S
+  - Scope: Windows
+- **F034** — Windows SyxxSettingsStore.Save bool cannot distinguish failure modes
+  - Criticality: Non-critical
+  - Files: Windows/Syxx.Kit/SyxxSettings.cs:51-61
+  - Complexity: S
+  - Scope: Windows
+- **F035** — Windows MonitorScheduler.IsRunning bool hides starting/stopping/crashed states
+  - Criticality: Non-critical
+  - Files: Windows/Syxx.Kit/MonitorScheduler.cs:28,104-129
+  - Complexity: S
+  - Scope: Windows
+- **F037** — testAllUntestedSections is a softened test — name says untested, fixture is inconclusive, assertion widened
+  - Criticality: Critical
+  - Files: macOS/Tests/SyxxKitTests/MatrixDeterminativeEngineTests.swift:357-384
+  - Complexity: S
+  - Scope: macOS
+- **F038** — Malformed signing key that successfully SIGNS is reported as SKIP not failure
+  - Criticality: Critical
+  - Files: macOS/Tests/SyxxAppTests/AppModelWitnessTests.swift:268-288
+  - Complexity: S
+  - Scope: macOS
+- **F039** — D096 and D097 success-path regression guards XCTSkip whenever feature is broken
+  - Criticality: Critical
+  - Files: macOS/Tests/SyxxAppTests/AppModelWitnessTests.swift:206-208,244-246
+  - Complexity: S
+  - Scope: macOS
+- **F040** — TrayGlyphTests false-clean guard quarantined out of build AND is red against current code
+  - Criticality: Critical
+  - Files: macOS/Tests/_quarantine/TrayGlyphTests.swift:25-26
+  - Complexity: M
+  - Scope: macOS
+- **F041** — Transcript-parity gate prints PASSED over zero or one transcript — cannot fail
+  - Criticality: Critical
+  - Files: .github/workflows/ci.yml:254-291
+  - Complexity: S
+  - Scope: Server
+- **F042** — corpus/matrix frozen spec oracle and golden vectors loaded by no test on any platform
+  - Criticality: Critical
+  - Files: corpus/matrix/default-spec.frozen.json; corpus/matrix/vectors/
+  - Complexity: M
+  - Scope: Server
+- **F043** — Ubuntu third of three-platform Witness parity harness never compiled or run by CI
+  - Criticality: Critical
+  - Files: .github/workflows/ci.yml:74-102; Ubuntu/SyxxUI.Avalonia.Tests/
+  - Complexity: S
+  - Scope: Linux
+- **F044** — C061 release-symbol gate passes when input missing, skips third release executable
+  - Criticality: Non-critical
+  - Files: .github/workflows/ci.yml:121-132
+  - Complexity: S
+  - Scope: Server
+- **F045** — Four MatrixDeterminativeEngineTests assertions are if-let/negative-only and survive deletion of named behaviour
+  - Criticality: Non-critical
+  - Files: macOS/Tests/SyxxKitTests/MatrixDeterminativeEngineTests.swift:668-719,617-661,823-853,490-509
+  - Complexity: S
+  - Scope: macOS
+- **F046** — FIXED 2026-07-30 (qwen-code). Restored 291 archived Windows test assertions into active test project
+  - Criticality: Critical
+  - Files: archive/dst-tests-windows/SyxxKitTests.cs → Windows/dotNET/Syxx.Tests/ (14 new files)
+  - Complexity: L
+  - Scope: Windows
+- **F047** — 209 quarantined macOS tests uncompilable by construction — includes only TrayIndicators/FirstRunScan/DNSCanaries coverage
+  - Criticality: Critical
+  - Files: macOS/Tests/_quarantine/ (19 files, 209 tests)
+  - Complexity: L
+  - Scope: macOS
+- **F048** — MatrixUntestedStateTests declares twin but Swift half missing three tests — report label already diverged
+  - Criticality: Non-critical
+  - Files: macOS/Tests/SyxxKitTests/MatrixUntestedStateTests.swift:4-6; Windows/dotNET/Syxx.Tests/MatrixUntestedStateTests.cs
+  - Complexity: S
+  - Scope: both
+
+## 4. Stale / Duplicate / Superseded List
+
+- **A060** — DNSSEC observation early exit on system vantage empty answers (duplicate of A041) | Scope: Prophet/Server | Superseded: A041
+- **A066** — recursive walker lacks shared deadline (superseded by A028 work-budget) | Scope: Portal/Server | Superseded: A028
+- **A072** — audit logs store unencrypted customer PII (debunked: no email column, IP purged) | Scope: Witness/Server | Superseded: N/A
+- **A081** — keygen license metadata plaintext email logging (debunked: not logged, delivery metadata) | Scope: Witness/Server | Superseded: N/A
+- **A084** — stripe checkout idempotency keys bypass session de-duplication (duplicate of A035) | Scope: Witness/Server | Superseded: A035
+- **A093** — warp regex HTML script parsing bypass (duplicate of A051) | Scope: Mirror/Server | Superseded: A051
+- **A099** — permissive CORS on licensed endpoints (debunked: no credentials, header-only auth) | Scope: Witness/Server | Superseded: N/A
+- **A101** — authoritative walk blocks connection handler threads (superseded by A028) | Scope: Portal/Server | Superseded: A028
+- **A202** — 6 test modules write to real repo DB (summary header) | Scope: Server/tests | Superseded: A214
+- **A203** — signature test passes with encoder deleted (summary header) | Scope: Server/tests | Superseded: A215
+- **A204** — honesty guards after __main__ invisible (summary header) | Scope: Server/tests | Superseded: A216
+- **A205** — Keygen-sig tests short-circuited by Date guard (summary header) | Scope: Server/tests | Superseded: A217
+- **A206** — preflight ratifies 4-byte Keygen key (summary header) | Scope: Server/tests | Superseded: A218
+- **A207** — 9 tests guard unreachable dns_sim.py (summary header) | Scope: Server/tests | Superseded: A219
+- **A208** — 5 paywalled routes no 402 test (summary header) | Scope: Server/tests | Superseded: A220
+- **A209** — DoT cap no falsifying test (summary header) | Scope: Server/tests | Superseded: A221
+- **A210** — gate registers 7 of 78 guards (summary header) | Scope: Server/tests/coverage | Superseded: A222
+- **A211** — scheduler 7 entry points 1 test (summary header) | Scope: Server/tests | Superseded: A223
+- **A212** — hostile-packet tests assert nothing (summary header) | Scope: Server/tests | Superseded: A224
+- **A213** — weak assertions inflate breadth (summary header) | Scope: Server/tests | Superseded: A225
+- **A226** — test ratifies broken 4-byte key deploy (refinement of A218) | Scope: Server/tests | Superseded: A218
+- **A227** — 5 paywalled routes no 402 test (summary header) | Scope: Server/tests | Superseded: A220
+- **A228** — ~40 DB tests run against shared repo DB (summary header) | Scope: Server/tests | Superseded: A214
+- **B081** — Witness verify accepts any unpinned self-signed key as VALID | Scope: Witness | Superseded: D011
+- **B178** — report renders unverified snapshot under tamper-evidence banner | Scope: Witness | Superseded: B254
+- **B192** — Windows drops ECS leak signal every leak branch returns before ECS read | Scope: Glutton | Superseded: B043
+- **B251** — three wire divergences make cross-platform witness snapshots unverifiable | Scope: Witness | Superseded: E011,D083,B037,D102,E162,B252
+- **C026** — Leak verdict cannot tell no-leak from query-never-arrived | Scope: Glutton | Superseded: A024, B030
+- **C079** — DNS payload sliced to buffer tail not validated UDP length (re-verification of C024/C029/C022) | Scope: Cage | Superseded: C024, C029, C022
+- **E099** — LicenseView renders fabricated machine ID, activation count, OS version, CPU architecture | Scope: E | Superseded: F016
+- **E100** — LicenseView marks Lite tier CURRENT regardless of real license state | Scope: E | Superseded: F016
+- **E113** — UpdatePanel Early access toggle is inert view state | Scope: E | Superseded: F021
+- **E145** — Broadcast marked dismissed the instant it is shown whatever the user does | Scope: E | Superseded: F025
+- **E162** — syxx witness create was dead on Windows — duplicate key crash in VantageComparer | Scope: E | Superseded: B010,B251
+- **F018** — ProphetView DNSSEC .inconclusive rendered critical-red — unmeasured state mislabeled a fault | Scope: F | Superseded: N/A
+- **F019** — DashboardView Queries seen and Resolver IP green even with no data — absence implies healthy | Scope: F | Superseded: E096
+
+## 5. Cross-Cutting Concerns
+
+### Shared root causes & cascade effects
+
+- scripts/deploy.sh:394-404 (referenced by 2 deltas)
+- Synthesizer.swift:490-508 (referenced by 2 deltas)
+- macOS/Sources/SyxxKit/DNSResolver.swift:395-403 (referenced by 2 deltas)
+- Windows/dotNET/Syxx.Kit/TracerouteRunner.cs:32 (referenced by 2 deltas)
+- Ubuntu/SyxxUI.Avalonia.Tests/ (referenced by 2 deltas)
+- Server/syxx_server/app.py:55 (referenced by 1 deltas)
+- Server/syxx_server/mailer.py:42 (referenced by 1 deltas)
+- Server/tests/test_routes.py:53-54 (referenced by 1 deltas)
+- Server/tests/test_warp_raw.py:23 (referenced by 1 deltas)
+- Server/syxx_server/app.py:363-375 (referenced by 1 deltas)
+- Server/syxx_server/fulfillment.py:97-98, 114-118 (referenced by 1 deltas)
+- Server/syxx_server/app.py:95-101, 132 (referenced by 1 deltas)
+- Server/syxx_server/resolver.py:384-456 (referenced by 1 deltas)
+- Server/syxx_server/app.py:730-762, 1016 (referenced by 1 deltas)
+- Server/syxx_server/db.py:421-456 (referenced by 1 deltas)
+- Server/syxx_server/config.py:130-137 (referenced by 1 deltas)
+- Server/syxx_server/dns_authoritative.py:175-190 (referenced by 1 deltas)
+- Server/syxx_server/leak.py:110-122 (referenced by 1 deltas)
+- Server/syxx_server/db.py:272-282 (referenced by 1 deltas)
+- Server/syxx_server/app.py:456-473 (referenced by 1 deltas)
+
+### Error patterns
+
+- A026 — /api/diff false tampered on legit cross-host third-party scripts
+- A107 — insecure TLS settings allowed in production SMTP (escape hatch, not default)
+- A118 — no test asserts 402 on any paid route (Protocol §3)
+- A120 — deployment masks critical dependency and backup failures, declares success
+- A123 — NS/CNAME except Exception swallows name decode errors into hex (false tamper)
+- A127 — passive DNS drift thresholds hardcoded, no config path (CDN blind spot)
+- A130 — _verify_validate_key_response collapses 7+ failure modes into bare False (tri-state)
+- A167 — observed:false on unqueried DNSSEC, bool not tri-state
+- A190 — mock subdomain fallback plus null forEach crash
+- A197 — hardcoded "ok" verdict on warp and baseline checks
+- B064 — DNSSEC back-compat bool reports expired signatures as true
+- B186 — signatureKeyTrusted tri-state never rendered nil renders as INVALID
+- B222 — Unknown tri-state collapsed to boolean first run resolves to Granted
+- B232 — every syxx invocation exits 2 including --help --version confirmed tamper
+- B238 — flushDNSCache reports success without reading exit status does not flush
+- B241 — baseline saved printed over discarded try? writes false success
+- B242 — hardcoded 1 resolver observed for 0 or N never says LEAK
+- B248 — syxx warp claims completely secure asserts cause not observed
+- B253 — witness verify exits 0 on Windows for tampered macOS exits 2 for everything
+- C046 — Unanimous-tampering detector bails out on the two conditions that prove interception
+- C051 — Windows VantageComparer Verdict uses three independent bools not tri-state enum
+- C056 — detectUnanimousTampering returns confirmed positive on missing evidence
+- C057 — Answer-CLASS filter hardcoded to IN (every CHAOS response emptied)
+- C082 — ~50-domain hardcoded stubs presented as NextDNS Default/Strict; blocklist leg no evaluated tri-state
+- C090 — isDNSEncrypted/isVPNActive bool shims discard .unknown (false encrypted-DNS-stopped alert)
+- C093 — loadSnapshot collapses corrupt/absent into nil; re-baselines tampered baseline file
+- C109 — Sentinel CLI prints tri-state as bare "no"; "stable" from failed samples; rolls baseline
+- C117 — CNAME/RRSIG rdata fed to isBlockingAnswer produces false tampering on every CDN name
+- C134 — Server no 255-octet name limit; bounds failure truncates answer list into success
+- C137 — Unreadable adapter list rendered as definite loss of protection (bool collapse)
+- C145 — No network identity in Trust layer; network change reported as tampering-shaped change to one network
+- C149 — Windows Sentinel CLI renders tri-state facts as binary certainties; "stable" from failed reads
+- E047 — Windows CLI Cage prints unconditional [SUCCESS] before any packet — no no-packet signal
+- E049 — Windows LeakDetector.Verify bool collapses 4 distinct failure modes into false
+- E050 — Windows LicenseManager.ValidateLicenseAsync bool wrapper hides timeout/network error at startup
+- E051 — macOS isVPNActive() bool wrapper collapses unknown — used by Sentinel snapshot
+- E059 — deploy.sh silent fallback to root user with success banner
+- E063 — deploy.sh reports daemon success without verifying it started
+- E068 — deploy.sh sentry-sdk install failure downgraded to warning with success banner
+- E069 — deploy.sh certbot failure downgraded, site left on plaintext HTTP with success banner
+- E109 — ProphetView result card is unconditionally success-tinted regardless of result
+- E118 — GluttonView probe table colours sent green — dispatch success in verdict palette
+- E120 — OverallVerdictView section badges render raw enum jargon — POSITIVE (red) means tampering found
+- E132 — Probe that ran and FAILED is indistinguishable from one that never ran — tri-state collapsed across 5 panes
+- E158 — Resolver addresses painted success-green on two panes regardless of state
+- F016 — LicenseView fabricated machine ID, activation count, and hardcoded CURRENT pill
+- F033 — Windows FirstRunScan Track(bool) conflates inconclusive with produced
+- F034 — Windows SyxxSettingsStore.Save bool cannot distinguish failure modes
+- F035 — Windows MonitorScheduler.IsRunning bool hides starting/stopping/crashed states
+- F038 — Malformed signing key that successfully SIGNS is reported as SKIP not failure
+- F039 — D096 and D097 success-path regression guards XCTSkip whenever feature is broken
+- F042 — corpus/matrix frozen spec oracle and golden vectors loaded by no test on any platform
+
+## 6. Execution Rules
+
+- 1. Before claiming a batch done, run a real run with valid output proving the feature works on real input.
+- 2. Every test must have failure cases: a happy path and a failure path.
+- 3. Tri-state over boolean: use secure/tampered/inconclusive end to end; never bare Bool/bool.
+- 4. Render no verdict before evidence: never return secure, tampered, confidence, or probability until every required datum is collected and validated.
+- 5. No mocked production output: remove hardcoded success/secure/tamper messages from real code paths.
+- 6. Platform parity: a SyxxKit change needs its Syxx.Kit twin; a trust-material change needs Server/ too.
+- 7. macOS is the gold standard: parity must be reached by bringing Windows and Linux to parity with macOS, not the other way around.
+- 8. GUI first: consider GUI usability and appeal before CLI output; GUI surfaces are 5x importance of CLI.
+
+---
+
+*See /tmp/phase0-manifest-*.md for full delta listing.*
+
+---
+
+## 7. Subagent Selection & Sequencing
+
+### 7.1 Persona Sources
+
+All subagent personas are drawn from `/Users/masterrabbit/Software/awesome-opencode-subagents/categories/`. Full prompt text is concatenated from persona files before each agent launch.
+
+| Persona File | Category | Expertise |
+|---|---|---|
+| `security-auditor.md` | 04-quality-security | Security controls, vulnerability assessment, compliance |
+| `penetration-tester.md` | 04-quality-security | Offensive security, exploit validation, attack surface |
+| `code-reviewer.md` | 04-quality-security | Code quality, security vulnerabilities, design patterns |
+| `qa-expert.md` | 04-quality-security | Test strategy, coverage, defect prevention |
+| `swift-expert.md` | 02-language-specialists | Swift 5.9+, SwiftUI, async/await, protocol-oriented |
+| `csharp-developer.md` | 02-language-specialists | C# 12+, .NET 8+, WinUI 3, cross-platform |
+| `python-pro.md` | 02-language-specialists | Python 3.11+, async, type safety, security |
+| `network-engineer.md` | 03-infrastructure | DNS architecture, network security, zero-trust |
+| `linux-infra-admin.md` | 03-infrastructure | systemd, snap, deb, shell hardening, UFW |
+
+### 7.2 Wave Sequencing
+
+Waves are ordered by **critical path**: each wave unblocks the next. No wave begins until its predecessor's verification gate passes.
+
+```
+Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
+                                  Wave 5 (Windows)   ←── parallel
+                                  Wave 6 (Linux)     ←── parallel
+                                             └──→ Wave 7 (test integrity)
+```
+
+### 7.3 Wave Definitions
+
+#### Wave 1 — Critical Crypto & Signing Fixes
+
+**Why first:** Signature verification order, key storage, and license validation are foundational. Every downstream feature depends on correct signing.
+
+**Personas:** `penetration-tester.md` + `csharp-developer.md` + `swift-expert.md` + `python-pro.md`
+
+**Findings:** K001, K002, K003, K004, K005, K007, K010, K015, K018, S001
+
+**Agent assignments:**
+
+| Agent | Persona Stack | Scope | Findings |
+|---|---|---|---|
+| `wave1-crypto-windows` | penetration-tester + csharp-developer | `Windows/dotNET/Syxx.Kit/WitnessSigner.cs`, `Trust/Trust.cs`, `DpapiSecretStore.cs` | K001, K002, K005, K007, K015 |
+| `wave1-crypto-macos` | security-auditor + swift-expert | `macOS/Sources/SyxxKit/LicenseManager.swift`, `WitnessKeyManager.swift` | K003, K004, K010, K018 |
+| `wave1-server-license` | python-pro + security-auditor | `Server/syxx_server/licensing.py`, `db.py` | S001 |
+
+**Verification gate:**
+- `WitnessSigner.VerifySnapshotDetailed` returns `.InvalidSignature` (not `.Expired`) for a fabricated snapshot with past timestamp
+- `IntegrityTag` key file is DPAPI-encrypted on Windows, `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` on macOS
+- `LicenseManager._validate_offline` accepts a valid DB-provisioned offline license
+- Cross-platform: a snapshot signed on macOS verifies on Windows and vice versa
+
+---
+
+#### Wave 2 — DNS Protocol Parity (Windows Catch-Up)
+
+**Why second:** Wave 1 fixes DNSSEC signing validation. Wave 2 ports the hardened macOS DNS capture/parse/validate stack to Windows. macOS is the gold standard (Rule 7).
+
+**Personas:** `network-engineer.md` + `csharp-developer.md`
+
+**Findings:** N005, N010, N015, N020, N025, N030, N035, N040, N045, N050, N055, N060, N065, N070, N075
+
+**Agent assignments:**
+
+| Agent | Persona Stack | Scope | Findings |
+|---|---|---|---|
+| `wave2-dns-capture` | network-engineer + csharp-developer | `Windows/dotNET/Syxx.Kit/DNSCapture.cs` | N020, N025, N030, N035, N060 |
+| `wave2-dns-resolver` | network-engineer + csharp-developer | `Windows/dotNET/Syxx.Kit/DNSResolver.cs`, `DNSSECVerifier.cs` | N005, N010, N015, N040, N065, N070 |
+| `wave2-dns-probes` | network-engineer + csharp-developer | `Windows/dotNET/Syxx.Kit/` probe files | N045, N050, N055, N075 |
+
+**Verification gate:**
+- Windows DNSCapture captures TCP DNS (port 53) and IPv6 DNS behind extension headers
+- Windows DNSResolver CLASS filter compares against queried QCLASS (not hardcoded `1`)
+- Windows DNSSECVerifier rejects DNSKEY from unrelated zones (owner/signer binding)
+- Side-by-side test: identical DNS response produces identical `DNSResponse` struct on both platforms
+
+---
+
+#### Wave 3 — Cross-Platform Behavioral Parity
+
+**Why third:** Waves 1-2 establish correct behavior on each platform. Wave 3 eliminates divergences where identical input produces different output.
+
+**Personas:** `code-reviewer.md` + `swift-expert.md` + `csharp-developer.md`
+
+**Findings:** P005, P010, P015, P020, P025, P030, P035, P040, P045, P050
+
+**Agent assignments:**
+
+| Agent | Persona Stack | Scope | Findings |
+|---|---|---|---|
+| `wave3-parity-synthesis` | code-reviewer + swift-expert + csharp-developer | `SynthesisEngine.cs`, `Synthesizer.cs`, `Report.cs`, `DNSCanaries.cs` (Windows side) | P005, P010, P015, P035, P040, P045 |
+| `wave3-parity-trust` | code-reviewer + csharp-developer | `NetworkKeyState.cs`, `Trust.cs`, `Sentinel.cs`, `FirstRunScan.cs` (Windows side) | P020, P025, P030, P050 |
+
+**Verification gate:**
+- Synthesis engine produces identical `Conclusion` for identical `SectionInputs` on both platforms
+- `Sentinel.Diff` detects encrypted→unknown transition on Windows (ConditionState, not bool)
+- `IsUsableDNSServer` accepts link-local on Windows (matching macOS per RFC 8106)
+- Cross-platform witness round-trip: macOS creates → Windows verifies → macOS re-verifies
+
+---
+
+#### Wave 4 — macOS Security Hardening
+
+**Why fourth:** Waves 1-3 establish correct behavior. Wave 4 hardens the macOS privilege and content boundary.
+
+**Personas:** `security-auditor.md` + `swift-expert.md`
+
+**Findings:** M001, M020, M025, M030, M035
+
+**Agent assignments:**
+
+| Agent | Persona Stack | Scope | Findings |
+|---|---|---|---|
+| `wave4-macos-security` | security-auditor + swift-expert | `DNSCryptProxyConfig.swift`, `DeepSyxx/main.swift`, `RemoteContentView.swift` | M001, M020, M025, M030, M035 |
+
+**Verification gate:**
+- `DNSCryptProxyConfig.locateBinary()` rejects PATH and Homebrew candidates for root execution
+- DeepSyxx `installPfRules` validates anchor name against whitelist
+- DeepSyxx `setDNSServers` validates each entry is a parseable IP
+- WKContentRuleList compilation failure prevents WebView from loading (not silent drop)
+
+---
+
+#### Wave 5 — Windows Security Hardening
+
+**Why parallel with Wave 4:** Different platform, no shared files. Can run simultaneously with Wave 4 and 6.
+
+**Personas:** `security-auditor.md` + `csharp-developer.md`
+
+**Findings:** W005, W010, W015, W020, W025
+
+**Agent assignments:**
+
+| Agent | Persona Stack | Scope | Findings |
+|---|---|---|---|
+| `wave5-windows-security` | security-auditor + csharp-developer | `LinuxSecretStore.cs`, `DpapiSecretStore.cs`, `PortalView.xaml.cs`, `EncryptedDNSConfigurator.cs` | W005, W010, W015, W020, W025 |
+
+**Verification gate:**
+- `LinuxSecretStore` schema uses `[StructLayout]` with proper marshalling
+- `DpapiSecretStore.Retrieve` zeroes plaintext after conversion
+- `PortalView.RunTracert` resolves `tracert` to `SystemDirectory` absolute path
+- DoH template URL validated as HTTPS before netsh registration
+
+---
+
+#### Wave 6 — Linux Deployment Hardening
+
+**Why parallel with Waves 4-5:** Different platform (shell scripts, systemd, snap). No shared files with Swift or C#.
+
+**Personas:** `linux-infra-admin.md` + `security-auditor.md`
+
+**Findings:** L001, L002, L003, L005, L006, L008, L011, L019, L021, L022, L023, L024
+
+**Agent assignments:**
+
+| Agent | Persona Stack | Scope | Findings |
+|---|---|---|---|
+| `wave6-linux-deploy` | linux-infra-admin + security-auditor | `scripts/installer-template.sh`, `scripts/deploy.sh`, `scripts/deploy-sentry.sh`, `Linux/snap/snapcraft.yaml` | L001-L003, L005-L006, L008, L011, L019, L021-L024 |
+
+**Verification gate:**
+- `installer-template.sh` creates `syxx` service user, writes secrets to 0600 env file, applies full systemd hardening block
+- Installer payload has SHA-256 checksum verified before extraction
+- Nginx configs include X-Frame-Options, X-Content-Type-Options, `client_body_buffer_size`
+- Sentry API token uses minimum scopes and is revoked after project creation
+
+---
+
+#### Wave 7 — Test Integrity
+
+**Why last:** All production code is fixed. Tests must validate the fixes, not mask regressions.
+
+**Personas:** `qa-expert.md` + `code-reviewer.md`
+
+**Findings:** T003, T004, T011, T012, S002, S003, S004
+
+**Agent assignments:**
+
+| Agent | Persona Stack | Scope | Findings |
+|---|---|---|---|
+| `wave7-test-integrity` | qa-expert + code-reviewer | All `*Tests*` files across platforms, `scripts/honesty-coverage-gate.py`, `scripts/cross-platform-parity-gate.py` | T003, T004, T011, T012, S002, S003, S004 |
+
+**Verification gate:**
+- Vacuous test `testD083_TamperedDisplayFormatVersion` either asserts formatVersion mismatch or is deleted
+- B252 DoH signing gap is closed: `dohOutcomes` included in canonical signed bytes
+- `test_scheduler.py` assertions are unconditional (directory exists, result row written)
+- Honesty-coverage-gate registers ≥20 guards (up from 7)
+
+### 7.4 Conventions (Mandatory for All Agents)
+
+These are extracted from Section 6 and the audit's findings. Every agent must follow them:
+
+1. **Never use "verdict"** — code uses `result`/`Result`, user-visible text uses `Conclusion`/`CONCLUSION`.
+2. **macOS is gold standard** — when platforms diverge, align Windows/Linux to macOS behavior.
+3. **Tri-state over bool** — `ConditionState` (.yes/.no/.unknown), never bare `Bool`.
+4. **Sign before time-check** — Ed25519 signature verification MUST precede expiry/trust checks (K001).
+5. **No silent fallbacks** — never silently substitute 8.8.8.8, never silently drop encryption, never silently succeed on failure.
+6. **Live DNS tests** — use native Cage capture infrastructure, never mock DNS responses.
+7. **Report every 5th finding** — agents report at delta 5, 10, 15, 20... for incremental DELTAS.md updates.
+8. **No step limits** — agents read every file in scope. Do not stop after 5 files.
+
+### 7.5 Parallelism Map
+
+| Time → | Slot A | Slot B | Slot C |
+|--------|--------|--------|--------|
+| **T0** | Wave 1 (crypto) | — | — |
+| **T1** | Wave 2 (DNS protocol) | — | — |
+| **T2** | Wave 3 (parity) | — | — |
+| **T3** | Wave 4 (macOS security) | Wave 5 (Windows security) | Wave 6 (Linux deploy) |
+| **T4** | Wave 7 (test integrity) | — | — |
+
+Waves 4/5/6 are independent (different platforms, no shared files) and run in parallel. All other waves are sequential due to dependencies.
+
+### 7.6 Audit-to-Wave Traceability
+
+All audit findings have been renumbered from parallel series (S/M/W/L/N/P/K/T/H/G) into the standard A–F domain taxonomy. The mapping is:
+
+| Original Series | New Domain | ID Range | Wave | Priority |
+|---|---|---|---|---|
+| S (server security) → | A | A229–A236 | Wave 1 (A229=S001) + Wave 7 | P0/P2 |
+| H (HTML frontend) → | A | A237–A261 | Wave 7 | P2 |
+| N (DNS protocol) → | B | B255–B269 | Wave 2 | P0 — feature-breaking |
+| P005,P010,P015 → | C | C158–C160 | Wave 3 | P0 — false results |
+| P020–P050 → | D | D128–D134 | Wave 3 | P0 — platform divergence |
+| L (Linux deploy) → | D | D135–D145 | Wave 6 | P1 — deployment security |
+| M (macOS security) → | E | E163–E177 | Wave 4 | P1 — privilege escalation |
+| W (Windows security) → | E | E178–E182 | Wave 5 | P1 — defense-in-depth |
+| K (cryptographic) → | E | E183–E199 | Wave 1 | P0 — feature-blocking |
+| T (test integrity) → | F | F049–F064 | Wave 7 | P2 — test quality |
+| G (corpus) → | F | F065–F070 | Wave 7 | P2 — test infrastructure |
+

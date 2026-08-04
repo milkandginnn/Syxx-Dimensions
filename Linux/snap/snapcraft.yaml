@@ -1,0 +1,58 @@
+name: syxx
+# Keep in step with SyxxConfig.Version (Windows/dotNET/Syxx.Kit/SyxxConfig.cs:13).
+version: '2.0.0'
+summary: DNS tampering detection toolkit
+description: |
+  Syxx investigates and detects DNS tampering, hijacking, spoofing,
+  and censorship. It produces evidence a user can actually trust across
+  six integrated toolsets: Prophet, Mirror, Portal, Glutton, Cage, and Witness.
+
+grade: stable
+confinement: strict
+base: core24
+
+apps:
+  syxx:
+    # Must match <AssemblyName> in Windows/dotNET/Syxx/Syxx.csproj, which is `Syxx`.
+    # This read `Syxx.CLI`, a name the build never produces, so the snap installed and
+    # then failed to launch.
+    #
+    # UNVERIFIED ON THIS HOST: `command` is resolved relative to $SNAP, and the exact
+    # stage path depends on where the core24 dotnet plugin publishes (root vs bin/).
+    # snapcraft cannot run on macOS, so this must be confirmed by one real
+    # `snapcraft` build on Ubuntu before shipping. If the plugin publishes to a
+    # subdirectory, prefix accordingly. The assembly NAME is correct either way.
+    command: Syxx
+    plugs:
+      - network
+      - network-bind
+      - network-observe
+      # E056: home plug required for witness key (~/.syxx/witness.key), answer
+      # ledger, sentinel snapshot, and home baseline under strict confinement.
+      # Without it, strict remaps $HOME into ~/snap/syxx/<rev>/ which snap remove
+      # deletes, and the paths are unreachable from outside the snap.
+      - home
+      # NOTE: raw-socket capture (`syxx cage`) needs CAP_NET_RAW, which no plug
+      # here grants to an unprivileged process. Under strict confinement Cage
+      # must report untested, never a clean or empty-normal capture.
+      # Install docs must include: snap connect syxx:network-observe
+
+# E055: build-snaps installs the SDK that DOTNET_ROOT points at; project-path dropped
+# (not a dotnet-plugin key); source-subdir points at the CLI project directly;
+# platforms declares both amd64 and arm64 (Ubuntu Desktop arm64 ISO target).
+platforms:
+  amd64:
+  arm64:
+
+parts:
+  syxx:
+    plugin: dotnet
+    dotnet-build-configuration: Release
+    source: .
+    source-subdir: Windows/dotNET/Syxx
+    build-snaps:
+      - dotnet-sdk/latest/stable
+    build-environment:
+      - DOTNET_ROOT: /snap/dotnet-sdk/current
+    stage-packages:
+      - libicu74

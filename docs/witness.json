@@ -1,0 +1,64 @@
+{
+  "comparison" : {
+    "isDegraded" : false,
+    "isInconclusive" : true,
+    "isRedirectionDetected" : false,
+    "localOutcome" : {
+      "records" : [
+        {
+          "name" : "thisvid.com",
+          "rdata" : "88.208.57.223",
+          "ttl" : 30,
+          "type" : 1
+        }
+      ],
+      "status" : "success"
+    },
+    "localRecords" : [
+      {
+        "name" : "thisvid.com",
+        "rdata" : "88.208.57.223",
+        "ttl" : 30,
+        "type" : 1
+      }
+    ],
+    "localServer" : "2601:2c4:4100:7a50::1",
+    "publicResolverOutcomes" : {
+      "Cloudflare" : {
+        "errorDescription" : "The operation couldn’t be completed. (Network.NWError error 57 - Socket is not connected)",
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      },
+      "Google" : {
+        "errorDescription" : "The operation couldn’t be completed. (Network.NWError error 57 - Socket is not connected)",
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      },
+      "Quad9" : {
+        "errorDescription" : "The operation couldn’t be completed. (Network.NWError error 57 - Socket is not connected)",
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      }
+    },
+    "publicResolverResults" : {
+      "Cloudflare" : [
+
+      ],
+      "Google" : [
+
+      ],
+      "Quad9" : [
+
+      ]
+    }
+  },
+  "signature" : "9c3935c1766c5800835f8c7b88f9636b8ccb8768c2153813494fb129dc0b4fa4",
+  "targetDomain" : "thisvid.com",
+  "timestamp" : 804985246.944055
+}

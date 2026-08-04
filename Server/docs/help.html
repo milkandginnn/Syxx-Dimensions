@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Syxx Dimensions — Help &amp; Documentation</title>
+<link rel="icon" type="image/png" href="../assets/syxx-favicon.png">
+<meta name="description" content="Comprehensive help and feature documentation for the Syxx Dimensions DNS investigation suite.">
+<!-- seo.py owns title/description/og:title/og:description/og:type/twitter:card/
+     canonical for this path and re-emits them at serve time. It never emits
+     og:url, and emits og:image only for "/", so these two are the only
+     identity tags that survive here. -->
+<meta property="og:url" content="https://syxx.app/docs/help">
+<meta property="og:image" content="https://syxx.app/assets/syxx-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Jost:ital,wght@0,300..700;1,300..500&family=Cormorant+SC:wght@400;600;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(130% 80% at 15% 0%,#1a0c33 0%,#0b0518 55%);font-family:'Jost',system-ui,-apple-system,sans-serif;min-height:100vh;color:#c9c1e6;line-height:1.7;padding:0 0 80px}
+a{color:#a78bff;text-decoration:none}a:hover{color:#c4b3ff}
+::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:rgba(124,92,255,.25);border-radius:8px}
+.wrap{max-width:920px;margin:0 auto;padding:40px 32px}
+h1{font:700 32px 'Cinzel',serif;color:#efeafe;margin-bottom:4px}
+h2{font:600 22px 'Cinzel',serif;color:#efeafe;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid rgba(124,92,255,.25)}
+h3{font:600 16px 'Cinzel',serif;color:#e0d6ff;margin:20px 0 8px}
+p,li{font-family:'EB Garamond',serif;font-size:17px;color:#c9c1e6}
+.breadcrumb{font:500 13px system-ui;color:#8f83b8;margin-bottom:24px}
+.breadcrumb a{color:#a78bff}
+.subtitle{font:italic 15px 'EB Garamond',serif;color:#9a8fc0;margin-bottom:28px}
+.badge{display:inline-block;font:700 10px system-ui;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;vertical-align:middle;margin-left:6px}
+.badge-free{background:rgba(45,212,191,.15);color:#2dd4bf;border:1px solid rgba(45,212,191,.3)}
+.badge-pro{background:rgba(224,180,90,.15);color:#e0b45a;border:1px solid rgba(224,180,90,.3)}
+.card{background:rgba(124,92,255,.06);border:1px solid rgba(124,92,255,.18);border-radius:12px;padding:20px 24px;margin:12px 0}
+.detect-box{background:rgba(45,212,191,.07);border-left:3px solid #2dd4bf;border-radius:0 8px 8px 0;padding:14px 18px;margin:12px 0 16px}
+.detect-box strong{color:#2dd4bf;font-family:system-ui;font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.detect-box p{margin-top:4px;font-size:15px}
+details{background:rgba(124,92,255,.04);border:1px solid rgba(124,92,255,.15);border-radius:10px;margin:10px 0;overflow:hidden}
+summary{cursor:pointer;padding:16px 20px;font:600 15px system-ui;color:#efeafe;list-style:none;display:flex;align-items:center;gap:10px;transition:background .15s}
+summary:hover{background:rgba(124,92,255,.1)}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▸';color:#7c5cff;font-size:14px;transition:transform .2s}
+details[open] summary::before{transform:rotate(90deg)}
+.det-body{padding:4px 20px 20px;border-top:1px solid rgba(124,92,255,.1)}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+th{text-align:left;font:600 12px system-ui;letter-spacing:.06em;text-transform:uppercase;color:#8f83b8;padding:10px 14px;border-bottom:1px solid rgba(124,92,255,.2)}
+td{padding:10px 14px;border-bottom:1px solid rgba(124,92,255,.1);font-family:'EB Garamond',serif;font-size:16px;color:#c9c1e6}
+.toc{columns:2;column-gap:24px;font-size:14px;line-height:2.2}
+.toc a{font-family:system-ui;font-weight:500}
+code{background:rgba(124,92,255,.12);padding:2px 7px;border-radius:4px;font-size:14px;color:#d4c8ff}
+.step{counter-increment:steps}.step::before{content:counter(steps) ".";color:#7c5cff;font-weight:700;margin-right:6px}
+ol{counter-reset:steps;padding-left:20px}
+ol li{margin:6px 0}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+@media(max-width:640px){.wrap{padding:24px 16px}.toc{columns:1}h1{font-size:24px}h2{font-size:18px}table{font-size:13px}td,th{padding:8px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<!-- HEADER -->
+<div class="breadcrumb"><a href="/">Home</a> → <a href="/docs">Docs</a> → Help</div>
+<h1>Help &amp; Documentation</h1>
+<p class="subtitle">Everything you need to investigate DNS, detect tampering, and trust your resolver's story.</p>
+<div style="display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap">
+<a href="/docs/api" style="font:600 13px system-ui;padding:8px 18px;border-radius:8px;background:rgba(124,92,255,.15);border:1px solid rgba(124,92,255,.3);color:#efeafe">📘 API Reference</a>
+<a href="/" style="font:600 13px system-ui;padding:8px 18px;border-radius:8px;background:rgba(124,92,255,.15);border:1px solid rgba(124,92,255,.3);color:#efeafe">🏠 Main Site</a>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<h2>Table of Contents</h2>
+<nav class="toc">
+<a href="#getting-started">1. Getting Started</a>
+<a href="#web-terminal">2. Web Terminal Commands</a>
+<a href="#web-api">3. Web API</a>
+<a href="#desktop-app">4. Desktop App (CLI)</a>
+<a href="#dns-threats">5. Understanding DNS Threats</a>
+<a href="#faq">6. FAQ</a>
+</nav>
+
+<!-- ===== SECTION 1: GETTING STARTED ===== -->
+<h2 id="getting-started">1. Getting Started</h2>
+
+<h3>What is Syxx Dimensions?</h3>
+<p>Syxx Dimensions is a DNS investigation suite that traces lookups end to end. It detects spoofed answers, poisoned caches, silent exfiltration, transparent proxies, content injection, and DNSSEC failures. It ships as both a web application served from <code>syxx.app</code> and a native desktop app for macOS, Windows, and Linux.</p>
+
+<h3>Web Server vs Desktop App</h3>
+<table>
+<tr><th>Capability</th><th>Web (syxx.app)</th><th>Desktop App</th></tr>
+<tr><td>DNS resolution &amp; comparison</td><td>✅ Server vantage</td><td>✅ Local vantage</td></tr>
+<tr><td>Content diff (mirror/warp)</td><td>✅ Pro</td><td>✅</td></tr>
+<tr><td>Network path diagnostics</td><td>—</td><td>✅ Local-only</td></tr>
+<tr><td>DNS leak detection</td><td>—</td><td>✅ Local-only</td></tr>
+<tr><td>Packet capture &amp; forensics</td><td>—</td><td>✅ Local-only</td></tr>
+<tr><td>Evidence signing (witness)</td><td>—</td><td>✅ Local-only</td></tr>
+<tr><td>Combined conclusion (conclude)</td><td>Partial</td><td>✅ Full pipeline</td></tr>
+</table>
+
+<h3>How to Activate Pro</h3>
+<ol>
+<li>Visit <a href="/account">syxx.app/account</a> and sign in.</li>
+<li>Enter your license key to receive a session token.</li>
+<li>The token unlocks <strong>prophet</strong>, <strong>mirror</strong>, and <strong>warp</strong> in the web terminal, plus all desktop features.</li>
+</ol>
+
+<h3>The Six Toolsets</h3>
+<div class="card">
+<p>🔮 <strong>Prophet</strong> — DNS resolution integrity. Is a single query/response exchange trustworthy?</p>
+<p>🪞 <strong>Mirror</strong> — Content comparison. Is something actively interfering with what you asked for?</p>
+<p>🚪 <strong>Portal</strong> — Network path diagnostics. What does the path to the destination actually look like?</p>
+<p>🍽️ <strong>Glutton</strong> — Privacy leak detection. Is your VPN keeping DNS queries private?</p>
+<p>🔒 <strong>Cage</strong> — Capture &amp; forensics. What DNS traffic is flowing, and who is responsible?</p>
+<p>📜 <strong>Witness</strong> — Trust infrastructure. Can the evidence and the app itself be trusted?</p>
+</div>
+
+<!-- ===== SECTION 2: WEB TERMINAL ===== -->
+<h2 id="web-terminal">2. Web Terminal Commands</h2>
+<p>Each command runs in the web terminal at <a href="/">syxx.app</a>. Enter a domain or URL, select the command, and read the output below the terminal.</p>
+
+<!-- prophet -->
+<details>
+<summary>🔮 prophet — Multi-Vantage DNS Investigation <span class="badge badge-pro">Pro</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Queries your domain from the Syxx server vantage using multiple resolvers, then compares answers against your local resolver to detect interception or inconsistency.</p>
+<div class="detect-box"><strong>What it detects</strong><p>DNS spoofing, cache poisoning, transparent proxy interception, resolver disagreement, DNSSEC validation failures.</p></div>
+<h3>How to use it</h3>
+<ol><li>Enter the target domain (e.g. <code>example.com</code>).</li><li>Select <strong>prophet</strong> from the command dropdown.</li><li>Click <strong>Run</strong>.</li></ol>
+<h3>Reading the output</h3>
+<table>
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>Unique Answers</td><td>Distinct IP/CNAME values returned across all resolvers</td></tr>
+<tr><td>Consensus</td><td>Percentage of resolvers that agree on the majority answer</td></tr>
+<tr><td>DNSSEC</td><td>Whether the chain validated (secure / insecure / bogus)</td></tr>
+<tr><td>Resolver detail</td><td>Per-resolver answer, latency, and rcode</td></tr>
+</table>
+</div>
+</details>
+
+<!-- nslookup -->
+<details>
+<summary>🔮 nslookup — DNS Record Lookup <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Queries a resolver for any record type on your domain and returns the raw answer. Useful for quick checks of A, AAAA, MX, TXT, CNAME, and more.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Unexpected record values, missing records, NXDOMAIN responses, SERVFAIL conditions.</p></div>
+<h3>How to use it</h3>
+<ol><li>Enter the domain.</li><li>Optionally select a record type (defaults to A).</li><li>Select <strong>nslookup</strong> and click <strong>Run</strong>.</li></ol>
+<h3>Reading the output</h3>
+<table><tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>Server</td><td>Resolver that answered the query</td></tr>
+<tr><td>Rcode</td><td>Response code (NOERROR, NXDOMAIN, SERVFAIL)</td></tr>
+<tr><td>Records</td><td>Each answer with TTL, type, and value</td></tr>
+</table>
+</div>
+</details>
+
+<!-- dig -->
+<details>
+<summary>🔮 dig — Detailed DNS Query <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Same core query as nslookup but with additional detail: the AD (Authenticated Data) flag, human-readable rcode names, and full header information.</p>
+<div class="detect-box"><strong>What it detects</strong><p>DNSSEC-aware resolver behavior, authentication flag inconsistencies, truncated responses.</p></div>
+<h3>How to use it</h3>
+<ol><li>Enter the domain and optional record type.</li><li>Select <strong>dig</strong> and click <strong>Run</strong>.</li></ol>
+<h3>Reading the output</h3>
+<table><tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>AD Flag</td><td>Whether the resolver validated DNSSEC (true/false)</td></tr>
+<tr><td>Rcode Name</td><td>Human-readable response status</td></tr>
+<tr><td>Answer Count</td><td>Number of resource records returned</td></tr>
+</table>
+</div>
+</details>
+
+<!-- whois -->
+<details>
+<summary>🔮 whois — Registration Lookup <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Fetches RDAP/WHOIS registration data for a domain, showing who owns it, when it was registered, and its current status.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Recently registered domains (phishing indicators), expired registrations, registrar changes, nameserver hijacking.</p></div>
+<h3>Reading the output</h3>
+<table><tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>Registrar</td><td>The registrar managing the domain</td></tr>
+<tr><td>Created / Expires</td><td>Registration and expiration dates</td></tr>
+<tr><td>Status</td><td>Domain status flags (e.g. clientTransferProhibited)</td></tr>
+<tr><td>Nameservers</td><td>Authoritative nameservers on record</td></tr>
+</table>
+</div>
+</details>
+
+<!-- email -->
+<details>
+<summary>🔮 email — Email Authentication Check <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Checks SPF, DMARC, and DKIM records for a domain and renders a pass/fail/inconclusive conclusion for each protocol.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Missing or weak SPF policies, absent DMARC records, DKIM misconfiguration, email spoofing exposure.</p></div>
+<h3>Reading the output</h3>
+<table><tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>SPF</td><td>Whether a valid SPF record exists and its policy strength</td></tr>
+<tr><td>DMARC</td><td>Whether a DMARC record exists with a reject/quarantine policy</td></tr>
+<tr><td>DKIM</td><td>Whether DKIM selector records are published</td></tr>
+</table>
+</div>
+</details>
+
+<!-- subdomains -->
+<details>
+<summary>🔮 subdomains — CT Log Enumeration <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Searches Certificate Transparency logs to discover subdomains that have been issued TLS certificates. Reveals the full attack surface of a domain.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Unknown subdomains, wildcard certificates, shadow IT services, certificate issuance anomalies.</p></div>
+<h3>Reading the output</h3>
+<p>Returns a deduplicated list of subdomain names sorted alphabetically. Each entry is a unique subdomain found in CT logs.</p>
+</div>
+</details>
+
+<!-- propagation -->
+<details>
+<summary>🔮 propagation — Global Resolver Check <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Queries 17 public resolvers distributed worldwide and shows what each one returns for your domain. Calculates a consensus and propagation percentage.</p>
+<div class="detect-box"><strong>What it detects</strong><p>DNS propagation delays, geo-specific hijacking, split-horizon DNS, regional censorship.</p></div>
+<h3>Reading the output</h3>
+<table><tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>Per-resolver</td><td>Each resolver's name, location, and returned answer</td></tr>
+<tr><td>Consensus</td><td>The majority answer across all resolvers</td></tr>
+<tr><td>Propagation %</td><td>Percentage of resolvers returning the consensus answer</td></tr>
+</table>
+</div>
+</details>
+
+<!-- firewall -->
+<details>
+<summary>🔮 firewall — Filter Detection <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Tests whether a resolver blocks known domains by querying a set of control domains that should resolve. Identifies DNS-level filtering or firewall interference.</p>
+<div class="detect-box"><strong>What it detects</strong><p>DNS filtering, ISP-level blocking, corporate firewall interference, government censorship.</p></div>
+<h3>Reading the output</h3>
+<table><tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>Per-domain</td><td>Each control domain: blocked or open</td></tr>
+<tr><td>Assessment</td><td>Overall conclusion: clean, partial filtering, or heavy filtering</td></tr>
+</table>
+</div>
+</details>
+
+<!-- dnssec -->
+<details>
+<summary>🔮 dnssec — Chain Validation <span class="badge badge-free">Free</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Walks the DNSSEC chain from root → TLD → your domain, verifying DS, DNSKEY, and RRSIG records at each level.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Broken DNSSEC chains, missing DS records, expired RRSIG signatures, DNSSEC downgrade attacks.</p></div>
+<h3>Reading the output</h3>
+<table><tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>Step</td><td>Each level: root, TLD, domain</td></tr>
+<tr><td>Status</td><td>valid, invalid, or inconclusive for each step</td></tr>
+<tr><td>Detail</td><td>Record types found and validation notes</td></tr>
+</table>
+</div>
+</details>
+
+<!-- mirror -->
+<details>
+<summary>🪞 mirror — Content Diff <span class="badge badge-pro">Pro</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Fetches a web page from the Syxx server vantage and compares the rendered content against what your local machine receives. Detects in-transit content modification.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Content injection, ISP ad insertion, transparent proxy modification, man-in-the-middle content tampering.</p></div>
+<h3>How to use it</h3>
+<ol><li>Enter a full URL (e.g. <code>https://example.com</code>).</li><li>Select <strong>mirror</strong> and click <strong>Run</strong>.</li><li>Review the diff output showing added, removed, and changed content.</li></ol>
+</div>
+</details>
+
+<!-- warp -->
+<details>
+<summary>🪞 warp — Source Diff <span class="badge badge-pro">Pro</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Compares the raw HTML, CSS, and JavaScript source of a page fetched from the Syxx server against your local fetch. Shows byte-level differences in the source code.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Script injection, stylesheet modification, HTML rewriting, tracker insertion, malicious code injection.</p></div>
+<h3>How to use it</h3>
+<ol><li>Enter a full URL.</li><li>Select <strong>warp</strong> and click <strong>Run</strong>.</li><li>Review per-resource diffs (HTML, CSS, JS).</li></ol>
+</div>
+</details>
+
+<!-- conclude -->
+<details>
+<summary>📜 conclude — Combined Conclusion <span class="badge badge-pro">Pro</span></summary>
+<div class="det-body">
+<p><strong>What it does:</strong> Aggregates results from all available tools into a single combined conclusion. Requires the desktop app for the full pipeline; the web version provides a partial conclusion based on server-side data.</p>
+<div class="detect-box"><strong>What it detects</strong><p>Comprehensive threat assessment combining DNS integrity, content authenticity, and trust signals.</p></div>
+<p><strong>Note:</strong> For the full conclude pipeline (including local network path, leak detection, and forensics), use the desktop app.</p>
+</div>
+</details>
+
+<!-- ===== SECTION 3: WEB API ===== -->
+<h2 id="web-api">3. Web API (Programmatic)</h2>
+<p>Full API reference: <a href="/docs/api">/docs/api</a></p>
+
+<h3>Quick Start</h3>
+<ol>
+<li><strong>Authenticate:</strong> POST your license key to <code>/api/auth</code> to receive a session token.</li>
+<li><strong>Make requests:</strong> Include <code>Authorization: Bearer &lt;token&gt;</code> in subsequent requests.</li>
+<li><strong>Parse responses:</strong> All endpoints return JSON with a consistent structure: <code>{status, data, meta}</code>.</li>
+</ol>
+
+<h3>Common Patterns</h3>
+<div class="card">
+<p><strong>Investigate a domain:</strong><br>
+<code>GET /api/prophet?domain=example.com</code> → resolution consensus, DNSSEC status, per-resolver detail.</p>
+<p><strong>Check DNSSEC:</strong><br>
+<code>GET /api/dnssec?domain=example.com</code> → chain validation from root to domain.</p>
+<p><strong>Enumerate subdomains:</strong><br>
+<code>GET /api/subdomains?domain=example.com</code> → deduplicated CT log results.</p>
+<p><strong>Check email auth:</strong><br>
+<code>GET /api/email?domain=example.com</code> → SPF/DMARC/DKIM conclusions.</p>
+</div>
+
+<!-- ===== SECTION 4: DESKTOP APP ===== -->
+<h2 id="desktop-app">4. Desktop App (CLI)</h2>
+<p>The desktop app provides local-vantage tools that the web server cannot replicate. Install from <a href="/">syxx.app</a> for macOS, Windows, or Linux.</p>
+
+<details>
+<summary><code>syxx prophet &lt;domain&gt;</code></summary>
+<div class="det-body">
+<p>DNS investigation from your local vantage. Queries multiple resolvers from your machine and compares answers to detect local interception.</p>
+<p><strong>Options:</strong> <code>--type A|AAAA|MX|TXT|CNAME</code> to specify record type. <code>--resolver &lt;ip&gt;</code> to use a custom resolver.</p>
+</div>
+</details>
+
+<details>
+<summary><code>syxx mirror &lt;domain&gt;</code></summary>
+<div class="det-body">
+<p>Content comparison from your local vantage. Fetches the page locally and compares against the Syxx server fetch.</p>
+<p><strong>Options:</strong> <code>--depth full|headers|body</code> to control comparison scope.</p>
+</div>
+</details>
+
+<details>
+<summary><code>syxx warp &lt;url&gt;</code></summary>
+<div class="det-body">
+<p>Source diff from your local vantage. Compares raw HTML/CSS/JS fetched locally against the server fetch.</p>
+<p><strong>Options:</strong> <code>--resource html|css|js|all</code> to filter by resource type.</p>
+</div>
+</details>
+
+<details>
+<summary><code>syxx portal</code></summary>
+<div class="det-body">
+<p>Network path diagnostics. Traces the route to a destination, identifies your local gateway, classifies IP addresses, and detects network anomalies.</p>
+<p><strong>Options:</strong> <code>--target &lt;host&gt;</code> to specify destination. <code>--hops &lt;n&gt;</code> to limit traceroute depth.</p>
+<p><em>Local-only: requires direct network access.</em></p>
+</div>
+</details>
+
+<details>
+<summary><code>syxx glutton</code></summary>
+<div class="det-body">
+<p>DNS leak detection. Sends controlled DNS queries and monitors whether they escape your VPN or tunnel. Reports any queries that bypass the encrypted path.</p>
+<p><strong>Options:</strong> <code>--duration &lt;seconds&gt;</code> for test length. <code>--vpn &lt;interface&gt;</code> to specify the tunnel interface.</p>
+<p><em>Local-only: requires monitoring local network interfaces.</em></p>
+</div>
+</details>
+
+<details>
+<summary><code>syxx cage</code></summary>
+<div class="det-body">
+<p>Packet capture and DNS forensics. Captures live DNS traffic, attributes queries to processes, and generates forensic reports.</p>
+<p><strong>Options:</strong> <code>--interface &lt;name&gt;</code> to capture on a specific interface. <code>--duration &lt;seconds&gt;</code> for capture length. <code>--output &lt;path&gt;</code> for report file.</p>
+<p><em>Local-only: requires packet capture permissions.</em></p>
+</div>
+</details>
+
+<details>
+<summary><code>syxx witness</code></summary>
+<div class="det-body">
+<p>Evidence signing and trust infrastructure. Signs investigation output with cryptographic attestations so results can be verified as authentic and untampered.</p>
+<p><strong>Options:</strong> <code>--sign &lt;file&gt;</code> to sign a report. <code>--verify &lt;file&gt;</code> to verify a signed report. <code>--key &lt;path&gt;</code> to specify a key file.</p>
+<p><em>Local-only: requires access to the local key store.</em></p>
+</div>
+</details>
+
+<details>
+<summary><code>syxx conclude</code></summary>
+<div class="det-body">
+<p>Combined conclusion from all tools. Runs the full pipeline (prophet, mirror, warp, portal, glutton, cage) and synthesizes a tri-state conclusion: <strong>secure</strong>, <strong>tampered</strong>, or <strong>inconclusive</strong>.</p>
+<p><strong>Options:</strong> <code>--domain &lt;name&gt;</code> for the target. <code>--quick</code> for a reduced pipeline. <code>--json</code> for machine-readable output.</p>
+</div>
+</details>
+
+<!-- ===== SECTION 5: DNS THREATS ===== -->
+<h2 id="dns-threats">5. Understanding DNS Threats</h2>
+
+<div class="card">
+<h3>DNS Spoofing / Cache Poisoning</h3>
+<p>An attacker injects forged DNS responses into a resolver's cache, causing it to return incorrect IP addresses. Detected by <strong>prophet</strong> through multi-resolver disagreement and DNSSEC validation failure.</p>
+</div>
+
+<div class="card">
+<h3>DNS Hijacking / Redirection</h3>
+<p>A resolver or intermediary silently redirects queries to attacker-controlled addresses. Detected by <strong>prophet</strong> comparing answers across vantages and <strong>propagation</strong> showing geo-specific anomalies.</p>
+</div>
+
+<div class="card">
+<h3>Transparent Proxy Interception</h3>
+<p>A network intermediary intercepts DNS queries before they reach the intended resolver. Detected by <strong>firewall</strong> testing filter behavior and <strong>prophet</strong> identifying resolver mismatch.</p>
+</div>
+
+<div class="card">
+<h3>DNS Exfiltration / Data Leakage</h3>
+<p>DNS queries leak outside the encrypted tunnel (VPN), exposing browsing intent. Detected by <strong>glutton</strong> monitoring query paths and <strong>cage</strong> capturing raw traffic.</p>
+</div>
+
+<div class="card">
+<h3>CNAME Cloaking</h3>
+<p>Trackers hide behind CNAME records that point to first-party subdomains, evading blocklists. Detected by <strong>subdomains</strong> enumerating CT logs and <strong>nslookup</strong> inspecting CNAME chains.</p>
+</div>
+
+<div class="card">
+<h3>DNSSEC Validation Failures</h3>
+<p>The cryptographic chain of trust is broken, leaving responses unauthenticated. Detected by <strong>dnssec</strong> walking the chain and <strong>dig</strong> checking the AD flag.</p>
+</div>
+
+<div class="card">
+<h3>Content Injection / In-Transit Modification</h3>
+<p>An intermediary modifies web content (HTML, CSS, JS) between the origin server and your browser. Detected by <strong>mirror</strong> comparing rendered content and <strong>warp</strong> comparing source code.</p>
+</div>
+
+<div class="card">
+<h3>Open Resolver Exposure</h3>
+<p>A resolver accepts queries from any source, enabling amplification attacks. Detected by <strong>firewall</strong> probing resolver behavior and <strong>prophet</strong> testing access patterns.</p>
+</div>
+
+<!-- ===== SECTION 6: FAQ ===== -->
+<h2 id="faq">6. FAQ</h2>
+
+<details>
+<summary>Why do web and desktop results differ?</summary>
+<div class="det-body">
+<p>The web server queries from its own network vantage, while the desktop app queries from yours. Differences between the two reveal exactly the kind of interception Syxx is designed to detect. When results diverge, that divergence is itself a signal.</p>
+</div>
+</details>
+
+<details>
+<summary>What does "inconclusive" mean?</summary>
+<div class="det-body">
+<p>Inconclusive means Syxx could not gather enough evidence to render a confident conclusion. This happens when queries time out, resolvers return inconsistent data, or required validation steps fail. An inconclusive result is honest: it means "we don't know yet," not "probably fine."</p>
+</div>
+</details>
+
+<details>
+<summary>How do I interpret a DNSSEC chain?</summary>
+<div class="det-body">
+<p>The chain has three levels: root (.) → TLD (.com, .org) → your domain. Each level must have valid DS, DNSKEY, and RRSIG records that chain upward. If any step shows "invalid" or "inconclusive," the chain is broken and DNSSEC cannot protect that domain's responses.</p>
+</div>
+</details>
+
+<details>
+<summary>What's the difference between Free and Pro?</summary>
+<div class="det-body">
+<p>Free tools (nslookup, dig, whois, email, subdomains, propagation, firewall, dnssec) query from a single server vantage. Pro unlocks multi-vantage comparison (<strong>prophet</strong>), content diff (<strong>mirror</strong>, <strong>warp</strong>), and the full combined conclusion (<strong>conclude</strong>). The desktop app's local-vantage tools are available to all users.</p>
+</div>
+</details>
+
+<details>
+<summary>How do I report a bug?</summary>
+<div class="det-body">
+<p>Email <a href="mailto:bugs@syxx.app">bugs@syxx.app</a> with the command you ran, the domain you tested, the output you received, and what you expected instead. If using the desktop app, include your OS and app version.</p>
+</div>
+</details>
+
+<div style="text-align:center;margin-top:48px;padding-top:24px;border-top:1px solid rgba(124,92,255,.15)">
+<p style="font:italic 14px 'EB Garamond',serif;color:#6f6597">Syxx Dimensions — Every resolver tells a story.</p>
+<p style="font:13px system-ui;color:#8f83b8;margin-top:8px">Support: <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a></p>
+</div>
+
+</main>
+</body>
+</html>

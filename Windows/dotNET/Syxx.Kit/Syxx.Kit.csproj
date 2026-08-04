@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- E053: enable culture-sensitive analyzers as errors so the class cannot recur.
+         CA1305: Specify IFormatProvider
+         CA1307: Specify StringComparison for clarity
+         CA1310: Specify StringComparison for ordinal case-insensitive comparisons -->
+    <WarningsAsErrors>$(WarningsAsErrors);CA1305;CA1307;CA1310</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NSec.Cryptography" Version="26.4.0" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- D003: expose internal transport-pinning helpers (IsTransportIdentityFailure,
+         MakeCollectorClient) to the test project, mirroring macOS @testable access. -->
+    <InternalsVisibleTo Include="Syxx.Tests" />
+    <!-- DimensionService.cs (source-linked into both GUI apps) signs/verifies the
+         dimensions cache with IntegrityTag, which stays internal. Grant the GUI
+         assemblies: "Syxx" = Avalonia GUI AssemblyName (and the CLI), "SyxxUI" = WinUI. -->
+    <InternalsVisibleTo Include="Syxx" />
+    <InternalsVisibleTo Include="SyxxUI" />
+  </ItemGroup>
+</Project>

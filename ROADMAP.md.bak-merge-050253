@@ -1,0 +1,1570 @@
+# ROADMAP.md — Syxx Roadmap
+
+*Captured 2026-07-14. Gap analysis, implementation plan, and ROI-sorted feature roadmap for Syxx.*
+
+---
+
+# SHIP-v1 — the v1 feature set (2026-07-16)
+
+**What this is:** the complete list of features Syxx must CONTAIN to be deployable, merged with the
+20-feature ROI list below. Not a defect register — individual broken lines belong in `DELTAS.md`.
+Each feature states what it must DO and where it stands.
+
+**Deadline:** dedicated server free 3 months, cancel decision ~1 month out, deploy-ready **2 weeks**
+(~2026-07-30).
+
+**Legend:** ✅ shipped · 🟡 partial (exists, incomplete or one-platform) · ⬜ absent
+**Grounded in** six tree audits, 2026-07-16, at `b7407bc`–`5708bab`. Status is verified against
+code, never against a document.
+
+**The merge:** the 20-feature list is a *capability* list — what Syxx can detect. It has no entry for
+installing, buying, activating, updating, getting help, or being understood by a first-time user.
+Those are features too, and they are what "deployable" means. Group A and Groups E–G below are the
+additions; Groups B–D map onto the existing 20.
+
+---
+
+## Group A — Get in the door
+
+| # | Feature | Must do | State |
+|---|---|---|---|
+| A-1 | **Installable artifact** | A customer downloads one file per platform and ends with a working app. DMG (macOS), installer (Windows), `.deb` (Debian/Mint). | ⬜ none exists on any platform |
+| A-2 | **First-run experience** | Launch → EULA → what this is → one obvious next action. No dead Dashboard of dashes. | ⬜ neither platform has one |
+| A-3 | **Licence agreement gate** | Shown once at first launch, acceptance recorded, decline exits. | 🟡 macOS panel exists but never fires and its text is a stub; Windows has none |
+| A-4 | **Elevation for capture** | Click → the OS's own auth prompt → capture runs. `osascript` / UAC `runas` / `pkexec`. Never "open a terminal and type this". | 🟡 macOS GUI ✅, Windows CLI ✅, Windows GUI ⬜, Linux ⬜ |
+| A-5 | **Runtime prerequisites** | The customer installs Syxx, not Syxx's dependencies. | 🟡 Linux self-contained ✅; Windows needs a **preview** .NET 11 + WinAppRuntime 2.2 |
+
+## Group B — The six modules (the product)
+
+Each must surface in the GUI, run, and render a real verdict — never a fabricated or defaulted one.
+
+| # | Module | State |
+|---|---|---|
+| B-1 | **Prophet** — resolver/record truth | ✅ both |
+| B-2 | **Mirror** — cross-vantage comparison *(the flagship paid module)* | ⬜ **does not run on either platform** — the Pro flag is never set, so macOS runs Lite forever and Windows returns before doing anything |
+| B-3 | **Portal** — path + LAN | 🟡 traceroute ✅ both; **macOS LAN discovery is a text placeholder** telling users to run `syxx lan` in Terminal |
+| B-4 | **Glutton** — leak detection | 🟡 runs both; **macOS renders the verdict without the attestation gate Windows has** |
+| B-5 | **Cage** — query capture | 🟡 macOS ✅; **Windows GUI has no trigger at all** — the pane can never populate |
+| B-6 | **Witness** — signed snapshots | ✅ both |
+| B-7 | **Conclusions** — the synthesis verdict | ✅ both |
+
+## Group C — Understand the answer *(ROI list #1, #2, #9 — Tier 1)*
+
+The roadmap's own thesis: *"capability doesn't sell; verdicts, consequences, and next steps sell."*
+
+| # | Feature | Must do | State |
+|---|---|---|---|
+| C-1 | **Verdict → Action** *(#1)* | Every terminal verdict ends in a plain sentence and a concrete next step. No dead-end "INCONCLUSIVE". | ✅ **both** (A1 macOS CLI + GUI integrated) |
+| C-2 | **Plain-language explanation** *(#9)* | "We believe X because A and B, despite C." A layperson can restate the cause. | ✅ **both** (A2 macOS CLI + GUI integrated) |
+| C-3 | **Network report card** *(#2)* | A–F grade + top 3 reasons. The shareable screenshot. | ✅ **both** (A3 macOS CLI + GUI integrated) |
+| C-4 | **Plain-English copy throughout** | A buyer diagnosing a hostile network can read the UI. | 🟡 in-app prose is ornate; the "layperson can restate it" bar is unmet on macOS |
+
+## Group D — Stay protected *(the subscription — ROI #4, #5, #6, #13, #20)*
+
+**This group IS the business model.** *"Scan = $10 utility; watchdog = subscription."* None of it ships today.
+
+| # | Feature | Must do | State |
+|---|---|---|---|
+| D-1 | **Five-minute first-run scan** *(#4)* | One button → full orchestrated scan → graded result, zero configuration. Doubles as onboarding (A-2). | 🟡 Windows CLI only; **no GUI button on either platform** |
+| D-2 | **Continuous monitoring** *(#6)* | Background re-probe, change detection, state persistence. A real config drift between two scans raises one alert. | ⬜ **the live path has never executed** on either platform |
+| D-3 | **Trust indicator** *(#5)* | Menu-bar/tray green/amber/red for the current network. The psychological anchor for D-2. | ⬜ **no status item or tray exists on either platform** |
+| D-4 | **Alerts / notifications** | The user learns about a change without opening the app. OS notification permission handled. | ⬜ not built; not in the 20 either |
+| D-5 | **Per-network history** *(#13)* | Answer memory over time; "this network changed since Tuesday". | ⬜ the ledger class exists and **nothing ever writes to it** |
+| D-6 | **Network-change detection** | Joining a new SSID triggers re-evaluation. Prerequisite for D-2/D-3 being meaningful. | ⬜ not built; not in the 20 |
+| D-7 | **Scheduled digest** *(#20)* | Weekly trust summary. Churn reducer. | ⬜ |
+
+## Group E — Commerce *(ROI #16 free/paid split)*
+
+| # | Feature | Must do | State |
+|---|---|---|---|
+| E-1 | **Free/paid split** *(#16)* | Free: local scans + grades. Paid: everything server-anchored. | ✅ the line is drawn cleanly along "does it need our VPS" |
+| E-2 | **Trial** | The customer experiences the paid product before paying. | 🟡 **client-side only — it unlocks local gates on features the server then refuses.** Every advertised trial feature is server-anchored. Stripe trial-period rebuild in motion. |
+| E-3 | **Purchase from inside the app** | Click Buy → Stripe → back to a page that confirms it. | ⬜ **no UI reaches the checkout route**; the return page 404s |
+| E-4 | **Licence key delivery** | The buyer receives the key on more than one channel. | 🟡 email only, and SMTP is unconfigured by default |
+| E-5 | **Licence activation in-app** | Paste key → validate → unlock → survive relaunch. | 🟡 Windows GUI ✅ (the reference), macOS CLI ✅; **macOS GUI now validates via LicenseManager.isFeatureUnlocked on launch and supports Activate button** (AppModel.swift:validateLicenseOnLaunch); Linux **cannot persist it** (DPAPI) |
+| E-6 | **Licence state display** | Show the real tier, machine identity, and expiry. Never a fabricated one. | 🟡 Windows ✅; **macOS GUI now dynamic — shows Lite/Trial/Pro/Error with status pill** (LicenseView.swift:licenseStatusPill) |
+| E-7 | **Works offline** | A paying customer with no internet stays unlocked. | ⬜ **locked out and told the trial expired** — on a filtered network, the condition this product diagnoses |
+| E-8 | **Subscription lifecycle** | Cancelled / suspended / expired / offline are four distinct, actionable states. | ⬜ all four render as one string |
+| E-9 | **Billing self-service** | Update card, view invoices, cancel. | ⬜ no customer portal |
+| E-10 | **Pricing consistency** | One price, everywhere, matching Stripe. | ⬜ `$2/mo` and `$4.99/mo` both ship today |
+
+## Group F — Trust & share *(ROI #6, #7, #8 — Tier 2; "every share is free acquisition")*
+
+| # | Feature | Must do | State |
+|---|---|---|---|
+| F-1 | **Signed evidence** | Snapshots are signed; altering a byte breaks the seal. | ✅ both |
+| F-2 | **Shareable incident report** *(#6)* | The signed evidence as a clean human-readable page. | ✅ both (B1) |
+| F-3 | **Public report verifier** *(#7)* | A third party with the bundle + pubkey can confirm or deny it. | 🟡 macOS (B2) — Windows pending CI |
+| F-4 | **Trust bootstrap** *(#8)* | Threat model, notarization, `security.txt`, "what data leaves your machine". | ⬜ owner-track |
+| F-5 | **Telemetry disclosure + consent** | The app phones home once per launch; the user is told and can decline. | ⬜ no disclosure, no opt-out |
+
+## Group G — Operate & support
+
+The features nobody lists until a customer needs one.
+
+| # | Feature | Must do | State |
+|---|---|---|---|
+| G-1 | **Update mechanism** | The app learns it is out of date and can update. | ⬜ **the check is disabled by default**; the "update" button opens a dead URL; no appcast, no updater |
+| G-2 | **Version identity** | One version, stamped at build, consistent everywhere. | 🟡 **SyxxConfig.version = "2.0.0"** is the source of truth; Info.plist now derives CFBundleShortVersionString and CFBundleVersion from it at bundle time (bundle-app.sh:29-47). AboutPanel and UpdatePanel read SyxxConfig.version. |
+| G-3 | **In-app help / support** | A customer whose key fails has somewhere to go. | ⬜ no support address in-app; `/help` is a dead route |
+| G-4 | **Diagnostics the user can send** | "Send me your log" has an answer. | ⬜ **no logging or crash reporting on either client** — a customer crash produces nothing |
+| G-5 | **Operator support tooling** | Look up a licence, resend a key, reissue. | ⬜ no admin path; the resend function is unreachable |
+| G-6 | **Settings** | Resolver set, scan scope, notifications, telemetry opt-out, data removal. | ⬜ no settings surface at all |
+| G-7 | **Uninstall / data removal** | Drag to Trash leaves nothing behind that matters. | 🟡 footprint is small; macOS captures may be root-owned |
+| G-8 | **Backups (service-side)** | The customer's licence survives losing a disk. | ⬜ **no backup exists** |
+| G-9 | **Service alerting** | The operator learns the service is down before the customer does. | ⬜ nothing alerts on anything |
+
+## Group H — Capabilities deferred past v1 *(ROI #3, #7, #10–#12, #14–#19)*
+
+Real features, correctly prioritized by the roadmap, and **none of them changes whether v1 ships**:
+router/gateway audit *(#3)*, filtering verification *(#7)*, resolver speed benchmark *(#8 — nearly
+free, the probe exists)*, remediation follow-through *(#10)*, per-network resolver policies *(#11)*,
+cache inspection *(#12)*, home network baseline *(#15)*, lookalike domain alerts *(#17)*, per-app
+resolver attribution *(#19 — both platforms have the data and never join it)*.
+
+Shipped already and worth naming: **DNSSEC validation** *(#16)*, **resolver identity verification**
+*(#18)*, **DNS tunneling detection** *(#14)* — the three genuinely end-to-end on both platforms.
+
+---
+
+## What v1 actually requires
+
+**Ten features stand between the tree and a deployable product.** In dependency order:
+
+1. **A-1** — an artifact exists (all three platforms)
+2. **B-2** — Mirror runs (the flagship paid module currently does not)
+3. **E-3 → E-5** — buy, deliver, activate: the loop closes
+4. **E-7** — offline paying customers stay unlocked
+5. **C-1/C-2/C-3 on macOS** — the "so what" layer the ROI thesis rests on
+6. **D-1** — the first-run scan button, which is also **A-2** onboarding
+7. **D-2/D-3** — monitoring + indicator, or **there is no subscription to sell**
+8. **G-1/G-2** — the app can be updated and knows its own version
+9. **G-4** — a customer crash tells you something
+10. **G-8** — the licence database survives a dead disk
+
+**The honest read on D-2/D-3:** they are the difference between a $10 utility and a subscription, and
+they are the two furthest from done — the monitoring engine's live path has never run, and the tray
+has no shell on either platform. If the two weeks cannot hold them, v1 is a paid scanner and the
+pricing should say so.
+
+**Sequencing note:** most of Groups C and E are *wiring over Kits that are built and tested*, not new
+invention. That is what makes two weeks plausible. Groups D-2/D-3/D-4 and G-1/G-4/G-6 are genuinely
+new code.
+
+## Deliberately excluded from v1
+
+Signing, notarization, certificates, and the legal surface (Privacy Policy, ToS, refund policy,
+Windows EULA, support address, `security.txt`) — all **required before money changes hands**, all
+owner-track from 2026-07-20, none of them engineering. Neither app store is an escape: the Microsoft
+Store rejects apps requiring elevation for any functionality, and the Mac App Store will not take
+`libpcap` + admin capture.
+
+Accessibility and localization: no evidence of either anywhere; both are post-v1 scope calls.
+
+---
+
+## Syxx protocol-level gaps (besides DoH/DoT/DoQ)
+
+**Ground truth**
+1. DNSSEC validation — cryptographic proof vs. quorum consensus; upgrades Dempster-Shafer weighting (validated answer ≠ merely corroborated).
+2. Authoritative chain walking — root→TLD→authoritative delegation walk; detects poisoning *above* the resolver layer (false consensus case).
+3. Negative-response validation — NSEC/NSEC3 denial-of-existence proofs; distinguishes honest NXDOMAIN from rewriting.
+
+**Coverage**
+4. IPv6 parity — AAAA paths, v4/v6 divergence, DNS64/NAT64 detection.
+5. Local multicast resolution — mDNS/LLMNR spoofing (Responder-style) detection.
+6. Search-domain/suffix leakage — DHCP-pushed search domains leaking single-label queries.
+
+**Privacy & behavior**
+7. ECS leakage detection — is the resolver forwarding client subnet upstream?
+8. QNAME minimization testing — RFC 9156 behavior verification.
+9. TTL manipulation detection — clamping/rewriting vs. honest decrement.
+
+**Detection**
+10. DNS tunneling/exfiltration detection — entropy + unique-subdomain-volume analysis (dnscat2, iodine).
+
+**Additional gaps (broader audit)**
+- DDR/DNR detection (RFC 9462/9463) — network steering toward encrypted resolvers.
+- SVCB/HTTPS record handling — ECH configs, ALPN; fresh manipulation target (also fixes the `?????` rendering lineage bug).
+- DNS cache inspection — poisoned entries persisting after the attack window.
+- Resolver identity verification — NSID/CHAOS fingerprinting; is 8.8.8.8 actually Google right now?
+- Historical/passive-DNS correlation — longitudinal answer deltas (operational cost caveat).
+- **Temporal gap** — Syxx is largely point-in-time; continuous monitoring + longitudinal record is a bigger epistemics upgrade than any single probe.
+- **Product gaps** — Verdict→Action layer, plain-language explanations over D-S synthesis, public report verifier, trust bootstrap (threat model, notarization, security.txt).
+
+## Implementation plan (protocol gaps)
+
+### Phase 0: Shared infrastructure (build first)
+
+**Wire-format DNS engine.** Raw UDP/TCP port 53, zero-deps encoder/decoder: EDNS0 (OPT, DO bit, ECS option), record parsing for DNSKEY/DS/RRSIG/NSEC/NSEC3 + usual types. Swift via `NWConnection` (reuse `ContinuationGate`), C# via `Socket`. Biggest single work item: ~2–3 weeks, wire-level test vectors from RFC examples + captured real responses. Everything else rides on it.
+
+**Controlled observation domain.** Authoritative DNS on the Python server for a test zone (e.g. `probe.milkandgin.com`). Logs every query (source IP, ECS payload, exact QNAME), exposed via authenticated endpoint. Turns "what did the resolver send upstream?" into direct measurement. Sign the zone so it doubles as a known-good DNSSEC target. ~1 week, mostly server work. **Only piece with ongoing operational cost — confirm this approach before writing any code** (items 3, 6, 7, 8, parts of 9 assume it).
+
+### Phase 1: Cheap wins (items 7, 8, 9) — ship as one "resolver behavior" probe group
+
+- **ECS leakage (7):** unique subdomain through resolver under test; server reports ECS arrival + prefix length. Evidence: `ecsForwarded(prefixLen)`. Few days per platform.
+- **QNAME minimization (8):** query `a.b.c.probe.milkandgin.com`; server observes full-name vs. minimized. RFC 9156-style root/TLD self-test as fallback. Few days.
+- **TTL manipulation (9):** distinctive authoritative TTLs, compare received vs. authoritative across repeats. Classify clamping/rewriting/honest decrement. `ttlManipulated` evidence: low LLR alone, good corroboration. Few days.
+
+New probe kinds inside existing `ProbePlan`/`ProbeBudget`.
+
+### Phase 2: Ground truth (items 1, 2, 3)
+
+**DNSSEC validation (1)** — three stages:
+- *Stage A — chain fetch:* DNSKEY/DS/RRSIG up to root; embedded root trust anchor (RFC 5011 rollover awareness as later hardening).
+- *Stage B — verification:* RSA/SHA-256 (alg 8), ECDSA P-256 (alg 13), Ed25519 (alg 15). macOS: `SecKeyVerifySignature` + CryptoKit. .NET: `System.Security.Cryptography`. Zero external deps both platforms.
+- *Stage C — synthesis integration:* new EvidenceIds `dnssecValidated` / `dnssecBogus` / `dnssecUnsigned`. `dnssecBogus` = very high LLR toward interception; `dnssecValidated` heavily discounts resolver-disagreement evidence. Update `WeightRubric` with documented reasoning (as done for source-group discounts).
+- Testing: mutation-proven against known-good chains, corrupted signatures, expired RRSIGs, unsupported algorithms. Verify RED per corruption class. ~3–4 weeks/platform; Stage B spec'd once, ported.
+
+**Authoritative chain walking (2)** — iterative resolution from root hints, recording NS sets + glue per delegation; compare authoritative answer vs. resolver answers. Tri-state result mirroring `ComparisonResult`: `chainConsistent` / `chainDivergent(level)` / `chainUnreachable`. Check parent-glue vs. child-zone NS consistency. Depends only on wire engine — parallel to item 1. ~2 weeks.
+
+**Negative-response validation (3)** — NSEC/NSEC3 proofs on DNSSEC Stage B. NSEC3: SHA-1 name hashing with iterations/salt; fiddly closest-encloser logic. Evidence: `nxdomainProven` / `nxdomainUnproven`; pairs with existing redirection classification (rewritten NXDOMAIN becomes provably dishonest). ~1–2 weeks after item 1.
+
+### Phase 3: Coverage (items 4, 5, 6)
+
+- **IPv6 parity (4):** audit every probe kind for AAAA coverage; per-family resolver comparison; DNS64 detection (`64:ff9b::` or learned prefix). Evidence: `familyDivergence`. Parameterize probes by family to avoid test explosion. ~2 weeks incl. test audit.
+- **Multicast resolution (5):** mDNS listener/prober macOS (`NWBrowser`/raw multicast socket); LLMNR + mDNS Windows. Responder-tell: query nonexistent names, flag any answering host. Syxx owns detection and verdict here. ~2 weeks, macOS first.
+- **Search-domain leakage (6):** read DHCP search domains + resolver config; probe single-label query behavior against observation domain. <1 week; composes with 7/8.
+
+### Phase 4: Detection (item 10)
+
+**DNS tunneling detection** — passive stream analysis, not active probing. Inputs: per-process query stream (LyxTOOLs/DNS Monitor capture lineage). Features: Shannon entropy of labels, unique-subdomain rate per registered domain, query length distribution, TXT/NULL ratios, query rate. Transparent hand-tuned thresholds; corpus from running iodine/dnscat2 in a lab VM + existing labeled CSVs as negatives. Resist ML — scored heuristics fit the explainable-verdict model; each heuristic gets a mutation-proven threshold test. New hypothesis: `covertChannel` — design into taxonomy alongside the SYN-201 frame-split so the hypothesis space is revised once. ~3 weeks incl. corpus.
+
+### Sequencing
+
+1. Phase 0 (wire engine + observation domain) — nothing starts without it
+2. Items 7/8/9 as one probe-group release — validates the engine in production
+3. Items 1 and 2 in parallel, then 3 on top of 1
+4. Items 4/5/6 as a coverage release
+5. Item 10 last, coordinated with SYN-201 taxonomy work
+
+Rough total: one quarter focused (macOS + server), Windows trailing each phase by usual port lag.
+
+## Commercial viability: 20 items, ROI-sorted
+
+Organizing principle: **capability doesn't sell; verdicts, consequences, and next steps sell** (the "traceroute — so what?" problem).
+
+**Tier 1: Fix the "so what" problem (highest ROI — repositioning, not new tech)**
+1. Verdict → Action layer — every module output ends in a plain sentence + recommended action.
+2. Plain-language explanation layer — "We believe X because A and B, despite C" over the D-S output.
+3. Five-minute first-run — one button, full scan, graded result before any configuration.
+4. Network report card / grading — letter grade per network, top three reasons. The shareable screenshot.
+5. Continuous monitoring mode — background re-probing + alerts. THE monetization item (scan = $10 utility; watchdog = subscription). Also fixes the point-in-time epistemics gap.
+
+**Tier 2: Trust and word-of-mouth**
+6. Shareable incident reports — signed evidence as a clean human-readable page; every share is free acquisition.
+7. Public report verifier — web page or tiny CLI validating witnessed bundles; makes signed reports credible.
+8. Trust bootstrap package — threat model, notarization, security.txt, "what data leaves your machine" page.
+9. ISP/network naming — aggregate anonymized verdicts into press-friendly findings.
+10. Beta → launch funnel — finish `feat/beta-signup-and-server-hardening`; instrument which verdicts users screenshot/share to drive Tier 1 priorities.
+
+**Tier 3: Differentiating capabilities**
+11. DNSSEC validation — "the only consumer tool that proves — not suspects — a lying resolver."
+12. Cache inspection — "what's already poisoned right now"; backward-looking harm demos best.
+13. DNS tunneling detection — gives Syxx a *detection* story, not only verification.
+14. Historical answer memory — 90-day answer deltas; self-explanatory to laypeople. Local-only first.
+15. Resolver identity verification — "verify 8.8.8.8 actually is Google." Cheap on the wire engine.
+
+**Tier 4: Commercial mechanics**
+16. Free/paid split — free: one-time scans + grades (viral surface); paid: monitoring, alerts, history, signed reports.
+17. Remediation follow-through — one-click resolver switch, rollback, re-test. Justifies "protection suite."
+18. Windows parity as launch requirement, not trailing port — roughly doubles addressable market.
+19. Prosumer export hooks — webhooks, syslog, JSON verdicts; enables IT-consultant multi-machine deployment.
+20. Comparison content — pages targeting real buyer searches ("is my hotel wifi safe"), not "Dempster-Shafer DNS synthesis."
+
+Key insight: items 1–10 are worth more than 11–20 combined, and almost none are protocol engineering.
+
+## Final consolidated feature list: 20 features, ROI-sorted
+
+Ten strongest existing recommendations + ten new, single ranking:
+
+**Tier 1: Sells the product on sight**
+1. Verdict → Action layer *(existing)*
+2. Network report card *(existing)*
+3. **Router/gateway DNS audit** *(new)* — hijacked router DNS, exposed admin, altered DHCP options. The most common real-world consumer DNS attack; no consumer tool checks it.
+4. Five-minute first-run scan *(existing)*
+5. **Menu bar trust indicator** *(new)* — glanceable green/amber/red per current network; turns Syxx into a presence, the psychological foundation for subscription.
+6. Continuous monitoring mode *(existing)*
+
+**Tier 2: Captures existing demand**
+7. **Filtering verification** *(new)* — "Is my Pi-hole/NextDNS/AdGuard actually working?" Blocklist enforcement + bypass detection (hardcoded resolvers, DoH sidesteps). Passionate self-identifying market.
+8. **Resolver speed benchmark** *(new)* — latency/reliability comparison + "best for you." Namebench's corpse proves demand; least threatening entry point.
+9. Plain-language explanation layer *(existing)*
+10. Remediation follow-through *(existing)*
+11. **Per-network resolver policies** *(new)* — auto-switch to trusted resolver on untrusted networks, restore at home. Remediation matured into prevention.
+12. Cache inspection *(existing)*
+
+**Tier 3: Differentiators that justify the price**
+13. Historical answer memory *(existing)*
+14. DNS tunneling detection *(existing)*
+15. **Home network baseline** *(new)* — profile home as known-good; compare every other network against it ("this café differs from home in 3 ways").
+16. DNSSEC validation *(existing)*
+17. **Lookalike domain alerts** *(new)* — punycode/homoglyph + newly-registered domains in the live query stream. Extends "is the answer honest" to "is the name itself deceptive."
+18. Resolver identity verification *(existing)*
+
+**Tier 4: Depth for the serious user**
+19. **Per-app resolver attribution** *(new)* — which process used which resolver; exposes hardcoded-DNS apps bypassing system settings. Feeds features 7 and 14.
+20. **Scheduled digest reports** *(new)* — weekly trust summary (notification/PDF/email). Exists to reduce churn, not to detect.
+
+Notes: the three highest-ROI new items (router audit, filtering verification, speed benchmark) attach to problems people already know they have. Features 5→6→11→20 form the subscription retention arc: indicator → monitoring → auto-policy → digest.
+
+---
+
+## Implementation plan v2 — executing the feature roadmap (2026-07-16)
+
+The 2026-07-14 protocol plan (Phases 0–4, above) is **largely built** — the detection *engine*
+exists. What remains unbuilt is (a) a handful of protocol probes and (b) almost the entire
+**product layer**, which the ROI analysis says is where the value is ("capability doesn't sell;
+verdicts, consequences, and next steps sell"). This plan sequences the remaining work, grounded in
+what is verified present in the tree at HEAD `4adb691` (file presence audited 2026-07-16; presence
+≠ verified-complete — MASTERPLAN2/WS7 is the hardening pass over these).
+
+**Foundation already in the engine (do NOT re-plan; build product features ON these):**
+Synthesis/verdict (`Conclusion`, `Synthesis/Stage5Presentation`), DNSSEC (`DNSSECVerifier`),
+chain-walk (`AuthoritativeVantage`,`CNAMEChainProbe`), NSEC/NSEC3 (`DenialOfExistenceProbe`),
+IPv6/DNS64 (`DualStackProbe`), ECS (`ECSProbe`), TTL (`TTLAnomalyProbe`), SVCB
+(`SVCBProbe`), resolver-id (`VersionBindProbe`), encrypted transport (`EncryptedTransportProbe`),
+leak (`LeakDetector`), latency (`ResolverLatencyProbe`), capture (`DNSCapture`), exfil/tunneling
+(`Forensics/ExfilAnalyzer`,`MonitorReportAnalyzer`), mDNS (`LAN/MDNSScanner`), continuous-monitoring
+core (`Trust/Sentinel`), signing (`WitnessSigner`,`SignedEvidencePayload`), server passive-DNS
+(`passivedns.py`). **Parity note:** the above are enumerated on macOS; every item below ships as a
+macOS + Windows twin (`AGENTS.md` parity), server where trust-material is touched.
+
+**Global acceptance discipline (every item):** real run + mutation-proven failing-case test
+(Protocol §3/§4); tri-state honesty (missing/timeout/invalid → inconclusive, never silent-good);
+GUI-visible copy proposed for approval before shipping (`AGENTS.md:42`).
+
+### Phase A — The "so what" product layer (Tier-1 ROI; engine already supports it, so highest value/effort)
+
+- **A1 — Verdict→Action layer.** Every module + the final `Conclusion` ends in a plain sentence and a
+  recommended action, per verdict class. Build: an action-map keyed on hypothesis/verdict →
+  {headline, why, do-this}; surface in GUI Conclusions + CLI `showConclusions`. Copy-gated.
+  *Bar:* every terminal verdict renders a concrete next step; no dead-end "INCONCLUSIVE".
+- **A2 — Plain-language explanation layer** over the Dempster-Shafer output ("we believe X because
+  A and B, despite C"). Build: an NL renderer over `Stage5Presentation` reasoning
+  (mechanism headline + provenance + within-class). *Bar:* a layperson can restate the verdict cause.
+- **A3 — Network report card / letter grade** + top-3 reasons; the shareable screenshot. Build: a
+  grading rubric over `Conclusion` confidence/section-statuses; a card view. Depends on A1.
+  *Bar:* the same run always yields the same grade; the three reasons are the real top contributors.
+- **A4 — Five-minute first-run.** One button → full orchestrated scan → graded result before any
+  config. Build: a scan sequencer over `ProbePlan`/`ProbeRunner`/`ProbeBudget`; onboarding flow.
+  *Bar:* cold launch to grade with zero configuration, bounded runtime.
+- **A5 — Continuous monitoring mode (THE subscription item).** Background re-probe + alerts + state
+  persistence. Build ON `Trust/Sentinel` + `MonitorReportAnalyzer`: scheduler, change-detection,
+  alert surface, per-network history. *Bar:* a real config drift between two scans raises one alert.
+- **A6 — Menu-bar / tray trust indicator.** Glanceable green/amber/red for the current network;
+  the psychological anchor for A5. Build: lightweight status item bound to the latest `Conclusion`.
+  *Bar:* indicator color always equals the last real verdict; never green on inconclusive.
+
+### Phase B — Trust & shareability (Tier-2 ROI; every share is free acquisition)
+
+- **[done] B1 — Shareable signed incident report** — the signed evidence as a clean human-readable page.
+  Build on `WitnessSigner`/`SignedEvidencePayload` + A2 copy. *Bar:* altering one byte breaks the seal.
+  macOS: 11 tests (match Windows parity). Renderer: `SignedIncidentReport.swift`/`.cs`. Fixed degraded > inconclusive
+  priority in verdict rendering. All 11 tests pass on macOS (524-t suite, 0 failures).
+- **[done] B2 — Public report verifier** (CLI) that validates a witnessed bundle independently.
+  Build on `SignedEvidencePayload` canonical bytes + published pubkey (`D004`).
+  `syxx witness verify` accepts `--pubkey <b64>`, `--fetch-pubkey <url>`, `--detailed` (tri-state).
+  macOS `SyxxWitness.swift` + Windows `WitnessCommand.cs`. Real-run verified: VALID / INVALID SIGNATURE / DISPLAY MISMATCH paths.
+  *Bar:* a third party with only the bundle + pubkey can confirm/deny authenticity.
+- **B3 — Trust bootstrap package** — threat model, notarization, `security.txt`, "what data leaves
+  your machine" page. Owner-gated (notarization/signing). *Bar:* every egress is documented.
+
+### Phase C — High-ROI new capabilities (attach to problems users already know they have)
+
+- **[done] C1 — Router / gateway DNS audit** (highest new ROI). Detect hijacked router DNS, exposed admin,
+  altered DHCP DNS options. Build: gateway discovery, admin-surface reachability check, DHCP option
+  inspection; feeds a `Conclusion` section. *Bar:* a lab router pushing a rogue resolver is caught.
+- **[done] C2 — Filtering verification** ("is my Pi-hole/NextDNS/AdGuard actually working?"). Blocklist
+  enforcement probe + bypass detection (hardcoded resolvers, DoH sidestep). Reuses
+  `EncryptedTransportProbe` + resolver enumeration. *Bar:* a known-blocked domain resolving is flagged.
+- **[done] C3 — Resolver speed benchmark** (nearly free — `ResolverLatencyProbe` exists). Add a comparison
+  UI + "best for you" recommendation. *Bar:* ranked latency/reliability across a resolver set.
+  macOS CLI: `syxx speed [domain]` — benchmarks system + public resolvers, ranks by median RTT,
+  recommends fastest. Real-run verified: 5 resolvers benchmarked, ranked table with status icons.
+- **C4 — Per-network resolver policies** (auto-switch to trusted resolver off-home, restore at home).
+  Depends on a one-click resolver-switch remediation primitive. *Bar:* joining an untrusted SSID
+  switches resolver; returning home restores it — both verified by a real read-back.
+  **[OWNER-GATED — 2026-07-19] This feature MUTATES system DNS settings (`networksetup
+  -setdnsservers` / `Set-DnsClientServerAddress`), needs elevation, and DESIGN.md's transport arc
+  makes a captive-portal failsafe "non-negotiable" (never leave the user with broken DNS). It is
+  the one Phase-C item that both crosses the system-settings-mutation line and needs an approved
+  behavior spec (what it switches to, when it reverts, the failsafe). Not built unilaterally; needs
+  an owner decision on behavior + the resolver-switch primitive's revert contract.**
+- **[done] C5 — Home network baseline** — profile home as known-good, diff every other network. Build on
+  `AnswerStabilityProbe` + `Sentinel` history. *Bar:* "this café differs from home in N ways" lists real deltas.
+- **[done] C6 — Lookalike domain alerts** — punycode/homoglyph + newly-registered domains in the live query
+  stream. Build on `DNSCapture` + the IDNA path in `DNSResolver`. *Bar:* a homoglyph of a known brand alerts.
+- **[done] C7 — Per-app resolver attribution** — which process used which resolver. Build on `DNSCapture`;
+  **carry the D063 caveat** (QR-bit direction is forgeable — key on port-53, disclose coverage limits).
+  *Bar:* a hardcoded-DNS app is attributed; the coverage gap is stated, never implied complete.
+- **C8 — Scheduled digest reports** (weekly trust summary; churn reducer). Build on A5 history + B1 rendering.
+  **[BLOCKED — 2026-07-19] Two missing prerequisites: (1) A5 keeps only `LastTick`/`LastChange`, NOT
+  a persisted multi-entry history to summarize — a digest needs a monitor-history STORE that does not
+  exist yet; (2) the periodic trigger is G-series platform-scheduler work (launchd / Task Scheduler),
+  also unbuilt. A pure digest generator with no history feed would be machinery over an absent signal
+  (anti-pattern). Sequenced AFTER a monitor-history store lands.**
+
+### Phase D — Remaining protocol gaps (lower ROI per the roadmap's own note; completes the engine)
+
+- **D0 — Controlled observation domain** (`probe.milkandgin.com`, signed zone) — **prerequisite** for
+  D1/D2 and honest ECS/QNAME ground truth. **Owner-gated:** the only piece with ongoing operational
+  cost — confirm the approach with the owner before building (server work, `AGENTS.md` pause-and-report).
+- **D1 — QNAME minimization testing** (item 8, RFC 9156). No implementation found at HEAD. Needs D0;
+  root/TLD self-test fallback. *Bar:* a resolver sending the full QNAME upstream is detected.
+- **D2 — Search-domain / suffix leakage** (item 6). No implementation found. Needs D0. *Bar:* a
+  DHCP-pushed search domain leaking a single-label query is caught.
+- **D3 — DDR/DNR detection** (RFC 9462/9463) — network steering toward encrypted resolvers. Not found.
+- **D4 — Cache inspection** — poisoned entries persisting after the attack window. No dedicated path.
+- **D5 — LLMNR parity (Windows)** to match macOS `MDNSScanner` (item 5's other half). Verify Windows twin.
+
+### Phase E — Commercial mechanics (Tier-4; product/GTM, mostly owner/business decisions)
+
+Free/paid split (free: one-time scans + grades; paid: A5 monitoring, history, signed reports),
+Windows parity as a launch requirement (not a trailing port), prosumer export hooks
+(webhooks/syslog/JSON verdicts), comparison/SEO content. Tracked here; most are owner-gated.
+
+### Sequencing & dependencies
+
+1. **Phase A first** — highest ROI, and the engine already produces the verdicts it surfaces. A1→A2→A3
+   are pure synthesis-surfacing (low risk); A4 orchestration; A5+A6 unlock the subscription. 
+2. **Phase B in parallel with A** (independent; builds on existing signing).
+3. **Phase C** next — C3 is nearly free (probe exists); C1/C2 are the top new-capability ROI.
+4. **Phase D last**, and only after **D0 (observation domain) is owner-approved** — D1/D2 are blocked on it.
+5. **Phase E** threads throughout as business decisions land.
+6. **Parity + hardening:** each item ships macOS+Windows twins; MASTERPLAN2/WS7 remediation of the
+   underlying engine (reassigned, in flight) must be green before product features depend on a given probe.
+
+**Owner-gated before their phase can start:** D0 observation domain (operational cost), B3/notarization
++ app signing, Phase-E business model, Keygen/Stripe go-live (see Owner-gated section).
+
+---
+
+## Pre-July 14, 2026 Content
+
+
+**Generated:** 2026-07-11  
+**Branch:** `feat/beta-signup-and-server-hardening`  
+**Build state:** macOS 364t/0f ✅ (4 new F009 item-3 parity tests), Windows 216t/0f ✅ (verified live on Windows VM — `dotnet restore`, `dotnet build`, `dotnet test` all pass), Server 97t/0f ✅
+**Source truth:** `DELTAS.md` A–F ledger (frozen baselines at confirmed commits)
+
+This document is the **single source of truth** for what to implement next. It replaces all
+earlier sequencing (HANDOFF-OPENCODE.md workstreams, Night-Pass backlog, retired Phase 0–6
+numbering). The working tree is committed (Phase 0 done — commit `5690ce8`). Every item below
+is **implementation-ready** — specified in enough detail for an engineer to build from this
+document alone.
+
+---
+
+## How to read this plan
+
+Each numbered workstream represents one implementation cycle. Within a workstream, items are
+ordered by mission risk (highest first). Per-item fields:
+
+- **Description** — What the delta is, in one paragraph.
+- **Files** — Every source file that needs modification (verified against live tree).
+- **Agent** — Which subagent type handles this (syxx-engineer for platform code,
+  syxx-threat-analyst for design-heavy items).
+- **Implementation** — Concise specification of what to change.
+- **Alerts/Warnings** — Gotchas, known pitfalls, design decisions to get right.
+- **Blockers** — Hard prerequisites (Phase 0, other WS items, external deps).
+- **Validation** — How to prove it works: real-run criteria + regression test floor.
+
+**Definition of done for every item:** a real run against real/adversarial data that produces
+honest, correct output. Green tests are the floor, never the bar.
+
+---
+
+## Status summary
+
+| Tier | Count | Description |
+|------|-------|-------------|
+| **Phase 0** | DONE | Working tree committed as `5690ce8` (no new logic) |
+| **WS1** | 3/3 | Server trust & payments — A019 (DONE), A020 (DONE), A021 (DONE) |
+| **WS2** | 4/5 | Detection efficacy — B032 (DONE†), C009 (DONE†), C006 (DONE†), B024 (DONE†); B005 (design done — `DESIGN.md` score contracts spec'd; composition math deferred on B003) |
+| **WS3** | 3/3 DONE ✅ | Evidence integrity & cross-platform trust — D003 (Critical), D004, D011 |
+| **WS4** | 4/4 DONE ✅ | Client test quality — B034, B035, B036, B039 |
+| **WS5** | 2/3 | Efficiency & code hygiene — F006 (DONE), F007 (DONE); F009 (2/5 DONE, 3 items closed — items 3/4/5 completed) |
+| **WS6** | 6 | Net-new features (post-hardening) — +E015 folded in |
+| **WS7** | 15 | MASTERPLAN2 completion (2026-07-16) — parity twins + confirmed honesty bugs; WS7-01/04/05/06 ⏳ in flight (OpenCode), rest not-started/verify. See §WS7 |
+| **Done ledger** | 1 | B009 captive-portal section status (verified fixed `47885df`) |
+| **Done ledger (this session)** | 23 | A019, A020, A021, B032†, C009†, C006†, B024†, B034, B035, B036, D003, D004, D011, B039, F006, F007, C009-WinParity, D4-WinUpdateUI, Windows-216t-live-verified, B005-design-spec, F009-item3-macOS-parity, F009-item5-clean, B005-tag-DESIGN.md |
+| **Owner-gated** | 2 | Delivery go-live, Crowd intel (not engineering tasks) |
+| **Open questions** | 3 | Items needing user direction before scheduling |
+
+† Output strings pending user approval (see Open Questions).
+
+---
+
+## Priority reallocation (remaining after OC-1–OC-9)
+
+This is the **relative execution priority** for remaining work. Items completed in the
+HANDOFF-OPENCODE.md session (OC-1 through OC-9) are removed.
+
+1. **Critical — server trust:** A021 *(WS1-03, DONE)*
+2. **Critical — client false-confidence:** **B005** *(design spec done ✅ — composition math deferred to B003; code implementation deferred)*
+3. **Efficiency / hygiene:** F009 *(2/5 DONE — remaining items 1/2: Windows-test-gated seams)*
+4. **Features / GUI:** Cage Report, OpenResolver GUI, **E015**, CF-07, CF-08, CF-09
+
+## Owner-track legend (work-division record)
+
+Every WS item now carries an **Owner:** field naming the assigned track. Tracks:
+
+- **IBM Bob** — lightest, decoupled, no copy-gates: F006, F007, B039.
+- **Opencode** — HANDOFF-OPENCODE.md session: A019, A020, B032, C009, C006, B024, B034,
+  B035, B036 — **ALL DONE**. Future Opencode assignments TBD.
+- **Claude (design, done directly)** — B005 (DESIGN.md), the DESIGN portion of D004/D011
+  (third-party pubkey-pinning protocol + key-rotation chain),
+  CF-07 (design + file the missing A–F delta), CF-08 (DNSSEC DS→DNSKEY→RRSIG chain-validation
+  threat-model + design), CF-09 (collector egress attestation design, depends on D004).
+- **syxx-engineer (Claude-orchestrated impl of Claude's designs)** — A021 impl (done),
+  D003 impl, D004/D011 wiring, CF-07/08/09 code (after design), F009 remaining
+  seams (Windows-host-gated).
+- **syxx-gui-architect (Claude-orchestrated)** — Cage Query Capture Report, OpenResolver
+  GUI advisories surface, E015.
+
+**Output-approval carry-over:** B032, C009, C006, B024, Cage Report, and the OpenResolver
+advisory produce user-visible strings. **Proposed wordings for B032, C009, C006, B024 are
+in the Done ledger above; they hold until user approval** (see Open Questions).
+
+## Done ledger (completed this cycle — do NOT schedule)
+
+- **B009 — Captive Portal Section Status.** VERIFIED FIXED. `Synthesizer.swift:356` now
+  appends `.degraded` for a captive-portal `.yes` state (the `.yes` case opens at :351),
+  not a clean/negative sub-signal, with a transparent evidence rationale
+  (`evidenceId: .captivePortalActive`). Commit `47885df` added the mutation-proven test on
+  both platforms. Closed — not scheduled.
+
+- **OC-1 (A019) — Stripe idempotency state machine.** `fulfillment.py:73-95`: replaced
+  `kv_insert_once` guard with state machine (`minted`/`processing`/`failed`). Keygen failure
+  → `"failed"` so Stripe retries re-enter mint. Server 73t/0f.
+
+- **OC-2 (A020) — DNS question match + source validation.** `resolver.py`: question-tuple
+  validation (qname, qtype, qclass) in `_parse_response`/`_parse_sections`. Connected UDP
+  kernel-filters off-source replies. Server 73t/0f.
+
+- **OC-3+OC-7 (B032/B034) — macOS tunnel→.unknown + typed-outcome tests.**
+  `NetworkKeyState.swift`: pure-core extraction; tunnel-only → `.unknown`. 5 typed-outcome
+  tests replace vacuous constructor tests. macOS 349t/0f.
+
+- **OC-4 (C009) — Exfil single-signal fix + Beacon degenerate fix.** `ExfilAnalyzer.swift`:
+  ≥2 signals for `.suspicious`, ≥3 for `.likelyExfil`. `BeaconAnalyzer.swift`: zero-mean
+  identical timestamps → `.insufficientData`. macOS 349t/0f.
+
+- **OC-5 (C006) — No silent 8.8.8.8 fallback.** 4 fallback sites add warning before using
+  8.8.8.8. `ContentWarp.swift`/`ContentWarp.cs`: return true when no resolver. macOS 349t/0f.
+
+- **OC-6 (B024) — Warp verdict-label consistency.** `SyxxWarp.swift`: inconclusive overall
+  → per-check lines show "⚠️ SKIPPED (proxy unreachable)" not "✅ MATCH"/"🚨 MISMATCH".
+  macOS 349t/0f.
+
+- **OC-8 (B035) — Narrow test whitelist.** `SynthesizerTests.swift`: explicit `||` chain
+  replaces `contains()` whitelist. macOS 349t/0f.
+
+- **OC-9 (B036) — Typed classify() for resolver-status.** `AuthoritativeVantage.swift`:
+  `resolverDidFail` param; empty+empty with resolver failure → `.inconclusive`.
+  macOS 349t/0f.
+
+- **WS3-03 (D003) — TLS (SPKI) pinning for leak collector (CRITICAL).** Closes the
+  forgeable-evidence hole where the leak-collector transport trusted the system CA store only.
+  macOS: `CollectorPinningDelegate` with `SecTrustEvaluateWithError` + SPKI pin check,
+  fail-closed to `.inconclusive`. Windows: `HttpClientHandler.ServerCertificateCustom
+  ValidationCallback` fail-closed. Byte-identical pin across openssl/.NET/Swift.
+  macOS 354t/0f (now 360). Mutation-proven: accept-all → RED.
+
+- **WS3-01 (D004) — Well-known collector pubkey endpoint.** Server `GET /api/pubkey` returns
+  collector's Ed25519 publicKey + keyId + rotation timestamp. 2 route tests. Server 75t/0f.
+
+- **WS3-02 (D011) — Trust-set key population.** macOS: `signatureKeyTrusted: Bool?` on
+  `LeakTestResult`, `trustedPublicKeys: Set<String>?` param on `runCollectorTest()`, trust-check
+  wiring. Windows: `SignatureKeyTrusted: bool?` on `LeakTestResult`, `trustedPublicKeys:
+  ISet<string>?` param on `RunCollectorTestAsync()`. 5 tests per platform. macOS 360t/0f.
+
+- **WS4-04 (B039) — ReportTests coverage.** macOS `ReportTests.swift` has all 8 tests
+  (4 B039-required + 4 pre-existing): target_answer conflict/consensus, empty SectionInputs,
+  structural sections, SECOND OPINION gating. Windows tests match.
+
+- **WS5-01 (F006) — ProbeRunner real wall-clock elapsed.** macOS `ProbeRunner.swift` uses
+  real elapsed time (not perProbeTimeout cap) for budget accounting. 8 ProbeRunnerTests.
+  Windows Parity already done (uses Stopwatch wall-clock, not the cap).
+
+- **WS5-02 (F007) — DomainCanonical IDNA length + CLI routing.** `DomainCanonical.swift:48-51`
+  and `DomainCanonical.cs:41` measure A-label length after IDNA encoding. CLI entry points on
+  both platforms canonicalize all domain arguments. Invalid domains rejected at CLI boundary.
+
+- **WS1-03 (A021) — Keygen response signature verification.** Ed25519 response signature
+  verification (Fix 1, confirmed available). `config.KEYGEN_PUBLIC_KEY` hex-encoded Ed25519
+  public key; `_verify_validate_key_response()` reconstructs signing data per draft RFC
+  http-signatures and verifies before trusting `meta.valid`. Server 97t/0f.
+
+- **B005 (WS2-05) — Score no/partial/full-data design spec.** Three flagship scores (Resolver
+  Provenance Confidence, Tamper Mechanism Fingerprint, Evidence Confidence Score) now have
+  explicit zero-data → inconclusive, partial-data → attenuated, full-data → normal contracts
+  in `DESIGN.md` (new "Score-design invariants" section). Composition math deferred pending
+  B003 independence resolution. — **DONE** ✅
+
+- **F009 item 3 — macOS `Default*_HasExpectedValues` parity tests.** 4 tests added to
+  `ProbeRunnerTests.swift`: `test_defaultProphet_HasExpectedValues`, `test_defaultMirror_HasExpectedValues`,
+  `test_defaultPortal_HasExpectedValues`, `test_defaultGlutton_HasExpectedValues`. Windows tests
+  already existed (4 tests at `SyxxKitTests.cs:2114-2147`). — **DONE** ✅
+
+- **F009 item 5 — Clean-slate found.** Investigated both platforms for skipped/conditional/
+  commented-out tests: zero instances found beyond the single intentional `XCTSkip` guard in
+  the D003 live-TLS test. No `FIXME`/`TODO`/`PENDING` in any test file. Item was already
+  resolved by Phase 0 commit. — **DONE** ✅
+
+- **Windows 216t/0f live verified.** On 2026-07-11, full `dotnet restore && dotnet build && dotnet test` pipeline executed live on Windows VM (C:\ drive, bypassing MSBuild MSB4248 network-drive bug). 216 tests passed, 0 failed, 0 skipped. Windows build state upgraded from "cross-compile from macOS" to "live-verified on Windows." Build warnings (59) are all pre-existing nullability/hygiene warnings (CS8619, CS8625, CA1416), no new regressions.
+
+---
+
+## Phase 0 — Lock the buildable tree — **DONE**
+
+**Status:** DONE. The entire working tree was committed as `5690ce8`
+("chore: snapshot working tree (multi-agent session WIP)", 65 files) at the user's explicit
+direction to commit everything. The buildable state (B031, C007, B032, B009 source fix, D015
+completion, probe-refactor files, ledgers/docs) is now in git history — no clean checkout can
+lose it.
+
+**Note on scope:** because the user directed a full snapshot, tool-config and scratch artifacts
+(`.opencode/`, `.claude/agents/`, `DELTAS.md.bak`, `diff_syxx.txt`, `Claude Comments.txt`) were
+committed along with project code. The earlier "do NOT commit these / split into logical commit
+groups" guidance is therefore moot and has been removed. No action remains here; **the first
+real step of this plan is WS1-01 (A019).**
+
+---
+
+## WS1 — Server trust & payments hardening (Critical) — 2/3 DONE
+
+**Status:** All three WS1 items are **DONE** ✅. A019 (Stripe idempotency), A020 (DNS
+question match), and A021 (Keygen response signature verification) are fully implemented
+and verified. Server suite: 97 tests, 0 failures.
+
+### WS1-01 — A019: Stripe pending-mint burns webhook retries after Keygen outage — **DONE** ✅
+
+- **Status:** Fully implemented and verified. Mutation-proven: break state-machine → test REDs.
+  Server suite: 73 tests, 0 failures (was 69 baseline).
+- **Implementation detail:** Used KV state machine (`minted`/`processing`/`failed`), not
+  `kv_delete` (no `kv_delete` API exists). Keygen failure → `"failed"` so Stripe retry re-enters.
+  Residual double-mint race from lost HTTP response after Keygen success is documented;
+  Keygen-side dedup is the real mitigation.
+- **Files changed:** `Server/syxx_server/fulfillment.py:73-95`, `Server/tests/test_payments.py`
+  (test_keygen_outage_then_retry + test_keygen_double_retry_still_one_license)
+
+### WS1-02 — A020: DNS oracle accepts wrong-question / off-source UDP replies — **DONE** ✅
+
+- **Status:** Fully implemented and verified. Server suite: 73 tests, 0 failures.
+- **Implementation detail:** Question-tuple validation (qname case-insensitive per RFC 4343,
+  qtype, qclass=1) in `_parse_response` and `_parse_sections`. Connected UDP
+  (`sock.connect()`) so kernel discards off-source spoofed replies. TCP fallback also
+  validates question. `_build_query` returns 4-tuple `(txid, packet, qname, qtype)`.
+- **Files changed:** `Server/syxx_server/resolver.py` (multiple locations for `_parse_response`,
+  `_parse_sections`, `query()`, `_query_sections()`, `_query_tcp()`)
+
+### WS1-03 — A021: Paid-route entitlement trusts unsigned Keygen `meta.valid` — **DONE** ✅
+
+- **Description:** The licensing module trusts `meta.valid` from Keygen's JSON response
+  body without cryptographic verification. While this rides over TLS (authenticated by
+  system trust store), it lacks defense against a compromised CA, a substituted trust
+  anchor, or a MITM with a valid cert. The tri-state transient handling is already
+  correct (`"__transient__"` not accepted as valid).
+- **Files:** `Server/syxx_server/licensing.py`, `Server/syxx_server/config.py`,
+  `Server/tests/test_licensing.py`
+- **Agent:** syxx-engineer
+- **Owner:** syxx-engineer
+- **Implementation (Fix 1 — confirmed available):**
+  1. Added `KEYGEN_PUBLIC_KEY` config var (hex-encoded Ed25519 public key from the Keygen
+     dashboard). When set, every validate-key response is cryptographically verified
+     before trusting `meta.valid`.
+  2. Added `_verify_validate_key_response()` to `licensing.py`: reconstructs the signing
+     data per the draft RFC http-signatures format `(request-target) | host | date |
+     digest`, then verifies the Ed25519 signature using the `cryptography` library
+     (already a dependency).
+  3. Modified `_validate_keygen()` to:
+     - Capture the raw response body and `Keygen-Signature`, `Digest`, `Date` headers
+       before JSON parsing.
+     - Call `_verify_validate_key_response()` before trusting `meta.valid`.
+     - Return `None` (denial, never `"pro"`) when signature is missing/invalid.
+     - Skip verification when `KEYGEN_PUBLIC_KEY` is empty (backward compat for dev/test).
+  4. Added 22 tests: `test_licensing.py` covers unit verification (valid sig, forged body,
+     missing sig, garbage sig, wrong host/path/date) and integration (full HTTP mock,
+     transient preservation, offline key path, semaphore timeout).
+- **Alerts/Warnings:**
+  - The transient-state path is unchanged — network/timeout errors still return
+    `"__transient__"`; 401/404 still return `None`.
+  - Operators must deploy `SYXX_KEYGEN_PUBLIC_KEY` (hex from Keygen dashboard settings)
+    to enable signature verification. Without it, the server falls back to the original
+    TLS-only trust (safe for dev/test but not production).
+- **Blockers:** None — resolved.
+- **Validation:**
+  1. ✅ MITM forged body → denied (22 tests).
+  2. ✅ Valid signature → `"pro"` granted.
+  3. ✅ Transient/network error → `"__transient__"` (no regression).
+  4. ✅ 401/404 → `None` (invalid key, not transient).
+  5. ✅ No pubkey configured → backward compat.
+  6. ✅ Server suite: 97 tests, 0 failures.
+
+---
+
+## WS2 — Client detection efficacy fixes (Critical/High)
+
+**Dependency:** Phase 0 (WS2 touches client source files that may be in the working tree).
+
+### WS2-01 — B032: macOS infers "encrypted DNS = yes" from VPN/tunnel interface alone — **DONE** ✅
+
+- **Status:** Implemented (uncommitted). macOS: 349 tests, 0 failures. Mutation-proven.
+- **Proposed evidence string** (requires user approval): "DNS is routed through a VPN/tunnel
+  interface (utunX). Whether the tunnel encrypts DNS is not verified — Syxx cannot confirm
+  encrypted DNS transport from the tunnel alone."
+- **Implementation detail:** Pure-core `encryptedDNSStatus(servers:scoped:)` extracted from
+  `NetworkKeyState`. Tunnel-only resolvers return `.unknown` (not `.yes`). 5 typed-outcome
+  tests replace the vacuous IPClassifier test (B032 + B034 combined).
+- **Files changed:** `macOS/Sources/SyxxKit/NetworkKeyState.swift`,
+  `macOS/Tests/SyxxKitTests/SyxxKitTests.swift`
+- **Output-approval note:** The evidence string is user-visible (`syxx-key` output).
+  Proposed wording above; do not finalize without user approval.
+
+### WS2-02 — C009: Exfil analyzer flags benign domain `.suspicious` on cadence alone — **DONE** ✅
+
+- **Status:** Implemented (uncommitted). macOS: 349 tests, 0 failures. Mutation-proven.
+- **Proposed verdict-label mapping** (requires user approval): single regular-cadence
+  signal → `.benign` (not `.suspicious`); ≥2 of {highEntropy, regular, flaggedBy} →
+  `.suspicious`; ≥3 → `.likelyExfil`.
+- **Implementation detail:** `ExfilAnalyzer.swift`: changed from `highEntropy || regular`
+  to counting signals. Requires ≥2 for `.suspicious`, ≥3 for `.likelyExfil`. Single signal
+  → `.benign`. `BeaconAnalyzer.swift`: identical-timestamp series → `.insufficientData`
+  (not `.highlyRegular`). Benign-domain fixture updated with realistic timestamps.
+- **Files changed:** `macOS/Sources/SyxxKit/Forensics/ExfilAnalyzer.swift`,
+  `macOS/Sources/SyxxKit/Forensics/BeaconAnalyzer.swift`,
+  `macOS/Tests/SyxxKitTests/SyxxKitTests.swift`,
+  `macOS/Tests/SyxxKitTests/MonitorReportAnalyzerTests.swift`
+- **Output-approval note:** Verdict label behavior changed — confirm proposed mapping
+  before finalizing.
+
+### WS2-03 — C006: Stop silent 8.8.8.8 fallback without user consent — **DONE** ✅
+
+- **Status:** Implemented (uncommitted). macOS: 349 tests, 0 failures. Windows parity applied.
+- **Proposed warning message** (requires user approval): "⚠️ System resolver undetectable —
+  falling back to 8.8.8.8"
+- **Implementation detail:** 4 fallback sites audited across both platforms. Sites print
+  warning before falling back. `ContentWarp.swift`/`ContentWarp.cs` return `true`
+  (conservative, assume public) when no resolver available. Intentional public-vantage
+  resolver lists (1.1.1.1, 8.8.8.8, 9.9.9.9) left untouched.
+- **Files changed:**
+  - `macOS/Sources/SyxxWitness/SyxxWitness.swift` — warning before fallback
+  - `macOS/Sources/SyxxCLI/SyxxCLI.swift` (2 sites) — warning in Prophet + Mirror sections
+  - `macOS/Sources/SyxxKit/ContentWarp.swift` — return true (no silent fallback)
+  - `Windows/Syxx.Kit/ContentWarp.cs` — same, for parity
+- **Output-approval note:** Warning message copy-gated — confirm wording before finalizing.
+
+### WS2-04 — B024: Warp per-check ✅/🚨 labels contradict ⚠️ INCONCLUSIVE overall verdict — **DONE** ✅
+
+- **Status:** Implemented (uncommitted). macOS: 349 tests, 0 failures.
+- **Proposed per-check label for inconclusive runs** (requires user approval):
+  "⚠️ SKIPPED (proxy unreachable)" replaces both "✅ MATCH" and "🚨 MISMATCH" when overall
+  verdict is inconclusive.
+- **Implementation detail:** `SyxxWarp.swift`: when overall verdict is inconclusive, all
+  per-check lines show "⚠️ SKIPPED (proxy unreachable)" and the overall header shows
+  "⚠️ INCONCLUSIVE". Conclusive runs (secure/tampered) unchanged. Windows `Program.cs` not
+  modified (lacks the per-check loop structure).
+- **Files changed:** `macOS/Sources/SyxxWarp/SyxxWarp.swift`
+- **Output-approval note:** Per-check label wording copy-gated — confirm before finalizing.
+
+### WS2-05 — B005: derived scores unspecified on no-/partial-data (DESIGN task) — **DESIGN DONE** ✅
+
+- **Status:** The no/partial/full-data contracts for all three scores (Resolver Provenance
+  Confidence, Tamper Mechanism Fingerprint, Evidence Confidence Score) are now specified in
+  `DESIGN.md` in the new "Score-design invariants" section. **Composition math deferred**
+  pending B003 independence resolution — the contracts are written to be implementable without
+  B003, but the exact B001/B002 sub-scorer wiring depends on the DST-vs-independence decision.
+- **Description:** CRITICAL (Honesty §3 zero-data confidence). The three marquee derivations
+  — **Resolver Provenance Confidence**, **Tamper Mechanism Fingerprint**, and **Evidence
+  Confidence Score** — are specified with **no no-data / partial-data / full-data behavior**.
+  The flagship scores are the least-specified and the most likely to emit unwarranted
+  confidence from missing or thin evidence. This governs the B001/B002 scorers.
+- **Files:** `DESIGN.md` — spec each score's no/partial/full-data behavior.
+- **Agent:** design (Claude, done directly in DESIGN.md).
+- **Owner:** **Claude (design, done directly)** — spec each score's no/partial/full-data
+  behavior; a missing/invalid input datum must make the score **inconclusive**, never default
+  to confident.
+- **Implementation (done):**
+  1. Added new "Score-design invariants" section to `DESIGN.md` with 5 invariant rules
+     binding on all scores.
+  2. For each of the three scores, defined behavior under three input regimes: **no data**
+     (→ inconclusive / no score, never a confident number), **partial data** (→ reduced,
+     explicitly-attenuated confidence with the gap surfaced), **full data** (→ normal).
+  3. Each contract specifies the exact signals used, the attenuation formula, and the
+     minimum-signal/minimum-section gating rules.
+- **Alerts/Warnings:**
+  - Composition math (how B001/B002 sub-scorers wire together) is **deferred** pending B003
+    independence decision. The contracts as written are implementable without B003, but the
+    sub-scorer architecture cannot be finalized until B003 is settled.
+- **Blockers:** **B003 (independence)** — the score-composition spec depends on the
+  DST-vs-independence decision; do not finalize composition math before B003 is settled.
+- **Effort:** M (design — DONE).
+- **Validation (design-level):** each score now has an explicit, written no/partial/full-data
+  contract in `DESIGN.md`; section heading "Score-design invariants" anchors the three tables.
+  A reviewer can point to the clause that forbids a confident score on absent data.
+  The real-data bar lands when B001/B002 implement to this spec and a thin/empty-evidence run
+  reads inconclusive, never confident.
+
+---
+
+## WS3 — Evidence integrity & cross-platform trust — **3/3 DONE** ✅
+
+### WS3-01 — D004: well-known collector pubkey endpoint (additive; third-party verifiable) — **DONE** ✅
+
+- **Status:** DONE. Server `GET /api/pubkey` route returns collector's Ed25519 public key (base64), keyId, and rotation timestamp. 2 tests in `test_routes.py`. Server suite: 75t/0f. Third-party verifier can now independently fetch the key.
+- **Status of the underlying delta:** D004 is **already FIXED** (in DELTAS-fixed.md). The
+  client **does** verify the collector's Ed25519 attestation today: `LeakDetector.verify()`
+  (LeakDetector.swift:170) is invoked at :146-147 (`verify(built)` when `signature`/`publicKey`
+  are present), and `publicKey`/`keyId` are carried on the result (:24-26, :48-49). The claim
+  "without it anyone can create attestations" is **false for current code** — a forged
+  self-consistent attestation is caught client-side.
+- **Description (residual only):** The one genuine gap is **additive**: there is no *well-known*
+  endpoint that publishes the collector's public key, so a **third-party verifier** (e.g. a
+  Reddit reader checking a pasted attestation) has no independent trust anchor to fetch and pin
+  the key from. This is an enhancement for third-party verifiability, **not** a fix for a live
+  forgeable-evidence hole.
+- **Files:**
+  - **Server:** `Server/syxx_server/app.py` (new `GET /api/pubkey` route)
+  - **Attestation output (optional):** client attestation formatter to embed the well-known URL
+- **Agent:** syxx-engineer
+- **Owner:** **Claude (design portion)** — third-party pubkey-pinning protocol +
+  key-rotation chain — then **syxx-engineer** wires the server route + attestation URL field
+  (Claude-orchestrated).
+- **Implementation:**
+  1. **Server:** Add `GET /api/pubkey` returning the collector's current Ed25519 public key
+     (base64), keyId, and rotation timestamp. Rate-limit like all other endpoints.
+  2. **Offline verifier hook:** Include the well-known pubkey URL in the attestation output so a
+     third party can independently fetch the key and verify a pasted attestation.
+  3. Client-side pin/sync of this key is tracked separately as WS3-02 (D011 residual).
+- **Alerts/Warnings:**
+  - Frame this honestly in any user-facing copy: the endpoint enables *independent third-party*
+    verification; it is **not** closing a hole in Syxx's own client verification, which already
+    exists at LeakDetector.swift:146-147/:170.
+  - Key rotation: publish keyId + rotation timestamp so a verifier can select the right key.
+- **Blockers:** A022 (ephemeral key) should be resolved so the published key is stable across
+  restarts — otherwise the endpoint advertises a key that changes on redeploy.
+- **Effort:** S (single additive server route + attestation URL field).
+- **Validation:**
+  1. `GET /api/pubkey` returns a valid base64 Ed25519 public key + keyId + rotation timestamp.
+  2. A third party fetches the key and independently verifies a genuine pasted attestation →
+     valid; a forged attestation → invalid.
+  3. Floor: server route test for shape/rate-limit; confirm no regression to the existing
+     client-side `verify()` path.
+
+### WS3-02 — D011: populate/thread `trustedPublicKeys` (narrow residual only) — **DONE** ✅
+
+- **Status:** DONE on both platforms. macOS: `signatureKeyTrusted: Bool?` on `LeakTestResult`,
+  `trustedPublicKeys: Set<String>?` param on `runCollectorTest()`, trust-check wiring. Windows: `SignatureKeyTrusted: bool?` on `LeakTestResult`, `trustedPublicKeys: ISet<string>?` param on `RunCollectorTestAsync()`. 5 tests per platform. macOS 360t/0f, Windows build 0 errors.
+- **Status of the underlying wire:** The verify-side `trustedPublicKeys` param **already
+  exists on both platforms**. `WitnessSigner.verifySnapshot(_:maxAge:trustedPublicKeys:)`
+  performs the membership/untrusted-rejection check at WitnessSigner.swift:117 (the check
+  branch) with the canonical-bytes verify at :164; Windows mirrors it at
+  `WitnessSigner.cs:101` (signature) with the membership check at `:133`. Do **not** re-propose
+  building this wire — it is present.
+- **Description (residual only):** Two narrow gaps remain: (a) there is no **sync/pinning
+  source** that *populates* the trusted set from the WS3-01 `GET /api/pubkey` endpoint, so in
+  practice callers pass `nil`/empty and the membership gate is inert; and (b) the same
+  `trustedPublicKeys` parameter is not yet threaded into `LeakDetector.verify()`
+  (LeakDetector.swift:170), which currently verifies signature+key-consistency but does not
+  consult a trust set.
+- **Files:**
+  - `macOS/Sources/SyxxKit/LeakDetector.swift:170` (add optional `trustedPublicKeys` param,
+    return an untrusted-key tri-state when a set is supplied and the signer is absent)
+  - `Windows/Syxx.Kit/LeakDetector.cs` (mirror)
+  - Config/credential store on both platforms (hold the pinned set, populated from WS3-01)
+- **Agent:** syxx-engineer
+- **Owner:** **Claude (design portion)** — pubkey-pinning/key-rotation chain (shared with
+  WS3-01) — then **syxx-engineer** threads `trustedPublicKeys` on both platforms
+  (Claude-orchestrated).
+- **Implementation:**
+  1. Add a trusted-key store populated by fetching `GET /api/pubkey` (WS3-01) periodically;
+     persist the last-known set for offline/graceful-degradation use.
+  2. Thread `trustedPublicKeys` into `LeakDetector.verify()` so a valid signature from an
+     **untrusted** key resolves to an honest untrusted-key outcome, distinct from valid
+     (signature + key trusted) and invalid (signature wrong). Do not regress the existing
+     `verifySnapshot` path, which already honors the set.
+- **Alerts/Warnings:**
+  - The untrusted-key state must NOT read as valid — it must be honest: "signature correct
+    but signer not in trust set." An **empty/absent** trust set must not silently downgrade a
+    genuine verification to failure; when no set is configured, keep today's behavior
+    (signature+consistency verify) rather than failing closed on every check.
+  - This is the client-side complement to WS3-01. Build after or with it.
+- **Blockers:** WS3-01 (the server pubkey endpoint must exist to populate the set).
+- **Effort:** S–M.
+- **Validation:**
+  1. With a configured trust set: snapshot/attestation signed by a member → valid; signed by
+     a non-member (valid signature) → untrusted-key (not valid); forged signature → invalid.
+  2. With no trust set configured: existing verify behavior is unchanged (no false failures).
+  3. Floor: tri-state unit tests with controlled keys on both platforms; mutation removing the
+     membership consult REDs the untrusted-key case.
+
+### WS3-03 — D003: no TLS pinning for leak-collector communication (**CRITICAL**)
+
+- **Status:** **[done]** (syxx-engineer). SPKI (RFC 7469 pin-sha256) transport pinning added to
+  both collector twins, fail-closed to `.inconclusive`/`Failed` with no accepted attestation.
+  - macOS: `LeakDetector.swift` — `CollectorPinning` (config slot `collector_spki_pins` UserDefaults /
+    `SYXX_COLLECTOR_PINS` env; DER SubjectPublicKeyInfo walker; pure `decide`) + `CollectorPinningDelegate`
+    (`SecTrustEvaluateWithError` then SPKI-pin check; `.cancelAuthenticationChallenge` on miss).
+  - Windows: `LeakDetector.cs` — `CollectorPinning` (env `SYXX_COLLECTOR_PINS`; `ExportSubjectPublicKeyInfo`;
+    `Accept`) + `HttpClientHandler.ServerCertificateCustomValidationCallback` (fail-closed).
+  - Cross-platform pin PARITY proven byte-identical (openssl == .NET == Swift walker) for EC and RSA.
+  - Verified: macOS `swift test` **354/0** incl. a LIVE-TLS mismatch test (real handshake → inconclusive);
+    Windows D003 tests pass; both mutation-proven (break fail-closed → guard REDs).
+  - OWNER DELIVERABLE: the real collector pin value(s) (primary + backup) are a deployment input, NOT
+    hardcoded. Until set, transport is transparently unpinned (posture `notConfigured`).
+  - PENDING USER APPROVAL: two user-visible placeholder strings (`[D003]`-prefixed pin-failure reason +
+    unconfigured caveat) — final wording in the engineer's report.
+  - Researcher: move D003 to DELTAS-fixed.md against the landing commit once committed.
+
+- **Priority note:** Criticality **CRITICAL** — documented here in WS3 next to its leak
+  trust-chain partners (D004/D011), but per the priority reallocation it executes in the
+  **tier-2 critical batch** (with B032/C009/C006/B005/D003), **ahead of** the High D004/D011.
+- **Description:** The leak-collector `URLSession` is created from `URLSessionConfiguration
+  .ephemeral` with **no `SecTrust` delegate / public-key pinning** — it trusts the system CA
+  store only. A compromised CA, a substituted trust anchor, or an on-path TLS proxy with a
+  valid cert can **forge leak verdicts and fake attestations**, producing a false clean/false
+  tamper leak result the user would trust. This is a live forgeable-evidence hole (distinct
+  from D004/D011, which are additive third-party-verifiability enhancements).
+- **Files:**
+  - **macOS:** `macOS/Sources/SyxxKit/LeakDetector.swift:66-72` — the `collectorSession`
+    ephemeral `URLSession` (no delegate/pinning). *(Corrected from the cited `:44-49`, which
+    is the `DNSLeakResult` initializer; the session block is at `:66-72`.)*
+  - **Windows twin:** `Windows/Syxx.Kit/LeakDetector.cs:55-58` — `_collectorClient =
+    new HttpClient { Timeout = ... }` (no `HttpClientHandler`/`ServerCertificateCustom
+    ValidationCallback` pinning).
+- **Agent:** syxx-engineer.
+- **Owner:** **syxx-engineer** (Claude-orchestrated). Pinning-protocol + key-rotation design
+  is Claude's (shared with the D004/D011 design portion); implementation is syxx-engineer.
+- **Implementation:**
+  1. **macOS:** add a `URLSessionDelegate` implementing
+     `urlSession(_:didReceive:completionHandler:)` that pins the collector server's SPKI
+     (public-key) hash; fail-closed (return leak **inconclusive**, never clean) on pin
+     mismatch. Optionally enforce Certificate Transparency.
+  2. **Windows:** set `HttpClientHandler.ServerCertificateCustomValidationCallback` (or a
+     `SocketsHttpHandler`) to pin the collector SPKI hash; fail-closed identically.
+  3. Pin the collector public key/SPKI hash in config with a rotation/grace window so a
+     server cert roll does not brick verification (coordinate with the WS3-01 key-rotation
+     chain).
+  4. A pin failure must resolve to the honest **inconclusive** leak state — never a clean
+     verdict and never a silently-accepted forged attestation.
+- **Alerts/Warnings:**
+  - Fail-closed must mean **inconclusive**, not a false "no leak." A pinned-but-unreachable
+    collector is inconclusive, exactly like today's network-error path.
+  - Cert/pin rotation is an operational hazard — a stale pin bricks the collector path in
+    production. Use an SPKI pin with a documented rotation window; reuse the WS3-01 rotation
+    metadata.
+  - Platform parity is mandatory: macOS `SecTrust`/SPKI pin and Windows validation-callback
+    pin must enforce the same policy and the same fail-closed-to-inconclusive behavior.
+- **Blockers:** None hard; **coordinate with WS3-01** for the published key + rotation
+  metadata so the pinned key and the well-known endpoint agree.
+- **Effort:** M (both platforms).
+- **Validation:**
+  1. On-path TLS proxy presenting a valid CA-chained cert for the collector host → pin
+     mismatch → leak result reads **inconclusive**, no attestation accepted (never clean).
+  2. Genuine collector with the pinned key → leak test completes and attestation verifies
+     as today (no regression).
+  3. Unreachable collector → inconclusive (unchanged).
+  4. Floor: pin-mismatch unit test on both platforms (inject a non-pinned cert/SPKI) that
+     REDs if the pin check is removed. Real-data bar: run against the live collector and
+     confirm a normal run still succeeds while a MITM-proxied run reads inconclusive.
+
+---
+
+## WS4 — Client test quality & API-shape (High)
+
+**Dependency:** Phase 0 (some code under test is in the working tree).
+
+### WS4-01 — B034: NetworkKeyState tri-state tests assert constructors, not the detector — **DONE** ✅
+
+- **Status:** Implemented (uncommitted). Combined with WS2-01 (B032) — pure-core
+  `encryptedDNSStatus(servers:scoped:)` extracted and shared by both items.
+  macOS: 349 tests, 0 failures. Mutation-proven.
+- **Implementation detail:** 5 typed-outcome tests (DoH→`.yes`, tunnel→`.unknown`,
+  loopback→`.unknown`, plain→`.no`, empty→`.unknown`). Vacuous IPClassifier test removed.
+- **Files changed:** `macOS/Sources/SyxxKit/NetworkKeyState.swift` (extraction),
+  `macOS/Tests/SyxxKitTests/SyxxKitTests.swift` (typed-outcome tests)
+
+### WS4-02 — B035: Synthesis tests use broad verdict whitelists — **DONE** ✅
+
+- **Status:** Implemented (uncommitted). macOS: 349 tests, 0 failures. Mutation-proven.
+- **Implementation detail:** `SynthesizerTests.swift:16-23`: replaced `contains([.a, .b, .c])`
+  with explicit `||` chain so `.clean` can never bypass the "never clean" assertion.
+- **Files changed:** `macOS/Tests/SyxxKitTests/SynthesizerTests.swift`
+
+### WS4-03 — B036: AuthoritativeVantage tests lock in "both empty == matches" — **DONE** ✅
+
+- **Status:** Implemented (uncommitted). macOS: 349 tests, 0 failures. Mutation-proven.
+- **Implementation detail:** `AuthoritativeVantage.swift:classify()` and `compare()` added
+  `resolverDidFail` parameter (default `false` for backward compat). Empty+empty with
+  resolver failure → `.inconclusive` (not `.matches`). `ProbePlan.swift` and `SyxxCLI.swift`
+  call sites updated to pass `comparison.localOutcome.didFail`.
+- **Files changed:** `macOS/Sources/SyxxKit/AuthoritativeVantage.swift`,
+  `macOS/Sources/SyxxKit/ProbePlan.swift`, `macOS/Sources/SyxxCLI/SyxxCLI.swift`,
+  `macOS/Tests/SyxxKitTests/AuthoritativeVantageTests.swift`
+
+### WS4-04 — B039: ReportTests covers only `local_resolver`; `target_answer` untested — **DONE** ✅
+
+- **Status:** DONE. macOS `ReportTests.swift` has all 8 tests (4 B039-required + 4 pre-existing): `target_answer` conflict/consensus, empty SectionInputs, structural sections, SECOND OPINION gating. Windows test suite has matching tests. No code change needed — tests were already present in working tree.
+- **Description:** `ReportTests.swift:22-48` has 2 tests, both populating only
+  `comparison.localServer`+`network.dnsServers` (one key). `target_answer` is
+  dual-populated from Mirror `localRecords` and Prophet `resolution.records` — the
+  cross-discipline discrepancy signal — with no test. No empty `SectionInputs` test.
+- **Files:** `macOS/Tests/SyxxKitTests/ReportTests.swift`,
+  `Windows/Syxx.Kit/Synthesis/Report.cs` (for Windows parity)
+- **Agent:** syxx-engineer
+- **Owner:** **IBM Bob** (lightest, decoupled, no copy-gates).
+- **Implementation:**
+  1. Add test: Prophet ≠ Mirror `target_answer` → `isConflicting` (highest value —
+     protects user-visible tamper corroboration).
+  2. Add test: empty `SectionInputs` renders without false datapoint.
+  3. Add test: `renderText` structure (formatting, sections present).
+  4. Add test: referral block present when referral triggered.
+  5. Mirror the core tests on Windows.
+- **Alerts/Warnings:**
+  - The `isConflicting` field is a key tamper-corroboration signal. Its untested state
+     is a gap in evidence integrity.
+  - Windows `Report.cs` may need the same rendering path — verify parity before testing.
+- **Blockers:** Phase 0.
+- **Validation:**
+  1. Mutation: collapse `target_answer` dual-population into one source (dropping
+     discrepancy) → test 1 REDs.
+  2. Empty input → no false datapoints rendered.
+  3. Floor: six added tests (4 macOS + 2 Windows parity).
+
+---
+
+## WS5 — Efficiency & code hygiene (Medium/Low)
+
+### WS5-01 — F006: ProbeRunner cooperative-only timeout + budget under-count — **DONE** ✅
+
+- **Status:** DONE on macOS. `ProbeRunner.swift` uses real wall-clock elapsed (not perProbeTimeout cap) for budget accounting. 8 `ProbeRunnerTests` verify uncapped elapsed and cancellation behavior. Windows parity needs `dotnet test` host (no code change expected — ProbeRunner already uses Stopwatch wall-clock on Windows).
+- **Description:** `ProbeRunner.run` uses cooperative cancellation (`TaskGroup.cancelAll`)
+  but does not enforce cancellation at the transport layer — a hung probe can run ~4s
+  past its deadline. Budget accounting on timeout uses `perProbeTimeout` (the cap)
+  instead of real elapsed time. The doc cross-reference to C006 is stale (C006 is the
+  8.8.8.8 fallback, unrelated).
+- **Files:** `macOS/Sources/SyxxKit/ProbeRunner.swift:44-73`,
+  `Windows/Syxx.Kit/ProbeRunner.cs` (mirror)
+- **Agent:** syxx-engineer
+- **Owner:** **IBM Bob** (lightest, decoupled, no copy-gates).
+- **Implementation:**
+  1. At the transport layer (DNSResolver query functions), check `Task.isCancelled` /
+    `CancellationToken.IsCancellationRequested` in the retry loop. If cancelled,
+    return immediately instead of starting another attempt.
+  2. On timeout, account real elapsed time (measured wall clock, not the cap).
+  3. Fix the doc cross-reference: remove the stale C006 mention; replace with accurate
+    description of cancellation behavior.
+- **Alerts/Warnings:**
+  - The retry loop is in `DNSResolver.queryUDPDetailed` / `QueryUDPDetailedAsync` —
+    touching that code has downstream test implications. All DNS resolver tests must
+    remain green.
+  - This is a performance/correctness fix, not a security fix — the timeout still fires
+    eventually, just ~4s late. Users may not notice the difference in interactive use.
+- **Blockers:** Phase 0 (ProbeRunner files are untracked).
+- **Validation:**
+  1. A probe that ignores cooperative cancellation is actually torn down at the
+    deadline (wall-clock ≈ perProbeTimeout, not perProbeTimeout+4s).
+  2. Budget reflects true elapsed time on a slow/hung resolver.
+  3. Floor: `ProbeRunnerTests` extended with hung-probe timeout-accounting case.
+
+### WS5-02 — F007: DomainCanonical contract unenforced; length guard measures pre-IDNA bytes — **DONE** ✅
+
+- **Status:** DONE on both platforms. `DomainCanonical.swift:48-51` and `DomainCanonical.cs:41` apply IDNA encoding first, then check A-label length ≤253. CLI entry points on macOS (`SyxxCLI.swift:108-113, 221-229`) and Windows (`Program.cs:135-139, 547-549`) canonicalize all domain arguments through `canonicalizeOrNil()`/`CanonicalizeOrNull()`. Invalid domains rejected at CLI boundary. macOS suite 360t/0f; Windows build 0 errors.
+- **Description:** `DomainCanonical.swift:3-9` claims "universal canonicalization" but
+  only `DimensionClient.swift:86,94` calls it — CLI entry points pass raw domains.
+  The ≤253 length guard at `:35` measures pre-IDNA UTF-8 bytes, not A-label length
+  (RFC 5891 limits A-labels to 253 bytes; UTF-8 input may be shorter pre-encoding).
+- **Files:** `macOS/Sources/SyxxKit/DomainCanonical.swift`,
+  `Windows/Syxx.Kit/LAN/DomainCanonical.cs`,
+  CLI entry points, `ProbePlan.swift` / `.cs`
+- **Agent:** syxx-engineer
+- **Owner:** **IBM Bob** (lightest, decoupled, no copy-gates).
+- **Implementation:**
+  1. Either: route ALL domain entry through `DomainCanonical` (make the contract real)
+     — modify CLI `SyxxCLI.swift` / `Program.cs` to canonicalize every domain argument.
+     OR: correct the doc to describe actual limited coverage.
+  2. Measure the ≤253 limit on the encoded A-label, not pre-IDNA UTF-8 bytes (apply
+     IDNA encoding first, then check length).
+  3. Mirror on Windows.
+- **Alerts/Warnings:**
+  - IDNA encoding can change the byte length (e.g., "münchen" → "xn--mnchen-3ya" which
+    is longer). Measuring pre-encoding gives a false positive (rejects valid domains)
+    or false negative (accepts domains that exceed A-label limit).
+  - This is a contract/robustness fix, not a live exploit — Syxx processes domains the
+    user provides, not attacker-controlled labels.
+- **Blockers:** Phase 0 (DomainCanonical files are untracked).
+- **Validation:**
+  1. A non-ASCII domain whose A-label exceeds 253 bytes but whose UTF-8 is under is
+     correctly rejected.
+  2. A non-ASCII domain whose A-label is ≤253 bytes is accepted.
+  3. A raw domain entering via CLI is canonicalized identically to one via DimensionClient.
+  4. Floor: encode-length and caller-parity tests both platforms.
+
+### WS5-03 — F009: §3-audit coverage debt (tracking + fixing) — **2/5 DONE**
+
+- **Description:** Five deferred items from the §3 test audit that were blocked/coupled
+  at the time of the sweep:
+  1. B030 all-timeout Windows leak seam (needs dispatch-injection into `TriggerQueriesAsync`).
+     — **Windows-host-gated, open.**
+  2. D013 license clock/config seam (needs config seam or WinUI host).
+     — **Windows-host-gated, open.**
+  3. **Windows `Default*_HasExpectedValues` tests** — Windows tests already exist (4 tests,
+     lines 2114-2147). macOS parity tests added 2026-07-11
+     (`ProbeRunnerTests.swift`: 4 tests verifying `defaultProphet`, `defaultMirror`,
+     `defaultPortal`, `defaultGlutton` factory defaults). — **DONE** ✅
+  4. **NetworkKeyState typed-outcome tests** — Same extraction as B034 (do not double-track).
+     Already covered by the 5 typed-outcome tests written for B034. — **DONE** ✅
+  5. **Tests coupled to currently-dirty source** — Investigated: zero skipped/commented-out/
+     conditional tests found on either platform. Single `XCTSkip` guard in D003 live-TLS test
+     is intentional and load-bearing. — **DONE** ✅
+- **Files:** Various across both test suites.
+- **Agent:** syxx-engineer
+- **Owner:** **syxx-engineer** (Claude-orchestrated) — remaining §3 seams;
+  **Windows-host-gated** for items (1)/(2).
+- **Implementation (remaining):**
+  1. Item (1): extend `LeakDetector` tests on Windows with a dispatch-injection seam.
+     If the seam doesn't exist, add it (e.g., a test-only `ITriggerQueries` interface).
+  2. Item (2): add a config seam to `LicenseManager` so the clock/can be substituted
+     in tests (e.g., `IClock` interface).
+  3. Write mutation-proven tests for each (requires Windows host for runtime verification).
+- **Alerts/Warnings:**
+  - Items (1)(2) require a **Windows host** (`dotnet test` on real Windows VM).
+- **Blockers:** Windows host (for items 1/2).
+- **Validation (remaining):**
+  1. Each new seam test is mutation-proven on the platform it targets.
+  2. No seam is marked done from macOS-only runs when it asserts Windows behavior.
+
+---
+
+## WS6 — Net-new features (post-hardening)
+
+**Dependency:** WS1–WS5 should be substantially complete before starting net-new features.
+These are additive — they do not fix defects, they extend capabilities.
+
+### WS6-01 — Cage Query Capture Report: layout & content [done]
+
+- **Description:** The DNS capture report (`syxx-cage` output) needs a formalized layout
+  with diagnostics page + optional raw data pages. Page 1 must be Reddit-paste-safe
+  (tight vertical column, no word-wrap). All paths must be relative (no usernames).
+- **Files:** `macOS/Sources/SyxxKit/Forensics/DNSCaptureReportGenerator.swift`,
+  `Windows/Syxx.Kit/DNSCaptureReportGenerator.cs`, CLI entry points
+- **Agent:** syxx-engineer (layout/engineering) + gui-architect (copy/design)
+- **Owner:** **syxx-gui-architect** (Claude-orchestrated) — OUTPUT-REQUIRES-USER-APPROVAL
+  gate cleared. User approved layout and copy; implementation complete on both platforms.
+- **Implementation:**
+  1. ✅ Page 1 template: 72-char header, centered title, metadata block, parse summary,
+    top-8 lists, combined anomalous indicators, actionable interpretation, next steps.
+  2. ⬜ Streaming raw data pages (Page 2+) — deferred to separate workstream.
+  3. ✅ Minify recommendation when file > 1 GB (`consider --minify to reduce file size`).
+  4. ✅ All paths use relative paths (strip home directory, usernames) via `relativeCapturePath`.
+  5. ✅ INCONCLUSIVE variant: honest empty-capture report with troubleshooting steps.
+  6. ✅ `interface` parameter added to both platforms (passed from CLI entry points).
+- **Validation:**
+  1. ✅ Page 1 fits within 72-char width — Reddit textarea safe.
+  2. ✅ No absolute path/username appears anywhere in output.
+  3. ✅ >1 GB capture triggers minify recommendation.
+  4. ✅ Empty/failed capture reads honestly (INCONCLUSIVE, no fabricated summary).
+  5. ✅ Tests pass on both platforms (364 macOS, 216 Windows).
+
+### WS6-02 — OpenResolverProbe GUI advisories surface (both platforms)
+
+- **Description:** `OpenResolverProbe` is shipped on both CLIs but the GUI does not
+  surface the advisory. The `Conclusion.advisories` channel exists but is not rendered
+  in macOS `SyxxApp` or Windows `SyxxUI`.
+- **Files:** `macOS/Sources/SyxxApp/PortalView.swift`,
+  `Windows/SyxxUI/Views/` (possibly new view),
+  Conclusion model on both platforms
+- **Agent:** syxx-engineer + gui-architect (for copy/UX)
+- **Owner:** **syxx-gui-architect** (Claude-orchestrated). OUTPUT-REQUIRES-USER-APPROVAL —
+  Claude supplies the proposed advisory copy/placement; holds until user approval.
+- **Implementation:**
+  1. Expose `Conclusion.advisories` to the GUI layer (currently consumed only by CLI).
+  2. In `PortalView.swift` / Windows equivalent, add an advisory section that renders
+     open-resolver findings prominently but distinctly from the tamper verdict.
+  3. Advisories must never tilt clean/spoofing/interception coloring.
+- **Alerts/Warnings:**
+  - **OUTPUT-REQUIRES-USER-APPROVAL:** Advisory copy and placement.
+  - OpenResolver is an exposure/hygiene finding, not a tamper verdict — must be visually
+    distinct from threat findings.
+- **Blockers:** None (probe + data channel already shipped).
+- **Validation:**
+  1. Against a real LAN open resolver → GUI shows advisory prominently, with
+    amplification factor.
+  2. Against a closed resolver → no advisory.
+  3. Advisory must not affect tamper-verdict coloring.
+  4. Floor: UI component test (if GUI test framework available).
+
+### WS6-03 — E015: Windows GUI ConclusionsView missing → navigation dead end
+
+- **Description:** HIGH (cross-platform parity failure). `Windows/SyxxUI/MainWindow.xaml.cs:94`
+  maps `"Conclusion" => typeof(ConclusionsView)`, but **no `ConclusionsView.xaml`/`.cs` exists**
+  under `Windows/SyxxUI/Views/`. Clicking "Conclusion" in the Windows GUI raises a
+  `TypeLoadException` — a dead-end navigation. macOS has a working
+  `macOS/Sources/SyxxApp/ConclusionsView.swift`; build the Windows view to parity.
+- **Files:**
+  - `Windows/SyxxUI/MainWindow.xaml.cs:94` (the map entry — verified present).
+  - **New:** `Windows/SyxxUI/Views/ConclusionsView.xaml` + `.xaml.cs` (currently absent —
+    verified no `*conclusion*` file exists under `Windows/SyxxUI/`).
+  - **Parity reference:** `macOS/Sources/SyxxApp/ConclusionsView.swift`.
+- **Agent:** syxx-gui-architect.
+- **Owner:** **syxx-gui-architect** (Claude-orchestrated). **Windows-host-gated** for full
+  runtime verification (`dotnet build`/`dotnet test` and the click-through need a Windows host).
+- **Implementation:**
+  1. Create `ConclusionsView.xaml`/`.xaml.cs` under `Windows/SyxxUI/Views/`, wired to the
+     same Conclusion model the macOS view consumes, at UX parity with the macOS view.
+  2. Preserve the honesty contract in rendering: inconclusive states must not read clean;
+     advisories must not tilt tamper-verdict coloring.
+- **Alerts/Warnings:**
+  - Verdict/section copy is user-visible; reuse the already-approved macOS wording where
+    it exists, otherwise treat new strings as OUTPUT-REQUIRES-USER-APPROVAL.
+- **Blockers:** Windows host for build/runtime verification.
+- **Effort:** M.
+- **Validation:**
+  1. On a Windows host, clicking "Conclusion" navigates to a rendered view — **no
+     `TypeLoadException`**.
+  2. The view renders a real conclusion at parity with macOS (inconclusive reads
+     inconclusive, never clean).
+  3. Floor: `dotnet build` succeeds; view-model binding test if the harness supports it.
+
+### WS6-04 to WS6-06 — CF-07/08/09 (proposals deferred from hardening)
+
+- **CF-07 — `syxx-route` structured path-anomaly analysis:** Currently honesty-labeled
+  as raw traceroute. Build structured hop-analysis/baseline-diff feature.
+  - **Owner:** **Claude (design + file the missing A–F delta)** → then **syxx-engineer**
+    (Claude-orchestrated) implements after design.
+  - **Effort:** L
+  - **Dependency:** Needs a filed delta (no current A–F id — see Open Questions).
+
+- **CF-08 — DNSSEC DS→DNSKEY→RRSIG chain validation:** Currently presence-only.
+  Build full cryptographic chain validation from root anchor.
+  - **Owner:** **Claude (threat-model + design)** — DS→DNSKEY→RRSIG chain-validation design
+    → then **syxx-engineer** (Claude-orchestrated) implements after design.
+  - **Effort:** L
+  - **Dependency:** Deep cryptographic work — design before implementation.
+  - **Note:** This is a significant new feature, not a bug fix. Design carefully.
+
+- **CF-09 — Collector egress attestation enrichment:** Use the Ed25519 key (CF-01)
+  to sign attestations for the egress path (not just leak checks). Server + client.
+  - **Owner:** **Claude (design, depends on D004)** → then **syxx-engineer**
+    (Claude-orchestrated) implements after design.
+  - **Effort:** M
+  - **Dependency:** CF-01 done; WS3-01 (pubkey endpoint) is a prerequisite.
+
+### WS6-07 — Conclusions completeness gate: required-tests panel before any verdict render (USER DIRECTIVE 2026-07-12)
+
+- **Description:** When any *required* test has not run, Conclusions must NOT render the
+  verdict surface at all — no big lit-up "DNS intercepted" headline with an "invalid"
+  caveat underneath (a caveat does not undo the first impression; this is the honesty
+  spine applied to layout). Instead, Conclusions navigates to a **gating panel view**
+  that shows only: (a) the required tests still remaining, and (b) the tests already
+  performed (with their per-section status). Only once **all required tests have
+  completed** does the Conclusions navigation target switch to the results panel with
+  the verdict render.
+- **Engine inputs (already shipped):** the gate condition is engine-owned and already
+  emitted — `Conclusion.stage5.completeness` (`criticalAvailable < criticalExpected` /
+  `observed < expected`), `stage5.honesty.hardGate` (`requiredSections`), and
+  `stage5.provenance.unavailable` (which section + why). The GUI must consume these,
+  never recompute or infer them (STAGE5-CONTRACT §2).
+- **Files:** `macOS/Sources/SyxxApp/ConclusionsView.swift` (navigation gate + new panel),
+  `macOS/Sources/SyxxApp/Views/Components/OverallVerdictView.swift`,
+  `Windows/SyxxUI/Views/ConclusionsView.xaml`/`.xaml.cs` (twin panel).
+- **Agent:** syxx-gui-architect (panel design + copy) — GUI lane only; no engine edits.
+- **Owner:** **syxx-gui-architect** (Claude-orchestrated). OUTPUT-REQUIRES-USER-APPROVAL —
+  panel copy ("required tests remaining" wording) is copy-gated per STAGE5 §10.
+- **Implementation:**
+  1. Gate: if `stage5 == nil` OR `stage5.honesty.hardGate != nil` OR
+     `completeness.criticalAvailable < criticalExpected`, Conclusions routes to the
+     gating panel, never the verdict view.
+  2. Gating panel: remaining required tests (from `hardGate.requiredSections` +
+     `provenance.unavailable`), performed tests with status, a completeness figure
+     (`observed/expected`), and a "run remaining tests" affordance.
+  3. Once the gate clears, Conclusions routes to the results panel (existing verdict
+     surface) — same navigation entry point, different destination.
+  4. Platform parity: identical gate predicate and panel structure on Windows.
+- **Alerts/Warnings:**
+  - A tampered/positive finding discovered on a *partial* run may still warrant urgent
+    surfacing — decide with the user whether a confirmed threat pierces the gate (e.g.
+    a "threat found — finish required tests for the full verdict" banner) or waits.
+    Do NOT resolve this unilaterally; it is a verdict-visibility policy call (O5-adjacent).
+  - Never render the verdict color/headline in the gating panel — the panel is a status
+    surface, not a softened verdict.
+
+---
+
+## WS7 — MASTERPLAN2 completion: cross-platform parity + confirmed honesty bugs (2026-07-16)
+
+Remaining work after the Trash-restore recovery + Windows-VM merge (commit `4adb691`) and a
+code-grounded audit of both masterplans. **The in-VM "Owed macOS/server twins" list
+(`CHANGELOG.md:173`) is partially STALE** — several items already landed Mac-side after that
+snapshot. Every status below was **verified against HEAD `4adb691` on 2026-07-16**, not copied
+from the list. Re-verify at the start of each item before coding (the tree is moving).
+
+**⚠ Coordination hazard (live at time of writing):** an OpenCode session is editing 7 macOS
+files uncommitted — `MirrorView`, `EDNS0Probe`, `DenialOfExistenceProbe`, `Conclusion`,
+`SynthesisEngine`, `Synthesizer`, + new `RPNOccurrence.swift` — and **that tree does not compile**
+(unwrapped `MechanismClass?` at `SynthesisEngine.swift:395`). Items marked **⏳ IN FLIGHT** are
+being coded there; do not edit those files in parallel — land + build-verify OpenCode's work first,
+then re-audit. Items marked **NOT STARTED** / **VERIFY** are untouched by that session.
+
+**Already done at HEAD (do NOT re-schedule — verified 2026-07-16):** C013 mapped-IPv4
+(`IPClassifier.swift:83`), C016 IDNA/punycode compare (`DNSResolver.swift:471`), C017 name-typed
+RDATA decode (`DNSResolver.swift:824`), Ph7.1 `runWithWeights` (`Calibration.swift:35`), and the
+D069/B049 Witness contradictory-rows fix (Bool level, `4adb691`).
+
+**Acceptance discipline (every WS7 item):** real run + a mutation-proven failing-case test
+(Protocol §3/§4); GUI-visible copy proposed for approval before shipping (`AGENTS.md:42`);
+cross-platform items require the byte-parity twin to exist before EITHER side ships.
+
+### Group A — Confirmed live honesty bugs (highest priority: false-secure / contradictory UI)
+
+- **WS7-01 — B052: macOS MirrorView DEGRADED renders green.** At HEAD `verdictColor(_:)`
+  (`MirrorView.swift`) had no `isDegraded` branch, so a degraded comparison returned
+  `.ioSuccessGreen`. **Status: ⏳ IN FLIGHT** (OpenCode adding `if c.isDegraded { .ioWarningAmber }`).
+  *Bar:* a real run where some public resolvers are unreachable renders amber "CONSISTENT
+  (DEGRADED)", never green. Owner: OpenCode → land + verify.
+- **WS7-02 — E021: macOS WitnessView forensic tri-state (GUI surface).** The Kit already has the
+  distinct-state enum (`WitnessSigner.swift:56` `case expired` …), but the GUI consumes only the
+  Bool `witnessValid` (`AppModel.witnessVerify`). The contradictory-rows bug is fixed
+  (`4adb691`); this item renders the DISTINCT expired / stale / future-dated / untrusted-signer /
+  display-mismatch / invalid-signature / unsupported states like Windows `WitnessView.xaml.cs:115`.
+  **Status: NOT STARTED** (Kit enum present, GUI not wired). *Bar:* an expired-but-authentic
+  snapshot reads visibly different from a forged one. Owner: Claude/gui — copy-gated.
+- **WS7-03 — Witness verdict copy approval.** The four strings shipped in `4adb691` are my
+  paraphrase, not verbatim `D069` Fix 3. **Status: OWNER-GATED** — swap to user-approved wording
+  (2-line change; no collision, OpenCode is not in `WitnessView.swift`).
+
+### Group B — macOS engine/probe twins
+
+- **WS7-04 — Ph5.2 scorer wiring.** `resolverProvenanceConfidence` + `tamperMechanismFingerprint`
+  are defined (`Scorers.swift:53,87`) with ZERO production call sites at HEAD. **Status: ⏳ IN
+  FLIGHT** (`SynthesisEngine.swift:394` — currently the non-compiling edit). *Bar:* thin/empty
+  evidence surfaces no fingerprint (never a guess); both scorers gate user-facing output.
+- **WS7-05 — malformed-OPT / authority consumers (B073/B071).** The resolver sets `ednsMalformed`
+  / `authorityMalformed` but at HEAD no probe read them. **Status: ⏳ IN FLIGHT**
+  (`EDNS0Probe.swift`, `DenialOfExistenceProbe.swift`). *Bar:* a malformed OPT reads EDNS-unknown
+  (never "absent"); a malformed authority reads inconclusive, never the BareDenial positive.
+- **WS7-06 — Ph7.2 `RPNOccurrence.swift` + Stage-5 `PriorityFactors.occurrence`.** Absent at HEAD.
+  **Status: ⏳ IN FLIGHT** (untracked file added). *Bar:* occurrence values byte-match the Windows
+  static expert-elicited defaults; SOD-v2 validator rule present.
+- **WS7-07 — C018: macOS SVCB canonicalizer + param-set compare** (`SVCBProbe.swift`). No canonical
+  comparison at HEAD. **Status: NOT STARTED.** *Bar:* reordered SvcParams compare equal; a real
+  param-set change (e.g. ALPN downgrade) is caught.
+- **WS7-08 — Ph3.2 completeness population.** The `completeness` field is plumbed
+  (`Synthesizer.swift:11`, default 1.0; passed through at :550). **Status: VERIFY** whether real
+  per-section N/M is computed or it is still always 1.0. *Bar:* a 4/5-clean + 1-timeout run shows
+  visibly lower completeness than 5/5.
+
+### Group C — Trust / witness / leak twins (owed-list item 11)
+
+- **WS7-09 — B085: reject future-dated snapshots in macOS `verifySnapshot`.** No future/inception
+  check found at HEAD (the enum has `expired` but no future-dated path surfaced). **Status:
+  VERIFY → likely NOT STARTED.** *Bar:* a snapshot dated beyond honest clock drift is rejected.
+- **WS7-10 — B091 signed-payload leak verdict + C031 expected-resolver baseline** (macOS
+  `LeakDetector.swift`). `signedPayload` and `reconcileVerdict` exist (:47, :208). **Status:
+  VERIFY/PARTIAL** — confirm the verdict derives from the SIGNED bytes (not outer JSON) and the
+  baseline stops the user's own resolver reading as a leak. *Bar:* an unsigned/altered payload
+  cannot produce a trusted `leaked:false`; own-resolver run is not flagged.
+- **WS7-11 — WS3-A.3: thread `trustedPublicKeys` + `pinSet` from macOS GUI into `runCollectorTest`**
+  (`AppModel.swift:389` currently calls it without trust params). **Status: VERIFY → likely owed.**
+  *Bar:* D003/D011 pinning actually engages in the shipped macOS app (not just the Kit).
+
+### Group D — Cross-platform coordinated flips (do LAST; both sides in ONE change)
+
+- **WS7-12 — Ph6.1/6.2: sign + verify the DecisiveActCatalog.** Windows defines
+  `WitnessSigner.SignDecisiveActs` (`WitnessSigner.cs:105`) but **no production caller invokes it**
+  (`Conclusion.cs:172` "Null until signed"); macOS has no signer at all. Sign the catalog at
+  conclude-time and verify before the M4 gate trusts it. `CanonicalBytes` must byte-match
+  `"syxx.decisive-acts.v1:{version}:{sorted-acts}"` on both platforms. *Bar:* tampering with catalog
+  membership makes verify fail; the M4 gate never runs on an unsigned catalog.
+- **WS7-13 — Stage-5 schema v2.** Both platforms hardcode v1 (`Stage5Presentation.cs:279,293`;
+  `Stage5Presentation.swift:366,388`). Author v2 carrying datapoint-level completeness; retire
+  `profile.sections.v0`. *Bar:* a v1 object still validates on a v2 reader per the version contract.
+- **WS7-14 — flip the two PARKED switches together (never one-sided):** (a)
+  `EmitDatapointCompletenessProfile` false→true — Windows flag exists (`SynthesisEngine.cs:28`),
+  macOS has not built the datapoint profile yet (`profile.sections.v0` only); (b) E020 signer
+  `formatVersion` 2→3 — both signers at v2, both verifiers already accept v3. *Bar:* a Windows-signed
+  v3 verifies on macOS and vice-versa BEFORE either ships; no single-platform flip.
+
+### Group E — Server (Python; no .NET/Swift twin)
+
+- **WS7-15 — Tier 4/5 remainder.** Already landed: A013 atomic mint, WS4-B SSRF IP-pinning
+  (`fetcher.py`), D040 fail-closed licensing, A056 Date freshness. **Remaining:** A058/A059 IPv6
+  sockets (`resolver.py` is `AF_INET`-only), `scripts/deploy.sh` hardening (A109 inline
+  `Environment=` secrets, A110 `User=root`), and missing tests (request-deadline timer, `_body_error`
+  413/400, bounded server capacity, `_version_key`). Independent of the client lanes — can run in
+  parallel.
+
+### Sequencing
+
+1. **Unblock the build.** Land OpenCode's in-flight work (WS7-01/04/05/06) and get the macOS tree
+   compiling again — it currently does not. Everything else is gated on a green tree.
+2. **Untouched macOS twins** — WS7-07, and resolve the VERIFYs (WS7-08/09/10/11).
+3. **Witness GUI** — WS7-02 (E021 surface) + WS7-03 (copy approval).
+4. **Coordinated flips LAST** — WS7-12/13/14, each staged on both platforms and landed in one
+   parity-tested commit.
+5. **Server** — WS7-15 in parallel throughout.
+
+**Owner:** macOS engine/probe twins currently OpenCode (in flight); Witness GUI + copy Claude /
+user-gated; server independent. **Parity rule:** no engine/trust change ships on one platform
+without its verified twin (`AGENTS.md` platform-parity).
+
+---
+
+## TOP TEN — the ranked queue (2026-07-16, all things considered)
+
+Everything below is **verified against the tree today**, not carried forward from a plan. Ranked by
+what actually blocks v1: a thing that makes the product LIE outranks a thing that makes it
+incomplete, and a go-live blocker outranks both once the lying is fixed.
+
+**Two corrections to earlier reporting, verified now:** A058/A059 IPv6 sockets ARE done
+(`resolver.py` has 4 `AF_INET6` refs), and the macOS Scorers ARE wired into production
+(`SynthesisEngine.swift:390`). Both were reported outstanding; they are not.
+
+| # | Task | Why it ranks here | State |
+|---|------|-------------------|-------|
+| 1 | **macOS false-clean: zero-evidence Mirror pinned as `.clean`** | Not a missing test — a false-clean **encoded as the contract**: a test that would have gone red if someone FIXED the engine. | **DONE** `3bacec8` — guard added, both clean baselines given real evidence, mutation-proven |
+| 2 | **macOS view honesty fixes are UNPROTECTED** *(supersedes the C028/B088 entries)* | **Re-verified 2026-07-16: C028 and B088 are both already FIXED** — C028's green is gated inside `witnessVerdictDisplay`'s `.valid` case (`4adb691` + OpenCode's E021), and B088 now returns confidence directly with threats never green. The audit entries were stale. **The real risk is that NEITHER FIX HAS A TEST**: `Tests/SyxxAppTests/` contains one file, and `trustStatColor` / `witnessVerdictDisplay` have ZERO references. Two user-reported honesty bugs, fixed, with nothing stopping their return. | OPEN — needs the logic made testable |
+| 3 | **Dashboard has a SECOND severity mapping** | `DashboardView.trustStatColor` maps verdict→colour independently of `TrayIndicators`/`ReportCards`, which A6 deliberately unified so surfaces cannot diverge (cf. D069: three contradictory rows in one panel). Two mappings will eventually disagree. Fold the Dashboard onto the shared source. | OPEN |
+| 4 | **Keygen go-live blocker** | `deploy.sh` never provisions `SYXX_KEYGEN_PUBLIC_KEY` and never sets `SYXX_DEV_MODE`; with D040 fail-closed now genuinely enforced, a stock deploy 402s **every real key**. The fail-closed fix (13a3af5) made this *more* certain, not less. **Owner-gated** on the env artifacts. | GATED |
+| 5 | **Stripe go-live blocker** | License email silently no-ops without SMTP (paid buyer gets no key); A046 `expand[]` in a GET body; never exercised against a live Stripe endpoint. **Owner-gated** on secrets + a live test. | GATED |
+| 6 | **A109/A110 deploy hardening** | **DONE — re-verified 2026-07-16, my entry was wrong.** A109: every secret comes from a root-only 0600 `EnvironmentFile=/etc/syxx/syxx.env`; the inline `Environment=` lines are deliberately non-secret (ports, DB path, the *public* Keygen account id, SMTP transport settings). A110: creates a `syxx` user, `NoNewPrivileges`, `ProtectSystem=strict`, `CapabilityBoundingSet=CAP_NET_BIND_SERVICE`, falling back to root only with a loud warning. I ranked this from a grep hit on `Environment=` without reading the context. | **DONE** |
+| 7 | **DecisiveActCatalog never signed in production** | Verified: `SignDecisiveActs`/`VerifyDecisiveActs` exist and are tested; **no production caller invokes either**. `Synthesizer.cs:810` passes an unsigned catalog and `SynthesisEngine.cs:119` reads `.Acts` directly, so the M4 gate runs unverified. **GATED:** the catalog is a compile-time constant — signing it with the *user's* key is theatre; meaningful signing needs a Syxx-controlled build-time key + a pinned public key, an owner artifact. Risk is the reverse of a false clean (acts *removed* would soften a real threat). See CHANGELOG. | GATED |
+| 8 | **The two parked cross-platform flips** | E020 signer v2→v3 and `EmitDatapointCompletenessProfile` false→true. Both verifiers already accept the new form; the flip must land on BOTH platforms in ONE commit or the engine goes transiently divergent. | OPEN |
+| 9 | **Phase A GUI shells + A5 scheduler** | A4's button, A6's status item, and a scheduler driving `ContinuousMonitor.tickOnce`. Kit logic is done and mutation-proven on both platforms; only the shells remain. **WinUI cannot be verified off-Windows** — VM bar. | PARTIAL |
+| 10 | **Remaining untested verdict-bearing surface** | `MonitorReportAnalyzer` **DONE** (`b5adc58`) — its first test found a real **NullReferenceException** on hostile input (`{"Network":{"Direction":null}}`), fixed at the deserialization boundary. `ECSProbe` **DONE** (`a43d1f6`) — it already had a QueryFn seam and was simply never tested. **`WitnessKeyStore` is BLOCKED, not merely undone:** `KeyPath` is private and hardcoded to the real `ApplicationData`, so a test calling `DeleteKey()` would destroy **the user's actual witness signing key**, and the round-trip needs Windows DPAPI regardless. Needs a path seam in key-custody code — a deliberate change, not a test-driven one. Remaining: `ContentWarp.ComparePageContentAsync` (network wrapper; its `HtmlAssetParser` helper is already covered). | PARTIAL |
+
+**Accuracy note on this list (2026-07-16).** Three entries — #2 (C028), #3 (B088) and #6 (A109/A110)
+— turned out to be ALREADY FIXED when I went to work them. I built the ranking from the audit
+report, and the audit predates both OpenCode's fixes and my own; #6 I flagged from a grep hit on
+`Environment=` without reading the surrounding context. The entries are corrected in place rather
+than deleted, so the correction is visible. The lesson is the one this repo keeps teaching: verify
+against the tree, not against a document — including a document I wrote hours earlier.
+
+**Deliberately NOT in the top ten:** the `ClusterId` corpus scaffolding (the engine has no cluster
+concept; OpenCode's rename to `..._ScaffoldingForFutureEngineUse` already stopped it claiming
+coverage it does not have), and the dead 0.40 partial-data cap (pinned by
+`testThePartialDataCapIsUnreachable_DeadCode` — deleting it today is a no-op).
+
+**Sequencing:** 1→3 first and together (they are all "a surface lies to the user"), then 6/7/10,
+then 8 as a single two-platform commit. 4 and 5 are owner-gated — see CHANGELOG for what is needed.
+
+---
+
+## Owner-gated — Not scheduled as engineering tasks
+
+These items require owner action (Keygen/Stripe config, deployment, app signing)
+before they can proceed. They are tracked here for completeness.
+
+### OG-01 — Delivery go-live (Workstream D)
+
+- Developer ID + notarization (macOS), Authenticode (Windows).
+- Sparkle/NetSparkle EdDSA update keypair; host appcast files.
+- Broadcast NSPanel / RemoteContentView webview (gui-architect, after server bits ship).
+  - **DONE (macOS + Windows):** All D1–D4 client/GUI work (RemoteContentView, broadcast panel,
+    startup fetch, update banner) is implemented on both platforms. The last gap — Windows
+    "Check for Updates" banner UI (`Views/UpdatePanel.xaml`, pane-footer sidebar banner,
+    auto-show + manual trigger) — was completed 2026-07-11.
+- Stripe go-live: set secret keys, webhook secrets, Keygen tokens. Redeploy syxx.app.
+- **Note:** WS1-01 (A019 Stripe pending-mint fix) should land BEFORE go-live so the
+  first real Keygen hiccup doesn't drop a paid license.
+
+### OG-02 — Crowd tampering intelligence (WS-S #6)
+
+- Aggregate "N users on ISP/region saw domain X redirected."
+- Network-effect moat + monetizable telemetry.
+- **Gate:** "Build once there's a base" — not currently feasible.
+
+---
+
+## Sequence & hard dependencies
+
+```
+Phase 0 (commit working tree) — DONE (5690ce8)
+  │
+  ├── WS1 (server trust)        ── A019 DONE, A020 DONE, A021 DONE
+  ├── WS2 (client efficacy)     ── B032 DONE, C009 DONE, C006 DONE, B024 DONE; B005 (deferred)
+  ├── WS3 (evidence integrity)  ── D003 DONE, D004 DONE, D011 DONE ✅
+  ├── WS4 (test quality)        ── B034 DONE, B035 DONE, B036 DONE, B039 DONE ✅
+  ├── WS5 (efficiency)          ── F006 DONE, F007 DONE; F009 (open)
+  └── WS6 (features)            └─ after WS1–WS5 substantially complete
+```
+
+**Hard constraints (forced ordering) — updated after OC-1–OC-9:**
+1. **Phase 0 is DONE** (working tree committed as `5690ce8`). WS1-01 (A019) and WS1-02 (A020)
+   are done; WS1 is 3/3 complete (A021 DONE).
+2. **WS3-01 (D004) preceded WS3-02 (D011)** — server pubkey endpoint (D004) was built first,
+   then trust-set population (D011) was implemented on both clients. Both are DONE ✅.
+3. **WS1-01 (A019 Stripe fix) should precede OG-01 (delivery go-live)** — ✅ DONE.
+4. **B032/B034 shared extraction** — ✅ DONE (pure-core `encryptedDNSStatus` extracted once,
+   shared between both items).
+5. **Windows-host-gated items:** WS5-03 (F009 items 1/2), **WS6-03 (E015 Windows
+   ConclusionsView)**, and any `dotnet test`/click-through verification need a Windows host —
+   pause-and-report if unavailable.
+6. **WS3-03 (D003 TLS pinning) is DONE** ✅ — implementation ran ahead of WS3-01/WS3-02,
+   coordinated pin format with WS3-01 key metadata.
+7. **B005 (WS2-05) design is blocked on B003 (independence)** for its score-composition math;
+   spec the no/partial/full-data contract regardless, but do not finalize composition before
+   B003 is settled.
+
+Everything else is independent; order within a workstream by mission risk.
+
+---
+
+## Open questions for the user (do not guess)
+
+1. **Output-approval items (code written, strings proposed — awaiting your sign-off):**
+   These items are implemented and working, but the user-visible strings need your
+   approval before finalizing:
+   - **B032 (tunnel evidence):** Proposed wording: "DNS is routed through a VPN/tunnel
+     interface (utunX). Whether the tunnel encrypts DNS is not verified — Syxx cannot
+     confirm encrypted DNS transport from the tunnel alone." — Applies to `syxx-key`
+     encrypted-DNS output.
+   - **C009 (verdict label):** Single regular-cadence signal → `.benign` (was `.suspicious`).
+     Proposed mapping: 1 signal → benign, ≥2 signals → suspicious, ≥3 → likely exfil.
+   - **C006 (fallback warning):** Proposed wording: "⚠️ System resolver undetectable —
+     falling back to 8.8.8.8" — Printed at 4 sites before fallback.
+   - **B024 (inconclusive per-check label):** Proposed wording: "⚠️ SKIPPED (proxy
+     unreachable)" — Replaces ✅ MATCH / 🚨 MISMATCH when overall verdict inconclusive.
+   - **WS6-01 (Cage Report)** — entire report template (not yet designed).
+   - **WS6-02 (OpenResolver advisory)** — advisory copy (not yet designed).
+
+2. **CF-07** has no live A–F delta id (the old A4 proposal id is orphaned). Should a
+   fresh delta be filed for structured path-anomaly analysis before it's scheduled as
+   WS6-03?
+
+---
+
+## Items explicitly NOT in this plan
+
+The following were evaluated and determined to be out of scope for the current
+implementation cycle:
+
+- **DST vs softmax architectural debate (B003/B006):** No user direction received.
+  Both platforms run DST; the debate is design-preference only.
+- **B030 Fix B (wording):** Needs user approval for specific wording change.
+  Blocked until approval.
+- **Historical P0–P3 re-audit items:** All marked `[done]` in the previous ROADMAP.
+  No longer actionable.
+- **CODEFIX (CF) items:** CF-01 through CF-06 are `[done]`. CF-07/08/09 are tracked
+  under WS6. CF-10 (reconciliation) is `[done]`.
+- **Night-Pass Backlog (Workstreams A–H):** RETIRED. Detail source was purged.
+  Do not schedule from these IDs.
+
+---
+
+## Deferred — Encrypted transports & trusted resolution (gated on dev ID)
+
+**Status:** DEFERRED / partially gated. Design lives in `DESIGN.md` → "Encrypted transports & trusted
+resolution." A separate track from the determinative-system upgrade — do **not** interleave.
+
+- **Not gated (can start any time):** (1) client **DoT/DoQ** transports (DoH already done) for an encrypted
+  reference baseline; (2) **resolver profiles / routing** — Cloudflare / Quad9 / **NextDNS** / **OpenDNS**
+  presets; (3) **server DoH** (≈ free RAM) then **DoT** (evaluate **DoQ** separately on measured RAM).
+- **Gated on the Apple Developer ID (NetworkExtension entitlement):** (4) **menu-bar client** + one-click DoT
+  engage/disengage (`NEDNSSettingsManager` / `NEDNSProxyProvider`, captive-portal failsafe); (5) **in-flow
+  process attribution** via `NEDNSProxyProvider` (fixes the post-hoc-`lsof` race); (6) bundled **Unbound** local
+  validating resolver.
+- **Suggested order:** DoT → resolver profiles → server DoH/DoT → [dev ID] menu-bar toggle → NEDNSProxyProvider
+  attribution → bundled Unbound.

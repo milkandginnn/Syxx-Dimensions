@@ -1,0 +1,135 @@
+<title>Cage Faux-Terminal — Platform Styling Spec</title>
+<style>
+  :root{
+    --io-canvas:#0b0518; --io-surface:#170c2e; --io-elevated:#1d1640;
+    --io-terminal:#100826; --io-border:#382c66;
+    --io-text:#efeafe; --io-text-2:#c9c1e6; --io-text-muted:#9a8fc0; --io-text-faint:#6f6597;
+    --io-blue:#7c5cff; --io-electric:#a78bff; --io-gold:#e0b45a; --io-gold-dark:#d9a441;
+    --io-teal:#2dd4bf; --io-amber:#f7931e; --io-red:#ff4d6d;
+    --mono:"Cascadia Mono","SF Mono",ui-monospace,Consolas,monospace;
+    --ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--io-canvas);color:var(--io-text);font-family:var(--ui);line-height:1.5;padding:32px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--io-text-muted);font-size:13px;margin-bottom:28px;max-width:900px}
+  .verdict{border:1px solid var(--io-border);border-left:3px solid var(--io-amber);background:var(--io-surface);
+    border-radius:10px;padding:14px 18px;margin-bottom:28px;max-width:960px}
+  .verdict b{color:var(--io-amber)}
+  .grid{display:grid;grid-template-columns:1fr;gap:24px;max-width:1180px}
+  @media(min-width:920px){.grid{grid-template-columns:1fr 1fr}}
+  .card{border:1px solid var(--io-border);border-radius:14px;background:var(--io-surface);overflow:hidden}
+  .card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin:0;padding:14px 18px;border-bottom:1px solid var(--io-border)}
+  .tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle}
+  .tag.keep{background:rgba(45,212,191,.15);color:var(--io-teal)}
+  .tag.fix{background:rgba(247,147,30,.16);color:var(--io-amber)}
+  .tag.gap{background:rgba(124,92,255,.18);color:var(--io-electric)}
+  .body{padding:18px}
+  .note{font-size:12px;color:var(--io-text-muted);margin:10px 2px 0}
+  /* faux terminal shells */
+  .term{border-radius:12px;border:1px solid var(--io-border);padding:14px;font-family:var(--mono);font-size:12.5px;line-height:1.55}
+  .term.mac{background:var(--io-terminal)}
+  .term.ubu{background:var(--io-canvas)}
+  .term.win{background:var(--io-terminal)}
+  .term .prompt{color:var(--io-text-2)}
+  .term .zsh-user{color:var(--io-teal)} .term .zsh-mark{color:var(--io-electric)}
+  .term .bash-user{color:var(--io-teal)} .term .bash-mark{color:var(--io-text-2)}
+  .term .ps{color:var(--io-electric)}
+  .term .cmd{color:var(--io-text)}
+  .term .listen{color:var(--io-text-muted);font-style:italic}
+  .term .line{color:var(--io-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .term .bullet{color:var(--io-gold)}
+  .term .ts{color:var(--io-text-faint)}
+  .term .dom{color:var(--io-text)}
+  .term .via{color:var(--io-text-muted)}
+  .term .res{color:var(--io-electric)}
+  .absent{border:1px dashed var(--io-border);border-radius:12px;padding:22px;text-align:center;color:var(--io-text-muted);font-size:13px;background:rgba(255,255,255,.01)}
+  .clihint{margin-top:14px;background:var(--io-terminal);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:12px;color:var(--io-text-2)}
+  table{border-collapse:collapse;width:100%;max-width:1180px;margin-top:14px;font-size:12.5px}
+  th,td{border:1px solid var(--io-border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--io-elevated);color:var(--io-text);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  td{color:var(--io-text-2)}
+  code{font-family:var(--mono);background:rgba(255,255,255,.05);padding:1px 5px;border-radius:4px;color:var(--io-electric);font-size:.92em}
+  .swatch{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:6px;border:1px solid rgba(255,255,255,.15)}
+  h3.section{margin:34px 0 8px;font-size:15px;color:var(--io-gold)}
+  .legend{font-size:12px;color:var(--io-text-muted);margin:6px 0 0}
+</style>
+
+<h1>Cage capture-output pane — platform faux-terminal spec</h1>
+<p class="sub">Design source-of-truth comparison. The live streaming faux-terminal feed currently exists on macOS only. This spec preserves the unix look on macOS/Ubuntu and defines a PowerShell-native rendering for Windows so the pane is not ported verbatim when parity work lands.</p>
+
+<div class="verdict">
+  <b>Finding.</b> The owner's literal suspicion is <b>refuted as stated</b>: the unix-styled faux terminal has <b>not</b> been copied to Windows — Windows has <b>no live-feed terminal pane at all</b> (a parity gap). The real risk is latent: the Windows XAML is written "for parity with macOS", so a future port would carry the zsh prompt, <code>sudo</code>, and <code>&bull;</code> bullets across unless this spec pre-empts it.
+</div>
+
+<div class="grid">
+
+  <!-- macOS -->
+  <div class="card">
+    <h2>macOS — current<span class="tag keep">keep (unix baseline)</span></h2>
+    <div class="body">
+      <div class="term mac">
+        <div class="prompt"><span class="zsh-user">you@syxx</span> ~ <span class="zsh-mark">%</span> <span class="cmd">sudo syxx cage --duration 30</span></div>
+        <div class="line"><span class="bullet">&bull;</span> <span class="ts">14:03:19</span>&nbsp; <span class="dom">example.com</span>&nbsp; <span class="via">via Safari</span>&nbsp; <span class="res">(1.1.1.1)</span></div>
+        <div class="line"><span class="bullet">&bull;</span> <span class="ts">14:03:21</span>&nbsp; <span class="dom">telemetry.acme.io</span>&nbsp; <span class="via">via helperd</span>&nbsp; <span class="res">(8.8.8.8)</span></div>
+        <div class="line"><span class="bullet">&bull;</span> <span class="ts">14:03:22</span>&nbsp; <span class="dom">cdn.example.net</span>&nbsp; <span class="via">via Safari</span>&nbsp; <span class="res">(1.1.1.1)</span></div>
+      </div>
+      <p class="note">Font <code>.system(design:.monospaced)</code> = SF&nbsp;Mono. zsh prompt <code>you@syxx ~ %</code>, <code>sudo</code>, <code>&bull;</code> bullet lines. Correct for macOS. One defect: background is a raw hex <code>Color(red:16/255…)</code> = <code>#100826</code>, not a token.</p>
+    </div>
+  </div>
+
+  <!-- Ubuntu -->
+  <div class="card">
+    <h2>Ubuntu — proposed if feed is added<span class="tag keep">keep unix (bash)</span></h2>
+    <div class="body">
+      <div class="term ubu">
+        <div class="prompt"><span class="bash-user">you@syxx</span>:~<span class="bash-mark">$</span> <span class="cmd">sudo syxx cage --duration 30</span></div>
+        <div class="line"><span class="bullet" style="color:var(--io-teal)">&bull;</span> <span class="ts">14:03:19</span>&nbsp; <span class="dom">example.com</span>&nbsp; <span class="via">via firefox</span>&nbsp; <span class="res" style="color:var(--io-teal)">(1.1.1.1)</span></div>
+        <div class="line"><span class="bullet" style="color:var(--io-teal)">&bull;</span> <span class="ts">14:03:21</span>&nbsp; <span class="dom">telemetry.acme.io</span>&nbsp; <span class="via">via systemd-resolve</span>&nbsp; <span class="res" style="color:var(--io-teal)">(8.8.8.8)</span></div>
+      </div>
+      <p class="note">Today Ubuntu has only a static CLI hint card (<code>sudo syxx cage --duration 30</code>, <code>FontFamily="monospace"</code>, teal). If a live feed is added, keep the unix look but switch to the <b>bash</b> prompt <code>you@syxx:~$</code> (<code>$</code>, not zsh <code>%</code>) and accent with Syx teal.</p>
+    </div>
+  </div>
+
+  <!-- Windows current -->
+  <div class="card">
+    <h2>Windows — current<span class="tag gap">parity gap</span></h2>
+    <div class="body">
+      <div class="absent">No live faux-terminal feed exists.<br>Only the captured-query grid + a static CLI hint below.</div>
+      <div class="clihint">&gt; syxx cage --duration 30</div>
+      <p class="note">The one mono element already reads correctly for Windows: <code>&gt;</code> prompt, no <code>sudo</code>, font <code>IoFontMono = "Cascadia Mono, Consolas"</code>. Nothing here is unix-styled — but nothing streams, either.</p>
+    </div>
+  </div>
+
+  <!-- Windows proposed -->
+  <div class="card">
+    <h2>Windows — proposed<span class="tag fix">PowerShell-native</span></h2>
+    <div class="body">
+      <div class="term win">
+        <div class="prompt"><span class="ps">PS</span> <span class="cmd">C:\&gt;</span> <span class="cmd">syxx cage --duration 30</span></div>
+        <div class="listen">Listening for DNS on port 53&hellip;</div>
+        <div class="line"><span class="ts">[14:03:19]</span>&nbsp; <span class="dom">example.com</span>&nbsp; <span class="via">via chrome.exe</span>&nbsp; <span class="res">(1.1.1.1)</span></div>
+        <div class="line"><span class="ts">[14:03:21]</span>&nbsp; <span class="dom">telemetry.acme.io</span>&nbsp; <span class="via">via svchost.exe</span>&nbsp; <span class="res">(8.8.8.8)</span></div>
+        <div class="line"><span class="ts">[14:03:22]</span>&nbsp; <span class="dom">cdn.example.net</span>&nbsp; <span class="via">via chrome.exe</span>&nbsp; <span class="res">(1.1.1.1)</span></div>
+      </div>
+      <p class="note">Cascadia Mono (already the token). <b>No</b> unix carry-over: PowerShell <code>PS C:\&gt;</code> prompt, no <code>sudo</code> (elevation is UAC), bracketed <code>[HH:mm:ss]</code> instead of the <code>&bull;</code> bullet, <code>.exe</code> on process names. Dark violet surface harmonized with the app theme — <b>not</b> raw PowerShell console blue.</p>
+    </div>
+  </div>
+
+</div>
+
+<h3 class="section">Why the app violet theme, not classic PowerShell blue</h3>
+<p class="legend">PowerShell 5.1's console is <span class="swatch" style="background:#012456"></span><code>#012456</code> dark blue with white/yellow/cyan text. Importing that raw would clash with Syxx's violet-gold system and fracture brand cohesion. Modern Windows Terminal already defaults to a dark, near-black surface with a colored prompt — which the app's own <span class="swatch" style="background:#100826"></span><code>#100826 / #0b0518</code> canvas matches far more closely. Recommendation: harmonize with existing tokens, borrow only PowerShell's <i>conventions</i> (prompt string, no bullets, <code>.exe</code>), not its palette.</p>
+
+<h3 class="section">State matrix — Cage capture-output pane (all platforms, one contract)</h3>
+<table>
+  <tr><th>State</th><th>Prompt line</th><th>Body</th><th>Color / token</th><th>Reads as safe?</th></tr>
+  <tr><td>loading / starting</td><td>prompt shown, command echoed</td><td><code>Listening for DNS on port 53&hellip;</code> muted italic</td><td>text-muted; no severity color</td><td>No — neutral</td></tr>
+  <tr><td>empty / no-data (idle)</td><td>prompt shown, dimmed</td><td>placeholder line at 50% opacity</td><td>text-faint</td><td>No — clearly inert</td></tr>
+  <tr><td>error (no binary / UAC declined)</td><td>prompt shown</td><td>honest one-liner ("Live capture is unavailable…")</td><td>amber/text; never green</td><td>No</td></tr>
+  <tr><td>timed-out / degraded</td><td>—</td><td>"Stopped watching. The elevated window finishes on its own timer."</td><td>text-muted</td><td>No</td></tr>
+  <tr><td>capturing (streaming)</td><td>prompt + live lines appending</td><td>timestamped query lines, newest at bottom, mono</td><td>text-2; resolver in electric/teal</td><td>No — feed is neutral by design; verdicts live in the grid</td></tr>
+  <tr><td>finished, 0 packets</td><td>—</td><td>amber notice: "No packets were detected…"</td><td>amber</td><td>No — amber, not a clean check</td></tr>
+  <tr><td>finished, N packets</td><td>—</td><td>"Captured N DNS packet(s)." — feed frozen, grid populated</td><td>text-2 (feed stays neutral)</td><td>No — a capture is evidence, never a verdict</td></tr>
+</table>
+<p class="legend">Cardinal-rule note: the terminal feed must stay chromatically <b>neutral</b> on every platform. Per-query severity belongs only to the grid badges below it. A green line or a check in the feed would imply a "clean" result the capture cannot support.</p>

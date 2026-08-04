@@ -1,0 +1,267 @@
+<!--
+  Glutton — DNS leak & encryption (Linux / Avalonia twin).
+
+  PARITY SCOPE (Aug 2026 catch-up): previously the Linux client shipped only a
+  "Check VPN / encryption status" button and a static deferred-collector note.
+  macOS (SyxxApp/GluttonView.swift) and Windows (SyxxUI/Views/GluttonView.xaml)
+  already ran the local probe dispatch + the collector-attested leak test. Linux
+  now mirrors BOTH halves so a leak claim on Linux is held to the same bar.
+
+  HONESTY (cross-platform bar, mirrored here):
+    B030 — "no leak detected" is ONLY stated by the collector's signed attestation;
+           absence of evidence is INCONCLUSIVE, never clean.
+    D004 — no valid signature → the verdict reads [UNVERIFIED], never leak/no-leak.
+    B066 — a crypto-valid signature by an UNTRUSTED key reads amber, never green.
+    B067 — a NotDetected result over a non-enforced transport reads amber.
+    E117 — FEATURE STATUS has three distinct states (unknown / locked / unlocked).
+           Unknown shows "Loading…", never a red ✗ on first paint.
+    E118 — local probe "sent" renders NEUTRAL — green is reserved for the
+           collector's attested verdict below.
+    B246 — distinguish "no check has run" from "collector ran (no local subdomain)".
+    E132 — a probe that FAILED must not render as one that never ran.
+    Defect-2 — every reason string passes through ErrorPresenter; raw exception
+               messages never reach the screen.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.GluttonView"
+             x:DataType="vm:GluttonViewModel">
+  <ScrollViewer Padding="0">
+    <StackPanel Spacing="20" Margin="6">
+
+      <!-- Header: eyebrow + lore + Check for Leaks button (macOS layout parity). -->
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Spacing="6">
+          <TextBlock Text="GLUTTON • DNS LEAK &amp; ENCRYPTION"
+                     FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
+                     Foreground="{StaticResource SyxRedBrush}" />
+          <TextBlock Text="Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished."
+                     FontFamily="{StaticResource SyxLoreFont}" FontSize="16" FontWeight="Bold"
+                     TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+        <!-- E118: the button is the LOCAL probe dispatch — it does NOT make a leak claim. -->
+        <Button Grid.Column="1" Content="Check for Leaks"
+                Command="{Binding CheckForLeaksCommand}"
+                IsEnabled="{Binding !IsRunning}"
+                VerticalAlignment="Bottom" Margin="16,0,0,0"
+                AutomationProperties.Name="Check for DNS leaks"
+                AutomationProperties.HelpText="Probe whether unencrypted DNS queries leak outside your VPN tunnel" />
+      </Grid>
+
+      <!-- Plain-language description (macOS/Windows full text). -->
+      <TextBlock Text="Glutton probes whether unencrypted DNS queries leak outside encrypted VPN tunnels (syxx leak), catching when queries bypass configured tunnels and making them visible. This test is only meaningful if you're connected to the internet via a VPN or using DNS encryption profile. It will be skipped if no VPN or DNS encryption is detected."
+                 FontFamily="{StaticResource SyxTypeBody}" FontSize="14" TextWrapping="Wrap"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+
+      <!-- Status cards grid (Feature Status + VPN / DNS encryption) — parity macOS LazyVGrid. -->
+      <Grid ColumnDefinitions="*,16,*">
+        <!-- FEATURE STATUS (E117): three states, never red on first paint. -->
+        <Border Grid.Column="0" Background="{StaticResource SyxSurfaceDarkBrush}"
+                CornerRadius="12" Padding="18"
+                BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+          <StackPanel Spacing="8">
+            <TextBlock Text="FEATURE STATUS:"
+                       FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="✓" FontFamily="{StaticResource SyxUiFont}" FontSize="14" FontWeight="Bold"
+                         Foreground="{Binding FeatureStatusBrush}"
+                         IsVisible="{Binding IsFeatureUnlocked}" />
+              <TextBlock Text="🔒" FontFamily="{StaticResource SyxUiFont}" FontSize="14" FontWeight="Bold"
+                         Foreground="{Binding FeatureStatusBrush}"
+                         IsVisible="{Binding IsFeatureLocked}" />
+              <TextBlock Text="…" FontFamily="{StaticResource SyxUiFont}" FontSize="14" FontWeight="Bold"
+                         Foreground="{Binding FeatureStatusBrush}"
+                         IsVisible="{Binding IsFeatureUnknown}" />
+              <TextBlock Text="{Binding FeatureStatusText}"
+                         FontFamily="{StaticResource SyxUiFont}" FontSize="14" FontWeight="Bold"
+                         Foreground="{Binding FeatureStatusBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+            <!-- Refresh feature status (parity macOS .task{}: the VM auto-loads on construction;
+                 this button is for a manual re-check after, e.g., entering a license key elsewhere). -->
+            <Button Content="Refresh licence status" Command="{Binding LoadFeatureStatusCommand}"
+                    HorizontalAlignment="Left" Padding="6,2" FontSize="12"
+                    Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          </StackPanel>
+        </Border>
+
+        <!-- VPN / DNS ENCRYPTION STATUS — Portal read. Yes=teal, No=neutral, Unknown=amber. -->
+        <Border Grid.Column="2" Background="{StaticResource SyxSurfaceDarkBrush}"
+                CornerRadius="12" Padding="18"
+                BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+          <StackPanel Spacing="8">
+            <TextBlock Text="VPN / DNS ENCRYPTION STATUS:"
+                       FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}" />
+            <TextBlock Text="Run Portal first or check the CLI for VPN status."
+                       FontFamily="{StaticResource SyxTypeBody}" FontSize="14" TextWrapping="Wrap"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}"
+                       IsVisible="{Binding !HasStatus}" />
+            <StackPanel Spacing="6" IsVisible="{Binding HasStatus}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Ellipse Width="8" Height="8" Fill="{Binding VpnLineBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding VpnLine}" FontFamily="{StaticResource SyxUiFont}"
+                           FontSize="14" FontWeight="Bold" TextWrapping="Wrap"
+                           Foreground="{Binding VpnLineBrush}" />
+              </StackPanel>
+              <TextBlock Text="{Binding VpnDetailLine}" FontFamily="{StaticResource SyxTypeBody}"
+                         FontSize="12" TextWrapping="Wrap"
+                         Foreground="{StaticResource SyxTextSecondaryBrush}" />
+              <Button Content="Check VPN / encryption status" Command="{Binding CheckStatusCommand}"
+                      IsEnabled="{Binding !IsRunning}" HorizontalAlignment="Left" Padding="6,2" FontSize="12"
+                      Foreground="{StaticResource SyxTextSecondaryBrush}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- Local probes ("Check for Leaks" results). -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="TEST LABEL:"
+                   FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}" />
+
+        <!-- B246: distinguish "no check has run" from "collector ran (no local subdomain)". -->
+        <TextBlock Text="Run a leak check to generate a probe subdomain."
+                   FontFamily="{StaticResource SyxTypeBody}" FontSize="14" TextWrapping="Wrap"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}"
+                   IsVisible="{Binding !HasSubdomain}" />
+        <TextBlock Text="{Binding LeakTestSubdomain}"
+                   FontFamily="{StaticResource SyxMonoFont}" FontSize="14"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}"
+                   IsVisible="{Binding HasSubdomain}" />
+
+        <!-- E132: failed run state gets its own honest line, never hidden by the no-check copy. -->
+        <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="8" Padding="12"
+                BorderBrush="{StaticResource SyxOrangeBrush}" BorderThickness="1"
+                IsVisible="{Binding IsGluttonFailed}">
+          <TextBlock Text="{Binding GluttonRunMessage}" FontFamily="{StaticResource SyxTypeBody}"
+                     FontSize="13" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxOrangeBrush}" />
+        </Border>
+
+        <!-- Probe table. sent/failed renders in the NEUTRAL/CRITICAL tone — E118.-->
+        <TextBlock Text="No probes dispatched."
+                   FontFamily="{StaticResource SyxTypeBody}" FontSize="14"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}"
+                   IsVisible="{Binding HasSubdomain}" />
+        <ItemsControl ItemsSource="{Binding LeakProbeResults}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LeakProbeRow">
+              <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="8" Padding="12,10"
+                      BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1"
+                      Margin="0,2">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <TextBlock Grid.Column="0" Text="Probe via"
+                             FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12"
+                             Foreground="{StaticResource SyxTextSecondaryBrush}"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{Binding Server}" Margin="12,0"
+                             FontFamily="{StaticResource SyxMonoFont}" FontSize="13"
+                             Foreground="{StaticResource SyxTextBrush}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <!-- E118: "sent" is neutral; green is reserved for the collector's verdict below. -->
+                  <TextBlock Grid.Column="2" Text="sent" FontFamily="{StaticResource SyxTypeEyebrow}"
+                             FontSize="12" FontWeight="Bold"
+                             Foreground="{StaticResource SyxTextSecondaryBrush}"
+                             VerticalAlignment="Center"
+                             IsVisible="{Binding Sent}" />
+                  <TextBlock Grid.Column="2" Text="failed" FontFamily="{StaticResource SyxTypeEyebrow}"
+                             FontSize="12" FontWeight="Bold"
+                             Foreground="{StaticResource SyxRedBrush}"
+                             VerticalAlignment="Center"
+                             IsVisible="{Binding !Sent}" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- Collector verification. D044/D004: the conclusion is rendered from the REAL
+           LeakTestResult and honesty-gated on the signed attestation — never a hardcoded pass. -->
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="14">
+          <TextBlock Text="COLLECTOR VERIFICATION:"
+                     FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="A leak collector confirms which upstream resolver actually forwarded your probes. The collector produces a signed attestation usable as evidence."
+                     FontFamily="{StaticResource SyxTypeBody}" FontSize="14" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}" />
+
+          <!-- URL field + Run Collector Verification button (macOS layout parity). -->
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding CollectorURL}"
+                     Watermark="Collector URL (https://…)"
+                     FontFamily="{StaticResource SyxMonoFont}" FontSize="13"
+                     IsEnabled="{Binding !CollectorRunning}"
+                     AutomationProperties.Name="Collector server URL"
+                     AutomationProperties.HelpText="The URL of the leak collector server that confirms which upstream resolver forwarded your DNS probes" />
+            <Button Grid.Column="1" Content="Run Collector Verification"
+                    Command="{Binding RunCollectorVerificationCommand}"
+                    IsEnabled="{Binding !CollectorRunning}"
+                    VerticalAlignment="Center" Margin="12,0,0,0"
+                    AutomationProperties.Name="Run collector verification"
+                    AutomationProperties.HelpText="Contacts the collector server to verify which resolver actually forwarded your DNS probes" />
+          </Grid>
+
+          <!-- Standing caveat (kept visible regardless of result so the B030 invariant is never hidden). -->
+          <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
+                  BorderBrush="{StaticResource SyxOrangeBrush}" BorderThickness="1">
+            <TextBlock Text="{Binding CollectorNote}" FontFamily="{StaticResource SyxTypeBody}"
+                       FontSize="13" TextWrapping="Wrap"
+                       Foreground="{StaticResource SyxOrangeBrush}" />
+          </Border>
+
+          <!-- The verdict panel — rendered from the signed result with honesty gating. -->
+          <StackPanel Spacing="6" IsVisible="{Binding HasCollectorResult}">
+            <TextBlock Text="{Binding LeakResultText}"
+                       FontFamily="{StaticResource SyxUiFont}" FontSize="16" FontWeight="Bold"
+                       TextWrapping="Wrap" Foreground="{Binding LeakResultBrush}" />
+            <TextBlock Text="{Binding LeakResultDetailText}"
+                       FontFamily="{StaticResource SyxTypeBody}" FontSize="13" TextWrapping="Wrap"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}" />
+
+            <!-- Attestation block (D004/B066/B067): sig line, validity, transport. -->
+            <Border Background="#00000000" CornerRadius="8" Padding="12"
+                    BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1"
+                    IsVisible="{Binding ShowSignatureBlock}">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding SignatureText}" FontFamily="{StaticResource SyxMonoFont}"
+                           FontSize="11" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+                <TextBlock Text="{Binding SignatureValidityText}"
+                           FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
+                           Foreground="{Binding SignatureValidityBrush}" />
+                <TextBlock Text="{Binding TransportText}"
+                           FontFamily="{StaticResource SyxTypeBody}" FontSize="12"
+                           Foreground="{Binding TransportBrush}" />
+              </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding ObservedResolversText}"
+                       FontFamily="{StaticResource SyxMonoFont}" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}"
+                       IsVisible="{Binding ShowObservedResolvers}" />
+
+            <!-- Defect-2: human-readable reason only — never raw exception text. -->
+            <TextBlock Text="{Binding ErrorReasonText}"
+                       FontFamily="{StaticResource SyxTypeBody}" FontSize="13" TextWrapping="Wrap"
+                       Foreground="{StaticResource SyxOrangeBrush}"
+                       IsVisible="{Binding ShowErrorReason}" />
+          </StackPanel>
+
+          <!-- CLI equivalent hint (parity macOS/Windows sidebar copy). -->
+          <Border Background="#00000000" CornerRadius="8" Padding="12"
+                  BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+            <TextBlock Text="&gt; syxx leak --collector https://syxx.app --key &lt;license-key&gt;   (CLI equivalent)"
+                       FontFamily="{StaticResource SyxMonoFont}" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          </Border>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

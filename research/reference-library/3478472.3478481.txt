@@ -1,0 +1,695 @@
+# Source: 3478472.3478481.pdf
+# Title (best guess): Anomaly Detection on User Terminals Based on Outbound
+# Pages: 10 · Words: 5539
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+Anomaly Detection on User Terminals Based on Outbound
+Traffic Filtering by DNS Query Monitoring and Application
+Program Identification
+Yong Jin∗
+
+Tokyo Institute of Technology, Japan
+
+Masahiko Tomoishi
+
+Tokyo Institute of Technology, Japan
+
+ABSTRACT
+
+Nariyoshi Yamai
+
+Tokyo University of Agriculture and
+Technology, Japan
+
+ACM Reference Format:
+Yong Jin, Masahiko Tomoishi, and Nariyoshi Yamai. 2021. Anomaly Detection on User Terminals Based on Outbound Traffic Filtering by DNS
+Query Monitoring and Application Program Identification. In 2021 International Conference on Human-Machine Interaction (ICHMI 2021), May
+07–09, 2021, Guangzhou, China. ACM, New York, NY, USA, 10 pages.
+https://doi.org/10.1145/3478472.3478481
+
+Malware attacks have become one of the most critical issues in
+the Internet nowadays. Most types of malware, after infecting a
+computer, attempt contacts to the Command and Control (C&C)
+servers using IP addresses or Fully Qualified Domain Name (FQDN)
+for further instructions. In the former case, the malware connects to
+the C&C servers directly without DNS name resolutions, while in
+the later case, DNS name resolutions for obtaining the IP addresses
+of the C&C servers are required. In both cases, the outbound traffic
+will be initialized by an unrecognized application program, the malware. In this research, we focus on these peculiarities and propose
+an anomaly detection system on user terminals based on outbound
+traffic filtering by using Software Defined Network (SDN) and DNS
+Response Policy Zone (DNS RPZ) technologies. In the proposed
+system, the outbound traffic initialized by unrecognized application
+programs or destined to the IP addresses obtained without DNS
+name resolutions will be detected and blocked on user terminals.
+What’s more, in order to reduce false positive detections, an alert
+message will make the users decide whether or not to allow the
+detected traffic. We implemented a prototype system on MacOS
+machine and conducted feature evaluations. According to the evaluation results, we confirmed that the proposed system worked
+exactly as we designed with the features of detection, blocking and
+alerting anomalies on user terminals.
+
+1
+
+INTRODUCTION
+
+The Internet has become one of the indispensable infrastructures
+for the human beings’ social activities nowadays. The numbers
+of the Internet users, Internet services and Internet-connected devices keep on increasing every year. In the meanwhile, malware
+attacks has been one of the most critical issues in the Internet for
+years. According to the “2019 Internet Security Threat Report” from
+Symantec [1], self. propagating Emotet, one of the most popular
+malware, jumps up to 16% in 2018 from 4% in 2017. In addition, the
+report clarified t hat MacOS malware variants also continued to
+increase in 2018 which was up 80.1% from 2016 and 0.6% from 2017.
+Once a computer is infected by some type of malware, not only
+the victim’s credentials such as login accounts of online banking
+system and credit card information can be stolen but also the victim will be forced to attend further cyber attacks such as SPAM
+mail proliferation, Distributed Denial of Service (DDoS) attacks, etc.
+Most types of malware attempt connections to the Command and
+Control (C&C) servers in order to obtain further instructions after
+infecting a computer [2–5]. The C&C servers, in general, indicate
+the target IP addresses or Fully Qualified Domain Names (FQDNs)
+[6] in the instructions so that the infected computer can conduct
+further attacks using the IP addresses directly or after the Domain
+Name System (DNS) [7] based name resolutions [8–10]. Another
+focusing point is that most types of malware attempt to hide itself from the users and conforms the principle by performing the
+preliminary DNS name resolutions. Therefore, DNS traffic monitoring and application program identification on user terminals
+become important. DNS name resolution is one of the most widely
+used Internet services for providing various mapping information
+between domain names and corresponding services such as IP addresses, mail servers, etc. The preliminary DNS name resolution
+is required prior to using any Internet services because almost all
+Internet users do not use IP addresses directly. However, a malware
+infected computer may obtain the target IP addresses from the C&C
+servers directly which makes direct communication without the
+preliminary DNS name resolution possible.
+With considering the above background and rationales, this paper proposes an anomaly detec- tion system on user terminals
+based on outbound traffic filtering by DNS query monitoring and
+
+CCS CONCEPTS
+• :; • Security and privacy; • Network security; • Malware and
+its mitigation; • Intrusion detection systems;
+
+KEYWORDS
+Additional Key Words and Phrases: Anomaly detection, malware,
+outbound traffic, process identification, DNS, RPZ, SDN, OpenFlow,
+POX
+∗ Authors’
+
+addresses: Yong Jin, Tokyo Institute of Technology, Tokyo, Japan,
+yongj@gsic.titech.ac.jp; Masahiko Tomoishi, Tokyo Institute of Technology, Tokyo,
+Japan, tomoishi@noc.titech.ac.jp; Nariyoshi Yamai, Tokyo University of Agriculture
+and Technology, Tokyo, Japan, nyamai@cc.tuat.ac.jp.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than ACM
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,
+to post on servers or to redistribute to lists, requires prior specific permission and/or a
+fee. Request permissions from permissions@acm.org.
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+© 2021 Association for Computing Machinery.
+ACM ISBN 978-1-4503-8777-4/21/05. . . $15.00
+https://doi.org/10.1145/3478472.3478481
+
+47
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Yong Jin et al.
+
+Figure 1: An example of malicious outbound traffic on an infected computer.
+application program identification. In the proposed system, all DNS
+queries from a user terminal will be monitored and the IP addresses
+obtained from the DNS responses as well as all legitimate application programs will be registered in a database. Accordingly, any
+outbound traffic initialized by unregistered application programs
+or destined to IP addresses obtained without the preliminary DNS
+name resolutions will be detected and blocked on user terminals.
+Furthermore, in order to reduce the false positive detection and
+improve the usability of the proposed system, we also added an
+user alert feature for showing a warning message to the users so
+that they can decide whether to allow or deny the detected traffic.
+The remainder of this paper is organized as follows. Section
+2 describes the target threat model of this work and the related
+work. Section 3 presents the proposed system followed by Section 4
+describing the prototype implementation. Section 4.4 presents the
+experimental evaluations and results. Finally, Section 5 describes
+the conclusion and future work.
+
+the destination IP addresses should be detected and blocked. This
+paper treats these two types of anomalies as the target threats.
+
+2.2
+
+Related work
+
+This section introduces some related work in general perspective
+and those focusing on practical use of DNS. In general perspective,
+the majority of existing research has been focused on centralized
+solutions and real time detection by using variant technologies such
+as machine learning, signature matching and anomaly detections,
+etc. [11–14].
+Huda et al. [11] proposed a hybrid framework by using more
+than one complementary filters and a wrapper selection approach
+to identify the most significant run-time behavioral characteristics of malware in order to mitigate the load of processing a large
+number of run-time malware features. Homayoun et al. [12] proposed a ransomware detection system by using two deep learning
+techniques Long Short-Term Memory (LSTM) and Convolutional
+Neural Network (CNN) as well as a classification algorithm softmax. Villalba et al. [13] proposed an intrusion detection system
+based on analysis of network traffic payload by implementing a
+“dynamic pre-processor” of Snort. The system used legitimate and
+malicious traffic samples in data training and created a statistical model for the legitimate network traffic using the Bloom filter
+and n-grams technologies. Viegas et al. [14] proposed an approach
+named BigFlow which is capable of processing high-speed network
+traffic and evolved attacks based on machine learning. The BigFlow
+used a verification method for checking the classifier outcome to
+provide reliability but manually updated the classification model
+when a suspicious packet was found.
+On the other hand, several DNS based solutions have been proposed for malware detection. For example, monitoring the success
+or failure of DNS name resolutions, monitoring the NS (Name
+Server) records achievement history and statistical analysis on the
+number of FQDNs in DNS queries in one day have been used in
+the literature [15, 16]. However, these solutions consume a lot of
+time for DNS traffic analysis. In addition, DNSBL [17] and DNS
+Sinkhole [18] also have been known as well-used technologies for
+detection and blocking the communication to the C&C servers and
+malicious domain names. By using these technologies, when the
+malware-infected computes access to the malicious domain names
+
+2
+
+TARGET THREAT MODEL AND RELATED
+WORK
+2.1 Target threat model
+The Internet communication uses IP addresses assigned to each
+computer while they are not appro- priate to be remembered by human beings when using so many Internet services. As an alternative,
+FQDN is used and the translating service is provided by DNS name
+resolutions. Accordingly, the preliminary DNS name resolutions
+are required prior to the real Internet communication such as web
+browsing and email transmission, etc. Once a computer is infected
+by some type of malware, in most cases the malware searches the
+C&C servers for obtaining further instructions. Figure 1 shows an
+example of cyber attack conducted by some type of malware. In this
+example, the malware infected computer obtains the IP addresses
+of the attack targets from the C&C server without the preliminary
+DNS name resolutions. Consequently, the infected computer can
+attack the target using the IP addresses directly without the preliminary DNS name resolutions. On the other hand, the malware which
+is an unrecognized application program on the infected computer
+may perform the preliminary DNS name resolutions in order to
+act as legitimate communication. In both cases, the malware and
+
+48
+
+Anomaly Detection on User Terminals Based on Outbound Traffic Filtering by DNS Query Monitoring and Application
+Program Identification
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Figure 2: Architecture of the proposed system.
+or the C&C servers, the connections can be detected and blocked or
+the users can be warned by displaying an alert messages. However,
+the attackers can use FastFlux [19] and Domain Name Generation
+Algorithm (DGA) [20] technologies to avoid the DNSBL and DNS
+Sinkhole since the malicious domain name generation can be much
+faster than the update of the blacklists. Furthermore, some types
+of malware may send DNS queries to the inside hard-coded IP
+addresses directly for further instructions [10].
+As introduced, the approaches in the literature were mainly
+centralized solutions and lack of detecting the anomalies on user
+terminal basis at the early stage of malware infection.
+
+3
+
+3.2
+
+3.2.1 Domain Name Resolution Unit (DNRU). The DNRU processes
+domain name resolution re- quests from the user terminals (steps
+1 and 9) and registers the IP addresses included in the “answer
+section” of the DNS responses into the database (step 8). For example, if the user terminal queries “www.example.com. A ?”, the
+DNRU performs DNS name resolution for the query first. When the
+DNRU receives a DNS response with the answer section including
+result like “www.example.com A 192.168.0.80” in the “domain name
+resolution” process, the “update destination IP” process updates the
+database with adding the IP address “192.168.0.80” in the database
+indicating that it is obtained by legitimate domain name resolution.
+
+OUTBOUND TRAFFIC FILTERING BY DNS
+QUERY MONITORING AND PROCESS
+IDENTIFICATION
+
+3.2.2 Outbound Traffic Filtering Unit (OTFU). The OTFU monitors
+all outbound traffic and deter- mines whether to allow or deny
+based on the registration status of the application programs and
+destination IP addresses. It also has pop-up alert feature in order
+to let the user make the decisions. The process verification feature
+identifies the application programs that initialize the outbound
+traffic (TCP and UDP) and verifies them on the database (steps 3
+and 11 on solid line). If the process been registered, the procedure
+goes to the destination IP address verification stage (steps 4-1 or
+12-1 on solid line) otherwise, a pop-up alert will be displayed (steps
+4-2 or 12-2). If the user allowed to use the application program,
+the process will be registered as legitimate (steps 4-3 or 12-3) and
+the procedure goes to the destination IP address verification stage,
+otherwise it will be registered as anomaly and the outbound traffic
+will be dropped. The Destination IP address verification feature
+verifies the destination IP addresses on the database (steps 5 and
+13 on solid line). If the destination IP address has been registered,
+the outbound traffic will be passed through (steps 6-1 or 14-1 on
+solid line), otherwise, a pop-up alert will be displayed (steps 6-2 or
+14-2 on dashed line). If the user allowed to communicate with the
+IP address, it will be registered as legitimate (steps 6-3 and 14-3 on
+dashed line) and the outbound traffic will be passed through (steps
+7 and 15 on solid line), otherwise it will be registered as anomaly
+
+This section describes a novel approach, an anomaly detection
+system on user terminals based on outbound traffic filtering by
+DNS traffic monitoring and process identification.
+
+3.1
+
+Architecture of the proposed system
+
+The proposed system consists of two main units, Domain Name Resolution Unit (DNRU) and Outbound Traffic Filtering Unit (OTFU).
+Figure 2 illustrates the architecture of the proposed system.
+
+Key idea of design rationale
+
+The key idea of the design rationale for the proposed system is
+DNS query monitoring and appli- cation program identification
+(hereafter, process identification) on user terminals. For example,
+some types of malware need to identify the IP addresses of the
+C&C servers by using DNS name resolutions [19, 20] and others
+directly involve DNS traffic into C&C communication by using
+DNS tunneling technologies [21, 22] and DNS TXT record [10].
+Therefore, the first focusing point in the idea is that the outbound
+traffic without the preliminary DNS name resolutions should be
+considered as anomalies. Another focusing point is that the malware
+can be installed or copied on the user terminals unconsciously
+and the existence can be invisible to the users. Accordingly, the
+outbound traffic sent from those unrecognized processes, no matter
+with or without the preliminary DNS name resolutions, should also
+be considered as anomalies.
+
+49
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Yong Jin et al.
+
+Figure 3: Architecture of the prototype system.
+Table 1: The specs of user terminal used in the experiment
+
+and the outbound traffic will be dropped. Only SYN packets for
+TCP traffic, while all packets for UDP traffic, will be processed.
+
+3.3
+
+Temporarily block SYN packet
+
+In the proposed system, the suspicious TCP connection will be
+hold on for a while waiting for the decision from the users. Thus,
+when an alert message is displayed for the users to decide whether
+allow the detected TCP connection or not, the users need to make
+a decision within the SYN timeout configured in the operating
+system or the specific application. In case of that the users make
+decision after the TCP connection has been timed out, even if
+the users allows the TCP connection the communication will fail.
+Accordingly, a longer TCP SYN establish timeout is required in
+order to practically use the proposed system. According to our
+investigations, in MacOS operating system, the default value of
+“net.inet.tcp.keepinit” is 75 seconds indicating the timeout for establishing SYN and “net.inet.tcp.broken_peer_syn_rexmit_thres”
+is 10 indicating the number of SYN retransmission time before
+TCP connection fails. Accordingly, the users technically can obtain
+12.5 minutes for deciding whether allow the outbound traffic that
+triggers the alert message.
+
+4
+
+OS Name
+
+Memory
+
+Host (MacOS)
+VirtualBox (Ubuntu)
+
+MacOS Big Sur
+Ubuntu 20.04 LTS
+
+16GB
+2GB
+
+based virtual machine with Ubuntu(20.04 LTS) operating system
+was added with installing the OpenVSwitch. On the other hand, MacOS does support OpenFlow controller so that the POX Controller
+[27] was used on the MacOS host machine. As shown in Figure
+3, all inbound and outbound network traffic will be transmitted
+via the OpenVSwitch and the POX Controller determines whether
+allow or deny the traffic on OpenVSwitch. In the prototype system,
+the OTFU was deployed in the POX Controller while the DNRU
+and database were in the Ubuntu virtual machine. Consequently,
+the DNRU performs domain name resolution for all application programs in the user terminal and registers the results in the database
+within the Ubuntu virtual machine. On the other hand, the POX
+Controller monitors all outbound traffic by using the “packet_in”
+event of the OpenFlow protocol and determines allow or deny policies by adding flow table entries in the OpenVSwith based on the
+check results from the database. Table 1 shows the specs of the
+MacOS and virtual machines used in the implementation.
+
+IMPLEMENTATION AND EVALUATION
+
+A prototype system has been implemented on a MacOS host machine using SDN [23]and VirtualBox [24] technologies. In the previous work [8], a lightwitht prototype system for only TCP protocol
+has been implemented on a Windows7 operating system using Cygwin [25] and “WinDivert” library [26]. However, MacOS does not
+support “Divert” functionality and the Windows7-base prototype
+system had a low-performance issue due to the usage of text basis
+destination IP address and application program whitelists. In this
+paper, we extend the implementation to MacOS machine and also
+solve the issues occurred in the previous Windows7-base prototype
+by using SDN and virtualization technologies.
+
+4.1
+
+Machine Type
+
+4.2
+
+Implementation of the DNRU
+
+The Domain Name Resolution Unit (DNRU) and the database were
+constructed in the Ubuntu virtual machine. For the DNRU, a perl
+module customized from the “Net::DNS::Dynamic::Proxyserver A dynamic DNS proxy-server” [28] with adding “destination IP
+address registration” functionality was used. For the database, a
+Berkeley Internet Named Domain (BIND) [29] based DNS server
+with RPZ (Response Policy Zone) [30] enabled was used. The RPZ
+is a BIND specific functionality and by using RPZ a DNS recursive
+server can return modified domain name resolution results based
+on the policies. In the prototype system we configured the RPZ
+with a name of “example.com”. When the dynamic DNS proxyserver receives a DNS query from the application program, for
+
+Architecture of the prototype system
+
+Figure 3 presents the architecture of the prototype system. Since
+MacOS does not support Open- VSwitch directly, a VirtualBox
+
+50
+
+Anomaly Detection on User Terminals Based on Outbound Traffic Filtering by DNS Query Monitoring and Application
+Program Identification
+
+example “www.example.com. A ?”, the DNS proxy forwards the
+DNS query to a DNS recursive server which can be an internal DNS
+full service resolver or a public DNS server (e.g. 8.8.8.8 which is a
+public DNS server provided by Google [31]) in order to perform the
+name resolutions. When the dynamic DNS proxy-server receives
+a DNS response with the answer section like “www.example.com
+A 192.168.0.80” in the “domain name resolution process”, the “update database” process updates the RPZ with adding a record like
+“192.168.0.80.example.com. A 127.0.0.1” which indicates the IP address “192.168.0.80” is obtained by legitimate domain name resolution.
+
+4.3
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+destination IP address on the OpenVSwitch and the packet will be
+passed through. Otherwise, an alert windows with message indicating whether or not allow the destination IP address will pop up. If
+the user selects “Allow”, a DNS resource record like “destination-IPaddress.example.com. IN A 127.0.0.1” (indicating the destination IP
+address is allowed to communicate) will be added in the RPZ. Then
+the corresponding flow entries will be added on the OpenVSwitch
+and the packet will be passed through. On the contrary, if the user
+selects “Deny”, a different DNS resource record like “destinationIP-address.example.com. IN A 127.0.0.2” (indicating the destination
+IP address has been denied to communicate) will be added in the
+RPZ. Then the corresponding flow entries will be added on the
+OpenVSwitch and the packet will be dropped.
+
+Implementation of the OTFU
+
+The Outbound Traffic Filtering Unit (OTFU) was constructed on
+the MacOS host by using the POX Controller.
+
+4.4
+
+4.4 Feature evaluations
+
+This section describes the feature evaluations of the prototype
+system including DNS query moni- toring, process verification and
+user alert functionalities.
+First, we evaluated the DNS query monitoring and database
+update functionalities using several application programs named
+“Safari”, “dig” and “wget” [32]. We confirmed that all DNS name
+resolution requests were sent to the dynamic DNS proxy-server
+in the Ubuntu and all IP addresses included in the “Answer section” of the DNS responses as well as the application program
+related DNS resource records were registered in the RPZ properly.
+The results are shown in Figure 4. The first five lines indicate the
+registration for “Safari” and it includes three DNS records, two
+A records and one TXT record. The first A record (the first two
+lines) with the IP address “127.0.0.127” registers the “checksum-ofapplication-program-name”. The TXT record (the third line) registers a TXT record indicating “host IP: application-program-name”.
+The second A record (the 4th and 5th lines) with the IP address
+“127.0.0.1” registers the “checksum-of-application-program-binarycode”. As a result, the first five lines mean that the application
+program “/Applications/Safari.app/Contents/MacOS/Safari” in the
+host “192.168.0.5” has been registered in the database and it is
+also permitted to communicate with outside via the SDN. The
+second five lines indicate the same thing for application program
+“/usr/local/bin/dig” and the third five lines indicate that the application program “/usr/local/bin/wget” in the same host has been
+registered in the database but the IP address “127.0.0.2” means that
+it is denied to communicate with outside via the SDN. On the other
+hand, the last three lines in the figure indicates that the communication to the destination IP address “192.168.0.10” is permitted
+while to “192.168.0.20” is denied.
+Next, we evaluated the process verification functionality in several patterns. Each pattern and the corresponding result is described
+in the following.
+First run of a non-registered application program: Ran a TCP
+application program named “TV” pre-installed on MacOS and an
+UDP application program named “dig” post-installed on MacOS.
+The results are shown in Figure 5 and Figure 6 respectively. By
+allowing the registration for these two applications we confirmed
+that they could communicate with the Internet.
+Web site access using “Safari”: After allowing registration for
+a TCP application program “Safari” pre-installed on MacOS, we
+
+4.3.1 Verification of application program. When an outbound TCP
+SYN or UDP packet reaches the POX Controller by “packet_in”
+event, it achieves the source port number of the packet and checks
+the “process id” by using “netstat” command. Then the POX Controller identifies the application program based on the “process
+id” by using the “ps” command and checks it on the database
+for determining whether allow or deny the packet. If the application program has been registered in the database the process
+goes to the next step for the verification of destination IP address.
+If the application program has not been registered in the database, an alert window with message indicating whether or not
+allow the application program will pop up. If the user selects “Allow”, two checksums for the application program will be calculated, “checksum-of-application-program- name” and “checksumof-application-program-binary-code”. The former indicates the
+checksum calculated from the string of full path of the application program while the later indicates the one from the application program binary code. For the checksum calculation, we used
+“shasum -a 224” with algorithm 224 and it generates a 56-byte
+long ASCII codes which is fit for a label of FQDN. Then the POX
+Controller adds three DNS resource records, two A records and
+one TXT record will be added to the RPZ regarding the application program. They are like “checksum-of- application-programname.example.com. IN A 127.0.0.127” (indicating the application
+program has been recognized), “checksum-of-application-programname.example.com. IN TXT application- program-name” (presents
+the application program name) and “checksum-of-applicationprogram- binary-code.example.com. IN A 127.0.0,1” (indicating
+the application program has been allowed to communicate). On
+the contrary, if the user selects “Deny”, the similar three DNS resource record but with different third one “checksum-of-applicationprogram-itself.example.com. IN A 127.0.0,2” (indicating the application program has been denied to communicate) will be added in
+the RPZ. Then the corresponding flow entries will be added on the
+OpenVSwitch and the packet will be dropped. Then
+4.3.2 Verification of destination IP address. After finishing the verification of application program, the OTFU verifies the destination
+IP address of the packet in the database. If the destination IP address
+is registered in the database the POX Controller adds outbound
+and inbound flow entries with “flood” action for the corresponding
+
+51
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Yong Jin et al.
+
+Figure 4: Examples of records registered in RPZ.
+
+Figure 5: Result of firstly running a TCP application program.
+accessed several web sites using it. Since the default DNS full service
+resolver on the MacOS had been set to the dynamic proxy-server
+thus all DNS domain name resolution results including A records
+had been registered as legitimate IP addresses on the database.
+Therefore, as we expected, we confirmed that all the accesses were
+successful without any errors.
+First deny and then allow: Ran a TCP application program named
+“Music” pre-installed on the MacOS and the result is shown in
+Figure 7. This time we clicked “Deny” and confirmed it could not
+communicate with the Internet. Next, we ran the program again
+
+and the result is shown in Figure 8. This time we clicked “Allow”
+and confirmed it could communicate with the Internet.
+First allow and then change application: Ran a TCP application
+program named “wget” post- installed on the MacOS and allow
+the registration. Then deleted the “wget” and changed another
+TCP application program named “curl” [33] to “wget” in the same
+directory. Then we ran the fake “wget” and received an alert as
+shown in Figure 9. The same evaluation was conducted for “dig”
+and the result is shown in Figure 10
+
+52
+
+Anomaly Detection on User Terminals Based on Outbound Traffic Filtering by DNS Query Monitoring and Application
+Program Identification
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Figure 6: Result of firstly running an UDP application program.
+
+Figure 7: Alert for the first run of “Music” program and click on “Deny”.
+
+Figure 8: Alert for the second run of “Music” program and click on “Allow”.
+Finally, we evaluated the destination IP address verification functionality in several patterns as well and each pattern and the corresponding result is described in the following. In this evaluation
+we used “wget” for the TCP application program and “dig” for the
+UDP application program.
+
+Direct communication to the destination IP address without DNS
+domain name resolution: In the command-line prompt window, we
+attempted direct communication with the destination IP address
+“192.168.0.20” and “192.168.0.10” using “wget” and “dig” respectively.
+The results are show in Figure 11 and Figure 12. After allowing
+
+53
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Yong Jin et al.
+
+Figure 9: Result of running a fake “wget” application program.
+
+Figure 10: Result of running a fake “dig” application program.
+
+Figure 11: Result of running “wget” using IP address directly.
+registration for these two IP addresses, we confirmed that the direct
+communication was successful.
+First deny and then allow the destination IP address: In this
+pattern, we denied first when the “wget” and “dig” attempted to
+communication the destination IP addresses. Then we tried again
+on the same destination IP addresses and the results are shown
+
+in Figure 13 and Figure 14. After allowing registration for these
+two IP addresses, we confirmed that the direct communication was
+successful.
+
+54
+
+Anomaly Detection on User Terminals Based on Outbound Traffic Filtering by DNS Query Monitoring and Application
+Program Identification
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Figure 12: Result of running “dig” using IP address directly.
+
+Figure 13: Result of running “wget” with an IP address denied before.
+
+Figure 14: Result of running “dig” with an IP address denied before.
+
+55
+
+ICHMI 2021, May 07–09, 2021, Guangzhou, China
+
+Yong Jin et al.
+
+Upon the above feature evaluations and the results, we confirmed that the proposed system is capable of detecting unregistered application programs and non-DNS-resolved IP addresses on
+the communication attempts for both of TCP and UDP protocols.
+
+5
+
+(CYBWRWORLDS 2018), pp.351–356, Oct 2018.
+[9] Y. Jin, K. Kakoi, M. Tomoishi, and N. Yamai, “Efficient detection of suspicious dns
+traffic by resolver separation per application program,” 2017 International Conference on Information and Communication Technology Convergence (ICTC),
+pp.87–92, Oct 2017.
+[10] Y. Jin, H. Ichise, and K. Iida, “Design of detecting botnet communication by
+monitoring direct outbound dns queries,” 2015 IEEE 2nd International Conference
+on Cyber Security and Cloud Computing, pp.37–41, Nov 2015.
+[11] S. Huda, R. Islam, J. Abawajy, J. Yearwood, M.M. Hassan, and G. Fortino, “A
+hybrid-multi filter-wrapper framework to identify run-time behavior for fast
+malware detection,” Future Generation Computer Systems, vol.83, pp.193 – 207,
+2018.
+[12] S. Homayoun, A. Dehghantanha, M. Ahmadzadeh, S. Hashemi, R. Khayami,
+K.K.R. Choo, and D.E. Newton, “Drthis: Deep ransomware threat hunting and
+intelligence system at the fog layer,” Future Generation Computer Systems, vol.90,
+pp.94 – 104, 2019.
+[13] L.J.G. Villalba, A.L.S. Orozco, and J.M. Vidal, “Advanced payload analyzer preprocessor,” Future Generation Computer Systems, vol.76, pp.474 – 485, 2017.
+[14] E. Viegas, A. Santin, A. Bessani, and N. Neves, “Bigflow: Realtime and reliable
+anomaly-based intrusion detection for high-speed networks,” Future Generation
+Computer Systems, 2018.
+[15] R. Villamarín-Salomón and J.C. Brustoloni, “Bayesian bot detection based on
+dns traffic similarity,” Proceedings of the 2009 ACM Symposium on Applied
+Computing, SAC ’09, New York, NY, USA, pp.2035–2041, ACM, 2009.
+[16] H. Choi and H. Lee, “Identifying botnets by capturing group activities in dns
+traffic,” Comput. Netw., vol.56, no.1, pp.20–33, Jan. 2012.
+[17] J. Levine, “DNS Blacklists and Whitelists,” RFC 5782, RFC Editor, February 2010.
+[18] G. Bruneau, “Dns sinkhole” (online), https://www.sans.org/reading-room/
+whitepapers/dns/dns-sinkhole-33523 (ac- cessed 2021-01-25).
+[19] J. Albors, “Fast flux networks: What are they and how do they work?” (online),
+https://www.welivesecurity.com/2017/ 01/12/fast-flux-networks-work/ (accessed
+2021-01-25).
+[20] M. Antonakakis, R. Perdisci, Y. Nadji, N. Vasiloglou, S. Abu-Nimeh, W. Lee, and
+D. Dagon, “From throw-away traffic to bots: Detecting the rise of dga-based
+malware,” Proceedings of the 21st USENIX Conference on Security Symposium,
+Security’12, Berkeley, CA, USA, pp.24–24, USENIX Association, 2012.
+[21] M. Aiello, M. Mongelli, and G. Papaleo, “Basic classifiers for dns tunneling detection,” 2013 IEEE Symposium on Computers and Communications (ISCC),
+pp.000880–000885, July 2013.
+[22] A.M. Kara, H. Binsalleeh, M. Mannan, A. Youssef, and M. Debbabi, “Detection of
+malicious payload distribution channels in dns,” 2014 IEEE International Conference on Communications (ICC), pp.853–858, June 2014.
+[23] “Open
+Networking
+Foundation:
+SDN
+Architecture”
+(online),
+https://opennetworking.org/wp-content/uploads/2014/10/
+TR521_SDN_Architecture_issue_1.1.pdf (accessed 2021-01-25).
+[24] “VirtualBox” (online), https://www.virtualbox.org (accessed 2021-01-25).
+[25] “Cygwin: Get that Linux Feeling - on Windows” (online), https://www.cygwin.
+com (accessed 2021-01-25)
+[26] basil., “Windivert 1.4: Windows packet divert” (online), https://reqrypt.org/
+windivert.html (accessed 2021-01-25).
+[27] “POX Manual” (online), https://noxrepo.github.io/pox-doc/html/ (accessed 2021–
+01-25)
+[28] “Net::DNS::Dynamic::Proxyserver - A dynamic DNS proxy-server” (online), https:
+//metacpan.org/pod/Net::DNS:: Dynamic::Proxyserver (accessed 2021-01-25).
+[29] Internet Systems Consortium, “BIND 9, Versatile, classic, complete name server
+software” (online), https://www.isc. org/bind/ (accessed 2021-01-25).
+[30] Internet Systems Consortium, “Response Policy Zones (RPZ)” (online), https:
+//www.isc.org/rpz/ (accessed 2021-01-25).
+[31] Google, “Google public dns” (online), https://developers.google.com/speed/publicdns/ (accessed 2021-01-25).
+[32] “GNU Wget” (online), https://www.gnu.org/software/wget/ (accessed 2021-0125).
+[33] “Command line tool and library for transferring data with urls” (online), https:
+//curl.haxx.se (accessed 2021-01-25).
+
+CONCLUSION
+
+In this paper, we proposed an anomaly detection system on user
+terminals based on outbound traffic filtering by DNS traffic monitoring and application program identification. In the proposed system,
+DNS RPZ is introduced for managing registered application programs and DNS-resolved IP addresses and OpenFlow based SDN is
+used for network traffic control. With effective control on outbound
+network traffic and light weight query-response for white and black
+lists inquiries, the proposed system realized a user terminal based
+anomaly detection solution for both of TCP and UDP protocols.
+More importantly, the user can make decision (allow or deny) based
+on the alert message for detected outbound traffic so that the false
+positive rate of blocking can be reduced. The prototype system
+presented in this paper was implemented on a MacOS machine and
+it is also possible to be deployed on a Windows system. For the
+future work, implementation for Windows system and performance
+evaluation are on the top priority and the deployment on a real
+network is also considered.
+
+ACKNOWLEDGMENTS
+This work was partially supported by JSPS KAKENHI (Grants-inAid for Scientific Research) Grant Number 19K20254, 18K11291.
+
+REFERENCES
+[1] Symantec Corporation, “ISTR: Internet Security Threat Report, Volume 24, February 2019” (online), https://docs. broadcom.com/doc/istr-24-2019-en (accessed
+2021-01-25).
+[2] F.Y. Rashid, “morto’ worm infects windows systems with weak passwords” (online), https://www.eweek.com/security/morto-worm-infects-windows-systemswith-weak-passwords (accessed 2021-01-25).
+[3] C.J. Dietrich, “Feederbot botnet using dns as carrier for command and control
+(c2)” (online), https://chrisdietri.ch/post/feederbot-botnet-using-dns-commandand-control/ (accessed 2021-01-25).
+[4] H. Ikarashi, Y. Jin, N. Yamai, N. Kitagawa, and K. Okayama, “Design and implementation of sdn-based proactive firewall system in collaboration with domain
+name resolution,” IEICE Transactions on Information and Systems, vol.E101-D,
+pp.2633–2643, 2018.
+[5] H. Ichise, Y. Jin, and K. Iida, “Analysis of dns txt record usage and consideration
+of botnet communication detection,” IEICE Transactions on Communications,
+vol.E101-B, pp.70–79, 2018.
+[6] B.V. M. Stapp, “Resolution of Fully Qualified Domain Name (FQDN) Conflicts
+among Dynamic Host Configuration Protocol (DHCP) Clients,” RFC 4703, RFC
+Editor, October 2006.
+[7] P. Mockapetris, “Domain names - implementation and specification,” RFC 1035,
+RFC Editor, November 1987.
+[8] Y. Jin, K, Kakoi, N. Yamai, N. Kitagawa, and M. Tomoishi, “A client based anomaly
+traffic detection and blocking mech- anism by monitoring dns name resolution with user alerting feature,” 2018 International Conference on Cyberworlds
+
+56
+
+

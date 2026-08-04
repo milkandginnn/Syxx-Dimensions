@@ -1,0 +1,500 @@
+{
+  "diagnoses" : [
+    {
+      "allowedCooccurrenceWith" : [
+
+      ],
+      "displayName" : "Clean",
+      "exclusionaryIndicators" : [
+        "lanDnsRedirect",
+        "authoritativeMismatch",
+        "localEnvironmentCompromised"
+      ],
+      "id" : "clean",
+      "mutuallyExclusiveWith" : [
+        "dnsInterception",
+        "dnsSpoofing",
+        "contentTampering",
+        "localCompromise"
+      ],
+      "requiredSections" : [
+        "prophet",
+        "witness"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "resolver",
+          "indicatorID" : "resolverAgreement",
+          "polarity" : "supports",
+          "weight" : 1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.9,
+          "independenceGroup" : "route",
+          "indicatorID" : "routeClean",
+          "polarity" : "supports",
+          "weight" : 0.8
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "trust",
+          "indicatorID" : "trustedWitnessOK",
+          "polarity" : "supports",
+          "weight" : 1.2
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "minor",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "local",
+          "indicatorID" : "localEvidenceSealValid",
+          "polarity" : "supports",
+          "weight" : 0.7
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 1,
+          "independenceGroup" : "path",
+          "indicatorID" : "lanDnsRedirect",
+          "polarity" : "excludes",
+          "weight" : 1.25
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 1,
+          "independenceGroup" : "answer",
+          "indicatorID" : "authoritativeMismatch",
+          "polarity" : "excludes",
+          "weight" : 1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 1,
+          "independenceGroup" : "privacy",
+          "indicatorID" : "dnsLeakDetected",
+          "polarity" : "excludes",
+          "weight" : 0.9
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 1,
+          "independenceGroup" : "host",
+          "indicatorID" : "localEnvironmentCompromised",
+          "polarity" : "excludes",
+          "weight" : 1.3
+        }
+      ]
+    },
+    {
+      "allowedCooccurrenceWith" : [
+        "contentTampering"
+      ],
+      "displayName" : "DNS spoofing \/ poisoning",
+      "exclusionaryIndicators" : [
+        "trustedWitnessOK"
+      ],
+      "id" : "dnsSpoofing",
+      "mutuallyExclusiveWith" : [
+        "clean"
+      ],
+      "requiredSections" : [
+        "prophet",
+        "mirror",
+        "witness"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1.3,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "answer",
+          "indicatorID" : "authoritativeMismatch",
+          "polarity" : "supports",
+          "weight" : 1.2
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.9,
+          "independenceGroup" : "signature",
+          "indicatorID" : "signedAnswerMismatch",
+          "polarity" : "supports",
+          "weight" : 1.1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.8,
+          "independenceGroup" : "trust",
+          "indicatorID" : "signedWitnessMismatch",
+          "polarity" : "supports",
+          "weight" : 1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.8,
+          "independenceGroup" : "resolver",
+          "indicatorID" : "resolverDisagreement",
+          "polarity" : "supports",
+          "weight" : 0.8
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 1,
+          "independenceGroup" : "trust",
+          "indicatorID" : "trustedWitnessOK",
+          "polarity" : "excludes",
+          "weight" : 0.9
+        }
+      ]
+    },
+    {
+      "allowedCooccurrenceWith" : [
+        "transportDowngrade"
+      ],
+      "displayName" : "Censorship \/ blocking",
+      "exclusionaryIndicators" : [
+
+      ],
+      "id" : "censorshipBlocking",
+      "mutuallyExclusiveWith" : [
+
+      ],
+      "requiredSections" : [
+        "mirror",
+        "portal"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.8,
+          "independenceGroup" : "portal",
+          "indicatorID" : "captivePortalSignal",
+          "polarity" : "supports",
+          "weight" : 0.7
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.85,
+          "independenceGroup" : "vantage",
+          "indicatorID" : "remoteLocalDivergence",
+          "polarity" : "supports",
+          "weight" : 1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.9,
+          "independenceGroup" : "geo",
+          "indicatorID" : "geoVantageDivergence",
+          "polarity" : "supports",
+          "weight" : 1.1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "minor",
+          "expectedStrength" : 0.7,
+          "independenceGroup" : "live",
+          "indicatorID" : "suspiciousNxDomainPattern",
+          "polarity" : "supports",
+          "weight" : 0.8
+        }
+      ]
+    },
+    {
+      "allowedCooccurrenceWith" : [
+        "censorshipBlocking",
+        "dnsPrivacyLeak"
+      ],
+      "displayName" : "Transport downgrade",
+      "exclusionaryIndicators" : [
+
+      ],
+      "id" : "transportDowngrade",
+      "mutuallyExclusiveWith" : [
+
+      ],
+      "requiredSections" : [
+        "glutton",
+        "mirror"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1.4,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "transport",
+          "indicatorID" : "forcedPlainDnsFallback",
+          "polarity" : "supports",
+          "weight" : 1.2
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.9,
+          "independenceGroup" : "privacy",
+          "indicatorID" : "protectedTransportBypass",
+          "polarity" : "supports",
+          "weight" : 1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "minor",
+          "expectedStrength" : 0.6,
+          "independenceGroup" : "vantage",
+          "indicatorID" : "remoteLocalDivergence",
+          "polarity" : "supports",
+          "weight" : 0.6
+        }
+      ]
+    },
+    {
+      "allowedCooccurrenceWith" : [
+        "contentTampering"
+      ],
+      "displayName" : "DNS interception (transparent proxy)",
+      "exclusionaryIndicators" : [
+        "trustedWitnessOK"
+      ],
+      "id" : "dnsInterception",
+      "mutuallyExclusiveWith" : [
+        "clean"
+      ],
+      "requiredSections" : [
+        "portal",
+        "prophet"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1.5,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "path",
+          "indicatorID" : "lanDnsRedirect",
+          "polarity" : "supports",
+          "weight" : 1.3
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.9,
+          "independenceGroup" : "route",
+          "indicatorID" : "resolverPathAnomaly",
+          "polarity" : "supports",
+          "weight" : 1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "minor",
+          "expectedStrength" : 0.7,
+          "independenceGroup" : "vantage",
+          "indicatorID" : "remoteLocalDivergence",
+          "polarity" : "supports",
+          "weight" : 0.7
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 1,
+          "independenceGroup" : "trust",
+          "indicatorID" : "trustedWitnessOK",
+          "polarity" : "excludes",
+          "weight" : 1
+        }
+      ]
+    },
+    {
+      "allowedCooccurrenceWith" : [
+        "dnsSpoofing",
+        "dnsInterception"
+      ],
+      "displayName" : "Content tampering",
+      "exclusionaryIndicators" : [
+
+      ],
+      "id" : "contentTampering",
+      "mutuallyExclusiveWith" : [
+
+      ],
+      "requiredSections" : [
+        "cage",
+        "mirror"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1.3,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.9,
+          "independenceGroup" : "live",
+          "indicatorID" : "liveQueryTamperPattern",
+          "polarity" : "supports",
+          "weight" : 1.2
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.85,
+          "independenceGroup" : "rewrite",
+          "indicatorID" : "liveQueryContentRewrite",
+          "polarity" : "supports",
+          "weight" : 1.1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "minor",
+          "expectedStrength" : 0.65,
+          "independenceGroup" : "vantage",
+          "indicatorID" : "remoteLocalDivergence",
+          "polarity" : "supports",
+          "weight" : 0.7
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.65,
+          "independenceGroup" : "trust",
+          "indicatorID" : "signedWitnessMismatch",
+          "polarity" : "supports",
+          "weight" : 0.8
+        }
+      ]
+    },
+    {
+      "allowedCooccurrenceWith" : [
+        "transportDowngrade"
+      ],
+      "displayName" : "DNS privacy leak",
+      "exclusionaryIndicators" : [
+
+      ],
+      "id" : "dnsPrivacyLeak",
+      "mutuallyExclusiveWith" : [
+
+      ],
+      "requiredSections" : [
+        "glutton"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "privacy",
+          "indicatorID" : "dnsLeakDetected",
+          "polarity" : "supports",
+          "weight" : 1.2
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.8,
+          "independenceGroup" : "transport",
+          "indicatorID" : "protectedTransportBypass",
+          "polarity" : "supports",
+          "weight" : 1
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "minor",
+          "expectedStrength" : 1,
+          "independenceGroup" : "route",
+          "indicatorID" : "routeClean",
+          "polarity" : "excludes",
+          "weight" : 0.4
+        }
+      ]
+    },
+    {
+      "allowedCooccurrenceWith" : [
+
+      ],
+      "displayName" : "Local compromise \/ exfiltration",
+      "exclusionaryIndicators" : [
+
+      ],
+      "id" : "localCompromise",
+      "mutuallyExclusiveWith" : [
+        "clean"
+      ],
+      "requiredSections" : [
+        "witness"
+      ],
+      "rules" : [
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "decisive",
+          "expectedStrength" : 0.95,
+          "independenceGroup" : "host",
+          "indicatorID" : "localEnvironmentCompromised",
+          "polarity" : "supports",
+          "weight" : 1.3
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 1,
+          "independenceGroup" : "seal",
+          "indicatorID" : "localEvidenceSealValid",
+          "polarity" : "excludes",
+          "weight" : 0.9
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "minor",
+          "expectedStrength" : 0.75,
+          "independenceGroup" : "privacy",
+          "indicatorID" : "dnsLeakDetected",
+          "polarity" : "supports",
+          "weight" : 0.7
+        },
+        {
+          "decayExponent" : 1,
+          "evidenceClass" : "major",
+          "expectedStrength" : 0.7,
+          "independenceGroup" : "live",
+          "indicatorID" : "liveQueryTamperPattern",
+          "polarity" : "supports",
+          "weight" : 0.8
+        }
+      ]
+    }
+  ],
+  "knownSections" : [
+    "prophet",
+    "portal",
+    "cage",
+    "glutton",
+    "witness",
+    "mirror"
+  ],
+  "thresholds" : {
+    "failClosedOnInvalidatedRequiredSections" : true,
+    "hardGateOnMissingRequiredSections" : true,
+    "maxContradictionForConclusive" : 0.1,
+    "maxContradictionForProbable" : 0.22,
+    "minimumCoverageForConclusive" : 0.8,
+    "minimumCoverageForProbable" : 0.55,
+    "minimumFitForConclusive" : 0.84,
+    "minimumFitForProbable" : 0.62,
+    "minimumIndependentSupportGroupsForConclusive" : 2,
+    "minimumIndependentSupportGroupsForProbable" : 1,
+    "minimumMarginForConclusive" : 0.18,
+    "minimumMarginForProbable" : 0.08,
+    "requireDecisiveOrTwoMajorsForConclusive" : true
+  }
+}

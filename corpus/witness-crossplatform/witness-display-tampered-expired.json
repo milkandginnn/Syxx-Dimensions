@@ -1,0 +1,112 @@
+{
+  "comparison" : {
+    "isDegraded" : false,
+    "isInconclusive" : false,
+    "isRedirectionDetected" : false,
+    "localOutcome" : {
+      "records" : [
+        {
+          "name" : "example.com",
+          "rdata" : "93.184.216.34",
+          "ttl" : 60,
+          "type" : 1
+        }
+      ],
+      "status" : "success"
+    },
+    "localRecords" : [
+      {
+        "name" : "example.com",
+        "rdata" : "93.184.216.34",
+        "ttl" : 60,
+        "type" : 1
+      }
+    ],
+    "localServer" : "1.1.1.1",
+    "publicResolverOutcomes" : {
+      "Cloudflare" : {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 60,
+            "type" : 1
+          }
+        ],
+        "status" : "success"
+      }
+    },
+    "publicResolverResults" : {
+      "Cloudflare" : [
+        {
+          "name" : "example.com",
+          "rdata" : "93.184.216.34",
+          "ttl" : 60,
+          "type" : 1
+        }
+      ]
+    }
+  },
+  "evidence" : {
+    "comparisonResult" : {
+      "authoritativeSet" : [
+        "93.184.216.34"
+      ],
+      "authoritativeTtls" : [
+        60
+      ],
+      "authoritativeTypes" : [
+        1
+      ],
+      "conclusion" : "matches",
+      "vantageSet" : [
+        "93.184.216.34"
+      ]
+    },
+    "expiresAt" : 1785792760980,
+    "formatVersion" : 4,
+    "perResolverAnswers" : [
+      {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 60,
+            "type" : 1
+          }
+        ],
+        "resolverId" : "1.1.1.1"
+      },
+      {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 60,
+            "type" : 1
+          }
+        ],
+        "resolverId" : "Cloudflare"
+      }
+    ],
+    "queryId" : "example.com",
+    "resolverQueryOutcomes" : [
+      {
+        "resolverId" : "1.1.1.1",
+        "success" : true
+      },
+      {
+        "resolverId" : "Cloudflare",
+        "success" : true
+      }
+    ],
+    "timestamp" : 1785792820980
+  },
+  "expiresAt" : 807485560.980854,
+  "formatVersion" : 4,
+  "keyId" : "4e22f0f074cf2da9",
+  "publicKey" : "G5wOwKZitaDQPxI2fh6fA8YC9XgjK+9Uo63jrFDNmhw=",
+  "signature" : "uihefL+8\/wj2gMR3nKITFHa6TIP\/qWi+uq9Rz6qHedc9X3bhbo1PvjdRibGmFRmbT1j2l07AEMxJJaAntPzACw==",
+  "targetDomain" : "example.com",
+  "timestamp" : 807485680.980905
+}

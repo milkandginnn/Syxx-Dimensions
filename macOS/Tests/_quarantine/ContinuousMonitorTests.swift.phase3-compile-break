@@ -1,0 +1,96 @@
+import XCTest
+@testable import SyxxKit
+
+// A5 twin — continuous monitoring. The load-bearing test is the FIRST one: a run with no baseline
+// must never read as "nothing changed". Mirrors Windows ContinuousMonitorTests.
+final class ContinuousMonitorTests: XCTestCase {
+
+    private func snap(resolvers: [String] = ["192.168.1.1"],
+                      interfaces: [String] = ["en0"],
+                      vpn: ConditionState = .no,
+                      encrypted: ConditionState = .no) -> NetworkConfigSnapshot {
+        NetworkConfigSnapshot(capturedAt: Date(timeIntervalSince1970: 0),
+                              resolvers: resolvers, activeInterfaces: interfaces,
+                              vpnActive: vpn, dnsEncrypted: encrypted)
+    }
+
+    func testNoBaselineIsBaselineEstablishedNeverNoChange() {
+        // The honesty crux: we have never looked before, so we cannot say nothing changed.
+        let tick = ContinuousMonitor.evaluate(previous: nil, current: snap())
+
+        XCTAssertEqual(tick.state, .baselineEstablished)
+        XCTAssertNotEqual(tick.state, .noChange)
+        XCTAssertTrue(tick.alerts.isEmpty)
+        XCTAssertFalse(tick.recheckRecommended)
+        XCTAssertFalse(tick.summary.lowercased().contains("no change"))
+        XCTAssertTrue(tick.summary.contains("Nothing has been compared yet"))
+    }
+
+    func testIdenticalSnapshotsReportNoChangeAndRaiseNoAlert() {
+        let tick = ContinuousMonitor.evaluate(previous: snap(), current: snap())
+        XCTAssertEqual(tick.state, .noChange)
+        XCTAssertTrue(tick.changes.isEmpty)
+        XCTAssertTrue(tick.alerts.isEmpty)
+        XCTAssertFalse(tick.recheckRecommended)
+    }
+
+    func testResolverDriftRaisesExactlyOneAlertAndRecommendsARecheck() {
+        // The plan's acceptance bar: a real config drift between two scans raises one alert.
+        let tick = ContinuousMonitor.evaluate(previous: snap(resolvers: ["192.168.1.1"]),
+                                              current: snap(resolvers: ["203.0.113.9"]))
+        XCTAssertEqual(tick.state, .changed)
+        XCTAssertEqual(tick.changes.count, 1)
+        XCTAssertEqual(tick.alerts.count, 1)
+        XCTAssertTrue(tick.recheckRecommended)
+        XCTAssertEqual(tick.changes[0].kind, .resolversChanged)
+        XCTAssertTrue(tick.alerts[0].detail.contains("192.168.1.1"))
+        XCTAssertTrue(tick.alerts[0].detail.contains("203.0.113.9"))
+    }
+
+    func testADriftIsNotAResultItMustNotClaimTampering() {
+        // Sentinel sees configuration, not honesty. A resolver change is a cafe DHCP lease OR an
+        // attack; this layer must not pretend to know which.
+        let tick = ContinuousMonitor.evaluate(previous: snap(resolvers: ["192.168.1.1"]),
+                                              current: snap(resolvers: ["203.0.113.9"]))
+        XCTAssertTrue(tick.summary.lowercased().contains("not proof of tampering"))
+        XCTAssertFalse(tick.summary.lowercased().contains("hijacked"))
+    }
+
+    func testLosingEncryptionIsAWarningGainingItIsNot() {
+        let lost = ContinuousMonitor.evaluate(previous: snap(encrypted: true), current: snap(encrypted: false))
+        let gained = ContinuousMonitor.evaluate(previous: snap(encrypted: false), current: snap(encrypted: true))
+
+        XCTAssertEqual(lost.alerts.first?.severity, .warning)
+        XCTAssertEqual(gained.alerts.first?.severity, .info)
+        // Asymmetry is the point: only one of these exposes the user.
+        XCTAssertNotEqual(lost.alerts.first?.severity, gained.alerts.first?.severity)
+        XCTAssertTrue(lost.alerts.first?.detail.contains("visible to the network") ?? false)
+    }
+
+    func testLosingVpnIsAWarningGainingItIsNot() {
+        let lost = ContinuousMonitor.evaluate(previous: snap(vpn: true), current: snap(vpn: false))
+        let gained = ContinuousMonitor.evaluate(previous: snap(vpn: false), current: snap(vpn: true))
+        XCTAssertEqual(lost.alerts.first?.severity, .warning)
+        XCTAssertEqual(gained.alerts.first?.severity, .info)
+    }
+
+    func testEveryChangeProducesExactlyOneAlertNoneSwallowed() {
+        // Four simultaneous drifts must surface four alerts — a change detected but not surfaced
+        // is a silently swallowed warning.
+        let tick = ContinuousMonitor.evaluate(
+            previous: snap(resolvers: ["192.168.1.1"], interfaces: ["en0"], vpn: true, encrypted: true),
+            current: snap(resolvers: ["203.0.113.9"], interfaces: ["en1"], vpn: false, encrypted: false))
+
+        XCTAssertEqual(tick.changes.count, 4)
+        XCTAssertEqual(tick.alerts.count, tick.changes.count)
+        for a in tick.alerts { XCTAssertFalse(a.headline.isEmpty) }
+    }
+
+    func testCopyIsVerbatimIdenticalToTheWindowsTwin() {
+        // The parity rule makes wording part of the contract.
+        XCTAssertEqual(ContinuousMonitor.evaluate(previous: nil, current: snap()).summary,
+            "Baseline recorded for this network. Nothing has been compared yet — monitoring starts from now.")
+        XCTAssertEqual(ContinuousMonitor.evaluate(previous: snap(), current: snap()).summary,
+            "No change to this network's DNS configuration since the last check.")
+    }
+}

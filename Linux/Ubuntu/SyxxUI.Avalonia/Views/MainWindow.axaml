@@ -1,0 +1,158 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+        xmlns:conv="using:SyxxUI.Avalonia.Converters"
+        x:Class="SyxxUI.Avalonia.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="Syxx — The Six Wardens"
+        Width="1050" Height="700"
+        MinWidth="900" MinHeight="600"
+        Background="{StaticResource SyxWindowFillBrush}">
+
+  <!-- =========================================================================================
+       WARDEN SHELL  (IMPLEMENTATION_GUIDE §2.2 window + §2.3 WardenSidebar; WardenSidebar.dc.html).
+       The sidebar binds to the existing ShellViewModel (NavItems / SelectedNav) UNCHANGED; the
+       warden styling is applied purely in the View layer via NavAspectConverter. macOS traffic-light
+       chrome (§2.2) is intentionally NOT drawn: on Linux the native DE draws the window frame, and
+       fake, non-functional dots read worse than real controls. Flagged for owner confirmation.
+       ========================================================================================= -->
+
+  <Window.Resources>
+    <conv:NavAspectConverter x:Key="Nav" />
+  </Window.Resources>
+
+  <Window.Styles>
+    <!-- Warden nav item: the FluentAvalonia default selection highlight is neutralized; the visual
+         comes from the inner .nav-pill Border so the gold group dividers are never painted over. -->
+    <Style Selector="ListBox.warden-nav">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBox.warden-nav ListBoxItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="CornerRadius" Value="9" />
+    </Style>
+    <Style Selector="ListBox.warden-nav ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.warden-nav ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <!-- Hover: faint violet wash (§1.6) -->
+    <Style Selector="ListBox.warden-nav ListBoxItem:pointerover Border.nav-pill">
+      <Setter Property="Background" Value="{StaticResource SyxNavHoverBrush}" />
+    </Style>
+    <Style Selector="ListBox.warden-nav ListBoxItem:pointerover Border.nav-pill TextBlock.nav-label">
+      <Setter Property="Foreground" Value="{StaticResource SyxTextBrush}" />
+    </Style>
+    <!-- Active: violet gradient fill + white 600 text + glow (§2.3) -->
+    <Style Selector="ListBox.warden-nav ListBoxItem:selected Border.nav-pill">
+      <Setter Property="Background" Value="{StaticResource SyxActiveNavBrush}" />
+      <Setter Property="BoxShadow" Value="{StaticResource SyxActiveNavShadow}" />
+    </Style>
+    <Style Selector="ListBox.warden-nav ListBoxItem:selected Border.nav-pill TextBlock.nav-label">
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="ListBox.warden-nav ListBoxItem:selected Border.nav-pill TextBlock.nav-glyph">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+  </Window.Styles>
+
+  <Grid ColumnDefinitions="236,*">
+
+    <!-- ================= SIDEBAR (§2.3) ================= -->
+    <Border Grid.Column="0" Background="{StaticResource SyxSidebarFillBrush}"
+            BorderBrush="{StaticResource SyxNeutralBorderBrush}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="15,46,15,16">
+
+        <!-- Logo block: real logo mark (avares asset, NOT a hand-drawn vector) + gradient wordmark + eyebrow.
+             avares root is the AssemblyName (Syxx), not the folder name. -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="11" Margin="4,0">
+          <Image Source="avares://Syxx/Assets/syxx-logo-source.png"
+                 Width="50" Height="50" Stretch="Uniform" />
+          <StackPanel VerticalAlignment="Center" Spacing="5">
+            <TextBlock Text="Syxx" FontFamily="{StaticResource SyxDisplayFont}"
+                       FontSize="27" FontWeight="Bold" Foreground="{StaticResource SyxWordmarkBrush}" />
+            <TextBlock Text="THE SIX WARDENS" FontSize="9.5" FontWeight="SemiBold"
+                       Foreground="{StaticResource SyxTextMutedBBrush}"
+                       LetterSpacing="2.1" />
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Hairline under logo -->
+        <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource SyxHairlineBrush}"
+                Margin="4,15,4,11" />
+
+        <!-- Footer reset pill (§2.3) pinned to bottom -->
+        <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" HorizontalAlignment="Left"
+                CornerRadius="999" BorderThickness="1" Padding="14,8"
+                BorderBrush="#59d9a441" Background="Transparent">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="⟲" FontSize="13" Foreground="{StaticResource SyxGoldTextBrush}" />
+            <TextBlock Text="Start your story anew" FontSize="12.5"
+                       Foreground="{StaticResource SyxGoldTextBrush}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Nav items -->
+        <ListBox Classes="warden-nav" DockPanel.Dock="Top"
+                 ItemsSource="{Binding NavItems}"
+                 SelectedItem="{Binding SelectedNav}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <StackPanel Spacing="0">
+                <!-- Gold group divider ABOVE grouped items (§2.3) -->
+                <Border Height="1" Margin="8,11" Background="{StaticResource SyxGoldDividerBrush}"
+                        IsVisible="{Binding ., Converter={StaticResource Nav}, ConverterParameter=divider}" />
+                <!-- The nav pill -->
+                <Border Classes="nav-pill" CornerRadius="9" Padding="13,8">
+                  <Grid ColumnDefinitions="22,*,Auto">
+                    <TextBlock Grid.Column="0" Classes="nav-glyph"
+                               Text="{Binding ., Converter={StaticResource Nav}, ConverterParameter=glyph}"
+                               FontSize="{Binding ., Converter={StaticResource Nav}, ConverterParameter=runeSize}"
+                               Foreground="{Binding ., Converter={StaticResource Nav}, ConverterParameter=glyphBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="nav-label" Text="{Binding .}"
+                               FontSize="14" Margin="13,0,0,0" VerticalAlignment="Center"
+                               Foreground="{StaticResource SyxTextSecondaryBBrush}" />
+                    <!-- PRO lock pill (Mirror / Glutton / Witness) -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding ., Converter={StaticResource Nav}, ConverterParameter=locked}">
+                      <TextBlock Text="🔒" FontSize="10" Foreground="{StaticResource SyxGoldTextBrush}" />
+                      <TextBlock Text="PRO" FontSize="10" FontWeight="Bold" LetterSpacing="1"
+                                 Foreground="{StaticResource SyxGoldTextBrush}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+      </DockPanel>
+    </Border>
+
+    <!-- ================= CONTENT (§2.2 window fill + per-pane radial glow) ================= -->
+    <Panel Grid.Column="1">
+      <!-- Base window fill is the Window.Background; layer the violet content glow on top (§1.2) -->
+      <Border>
+        <Border.Background>
+          <RadialGradientBrush Center="72%,-8%" GradientOrigin="72%,-8%" RadiusX="0.85" RadiusY="0.7">
+            <GradientStop Color="#2E7c5cff" Offset="0" />
+            <GradientStop Color="#007c5cff" Offset="0.55" />
+          </RadialGradientBrush>
+        </Border.Background>
+      </Border>
+      <ScrollViewer>
+        <ContentControl Content="{Binding CurrentView}" />
+      </ScrollViewer>
+    </Panel>
+  </Grid>
+</Window>

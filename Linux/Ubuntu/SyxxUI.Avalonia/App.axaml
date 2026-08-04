@@ -1,0 +1,195 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sty="using:FluentAvalonia.Styling"
+             x:Class="SyxxUI.Avalonia.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Styles>
+    <sty:FluentAvaloniaTheme PreferSystemTheme="False" />
+  </Application.Styles>
+
+  <Application.Resources>
+    <!--
+         SYXX FANTASY "SECURITY CONSOLE" DESIGN TOKENS  (Ubuntu / Avalonia client)
+         Source of truth: "Syxx GUI Mockups/IMPLEMENTATION_GUIDE.md" §1, transcribed 1:1 from the
+         warden artboard. This is a THIRD, deliberately distinct token set from the Windows "Io"
+         XAML and the macOS Swift tokens (three-way drift is a known, owner-flagged reconciliation).
+
+         HONESTY NOTE: the success/healthy color in this theme is TEAL (#2dd4bf), not the old "Io"
+         green. The severity to brush mapping that enforces "clean is the ONLY success color" lives
+         in Presentation/SeverityColor.cs; these resources are the visual palette only.
+    -->
+
+    <!-- 1.1  COLORS -->
+    <Color x:Key="SyxCanvasColor">#0b0518</Color>
+    <Color x:Key="SyxWindowTopColor">#170c2e</Color>
+    <Color x:Key="SyxWindowBottomColor">#0f0720</Color>
+    <Color x:Key="SyxSidebarTopColor">#1d1240</Color>
+    <Color x:Key="SyxSidebarBottomColor">#160c30</Color>
+
+    <Color x:Key="SyxVioletColor">#7c5cff</Color>
+    <Color x:Key="SyxVioletDeepColor">#5b3fd6</Color>
+    <Color x:Key="SyxVioletBrightColor">#a78bff</Color>
+    <Color x:Key="SyxVioletPaleColor">#c4b3ff</Color>
+    <Color x:Key="SyxTealColor">#2dd4bf</Color>
+    <!-- Prophet module highlight (owner directive 2026-08-02): rgba(0, 180, 255) = #00b4ff.
+         Parity twin of macOS Color.ioProphetBlue (IoDesignSystem.swift:36). -->
+    <Color x:Key="SyxProphetBlueColor">#00b4ff</Color>
+    <Color x:Key="SyxTealDeepColor">#14a89a</Color>
+    <Color x:Key="SyxGoldColor">#d9a441</Color>
+    <Color x:Key="SyxGoldTextColor">#e0b45a</Color>
+    <Color x:Key="SyxOrangeColor">#f7931e</Color>
+    <Color x:Key="SyxRedColor">#ff4d6d</Color>
+    <Color x:Key="SyxRedDeepColor">#d62a4c</Color>
+
+    <Color x:Key="SyxTextColor">#efeafe</Color>
+    <Color x:Key="SyxTextSecondaryColor">#c9c1e6</Color>
+    <Color x:Key="SyxTextSecondaryBColor">#b3a7d6</Color>
+    <Color x:Key="SyxTextMutedColor">#9a8fc0</Color>
+    <Color x:Key="SyxTextMutedBColor">#8f83b8</Color>
+    <Color x:Key="SyxTextFaintColor">#6f6597</Color>
+    <Color x:Key="SyxTextFaintBColor">#7d7399</Color>
+
+    <!-- Semantic tint helpers and neutral surfaces (guide 1.1 "Standard tints"). ARGB hex. -->
+    <Color x:Key="SyxSurfaceFillColor">#08FFFFFF</Color>
+    <Color x:Key="SyxNeutralBorderColor">#249478F6</Color>
+    <Color x:Key="SyxInputFillColor">#990A0614</Color>
+
+    <!-- 1.1  SOLID BRUSHES -->
+    <SolidColorBrush x:Key="SyxCanvasBrush" Color="{StaticResource SyxCanvasColor}" />
+    <SolidColorBrush x:Key="SyxVioletBrush" Color="{StaticResource SyxVioletColor}" />
+    <SolidColorBrush x:Key="SyxVioletBrightBrush" Color="{StaticResource SyxVioletBrightColor}" />
+    <SolidColorBrush x:Key="SyxVioletPaleBrush" Color="{StaticResource SyxVioletPaleColor}" />
+    <SolidColorBrush x:Key="SyxTealBrush" Color="{StaticResource SyxTealColor}" />
+    <SolidColorBrush x:Key="SyxProphetBlueBrush" Color="{StaticResource SyxProphetBlueColor}" />
+    <SolidColorBrush x:Key="SyxTealDeepBrush" Color="{StaticResource SyxTealDeepColor}" />
+    <SolidColorBrush x:Key="SyxGoldBrush" Color="{StaticResource SyxGoldColor}" />
+    <SolidColorBrush x:Key="SyxGoldTextBrush" Color="{StaticResource SyxGoldTextColor}" />
+    <SolidColorBrush x:Key="SyxOrangeBrush" Color="{StaticResource SyxOrangeColor}" />
+    <SolidColorBrush x:Key="SyxRedBrush" Color="{StaticResource SyxRedColor}" />
+
+    <SolidColorBrush x:Key="SyxTextBrush" Color="{StaticResource SyxTextColor}" />
+    <SolidColorBrush x:Key="SyxTextSecondaryBrush" Color="{StaticResource SyxTextSecondaryColor}" />
+    <SolidColorBrush x:Key="SyxTextSecondaryBBrush" Color="{StaticResource SyxTextSecondaryBColor}" />
+    <SolidColorBrush x:Key="SyxTextMutedBrush" Color="{StaticResource SyxTextMutedColor}" />
+    <SolidColorBrush x:Key="SyxTextMutedBBrush" Color="{StaticResource SyxTextMutedBColor}" />
+    <SolidColorBrush x:Key="SyxTextFaintBrush" Color="{StaticResource SyxTextFaintColor}" />
+    <SolidColorBrush x:Key="SyxTextFaintBBrush" Color="{StaticResource SyxTextFaintBColor}" />
+
+    <SolidColorBrush x:Key="SyxSurfaceFillBrush" Color="{StaticResource SyxSurfaceFillColor}" />
+    <SolidColorBrush x:Key="SyxNeutralBorderBrush" Color="{StaticResource SyxNeutralBorderColor}" />
+    <SolidColorBrush x:Key="SyxInputFillBrush" Color="{StaticResource SyxInputFillColor}" />
+
+    <!-- Semantic aliases for views that reference Io* names. Maps to Warden opaque surfaces. -->
+    <SolidColorBrush x:Key="SyxSurfaceDarkBrush" Color="#FF170C2E" />
+    <SolidColorBrush x:Key="SyxBorderSubtleBrush" Color="#FF382C66" />
+
+    <!-- Sidebar hairline rgba(148,120,246,.16); gold divider #d9a441 at opacity .32 -->
+    <SolidColorBrush x:Key="SyxHairlineBrush" Color="#289478F6" />
+    <SolidColorBrush x:Key="SyxGoldDividerBrush" Color="#52d9a441" />
+    <!-- Nav hover wash rgba(124,92,255,.10) -->
+    <SolidColorBrush x:Key="SyxNavHoverBrush" Color="#1A7c5cff" />
+
+    <!-- 1.2  GRADIENTS -->
+    <!-- Window fill  linear-gradient(180deg,#170c2e,#0f0720) -->
+    <LinearGradientBrush x:Key="SyxWindowFillBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Color="{StaticResource SyxWindowTopColor}" Offset="0" />
+      <GradientStop Color="{StaticResource SyxWindowBottomColor}" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Sidebar fill  linear-gradient(180deg,#1d1240,#160c30) -->
+    <LinearGradientBrush x:Key="SyxSidebarFillBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Color="{StaticResource SyxSidebarTopColor}" Offset="0" />
+      <GradientStop Color="{StaticResource SyxSidebarBottomColor}" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Primary button  linear-gradient(120deg,#7c5cff,#5b3fd6) -->
+    <LinearGradientBrush x:Key="SyxPrimaryButtonBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#7c5cff" Offset="0" />
+      <GradientStop Color="#5b3fd6" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Teal button  linear-gradient(120deg,#2dd4bf,#14a89a) -->
+    <LinearGradientBrush x:Key="SyxTealButtonBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#2dd4bf" Offset="0" />
+      <GradientStop Color="#14a89a" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Red button  linear-gradient(120deg,#ff4d6d,#d62a4c) -->
+    <LinearGradientBrush x:Key="SyxRedButtonBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#ff4d6d" Offset="0" />
+      <GradientStop Color="#d62a4c" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Active nav item  linear-gradient(90deg,#7c5cff,#6a49ef) -->
+    <LinearGradientBrush x:Key="SyxActiveNavBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+      <GradientStop Color="#7c5cff" Offset="0" />
+      <GradientStop Color="#6a49ef" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Wordmark  linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff) -->
+    <LinearGradientBrush x:Key="SyxWordmarkBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+      <GradientStop Color="#ff9a3d" Offset="0" />
+      <GradientStop Color="#ff2d78" Offset="0.5" />
+      <GradientStop Color="#9a5cff" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Health meter fill  linear-gradient(90deg,#2dd4bf,#7c5cff) -->
+    <LinearGradientBrush x:Key="SyxHealthMeterBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+      <GradientStop Color="#2dd4bf" Offset="0" />
+      <GradientStop Color="#7c5cff" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Trust ring stroke  #2dd4bf to #7c5cff, diagonal -->
+    <LinearGradientBrush x:Key="SyxTrustRingBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#2dd4bf" Offset="0" />
+      <GradientStop Color="#7c5cff" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Pro Covenant panel  linear-gradient(120deg,rgba(124,92,255,.16),rgba(45,212,191,.06)) -->
+    <LinearGradientBrush x:Key="SyxProCovenantBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#297c5cff" Offset="0" />
+      <GradientStop Color="#0F2dd4bf" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- 1.4  CORNER RADII -->
+    <CornerRadius x:Key="SyxRadiusBadge">5</CornerRadius>
+    <CornerRadius x:Key="SyxRadiusChip">7</CornerRadius>
+    <CornerRadius x:Key="SyxRadiusButton">10</CornerRadius>
+    <CornerRadius x:Key="SyxRadiusNavItem">9</CornerRadius>
+    <CornerRadius x:Key="SyxRadiusCard">14</CornerRadius>
+    <CornerRadius x:Key="SyxRadiusWindow">16</CornerRadius>
+    <CornerRadius x:Key="SyxRadiusPill">999</CornerRadius>
+
+    <!-- 1.5  SHADOWS and GLOW. Avalonia BoxShadows string: "offX offY blur spread color" -->
+    <BoxShadows x:Key="SyxWindowShadow">0 40 120 0 #8C000000</BoxShadows>
+    <BoxShadows x:Key="SyxPrimaryButtonShadow">0 10 26 0 #667c5cff</BoxShadows>
+    <BoxShadows x:Key="SyxActionShadow">0 12 30 0 #667c5cff</BoxShadows>
+    <BoxShadows x:Key="SyxActiveNavShadow">0 8 20 0 #667c5cff</BoxShadows>
+
+    <!-- 1.3 TYPOGRAPHY (Phase A/F1 owner-approved role map; mirrors macOS IoDesignSystem.swift:172-195).
+         avares authority is AssemblyName "Syxx". System font is last-resort glyph fallback only.
+         display/sectionHeading = Cinzel; body = Cormorant Garamond 400; bodyLight = Cormorant Garamond 300
+         (Jost RETIRED from body); navLabel = Spectral Light 300 (sidebar / navigation chrome);
+         bodyAlternate/deck = Cormorant SC; emphasis = EB Garamond Italic; uiLabel/eyebrow = Jost Medium;
+         technical = JetBrains Mono; Marcellus SC bundled but deliberately role-less.
+         UI chrome (SyxUiFont, uiLabel, eyebrow) stays on Jost per owner decision. -->
+    <FontFamily x:Key="SyxTypeDisplay">avares://Syxx/Assets/Fonts/Cinzel-Bold.ttf#Cinzel</FontFamily>
+    <FontFamily x:Key="SyxTypeSectionHeading">avares://Syxx/Assets/Fonts/Cinzel-SemiBold.ttf#Cinzel</FontFamily>
+    <FontFamily x:Key="SyxDisplayFont">avares://Syxx/Assets/Fonts/Cinzel-SemiBold.ttf#Cinzel</FontFamily>
+    <FontFamily x:Key="SyxTypeBodyLight">avares://Syxx/Assets/Fonts/CormorantGaramond-Light.ttf#Cormorant Garamond Light</FontFamily>
+    <FontFamily x:Key="SyxTypeBody">avares://Syxx/Assets/Fonts/CormorantGaramond-Regular.ttf#Cormorant Garamond</FontFamily>
+    <FontFamily x:Key="SyxTypeNavLabel">avares://Syxx/Assets/Fonts/Spectral-Light.ttf#Spectral Light</FontFamily>
+    <FontFamily x:Key="SyxTypeBodyAlternate">avares://Syxx/Assets/Fonts/CormorantSC-Regular.ttf#Cormorant SC</FontFamily>
+    <FontFamily x:Key="SyxTypeDeck">avares://Syxx/Assets/Fonts/CormorantSC-SemiBold.ttf#Cormorant SC</FontFamily>
+    <FontFamily x:Key="SyxDeckFont">avares://Syxx/Assets/Fonts/CormorantSC-SemiBold.ttf#Cormorant SC</FontFamily>
+    <FontFamily x:Key="SyxTypeEmphasis">avares://Syxx/Assets/Fonts/EBGaramond-Italic.ttf#EB Garamond</FontFamily>
+    <FontFamily x:Key="SyxLoreFont">avares://Syxx/Assets/Fonts/EBGaramond-Italic.ttf#EB Garamond</FontFamily>
+    <FontFamily x:Key="SyxTypeUiLabel">avares://Syxx/Assets/Fonts/Jost-Medium.ttf#Jost Medium</FontFamily>
+    <FontFamily x:Key="SyxTypeEyebrow">avares://Syxx/Assets/Fonts/Jost-Medium.ttf#Jost Medium</FontFamily>
+    <FontFamily x:Key="SyxTypeTechnical">avares://Syxx/Assets/Fonts/JetBrainsMono-Regular.ttf#JetBrains Mono</FontFamily>
+    <FontFamily x:Key="SyxMonoFont">avares://Syxx/Assets/Fonts/JetBrainsMono-Regular.ttf#JetBrains Mono</FontFamily>
+    <!-- UI chrome stays on Jost 400 per owner decision (body text moved to Cormorant Garamond in Phase A/F1). -->
+    <FontFamily x:Key="SyxUiFont">avares://Syxx/Assets/Fonts/Jost-Regular.ttf#Jost</FontFamily>
+  </Application.Resources>
+</Application>

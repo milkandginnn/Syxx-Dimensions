@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "documentId": "syxx-eula",
+  "versionId": "syxx-eula-draft-2026-07-30",
+  "status": "internal-draft-presentation",
+  "sourceDocument": "Syxx GUI Mockups/Syxx macOS GUI Mxups.html",
+  "sourceScope": "License Agreement presentation body, including the introductory paragraph, sections 1 through 16, and copyright line",
+  "canonicalPath": "Legal/EULA/Syxx-EULA.txt",
+  "sha256": "0a006599c946fd0dbc19be924d8ce09cb722ee1d36a724360d89cbc2577520eb",
+  "copies": [
+    "macOS/Sources/SyxxApp/Resources/Legal/Syxx-EULA.txt",
+    "Windows/dotNET/SyxxUI/Assets/Legal/Syxx-EULA.txt",
+    "Linux/Ubuntu/SyxxUI.Avalonia/Assets/Legal/Syxx-EULA.txt"
+  ]
+}

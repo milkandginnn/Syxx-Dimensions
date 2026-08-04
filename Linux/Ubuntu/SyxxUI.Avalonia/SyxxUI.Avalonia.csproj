@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- WS-E1 (Ubuntu/UBUNTU-PORT-PLAN.md §4): the Linux desktop client — a third twin to macOS
+       SyxxApp and Windows SyxxUI. Avalonia draws its own pixels, so it renders identically on
+       GNOME / MATE / Cinnamon rather than adopting one DE's styling (Fork 0.2, user-decided).
+
+       Version pinning (closes plan Section 12 item 7, which assumed Avalonia 11.x): the current
+       line is Avalonia 12.1.0 with FluentAvaloniaUI 3.0.2. Exact pins, no floating ranges, so a
+       future restore cannot silently change the widget set the honesty surfaces are built on. -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SyxxUI.Avalonia</RootNamespace>
+    <AssemblyName>Syxx</AssemblyName>
+    <!-- The Linux RIDs the Windows csproj lacks. Kept UNTRIMMED on purpose: NSec and the DNS
+         reflection paths are trim-hostile, and a trimming drop is the "green build that lies"
+         class (plan §2, WS-A2). -->
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <!-- Bundled UI assets (the real Syxx logo mark, etc.). Compiled into the assembly and addressed
+       as avares://Syxx/Assets/... — note the avares root is the AssemblyName (Syxx), NOT the folder
+       name (SyxxUI.Avalonia). The logo is the real 1254x1254 transparent PNG from
+       Design/logos/syxx-logo-source.png, never a hand-drawn vector approximation. -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <!-- The ViewModel unit tests assert the shared verification severity switch directly (the Stale /
+       FutureDated / UntrustedSigner tiers are awkward to reach end-to-end), so the test assembly
+       gets internal visibility. Scoped to that one assembly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyxxUI.Avalonia.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
+    <PackageReference Include="FluentAvaloniaUI" Version="3.0.2" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <!-- The shared reasoning core. Same bytes as Windows and (by golden vector) macOS. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj" />
+    <!-- Sentry-backed diagnostic sink, shared with the Windows GUI and the CLI. Linux was the
+         only surface with NO crash reporting at all — and it is the FIRST platform to ship, so
+         its failures were the ones we would least be able to see. -->
+    <ProjectReference Include="..\..\..\Windows\dotNET\Syxx.Telemetry\Syxx.Telemetry.csproj" />
+  </ItemGroup>
+
+  <!-- LINKED, NOT FORKED (plan WS-E1). The honesty-critical presentation layer is framework-neutral
+       C# and compiles verbatim under Avalonia; forking it is how the honesty spine silently drifts
+       between platforms. SeverityBrush is excluded: it is the one Presentation file bound to WinUI
+       brush types, and its Avalonia equivalent lives in Presentation/SeverityColor.cs here. -->
+  <!-- The MOTD/startup client. Portable as written: HttpClient + JSON + SpecialFolder
+         .LocalApplicationData, which .NET maps to $XDG_DATA_HOME (~/.local/share) on Linux. Linked
+         so all three clients speak to the startup endpoint through ONE implementation. -->
+  <ItemGroup>
+    <Compile Include="..\..\..\Windows\dotNET\SyxxUI\Services\DimensionService.cs">
+      <Link>Services\DimensionService.cs</Link>
+    </Compile>
+    <!-- The single boundary every caught exception crosses before it can reach the screen (twin of
+         macOS SyxxApp/ErrorPresenter.swift). Framework-neutral C# — System + Syxx.Kit only — so it
+         compiles verbatim here. Linked rather than copied for the reason above: an honesty boundary
+         maintained in two places drifts, and the weaker copy is the one that leaks crash-reporter
+         text as product copy. -->
+    <Compile Include="..\..\..\Windows\dotNET\SyxxUI\Presentation\ErrorPresenter.cs">
+      <Link>Presentation\ErrorPresenter.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+</Project>

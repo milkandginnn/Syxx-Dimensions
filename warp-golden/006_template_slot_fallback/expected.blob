@@ -1,0 +1,8 @@
+WARP_ASSEMBLY_V1
+
+===== WARP TEMPLATE 0 =====
+<li class="item">ROW</li>
+===== WARP TEMPLATE 1 =====
+DEFAULT SLOT CONTENT
+===== WARP JS https://example.test/app.js =====
+console.log("app.js in degraded mode");

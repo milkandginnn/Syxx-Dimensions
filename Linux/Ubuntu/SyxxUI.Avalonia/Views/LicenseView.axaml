@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SyxxUI.Avalonia.Views.LicenseView">
+  <StackPanel Spacing="20">
+    <StackPanel Spacing="6">
+      <TextBlock Text="ACCOUNT • LICENSING" FontSize="12" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="License and Registration" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
+      <TextBlock Text="All local diagnostics are free forever. Pro unlocks the server-backed checks."
+                 FontSize="14" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </StackPanel>
+
+    <Grid ColumnDefinitions="*,16,*">
+      <Border Grid.Column="0" Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Lite" FontSize="20" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
+          <TextBlock Text="Free" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SyxTealBrush}" />
+          <TextBlock Text="Prophet • resolver accuracy" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="Portal • local network and route trace" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="Witness • sign and verify testimony" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="Mirror (Lite) • cross-resolver comparison" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="2" Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxVioletBrightBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Pro" FontSize="20" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
+          <TextBlock x:Name="PriceText" Text="$3.95 / month" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
+          <ComboBox x:Name="PeriodCombo" SelectedIndex="0" HorizontalAlignment="Center" MinWidth="160">
+            <ComboBoxItem Content="Monthly ($3.95/mo)" />
+            <ComboBoxItem Content="Yearly ($19.95/yr)" />
+          </ComboBox>
+          <TextBlock x:Name="SaveText" Text="Save 58% with yearly" FontSize="12"
+                     Foreground="{StaticResource SyxSuccessGreenBrush}" HorizontalAlignment="Center"
+                     IsVisible="False" />
+          <TextBlock Text="Everything in Lite, plus:" FontSize="13" FontWeight="Bold" Foreground="{StaticResource SyxVioletBrightBrush}" />
+          <TextBlock Text="Mirror • remote vs local asset comparison" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="Glutton • collector-attested leak proof" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <Button x:Name="TrialBtn" Content="Start Pro Trial"
+                  Click="TrialBtn_Click" HorizontalAlignment="Stretch"
+                  Background="{StaticResource SyxVioletBrightBrush}"
+                  Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- G16: in-app activation, at parity with the Windows and macOS clients. The key is validated
+         with the licensing service and then persisted through the cross-platform ISecretStore
+         (LinuxSecretStore: OS keyring via libsecret/secret-tool, AES-256-GCM encrypted-file fallback),
+         so it survives a relaunch. No DPAPI is involved on Linux. -->
+    <Border CornerRadius="12" Padding="18" Background="{StaticResource SyxSurfaceDarkBrush}"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Activate a License Key" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
+        <TextBlock Text="Your license key unlocks the Pro checks. It is validated with the licensing service, then kept on this machine using the OS keyring (with an encrypted-file fallback). It never travels alongside your DNS data, so your network findings stay unbound from your identity."
+                   FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <!-- Live entitlement state — the REAL result of LicenseManager.IsFeatureUnlockedAsync()
+             (validates the stored key, then falls back to trial/locked), never a hardcoded "Pro". -->
+        <TextBlock x:Name="StatusText" Text="Checking your license status…" FontSize="13"
+                   TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <TextBox x:Name="KeyBox" PlaceholderText="SYXX-XXXX-XXXX-XXXX-XXXX" Width="320"
+                   Background="{StaticResource SyxInputFillBrush}" Foreground="{StaticResource SyxTextBrush}" />
+          <Button x:Name="ActivateBtn" Content="Activate" Click="ActivateBtn_Click"
+                  Background="{StaticResource SyxVioletBrightBrush}" Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+        <!-- Real activation outcome — set only from LicenseManager results, never a hardcoded success.
+             Distinguishes an invalid key from a network failure (D043), and a verified-but-unsaved
+             key (D042 — the Linux file store is best-effort, so we read the key back to confirm). -->
+        <TextBlock x:Name="ActivateStatusText" Text="" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBlock Text="Need a key? Purchasing is completed on syxx.app; activation happens right here."
+                   FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

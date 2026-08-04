@@ -1,0 +1,15 @@
+1. Dark mode toggle
+a. Detect the system color-scheme preference on first load
+b. Persist the user's explicit choice across sessions
+c. Expose a toggle in the top nav that overrides the system default
+2. CSV import with column mapping
+a. Let the user map source columns to target fields
+b. Show a dry-run preview of the first 20 rows before committing
+c. Reject malformed rows and offer a downloadable error report
+3. Full-text search across notes
+a. Rank results by relevance and recency
+b. Highlight the matched snippet in each result
+c. Support quoted phrases and -exclusions in the query
+4. Weekly activity email digest
+a. Opt-in per user, sent Monday morning in their timezone
+b. Summarize the top five items from the past seven days

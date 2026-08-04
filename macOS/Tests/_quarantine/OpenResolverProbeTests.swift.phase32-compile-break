@@ -1,0 +1,66 @@
+import XCTest
+@testable import SyxxKit
+
+/// Offline tests for the Portal Open Resolver & Amplification probe and the `DNSResponse.responseByteLength`
+/// wire-size field it rides on.
+final class OpenResolverProbeTests: XCTestCase {
+
+    func testResponseByteLengthParsedFromWire() {
+        func name(_ parts: [String]) -> [UInt8] { parts.flatMap { [UInt8($0.utf8.count)] + Array($0.utf8) } + [0x00] }
+        var b: [UInt8] = [0x12, 0x34, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
+        b += name(["example", "com"]) + [0x00, 0x01, 0x00, 0x01]
+        b += name(["example", "com"]) + [0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3C, 0x00, 0x04, 93, 184, 216, 34]
+        let r = DNSResolver.parseResponsePacketDetailed(Data(b), requestedType: 1)
+        XCTAssertEqual(r.responseByteLength, b.count)
+    }
+
+    func testAmplificationFactor() {
+        let big = DNSResponse(status: .success, responseByteLength: 1200)
+        XCTAssertEqual(OpenResolverProbe.amplificationFactor(queryBytes: 40, response: big), 30.0, accuracy: 0.001)
+        XCTAssertEqual(OpenResolverProbe.amplificationFactor(queryBytes: nil, response: big), 0)     // unknown query size
+        XCTAssertEqual(OpenResolverProbe.amplificationFactor(queryBytes: 40, response: DNSResponse(status: .success)), 0) // no wire size
+    }
+
+    func testClassifyThresholds() {
+        XCTAssertEqual(OpenResolverProbe.classify(target: "t", factor: 25).status, .recursiveHighAmp)
+        XCTAssertEqual(OpenResolverProbe.classify(target: "t", factor: 3).status, .recursiveLowAmp)
+        // Boundary: a factor exactly AT the threshold is high-amp (>=); just below is low-amp. The
+        // 25/3 cases can't catch an off-by-one flip of >= to > — these do.
+        XCTAssertEqual(OpenResolverProbe.classify(target: "t", factor: OpenResolverProbe.highAmpThreshold).status, .recursiveHighAmp,
+            "a factor exactly at the threshold must be high-amp (>=)")
+        XCTAssertEqual(OpenResolverProbe.classify(target: "t", factor: OpenResolverProbe.highAmpThreshold - 0.01).status, .recursiveLowAmp,
+            "a factor just below the threshold must be low-amp")
+    }
+
+    func testProbeFlagsHighAmplificationRecursive() async {
+        let query: OpenResolverProbe.QueryFn = { q in
+            if q.type == OpenResolverProbe.typeA {
+                return DNSResponse(status: .success,
+                    records: [DNSRecord(name: q.name, type: 1, ttl: 60, rdata: "93.184.216.34")],
+                    recursionAvailable: true, responseByteLength: 60)
+            }
+            return DNSResponse(status: .success,
+                records: [DNSRecord(name: q.name, type: 48, ttl: 60, rdata: "abcd")],
+                responseByteLength: 1400)   // large DNSKEY response
+        }
+        let f = await OpenResolverProbe.probe(target: "192.168.1.1", query: query)
+        XCTAssertEqual(f.status, .recursiveHighAmp)
+        XCTAssertTrue(f.recursive)
+        XCTAssertGreaterThan(f.amplificationFactor, OpenResolverProbe.highAmpThreshold)
+    }
+
+    func testProbeNotRecursiveWhenExternalNameUnresolved() async {
+        // Resolves nothing for an external name → not acting as an open recursive resolver.
+        let query: OpenResolverProbe.QueryFn = { _ in DNSResponse(status: .noData) }
+        let f = await OpenResolverProbe.probe(target: "10.0.0.1", query: query)
+        XCTAssertEqual(f.status, .notRecursive)
+        XCTAssertFalse(f.recursive)
+    }
+
+    func testProbeUntestedWhenTargetSilent() async {
+        // A silent target is UNTESTED — never collapsed into a clean/not-recursive result.
+        let query: OpenResolverProbe.QueryFn = { _ in DNSResponse(status: .timeout) }
+        let f = await OpenResolverProbe.probe(target: "10.0.0.1", query: query)
+        XCTAssertEqual(f.status, .untested)
+    }
+}

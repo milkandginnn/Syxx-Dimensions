@@ -1,0 +1,65 @@
+{
+  "expected" : {
+    "diagnoses" : [
+      {
+        "confidence" : "probable",
+        "contradiction" : 0,
+        "coverage" : 0.560976,
+        "displayName" : "DNS spoofing \/ poisoning",
+        "explanation" : "Probable support for DNS spoofing \/ poisoning: a decisive observation across 2 independent evidence groups (fit 100%, coverage 56%, margin 56%, contradiction 0%).",
+        "fit" : 1,
+        "id" : "dnsSpoofing",
+        "independentSupportGroups" : 2,
+        "margin" : 0.560976,
+        "strength" : 0.560976,
+        "supportingIndicators" : [
+          "authoritativeMismatch",
+          "signedAnswerMismatch"
+        ]
+      }
+    ],
+    "explanation" : "Detected: DNS spoofing \/ poisoning. The evidence affirmatively supports this diagnosis.",
+    "state" : "threatDetected",
+    "suppressed" : [
+
+    ]
+  },
+  "input" : {
+    "indicators" : [
+      {
+        "contradictory" : false,
+        "indicator" : "authoritativeMismatch",
+        "observedStrength" : 0.95,
+        "quality" : 1,
+        "section" : "prophet"
+      },
+      {
+        "contradictory" : false,
+        "indicator" : "signedAnswerMismatch",
+        "observedStrength" : 0.9,
+        "quality" : 1,
+        "section" : "prophet"
+      }
+    ],
+    "sections" : [
+      {
+        "section" : "prophet",
+        "status" : "passed",
+        "trusted" : true
+      },
+      {
+        "section" : "mirror",
+        "status" : "passed",
+        "trusted" : true
+      },
+      {
+        "section" : "witness",
+        "status" : "passed",
+        "trusted" : true
+      }
+    ]
+  },
+  "name" : "GV-3: single decisive threat → threatDetected (dnsSpoofing)",
+  "spec" : "default",
+  "why" : "Pins threat detection with correct diagnosis, supportingIndicators, and explanation numbers. MATRIX-MIGRATION-PLAN.md §6."
+}

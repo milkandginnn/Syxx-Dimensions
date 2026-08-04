@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "notEvaluated",
+  "htmlState": "notEvaluated",
+  "manifestState": "notEvaluated",
+  "notes": "key_id not in the client's pinned set; never a match.",
+  "signatureState": "untrustedSigner"
+}

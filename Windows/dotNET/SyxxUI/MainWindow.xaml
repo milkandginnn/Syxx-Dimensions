@@ -1,0 +1,438 @@
+<Window
+    x:Class="SyxxUI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:local="using:SyxxUI"
+    xmlns:views="using:SyxxUI.Views"
+    Title="Syxx — DNS Investigator">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid>
+        <NavigationView
+            x:Name="NavView"
+            Visibility="Collapsed"
+            PaneDisplayMode="Left"
+            OpenPaneLength="236"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            IsPaneToggleButtonVisible="False"
+            SelectionChanged="NavView_SelectionChanged"
+            Background="{StaticResource IoBgBrush}">
+
+            <!-- Warden sidebar: gradient fill, active item violet gradient, gold separators -->
+            <NavigationView.Resources>
+                <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#FF1D1240" />
+                <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#FF1D1240" />
+                <StaticResource x:Key="NavigationViewItemBackgroundSelected" ResourceKey="IoBlueBrush" />
+                <StaticResource x:Key="NavigationViewItemBackgroundSelectedPointerOver" ResourceKey="IoBlueBrush" />
+                <StaticResource x:Key="NavigationViewItemBackgroundSelectedPressed" ResourceKey="IoBlueBrush" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundSelected" Color="White" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundSelectedPointerOver" Color="White" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundSelectedPressed" Color="White" />
+                <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="Transparent" />
+                <!-- Gold separator at 32% opacity -->
+                <SolidColorBrush x:Key="NavigationViewItemSeparatorForeground" Color="#52D9A441" />
+            </NavigationView.Resources>
+
+            <NavigationView.Header>
+                <StackPanel Orientation="Horizontal" Spacing="0" />
+            </NavigationView.Header>
+
+            <NavigationView.PaneHeader>
+                <!-- Warden wordmark: 50x50 logo, Cinzel gradient title, small subtitle -->
+                <Border Padding="15,46,15,16"
+                        AutomationProperties.Name="Syxx, DNS Investigation"
+                        AutomationProperties.AccessibilityView="Content">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <!-- Phase 9.1 build fix: this was <Image.Effect> with
+                             Windows.UI.Xaml.Media.DropShadowEffect. Neither exists in WinUI 3 -
+                             UIElement.Effect is a WPF-only property and Windows.UI.Xaml.* is the
+                             retired UWP namespace, so the markup compiler cannot resolve either and
+                             the page fails to build. Replaced with a RadialGradientBrush glow plate
+                             behind the mark, which is the supported WinUI 3 way to get the same look.
+                             Colour and strength match macOS ContentView.swift:121
+                             (.shadow(color: rgb(255,45,120).opacity(0.3), radius: 10)). -->
+                        <Grid Width="50" Height="50">
+                            <Border Margin="-10">
+                                <Border.Background>
+                                    <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.5,0.5"
+                                                         RadiusX="0.5" RadiusY="0.5"
+                                                         MappingMode="RelativeToBoundingBox">
+                                        <GradientStop Color="#4DFF2D78" Offset="0.0" />
+                                        <GradientStop Color="#00FF2D78" Offset="1.0" />
+                                    </RadialGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <Image Source="ms-appx:///Assets/syxx-logo.png"
+                                   AutomationProperties.AccessibilityView="Raw" />
+                        </Grid>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Syxx"
+                                       FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="27" FontWeight="Bold"
+                                       Foreground="{StaticResource IoWordmarkBrush}" />
+                            <TextBlock Text="DNS Investigation"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       FontSize="9.5"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FF8F83B8"
+                                       CharacterSpacing="220" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </NavigationView.PaneHeader>
+
+            <!-- Navigation items — Elder Futhark runes for warden nav.
+                 Phase 9.3 accessibility: every item carries an explicit AutomationProperties.Name so
+                 Narrator announces the warden by name. The Elder Futhark rune next to each label is
+                 pure decoration and has no text meaning, so it is marked AccessibilityView="Raw" to
+                 keep it out of the announcement instead of being read as a bare Unicode code point
+                 (Narrator reads an unmapped U+16A8 as noise). Each rune still carries the warden name
+                 so any tool that does surface it gets a real word rather than a glyph id. -->
+            <NavigationView.MenuItems>
+                <!-- What's New -->
+                <NavigationViewItem Tag="Welcome"
+                                    AutomationProperties.Name="What's New"
+                                    AutomationProperties.HelpText="Release notes and announcements from syxx.app">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE735;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <TextBlock Text="What's New"
+                                   FontFamily="{StaticResource IoFontUI}"
+                                   Foreground="{StaticResource IoTextBrush}" />
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Dashboard -->
+                <NavigationViewItem Tag="Dashboard"
+                                    AutomationProperties.Name="Dashboard"
+                                    AutomationProperties.HelpText="Overview of your network's current DNS status">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE9E9;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <TextBlock Text="Dashboard"
+                                   FontFamily="{StaticResource IoFontUI}"
+                                   Foreground="{StaticResource IoTextBrush}" />
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Gold divider before warden section -->
+                <NavigationViewItemSeparator />
+
+                <!-- Prophet ᚨ -->
+                <NavigationViewItem Tag="Prophet"
+                                    AutomationProperties.Name="Prophet"
+                                    AutomationProperties.HelpText="Opens the Prophet tool for detailed diagnostics: resolver accuracy and DNSSEC validation">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE721;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="ᚨ" FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       AutomationProperties.Name="Prophet"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Text="Prophet"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       Foreground="{StaticResource IoTextBrush}" />
+                        </StackPanel>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Mirror ᛞ (PRO).
+                     The gold padlock + "PRO" pill is the only signal that this tool is gated. The
+                     lock glyph and its colour carry no text, so the entitlement is folded into the
+                     item's Name, matching macOS IoDesignSystem.swift:679
+                     (.accessibilityLabel(isLocked ? "\(label), requires Pro" : label)). -->
+                <NavigationViewItem Tag="Mirror"
+                                    AutomationProperties.Name="Mirror, requires Pro"
+                                    AutomationProperties.HelpText="Opens the Mirror tool for detailed diagnostics: censorship and tampering comparison. Requires a Pro license.">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8AB;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="ᛞ"
+                                       FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       Margin="0,0,10,0"
+                                       AutomationProperties.Name="Mirror"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Grid.Column="1" Text="Mirror"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       Foreground="{StaticResource IoTextBrush}" />
+                            <!-- PRO lock indicator -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3"
+                                        VerticalAlignment="Center" Margin="6,0,0,0">
+                                <FontIcon Glyph="&#xE72E;" FontSize="10"
+                                          Foreground="{StaticResource IoGoldBrush}"
+                                          AutomationProperties.Name="Requires Pro"
+                                          AutomationProperties.AccessibilityView="Raw" />
+                                <TextBlock Text="PRO" FontSize="9" FontWeight="Bold"
+                                           FontFamily="{StaticResource IoFontMono}"
+                                           Foreground="{StaticResource IoGoldBrush}"
+                                           AutomationProperties.AccessibilityView="Raw" />
+                            </StackPanel>
+                        </Grid>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Portal ᛜ -->
+                <NavigationViewItem Tag="Portal"
+                                    AutomationProperties.Name="Portal"
+                                    AutomationProperties.HelpText="Opens the Portal tool for detailed diagnostics: local network interfaces and route tracing">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE909;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="ᛜ" FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       AutomationProperties.Name="Portal"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Text="Portal"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       Foreground="{StaticResource IoTextBrush}" />
+                        </StackPanel>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Glutton ᚦ — E154: removed PRO pill. The sidebar stated a restriction that does
+                     not exist (RunGluttonAsync has no IsPro gate). GluttonView's own FEATURE STATUS
+                     card renders the real entitlement from LicenseManager — the single source. -->
+                <NavigationViewItem Tag="Glutton"
+                                    AutomationProperties.Name="Glutton"
+                                    AutomationProperties.HelpText="Opens the Glutton tool for DNS leak and encryption testing">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7BA;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="ᚦ" FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       AutomationProperties.Name="Glutton"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Text="Glutton"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       Foreground="{StaticResource IoTextBrush}" />
+                        </StackPanel>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Cage ᚾ -->
+                <NavigationViewItem Tag="Cage"
+                                    AutomationProperties.Name="Cage"
+                                    AutomationProperties.HelpText="Opens the Cage tool for detailed diagnostics: live DNS query capture">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE72D;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="ᚾ" FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       AutomationProperties.Name="Cage"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Text="Cage"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       Foreground="{StaticResource IoTextBrush}" />
+                        </StackPanel>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Witness ᛉ -->
+                <NavigationViewItem Tag="Witness"
+                                    AutomationProperties.Name="Witness"
+                                    AutomationProperties.HelpText="Opens the Witness tool for detailed diagnostics: signed resolution snapshots and environment trust">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xEB95;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="ᛉ" FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       AutomationProperties.Name="Witness"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Text="Witness"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       Foreground="{StaticResource IoTextBrush}" />
+                        </StackPanel>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Gold divider before conclusions -->
+                <NavigationViewItemSeparator />
+
+                <!-- Conclusion ✒ -->
+                <NavigationViewItem Tag="Conclusion"
+                                    AutomationProperties.Name="Conclusions"
+                                    AutomationProperties.HelpText="Opens Conclusions, where evidence from every tool is combined into a single graded result">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8FD;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="✒" FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       AutomationProperties.Name="Conclusions"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Text="Conclusions"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       Foreground="{StaticResource IoTextBrush}" />
+                        </StackPanel>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- Gold divider before external links -->
+                <NavigationViewItemSeparator />
+
+                <!-- Dimensions — gold, external link.
+                     The trailing "open in new window" glyph is the only cue that this leaves the app,
+                     so that fact is stated in the Name rather than left to the icon alone. -->
+                <NavigationViewItem Tag="Dimensions"
+                                    AutomationProperties.Name="Dimensions, opens in your browser"
+                                    AutomationProperties.HelpText="Opens the Syxx Dimensions site at syxx.app in your default browser">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE774;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="⊕"
+                                       FontFamily="{StaticResource IoFontDisplay}"
+                                       FontSize="17" Foreground="{StaticResource IoGoldBrush}"
+                                       Margin="0,0,10,0"
+                                       AutomationProperties.Name="Dimensions"
+                                       AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Grid.Column="1" Text="Dimensions"
+                                       FontFamily="{StaticResource IoFontUI}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource IoGoldBrush}" />
+                            <FontIcon Grid.Column="2" Glyph="&#xE8A7;" FontSize="11"
+                                      Margin="8,0,4,0"
+                                      Foreground="{StaticResource IoGoldBrush}"
+                                      AutomationProperties.Name="Opens in your browser"
+                                      AutomationProperties.AccessibilityView="Raw" />
+                        </Grid>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <!-- Footer: Settings, License, "Start your story anew" pill -->
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItemSeparator />
+
+                <NavigationViewItem Tag="Settings"
+                                    AutomationProperties.Name="Settings"
+                                    AutomationProperties.HelpText="Encrypted DNS, privacy, notification, and stored data preferences">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <TextBlock Text="Settings"
+                                   FontFamily="{StaticResource IoFontUI}"
+                                   Foreground="{StaticResource IoTextBrush}" />
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <NavigationViewItem Tag="License"
+                                    AutomationProperties.Name="License"
+                                    AutomationProperties.HelpText="License and registration: view your current status and activate a license key">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8D7;" AutomationProperties.AccessibilityView="Raw" />
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.Content>
+                        <TextBlock Text="License"
+                                   FontFamily="{StaticResource IoFontUI}"
+                                   Foreground="{StaticResource IoTextBrush}" />
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+
+                <!-- "Start your story anew" pill button.
+                     HelpText reuses the existing ToolTip copy so the pointer and Narrator paths say
+                     the same thing rather than the tooltip being sighted-only. -->
+                <NavigationViewItem SelectsOnInvoked="False">
+                    <NavigationViewItem.Content>
+                        <Button x:Name="ClearContentBtn"
+                                Click="ClearContentBtn_Click"
+                                HorizontalAlignment="Stretch"
+                                ToolTipService.ToolTip="Clear each pane"
+                                Background="Transparent"
+                                BorderBrush="#59D9A441"
+                                BorderThickness="1"
+                                CornerRadius="999"
+                                Padding="12,6"
+                                AutomationProperties.Name="Start your story anew"
+                                AutomationProperties.HelpText="Clear each pane">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE72C;" FontSize="12"
+                                          Foreground="{StaticResource IoGoldBrush}"
+                                          AutomationProperties.AccessibilityView="Raw" />
+                                <TextBlock Text="Start your story anew"
+                                           FontFamily="{StaticResource IoFontUI}"
+                                           FontSize="12.5" FontWeight="Medium"
+                                           Foreground="{StaticResource IoGoldBrush}" />
+                            </StackPanel>
+                        </Button>
+                    </NavigationViewItem.Content>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+
+            <!-- Footer actions: update check banner -->
+            <NavigationView.PaneFooter>
+                <StackPanel>
+                    <!-- The amber fill is the only cue that this banner is a call to action, so the
+                         meaning is carried in HelpText (reusing the existing ToolTip copy) instead of
+                         resting on colour. LiveSetting announces the banner when it appears, since it
+                         is revealed asynchronously after the launch update check returns. -->
+                    <Border x:Name="UpdateBanner"
+                            Padding="12,4,12,4"
+                            Visibility="Collapsed"
+                            AutomationProperties.LiveSetting="Polite">
+                        <Button x:Name="CheckUpdateBtn"
+                                Click="CheckUpdateBtn_Click"
+                                HorizontalAlignment="Stretch"
+                                ToolTipService.ToolTip="A newer version of Syxx is available"
+                                Background="{StaticResource IoWarningAmberBrush}"
+                                Opacity="0.85"
+                                CornerRadius="8"
+                                Padding="12,6"
+                                BorderThickness="0"
+                                AutomationProperties.Name="Update Available"
+                                AutomationProperties.HelpText="A newer version of Syxx is available">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <SymbolIcon Symbol="Download"
+                                            Foreground="{StaticResource IoBackgroundDarkBrush}"
+                                            AutomationProperties.AccessibilityView="Raw" />
+                                <TextBlock Text="Update Available"
+                                           FontFamily="{StaticResource IoFontUI}"
+                                           FontSize="12" FontWeight="Bold"
+                                           Foreground="{StaticResource IoBackgroundDarkBrush}" />
+                            </StackPanel>
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </NavigationView.PaneFooter>
+
+            <!-- Content frame -->
+            <Frame x:Name="ContentFrame"
+                   Background="{StaticResource IoBgBrush}" />
+        </NavigationView>
+
+        <views:FirstRunView x:Name="FirstRunGate" />
+    </Grid>
+</Window>

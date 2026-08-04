@@ -1,0 +1,389 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/brand/**",
+              "components/core/**",
+              "components/security/**",
+              "ui_kits/nnyx-app/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|icon|disabled|fullWidth|children|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, icon, disabled, fullWidth, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|success|danger|ghost)$/]",
+        "message": "<Button> variant must be one of 'primary' | 'secondary' | 'success' | 'danger' | 'ghost'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Button> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:glow|tint|padding|radius|children|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: glow, tint, padding, radius, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute[name.name='glow'] > Literal[value!=/^(?:blue|success|critical|electric)$/]",
+        "message": "<Card> glow must be one of 'blue' | 'success' | 'critical' | 'electric'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute[name.name='tint'] > Literal[value!=/^(?:blue|success|critical|high|warning|info)$/]",
+        "message": "<Card> tint must be one of 'blue' | 'success' | 'critical' | 'high' | 'warning' | 'info'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Detection'] > JSXAttribute > JSXIdentifier[name!=/^(?:severity|name|signing|scanner|evidence|key|ref|className|style|children)$/]",
+        "message": "<Detection> doesn't accept that prop. Declared props: severity, name, signing, scanner, evidence."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Detection'] > JSXAttribute[name.name='severity'] > Literal[value!=/^(?:critical|high|medium|low|info)$/]",
+        "message": "<Detection> severity must be one of 'critical' | 'high' | 'medium' | 'low' | 'info'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Detection'] > JSXAttribute[name.name='signing'] > Literal[value!=/^(?:apple|appstore|developer|development|unsigned)$/]",
+        "message": "<Detection> signing must be one of 'apple' | 'appstore' | 'developer' | 'development' | 'unsigned'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='GlassPanel'] > JSXAttribute > JSXIdentifier[name!=/^(?:radius|padding|children|key|ref|className|style|children)$/]",
+        "message": "<GlassPanel> doesn't accept that prop. Declared props: radius, padding, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Logo'] > JSXAttribute > JSXIdentifier[name!=/^(?:size|wordmark|label|sublabel|key|ref|className|style|children)$/]",
+        "message": "<Logo> doesn't accept that prop. Declared props: size, wordmark, label, sublabel."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ProgressRing'] > JSXAttribute > JSXIdentifier[name!=/^(?:progress|size|lineWidth|value|caption|glow|key|ref|className|style|children)$/]",
+        "message": "<ProgressRing> doesn't accept that prop. Declared props: progress, size, lineWidth, value, caption, glow."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SeverityBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:severity|key|ref|className|style|children)$/]",
+        "message": "<SeverityBadge> doesn't accept that prop. Declared props: severity."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SeverityBadge'] > JSXAttribute[name.name='severity'] > Literal[value!=/^(?:critical|high|medium|low|info)$/]",
+        "message": "<SeverityBadge> severity must be one of 'critical' | 'high' | 'medium' | 'low' | 'info'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SidebarItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|icon|selected|badge|onClick|key|ref|className|style|children)$/]",
+        "message": "<SidebarItem> doesn't accept that prop. Declared props: label, icon, selected, badge, onClick."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SigningBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:source|emoji|key|ref|className|style|children)$/]",
+        "message": "<SigningBadge> doesn't accept that prop. Declared props: source, emoji."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SigningBadge'] > JSXAttribute[name.name='source'] > Literal[value!=/^(?:apple|appstore|developer|development|unsigned)$/]",
+        "message": "<SigningBadge> source must be one of 'apple' | 'appstore' | 'developer' | 'development' | 'unsigned'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|label|color|key|ref|className|style|children)$/]",
+        "message": "<StatCard> doesn't accept that prop. Declared props: value, label, color."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatCard'] > JSXAttribute[name.name='color'] > Literal[value!=/^(?:blue|success|critical|high|warning|orange|info)$/]",
+        "message": "<StatCard> color must be one of 'blue' | 'success' | 'critical' | 'high' | 'warning' | 'orange' | 'info'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusPill'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|color|glow|solid|key|ref|className|style|children)$/]",
+        "message": "<StatusPill> doesn't accept that prop. Declared props: label, color, glow, solid."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusPill'] > JSXAttribute[name.name='color'] > Literal[value!=/^(?:success|critical|warning|blue|high)$/]",
+        "message": "<StatusPill> color must be one of 'success' | 'critical' | 'warning' | 'blue' | 'high'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "Button": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "Detection": {
+        "replaces": []
+      },
+      "GlassPanel": {
+        "replaces": []
+      },
+      "Logo": {
+        "replaces": []
+      },
+      "ProgressRing": {
+        "replaces": []
+      },
+      "SeverityBadge": {
+        "replaces": []
+      },
+      "SidebarItem": {
+        "replaces": []
+      },
+      "SigningBadge": {
+        "replaces": []
+      },
+      "StatCard": {
+        "replaces": []
+      },
+      "StatusPill": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-2",
+      "--border-card",
+      "--border-hairline",
+      "--border-subtle",
+      "--border-width",
+      "--dur-base",
+      "--dur-fast",
+      "--dur-slow",
+      "--ease-smooth",
+      "--ease-spring",
+      "--font-mono",
+      "--font-rounded",
+      "--font-sans",
+      "--glow-blue",
+      "--glow-critical",
+      "--glow-radius",
+      "--glow-radius-lg",
+      "--glow-success",
+      "--header-gap",
+      "--hover-scale",
+      "--hover-scale-lg",
+      "--io-accent-end",
+      "--io-accent-start",
+      "--io-bg",
+      "--io-blue",
+      "--io-border",
+      "--io-critical",
+      "--io-deep-blue",
+      "--io-electric",
+      "--io-hairline",
+      "--io-high",
+      "--io-info",
+      "--io-logo-1",
+      "--io-logo-2",
+      "--io-logo-3",
+      "--io-logo-lens",
+      "--io-logo-stroke",
+      "--io-orange",
+      "--io-sign-apple",
+      "--io-sign-appstore",
+      "--io-sign-dev",
+      "--io-sign-developer",
+      "--io-sign-unsigned",
+      "--io-success",
+      "--io-surface",
+      "--io-surface-elevated",
+      "--io-text",
+      "--io-text-secondary",
+      "--io-tint-08",
+      "--io-tint-10",
+      "--io-warning",
+      "--leading-normal",
+      "--leading-snug",
+      "--leading-tight",
+      "--pad-button-x",
+      "--pad-button-y",
+      "--pad-card",
+      "--pad-card-lg",
+      "--pad-sidebar-x",
+      "--pad-sidebar-y",
+      "--pad-view",
+      "--radius-badge",
+      "--radius-button",
+      "--radius-card",
+      "--radius-chip",
+      "--radius-panel",
+      "--radius-pill",
+      "--section-gap",
+      "--shadow-card",
+      "--shadow-panel",
+      "--shadow-pop",
+      "--sidebar-width",
+      "--space-1",
+      "--space-10",
+      "--space-11",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-7",
+      "--space-8",
+      "--space-9",
+      "--surface-app",
+      "--surface-card",
+      "--surface-raised",
+      "--text-badge",
+      "--text-body",
+      "--text-caption",
+      "--text-eyebrow",
+      "--text-hero",
+      "--text-muted",
+      "--text-primary",
+      "--text-small",
+      "--text-title1",
+      "--text-title2",
+      "--text-title3",
+      "--tracking-badge",
+      "--tracking-eyebrow",
+      "--weight-bold",
+      "--weight-medium",
+      "--weight-regular",
+      "--weight-semibold",
+      "--window-min-height",
+      "--window-min-width"
+    ],
+    "tokenKinds": {
+      "--io-blue": "color",
+      "--io-deep-blue": "color",
+      "--io-electric": "color",
+      "--io-accent-start": "color",
+      "--io-accent-end": "color",
+      "--io-critical": "color",
+      "--io-high": "color",
+      "--io-warning": "color",
+      "--io-orange": "color",
+      "--io-success": "color",
+      "--io-info": "color",
+      "--io-bg": "color",
+      "--io-surface": "color",
+      "--io-surface-elevated": "color",
+      "--io-border": "color",
+      "--io-text": "font",
+      "--io-text-secondary": "font",
+      "--io-sign-apple": "color",
+      "--io-sign-appstore": "color",
+      "--io-sign-developer": "color",
+      "--io-sign-dev": "color",
+      "--io-sign-unsigned": "color",
+      "--io-logo-1": "color",
+      "--io-logo-2": "color",
+      "--io-logo-3": "color",
+      "--io-logo-stroke": "color",
+      "--io-logo-lens": "color",
+      "--io-tint-08": "color",
+      "--io-tint-10": "color",
+      "--io-hairline": "color",
+      "--surface-app": "color",
+      "--surface-card": "color",
+      "--surface-raised": "color",
+      "--border-subtle": "color",
+      "--text-primary": "font",
+      "--text-muted": "font",
+      "--accent": "color",
+      "--accent-2": "color",
+      "--font-sans": "font",
+      "--font-rounded": "radius",
+      "--font-mono": "font",
+      "--text-hero": "font",
+      "--text-title1": "font",
+      "--text-title2": "font",
+      "--text-title3": "font",
+      "--text-body": "font",
+      "--text-caption": "font",
+      "--text-small": "font",
+      "--text-eyebrow": "font",
+      "--text-badge": "font",
+      "--weight-regular": "font",
+      "--weight-medium": "font",
+      "--weight-semibold": "font",
+      "--weight-bold": "font",
+      "--leading-tight": "font",
+      "--leading-snug": "font",
+      "--leading-normal": "font",
+      "--tracking-eyebrow": "font",
+      "--tracking-badge": "font",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-7": "spacing",
+      "--space-8": "spacing",
+      "--space-9": "spacing",
+      "--space-10": "spacing",
+      "--space-11": "spacing",
+      "--pad-card": "spacing",
+      "--pad-card-lg": "spacing",
+      "--pad-view": "spacing",
+      "--pad-button-x": "spacing",
+      "--pad-button-y": "spacing",
+      "--pad-sidebar-x": "spacing",
+      "--pad-sidebar-y": "spacing",
+      "--sidebar-width": "spacing",
+      "--window-min-width": "spacing",
+      "--window-min-height": "spacing",
+      "--section-gap": "spacing",
+      "--header-gap": "spacing",
+      "--radius-badge": "radius",
+      "--radius-chip": "radius",
+      "--radius-button": "radius",
+      "--radius-card": "radius",
+      "--radius-panel": "radius",
+      "--radius-pill": "radius",
+      "--border-width": "spacing",
+      "--border-hairline": "color",
+      "--border-card": "color",
+      "--shadow-card": "shadow",
+      "--shadow-panel": "shadow",
+      "--shadow-pop": "shadow",
+      "--glow-radius": "radius",
+      "--glow-radius-lg": "radius",
+      "--glow-blue": "shadow",
+      "--glow-success": "shadow",
+      "--glow-critical": "shadow",
+      "--ease-spring": "other",
+      "--ease-smooth": "other",
+      "--dur-fast": "other",
+      "--dur-base": "other",
+      "--dur-slow": "other",
+      "--hover-scale": "other",
+      "--hover-scale-lg": "other"
+    },
+    "fontFamilies": []
+  }
+}

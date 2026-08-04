@@ -1,0 +1,1696 @@
+# Source: December-2025-Vol-14-No-2_JD_2504.pdf
+# Title (best guess): IJDI-ERET
+# Pages: 12 · Words: 7747
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+IJDI-ERET
+
+INTERNATIONAL JOURNAL OF DARSHAN INSTITUTE ON
+ENGINEERING RESEARCH AND EMERGING TECHNOLOGIES
+Vol. 14, No. 2, 2025
+www.ijdieret.in
+DOI 10.32692/IJDI-ERET/14.2.2025.2504
+
+(Review Article)
+
+Enhancing Failure Mode and Effects Analysis with Industry 4.0
+(FMEA 4.0): A Comprehensive Review and Strategic Framework
+Attia Hussien Gomaa1*
+1*
+
+Mechanical Engineering Department, Faculty of Engineering, Shubra, Benha University, Cairo, EGYPT
+
+Abstract
+Failure Mode and Effects Analysis (FMEA) is a foundational technique for identifying, prioritizing, and mitigating potential
+failure modes in manufacturing systems. However, traditional FMEA methods—being manual, static, and retrospective—are
+increasingly inadequate in today’s complex, data-driven industrial landscape. This paper introduces FMEA 4.0, a digital
+framework that integrates core Industry 4.0 technologies—including the Internet of Things (IoT), artificial intelligence (AI),
+digital twins, big data analytics, and cloud computing—to transform FMEA into a real-time, predictive, and adaptive risk
+management system. The study critically examines the limitations of conventional FMEA and outlines the evolution toward a
+more intelligent, automated, and continuous approach. FMEA 4.0 facilitates dynamic risk assessment, early failure detection,
+optimized maintenance planning, improved asset utilization, and enhanced overall equipment effectiveness (OEE). A
+structured implementation methodology is proposed, based on the DMAIC (Define, Measure, Analyze, Improve, Control)
+framework, to ensure systematic integration with existing quality management systems. The framework also incorporates key
+performance indicators (KPIs) aligned with strategic organizational goals, enabling continuous monitoring, data-driven
+decision-making, and sustained improvement in reliability, safety, and operational performance. By unifying digital
+technologies with proven quality principles, FMEA 4.0 emerges as a strategic enabler of resilience, agility, and
+competitiveness in smart manufacturing. The paper concludes with practical implementation guidance and insights for
+researchers and industry professionals advancing digital transformation in reliability and risk management.
+Keywords: Failure Mode and Effects Analysis (FMEA), FMEA 4.0, DMAIC, Maintenance Improvement, Industry 4.0.
+1. Introduction
+Failure Mode and Effects Analysis (FMEA) is a fundamental
+risk management methodology used to systematically
+identify, evaluate, and prioritize potential failure modes
+across systems, processes, or products. By anticipating
+failures and assessing their potential impact, FMEA enables
+organizations to proactively mitigate risks, enhance safety,
+reduce downtime, and improve operational performance.
+Traditionally, FMEA has relied on expert judgment and
+historical data, typically applied at fixed intervals. While
+effective in stable and less complex environments, this static
+approach lacks responsiveness to real-time conditions,
+limiting its applicability in today’s fast-evolving, datadriven manufacturing settings (Gomaa 2023 [1]).
+
+operations. Industry 4.0 (I4.0), also known as the Fourth
+Industrial Revolution, represents this transformation through
+the integration of advanced technologies such as the Internet
+of Things (IoT), Artificial Intelligence (AI), cyber-physical
+systems, cloud computing, and big data analytics (Khin &
+Hung Kee, 2022). These technologies not only improve
+productivity, operational efficiency, and sustainability but
+also offer unprecedented visibility and control over complex
+systems (Machado et al., 2021 [2]).
+As shown in Figure 1, Industry 4.0 is powered by
+interconnected, intelligent technologies that enable datadriven decision-making and adaptive manufacturing. Key
+enablers include (Gomaa, 2024 [3,4]):
+
+
+The rapid advancement of manufacturing technologies in
+recent decades—driven by both social (soft) and
+technological (hard) innovations—has accelerated the
+transition toward digital, automated, and intelligent
+*
+
+Corresponding Author: e-mail: attia.goma@feng.bu.edu.eg,
+Tel-+20 12 22738497
+ISSN 2320-7590 (Print) 2583-3863 (Online)
+ 2025 Darshan Institute of Engg. & Tech., All rights reserved
+
+
+
+
+
+Internet of Things (IoT): Real-time data collection via
+networked sensors for enhanced asset visibility.
+Advanced Sensors and Actuators: High-frequency data
+acquisition enabling early fault detection.
+Robotics and Automation: Precision and efficiency in
+operations and maintenance tasks.
+Artificial Intelligence (AI) and Machine Learning
+(ML): Predictive models for failure detection and risk
+analysis.
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+
+
+
+
+
+
+
+
+
+
+safety. By embedding digital intelligence into maintenance
+practices, it fosters a culture of continuous improvement and
+equips organizations to achieve greater resilience and
+innovation in smart manufacturing and healthcare
+environments (Gomaa, 2025 [6]).
+
+Cyber-Physical Systems (CPS): Seamless integration of
+physical and digital systems for autonomous control.
+Augmented Reality (AR) and Virtual Reality (VR):
+Enhanced support for training, maintenance, and
+inspections.
+Cloud Computing: Scalable infrastructure for data
+storage, processing, and collaboration.
+Digital Twins: Virtual replicas of assets for simulation,
+diagnostics, and predictive maintenance.
+Additive Manufacturing (3D Printing): On-demand
+production of spare parts for faster maintenance.
+Big Data Analytics: Extraction of insights from
+complex data to inform risk-based decisions.
+Cybersecurity:
+Protection
+of
+data
+integrity,
+confidentiality, and system availability.
+Blockchain: Tamper-proof data records ensuring
+transparency and traceability.
+Location Detection Technologies: Real-time tracking to
+improve asset utilization and safety.
+
+This paper reviews recent advances in Failure Mode and
+Effects Analysis (FMEA) and introduces FMEA 4.0, a
+predictive framework enhanced by Industry 4.0 technologies
+like IoT, AI, and digital twins. Integrating these with quality
+management and the DMAIC methodology, FMEA 4.0
+transforms failure analysis into a real-time, proactive risk
+management system. It supports strategic goals through
+KPIs that improve asset reliability, reduce downtime, and
+enhance safety, enabling manufacturers to optimize
+maintenance and gain a competitive advantage in smart
+manufacturing.
+The paper is structured as follows: Section 2 reviews
+traditional Failure Mode and Effects Analysis (FMEA) and
+Reliability-Centered Maintenance (RCM), focusing on their
+key principles and limitations. Section 3 identifies research
+gaps and challenges in adapting these methods to evolving
+industrial contexts. Section 4 presents the research
+methodology and introduces the FMEA 4.0 framework,
+which integrates Industry 4.0 technologies with Lean Six
+Sigma for predictive, data-driven maintenance. Section 5
+concludes with key findings, practical implications, and
+future research directions, highlighting the vital roles of AI,
+IoT, Digital Twins, and 5G in advancing smart maintenance
+and asset management.
+
+The integration of FMEA with Industry 4.0 technologies—
+such as IoT, predictive analytics, and real-time data
+processing—advances it into FMEA 4.0: an intelligent,
+adaptive, and data-driven approach to failure management.
+This modern framework enables continuous monitoring,
+early fault detection, and prioritized risk assessment,
+supporting predictive maintenance strategies that effectively
+reduce failure rates, minimize downtime, and extend asset
+lifecycles (Gandhare et al., 2025 [5]). FMEA 4.0 enhances
+asset utilization and Overall Equipment Effectiveness (OEE)
+while reinforcing regulatory compliance and workplace
+
+Figure 1. Main technologies of industry 4.0
+RCM enables organizations to concentrate maintenance
+efforts on the most significant risks, thereby enhancing
+system reliability, safety, and efficiency while optimizing
+resource allocation. The emergence of Industry 4.0
+technologies has further advanced this integration,
+facilitating predictive, data-driven maintenance that adapts
+dynamically to real-time asset conditions (Gomaa, 2025[6]).
+
+2. Literature Review
+The literature review highlights Failure Mode and Effects
+Analysis (FMEA) and Reliability-Centered Maintenance
+(RCM) as fundamental methodologies in contemporary
+engineering and asset management. FMEA provides a
+systematic approach to identifying, assessing, and
+prioritizing potential failure modes at both the component
+and process levels. These insights form the basis for RCM,
+which develops maintenance strategies tailored to asset
+criticality and operational priorities. Integrating FMEA into
+
+2.1 Failure mode and effects analysis (FMEA): Failure
+Mode and Effects Analysis (FMEA) is a proactive,
+systematic risk assessment method developed by NASA in
+22
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+the 1960s to enhance system reliability and safety. Since
+then, it has become a widely adopted tool across diverse
+industries such as aerospace, automotive, manufacturing,
+healthcare, and services. Unlike reactive approaches that
+respond to failures after they occur, FMEA emphasizes the
+early identification and evaluation of potential failure
+modes. This allows organizations to take preventive actions
+that improve product quality, operational efficiency, safety,
+and cost-effectiveness (Huang and Li, 2017 [7]; Sunday et
+al., 2018 [8]; Qin et al., 2020 [9]). FMEA assesses potential
+failure modes using three core parameters: severity (S),
+occurrence (O), and detection (D). These are combined into
+the Risk Priority Number (RPN = S × O × D), which helps
+prioritize risks and allocate resources more effectively.
+Higher RPN values indicate failure modes that need prompt
+attention. The integration of Industry 4.0 technologies—
+such as IoT, real-time analytics, and digital dashboards—
+enhances FMEA by enabling continuous monitoring and
+supporting predictive maintenance strategies (Gupta &
+Sharma, 2020 [10]; Gandhare et al., 2025 [5]). The
+fundamental components of FMEA include Failure Mode
+(FM), which describes how a component or system might
+fail; Failure Effect (FE), detailing the consequences of that
+failure on operation or customer needs; and Failure Cause
+(FC), identifying the root reasons such as design flaws,
+process variations, or misuse (Spreafico & Sutrisno, 2023
+[11]). These elements form the basis of various FMEA types,
+including Design FMEA (DFMEA), which focuses on early
+design risks; Process FMEA (PFMEA), which addresses
+failures during manufacturing and assembly; and
+Environmental FMEA, which assesses ecological impacts
+(Spreafico, 2022 [12]). In practice, FMEA supports
+compliance with standards like ISO 9001:2015, drives
+quality improvements, and promotes organizational risk
+awareness. Its structured process allows for systematic root
+cause analysis, quantitative risk ranking, and the
+implementation of targeted mitigation strategies, ultimately
+reducing defects, enhancing safety, minimizing downtime,
+and sustaining competitive advantage.
+
+In conclusion, FMEA remains a vital and evolving tool for
+risk-based maintenance and quality management. Its
+proactive focus, adaptability to digital transformation, and
+broad applicability ensure it continues to play a key role in
+managing complex, data-intensive industrial environments.
+2.2 Reliability-centered maintenance (RCM): ReliabilityCentered Maintenance (RCM) is a systematic, risk-based
+approach originally developed in the 1960s for the aviation
+industry to identify cost-effective maintenance strategies
+that ensure asset reliability, safety, and lifecycle efficiency.
+At its core, RCM focuses on analyzing potential failure
+modes and their consequences—commonly through Failure
+Mode and Effects Analysis (FMEA)—to prioritize critical
+functions and determine appropriate maintenance actions
+(Gomaa, 2025 [6]). RCM facilitates a transition from
+traditional time-based maintenance to condition-based and
+predictive strategies by aligning maintenance activities with
+operational context, system functions, and safety
+requirements. This adaptability has led to its widespread
+application across sectors. In aviation, RCM enhances safety
+and performance by addressing failure risks in airframes and
+propulsion systems (Rehmanjan, 2017 [15]). In the
+automotive sector, it improves manufacturing uptime by
+prioritizing maintenance for key equipment (Wartgow,
+2019). Facilities management adopts RCM to optimize
+predictive maintenance for HVAC, fire protection, and
+plumbing systems, reducing disruptions through real-time
+monitoring (Geisbush & Ariaratnam, 2023 [16]). In the food
+and beverage industry, RCM reduces maintenance costs by
+up to 20% by ensuring the availability of critical packaging
+systems. In manufacturing, fuzzy logic-enhanced RCM has
+refined failure prioritization; Gupta and Mishra (2016) [17]
+identified nearly 46% of milling machine failures as critical,
+while Afefy et al. (2019) [18] achieved over 50% downtime
+reduction in sugar production through targeted interventions.
+In oil and gas, RCM addresses prevalent failure modes such
+as corrosion and weld defects, integrating condition
+monitoring and scheduling optimization to enhance safety
+and reduce costs (Omoya et al., 2019 [19]). Power
+generation—including thermal and nuclear—utilizes RCM
+to reduce unplanned outages by aligning maintenance with
+operational duty cycles (Piasson et al., 2016 [20]). Mining
+operations employ RCM to minimize equipment
+breakdowns and lower operating costs (Hoseinie et al., 2016
+[21]). Maritime industries, where maintenance expenses can
+exceed 40% of total operating costs, leverage RCM to
+enhance vessel reliability and lifecycle efficiency (Emovon
+et al., 2018 []). In healthcare, RCM ensures the reliability of
+life-support and diagnostic equipment, contributing to
+patient safety while reducing maintenance expenditures by
+up to 16% (Salah et al., 2018). The U.S. Navy’s NAVAIR
+program integrates RCM with real-time monitoring to boost
+mission readiness and reduce logistics burdens (Geisbush &
+Ariaratnam, 2023 [16]). RCM has further applications in
+pulp and paper, railways, telecommunications, and water
+utilities. Rail operators such as Amtrak (2020) [23] have
+used RCM to enhance rolling stock reliability, while water
+utilities apply it to critical infrastructure despite limited
+distribution system integration (Geisbush, 2020 [24]).
+
+Recent developments have incorporated advanced
+computational techniques such as fuzzy logic, Bayesian
+networks, and artificial intelligence (AI) to improve
+FMEA’s ability to handle uncertainty and complex
+interactions. AI-enhanced FMEA enables real-time risk
+assessment, automated prioritization, and integration with
+Quality 4.0 and smart manufacturing initiatives (Spreafico et
+al., 2017 [13]). Expanding FMEA’s applications, recent
+research includes AI-powered chatbots to facilitate Social
+Failure Mode and Effects Analysis (SFMEA), helping
+identify social sustainability risks interactively, as well as
+hybrid approaches combining fuzzy logic and analytic
+networks to evaluate risk impacts on additive manufacturing
+quality (Spreafico & Sutrisno, 2023 [11]; Kar & Rai, 2025
+[14]). Additionally, combining FMEA with Industry 4.0
+analytics and extensive failure databases has proven
+effective in enhancing preventive maintenance for critical
+healthcare equipment, improving reliability and patient
+safety during emergencies (Gandhare et al., 2025 [5];
+Gomaa, 2025 [6]).
+23
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+Recent advancements reflect RCM’s evolution. Liu et al.
+(2025) [25] implemented predictive RCM in high-speed rail
+to mitigate infrastructure degradation. Ali Ahmed Qaid et al.
+(2024) [26] proposed a fuzzy-FMECA framework to
+improve failure prioritization in manufacturing. Asghari and
+Jafari (2024) [27] extended pump reliability in water
+treatment, and Cahyati et al. (2024) [28] demonstrated 70%
+cost savings in processing industries through RCM
+application. Introna and Santolamazza (2024) [29] and
+Resende et al. (2024) [30] integrated RCM with Industry 4.0
+technologies, including Digital Twins and fuzzy logic, to
+enhance diagnostic capabilities and asset performance in
+aerospace and industrial settings.
+
+Scalability & Customization, Human & Organizational
+Factors, Cross-Functional Collaboration, Multi-Objective
+Decision-Making, and Long-Term Effectiveness &
+Continuous Improvement. Each category highlights the
+impact on FMEA’s effectiveness and specifies research
+priorities needed to overcome these challenges. This analysis
+provides a strategic roadmap for advancing FMEA
+methodologies to better align with the complexities of
+modern digitalized industrial systems.
+3.1 Technology integration & automation: Current FMEA
+approaches are limited by reliance on static data and
+insufficient real-time integration with IoT sensor networks,
+restricting continuous risk updates and predictive accuracy.
+Adaptive frameworks leveraging AI/ML for automated
+failure detection, risk assessment, and mitigation planning
+are essential. Additionally, the potential of digital twins and
+simulation tools to enhance virtual testing and real-time risk
+management remains largely untapped.
+
+Despite its advantages, traditional RCM faces limitations
+such as static scheduling, offline data reliance, and
+insufficient consideration of human factors. Addressing
+these gaps requires adaptive, data-driven RCM frameworks
+that leverage real-time IoT monitoring, AI-based
+diagnostics, and Digital Twin simulations to simulate
+failures, optimize plans, and enhance human-in-the-loop
+decision-making (Gomaa, 2025 [6,31]).
+
+3.2 Scalability, customization & integration: Effectively
+applying FMEA to complex, large-scale systems is
+challenged by intricate interdependencies and extensive data
+volumes. Scalable, modular methodologies supported by
+advanced computational tools are necessary. Furthermore,
+the lack of standardized yet customizable frameworks
+tailored to diverse industries and regulatory environments
+limits adoption. FMEA is often siloed, lacking integration
+with complementary risk methods such as Fault Tree
+Analysis (FTA), Root Cause Analysis (RCA), and
+Reliability-Centered Maintenance (RCM). Integrated multimethod frameworks would improve holistic risk evaluation.
+
+Gomaa (2025) [31] outlines how Maintenance 4.0—
+powered by IoT, AI, and Big Data—advances Asset
+Integrity Management (AIM) by enabling predictive
+diagnostics and real-time decision-making. This shift from
+reactive to intelligent maintenance improves RAMS
+outcomes while supporting cost reduction, risk mitigation,
+and sustainable growth. Building on this, Gomaa (2025) [6]
+introduces RCM 4.0, an AI-enabled digital maintenance
+framework that integrates RCM with Lean Six Sigma’s
+DMAIC methodology. RCM 4.0 utilizes IIoT sensors,
+machine learning, and Digital Twins to support dynamic
+failure classification, risk prioritization, and performance
+optimization.
+
+3.3 Human, organizational & sustainability factors: Human
+factors—such as cognitive biases, expertise variability,
+communication challenges, and organizational culture—
+significantly influence FMEA quality but are underexplored.
+Research to enhance team collaboration and knowledge
+management is critical to avoid repeated errors and leverage
+organizational learning. Sustainability and cybersecurity
+considerations are rarely embedded, reducing FMEA’s
+relevance in today’s environmentally conscious and digitally
+secure landscape. Embedding continuous improvement
+mechanisms is vital for long-term effectiveness.
+
+RCM 4.0 marks a transformation toward predictive, selfoptimizing maintenance systems that minimize downtime,
+enhance reliability, and improve lifecycle cost-efficiency.
+Future developments—such as 5G-enabled connectivity,
+autonomous robotic maintenance, blockchain-secured
+maintenance records, and edge AI diagnostics—are
+expected to further advance digital RCM ecosystems,
+enhancing their scalability, security, and intelligence. These
+innovations position RCM as a cornerstone of proactive,
+sustainable maintenance strategies in the Industry 4.0 era.
+
+3.4 Cross-functional collaboration and communication:
+FMEA requires collaboration across multiple departments,
+yet organizational silos and communication gaps often
+hinder this process, resulting in incomplete risk assessments.
+Promoting a collaborative culture supported by clear
+communication protocols and integrated digital platforms
+enables real-time information sharing and collective
+decision-making, enhancing FMEA outcomes.
+
+3. Research Gap Analysis for FMEA Applications
+Failure Mode and Effects Analysis (FMEA) has been a
+cornerstone of risk management and reliability engineering.
+The rise of Industry 4.0 technologies—such as IoT, big data
+analytics, artificial intelligence (AI), machine learning
+(ML), and digital twins—has catalyzed the evolution toward
+FMEA 4.0: a dynamic, real-time, data-driven framework
+that enhances predictive maintenance and operational
+decision-making. Despite these advances, several critical
+research gaps impede the full realization and widespread
+adoption of FMEA 4.0. Table 1 categorizes these gaps into
+six key themes: Technology Integration & Automation,
+
+3.5 Multi-objective decision-making and trade-off analysis:
+Traditional FMEA tends to prioritize risk metrics without
+fully considering trade-offs among safety, cost,
+performance, and environmental impact. This narrow focus
+can lead to suboptimal mitigation decisions. Integrating
+Multi-Criteria Decision-Making (MCDM) techniques
+allows balanced evaluation across objectives, supporting
+24
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+strategic decisions that optimize resource use and align with
+organizational priorities.
+
+In conclusion, addressing these research gaps—across
+digital integration, scalability, human factors, collaboration,
+multi-objective
+optimization,
+and
+continuous
+improvement—is essential to fully realize the potential of
+FMEA 4.0. Bridging these gaps will enable the development
+of intelligent, scalable, and collaborative FMEA systems
+aligned with the principles of Industry 4.0 and sustainable
+manufacturing. This research agenda not only advances
+theoretical understanding but also provides a strategic
+foundation for deploying FMEA as a forward-looking,
+value-generating tool in modern industrial ecosystems.
+
+3.6 Long-term effectiveness and continuous improvement:
+Systematic mechanisms for ongoing evaluation, feedback,
+and refinement are often lacking, causing FMEA outputs to
+become outdated as conditions evolve. Incorporating
+continuous monitoring, performance tracking, and adaptive
+learning within FMEA processes ensures sustained risk
+reduction. Integration with broader asset and quality
+management systems, enhanced by data analytics, enables
+dynamic risk prioritization and validation of corrective
+actions.
+
+Category
+Technology &
+automation
+
+#
+1
+
+2
+
+3
+
+Scalability &
+integration
+
+4
+
+5
+
+6
+
+Human &
+organizational
+factors
+
+7
+
+8
+
+9
+
+10
+
+Collaboration
+
+11
+
+Table 1. Research gaps in FMEA applications
+Description
+Impact
+Limited incorporation of
+Reduces adaptability
+real-time sensor and IoT
+and limits predictive
+data for dynamic risk
+maintenance.
+updates.
+AI/ML
+Lack of automation in
+Increases time
+automation
+failure detection, risk
+consumption and risk
+evaluation, and mitigation
+of human error.
+using AI/ML.
+Digital twins &
+Underuse of digital twins
+Limits predictive
+simulation
+and simulation for
+accuracy and virtual
+dynamic failure prediction
+testing capability.
+and validation.
+Scalability for
+Challenges applying
+Leads to incomplete
+complex
+FMEA to large,
+or superficial risk
+systems
+interconnected, complex
+analysis.
+systems.
+IndustryLack of flexible,
+Hinders adoption and
+specific
+standardized frameworks
+cross-industry best
+standardization
+tailored to diverse
+practice alignment.
+industries.
+Integration with
+FMEA is often used in
+Limits the
+complementary
+isolation without
+comprehensiveness
+tools
+combining with FTA,
+of risk management.
+RCA, or RCM.
+Human &
+Insufficient focus on
+Reduces consistency,
+organizational
+cognitive biases,
+reliability, and
+impact
+communication, and
+accuracy.
+culture in FMEA
+execution.
+Knowledge
+Weak capture, sharing, and
+Causes repeated
+management
+reuse of FMEA insights
+errors and missed
+across teams.
+improvement
+opportunities.
+Environmental
+Sustainability and
+Limits sustainable
+& cybersecurity
+cybersecurity risks are
+practices and exposes
+risks
+often neglected in FMEA. digital vulnerabilities.
+Continuous
+Lack of systematic
+Weakens sustained
+improvement
+evaluation and refinement
+risk reduction and
+of FMEA outcomes.
+organizational
+learning.
+CrossSilos and poor
+Leads to fragmented
+functional
+communication hinder
+risk assessments and
+collaboration
+effective multi-department
+overlooked failure
+FMEA.
+modes.
+Research gap
+Real-time data
+& IoT
+integration
+
+25
+
+Research need
+Develop adaptive FMEA
+frameworks utilizing realtime IoT data.
+Integrate AI/ML to
+enhance accuracy, speed,
+and scalability.
+Incorporate digital twins
+and simulation into FMEA
+processes.
+Develop scalable, modular
+methods supported by
+computational tools.
+Create adaptable
+frameworks balancing
+standardization and
+customization.
+Develop integrated multimethod risk assessment
+frameworks.
+Study human factors and
+develop guidelines for
+effective teamwork.
+
+Implement robust
+knowledge management
+and organizational
+learning.
+Integrate environmental
+and cybersecurity
+considerations into FMEA.
+Embed continuous
+feedback loops and longterm monitoring.
+Foster a collaboration
+culture supported by
+communication protocols
+and shared platforms.
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+Decisionmaking
+
+12
+
+Multi-objective
+trade-offs
+
+Long-term
+effectiveness
+
+13
+
+Sustained
+evaluation
+
+FMEA focuses mainly on
+risk, neglecting trade-offs
+among safety, cost, and
+environment.
+Absence of long-term
+monitoring and updates to
+FMEA results.
+
+This section presents a clear, structured methodology for
+implementing FMEA 4.0 by integrating Industry 4.0
+technologies with established quality management practices.
+By harnessing real-time data, artificial intelligence, and
+automation, this approach significantly improves failure
+detection, risk assessment, and mitigation. The methodology
+is organized into three main components: leveraging
+Industry 4.0 technologies to modernize FMEA, applying a
+DMAIC-driven framework for systematic deployment, and
+defining strategic objectives supported by measurable KPIs
+to ensure sustainable success and continuous improvement.
+
+
+
+
+
+Integrate multi-criteria
+decision-making to
+balance objectives.
+
+Weakens sustained
+risk mitigation and
+organizational
+learning.
+
+Align FMEA with
+continuous improvement
+and asset management
+systems.
+
+continuous improvement. Ultimately, this framework
+positions FMEA 4.0 as a critical enabler of resilience, safety,
+and efficiency in the evolving landscape of smart
+manufacturing.
+
+4. Research Methodology for Effective Implementation
+of FMEA 4.0
+
+
+
+Results in suboptimal
+or unsustainable
+decisions.
+
+4.1 Industry 4.0 technologies for enhanced FMEA: Industry
+4.0 technologies are redefining traditional Failure Mode and
+Effects Analysis (FMEA) into an intelligent, adaptive
+framework—FMEA 4.0—designed to address the
+complexities of modern manufacturing. Moving beyond
+static, periodic reviews, FMEA 4.0 leverages continuous
+real-time data, advanced analytics, and automation to
+proactively detect, predict, and mitigate failures. As
+illustrated in Table 2, this evolution significantly improves
+the accuracy, speed, and effectiveness of risk management,
+enhancing operational reliability and safety within smart
+manufacturing environments.
+
+Leveraging industry 4.0 technologies to modernize
+FMEA: This subsection examines how Industry 4.0
+technologies—such as IoT, AI, digital twins, and big
+data analytics—enhance traditional FMEA processes.
+These tools enable richer data collection, continuous
+real-time monitoring, predictive analytics, and
+automated decision-making, evolving FMEA into an
+intelligent and proactive risk management system
+tailored for smart manufacturing.
+Applying a DMAIC-driven framework for systematic
+deployment of FMEA 4.0: The DMAIC (Define,
+Measure, Analyze, Improve, Control) methodology is
+adapted into a structured, data-driven framework to
+guide the systematic implementation of FMEA 4.0.
+Integrating digital tools and advanced analytics at every
+stage, this approach enhances accuracy in failure
+detection, strengthens risk evaluation, refines mitigation
+strategies, and ensures continuous control—enabling
+resilient and effective risk management in Industry 4.0enabled environments.
+Defining strategic objectives and kpis to sustain fmea
+4.0 success: This section focuses on aligning strategic
+objectives with key organizational goals such as
+improving asset reliability, reducing downtime, and
+enhancing safety. It establishes clear, measurable KPIs
+to enable continuous monitoring and assessment of
+FMEA 4.0 performance, supporting data-driven
+decision-making and promoting ongoing operational
+excellence.
+
+
+
+
+
+
+
+In conclusion, this methodology offers a comprehensive,
+integrated approach to implementing FMEA 4.0 that bridges
+traditional risk analysis with Industry 4.0 innovations. By
+combining advanced digital technologies, a disciplined
+DMAIC framework, and well-defined strategic objectives
+and KPIs, organizations can significantly enhance failure
+detection, optimize maintenance strategies, and drive
+26
+
+Real-time data acquisition and connectivity form the
+foundation of FMEA 4.0. The Internet of Things (IoT)
+enables assets to be equipped with interconnected
+sensors that monitor critical parameters continuously,
+providing detailed data essential for early fault
+detection. Advanced actuators and location tracking
+technologies complement this setup, generating
+comprehensive data streams. Edge computing processes
+information locally to reduce latency, while 5G
+connectivity ensures fast, reliable communication.
+Together, these technologies maintain an up-to-date,
+holistic view of asset health, allowing timely
+identification of potential failure modes.
+Advanced analytics and artificial intelligence (AI)
+unlock the value of this data-rich environment by
+turning raw data into actionable insights. Machine
+learning algorithms analyze historical and real-time data
+to uncover hidden failure patterns and dynamically
+update risk models. Big data analytics integrates diverse
+information—from sensor readings to maintenance
+records—forming a robust empirical basis for assessing
+severity, occurrence, and detection. Predictive analytics
+further empower maintenance teams to forecast failures,
+optimize intervention schedules, reduce downtime, and
+enhance resource allocation.
+Digital twins and immersive simulation technologies
+extend FMEA’s capabilities through virtual
+experimentation and workforce training. Digital twins
+create real-time, high-fidelity virtual replicas of assets
+and processes, allowing engineers to simulate failure
+scenarios and test mitigation strategies without
+disrupting production. Virtual reality (VR) immerses
+operators in realistic failure scenarios, improving their
+preparedness and response effectiveness. These tools
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+
+
+
+
+
+transform FMEA from static documentation into a
+dynamic process of continuous improvement and
+resilience building.
+Automation and autonomous systems enhance fault
+detection and mitigation precision. Robotics and
+automated
+inspection
+technologies
+perform
+maintenance tasks with consistent accuracy, reducing
+human error and fatigue-related variability. Cyberphysical systems (CPS) seamlessly integrate physical
+assets with digital controls, enabling autonomous
+monitoring and adaptive responses to emerging risks.
+Additive manufacturing (3D printing) supports rapid,
+on-demand spare part production, accelerating repairs
+and minimizing downtime. Collectively, these
+technologies ensure that insights from FMEA 4.0
+translate into timely, effective maintenance actions.
+Collaboration, security, and traceability are essential to
+FMEA 4.0’s success. Cloud computing platforms
+provide scalable, centralized data storage and facilitate
+real-time collaboration across teams, ensuring
+
+Group
+Real-time data
+& connectivity
+
+Advanced
+analytics & AI
+
+Digital twins
+& simulation
+
+Automation &
+autonomous
+ops
+
+Collaboration
+& security
+
+consistency and transparency. Robust cybersecurity
+protects data integrity and confidentiality. Blockchain
+technology guarantees immutable, transparent records,
+enhancing traceability and compliance. Augmented
+reality (AR) overlays critical failure data and
+instructions on equipment during maintenance,
+improving communication and knowledge transfer.
+Together, these technologies create a secure,
+collaborative, and auditable environment that
+strengthens organizational trust and alignment.
+In conclusion, the integration of Industry 4.0 technologies
+elevates FMEA into a dynamic, intelligent, and collaborative
+framework that meets the demands of smart manufacturing.
+FMEA 4.0 enables faster, more accurate failure
+identification, predictive risk management, advanced
+training, automated mitigation, and secure collaboration.
+This transformation positions FMEA not just as a
+compliance tool, but as a strategic enabler of operational
+excellence, safety, and sustainability in the digital era.
+
+Table 2. Industry 4.0 technologies driving the enhancement of FMEA
+Technologies
+Contribution
+Enhanced FMEA phases
+IoT
+Enables continuous, real-time asset monitoring
+Failure identification,
+for early fault detection.
+detection
+Advanced sensors
+Captures detailed data to identify subtle
+Failure identification,
+anomalies before failure.
+detection
+Location tracking
+Provides real-time tracking of assets and
+Failure identification,
+personnel to contextualize risks and enable rapid
+risk mitigation
+response.
+Edge computing
+Processes data locally to reduce latency and
+Detection, real-time
+enable fast decision-making.
+evaluation
+5G connectivity
+Offers ultra-reliable, low-latency communication
+Detection, monitoring,
+for seamless system integration.
+documentation
+Artificial intelligence
+Applies pattern recognition and root cause
+Failure identification,
+(AI)
+analysis to optimize risk mitigation.
+root cause analysis
+Machine learning (ML)
+Continuously refines risk models using real-time
+Occurrence, detection,
+data for accurate failure prediction and
+risk prioritization
+prioritization.
+Big data analytics
+Analyzes large datasets to improve severity,
+Severity, occurrence,
+occurrence, and detection assessments.
+detection
+Predictive analytics
+Forecasts failure likelihoods to support proactive
+Occurrence, severity,
+maintenance planning.
+mitigation
+Digital twins
+Creates virtual replicas to simulate faults and
+Failure prediction, risk
+validate mitigation without disrupting operations.
+mitigation
+Virtual reality (VR)
+Offers immersive failure scenario simulations for
+Training, risk response
+enhanced training and response validation.
+validation
+Robotics & automation
+Performs precise inspections and maintenance to Detection, risk mitigation
+reduce human error and improve reliability.
+Cyber-physical systems Integrates physical assets with digital controls for
+Detection, control
+(CPS)
+autonomous fault detection and response.
+planning
+Additive manufacturing
+Enables on-demand spare parts production,
+Risk mitigation,
+minimizing downtime.
+maintenance response
+Cloud computing
+Centralizes scalable data storage, collaboration,
+Documentation,
+and documentation.
+collaboration
+Cybersecurity
+Protects data integrity and confidentiality from
+Control planning,
+cyber threats.
+documentation
+Blockchain
+Provides immutable, transparent records for
+Documentation,
+traceability and compliance.
+traceability
+27
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+Augmented reality (AR)
+
+Enhances communication by overlaying
+actionable failure data on equipment.
+
+
+4.2 Applying a DMAIC-driven framework: The integration
+of Industry 4.0 technologies into the Failure Mode and
+Effects Analysis (FMEA) process transforms traditional risk
+management into a continuous, intelligent, and adaptive
+system suited for smart manufacturing. Embedding
+advanced digital tools within the DMAIC (Define, Measure,
+Analyze, Improve, Control) framework enables FMEA 4.0
+to shift from reactive assessments to a proactive, data-driven
+approach, enhancing failure detection, risk evaluation,
+mitigation, and control with greater accuracy and agility.
+Table 3 demonstrates how Industry 4.0 innovations
+strengthen each DMAIC phase, evolving FMEA into a
+dynamic and resilient risk management framework.
+
+
+
+
+
+
+
+
+Define: Dynamic and Accurate Scope Definition: IoTenabled asset mapping and digital twins provide realtime, precise digital models of critical assets and their
+operational contexts. This allows risk managers to
+define FMEA boundaries flexibly and contextually,
+ensuring assessments remain relevant as systems and
+conditions change.
+Measure:
+Continuous,
+High-Resolution
+Data
+Collection: IoT sensors and smart devices replace
+periodic inspections by continuously capturing detailed
+operational data. This ongoing data stream detects early
+warning signs of failure, supplying enriched inputs for
+deeper analysis.
+
+Phase
+Define
+
+Measure
+
+Analyze
+
+Improve
+
+Control
+
+Risk communication,
+mitigation
+
+Analyze: AI-Driven Predictive Risk Assessment: AI
+and machine learning analyze complex data to uncover
+hidden failure patterns, predict failure probabilities, and
+identify root causes with precision. Digital twins
+simulate scenarios to forecast impacts, shifting FMEA
+towards predictive and prescriptive risk management.
+Improve: Proactive, Automated Mitigation: Predictive
+insights guide optimized maintenance and mitigation
+plans. Automation and robotics enable rapid, precise
+corrective actions, reducing downtime, extending asset
+life, and minimizing human error.
+Control: Real-Time Monitoring and Adaptive
+Response: Dashboards and automated alerts provide
+continuous monitoring of risk indicators and mitigation
+performance. Adaptive control systems react
+immediately to deviations or emerging threats, closing
+the feedback loop to support ongoing improvement and
+resilience.
+
+In summary, by integrating Industry 4.0 technologies with
+the DMAIC process, FMEA 4.0 becomes a smart,
+continuous risk management framework that enhances
+operational resilience, safety, and efficiency—essential
+elements of smart manufacturing. This holistic approach
+facilitates seamless, proactive, and data-driven risk
+management in today’s complex industrial environments.
+
+Table 3. DMAIC-Driven enhancement of FMEA 4.0 enabled by industry 4.0 technologies
+Focus area
+Enhancement of FMEA 4.0
+Industry 4.0 technologies
+Scope &
+Accurately define critical assets and failure modes by
+IoT-enabled asset mapping,
+objectives
+integrating comprehensive digital asset models and real-time
+digital twins
+context awareness.
+Data
+Enable continuous, high-fidelity, and automated data capture
+IoT sensors, embedded smart
+acquisition
+to detect subtle anomalies early, supporting dynamic and realdevices, real-time data
+time risk assessment.
+streaming
+Failure & risk
+Employ AI and machine learning to perform sophisticated
+AI/ML analytics, predictive
+analysis
+pattern recognition, predictive diagnostics, and root cause
+models, digital twin
+analysis for precise risk prioritization.
+simulations
+Mitigation &
+Drive proactive, data-driven maintenance strategies and
+Predictive maintenance
+optimization
+automated corrective actions to minimize downtime and
+platforms, robotics, process
+extend asset lifespan.
+automation
+Continuous
+Sustain improvements through real-time monitoring
+Real-time analytics
+monitoring &
+dashboards, automated alerts, and adaptive control systems
+platforms, automated
+feedback
+that rapidly respond to emerging risks.
+notifications, control systems
+
+4.3 Defining strategic objectives and KPIs: This section
+emphasizes the critical need to align FMEA 4.0
+implementation with key organizational goals, such as
+enhancing asset reliability, minimizing downtime, and
+improving workplace safety. To ensure effective
+deployment and sustained impact, it is essential to establish
+clear, measurable Key Performance Indicators (KPIs) that
+continuously evaluate the performance of FMEA 4.0. These
+KPIs provide actionable insights into failure detection, risk
+assessment, and mitigation, enabling timely identification of
+gaps and data-driven decision-making to support continuous
+improvement. This strategic alignment not only facilitates
+
+successful implementation but also ensures the long-term
+effectiveness of FMEA 4.0, driving operational excellence
+and resilience in smart manufacturing environments. Table
+4 presents a structured framework linking strategic
+objectives, KPIs, and AI-enabled analytics tools to support
+ongoing optimization and sustainability.
+
+
+28
+
+Reliability and Maintenance: This area targets
+maximizing asset reliability while minimizing
+downtime through critical KPIs such as Mean Time
+between Failures (MTBF) and Mean Time to Repair
+(MTTR). MTBF measures the average operational time
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+
+
+
+
+
+between failures, while MTTR captures the average
+repair duration. Additional metrics like Failure Rate and
+Operational Reliability quantify the frequency of
+failures and the ratio of actual to scheduled operating
+time. Overall Equipment Effectiveness (OEE)
+integrates availability, performance, and quality into a
+comprehensive indicator of asset productivity. Industry
+4.0 technologies—such as IoT sensors and AI—enable
+continuous real-time monitoring, predictive analytics,
+and optimized maintenance scheduling, effectively
+reducing unplanned downtime and improving asset
+utilization.
+Safety and Risk Management: The goal in this domain
+is to enhance workplace safety and proactively manage
+risks. The Incident Rate tracks safety incidents relative
+to total work hours, serving as a direct safety
+performance indicator. Prediction Accuracy evaluates
+how precisely AI models forecast failures and hazards,
+essential for prevention. Near-Miss Reporting Rate
+encourages early risk detection by monitoring near-miss
+events. Leveraging digital twins and machine learning
+enhances hazard simulation and fault prediction,
+empowering organizations to prioritize risks effectively
+and prevent accidents before they occur.
+Operational Efficiency and Sustainability: This area
+focuses on optimizing resource utilization and
+minimizing waste to promote sustainability. Resource
+Utilization Rate measures how efficiently resources are
+used relative to availability. Energy Consumption per
+Unit tracks energy usage per production output,
+supporting energy efficiency goals. Scrap Rate
+quantifies defective products discarded, reflecting
+
+Area
+Reliability &
+maintenance
+
+Safety & risk
+management
+
+Operational
+efficiency &
+sustainability
+
+
+
+process quality. AI and IoT technologies enable realtime detection of inefficiencies, optimized resource
+allocation, dynamic energy monitoring, and early
+quality issue identification—collectively driving waste
+reduction and green manufacturing initiatives.
+Data and Decision Support: Accurate data and swift
+decision-making are fundamental to successful FMEA
+4.0 implementation. Data Accuracy ensures the
+reliability of collected data, underpinning sound
+analysis. Decision Cycle Time measures the time from
+issue detection to decision, reflecting organizational
+responsiveness. Predictive Maintenance Coverage
+quantifies the extent of assets under predictive
+monitoring, reducing unexpected failures. Big data
+analytics, AI, and automated monitoring guarantee high
+data quality, rapid diagnostics, and timely decisions—
+enhancing compliance, agility, and continuous
+operational improvement.
+
+In conclusion, the successful implementation and ongoing
+effectiveness of FMEA 4.0 depend on its alignment with
+strategic goals and clear, measurable KPIs. By integrating
+Industry 4.0 technologies—such as IoT, AI, and digital
+twins—traditional failure analysis is transformed into a
+proactive, predictive risk management system. This
+advancement enhances asset reliability, safety, operational
+efficiency, and accelerates data-driven decision-making.
+Embracing this integrated approach enables manufacturers
+to foster continuous improvement, strengthen operational
+resilience, and maintain a sustainable competitive advantage
+in the dynamic environment of smart manufacturing.
+
+Table 4. Strategic objectives & KPIs for FMEA 4.0 implementation
+KPI
+Formula
+Industry 4.0 impact
+Mean time between
+Total operating time ÷ number
+IoT and AI enable continuous
+failures (MTBF)
+of failures
+monitoring and predictive
+maintenance.
+Mean time to repair
+Total downtime ÷ number of
+Advanced analytics optimize
+(MTTR)
+repairs
+repairs and reduce downtime.
+Failure rate
+Number of failures ÷ total
+Real-time data supports proactive
+operating time
+maintenance.
+Operational
+(Actual ÷ scheduled operating
+AI-driven diagnostics maximize
+reliability
+time) × 100%
+uptime.
+Overall equipment
+Availability × performance ×
+Sensors and AI enhance
+effectiveness (OEE)
+quality (%)
+equipment efficiency.
+Enhance
+Incident rate
+Safety incidents ÷ total work
+Digital twins and ML improve
+safety and
+hours
+hazard prediction and risk
+mitigate
+management.
+risks
+Prediction accuracy
+Correct predictions ÷ total
+AI improves incident forecasting.
+predictions × 100%
+Near-miss reporting
+Near-miss reports ÷ total work
+IoT enhances detection and
+rate
+hours
+reporting of near-misses.
+Optimize
+Resource utilization
+Resources used ÷ resources
+AI and IoT optimize resource use
+efficiency
+rate
+available × 100%
+and minimize waste.
+and reduce
+Energy
+Total energy consumed ÷ units
+Smart sensors enable energy
+waste
+consumption per
+produced
+savings.
+unit
+Scrap rate
+Scrap units ÷ total units
+AI quality controls reduce defects
+produced × 100%
+and scrap.
+Objective
+Maximize
+reliability
+and
+minimize
+downtime
+
+29
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+Data &
+decision
+support
+
+Ensure
+data
+integrity
+and
+accelerate
+decisions
+
+Data accuracy
+Decision cycle time
+Predictive
+maintenance
+coverage
+
+Valid data points ÷ total data
+points × 100%
+Time from issue detection to
+decision
+Assets under predictive
+maintenance ÷ total assets ×
+100%
+
+assess its practical effectiveness, scalability, and
+adaptability across various industrial environments.
+Further exploration is encouraged into its integration
+with emerging technologies, including blockchain for
+secure and transparent failure tracking, augmented
+reality (AR) for immersive risk visualization and
+operator support, and edge computing for decentralized,
+real-time analytics and decision-making. Additionally,
+future studies should evaluate the framework’s broader
+impact on key organizational dimensions such as
+resilience, sustainability, and digital maturity. These
+insights will be essential to positioning FMEA 4.0 as a
+strategic enabler of intelligent, adaptive, and futureready operations within Industry 4.0 ecosystems.
+
+5. Conclusion and Future Work
+This study provides a comprehensive review of the evolution
+and industrial applications of Failure Mode and Effects
+Analysis (FMEA), culminating in the introduction of FMEA
+4.0—a predictive, data-driven framework designed for the
+era of Industry 4.0. By integrating advanced technologies
+such as IoT, AI, digital twins, and big data analytics, FMEA
+4.0 transforms traditional risk assessment into a dynamic and
+intelligent process suited to smart manufacturing systems.
+Anchored in the DMAIC methodology, the proposed
+framework enables real-time risk identification, continuous
+asset monitoring, and proactive maintenance. It fosters
+enhanced failure detection, improved risk mitigation, and
+data-driven decision-making. Aligned with strategic
+business goals and supported by measurable KPIs, FMEA
+4.0 promotes improved asset reliability, reduced downtime,
+increased safety, and greater operational efficiency—
+ultimately delivering substantial cost savings and
+competitive advantage.
+
+
+
+
+
+
+
+
+
+
+Big data and AI ensure reliable,
+actionable data.
+Automation accelerates decisionmaking.
+IoT and AI expand predictive
+maintenance coverage.
+
+References
+[1]
+
+Theoretical Implications: This study enriches the
+academic discourse by bridging classical FMEA with
+Industry 4.0 technologies, contributing to the
+conceptualization of digitalized risk management. It
+positions FMEA 4.0 as a cyber-physical framework for
+intelligent reliability engineering, offering a foundation
+for future interdisciplinary research in smart operations
+and quality management.
+Practical Implications: Practically, the framework
+serves as a structured roadmap for implementing digital
+FMEA in complex, data-rich environments. It guides
+practitioners in transitioning from reactive to predictive
+maintenance approaches and supports the integration of
+real-time analytics into existing operational and quality
+management systems.
+Managerial Implications: For managers and decisionmakers, the study highlights the importance of aligning
+digital transformation efforts with risk management
+strategies. FMEA 4.0 provides actionable insights,
+enabling leaders to enhance decision-making, optimize
+resource allocation, and foster a culture of continuous
+improvement driven by real-time data and system
+intelligence.
+Study Limitations: Despite offering a robust conceptual
+foundation, this study is limited by the absence of
+empirical validation. The framework’s applicability
+may vary across industries with differing levels of
+technological maturity, organizational readiness, and
+regulatory contexts.
+Future Work: Future research should aim to empirically
+validate the FMEA 4.0 framework through case studies,
+pilot implementations, and simulation modeling to
+
+[2]
+
+[3]
+
+[4]
+
+[5]
+
+[6]
+
+30
+
+A. H. Gomaa, “Maintenance Process Improvement
+Framework Using Lean Six Sigma: A Case Study,”
+International Journal of Business and Administrative
+Studies, vol. 9, no. 1, pp. 1–25, Mar. 2023, [Online].
+Available:
+https://kkgpublications.com/wpcontent/uploads/2024/03/ijbas.9.10001-1.pdf
+C. G. Machado, M. Winroth, P. Almström, A. Ericson
+Öberg, M. Kurdve, and S. AlMashalah, “Digital
+organisational
+readiness:
+experiences
+from
+manufacturing companies,” Journal of Manufacturing
+Technology Management, vol. 32, no. 9, pp. 167–182,
+Dec. 2021, doi: 10.1108/JMTM-05-2019-0188.
+A. H. Gomaa, “Improving Shutdown Maintenance
+Management Performance Using Lean Six Sigma
+Approach: A Case Study,” International Journal of
+Applied and Physical Sciences, vol. 10, pp. 1–14, Mar.
+2024,
+[Online].
+Available:
+https://kkgpublications.com/wpcontent/uploads/2024/07/ijaps.10.50001.pdf
+A. H. Gomaa, “Enhancing Proactive Maintenance of
+Critical Equipment by Integrating Digital Twins and
+Lean Six Sigma Approaches,” International Journal
+of Modern Studies in Mechanical Engineering
+(IJMSME), vol. 10, no. 1, pp. 20–35, 2024, [Online].
+Available: https://arcjournals.org/pdfs/ijmsme/v10i1/3.pdf
+S. Gandhare, P. Kumar, T. Madankar, D. Singh, and
+J. Bhamu, “Development and validation of a FMEAbased medical equipment maintenance framework
+using Industry 4.0,” International Journal of Quality
+& Reliability Management, Mar. 2025, doi:
+10.1108/IJQRM-07-2024-0246.
+A. H. Gomaa, “RCM 4.0: A Novel Digital Framework
+for Reliability-Centered Maintenance in Smart
+Industrial Systems,” International Journal of
+Emerging Science and Engineering, vol. 13, no. 5, pp.
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+
+[7]
+
+[8]
+
+[9]
+
+[10]
+
+[11]
+
+[12]
+
+[13]
+
+[14]
+
+[15]
+
+[16]
+
+[17]
+
+[18]
+
+32–43,
+Apr.
+2025,
+doi:
+10.35940/ijese.E2595.13050425.
+J. Huang, Z. Li, and H.-C. Liu, “New approach for
+failure mode and effect analysis using linguistic
+distribution assessments and TODIM method,”
+Reliability Engineering & System Safety, vol. 167, pp.
+302–309, Nov. 2017, doi: 10.1016/j.ress.2017.06.014.
+A. S. Afolalu, Y. S. Enesi, O. Kehinde, U. A. Samuel,
+V. I. Ikechi, and R. E. Remilekun, “Failure Mode and
+Effect Analysis a Tool for Reliability Evaluation:
+Review,” European Journal of Engineering Research
+and Science, vol. 3, no. 4, pp. 65–68, Apr. 2018, doi:
+10.24018/ejers.2018.3.4.636.
+J. Qin, Y. Xi, and W. Pedrycz, “Failure mode and
+effects analysis (FMEA) for risk assessment based on
+interval type-2 fuzzy evidential reasoning method,”
+Applied Soft Computing, vol. 89, p. 106134, Apr.
+2020, doi: 10.1016/j.asoc.2020.106134.
+G. Gupta and R. P. Mishra, “A Failure Mode Effect
+and Criticality Analysis of Conventional Milling
+Machine Using Fuzzy Logic: Case Study of RCM: A
+FMECA of Conventional Milling Machine Using
+Fuzzy Logic,” Quality and Reliability Engineering
+International, vol. 33, no. 2, pp. 347–356, Mar. 2017,
+doi: 10.1002/qre.2011.
+C. Spreafico and A. Sutrisno, “Artificial Intelligence
+Assisted Social Failure Mode and Effect Analysis
+(FMEA) for Sustainable Product Design,”
+Sustainability, vol. 15, no. 11, p. 8678, May 2023, doi:
+10.3390/su15118678.
+C. Spreafico, “A Systematic Robust Design Method to
+Reduce Products’ Environmental Impact Variations,”
+Knowledge, vol. 2, no. 2, pp. 266–285, May 2022, doi:
+10.3390/knowledge2020016.
+C. Spreafico, D. Russo, and C. Rizzi, “A state-of-theart review of FMEA/FMECA including patents,”
+Computer Science Review, vol. 25, pp. 19–28, Aug.
+2017, doi: 10.1016/j.cosrev.2017.05.002.
+A. Kar and R. N. Rai, “A modified fuzzy PFMEA
+model for risk-centric Six Sigma assessment under the
+paradigm of Quality 4.0,” International Journal of
+Lean Six Sigma, vol. 16, no. 1, pp. 197–230, Jan. 2025,
+doi: 10.1108/IJLSS-08-2023-0131.
+Ubair. H. Rehmanjan, “Reliability analysis and
+maintenance program for airline seats,” in 2017
+Annual Reliability and Maintainability Symposium
+(RAMS), Orlando, FL, USA: IEEE, 2017, pp. 1–5. doi:
+10.1109/RAM.2017.7889652.
+J. Geisbush and S. T. Ariaratnam, “Reliability
+centered maintenance (RCM): literature review of
+current industry state of practice,” Journal of Quality
+in Maintenance Engineering, vol. 29, no. 2, pp. 313–
+337, Apr. 2023, doi: 10.1108/JQME-02-2021-0018.
+S. Gupta and P. Sharma, “Study of Maintenance of
+Medical Equipment and Scope of AI in Enhancing
+Efficiecy of Current System,” Global Journal of
+Enterprise Information System, vol. 12, no. 4, pp. 78–
+86,
+2020,
+[Online].
+Available:
+https://gjeis.com/index.php/GJEIS/article/view/603
+I. H. Afefy, A. Mohib, A. M. El-kamash, and M. A.
+Mahmoud, “A New Framework of Reliability
+
+[19]
+
+[20]
+
+[21]
+
+[22]
+
+[23]
+
+[24]
+
+[25]
+
+[26]
+
+[27]
+31
+
+Centered Maintenance ,” Jordan Journal of
+Mechanical and Industrial Engineering, vol. 13, no.
+3, pp. 175–190, Oct. 2019, [Online]. Available:
+https://jjmie.hu.edu.jo/vol-13-3/88-19-01.pdf
+O. A. Omoya, K. A. Papadopoulou, and E. Lou,
+“Reliability engineering application to pipeline
+design,” International Journal of Quality &
+Reliability Management, vol. 36, no. 9, pp. 1644–
+1662, Oct. 2019, doi: 10.1108/IJQRM-09-2017-0197.
+D. Piasson, A. A. P. Bíscaro, F. B. Leão, and J. R. S.
+Mantovani, “A new approach for reliability-centered
+maintenance programs in electric power distribution
+systems based on a multiobjective genetic algorithm,”
+Electric Power Systems Research, vol. 137, pp. 41–
+50, Aug. 2016, doi: 10.1016/j.epsr.2016.03.040.
+S. H. Hoseinie and U. Kumar, “Reliability Centered
+Maintenance (RCM) for Automated Mining
+Machinery - VINNOVA SIP-STRIM Project Report,”
+Luleå University of Technology Division of
+Operation and Maintenance Engineering, Mar. 2016.
+[Online].
+Available:
+https://www.scribd.com/document/367273592/Rcmfor-Automated-Mining-Machinery
+I. Emovon, R. A. Norman, A. J. Murphy, and M. O.
+Okwu, “Application of Waspas In Enhancing
+Reliability Centered Maintenance For Ship System
+Maintenance,” Journal of Engineering and
+Technology (JET), vol. 9, no. 1, pp. 35–53, Jun. 2018,
+Accessed: Jul. 23, 2025. [Online]. Available:
+https://jet.utem.edu.my/jet/article/view/3021
+Amtrak, “Amtrak Five-Year Asset Line Plans Fiscal
+Years 2020–2025 (Base + Five-Year Strategic Plan).”
+National
+Railroad
+Passenger
+Corporation,
+Washington,
+DC.
+[Online].
+Available:
+https://www.amtrak.com/content/dam/projects/dotco
+m/english/public/documents/corporate/businessplann
+ing/Amtrak-Asset-Line-Plans-FY21-25.pdf
+J. Geisbush, “Performing a Reliability Centered
+Maintenance Workshop on the World’s Largest
+Prestressed Concrete Pipes,” in Pipelines 2020, San
+Antonio, Texas (Conference Held Virtually):
+American Society of Civil Engineers, Aug. 2020, pp.
+343–351. doi: 10.1061/9780784483206.039.
+G. Liu, L. Liu, Q. Li, Q. Wang, and H. Zhang,
+“Reliability-Centered
+Maintenance
+Scheduling
+Optimization for High-Speed Railway Facilities with
+Multi-level Tasks,” in The Proceedings of the 11th
+International
+Conference
+on
+Traffic
+and
+Transportation Studies, vol. 616, L. Meng, Y. Qian,
+Y. Bai, B. Lv, and Y. Tang, Eds., Singapore: Springer
+Nature Singapore, 2025, pp. 51–60. doi: 10.1007/978981-97-9644-1_6.
+A. Ali Ahmed Qaid, R. Ahmad, S. A. Mustafa, and B.
+A. Mohammed, “A systematic reliability-centred
+maintenance framework with fuzzy computational
+integration – a case study of manufacturing process
+machinery,” Journal of Quality in Maintenance
+Engineering, vol. 30, no. 2, pp. 456–492, May 2024,
+doi: 10.1108/JQME-04-2022-0021.
+A. Asghari and S. M. J. afari, “Investigating the
+Influence of Reliability Centered Maintenance on
+
+International Journal of Darshan Institute on Engineering Research and Emerging Technologies
+Vol. 14, No. 2, 2025, pp. 21-32
+Water Treatment Plant Pumps (Case Study: Guilan
+Water Treatment Plant),” Water and Wastewater, vol.
+35, no. 1, pp. 86–102, Apr. 2024, doi:
+10.22093/wwj.2024.444001.3400.
+[28] S. Cahyati, S. D. Puspa, R. Himawan, N. R. Agtirey,
+and J. A. Leo, “Optimization of preventive
+maintenance on critical machines at the Sabiz 1 plant
+using Reliability-Centered Maintenance method,”
+Sinergi, vol. 28, no. 2, p. 355, May 2024, doi:
+10.22441/sinergi.2024.2.015.
+[29] V. Introna and A. Santolamazza, “Strategic
+maintenance planning in the digital era: a hybrid
+approach merging Reliability-Centered Maintenance
+with digitalization opportunities,” Operations
+Management Research, vol. 17, no. 4, pp. 1397–1420,
+
+Dec. 2024, doi: 10.1007/s12063-024-00496-y.
+[30] B. A. D. Resende, F. G. Dedini, J. J. Eckert, T. F. A.
+C. Sigahi, J. D. S. Pinto, and R. Anholon, “Proposal
+of a facilitating methodology for fuzzy FMEA
+implementation with application in process risk
+analysis in the aeronautical sector,” International
+Journal of Quality & Reliability Management, vol. 41,
+no. 4, pp. 1063–1088, Mar. 2024, doi:
+10.1108/IJQRM-07-2023-0237.
+[31] A. H. Gomaa, “Maintenance 4.0: Optimizing Asset
+Integrity and Reliability in Modern Manufacturing,”
+International Journal of Inventive Engineering and
+Sciences, vol. 12, no. 2, pp. 18–26, Feb. 2025, doi:
+10.35940/ijies.B1098.12020225.
+
+Biographical notes
+
+Prof. Dr. Attia Gomaa earned his Ph.D. in Industrial Engineering from Cairo University, Egypt, in 1994. He is a professor in the Mechanical
+Engineering Department at Shoubra Faculty of Engineering, Banha University, and a consultant at ESS Engineering Services, American
+University in Cairo. With over 80 published research papers, his expertise includes Total Quality Management, Lean Six Sigma, supply chain
+management, maintenance management, and project management, contributing to industrial innovation and digital transformation.
+
+32
+
+

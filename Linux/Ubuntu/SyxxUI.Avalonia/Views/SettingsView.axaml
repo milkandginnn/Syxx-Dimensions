@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <StackPanel Spacing="20">
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="PREFERENCES" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="Settings" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
+    </StackPanel>
+
+    <!-- Encrypted DNS -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="ENCRYPTED DNS" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBlock Text="Send every DNS query over an encrypted transport (DoH/DoT). Configures the system directly — no profile to install."
+                   FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <ToggleSwitch Content="Encrypt all DNS queries" IsChecked="{Binding EncryptEnabled}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="Resolver:" VerticalAlignment="Center" Foreground="{StaticResource SyxTextBrush}" />
+          <ComboBox ItemsSource="{Binding Resolvers}" SelectedIndex="{Binding ResolverIndex}" MinWidth="220" />
+        </StackPanel>
+        <ToggleSwitch Content="Use DoT (TLS) instead of DoH" IsChecked="{Binding UseDot}" />
+        <TextBlock Text="{Binding EncryptState}" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBlock Text="Syxx keeps its own audit lookups in cleartext so it can still detect tampering; only your system's ordinary DNS is encrypted here."
+                   FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Updates (Phase 3.2) — authenticated UpdateService; same copy as Windows UpdatePanel -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="UPDATES" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="Current version" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="{Binding Update.VersionText}" FontSize="13" FontWeight="SemiBold"
+                     Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="Last checked" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <TextBlock Text="{Binding Update.LastCheckedText}" FontSize="13" FontWeight="SemiBold"
+                     Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+        <TextBlock Text="{Binding Update.StatusText}"
+                   FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Check for Updates"
+                  Command="{Binding Update.CheckCommand}"
+                  IsEnabled="{Binding !Update.IsBusy}" />
+          <Button Content="Download Update"
+                  Command="{Binding Update.DownloadCommand}"
+                  IsVisible="{Binding Update.DownloadVisible}"
+                  IsEnabled="{Binding !Update.IsBusy}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Privacy -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="PRIVACY" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <ToggleSwitch Content="Send anonymous usage ping (platform + version, no identifier)" IsChecked="{Binding TelemetryEnabled}" />
+        <TextBlock Text="Syxx contacts syxx.app once per launch to check for news and updates. The ping carries only your OS and app version — never your identity, resolvers, or the names you look up."
+                   FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Notifications -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="NOTIFICATIONS" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <ToggleSwitch Content="Notify me when the network's trust changes" IsChecked="{Binding NotificationsEnabled}" />
+        <TextBlock Text="Preference saved. Delivery arrives with continuous monitoring; this switch has no effect until then."
+                   FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource SyxOrangeBrush}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Data -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="DATA" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBlock Text="Everything Syxx stores lives under your local profile and never leaves your machine."
+                   FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <Button Content="Remove stored data" Command="{Binding RemoveDataCommand}" />
+        <TextBlock Text="{Binding DataNote}" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+
+    <TextBlock Text="{Binding SaveNote}" FontSize="12" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+
+  </StackPanel>
+</UserControl>

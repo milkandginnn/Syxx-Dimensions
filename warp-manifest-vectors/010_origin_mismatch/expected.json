@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "originMismatch",
+  "htmlState": "notEvaluated",
+  "manifestState": "parsed",
+  "notes": "origin_url does not equal the origin the client requested.",
+  "signatureState": "verified"
+}

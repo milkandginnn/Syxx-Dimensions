@@ -1,0 +1,864 @@
+openapi: "3.0.3"
+info:
+  title: Syxx Server API
+  version: "1.0.0"
+  description: |
+    DNS investigation and tampering detection API. Provides authenticated
+    endpoints for DNS resolution, authoritative ground-truth lookups,
+    leak detection, content diffing, and passive DNS history.
+
+    ## Authentication
+    Endpoints marked `paid` require a valid Syxx Pro license. Authenticate via:
+    - `X-Syxx-API-Key: syxx_...` header (API key)
+    - `Authorization: Bearer <session-token>` header (session token)
+    - `X-Syxx-License: <license-key>` header (license key)
+
+    Unauthenticated requests to paid endpoints return `402 Payment Required`.
+
+    ## API Versioning
+    All endpoints under `/api/` are also available at `/api/v1/` for version pinning.
+
+    ## Pagination
+    List endpoints support `?page=N&limit=M` query parameters. Response includes
+    a `pagination` object with `page`, `limit`, `total`, and `hasMore`.
+
+servers:
+  - url: https://syxx.app
+    description: Production server
+
+tags:
+  - name: Public
+    description: Free-tier endpoints (rate-limited per IP)
+  - name: Paid
+    description: Pro-tier endpoints (entitlement required)
+  - name: Auth
+    description: Authentication and session management
+  - name: Webhooks
+    description: Stripe and Keygen webhook receivers
+
+paths:
+  # ── Public endpoints ──
+  /api/stats:
+    get:
+      tags: [Public]
+      summary: Get passive DNS record count
+      responses:
+        "200":
+          description: Passive DNS stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /api/lookup:
+    get:
+      tags: [Public]
+      summary: DNS lookup via a public resolver
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, default: "A", enum: ["A","AAAA","NS","CNAME","SOA","MX","TXT","CAA","PTR","SRV"] }
+        - name: server
+          in: query
+          schema: { type: string, description: "Resolver IP (public IPs only)" }
+      responses:
+        "200":
+          description: DNS lookup result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsLookup"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "429":
+          $ref: "#/components/responses/Error429"
+        "502":
+          $ref: "#/components/responses/Error502"
+
+  /api/reverse-dns:
+    get:
+      tags: [Public]
+      summary: Reverse DNS (PTR) lookup
+      parameters:
+        - name: ip
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Reverse DNS result
+        "400":
+          $ref: "#/components/responses/Error400"
+
+  /api/benchmark:
+    get:
+      tags: [Public]
+      summary: Benchmark DNS resolution across public resolvers
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, default: "A" }
+        - name: rounds
+          in: query
+          schema: { type: integer, default: 3, minimum: 1, maximum: 10 }
+      responses:
+        "200":
+          description: Benchmark results
+
+  /api/whois:
+    get:
+      tags: [Public]
+      summary: WHOIS/RDAP domain lookup
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WHOIS/RDAP data
+
+  /api/propagation:
+    get:
+      tags: [Public]
+      summary: Check DNS propagation across resolvers
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, default: "A" }
+      responses:
+        "200":
+          description: Propagation consensus
+
+  /api/email-auth:
+    get:
+      tags: [Public]
+      summary: Check SPF/DMARC/DKIM email authentication
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: selector
+          in: query
+          schema: { type: string, description: "DKIM selector" }
+      responses:
+        "200":
+          description: Email auth check results
+
+  /api/subdomains:
+    get:
+      tags: [Public]
+      summary: Enumerate subdomains via Certificate Transparency logs
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Subdomain enumeration results
+
+  /api/firewall-test:
+    get:
+      tags: [Public]
+      summary: Detect DNS firewall/filtering
+      parameters:
+        - name: resolver
+          in: query
+          schema: { type: string, description: "Resolver IP (defaults to client IP)" }
+      responses:
+        "200":
+          description: Firewall test results
+
+  /api/dnssec:
+    get:
+      tags: [Public]
+      summary: DNSSEC validation for a domain
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: DNSSEC validation result
+
+  # ── Auth endpoints ──
+  /api/auth/activate:
+    post:
+      tags: [Auth]
+      summary: Activate a license key and obtain a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [licenseKey]
+              properties:
+                licenseKey:
+                  type: string
+                  description: "Syxx Pro license key"
+      responses:
+        "200":
+          description: Session token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "402":
+          $ref: "#/components/responses/Error402"
+        "503":
+          $ref: "#/components/responses/Error503"
+
+  /api/trial/anchor:
+    post:
+      tags: [Auth]
+      summary: Start a trial period
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fingerprint]
+              properties:
+                fingerprint:
+                  type: string
+      responses:
+        "200":
+          description: Trial anchored
+
+  /api/pubkey:
+    get:
+      tags: [Auth]
+      summary: Get the collector's Ed25519 public key
+      description: Used by clients to verify leak attestation signatures.
+      responses:
+        "200":
+          description: Public key and key ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicKey"
+
+  # ── Paid endpoints ──
+  /api/investigate:
+    get:
+      tags: [Paid]
+      summary: Multi-vantage DNS investigation
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Investigation results with consensus conclusion
+        "402":
+          $ref: "#/components/responses/Error402"
+
+  /api/authoritative:
+    get:
+      tags: [Paid]
+      summary: Authoritative DNS ground truth (root-to-leaf walk)
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, default: "A", enum: ["A", "AAAA"] }
+      responses:
+        "200":
+          description: Authoritative answer with delegation trace
+
+  /api/diff:
+    post:
+      tags: [Paid]
+      summary: Compare local DNS/content against authoritative ground truth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiffRequest"
+      responses:
+        "200":
+          description: Diff conclusion (clean/tampered/inconclusive)
+        "402":
+          $ref: "#/components/responses/Error402"
+
+  /api/trace:
+    get:
+      tags: [Paid]
+      summary: DNS delegation trace
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, default: "A", enum: ["A", "AAAA", "NS"] }
+      responses:
+        "200":
+          description: Delegation trace
+
+  /api/baseline:
+    get:
+      tags: [Paid]
+      summary: Passive DNS baseline and drift analysis
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, description: "Record type filter" }
+      responses:
+        "200":
+          description: Baseline with drift signal
+
+  /api/exposure:
+    get:
+      tags: [Paid]
+      summary: Check DNS exposure/resolver diversity
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Exposure analysis
+
+  /api/passive-dns:
+    get:
+      tags: [Paid]
+      summary: Query passive DNS history
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+      responses:
+        "200":
+          description: Passive DNS records with pagination
+        "402":
+          $ref: "#/components/responses/Error402"
+
+  /api/leak/token:
+    post:
+      tags: [Paid]
+      summary: Issue a one-time leak detection token
+      parameters:
+        - name: zone
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Leak token with subdomain
+        "402":
+          $ref: "#/components/responses/Error402"
+
+  /api/leak/verify:
+    get:
+      tags: [Paid]
+      summary: Verify leak observations and get signed attestation
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Signed leak attestation
+        "404":
+          description: Unknown or expired token
+
+  /api/leaktest/start:
+    post:
+      tags: [Paid]
+      summary: Start a web-based leak test
+      responses:
+        "200":
+          description: Leak test token for web
+
+  /api/leaktest/check:
+    get:
+      tags: [Paid]
+      summary: Check leak test results
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Leak test results
+
+  /api/keys:
+    get:
+      tags: [Paid]
+      summary: List API keys
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+      responses:
+        "200":
+          description: API keys with pagination
+    post:
+      tags: [Paid]
+      summary: Create a new API key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  maxLength: 64
+                ttlDays:
+                  type: integer
+                  default: 90
+                  maximum: 365
+      responses:
+        "201":
+          description: API key created
+
+  /api/keys/{id}:
+    delete:
+      tags: [Paid]
+      summary: Revoke an API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Key revoked
+
+  /api/monitors:
+    get:
+      tags: [Paid]
+      summary: List monitoring configurations
+      responses:
+        "200":
+          description: Monitor list
+
+  /api/monitors/{id}:
+    delete:
+      tags: [Paid]
+      summary: Delete a monitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Monitor deleted
+
+  /api/bulk-investigate:
+    post:
+      tags: [Paid]
+      summary: Bulk domain investigation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domains]
+              properties:
+                domains:
+                  type: array
+                  items: { type: string }
+                  maxItems: 50
+      responses:
+        "200":
+          description: Bulk investigation results
+
+  /api/lookalike:
+    post:
+      tags: [Paid]
+      summary: Check for lookalike/typosquatting domains
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain]
+              properties:
+                domain:
+                  type: string
+      responses:
+        "200":
+          description: Lookalike analysis
+
+  /warp:
+    get:
+      tags: [Paid]
+      deprecated: true
+      summary: "DEPRECATED — unsigned structural baseline (use /api/warp/manifest)"
+      description: >
+        DEPRECATED. Returns the server's unsigned structural baseline for a page. Superseded by
+        the signed manifest at /api/warp/manifest (WARP_MANIFEST_V1): a declared-but-unsigned hash
+        is forgeable by a MITM into a false match. Retained one release because the scheduler
+        baseline job and the /api/diff content half still consume this shape.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+      responses:
+        "200":
+          description: Fetched content
+
+  /api/warp/manifest:
+    get:
+      tags: [Paid]
+      summary: WARP_MANIFEST_V1 signed content-integrity manifest (server clean vantage)
+      description: >
+        The server is the ONLY parser: it fetches the initial-load HTML, resolves the transitive
+        static-asset closure (HTML + JS via <script src>/<link rel=modulepreload>/<link
+        rel=preload as=script> + CSS via <link rel=stylesheet> + CSS @import, deduped and
+        depth-bounded), and hashes each asset's RAW (envelope-decoded, incl. brotli) bytes per the
+        frozen WARP_MANIFEST_V1 contract (docs/warp-manifest-v1-spec.md §3). The inner manifest is
+        serialized ONCE and Ed25519-signed with the collector key over the EXACT transmitted bytes
+        (no JCS, no re-serialization). Initial-load only — no JS execution — a declared boundary.
+        An asset that will not fetch is recorded { fetch_status: "fetch_failed" } (never dropped),
+        forcing the client to INCONCLUSIVE rather than a clean pass. Optional nonce (<=64 chars of
+        [A-Za-z0-9_-]) is echoed inside the signed bytes for replay binding.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+        - name: nonce
+          in: query
+          required: false
+          schema: { type: string, pattern: "^[A-Za-z0-9_-]{1,64}$" }
+      responses:
+        "200":
+          description: >
+            Signed envelope: { manifest_b64 (base64 of the exact signed inner-manifest bytes),
+            signature_ed25519 (base64 detached Ed25519 over the base64-decoded manifest_b64),
+            key_id (lowercase hex of the raw 32-byte collector public key — the client's pinned-key
+            label; verify against /api/pubkey) }. The inner manifest carries warp_manifest_version,
+            origin_url, final_url, html_sha256, asset_classes_in_scope ["HTML","JS","CSS","CSS_IMPORT"],
+            assets[], timestamp (integer ms), freshness_seconds, redirect_policy, allowed_redirects, nonce.
+        "400":
+          description: Missing url, malformed nonce, or target blocked by SSRF policy.
+        "502":
+          description: Manifest fetch failed, or inconclusive (initial-load HTML unavailable).
+
+  /api/warp/raw:
+    get:
+      tags: [Paid]
+      summary: Server clean-path copy of one resource (diff-overlay primitive)
+      description: >
+        Returns the server's clean-path copy of a URL so the client can diff it against what its
+        own network delivered. Default mode returns a JSON envelope with the utf-8-decoded text
+        (binary content is refused). WARP_MANIFEST_V1 §9 diff overlay: pass raw=1 to receive the
+        envelope-decoded RAW bytes as application/octet-stream with an X-Syxx-Warp-Sha256 header
+        (and X-Syxx-Warp-Final-Url), bypassing the utf-8-replace path so the bytes are byte-exact
+        for a mismatch overlay. This returns ONE vantage's bytes and never a result about the
+        user's connection.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+        - name: raw
+          in: query
+          required: false
+          description: "raw=1 → application/octet-stream of the envelope-decoded RAW bytes + X-Syxx-Warp-Sha256."
+          schema: { type: string, enum: ["1", "true", "yes", "on"] }
+      responses:
+        "200":
+          description: JSON clean-path copy, or (raw=1) application/octet-stream RAW bytes + X-Syxx-Warp-Sha256.
+        "400":
+          description: Missing url, or target blocked by SSRF policy.
+        "415":
+          description: Content is not text and cannot be diffed (default mode only).
+        "502":
+          description: Fetch failed.
+
+  /api/warp/assembly:
+    get:
+      tags: [Paid]
+      deprecated: true
+      summary: "DEPRECATED/GONE — WARP_ASSEMBLY_V1 retired (use /api/warp/manifest)"
+      description: >
+        DEPRECATED. The WARP_ASSEMBLY_V1 raw-concatenation assembler is retired: a parity+security
+        audit proved three hand-written parsers could not hold byte-parity and that the
+        raw-concatenation response was unsigned (a MITM could forge the declared hash into a false
+        match). Superseded by the signed manifest at /api/warp/manifest (WARP_MANIFEST_V1). The
+        assembler machinery is deleted; this stub remains for one deprecation release and returns
+        410 Gone with a migration pointer — it never fabricates a blob.
+      parameters:
+        - name: url
+          in: query
+          required: false
+          schema: { type: string, format: uri }
+      responses:
+        "410":
+          description: >
+            Gone. { error, successor: "/api/warp/manifest", deprecated: true }.
+
+  /fetch_script:
+    get:
+      tags: [Paid]
+      summary: Fetch and parse scripts from a URL
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+      responses:
+        "200":
+          description: Script inventory
+
+  /dns-query:
+    get:
+      tags: [Paid]
+      summary: DNS-over-HTTPS forwarder (GET)
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        "200":
+          description: DNS response
+    post:
+      tags: [Paid]
+      summary: DNS-over-HTTPS forwarder (POST, wire format)
+      responses:
+        "200":
+          description: DNS response
+
+  # ── Webhooks ──
+  /api/webhooks/stripe:
+    post:
+      tags: [Webhooks]
+      summary: Stripe webhook receiver
+      description: Signature-verified. Triggers license fulfillment.
+      responses:
+        "200":
+          description: Event processed
+
+  /api/webhooks/keygen:
+    post:
+      tags: [Webhooks]
+      summary: Keygen license webhook receiver
+      responses:
+        "200":
+          description: Event processed
+
+  /api/checkout:
+    get:
+      tags: [Auth]
+      summary: Create a Stripe Checkout session
+      parameters:
+        - name: price
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "303":
+          description: Redirect to Stripe Checkout
+
+  # ── Health ──
+  /healthz:
+    get:
+      tags: [Public]
+      summary: Liveness check
+      responses:
+        "200":
+          description: OK
+
+  /readyz:
+    get:
+      tags: [Public]
+      summary: Readiness check
+      responses:
+        "200":
+          description: Ready
+
+  /metrics:
+    get:
+      tags: [Public]
+      summary: Prometheus metrics
+      responses:
+        "200":
+          description: Metrics in Prometheus format
+
+components:
+  schemas:
+    Stats:
+      type: object
+      properties:
+        passiveRecords:
+          type: integer
+
+    DnsLookup:
+      type: object
+      properties:
+        domain:
+          type: string
+        type:
+          type: string
+        server:
+          type: string
+        rcode:
+          type: integer
+        rcodeName:
+          type: string
+        ad:
+          type: boolean
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/DnsRecord"
+        truncated:
+          type: boolean
+
+    DnsRecord:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+
+    Session:
+      type: object
+      properties:
+        session:
+          type: string
+        expiresAt:
+          type: integer
+        plan:
+          type: string
+
+    PublicKey:
+      type: object
+      properties:
+        publicKey:
+          type: string
+          description: "Base64-encoded Ed25519 public key"
+        keyId:
+          type: string
+          description: "Truncated key identifier"
+
+    DiffRequest:
+      type: object
+      required: [domain]
+      properties:
+        domain:
+          type: string
+        type:
+          type: string
+          enum: ["A", "AAAA"]
+          default: "A"
+        localAnswers:
+          type: array
+          items: { type: string }
+          maxItems: 64
+        url:
+          type: string
+          format: uri
+        localHTML:
+          type: string
+          maxLength: 500000
+        localScripts:
+          type: array
+          items: { type: string }
+        localInlineScriptHashes:
+          type: array
+          items: { type: string }
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    Error400:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Error402:
+      description: Payment required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Error429:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Error502:
+      description: Upstream error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Error503:
+      description: Service unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

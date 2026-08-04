@@ -1,0 +1,1705 @@
+# Source: s41597-026-06738-x.pdf
+# Title (best guess): A dataset collected in real-world
+# Pages: 12 · Words: 7060
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+www.nature.com/scientificdata
+
+A dataset collected in real-world
+Data Descriptor industrial control systems for
+network attack detection
+OPEN
+
+Xun Zhou 1, Zihao Cheng1, Chenyu Wang1, Shen Wang1, Chengxi Tao1, Zhengyan Zhou2,
+Xiang Chen2, Jiayu Luo3, Di Wang1 & Haifeng Zhou1 ✉
+In the context of Industry 4.0, Industrial Control Systems (ICSs) are undergoing a significant transition
+from physical isolation to partial openness. While this shift enhances operational efficiency and
+integration, it also exposes ICSs to increasing network attacks. Effective intrusion detection methods
+rely on high-quality ICS datasets, yet existing options remain limited in scope, diversity, and realism.
+To address this gap, we introduce ICS-NAD, a dataset collected in real-world ICS scenarios with three
+well-known ICS brands. It contains two attack traffic sample patterns and covers 20 common ICS
+attack types. Through feature extraction and labeling, the ICS-NAD dataset provides 60 features with
+complete labels. We validate its utility using 10 machine learning and deep learning classification
+models. The dataset comprises 245.96 GB data files, including raw ICS network traffic (in PCAP format)
+and extracted features with labels (in CSV format). It is publicly available on the website to support ICS
+network attack detection research in academic and engineering contexts.
+
+Background & Summary
+
+Industry 4.0 advancements are driving traditionally air-gapped Industrial Control Systems (ICSs) toward
+increased connectivity. This shift, while essential for enabling smart manufacturing and maintenance through
+technologies like AI, big data analytics, and digital twins1,2, unavoidably exposes inherent ICS vulnerabilities
+to malicious attackers. Consequently, ICSs have emerged as a prime target for escalating cyberattacks3, facing
+ever-growing threats and damage. This trend is underscored by many serious ICS attack incidents worldwide in
+recent years4–6, causing significant economic and social losses.
+To effectively address this challenge, the availability of suitable ICS datasets is vital. Many critical applications
+designed to defend against ICS network attacks, e.g., AI-driven anomaly detection, signature-based analysis, and
+behavioral monitoring, heavily rely on such datasets for both training robust detection models and rigorously
+evaluating their performance, thereby accurately identifying ICS network threats within real-world operational
+environment7.
+
+Related work. However, existing ICS datasets suffer from three primary limitations, restricting their wide
+usage. We categorize 28 start-of-the-art datasets into three groups based on the limitations. (L1) Datasets with
+small testbeds or simulated network traffic. (L2) Datasets with non-ICS-specific or limited attacks. (L3) Datasets
+with insufficient features or imperfect labels. We list them in Table 1 based on the network scenarios and publication years of these datasets.
+Datasets with small testbeds or simulated network traffic. The ISCX dataset8 has virtual network traffic created
+by agents that follow predefined network states. The New Gas Pipeline dataset and the Water Storage dataset9 are gathered from two laboratory-scale ICSs and include three attacks. The Battle of the Attack Detection
+Algorithms (BATADAL) dataset10 only has simulated records and cannot reflect real network traffic. On the
+website of iTrust11, three pertinent datasets are available, i.e., the Secure Water Treatment (SWaT) dataset, the
+Water Distribution (WaDi) dataset, and the Electric Power and Intelligent Control (EPIC) dataset. Their testbeds
+are well-organized but small. The ICS-flow dataset12 includes four types of network attacks and an open-source
+1
+
+College of Control Science and Engineering, Zhejiang University, Hangzhou, 310027, Zhejiang, China. 2College of
+Computer Science and Technology, Zhejiang University, Hangzhou, 310027, Zhejiang, China. 3Polytechnic Institute
+of Zhejiang University, Zhejiang University, Hangzhou, 310027, Zhejiang, China. ✉e-mail: zhouhaifeng@zju.edu.cn
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+1
+
+www.nature.com/scientificdata
+
+www.nature.com/scientificdata/
+Dataset
+
+Year
+
+Scenario
+
+Attack type
+
+Major limitation
+
+DARPA14
+
+1998
+
+Traditional network
+
+Reconnaissance, DoS
+
+L2
+
+KDD Cup'9915
+
+1999
+
+Traditional network
+
+Reconnaissance, DoS
+
+L2
+
+Kyoto 200626
+
+2006
+
+Traditional network
+
+Reconnaissance
+
+L3
+
+Twente27
+
+2009
+
+Traditional network
+
+Reconnaissance, DoS
+
+L3
+
+ICSX8
+
+2012
+
+Traditional network
+
+DoS, DDoS, etc.
+
+L1
+
+CAIDA and MAWI16
+
+—
+
+Traditional network
+
+DoS, DDoS, etc.
+
+L2
+
+CTU-1317
+
+2013
+
+Traditional network
+
+DDoS
+
+L2
+
+DDoS201618
+
+2016
+
+Traditional network
+
+DDoS
+
+L2
+
+UGR'1628
+
+2016
+
+Traditional network
+
+Reconnaissance, DoS, etc.
+
+L3
+
+CICDoS20
+
+2017
+
+Traditional network
+
+DoS
+
+L2
+
+CICIDS201721
+
+2017
+
+Traditional network
+
+DoS, DDoS, etc.
+
+L2
+
+CICDDoS201922
+
+2019
+
+Traditional network
+
+DDoS
+
+L2
+
+CIDDS-00130
+
+2019
+
+Traditional network
+
+Reconnaissance, DoS, etc.
+
+L3
+
+WUSTL-IIoT23
+
+2019
+
+Traditional network
+
+DoS, FDI
+
+L2
+
+TON-IoT24
+
+2020
+
+Traditional network
+
+DoS, DDoS, etc.
+
+L2
+
+Edge-IIoTSet25
+
+2022
+
+Traditional network
+
+DoS, MitM, etc.
+
+L2
+
+X-IIoTID32
+
+2022
+
+Traditional network
+
+Reconnaissance, DoS, etc.
+
+L3
+
+Gas Pipeline9
+
+2014
+
+ICS network
+
+Reconnaissance, FDI, etc.
+
+L1
+
+Water Storage9
+
+2014
+
+ICS network
+
+Reconnaissance, FDI, etc.
+
+L1
+
+UNSW-NB1519
+
+2015
+
+ICS network
+
+Reconnaissance, DoS, etc.
+
+L2
+
+SWaT11
+
+2016
+
+ICS network
+
+FDI
+
+L1
+
+WaDi11
+
+2017
+
+ICS network
+
+FDI
+
+L1
+
+EPIC11
+
+2019
+
+ICS network
+
+FDI
+
+L1
+
+BATADAL10
+
+2018
+
+ICS network
+
+FDI
+
+L1
+
+Electra33
+
+2019
+
+ICS network
+
+Reconnaissance, FDI, etc.
+
+L3
+
+WDT31
+
+2021
+
+ICS network
+
+Reconnaissance, DoS, MitM, etc.
+
+L3
+
+ICS-Flow12
+
+2023
+
+ICS network
+
+Reconnaissance, DDoS, FDI, etc.
+
+L1
+
+ICS-ADD13
+
+2024
+
+ICS network
+
+DoS, MitM, etc.
+
+L1
+
+ICS-NAD34
+
+2025
+
+ICS network
+
+Reconnaissance, DoS, DDoS, FDI, MitM -
+
+Table 1. Scenarios, attack types and major limitations of related datasets.
+
+tool called ICSFlowGenerator for extracting the required features. However, its testbed is limited to laboratory
+scale. The ICS-ADD dataset13 has six ICS network attacks, but only uses a limited testbed scale. In summary,
+these datasets have small testbeds or simulated network traffic, which cannot reflect real-world scenarios with
+diverse ICS brands and network protocols.
+Datasets with non-ICS-specific or limited attacks. The DARPA dataset14 and the KDD Cup’99 dataset15
+have 41 features and include four traditional network attacks. The CAIDA dataset and the MAWI dataset 16
+are widely used, but their attacks are not ICS-specific. The CTU-13 dataset17 is designed for botnet attacks,
+and the DDoS2016 dataset18 focuses on DDoS attacks. Both of them contain only one type of attack. The
+UNSW-NB15 dataset19 is proposed to reflect modern network traffic, and it only contains limited attack types.
+The Canadian Institute for Cybersecurity (CIC) provides the CICFlowMeter tool to extract rich features. Three
+known studies employ it for dataset processing, namely the CICDoS dataset20, the CICIDS2017 dataset21, and
+the CICDDoS2019 dataset22. The WUSTL-IIoT dataset23, the TON-IoT dataset24, and the Edge-IIoTSet dataset25 extract alerts and system resources as features. However, the above six datasets are not targeted at ICS. To
+sum up, most of these datasets are not specifically designed for ICS, and traffic with non-ICS-specific attacks is
+inapplicable in the ICS network.
+Datasets with insufficient features or imperfect labels. The Kyoto 2006 dataset26 involves various attacks collected through honeypots, but it is not labeled. The Twente dataset27 is the first publicly available labeled dataset for flow-based intrusion detection, but it lacks packet-based features. The UGR’16 dataset28 is suitable for
+long-term network analysis, but problems with mislabeling require further examination29. The CIDDS-001 dataset30 is a flow-based dataset, and lacks packet-based features. The Water Distribution Testbed (WDT) dataset31
+involves two hours of records, but its network dataset only has limited 14 packet-based features. The X-IIoTID
+dataset32 contains 18 types of attacks, exceeding other datasets in variety. However, missing data confines its
+wide usage12. The Electra dataset33 is well-designed with three types of ICS attacks, and all the records are from
+realistic devices like PLCs. However, only Modbus-related features, e.g., function code and error, are provided.
+Dataset labels are indispensable for supervised learning. Flow-based features and packet-based features can
+reflect network characteristics from two different aspects. Therefore, the defect of any one of them will affect the
+overall dataset utilization effect12.
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+2
+
+www.nature.com/scientificdata/
+
+www.nature.com/scientificdata
+
+Fig. 1 The complete process of generating the ICS-NAD dataset34. This figure illustrates the four-stage pipeline
+for generating the dataset, i.e., attack generation, traffic monitoring, data collection, feature extraction, and
+packet labeling.
+
+Our dataset.
+
+To address the aforementioned three limitations, we present the ICS-NAD dataset34 as a
+benchmark for ICS network attack detection datasets. In particular, (1) Large-scale real-world dataset collection environment. The ICS-NAD dataset34 is based on a large ICS test site, which has 10 ICS brands and hundreds of Programmable Logic Controllers (PLCs), as well as 10 sets of industrial processes in different fields, e.g.,
+thermal power generation and sewage treatment. In producing the ICS-NAD dataset34, we choose three sets of
+ICSs from three well-known brands, each utilizing a different network protocol. The reason for this selection is
+that their protocols and packets are not encrypted, which provide more information for the dataset users. (2)
+ICS-specific attacks. We carefully select 20 common ICS network attacks and group them into four categories:
+Reconnaissance, Denial of Service (DoS) and Distributed Denial of Service (DDoS), False Data Injection (FDI),
+and Man-in-the-Middle (MitM). (3) Two attack sample patterns (ASPs). In existing datasets, the traditional ASP
+consists of normal traffic followed by continuous one-time attack traffic. Except for this, the ICS-NAD dataset34
+also provides a more practical and consistent pattern, i.e., normal traffic and randomly happened attack traffic
+appear 19 times in turn. Specifically, each cycle contains three minutes of traffic with 30-second attack bursts
+occurring randomly within the second minute. This ASP reflects more detailed traffic characteristics, including
+the process where the traffic becomes abnormal gradually after the attack begins, and the process where the network gradually recovers after the attack is over, which provides dataset users with additional information of the
+ICS traffic. (4) Rich features and complete labels. The ICS-NAD dataset34 is not anonymized and contains 60 features extracted through ICSFlowGenerator12, including both flow-based and packet-based features. We enhance
+labeling efficiency through a two-step strategy and clearly label all the records as either benign or the name of the
+attack, enabling convenient usage for researchers in the ICS network attack detection field.
+
+Methods
+
+This section details the collection and processing methodology for the ICS-NAD dataset34. First, we describe
+the real-world testbed environment, including ICS scenarios, network topology, and the selection of 20 representative ICS network attacks. Next, we outline the attack execution process of the two ASPs. We then present
+the methods for capturing and storing the raw network traffic. Finally, we cover the dataset processing steps, i.e.,
+feature extraction and labeling of the ICS-NAD dataset34. The complete processing procedure is shown in Fig. 1.
+
+Data collection. Dataset collection environment. Our dataset collection environment contains three sets of
+
+ICSs from three well-known ICS brands and two sets of industrial processes, which can reflect multiple real-world
+ICS scenarios. The dataset collection environment can be divided into the physical domain and the network
+domain.
+As shown in Fig. 2, the physical domain has two comprehensive ICS scenarios, i.e., thermal power and sewage plant. The former scenario has complete thermal power generation facilities, e.g., reheaters, burners, and
+steam turbines, while the latter scenario contains eight tanks for processes including sedimentation and filtration of impurities.
+Three brands of ICSs are used to control these two industrial processes. Configuration information is shown
+in Table 2. To be concrete, the thermal power employs ABB’s ICSs as its controller and uses the private TCP
+protocol for network communication. The sewage plant can utilize either Siemens’s ICSs or Schneider’s ICSs to
+control the industrial processes. Siemens’s ICSs use the S7Comm protocol, and Schneider’s ICSs use the Modbus
+protocol. Three ICSs are independent of each other in terms of wiring so that dataset records do not clutter.
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+3
+
+www.nature.com/scientificdata
+
+www.nature.com/scientificdata/
+
+Fig. 2 Physical domain of the dataset collection environment. This figure shows the physical domain of the
+dataset collection environment, i.e., thermal power and sewage plant, and the corresponding specific equipment
+components.
+
+Brand
+
+Protocol
+
+Scenario
+
+ICS software
+
+ABB
+
+TCP
+
+Thermal power
+
+ABB ability symphony plus engineering 2.2
+
+Version
+
+Siemens
+
+S7Comm
+
+Sewage plant
+
+Siemens simatic TIA portal
+
+18
+
+Schneider
+
+Modbus
+
+Sewage plant
+
+EcoStruxure control expert
+
+15.3
+
+Table 2. ICS brands, network protocols, application scenarios and ICS software versions.
+
+As for the network domain, all the ICSs share the same network topology, as illustrated in Fig. 3, because
+of similar device numbers and network scales. Our topology employs two human-machine interfaces (HMIs)
+to send operation commands and corresponding PLCs to control the industrial processes. HMIs and PLCs are
+connected through one switch. We employ a server as an attacker to eavesdrop or inject attack traffic into the
+network. This access of the attacker server can be obtained using various methods, e.g., malicious software,
+backdoors, and remote access12. There is another server that captures and stores the traffic data. Table 3 provides
+comprehensive details for each device.
+ICS-specific attacks. ICS network is at risk mainly due to the absence of authentication mechanisms, data
+encryption, and integrity checks33, which allows attackers to conduct network attacks based on eavesdropping,
+traffic flooding, and packet modification12. Therefore, we conduct the following ICS attack types, which have
+been identified as common yet critical in previous researches33–35 and reports from the European Union Agency
+for Cybersecurity36.
+1. Reconnaissance attacks. They surreptitiously collect information about target victims, e.g., IP addresses,
+operating systems (OSs), and open ports. In our experiment, we use the Nmap tool to conduct IP scans and
+port scans.
+2. DoS and DDoS attacks. The DoS and DDoS attacks send a large number of packets in a short period,
+resulting in a denial of service. We use the Hping3 tool to generate DoS and DDoS traffic. Moreover, we
+choose two packet-sending speeds in the optional parameters, i.e., fast and flood, to reflect different attack
+intensities. In the fast mode, ten packets are delivered per second. In the flood mode, Hping3 uses the fastest speed of the network interface card to generate attack traffic.
+3. FDI attacks. They use false data, false responses, and false commands33 to fool victims. We use the Netwox
+tool to generate four FDI attacks. For the large ICMP packet attack, we send ICMP packets that are too
+large to deal with in the ICS devices. For the ICMP redirection attack and the ICMP packet unreachable
+attack, we change the route message of packets to trick the network routing. We also generate packets with
+wrong TCP flags to disrupt the protocol parsing process.
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+4
+
+www.nature.com/scientificdata
+
+www.nature.com/scientificdata/
+
+Fig. 3 Network domain of the dataset collection environment. This figure shows the network domain of the
+dataset collection environment, including the equipment information and wiring connections.
+
+Brand
+Siemens
+Schneider
+ABB
+Attacker server
+Storage server
+
+IP
+
+MAC
+
+192.168.10.1/24
+
+02-1B-1B-B9-5E-00
+
+192.168.10.100/24
+
+70-B5-E8-70-3D-96
+
+192.168.10.101/24
+
+C0-25-A5-94-A4-FA
+
+192.168.10.102/24
+
+00-1B-21-64-4B-85
+
+192.168.8.4/24
+
+6C-2B-59-E8-7E-B3
+
+192.168.8.16/24
+
+54-BF-64-9E-1C-A3
+
+192.168.8.112/24
+192.168.10.112/24
+192.168.8.114/24
+192.168.10.114/24
+
+OS
+
+CPU
+
+RAM
+
+Win10
+
+Intel I3-10100
+
+20GB
+
+Win10
+
+Intel I3-10105
+
+16GB
+
+Win10
+
+Intel Xeon W-2102
+
+8GB
+
+90-8D-6E-C9-9D-D8
+
+Ubuntu20.04
+
+Intel Xeon Silver 4210 R
+
+32GB
+
+E8-EB-D3-A3-64-C3
+
+Ubuntu20.04
+
+Intel Xeon Silver 4210 R
+
+32GB
+
+Table 3. Detailed configuration of testbed devices.
+4. MitM attacks. They intercept and manipulate the communication data between network devices12. We use
+the Arpspoof tool to conduct ARP poisoning in our experiment.
+
+Attack traffic sample patterns. In the ICS-NAD dataset34, we generate two types of attack patterns in the
+attacker server to reflect rich traffic characteristics in different attack scenarios, as shown in Fig. 4. The first type
+is typically seen in existing datasets and lasts for five minutes. In the first minute, we have only regular network
+traffic, while an attack is executed in the following four minutes. This ASP can reflect the degree and severity of
+the attack through continuous attack traffic. The second type is designed for DoS and DDoS attacks and contains
+20 cycles of three minutes each, for a total of one hour. The reason for this design is that these attacks utilize a
+large amount of traffic to cause service denial, and the process of flow variation contains rich information7. The
+first cycle only includes regular packets. During the remaining 19 cycles, an attack occurs randomly and lasts
+for 30 seconds in the second minute of each period. Therefore, in the second ASP, the first and the third minutes can display the initiation and recovery processes of the DoS and DDoS attacks, which are vital for attack
+pre-detection.
+Dataset collection and storage. When collecting the ICS-NAD dataset34, we utilize the following steps. First, we
+set the workflow of the switch in our topology and let it forward all the traffic in the ICS network to the storage
+server. Then, this server uses the TCPdump tool to capture all the raw ICS traffic and store it in the PCAP format.
+In addition, we run a script on the attacker server to automatically generate attack traffic in the ICS network with
+two different ASPs. During this process, the attacker server also stores logs that contain the timestamps at which
+attacks happen, which are utilized to help the labeling process.
+
+Data processing. Feature extraction. Datasets containing only flow-based features or packet-based features cannot fully reflect network status. Flow-based features show the characteristics of flows, e.g., packet numbers and latency between packets. Packet-based features contain the information inside the packets, e.g., TCP
+flags and protocols. Therefore, we consider the ICSFlowGenerator12 as a practical feature extraction tool, because
+it can extract both types of features. By modifying the source code, we optimize its work pattern to meet our
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+5
+
+www.nature.com/scientificdata/
+
+www.nature.com/scientificdata
+
+Fig. 4 Two types of ASPs in the ICS-NAD dataset34. This figure illustrates two types of ASPs. The first type is
+typically seen in existing datasets and lasts for five minutes. In the first minute, we have only regular network
+traffic, while an attack is executed in the following four minutes. The second type is designed for DoS and DDoS
+attacks and contains 20 cycles of three minutes each, for a total of one hour. The first cycle only includes regular
+packets. During the remaining 19 cycles, an attack occurs randomly and lasts for 30 seconds in the second
+minute of each period.
+requirements, specifically to output 60 features in bulk via command-line operation, as shown in Table 4. In this
+way, for each input PCAP file, we can extract 60 features in total, which is sufficient for training ICS network
+attack detection models12.
+
+Labeling. Labeling can be a challenging task. For one thing, the number of network packets can easily reach
+hundreds of millions. If each packet is judged when labeling, even using an automated approach can consume
+considerable time. For another, our dataset contains 20 types of ICS network attacks, which makes it difficult to
+accurately distinguish benign and attack records using a fixed scheme. Therefore, we propose a two-step strategy
+to accomplish this task. First, when generating attacks, we log the timestamps for each attack when it occurs.
+Therefore, we can roughly jump to the positions where attack records first appear in the dataset and skip the
+benign records, thereby reducing the overall judging time for labeling. Second, we use specific judgment criteria
+for each attack to distinguish attack packets from benign packets based on attack characteristics, e.g., protocol,
+IP address, and TCP flag. Through the two-step strategy, we clearly and efficiently label all the records in the
+dataset as either benign or the name of the attack. Both features and labels are stored in CSV format.
+
+Data Records
+
+The ICS-NAD dataset34 is publicly available in the Science Data Bank repository (https://doi.org/10.57760/sciencedb.25938). A total of 245.96 GB of ICS network records and 272 data files are provided. Our dataset is
+divided into eight dictionaries, including raw ICS network traffic stored in PCAP format, extracted features
+stored in CSV format with complete labels, and log files of the attack timestamps.
+1. ABB, Schneider, and Siemens dictionaries: Contain raw ICS network traffic data (in PCAP format) captured
+from ABB, Schneider, and Siemens ICSs, respectively. Each PCAP file includes one minute of normal traffic and four minutes of attack traffic with a specific ICS network attack.
+2. ABB-LONG, Schneider-LONG, and Siemens-LONG dictionaries: Contain raw ICS network traffic data (in
+PCAP format) captured from ABB, Schneider, and Siemens ICSs, respectively. Each PCAP file includes
+20 cycles of ICS traffic. In each cycle, three minutes of ICS traffic is captured, and a 30-second attack burst
+occurs randomly within the second minute.
+3. Labeled_CSV dictionary: Contains CSV files corresponding to the PCAP files. These CSV files contain 60
+features extracted from the raw ICS traffic, encompassing both packet-based and flow-based features. All
+the records are clearly labeled as benign or the name of the attack in the last column of the CSV files.
+4. Time_of_Attack dictionary: Contains the log files of the timestamps that attacks happen, which are utilized
+for the labeling process.
+
+Technical Validation
+
+This section experimentally validates the scale, real-worldness, and usability of the ICS-NAD dataset34. We first
+assess dataset scale through comparative analysis against the most closely related ICS-flow dataset12. Next, we
+demonstrate real-worldness by analyzing key characteristics of the traffic samples against operational ICS environments. Finally, we validate practical usability through training and evaluating 10 commonly used machine
+learning (ML) and deep learning (DL) classification models on the ICS-NAD dataset34.
+
+Comparison with the ICS-flow dataset. This dataset is the most recent and relevant ICS network dataset,
+and we choose the following six main indicators for comparison12. As shown in Table 5, the ICS-NAD dataset34
+contains more data records and covers more ICS types and protocols, as well as richer attacks and features, which
+indicates the larger scale of the ICS-NAD dataset34.
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+6
+
+www.nature.com/scientificdata
+
+www.nature.com/scientificdata/
+Number
+
+Feature
+
+Description
+
+Type
+
+1, 2
+
+(s/r)Address
+
+Sender/Receiver IP address or MAC address of the flow
+
+str
+
+3, 4
+
+(s/r)MACs
+
+Sender/Receiver MAC address of the flow
+
+str
+
+5, 6
+
+(s/r)IPs
+
+Sender/Receiver IP address of the flow
+
+str
+
+7
+
+Protocol
+
+Network protocol
+
+str
+
+8, 9
+
+(start/end)Date
+
+Date of the first/last packet in the flow
+
+float
+
+10, 11
+
+Start/End
+
+Precise timestamp of the first/last packet in the flow
+
+float
+
+12, 13
+
+(start/end)Offset
+
+Time offset of first/last packet in the flow relative to first packet in the dataset
+
+float
+
+14
+
+Duration
+
+Flow interval
+
+float
+
+15, 16
+
+(s/r)Packets
+
+Sent/Received packets count within the flow
+
+int
+
+17, 18
+
+(s/r)BytesSum
+
+The total sum of bytes sent/received in one packet within the flow
+
+int
+
+19, 20
+
+(s/r)BytesMax
+
+Maximum bytes sent/received in one packet within the flow
+
+int
+
+21, 22
+
+(s/r)BytesMin
+
+Minimum bytes sent/received in one packet within the flow
+
+int
+
+23, 24
+
+(s/r)BytesAvg
+
+Average sent/received bytes per packet within the flow
+
+float
+
+25, 26
+
+(s/r)Load
+
+Sent/Received bits per second
+
+float
+
+27, 28
+
+(s/r)PayloadSum
+
+The total sum of bytes sent/received as a payload within the flow
+
+int
+
+29, 30
+
+(s/r)PayloadMax
+
+Maximum bytes sent/received as a payload in one packet within the flow
+
+int
+
+31, 32
+
+(s/r)PayloadMin
+
+Minimum bytes sent/received as a payload in one packet within the flow
+
+int
+
+33, 34
+
+(s/r)PayloadAvg
+
+Average payload bytes of sent/received packets
+
+float
+
+35, 36
+
+(s/r)InterPacket
+
+Average send/receive inter-packet arrival time
+
+float
+
+37, 38
+
+(s/r)TTL
+
+Average sending/receiving time-to-live
+
+float
+
+39, 40
+
+(s/r)AckRate
+
+Rate of sent/received packets contains acknowledge flag
+
+float
+
+41, 42
+
+(s/r)UrgRate
+
+Rate of sent/received packets contains urgent flag
+
+float
+
+43, 44
+
+(s/r)FinRate
+
+Rate of sent/received packets contains finish flag
+
+float
+
+45, 46
+
+(s/r)PshRate
+
+Rate of sent/received packets contains push flag
+
+float
+
+47, 48
+
+(s/r)SynRate
+
+Rate of sent/received packets contains synchronization flag
+
+float
+
+49, 50
+
+(s/r)RstRate
+
+Rate of sent/received packets contains reset flag
+
+float
+
+51, 52
+
+(s/r)WinTCP
+
+Sender/Receiver average TCP window advertisement
+
+float
+float
+
+53, 54
+
+(s/r)FragmentRate
+
+Sender/Receiver fragmentation rate of TCP packets
+
+55, 56
+
+(s/r)AckDelayMax
+
+Maximum interval between packets and acknowledge in sender/receiver node float
+
+57, 58
+
+(s/r)AckDelayMin
+
+Minimum interval between packets and acknowledge in sender/receiver node
+
+float
+
+59, 60
+
+(s/r)AckDelayAvg
+
+Average interval between packets and acknowledge in sender/receiver node
+
+float
+
+Table 4. The short descriptions and data types of 60 extracted features.
+
+Dataset
+
+Total size
+
+ICS type
+
+ICS protocol type
+
+Attack type
+
+Feature type
+
+ICS-NAD
+
+245.96 GB
+
+3
+
+3
+
+20
+
+60
+
+ICS-flow
+
+1.86 GB
+
+1
+
+1
+
+5
+
+50
+
+Table 5. Comparison between the ICS-NAD dataset34 and the ICS-flow dataset12.
+
+Real-world ICS traffic characteristics. Since all traffic is captured in real-world ICS scenarios, the ICS-NAD dataset34 accurately reflects intrinsic ICS network characteristics. To provide a quantitative and objective characterization that facilitates cross-dataset comparison and deeper analysis, we employ a set of time-series statistical features.
+Taking the Siemens traffic as an example, the data samples of normal traffic and ICMP flood attack traffic are shown
+in Figs. 5 and 6. As summarized in Table 6, these features are calculated for both normal traffic and attack traffic,
+offering clear insights into how attacks alter network behavior. The time granularity for feature calculation is 100 ms.
+1. Skewness. The skewness quantifies the asymmetry in traffic volume distribution. Normal traffic exhibits
+positive skewness, i.e., 1.94, indicating a right-skewed distribution where most time intervals have low
+packet counts, punctuated by occasional of ICS operational events. Under an ICMP flood attack, the skewness increases to 2.56, confirming that the attack creates a more pronounced asymmetry with high-volume
+spikes, which is a signature of malicious flooding activity.
+2. Kurtosis. Kurtosis describes the concentration of data around the mean and in the tails. During the ICMP
+flood attack, kurtosis rises sharply from 2.10 to 5.32, indicating a transition to a sharply peaked distribution with heavy tails. This feature indicates a significant increase in the peak flow during the ICMP flood
+attack process.
+3. Approximate entropy. Approximate entropy measures the predictability and regularity of sequential traffic
+patterns. Both normal and attack scenarios show irregularity in the real-world ICS environment, due to
+heterogeneous device communications. But the attack causes a slight increase in entropy from 1.16 to 1.25,
+indicating a reduction in predictability.
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+7
+
+www.nature.com/scientificdata
+
+www.nature.com/scientificdata/
+
+Fig. 5 Normal traffic of Siemens ICS. This figure shows the flow distribution of normal traffic. The horizontal
+axis represents time, and the vertical axis represents the number of packets.
+
+Fig. 6 ICMP flood traffic of Siemens ICS. This figure shows the flow distribution of ICMP flood traffic. The
+horizontal axis represents time, and the vertical axis represents the number of packets.
+Traffic type
+
+Skewness
+
+Kurtosis
+
+Approximate entropy
+
+Zero ratio
+
+Normal traffic
+
+1.94
+
+2.10
+
+1.16
+
+43.17%
+
+ICMP flood
+
+2.56
+
+5.32
+
+1.25
+
+9.83%
+
+Table 6. Time-series features of the ICS-NAD dataset34.
+
+4. Zero ratio. The zero ratio directly measures network idle time by calculating the proportion of time bins
+with no traffic. Normal traffic shows a high zero ratio of 43.17%, concretely evidencing the low traffic rate
+and infrequent communication inherent to ICS networks. The ICMP flood attack reduces this ratio to
+9.83%, as the sustained malicious packets flood the network and minimize idle periods. This metric provides clear quantitative distinctions between benign low-rate ICS operation and the ICMP flood attack.
+
+Evaluation of 10 ML and DL models. We test the ICS-NAD dataset34 usability by 10 commonly used ML
+
+and DL classification models: Iterative Dichotomiser 3 (ID3), K-Nearest Neighbors (KNN), Random Forest (RF),
+Gradient Boosting Decision Tree (GBDT), Support Vector Classifier (SVC), Extreme Learning Machine (ELM),
+Light Gradient Boosting Machine (LGBM), Adaptive Boosting (AB), Extreme Gradient Boosting (XGB), and
+Artificial Neural Network (ANN). This selection synthesizes models that have been validated in prior ICS dataset studies12,22. To ensure a comprehensive and unbiased assessment, the chosen models span four distinct and
+complementary families. (1) Tree and tree-ensemble models: ID3, RF, GBDT, LGBM, and XGB. (2) Distance and
+kernel-based models: KNN, and SVC. (3) Neural network models: ANN, and ELM. (4) Adaptive ensemble model:
+AdaBoost. This diverse and principled selection allows for a robust evaluation of the dataset across different models.
+
+Data preparation. During the processing of the ICS-NAD dataset34, we conduct the following steps. (1)
+Columns where all the values are equal are deleted. (2) Empty places are filled with 0. (3) String type values, e.g.,
+address and timestamp, are converted to numeric types. (4) Values are normalized and scaled to a range between
+0 and 1. (5) The records are split into two subsets, i.e., the training set (60%) and the testing set (40%).
+Feature selection. Our dataset has 60 features, but using all of them for training will reduce efficiency and may
+introduce additional noise. Therefore, we employ the Random Forest Regressor class of scikit-learn21 to rank the
+importance of each feature. This method has been adopted in benchmark studies for its stability and ability to
+identify features that contribute most to the model prediction performance12,22. Following the precedent of the
+related works, we select the top four features for model training12,22. This parsimonious subset promotes efficient
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+8
+
+www.nature.com/scientificdata/
+
+www.nature.com/scientificdata
+
+Fig. 7 The top 10 features with the highest usage frequency in the validation experiments. This figure lists the
+most frequently used 10 features in the validation experiments. The horizontal axis represents the names of the
+features, while the vertical axis represents the frequency of usage.
+
+Fig. 8 The average score of the top 10 features, with the highest score set to 100. This figure shows the average
+score of the top 10 features calculated by the Random Forest Regressor. The horizontal axis represents the names
+of the features, while the vertical axis represents the average score.
+
+learning and reduces the risk of overfitting. In Figs. 7 and 8, we list the 10 most important and frequently utilized
+features across the training of all attacks in the ICS-NAD dataset34 and show the scores of each feature, with the
+highest score set to 100. Notably, features associated with flow bytes and packet payload exhibit a more substantial impact, which indicates that ICS network attacks are more often initiated through factors like flow size and
+packet content, e.g., DoS and DDoS attacks and FDI attacks.
+Model validation. The core task for each ML and DL model is to predict whether a traffic sample characterized
+by the four selected features represents benign traffic or a specific attack type from the ICS-NAD dataset34. For
+each ML and DL model, we first need to find its most suitable hyperparameters. Through a series of parameter
+tuning experiments33, we get the relatively universal ones for each model. All the datasets are trained with
+the same set of hyperparameters to ensure fairness. Since we generate two ASPs to reflect multiple anomalies,
+the ICS-NAD dataset34 is not balanced. Thus, we use four classical metrics to reflect the training effect, i.e.,
+accuracy, recall, precision, and F1-score. As shown in Table 7, ideal training results can be obtained. Four core
+metrics can basically reach more than 90 (full score set to 100). Considering all the results, we believe that SVC,
+ELM, and KNN are relatively suitable models for the ICS-NAD dataset34 in our experiment. On the other hand,
+we should admit that the recall value for the MitM dataset generally reaches 100, which is related to the small
+number of positive samples caused by the characteristics of the attack type.
+In summary, we substantiate our dataset’s scale through benchmarking against the ICS-flow dataset12, confirm its real-world representativeness through traffic characteristic analysis, and demonstrate practical usability
+through training 10 ML and DL models. Experimental results collectively validate the value of the ICS-NAD
+dataset34 for ICS network attack detection research.
+
+Usage Notes
+
+The ICS-NAD dataset34 is designed to facilitate research in ICS security, specifically in ICS network attack detection
+and analysis. Below are key usage opportunities and practical advice for researchers aiming to utilize this dataset.
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+9
+
+www.nature.com/scientificdata
+
+www.nature.com/scientificdata/
+Attack
+
+Reconnaissance
+
+DoS and DDoS
+
+FDI
+
+MitM
+
+Result
+
+ID3
+
+KNN
+
+RF
+
+GBDT
+
+SVC
+
+ELM
+
+LGBM
+
+AB
+
+XGB
+
+ANN
+
+Accuracy
+
+90.18
+
+99.60
+
+99.71
+
+99.93
+
+98.96
+
+98.68
+
+99.93
+
+99.82
+
+99.54
+
+98.95
+
+Recall
+
+89.98
+
+99.99
+
+99.98
+
+99.98
+
+99.64
+
+99.29
+
+100.0
+
+99.84
+
+99.91
+
+99.47
+
+Precision
+
+99.98
+
+99.60
+
+99.72
+
+99.94
+
+99.32
+
+99.36
+
+99.93
+
+99.98
+
+99.63
+
+99.46
+
+F1-score
+
+94.51
+
+99.80
+
+99.85
+
+99.96
+
+99.45
+
+99.33
+
+99.97
+
+99.91
+
+99.77
+
+99.46
+
+Accuracy
+
+96.62
+
+98.77
+
+98.42
+
+98.80
+
+98.81
+
+98.72
+
+98.36
+
+98.58
+
+98.70
+
+98.84
+
+Recall
+
+90.19
+
+98.28
+
+98.00
+
+98.19
+
+98.07
+
+97.72
+
+97.38
+
+97.75
+
+98.04
+
+98.16
+
+Precision
+
+98.50
+
+98.72
+
+98.18
+
+98.99
+
+99.13
+
+99.21
+
+98.80
+
+98.90
+
+98.97
+
+99.11
+
+F1-score
+
+93.58
+
+98.45
+
+98.07
+
+98.50
+
+98.48
+
+98.32
+
+97.92
+
+98.20
+
+98.39
+
+98.52
+
+Accuracy
+
+94.80
+
+99.73
+
+99.67
+
+99.70
+
+99.60
+
+99.63
+
+99.77
+
+99.78
+
+99.76
+
+99.59
+
+Recall
+
+92.00
+
+99.78
+
+99.63
+
+99.66
+
+99.77
+
+99.63
+
+99.72
+
+99.67
+
+99.74
+
+99.66
+
+Precision
+
+99.46
+
+99.71
+
+99.81
+
+99.76
+
+99.61
+
+99.75
+
+99.83
+
+99.80
+
+99.81
+
+99.67
+
+F1-score
+
+95.43
+
+99.74
+
+99.72
+
+99.71
+
+99.68
+
+99.69
+
+99.77
+
+99.74
+
+99.78
+
+99.67
+
+Accuracy
+
+94.41
+
+99.31
+
+99.95
+
+99.95
+
+99.17
+
+99.33
+
+99.84
+
+99.95
+
+99.95
+
+99.10
+
+Recall
+
+100.0
+
+100.0
+
+100.0
+
+100.0
+
+100.0
+
+100.0
+
+100.0
+
+100.0
+
+100.0
+
+90.07
+
+Precision
+
+72.39
+
+96.63
+
+98.89
+
+98.89
+
+95.96
+
+96.32
+
+98.74
+
+98.89
+
+98.89
+
+97.75
+
+F1-score
+
+83.96
+
+98.29
+
+99.44
+
+99.44
+
+97.94
+
+98.12
+
+99.37
+
+99.44
+
+99.44
+
+93.03
+
+Table 7. Results of 10 ML and DL models for the ICS-NAD dataset34 evaluation.
+
+Potential research applications.
+including but not limited to:
+
+Our dataset supports a variety of analyses in the ICS security domain,
+
+1. Supervised learning for attack detection. The CSV files, with their 60 extracted features and complete
+labels, are suitable for training and evaluating supervised ML and DL models. Researchers can benchmark
+new detection algorithms, compare model performance, or explore feature importance for ICS-specific
+threats.
+2. Unsupervised and semi-supervised attack detection. The availability of both normal and attack traffic
+allows for the development and testing of attack detection models that do not rely solely on labeled attack
+data. This is valuable for identifying novel or zero-day attacks.
+3. Protocol analysis and modeling. The raw PCAP files contain traffic for three critical ICS protocols. Researchers can use these to analyze protocol state machines, establish baselines for normal operational behavior, and study how the documented attacks violate protocol specifications or communication patterns.
+
+Advice for access and use.
+
+The dataset is split into PCAP and CSV formats to serve different research
+needs. Using tools like Wireshark can access PCAP files for deep packet inspection and flow analysis. The CSV
+files are ready for use in data science environments, e.g., Python and MATLAB. The label column clearly distinguishes attack classes from normal traffic.
+
+Data availability
+
+The ICS-NAD dataset34 is publicly available in the Science Data Bank repository (https://doi.org/10.57760/
+sciencedb.25938). Totally 245.96 GB of ICS data records and 272 data files are provided. All the files are divided
+into eight dictionaries, including raw ICS network traffic stored in PCAP format, extracted features stored in CSV
+format with complete labels, and log files of the attack timestamps.
+
+Code availability
+
+Python codes for processing the ICS-NAD dataset34, together with 10 ML and DL models, can be obtained freely
+at https://github.com/zxzx2002/Code-for-ICS-NAD-Dataset.git, with no restrictions to access.
+Received: 12 September 2025; Accepted: 27 January 2026;
+Published: xx xx xxxx
+
+References
+
+1. Conti, M., Donadel, D. & Turrin, F. A survey on industrial control system testbeds and datasets for security research. IEEE
+Communications Surveys & Tutorials. 23, 2248–2294, https://doi.org/10.1109/COMST.2021.3094360 (2021).
+2. Wang, W. et al. A Real Network Environment Dataset for Traffic Analysis. Sci. Data. 12(1), 1–12, https://doi.org/10.1038/s41597025-04876-2 (2025).
+3. Ding, D., Han, Q. L., Wang, Z. & Ge, X. A survey on model-based distributed control and filtering for industrial cyber-physical
+systems. IEEE Transactions on Industrial Informatics. 15, 2483–2499, https://doi.org/10.1109/TII.2019.2905295 (2019).
+4. Karnouskos, S. Stuxnet worm impact on industrial cyber-physical system security. 2011 IECON 37th Annual Conference of the IEEE
+Industrial Electronics Society. https://doi.org/10.1109/IECON.2011.6120048 (2011).
+5. Koay, A. M., Ko, R. K. L., Hettema, H. & Radke, K. Machine learning in industrial control system (ICS) security: current landscape,
+opportunities and challenges. Journal of Intelligent Information Systems. 60, 377–405, https://doi.org/10.1007/s10844-022-00753-1
+(2023).
+6. Sasaki, T. et al. Exposed infrastructures: Discovery, attacks and remediation of insecure ics remote management devices. 2022 IEEE
+Symposium on Security and Privacy (SP). https://doi.org/10.1109/SP46214.2022.9833730 (2022).
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+10
+
+www.nature.com/scientificdata/
+
+www.nature.com/scientificdata
+
+7. Chae, J. et al. A survey and perspective on industrial cyber-physical systems (ICPS): from ICPS to AI-augmented ICPS. IEEE
+Transactions on Industrial Cyber-Physical Systems. 1, 257–272, https://doi.org/10.1109/TICPS.2023.3323600 (2023).
+8. Shiravi, A., Shiravi, H., Tavallaee, M. & Ghorbani, A. A. Toward developing a systematic approach to generate benchmark datasets
+for intrusion detection. Computers & Security. 31, 357–374, https://doi.org/10.1016/j.cose.2011.12.012 (2012).
+9. Morris, T. & Gao, W. Industrial control system traffic data sets for intrusion detection research. 2014 Critical Infrastructure Protection
+VIII: 8th IFIP WG 11.10 International Conference. https://doi.org/10.1007/978-3-662-45355-1_5 (2014).
+10. Taormina, R. et al. Battle of the attack detection algorithms: Disclosing cyber attacks on water distribution networks. Journal of
+Water Resources Planning and Management. 144, 04018048, https://doi.org/10.1061/(ASCE)WR.1943-5452.0000969 (2018).
+11. Lin, Q., Verwer, S., Kooij, R. & Mathur, A. Using datasets from industrial control systems for cyber security research and education.
+2019 Critical Information Infrastructures Security: 14th International Conference. https://doi.org/10.1007/978-3-030-37670-3_10
+(2019).
+12. Dehlaghi-Ghadim, A., Moghadam, M. H., Balador, A. & Hansson, H. Anomaly detection dataset for industrial control systems.
+IEEE Access. 11, 107982–107996, https://doi.org/10.1109/ACCESS.2023.3320928 (2023).
+13. Gaggero, G. B., Armellin, A., Portomauro, G. & Marchese, M. Industrial Control System-Anomaly Detection Dataset (ICS-ADD)
+for Cyber-Physical Security Monitoring in Smart Industry Environments. IEEE Access. 12, 64140–64149, https://doi.org/10.1109/
+ACCESS.2024.3395991 (2024).
+14. Lippmann, R.P. et al. Evaluating intrusion detection systems: The 1998 DARPA off-line intrusion detection evaluation. Proceedings
+DARPA Information Survivability Conference and Exposition. https://doi.org/10.1109/DISCEX.2000.821506 (2000).
+15. Tavallaee, M., Bagheri, E., Lu, W. & Ghorbani, A.A. A detailed analysis of the KDD CUP 99 data set. 2009 IEEE Symposium on
+Computational Intelligence for Security and Defense Applications. https://doi.org/10.1109/CISDA.2009.5356528 (2009).
+16. Fontugne, R., Borgnat, P., Abry, P. & Fukuda, K. MAWILab: Combining diverse anomaly detectors for automated anomaly labeling
+and performance benchmarking. Proceedings of the 6th International Conference. https://doi.org/10.1145/1921168.1921179 (2010).
+17. Garcia, S., Grill, M., Stiborek, J. & Zunino, A. An empirical comparison of botnet detection methods. Computers & Security. 45,
+100–123, https://doi.org/10.1016/j.cose.2014.05.011 (2014).
+18. Alkasassbeh, M., Al-Naymat, G., Hassanat, A.B. & Almseidin, M. Detecting distributed denial of service attacks using data mining
+techniques. International Journal of Advanced Computer Science and Applications. 7(1), https://doi.org/10.14569/ijacsa.2016.070159
+(2016).
+19. Moustafa, N. & Slay, J. UNSW-NB15: a comprehensive data set for network intrusion detection systems. 2015 Military
+Communications and Information Systems Conference. https://doi.org/10.1109/MilCIS.2015.7348942 (2015).
+20. Jazi, H. H., Gonzalez, H., Stakhanova, N. & Ghorbani, A. A. Detecting HTTP-based application layer DoS attacks on web servers in
+the presence of sampling. Computer Networks. 121, 25–36, https://doi.org/10.1016/j.comnet.2017.03.018 (2017).
+21. Sharafaldin, I., Lashkari, A.H. & Ghorbani, A.A. Toward generating a new intrusion detection dataset and intrusion traffic
+characterization. Proceedings of the 4th International Conference on Information Systems Security and Privacy. https://doi.
+org/10.5220/0006639801080116 (2018).
+22. Sharafaldin, I., Lashkari, A.H., Hakak, S. & Ghorbani, A.A. Developing realistic distributed denial of service (DDoS) attack dataset
+and taxonomy. 2019 International Carnahan Conference on Security Technology (ICCST). https://doi.org/10.1109/
+CCST.2019.8888419 (2019).
+23. Zolanvari, M. et al. Machine learning-based network vulnerability analysis of industrial Internet of Things. IEEE Internet of Things
+Journal. 6(4), 6822–6834, https://doi.org/10.1109/JIOT.2019.2912022 (2019).
+24. Alsaedi, A., Moustafa, N., Tari, Z., Mahmood, A. & Anwar, A. TON_IoT telemetry dataset: A new generation dataset of IoT and IIoT
+for data-driven intrusion detection systems. IEEE Access. 8, 165130–165150, https://doi.org/10.1109/ACCESS.2020.3022862 (2020).
+25. Ferrag, M. A., Friha, O., Hamouda, D., Maglaras, L. & Janicke, H. Edge-IIoTset: A new comprehensive realistic cyber security dataset
+of IoT and IIoT applications for centralized and federated learning. IEEE Access. 10, 40281–40306, https://doi.org/10.1109/
+ACCESS.2022.3165809 (2022).
+26. Song, J. et al. Statistical analysis of honeypot data and building of Kyoto 2006+ dataset for NIDS evaluation. Proceedings of the First
+Workshop on Building Analysis Datasets and Gathering Experience Returns for Security. https://doi.org/10.1145/1978672.1978676
+(2011).
+27. Sperotto, A., Sadre, R., Van Vliet, F. & Pras, A. A labeled data set for flow-based intrusion detection. IP Operations and Management:
+9th IEEE International Workshop (IPOM). https://doi.org/10.1007/978-3-642-04968-2_4 (2009).
+28. Maciá-Fernández, G., Camacho, J., Magán-Carrión, R., García-Teodoro, P. & Therón, R. UGR ‘16: A new dataset for the evaluation
+of cyclostationarity-based network IDSs. Computers & Security. 73, 411–424, https://doi.org/10.1016/j.cose.2017.11.004 (2018).
+29. Ring, M. et al. A survey of network-based intrusion detection data sets. Computers & Security. 86, 147–167, https://doi.org/10.1016/j.
+cose.2019.06.005 (2019).
+30. Verma, A. & Ranga, V. Statistical analysis of CIDDS-001 dataset for network intrusion detection systems using distance-based
+machine learning. Procedia Computer Science. 125, 709-716, https://doi.org/10.1016/j.procs.2017.12.091 (2018).
+31. Faramondi, L., Flammini, F., Guarino, S. & Setola, R. A hardware-in-the-loop water distribution testbed dataset for cyber-physical
+security testing. IEEE Access. 9, 122385–122396, https://doi.org/10.1109/ACCESS.2021.3109465 (2021).
+32. Al-Hawawreh, M., Sitnikova, E. & Aboutorab, N. X-IIoTID: A connectivity-agnostic and device-agnostic intrusion data set for
+industrial Internet of Things. IEEE Internet of Things Journal. 9(5), 3962–3977, https://doi.org/10.1109/JIOT.2021.3102056 (2021).
+33. Gómez, Á. L. P. et al. On the generation of anomaly detection datasets in industrial control systems. IEEE Access. 7, 177460–177473,
+https://doi.org/10.1109/ACCESS.2019.2958284 (2019).
+34. Zhou, X. et al. A network attack detection dataset collected from multiple real-world industrial control systems. Science Data Bank
+https://doi.org/10.57760/sciencedb.25938 (2025).
+35. Eltomy, R. & Lalouani, W. Explainable Intrusion Detection in Industrial Control Systems. 2024 IEEE 7th International Conference
+on Industrial Cyber-Physical Systems (ICPS). https://doi.org/10.1109/ICPS59941.2024.10640024 (2024).
+36. Sklyar, V. & Kharchenko, V. ENISA documents in cybersecurity assurance for industry 4.0: IIoT threats and attacks scenarios. 2019
+10th IEEE International Conference on Intelligent Data Acquisition and Advanced Computing Systems: Technology and Applications
+(IDAACS). https://doi.org/10.1109/IDAACS.2019.8924452 (2019).
+
+Acknowledgements
+
+We first sincerely thank our editors and reviewers for their constructive comments. We then gratefully
+acknowledge Prof. Wenhai Wang, director of the Zhejiang University NGICS Platform, along with Wenwen
+Zhang, Chencheng Xie, Yue Wu, Jing Zheng, Ying Wu, Yinan Zhang, and Chao Pei for their valuable
+contributions. Finally, this work was supported in part by the National Key Research and Development (R&D)
+Program of China under Grant 2023YFB2904200, in part by the Chinese State Key Laboratory of Industrial
+Control Technology under Grant ICT2025A13, and in part by the Cryptographic Research Experimental
+Platform Project under Grant 202204.
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+11
+
+www.nature.com/scientificdata/
+
+www.nature.com/scientificdata
+
+Author contributions
+
+Xun Zhou collected the dataset and wrote the manuscript. Zihao Cheng, Chenyu Wang, Shen Wang, and Chengxi
+Tao conducted the dataset processing and validation experiments. Zhengyan Zhou, Xiang Chen, Jiayu Luo, Di
+Wang, and Haifeng Zhou reviewed the manuscript.
+
+Competing interests
+
+The authors declare no competing interests.
+
+Additional information
+
+Correspondence and requests for materials should be addressed to H.Z.
+Reprints and permissions information is available at www.nature.com/reprints.
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in published maps and
+institutional affiliations.
+Open Access This article is licensed under a Creative Commons Attribution-NonCommercialNoDerivatives 4.0 International License, which permits any non-commercial use, sharing, distribution and reproduction in any medium or format, as long as you give appropriate credit to the original author(s)
+and the source, provide a link to the Creative Commons licence, and indicate if you modified the licensed material. You do not have permission under this licence to share adapted material derived from this article or parts of it.
+The images or other third party material in this article are included in the article’s Creative Commons licence,
+unless indicated otherwise in a credit line to the material. If material is not included in the article’s Creative
+Commons licence and your intended use is not permitted by statutory regulation or exceeds the permitted
+use, you will need to obtain permission directly from the copyright holder. To view a copy of this licence, visit
+http://creativecommons.org/licenses/by-nc-nd/4.0/.
+© The Author(s) 2026
+
+Scientific Data |
+
+(2026) 13:399 | https://doi.org/10.1038/s41597-026-06738-x
+
+12
+
+

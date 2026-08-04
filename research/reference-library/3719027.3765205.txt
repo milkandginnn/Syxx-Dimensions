@@ -1,0 +1,1963 @@
+# Source: 3719027.3765205.pdf
+# Title (best guess): Chekhov’s Gun: Uncovering Hidden Risks in macOS
+# Pages: 15 · Words: 13535
+# Extracted: 2026-07-13 by build-reference-library.py
+# NOTE: machine-extracted text; layout/figures/tables may be imperfect.
+------------------------------------------------------------------------
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS
+Application-Sandboxed PID-Domain Services
+Minghao Lin
+
+Jiaxun Zhu
+
+Tingting Yin
+
+mlin7282@usc.edu
+University of Southern California
+Los Angeles, California, USA
+
+jiaxunzhu@outlook.com
+Independent Researcher
+
+ttea.yin@gmail.com
+Independent Researcher
+
+Zechao Cai
+
+Guanxing Wen
+
+Yanan Guo
+
+zechao.cai@inf.ethz.ch
+ETH Zurich
+Zurich, Switzerland
+
+guanxing.wen@certik.com
+Certified Kernel Tech LLC
+New York, New York, USA
+
+yanan.guo@rochester.edu
+University of Rochester
+Rochester, New York, USA
+
+Mengyuan Li
+mli49061@usc.edu
+University of Southern California
+Los Angeles, California, USA
+2025 ACM SIGSAC Conference on Computer and Communications Security
+(CCS ’25), October 13–17, 2025, Taipei. ACM, New York, NY, USA, 15 pages.
+https://doi.org/10.1145/3719027.3765205
+
+Abstract
+macOS delegates many high-privilege operations to dedicated PIDdomain services, which applications can register and communicate
+with through inter-process communication (IPC). This architecture
+improves userland stability and security but also introduces attractive attack surfaces for adversaries. In this paper, we systematically
+analyze PID-domain services and uncover an overlooked attack
+vector: PID-domain services that are restricted to an Application
+Sandbox identical to the calling application can still be exploited
+due to subtle entitlement differences.
+To fully understand this attack surface, we reverse-engineered
+the implementation of the entitlement mechanism for the Application Sandbox in macOS. Based on these insights, we designed
+an entitlement-guided taint analysis framework to automatically
+detect vulnerable PID-domain services within this attack surface.
+Using our detection tool, we identified 19 confirmed zero-day vulnerabilities in the latest macOS 15.2, with 7 assigned CVE identifiers.
+
+1
+
+Introduction
+
+Apple’s macOS is widely recognized as one of the most secure commercial operating systems. Apple’s relentless emphasis on user privacy and data protection is evident through its sophisticated multilayered defense strategy, integrating robust security mechanisms
+across both software and hardware components. At the hardware
+level, technologies such as the Secure Enclave coprocessor [8], hardware root of trust, and secure boot processes provide foundational
+assurances, ensuring the integrity and authenticity of software
+components right from system startup. Complementing these hardware protections, macOS incorporates advanced software-based
+defenses, including System Integrity Protection (SIP), Gatekeeper,
+Sandboxing, Transparency, Consent, and Control (TCC), and the
+entitlement-based permission system, systematically limiting privileges and enforcing strict runtime constraints.
+A crucial element of macOS’s software security architecture is
+its sandboxing and inter-process communication (IPC) mechanism,
+explicitly designed to enforce the principle of least privilege by isolating applications and restricting their access to system resources.
+Third-party applications are constrained within an application sandbox environment. To interact beyond their sandbox boundaries
+(e.g., invoking system services or helper utilities), macOS provides
+a robust IPC mechanism known as XPC. XPC allows applications
+to delegate specific tasks to helper services or system daemons, enhancing stability and modularity without compromising security.
+Depending on their sensitivity and intended design, macOS services operate within three distinct domains: the System domain,
+User domain, and PID domain. System-wide daemons and widelyaccessible services typically reside within the System or User domains, subject to global access restrictions enforced by specific permission checks. Conversely, each sandboxed application manages
+its own dedicated PID domain—a private namespace isolating its
+XPC services from other applications. Services within PID domains
+
+CCS Concepts
+• Security and privacy → Virtualization and security.
+
+Keywords
+macOS Security, Sandbox, Entitlement, PID-domain Services
+ACM Reference Format:
+Minghao Lin, Jiaxun Zhu, Tingting Yin, Zechao Cai, Guanxing Wen, Yanan
+Guo, and Mengyuan Li. 2025. Chekhov’s Gun: Uncovering Hidden Risks in
+macOS Application-Sandboxed PID-Domain Services. In Proceedings of the
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+CCS ’25, Taipei
+© 2025 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 979-8-4007-1525-9/2025/10
+https://doi.org/10.1145/3719027.3765205
+
+3870
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Minghao Lin et al.
+
+run under either a Service Sandbox or an Application Sandbox, depending on their specific privilege and entitlement requirements.
+For example, most Apple daemon services run in Service Sandboxes,
+governed by separate, predefined sandbox profiles that are explicitly
+initialized through sandbox APIs, but they typically do not undergo
+additional containerization during runtime. Conversely, less sensitive services may instead be placed within an Application Sandbox,
+isolated in a containerized environment, and subject to a stricter
+entitlement policy, similar to that of third-party applications.
+This carefully structured PID domain design prevents unauthorized interactions from other applications, significantly enhancing
+security by isolating processes and limiting the potential attack surface. Due to the constrained capabilities of these sandboxes, attackers are often motivated to gain broader execution privileges and
+escape the Application sandbox. The only two known attacks targeting PID-domain services typically involve privilege escalation
+attempts. For example, prior work by Tencent’s Xuanwu Lab [24]
+identified a vulnerability in a PID-domain service registration API,
+which allowed custom PID-domain services to be registered into
+the PID domain of a higher-privileged application (e.g., running
+as root). Apple subsequently mitigated this issue by disallowing
+the registration of third-party PID-domain services. More recently,
+Micky Jin [25] demonstrated that some of Apple’s own PID-domain
+services, which run within weaker fixed-rule Service Sandboxes,
+could still be exploited to assist attackers in escaping the Application Sandbox and even bypassing SIP protection mechanisms.
+In this paper, we reveal an overlooked attack surface: Numerous
+PID-domain services, despite operating within an Application Sandbox identical to the calling application, can be exploited due to subtle entitlement differences. Specifically, although most services developed for application contexts are restricted within Application
+Sandboxes, their entitlements often exhibit minor deviations to facilitate necessary specialized operations. These subtle entitlement
+variations can inadvertently become exploitable by malicious applications. We term this newly identified attack vector "Chekhov’s
+Gun", drawing from the literary principle suggesting that any "gun"
+presented in a narrative is eventually fired. The analogy illustrates
+how an extra capability or entitlement included in a seemingly benign component (the PID-domain service well restricted in the Application Sandbox or the "gun on the wall") may eventually be leveraged maliciously when the component falls under an attacker’s
+control. To the best of our knowledge, this paper represents the
+first systematic exploration into how a malicious sandboxed application can exploit PID-domain services that also operate within
+Application Sandbox to break macOS’s protection.
+
+Finally, we perform static taint analysis using binary-level dataflow tracking to verify whether these sensitive operations can be
+externally triggered via API calls.
+Applying this methodology to macOS 15.2, we identified 19
+previously unknown vulnerabilities within PID-domain services.
+Apple validated all of these, assigning CVEs to seven vulnerabilities,
+with an additional acknowledgment. The contributions of our work
+are summarized as:
+● We conduct the first systematic analysis of the PID-domain service attack surface on macOS, revealing a previously unexplored
+vector termed the Chekhov’s Gun attack, where PID-domain services restricted by Application Sandboxs remain vulnerable.
+● We demystify how entitlement-check mechanisms are implemented within the macOS kernel and clarify their interplay with
+the sandbox security model.
+● We design and implement a semiautomated entitlement-guided
+taint analysis framework1 specifically tailored to this newly identified attack surface. Our framework systematically discovers exploitable paths by tracing data flow from externally accessible
+APIs to sensitive operations. We evaluated our tool on macOS 15.2,
+demonstrating its practicality by effectively discovering 19 previously unknown zero-day vulnerabilities.
+Responsible disclosure. We disclosed all vulnerabilities we identified and the Chekhov’s Gun attack to Apple via the Apple Security
+Research platform in December 2024. Apple engineers have confirmed 19 vulnerabilities and assigned CVEs (CVE-2025-24249, CVE2025-43273, CVE-2025-43365, CVE-2025-30448, CVE-2025-24205,
+CVE-2025-24207, CVE-2025-24248). As of the time of writing, these
+CVEs have been patched in macOS 15.6.1. All affected PID domain
+services have had entitlement checks added to reject unauthorized
+access and removed some exported APIs. The remaining vulnerabilities are planned to be fixed in the Fall of 2025.
+
+2 Background
+2.1 Layered User-space Protection in macOS
+Apple enforces multiple layers of user-space protections in macOS
+to limit the actions of potentially malicious or compromised applications. At the hardware level, modern Apple devices rely on many
+hardware features, such as the Secure Enclave, Pointer Authentication (PA) [12], and Page Protection Layer (PPL) [6], which have
+significantly raised the bar for kernel exploitation. At the software
+level, System Integrity Protection (SIP) [7] further reduces the risk
+of unauthorized code execution. Building on these low-level safeguards, macOS employs additional measures in user space, including sandboxing, TCC (Transparency, Consent, and Control), and
+entitlements, to confine application behavior and mediate access to
+sensitive resources.
+
+A Tailored Static Detection Framework. To systematically uncover vulnerabilities within the identified PID-domain attack surface, we developed a static analysis framework capable of automated vulnerability discovery and evaluation. Our approach begins by exhaustively scanning the macOS filesystem to identify
+connectable XPC services. We then reverse-engineer these binaries, examining their entitlement-check mechanisms to filter out
+services that are realistically connectable, and extract publicly exported APIs to define source points. Next, we systematically map
+undocumented entitlements to sensitive operations (sink points).
+
+Sandboxing Protection. A core component of Apple’s user-space
+defense is the App Sandbox, a mandatory access control (MAC)
+framework inherited from iOS. As Deaconescu et al. and others
+have shown, the sandbox confines an application to a limited set
+of operations, preventing unauthorized access to the file system,
+network, or other system resources. This mechanism applies to all
+1
+
+https://github.com/MinghaoLin2000/Chekhov-s-Gun
+
+3871
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS Application-Sandboxed PID-Domain Services
+
+Resources
+
+Sandbox
+
+third-party Mac App Store apps and many system daemons, and
+it ensures that even if an attacker manages to compromise a sandboxed app, their ability to read sensitive files or execute privileged
+commands remains significantly constrained. Apple introduced
+application sandboxing in macOS to isolate apps and thereby reduce the attack surface [1]. Researchers have extensively reverseengineered this feature: FG1 analyzed the sandbox configuration
+files using the Sandbox Profile Language (SBPL), which adopts a
+TinyScheme-based syntax [19]. Subsequent work by census-labs
+and Stefan Esser revealed that the sandbox operates within the macf
+framework by intercepting fundamental system calls and checking
+each call against a configuration file. When the requested action is
+disallowed, the system call fails, effectively enforcing the sandbox’s
+restrictions [13, 40].
+
+Feature
+Activation
+Profile
+Privileges
+File Access
+Networking
+IPC
+Quarantine
+
+Service Sandbox Application Sandbox
+Explicit API call
+Automatic
+Custom
+Generic
+User/root/system
+User-level
+Specified paths
+Containerized
+Profile-dependent
+By entitlement
+Explicitly allowed
+Broker-mediated
+Manual
+Automatic
+
+Table 1: macOS Sandbox Comparison between Service Sandboxes and Application Sandboxes.
+
+trust model poses security risks, as PID-domain XPC services bundled with apps or frameworks may neglect strict client authentication under the assumption that only trusted parent apps can reach
+them. Consequently, these controlled IPC pathways, while necessary for functionality, can become inadvertent attack surfaces if
+malicious actors exploit assumptions made by the designers.
+
+Entitlement Protection. Beyond the sandbox, Apple introduced
+an entitlement mechanism to fine-tune control over an app’s capabilities [2]. Publicly documented entitlements allow developers
+to request certain permissions, though many private entitlements
+remain undisclosed [2]. Even prior work has analyzed the sandbox
+and provided insights into entitlement checks [40], the kernel implementation details and the complete set of private entitlements
+have never been fully revealed. Nonetheless, these entitlements
+play an integral role in shaping macOS’s security landscape by
+granting or restricting capabilities in a manner that remains transparent to the operating system but opaque to most third parties.
+
+2.3
+
+PID-domain XPC Services
+
+Depending on the specific operation requirements, PID-domain services in macOS can be executed within a Service Sandbox [25] or an
+Application Sandbox [1]. Their difference is summarized in Table 1.
+Service Sandboxes are explicitly activated through dedicated
+sandbox initialization API calls, allowing developers to specify customized sandbox profiles tailored to the operational needs of individual system daemons or services. These profiles typically grant
+services varying privilege levels, including elevated access at root
+or system levels essential for performing specific tasks. File system
+interactions are precisely controlled by explicitly specified paths
+within the sandbox profiles, and network access or inter-process
+communications are regulated through detailed rules. Due to their
+relatively permissive profiles, service sandboxes are commonly
+adopted by system daemons and processes, which grant broader
+access to sensitive system resources. Unlike application-generated
+outputs, files created by service processes do not undergo automatic quarantine; instead, developers must explicitly implement
+tagging if quarantine measures are needed, highlighting the importance of careful configuration to safeguard against vulnerabilities.
+In contrast, Application Sandboxes automatically apply security
+controls upon application launch, enforcing a generic sandbox profile suitable for typical application behaviors. This built-in profile
+restricts applications strictly to user-level privileges, effectively preventing unauthorized access to critical system resources. File operations within Application Sandboxes are containerized, isolating application data and significantly mitigating potential risks from compromised software. Additionally, network interactions and interprocess communications are tightly managed through entitlementbased permissions mediated by trusted broker services, further limiting the exposure surface for security breaches. Outputs generated
+by applications within these sandboxes are also quarantined.
+
+TCC Protection. Complementing the sandbox and entitlement
+protection, Apple’s Transparency, Consent, and Control (TCC) enforces user authorization for accessing sensitive data like photos,
+contacts, and location. It intercepts access attempts and prompts
+users for consent, storing preferences in System Settings. To support
+essential functionality, some Apple system apps are granted private
+entitlements (e.g., com.apple.private.tcc.allow) that let them
+bypass prompts for trusted operations—such as Calendar accessing
+address book entries. These entitlements are restricted from thirdparty use, preserving TCC’s role in confining untrusted apps while
+enabling trusted system components to operate seamlessly.
+
+2.2
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Interprocess Communication (IPC)
+
+When operating cohesively, macOS sandboxing mechanisms provide robust isolation, significantly limiting the actions of potentially
+compromised apps. In reality, however, macOS still needs to facilitate controlled inter-process communication (IPC) for legitimate
+tasks such as accessing iCloud, printing, or handling Apple Events.
+These IPC operations typically rely on Mach messages and XPC
+services, where a privileged or less-restricted service performs specific actions on behalf of a sandboxed application. At the heart of
+IPC is launchd (PID 1), macOS’s central service manager, responsible for registering, launching, and managing Mach-based services,
+including XPC services, within defined namespaces—System, User,
+and PID domains. While sandbox policies restrict an application’s
+communication to whitelisted services unless explicitly entitled
+otherwise, services within an application’s own PID domain remain implicitly accessible, since they are intended to operate exclusively within their parent app’s context. However, this implicit
+
+3
+
+Chekhov’s Gun Attack
+
+In this section, we present the attack Chekhov’s Gun and illustrate
+the rationale behind how numerous PID domain services, although
+also operating within an Application Sandbox identical to that of
+
+3872
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Minghao Lin et al.
+
+Example: File mount entitlement enforcement in a sandbox
+environment. We use a file mount information retrieval operation
+as a concrete example to illustrate how the two stage entitlement
+mechanism works:
+● First-stage Check. As shown in Figure 1, when a user-mode
+process is launched, its sandbox profile is first compiled into a binary representation. This compilation is performed using APIs
+provided by libsystem_sandbox.dylib, a dynamic library in macOS that serves as the interface between user-space applications
+and the system’s sandboxing infrastructure. This compiled profile is then loaded into the kernel. During the compilation process, the dylib interprets the sandbox rules defined in the profile. At line 11, it checks whether the user-space process has declared the entitlement com.apple.security.temporary-exception.
+files.home-relative-path.read-write (line 12). If the entitlement
+is present, the corresponding filter paths associated with it are injected into the sandbox rule set during compilation. This grants
+the process read and write permissions to the specified filtered
+paths (line 14). This type of entitlement belongs to the first check
+stage, where it allows the process to bypass the application sandbox restrictions for certain paths.
+
+the calling application, can be exploited due to subtle entitlement
+differences. We begin by laying out our threat model. We then demystify how the entitlement mechanism underpins both sandboxing and the TCC (Transparency, Consent, and Control) framework
+in the PID-domain, highlighting the strengths of this multi-layered
+design as well as the vulnerabilities that arise when entitlements
+are granted or enforced improperly. Finally, we provide a concrete
+example (CVE-2025-30448) to demonstrate how these architectural
+components can be exploited in practice.
+
+3.1
+
+Threat Model
+
+Our threat model assumes that the attacker is a sandboxed application. The application is confined to its own Application Sandbox
+and can only read or write files within its designated container. It
+is explicitly restricted from accessing other system resources or
+user data beyond the sandbox boundary. Furthermore, the attacker
+cannot self-declare any restricted public or private entitlements,
+as these require explicit approval through Apple’s notarization or
+code-signing process. This threat model reflects the realistic constraints faced by third-party applications in the macOS ecosystem
+and explicitly excludes any form of privileged code execution or
+kernel-level access.
+Despite these stringent sandbox restrictions, we show that a
+malicious sandboxed application can still mount powerful attacks
+by abusing PID-domain services. In particular, we show how such
+an app can exploit PID-domain services to carry out operations that
+are explicitly disallowed by the Application Sandbox policy, such as
+TCC and SIP, thereby violating core security guarantees enforced
+by macOS. This attack can succeed when all three of the following
+conditions are met: (1) the application is able to invoke a PID domain
+service that carries a sensitive entitlement that the application itself
+is not permitted to have, (2) the PID domain service exposes an
+API whose behavior effectively grants the sensitive entitlement’s
+capabilities, and (3) the application has a valid path or control over
+one or more parameters that reach the sink.
+
+3.2
+
+● Second-stage Check. Once the compiled sandbox profile is
+loaded into the kernel, the user-space process invokes the fsctl
+function to query mount information for a file located under one of
+the allowed paths. The fsctl call first routes through the syscall
+handler syscall_fsctl. The sandbox hooks this syscall to perform checks. The control flow first enter hook_mount_check_fsctl
+function, which performs a sandbox access check. If the check
+fails, the kernel immediately denies the operation. Within the function hook_mount_check_fsctl, cred_sb_evaluate is invoked
+to evaluate whether the operation is permitted or not. At line 1,
+cred_sb_evaluate retrieves the precompiled sandbox profile associated with the calling process. At line 4, it evaluates whether the
+profile allows the specific fsctl operation targeting the requested
+file. Because the process had previously declared the security.
+temporary-exception.files.home-relative-path.read-write entitlement, and the target path matches the entitlement’s filter, the operation is allowed by the sandbox (line 5). Once the sandbox check
+passes, the system proceeds to fsctl_internal, which eventually invokes the handle_get_graft_info function—the function
+responsible for retrieving the file’s mount information. The kernel
+then calls apfs_is_task_entitled to check whether the process
+has declared the required entitlement com.apple.private.apfs.
+get-graft-info (line 7). If the entitlement is present, the operation
+proceeds and the mount information is returned. Otherwise, the
+operation is denied.
+
+Demystify Entitlement Mechanism in
+Application Sandbox
+
+Although Apple’s own PID-domain services that run inside the
+Application Sandbox are subject to containerized environment restrictions, macOS enables certain entitlements for these services to
+function properly. Chekhov’s Gun attack exploits and reveals the
+subtle differences in entitlement configurations between attackercontrolled applications and these PID-domain services.
+We begin by demystifying how the entitlement mechanism operates within the Application Sandbox. Through reverse engineering of the macOS kernel, we find that entitlements serve as a finergrained access control mechanism in Application Sandbox, and
+their effects depend on the enforcement context. Specifically, entitlement checks occur at two main stages, as shown in Figure 1:
+First, at the kernel sandbox Rule Check stage, entitlements can be
+used to bypass the Application Sandbox restrictions, granting abilities beyond the sandboxed environment. Second, after the sandbox
+rule is passed, entitlements can still influence access to sensitive resources (such as directories protected by TCC and SIP) or sensitive
+operations, depending on the capabilities the entitlement grants.
+
+Layered defensive strategy in PID-domain services. This example demonstrates a complete two-stage entitlement enforcement
+path: the first entitlement allows bypassing application sandbox restrictions, and the second, more privileged entitlement grants access
+to a protected capability. Our reverse engineering findings, combined with existing research on sandboxing, SIP, TCC, and other
+user-space security mechanisms, reveal a clear layered defensive
+strategy employed in macOS: The sandbox serves as the first line
+of defense, restricting application behavior by default. However,
+
+3873
+
+First-stage
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS Application-Sandboxed PID-Domain Services
+
+Generate
+Sandbox Rule
+Reject
+
+User Mode Process
+Call
+
+Syscall_fsctl
+Call
+
+Second-stage
+
+hook_mount_check
+_fsctl
+Call
+
+fsctl_internal
+Multi Call
+
+handle_get_graft_inf
+o
+
+1 void -[SPIHelper startFileSharing](SPIHelper *self, SEL a2,
+id Filepath, ..., id withReply)
+2{
+…
+3 NSURL *fileURL = [NSURL fileURLWithPath:Filepath];
+4 sub_100041210 (fileURL, ..., withReply);
+…
+Multi Call
+5}
+
+11(sandbox-array-entitlement
+12 "com.apple.security.temporaryexception.files.home-relative-path.read-write"
+13 (let ((filter (select-filter path home-subpath
+home-literal)))
+14
+(read-write-and-issue-extensions filter))))
+
+Application.sb
+6 sub_1000413E0(NSURL *fileURL , .., id withReply)
+7{
+…
+Guide
+8 sharedFileWebURL
+=BRSharingCreateShareForItemAtURL(fileURL)); // Upload
+the shared file to icloud server and return online web URL.
+…
+9 withReply(..., sharedFileURL) // Return above URL to client
+…
+}
+
+com.apple.security.temporary-exception.files.homerelative-path.read-write
+
+Userspace
+Kernel
+
+Entitlements libsystem_sandbox.dylib
+cred_sb_evaluate(macf_ctx, SBOperation)
+{
+1 SBProfile*
+profile=RetriveProfile(macf_ctx);
+2 While(profile->rule){
+…
+3
+if profile->rule->op== SBOperation:
+4
+if (rule->filter->matches(macf_ctx)) {
+5
+return true;
+6
+else { return false;}
+
+...
+1 [Key] com.apple.security.app-sandbox
+2 [Value]
+3
+[Bool] true
+4 [Key] com.apple.security.temporary-exception.files.home-relative-path.read-write
+5 [Value]
+6 [Array]
+7
+[String] /Library/Mobile Documents/
+8 [Key] com.apple.private.security.storage.MobileDocuments
+9 [Value]
+[Bool] true
+...
+
+Entitlement
+
+Figure 2: Code snippet for malicious iCloud file downloading.
+Rule
+Check
+
+Initially, the service declares com.apple.security.app-sandbox
+(lines 1–3), indicating the standard sandbox restrictions. It also declares two entitlements: files.home-relative-path.read-write
+and storage.MobileDocuments (lines 4–7). The former enables
+file access to directories outside the sandbox, specifically within
+~/Library/Mobile Documents/, though these directories are generally protected by TCC. Crucially, the latter private entitlement
+grants unrestricted access to iCloud files within this directory without requiring user consent.
+
+7 If apfs_is_task_entitled (usermodeProcess,
+"com.apple.private.apfs.get-graft-info")
+{
+8 getGraftinfo(file_node,...);
+}
+9 else{
+10 RejectOperation();
+}
+
+Figure 1: Entitlement check mechanism in Application Sandboxs, with entitlement check highlighted in red.
+Apple does not fully trust the area outside the sandbox to be inherently safe. Instead, access to sensitive resources and operations
+beyond the sandbox is further gated by SIP, TCC, and additional entitlement checks, effectively narrowing the attack surface. Notably,
+even for resources that are accessible only outside the sandbox, Apple requires specific entitlements to bypass TCC or SIP without
+user consent. This layered security model demonstrates that entitlements are a trusted cornerstone in Apple’s user-space defense
+architecture. The system fundamentally relies on entitlements to
+grant privileged access in a tightly controlled and auditable way.
+Importantly, because certain PID-domain services must perform
+operations that exceed the capabilities permitted by a standard
+Application Sandbox, Apple grants them specific entitlements to
+support their privileged functionality. These entitlements are carefully curated to ensure the service can function while preserving
+broader system security. However, this design also introduces a
+subtle but critical asymmetry: the entitlements assigned to these
+services differ in small but meaningful ways from those available
+to ordinary sandboxed applications. Chekhov’s Gun attack exploits
+these fine-grained entitlement differences to perform actions that
+are normally prohibited by sandbox policies. In the following section, we demonstrate the vulnerabilities we discovered: even when
+PID-domain service running inside a restricted Application Sandbox, such misuse can lead to severe security consequences.
+
+3.3
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Exploiting the Vulnerability via Exported APIs. Our analysis identified a vulnerable API, startFileSharing, by tracing data
+flows from its controllable input parameters. The first parameter,
+a file path, is propagated through several function calls and ultimately reaches BRSharingCreateShareForItemAtURL at line 8.
+This function uploads the specified file to an iCloud server and returns a publicly accessible URL, allowing arbitrary file downloads
+from the victim’s iCloud storage without user authorization.
+To identify this vulnerability, four conditions need to be met.
+The first is a special capability, where we analyze the service’s
+entitlements to determine what capabilities it possesses. The second
+is identifying the exported APIs, which indicate which APIs are
+callable. The third condition is pairing the special capability with
+sensitive functions. This involves collecting the relevant sensitive
+functions based on the special capability. The last condition is
+the exploitable sensitive function, where the sensitive functions
+collected earlier need to be influenced by controllable parameters
+from the exported APIs in order to be exploited.
+End-to-end Test. We conducted an end-to-end attack on our local machine to confirm the feasibility of exploiting SPIHelper.xpc.
+One additional necessary step was registering the target PID-domain
+service. This registration can be achieved through explicit registration APIs [24] or implicitly by loading Apple’s third-party libraries,
+which automatically handle service registration during initialization. Once registered, our proof-of-concept successfully triggered
+the vulnerability, enabling arbitrary read of iCloud files.
+
+Case Study: Downloading iCloud Files
+
+To demonstrate how the identified architectural components can be
+exploited in practice, we provide a detailed case study of a vulnerability that we found in the PID-domain service SPIHelper.xpc.
+This vulnerability allows attackers to arbitrarily read and download
+users’ private files stored in iCloud, bypassing macOS sandbox and
+TCC protections. The case highlights how improper handling of
+private entitlements and service containerization can lead to unauthorized data leakage from a seemingly sandboxed environment.
+
+4
+
+Analyzing Service Entitlements and Capabilities. Figure 1
+(right side) illustrates the entitlement declarations for SPIHelper.xpc.
+
+3874
+
+A Static Analysis Framework for Detecting
+Chekhov’s Gun Attack
+
+To automatically assess the new attack surface identified by the
+Chekhov’s Gun attack, we design a static analysis-based detection
+framework to analyze PID domain services at scale. Our goal is
+to identify which PID-domain services can be connected to, discover the APIs they export, and then determine whether any of
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Minghao Lin et al.
+
+Directory Name
+Frameworks
+
+these APIs can be exploited to perform sensitive operations. To accomplish this, we first identify connectable PID domain services
+through reverse engineering and gather their associated APIs as
+targeted APIs. Next, we collect a sensitive operation sink list by
+filtering functions based on sensitive operations. Because Apple’s
+entitlements restrict which processes can call particular services,
+we correlate each service’s entitlements with its exposed functions,
+thus eliminating false positives. Ultimately, this approach helps us
+to discover truly exploitable PID-domain services by tracing data
+flows from API sources to critical sink functions using taint analysis.
+An overview of our detection framework is illustrated in Figure 4.
+
+4.1
+
+PrivateFrameworks
+CoreServices
+PreferencePanes
+Templates
+CryptoTokenKit
+
+Service Category Description
+Public system frameworks used by both system and
+third-party applications.
+Apple private frameworks.
+Essential macOS components for UI functionality,
+background services, and system runtime.
+UI modules for managing user-accessible preferences.
+Service templates used for initializing system
+features or user-facing components.
+Services related to secure identity and token-based
+cryptographic operations.
+
+Table 2: Overview of PID-domain Service Categories.
+bool __cdecl -[ServiceDelegate listener:shouldAcceptNewConnection:]()
+{
+1 SecTaskRef = SecTaskCreateWithAuditToken()
+...
+2 HasEnt =
+SecTaskCopyValueForEntitlement(SecTaskRef,"com.apple.WallpaperHelp
+er");
+....
+3 if ( HasEnt )
+{
+...
+4 exportedInterface = +[NSXPCInterface interfaceWithProtocol:](
+&OBJC_CLASS___NSXPCInterface,
+"interfaceWithProtocol:",
+&OBJC_PROTOCOL___WallpaperHelperProtocol);
+5 objc_msgSend(v8, "setExportedInterface:", exportedInterface);
+6 exportObject = objc_opt_new(&OBJC_CLASS___WallpaperHelper, v15,
+v16);
+7 objc_msgSend(v8, "setExportedObject:", exportObject);
+8 objc_msgSend(v8, "resume");
+9 v11 = 1;
+...
+}else{
+...
+10 v11 = 0;
+...
+}
+...
+11 return v11;
+}
+
+Enumerating Connectable APIs in PID
+Services via Reverse Engineering
+
+Before analyzing API behaviors and potential security risks, we
+first need to exhaustively determine which PID-domain services
+and APIs are actually exposed to external processes. To this end,
+we begin by collecting all PID-domain services present, analyzing
+the entitlement checks to confirm their connectivity and types, and
+subsequently extracting their relevant public-facing APIs.
+4.1.1 Enumerating All PID Domain Services. Our search space for
+PID-domain services extends beyond those confined to service sandboxes; it also includes PID-domain services running within application sandboxes. Consequently, rather than limiting our scope to
+the conventional directories—System/Library/Frameworks and
+System/Library/PrivateFrameworks [25]—we perform a comprehensive scan of the entire file system to identify all potential
+PID-domain services. Specifically, we locate services that are packaged as .xpc bundles and whose Info.plist files specify the Service
+Type key as application. This exhaustive search reveals that, in addition to the two known directories, PID-domain services also reside in four other locations, as shown in Table 2. We therefore systematically traverse all six directories to collect the full set of PIDdomain services. These services are then passed to the next stage
+of analysis to evaluate their external connectivity.
+
+12 OBJC_INSTANCE_METHODS_WallpaperHelperProtocol
+13 objc2_meth <removeWallpaperFiles>
+14 objc2_meth <copyItemAtPath_toPath>
+
+NSXPC Protocol
+
+15 OBJC_INSTANCE_METHODS_WallpaperHelper_meth_l
+ist
+16 DCD removeWallpaperFiles
+17 DCD copyItemAtPath_toPath
+18. DCD setLogger
+….
+
+Exported APIs
+
+Figure 3: Simplified code of NSXPC connection check.
+the entitlement is present, the return variable is set to 1 (line 9), allowing the connection to be accepted. Otherwise, it is set to 0 (line
+10), and the connection is rejected.
+Inspired by this checking pattern, we implemented a data-flow
+analysis starting from the return value upwards, examining whether
+the return value has multiple assignments. If the return value is only
+ever assigned the constant value 1, it indicates that the connection
+can be accepted. If multiple assignments to the return value exist,
+this suggests that an entitlement check is performed and thus the
+service is considered inaccessible.
+
+4.1.2 Filtering Connectable PID Domain Services. After identifying
+all PID-domain services, we filter out those gated by entitlement
+checks that usually attacker application cannot satisfy. This allows
+us to concentrate on services that are truly reachable and therefore
+constitute a realistic security threat.
+During our reverse engineering process, we discovered that
+many PID domain services verify caller identity by checking for
+the presence of specific entitlements. Since entitlements cannot be
+freely signed on Apple’s operating systems without jailbreaking,
+such checks are effectively impossible to bypass. If these checks exist, the corresponding PID domain services become inaccessible. We
+identify that the implementation of these entitlement checks is in
+the NSXPCListenerDelegate-listener(_:shouldAcceptNewConnection
+:):function , which primarily determines whether to accept or reject incoming connections. Specifically, as exampled in Figure 3,
+the function first retrieves the requestor’s information (line 1), and
+then checks whether this information contains the corresponding
+entitlement, such as "com.apple.WallpaperHelper" (lines 2-3). If
+
+3875
+
+4.1.3 Find Exported APIs of PID Domain Services. After identifying
+connectable PID domain services in the previous step, we still need
+to pinpoint the APIs that these services expose. Our objective is to
+extract all the interfaces that could be invoked remotely, revealing
+the genuine entry points for external callers. These connectable
+APIs will serve as Sources in our subsequent taint analysis.
+In NSXPC communication, interactions occur through specific
+NSXPC protocols, so we need to identify the corresponding protocols. For example, as shown in Figure 3, the Wallpaper Helper
+protocol definition is passed as a parameter to the NSXPCInterface
+interfaceWithProtocol method (line 4), and subsequently set
+as the exported interface (line 5). The protocol definition explicitly exports API method names, such as "removeWallpaperFiles"
+and "CopyItemAtPath_toPath" (line 13, line 14). Next,
+the WallpaperHelper object is set as the exported object (line
+7). Although the WallpaperHelper class itself defines three methods—"removeWallpaperFiles", "CopyItemAtPath_toPath", and
+"setLogger" (line 16, line 17, and line 18)—only the first two methods are included in the exported protocol, meaning only Wallpaper
+Helper removeWallpaperFiles and WallpaperHelper CopyItemAtPath
+_toPath can be remotely invoked. Based on this pattern, we extract
+the NSXPC protocol argument from the interfaceWithProtocol
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS Application-Sandboxed PID-Domain Services
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Framework Input: PID-domain Service
+
+Framework Output: Vulnerable Services
+
+PID-domain Service
+
+Service-specific Info
+
+Enumerating Connectable
+APIs (Sources)
+
+Sensitive Operation
+Filtering (Sinks)
+
+Taint Flow Tracking
+
+PID-domain
+Service Info
+
+Service Types
+
+Exported API Analysis
+
+Sink Classification
+(LLM & Human)
+
+Call Graph & IR
+Construction
+
+Bundle Path
+
+.entitlements files
+
+Entitlement Check
+
+Entitlement to Sink
+Mapping
+(LLM & Human)
+
+Propagation Logic &
+Validator
+
+Exploitable PID-domain Services &
+API Reports
+
+Entitlements
+Analysis &
+Improvement
+
+Disable APIs
+
+Possible Mitigations
+
+Service Entitlement Info E.
+Entitlement Semantics
+
+Entitlement Values
+
+Figure 4: An overview of the static detection framework for PID-domain services.
+
+method to obtain a list of exported API method names. We also
+identify the corresponding class name of the exported object. By
+combining these two pieces of information, we generate a complete
+set of callable API names. Details of the identified results are provided in the evaluation section (Section 5.1).
+
+4.2
+
+leading to full system compromise if abused, such as modifying
+system-wide configurations (e.g., firewall rules, startup items) and
+loading or injecting kernel extensions (KEXT), thereby controlling
+kernel behavior and enabling local privilege escalation (LPE).
+● Transparency Consent and Control (TCC) Related Operations. Operations that access resources protected by TCC without
+explicit user consent, including accessing user-taken or stored photos, capturing video or images using the system camera, recording
+audio or voice input, accessing information or data from Bluetooth
+devices, reading user contacts, obtaining GPS or WiFi location information, reading or writing user schedules, capturing the user’s
+current desktop screen, monitoring user keyboard inputs, posing
+potential keylogging risks, accessing private user directories(e.g.,
+Downloads, Desktop)
+Building upon the above categorization, we aimed to construct a
+sink list that was as comprehensive as possible by analyzing function exports from connectable services and mapping them to entitlements. To scale this effort, we adopted a hybrid methodology that
+combined human expertise with LLM assistance. After defining the
+five core categories of sensitive operations, we applied structured filtering techniques, supported by language model analysis, to identify
+candidate functions corresponding to each category. Importantly,
+human effort remained central throughout the process: we carefully validated and refined the procedure using contextual knowledge from Apple’s documentation and previous research, ensuring
+that the selected operations genuinely reflected policy-relevant behaviors rather than superficial matches or misleading names.
+Specifically, we first extracted each function’s name, parameter
+list, and decompiled code from connectable services using IDA Pro.
+From the original set of functions, we excluded functions with no parameters, yielding a final dataset of functions for sink classification.
+We then constructed prompts using advanced prompt engineering
+techniques [20], including Chain-of-Thought (CoT) reasoning [28],
+few-shot learning [47], and self-reflection [39]. Each prompt begins
+by formally defining the five categories of sensitive operations. The
+classification process is then decomposed into three explicit reasoning steps following the CoT paradigm: (1) analyze the function name
+and parameters; (2) analyze the function body; (3) analyze string literals embedded in the function. A function is considered sensitive
+if any of the three reasoning stages indicates the presence of a sensitive operation. To guide the model through this multistep process,
+we also employ a few-shot learning by providing two representative
+
+Entitlement-Guided Sensitive Operation
+Filtering
+
+In the previous step, we identified the exported APIs as potential
+Source points—entry functions that may initiate PID-domain operations. We now define Sink points as operations that could potentially violate the sandbox security policy, such as accessing protected resources or invoking privileged functionality. In this section,
+we describe our best effort to construct a comprehensive and accurate sink list. Figure 5 shows an overview of the filtering procedure.
+4.2.1 Building the Sensitive Operation Sink List. Identifying a comprehensive sink list for sensitive operations proves inherently challenging, requiring a thorough synthesis of documentation, prior
+research, and meticulous human inspection. Building on insights
+from Apple’s Secure Coding Guide [3] and the iService study [46],
+we incorporated entitlements [2] and sandbox considerations [29]
+to arrive at five overarching categories that capture a comprehensive range of security-critical behaviors:
+● File System Operations. Actions involving file permissions and
+file read/write operations that may compromise system integrity
+or leak sensitive data, such as changing file permissions or ownership (e.g., chmod, chown). Or reading, writing, or deleting files
+belonging to the system or other users.
+● Privileged Networking. Sensitive network-related operations
+that could lead to unauthorized access or data leaks, including
+initiating services on common ports such as 443, or 22, and directly
+crafting network packets (e.g., for ping, ICMP, TCP SYN flood).
+● Process and Memory Control. Operations that affect running
+processes and memory, enabling attackers to perform high-risk
+behaviors including creating, terminating, debugging processes,
+or retrieving sensitive process information and accessing arbitrary
+process memory space, potentially causing information leaks or
+sandbox bypass as well as loading unsigned third-party libraries,
+which could result in the execution of arbitrary code.
+● System and Kernel Level Control. Actions impacting overall
+system behavior, typically requiring high privileges and potentially
+
+3876
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Decompiled
+Code
+
+Minghao Lin et al.
+
+Filter
+
+# Desc & task
+# Example
+# Classification
+## step1
+## step2
+## step3
+## Code
+# Self-reflection
+# output format
+Prompt
+
+LLM
+
+Sensitive Sink
+Function list
+
+Get sensitive operation sink list
+
+Entitlement
+
+# Desc & task
+# Load Context
+# Example
+# Infer
+## Entitlement
+# Selfreflection
+# output format
+
+LLM
+
+Manually Verify
+& Classify
+
+# Desc & task
+# Example
+# Mapping
+## noise-aware
+## step1
+## step2
+## step3
+## Entitlement Desc
+## Function list
+# Self-reflection
+# output format
+Prompt
+
+Description
+list
+
+LLM
+
+Ent – Function
+Mapping list
+
+Manually Verify & Filter
+
+Get every connectable service’s Ent-Function mapping list
+
+Prompt
+
+Get entitlement capability description table
+
+Figure 5: The workflow of LLM assists in identifying the sink list and constructing entitlement mappings.
+examples, each corresponding to a different sensitive operation category, along with annotated, step-by-step reasoning for each stage.
+We further enhance reliability through a self-reflection step,
+prompting the model to critically evaluate the validity of its own
+reasoning. If flaws or inconsistencies are detected, the model reanalyzes the function accordingly. If the reasoning is sound, the
+model proceeds to assign the function to one of the five sensitive
+categories, or labels it as non-sensitive if none apply. We employ
+Gemini 2.5-Flash as the underlying large language model, selected
+for its strong performance in semantic reasoning tasks. Finally, this
+process enables the automated construction of a high-quality, semantically grounded sink list, categorized into five distinct types
+of sensitive operations. By leveraging the reasoning capabilities of
+LLMs, this approach enables scalable, context-aware, and semantically rich classification of security-critical functionality, significantly reducing manual effort while maintaining high precision.
+However, as evaluated in Section 5.2, we cannot guarantee the
+completeness of the resulting sink list despite these efforts. This
+limitation is inherent in many reverse engineering analyses, as
+further discussed in the limitation section (Section 6.3).
+
+associated privileges, we prompt Gemini 2.5-Flash to infer the corresponding capabilities of each entitlement based on its name. To
+improve the accuracy and contextual grounding of the model’s inference, we augment the prompt using Retrieval-Augmented Generation (RAG) [30]. Specifically, we scrape official descriptions of
+public entitlements and their granted functions from the Apple developer documentation [9], and embed these into the prompt as a
+retrieved context. We apply this LLM-assisted pipeline to all collected entitlements. As the number of unique entitlements is relatively small, we manually validate the final inferred capabilities
+and correct any remaining inaccuracies to ensure high precision.
+During the validation process, we also manually assign each entitlement to one of the five categories of sensitive operations. Finally,
+we get the entitlement capability table for the mapping.
+Entitlements and sink functions are inherently linked by their
+shared categories of sensitive operations. To improve the accuracy
+of the mapping process, our mapping prompt adopts the same
+prompt engineering techniques used in the sink classification task,
+including CoT, few-shot learning, and self-reflection. The prompt
+begins with a task description that asks the LLM to determine
+whether a given sink function could exploit the capability granted
+by a specific entitlement. The reasoning process is structured into
+four steps: (1) noise-aware section, where the prompt explicitly
+notes that the input function list was generated by an LLM classifier
+to encourage a more critical stance; (2) analyze the entitlement
+name and its inferred capability; (3) analyze the function name and
+its parameters; (4) analyze the function summary generated during
+the prior sink classification step. We also provide representative fewshot examples that follow this three-step reasoning process to guide
+the analysis. After the initial reasoning, the model enters a selfreflection phase, where it is prompted to critically evaluate whether
+the previous reasoning was correct. If inconsistencies or flaws are
+identified, the model is instructed to re-analyze the mapping before
+producing the final decision.
+This process yields a list of key-value mappings, where each
+entitlement is mapped to a set of aligned sink functions. We then
+index this mapping using the entitlement list declared by each
+connectable service to obtain a service-specific list of candidate sink
+functions. To ensure high precision, we manually reviewed the sink
+list for each service. Specifically, we verified whether each function
+could plausibly align with the capability of any entitlement declared
+by the service. Functions identified as false positives were excluded
+from the list. The whole procedure is evaluated in Section 5.3.
+
+4.2.2 Correlating Entitlements with Sensitive Sinks. After identifying the comprehensive sink list, the subsequent step is to map each
+entitlement to its corresponding sink functions. Establishing such
+mappings is essential because a security risk materializes only when
+certain entitlements are combined with sensitive sinks. Accurately
+correlating entitlements to relevant sinks significantly reduces the
+false-positive rate in subsequent taint analysis, as irrelevant sinkentitlement combinations can be systematically disregarded.
+Our approach leverages the semantic nature of entitlements.
+While there is no detailed official specification on the precise capabilities of individual entitlements, entitlement names often inherently
+reflect their permitted capabilities, which can be further elucidated
+through kernel reverse engineering and sandbox rule analyses. By
+integrating Apple’s publicly available entitlement descriptions with
+our own kernel reverse-engineering results (Section 3.2), where we
+dissected the kernel implementation, inspected the logic, and confirmed that each name aligns with the kernel enforcement logic,
+we inferred and annotated the functional scope of various private
+entitlements, culminating in a detailed entitlement capability table.
+To scale up this semantic interpretation process, we combine
+LLM assistance with human expertise. We begin by collecting all
+distinct entitlements declared by connectable services. Motivated
+by the observation that the names of the entitlement reflect their
+
+3877
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS Application-Sandboxed PID-Domain Services
+
+As an illustrative example, Listing 1 presents the mapping between the entitlement security.cs.disable-library-validation
+and its corresponding sink list. This particular entitlement enables
+the loading of third-party libraries lacking Apple’s cryptographic
+signature verification—potentially permitting attacker-controlled
+dynamic libraries. Consequently, the sink functions linked to this
+entitlement predominantly involve dynamic library loading operations. This detailed mapping serves a critical defensive purpose:
+without the security.cs.disable-library-validation entitlement, even if taint analysis identifies attacker-controlled inputs influencing dynamically loaded libraries, the system inherently rejects such libraries if unsigned, rendering the exploitation path ineffective. Conversely, possession of this entitlement without corresponding sensitive sinks also poses no immediate threat, as the
+required sensitive operations remain inaccessible. Therefore, security threats manifest exclusively at the intersection of specific entitlements and their associated sensitive sink functions, reinforcing
+the necessity and effectiveness of our entitlement-sink mapping in
+accurately identifying genuine security risks.
+" com . apple . security . cs . disable - library - validation
+": [
+2
+" _CFBundleGetFunctionPointersForNames " ,
+3
+" _CFBundleCreateBundlesFromDirectory " ,
+4
+" _CFBundleLoadExecutable ",
+5
+" _CFBundleLoadExecutableAndReturnError " ,
+6
+" _CFBundleCreate "
+7
+]
+1
+
+Listing 1: An example of entitlement-sink list mapping.
+
+4.3
+
+Static Taint Propagation to Identify
+Exploitable Sinks
+
+mark the third and subsequent parameters of each source API as
+taint sources in IDA IR. We then propagate taint within each function and check whether tainted data flows into the parameters of
+the next function in the call graph. When processing the taint propagation to the next function call, there are three scenarios. The first
+is when the next function is a block callback [4]. The second is
+when the next function is an Objective-C function [44]. The third
+is when the next function is a C function. Each of these scenarios
+corresponds to different parameter passing logic, meaning different
+taint propagation behavior. In the previous step, while constructing the call graph, we marked these three different situations. If the
+cross-reference points to a data block, it indicates a block callback.
+If the cross-reference is a code block passing through an intermediary function, it indicates an Objective-C function. If the crossreference directly points to a code block, it indicates a C function.
+For each case, we further handled the taint propagation logic. If the
+next function is a block callback, we check for the appearance of
+the NSConcreteStackBlock marker during taint analysis. If this
+marker is encountered, it indicates that the block structure is being
+assembled for the callback. Based on the structure description, we
+track the data flow to the fifth parameter of the structure, which is
+the first parameter of the callback, and continue the taint analysis
+from there. If the next function is an Objective-C function, I follow
+the Objective-C calling convention, starting the taint analysis from
+the third parameter onward. If the next function is a C function, we
+perform the taint analysis starting from the first parameter, as is
+typical for C functions. If taint successfully propagates across function boundaries and reaches a sink parameter, the path is considered valid. In this case, the source is deemed potentially exploitable.
+
+5
+
+The final step is to determine whether a sink function is truly exploitable. We then perform a taint analysis: we track whether data
+originating from attacker-controlled parameters in a source function can flow into the sink. To do this, we implemented a lightweight
+taint analysis framework based on IDA Pro’s Intermediate Representation (Microcode). The process consists of three main steps:
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Evaluation
+
+In this section, we evaluate the effectiveness of our automated detection framework, focusing on the following two research questions: (1) Attack Surface Characterization: How extensive is the
+newly discovered attack surface in terms of sensitive services and
+exploitable APIs? (2) Framework Effectiveness: How effective is our
+framework in accurately identifying and validating actual security
+vulnerabilities?
+
+Source and sink lists preparing. We begin by iterating over all
+connectable services. For each service, we extract its entitlements
+and use the constructed entitlement-to-sink mapping to retrieve the
+corresponding sink list. Since the sink list may contain functions
+from other services, we filter it to retain only the sink functions
+that belong to the current service. We then combine this refined
+sink list with the previously obtained source list for the service.
+
+Evaluation Environment. We conducted all our experiments on a
+MacBook Pro equipped with an Apple Silicon M3 Pro chip, which integrated an 11-core CPU and a 14-core GPU. The machine was configured with 36GB of unified DRAM and a 4TB NVMe SSD for storage. The system ran macOS 15.2 (Sonoma), which incorporated the
+latest security features, entitlement policies, and sandboxing mechanisms, allowing us to evaluate our detection framework under up-todate protection models. All experiments were performed in a clean
+user-space environment with SIP (System Integrity Protection) and
+AMFI (Apple Mobile File Integrity) enabled, to reflect the realistic
+constraints under which an attacker-controlled app would operate.
+
+Call graph generations. Using IDA Pro, we load the target service binary and begin analyzing each sink in the list. Starting from
+each sink function, we recursively trace backward through crossreferences to find the caller functions by using existing IDAPython
+APIs. If the reference is located within the body of a function, we
+continue the backward search from that function. If no further function cross-references are found, we check for data cross-references,
+indicating the use of a block or function pointer. This process continues until we reach a source function or there are no more references, at which point the path ends.
+
+5.1
+
+Attack Surface Characterization
+
+To characterize the attack surface, we first conducted a system-wide
+enumeration of PID-domain services. These services were classified
+based on their interprocess communication mechanisms—either
+NSXPC or XPC—and their exported APIs were extracted accordingly. Specifically, we traversed system directories to collect all .xpc
+
+Information flow tracking. With the call graph constructed, according to the Objective-C function calling convention [44], we
+
+3878
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Minghao Lin et al.
+
+bundles with an Info.plist file indicating a Service Type of application. Each identified service was categorized as NSXPC or XPC
+based on its communication method. As summarized in Table 3,
+our analysis identified a total of 302 PID-domain services, including 152 NSXPC services and 150 XPC services. Among these PIDdomain services, we performed data flow analysis (Section 4.1.2)
+and identified 105 services that were externally connectable: 85
+NSXPC and 20 XPC. We then manually validated their connectability. WACEAService was the only service we missed: the compiler
+replaced the usual mov w0, 1 with a constant-folded pair (mov w8,
+1 → and w0, w8, 1). Our filter, which flags a literal mov w0, 1 as “always connectable,” therefore mis-classified it. Such optimized patterns were seen in only this instance across all services. We can extend our heuristic rules to add it. Through reverse engineering, we
+identified that these connectable services exposed a total of 2,394
+APIs, with 2,357 from NSXPC services and 37 from XPC services.
+
+5.2
+
+NSXPC
+XPC
+Total
+
+#Connectable
+Services
+85
+20
+105
+
+#Exported APIs
+2357
+37
+2394
+
+Table 3: Statistics of PID-domain services, connectable endpoints, and exported APIs.
+Operation Category
+File System Operations
+Privileged Networking
+Process & Memory Control
+System & Kernel Control
+TCC Related Operations
+# Sensitive Functions
+
+Ground Truth
+288
+61
+67
+92
+136
+555
+
+Prediction
+289
+40
+66
+110
+134
+536
+
+Correct Prediction
+276
+39
+51
+70
+110
+457
+
+Table 4: Classification and benchmark among 1200 functions.
+Entitlement Semantic Analysis. First, we collected 640 distinct
+entitlements from all connectable services. Then we collect 143 public entitlement [9] and according capability description as RetrievalAugmented Generation (RAG) context. Finally, we ask LLM to infer
+the entitlement’s capability. Since the number of entitlements is
+not large, we dig a little bit further manually and verify the prediction result. We found that only six entitlement capabilities are
+incorrect described, as these entitlements do not include enough semantics to describe its actions, such as com.apple.private.xprotect,
+com.apple.USBCEntitlement, etc.
+To validate and refine the inferred capabilities of entitlements,
+we leverage their typical usage pattern within Apple platforms: entitlements are extracted from an application code signature and
+compared as string literals during access control enforcement. This
+behavior enables reverse engineers to locate entitlement checks
+by searching for entitlement strings and analyzing their crossreferences within binaries. In the kernel, for example, searching for
+the string "com.apple.USBCEntitlement" in the macOS kernel binary reveals a cross-reference within the function AppleHPMUserClient::initWithTask(IOUserClient *this, task *a2, void *a3, UInt32
+a4, OSDictionary *a5). This function is responsible for initializing
+connections to the AppleHPMUserClient driver, which provides access to Apple’s Hardware Performance Monitor. The presence of
+the entitlement check within this connection initialization function
+indicates that the entitlement controls whether a user-space process is authorized to interact with this kernel extension. Therefore,
+the entitlement effectively grants the ability to communicate with
+the AppleHPMUserClient driver. In the user space, running grep
+-r "com.apple.private.xprotect" from the root directory identifies a
+match within the /usr/bin/xprotect binary. Opening this binary in
+IDA Pro reveals that the entitlement is validated during the XPC
+connection setup phase. This context suggests that entitlement is
+required to establish authorized communication between the client
+application and the associated system service.
+As part of the validation, we also categorized each entitlement by
+the type of sensitive operations. For instance, we identified 258 entitlements related to file system operations, 39 tied to privileged networking, 161 to process memory control, 231 to system- or kernellevel control, and 365 governing access to TCC-protected resources.
+(Note that some entitlements may fall into multiple categories).
+This categorization provides a high-level view of how entitlements
+are distributed across different security domains.
+
+LLM-Aided Retrieval of Sink Functions
+
+To perform the taint analysis, we leveraged the sensitive operation
+taxonomy defined earlier and LLM-assisted filtering to extract relevant APIs from the functions present in the connectable services
+(Section 4.2). Initially, we excluded 5330 functions that have no parameters from the original set of 22,390 functions, resulting in the
+final set of 17,060 functions to be classified. Applying our structurefilter prompt to the decompiled code, the LLM identified 4,820 sensitive sink functions in total. Specifically, it classified 2,462 functions as File System Operations, 467 as Privileged Networking, 791
+as Process and Memory Control, 903 as System and Kernel Level
+Control, and 1,286 as TCC-related operations.
+To evaluate the accuracy and coverage of the LLM-classified
+sink list, we constructed a benchmark dataset by selecting 1,200
+functions from the final set of 17,060 candidates. Each function in
+the benchmark was subjected to a comprehensive manual analysis
+to determine its correct sensitive operation category, thereby establishing a high-confidence ground truth for evaluation. We then
+compared it with the LLM’s prediction results. Table 4 shows the
+benchmark result. In this benchmark, the model correctly identified 457 of the 555 sensitive functions, erroneously flagged 79 nonsensitive functions as sensitive, and failed to detect 98 true sensitive functions. As a result, it achieved a precision of 85.26%, a recall of 82. 34%, and an F1 score of 83. 78%. Through manual analysis, we pinpointed two primary causes of misclassification. First,
+insufficient context hinders accurate reasoning. For example, our
+extraction captures only a single level of logic, yet many functions
+serve merely as wrappers whose true behavior occurs in deeper
+callees. Second, the obfuscated nature of Swift function names after compilation makes their semantics difficult to interpret, further
+increasing the likelihood of errors. In light of these limitations, we
+modularized the sink list as a standalone document that can be iteratively refined and extended. We will also make this list publicly
+available to facilitate future validation and follow-up research.
+
+5.3
+
+#PID-domain
+Services
+152
+150
+302
+
+Inference of Entitlement Capabilities
+
+We combine LLM assistance with human effort to infer the capacity
+of each entitlement based on its semantic name and generate the
+entitlement-sink mapping.
+
+3879
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS Application-Sandboxed PID-Domain Services
+
+Sensitive Operation Category
+File System Operations
+Privileged Networking
+Process and Memory Control
+System and Kernel Level Control
+TCC Related Operations
+All
+
+Detected
+7
+1
+6
+8
+18
+40
+
+Validated Vulnerable APIs
+4
+0
+2
+2
+11
+19
+
+Table 5: Vulnerable exported API detection results
+Entitlement-to-sink Mapping. Based on the entitlement description table and the categorized sensitive operation sink list, we
+ask the LLM to establish an initial mapping between entitlements
+and sink functions whose capabilities semantically align. To evaluate the precision of this mapping, we manually verify the list of
+sinks of each connectable service. Since the size of each individual sink list is relatively small, this manual verification is feasible. During this process, we identify and remove false positives.
+In total, the initial aggregated set of sink functions across all connectable services contains 2,731 functions. After manual validation and filtering, 2,450 functions remain, resulting in a false positive rate of 10.29% and a precision of 89.71%. False positives arise
+for three primary reasons. First, some false positives come from
+the previous LLM-based sink classification step. The initial classifier may have incorrectly labeled certain functions as sensitive
+based solely on superficial lexical features, such as the presence
+of read, file, or URL in the function names. For example, functions like _objc_msgSend$dataWithContentsOfURL:options:error:
+and_objc_msgSend$read:maxLength: were likely misclassified due
+to their suggestive names, although they are typically used for
+image loading or stream reading and do not involve privileged
+capabilities. Second, the model may incorrectly associate functions that frequently appear near sensitive operations in the call
+chain, even if they themselves do not trigger any privileged behavior. For instance, -[MediaConversionQueue initWithDelegate:]
+and _objc_msgSend$setMetadataPolicy: are initialization or configuration functions unrelated to access control. Third, the LLM may
+overgeneralize the semantics of certain entitlements. For example,
+com.apple.private.apfs.get-graft-info specifically governs access to
+graft mapping data in mount points, but the model may mistakenly associate it with general file or URL-related functions such as
+_objc_msgSend$imageDataForPassthroughConversionForSourceURL:.
+These sources of error highlight the need for manual validation
+when high precision is required.
+
+5.4
+
+Bug Finding
+
+Table 5 shows the detection results. We manually inspect all 40 reported APIs and found that 21 of them were not exploitable. The
+main reasons for these false positives include some APIs that allow us to write files outside the sandbox using the service’s own
+functionality, but the file contents are uncontrollable. Additionally,
+some APIs have parameters that cannot be obtained, such as UUIDs,
+which are completely random 32-character strings. These APIs were
+deemed non-exploitable. In addition, five of them were reported to
+Apple but were later judged non-exploitable by Apple since they
+rely on a legacy iOS entitlement “private.security.storage.Photos",
+present in ImageConversionService and VideoConversionService
+but non-operative on macOS. In the end, the number of exploitable
+APIs is 19. All bugs are due to entitlement inconsistency. We reported these vulnerabilities through Apple’s responsible disclosure
+
+3880
+
+CCS ’25, October 13–17, 2025, Taipei
+
+-[DistributionHelperService fileAtPathExistsOnGraft:reply:(
+SPIHelper *self,
+SEL file_path,
+id withReply)
+{
+....
+1 withReply _v = objc_retain(withReply);
+2 ret_val=0;
+...
+3 if ( fsctl(objc_msgSend(file_path, “fileSystemRepresentation”),
+0xC0104A66uLL, &ret_val, 0) ) //
+{
+...
+4 error_code=+[NSError errorWithDomain:code:userInfo:](...);
+5 (withReply_v)(v5, 0LL, 0LL, error_code);
+}
+else
+{
+...
+6 (withReply _v)(v5, 0LL, 0LL, ret_val);
+...
+}
+}
+
+...
+1 [Key] com.apple.private.apfs.get-graft-info
+2 [Value]
+3
+[Bool] true
+...
+
+Entitlement
+
+Exported API
+
+Figure 6: Code snippet for attack case study: file existence.
+-[***:](***, id bundlePath) {
+1 bundlePath_v = objc_retain(bundlePath);
+...
+2 bundleURL = NSURL fileURLWithPath:](..,
+"fileURLWithPath:", bundlePath_v);
+…
+3 CFBundleObj = CFBundleCreate(kCFAllocatorDefault,
+bundleURL);
+…
+4 If
+(CFBundleLoadExecutableAndReturnError(CFBundleObj,
+&error) ) // Load Bundle into memory
+}
+
+...
+[Key] com.apple.private.tcc.ifdreader
+[Value]
+[Array]
+[String] kTCCServiceBluetoothAlways
+1[Key] com.apple.security.cs.disable-library-validation
+3[Value]
+4
+[Bool] true
+...
+
+Entitlement
+
+Exported API
+
+Figure 7: Code snippet for attack case study: arbitrary code
+execution and TCC bypass.
+process, leading to acknowledgment of 19 vulnerabilities and issuance of 7 CVEs by Apple. Detailed information on these vulnerabilities, impacts, disclosure status, and type of service is presented
+in Table 6. We also categorized them by security-critical behaviors
+they violated (Section 4.2.1). In the rest of this subsection, we will
+showcase case studies of identified vulnerabilities, explaining their
+root causes and demonstrating how this tool is able to identify them.
+5.4.1 Case Study 1: File Existence Disclosure. Figure 6 shows a vulnerability identified by our tool. This bug was discovered in the DistributionKit.xpc service. Our tool identified that this connectable
+service exports the API fileAtPathExistsOnGraft, which we
+treat as a source point for taint analysis. The service declares a
+private Apple entitlement, private.apfs.get-graft-info (Entitlement Line 1), which grants the ability to access internal mount
+information of the APFS (Apple File System). Leveraging this entitlement, our tool mapped it to a corresponding sink list, which includes the use of the fsctl API that can perform file system-specific
+operations. Our analysis framework then taints all parameters of the
+exported API except the first and second ones. It successfully tracks
+the taint on the third parameter, file_path, propagating through
+to the sensitive fsctl sink function (Exported API Line 3). This
+fsctl call uses the command 0xC0104A66, which, as we reverseengineered, queries the mount status of a file within the file system. In the kernel, this functionality is protected by an entitlement
+check. However, since the service explicitly declares the required
+entitlement, it is allowed to invoke this operation. Ultimately, the
+result of this fsctl call—whether the file is mounted—is returned
+to the caller (Exported API Line 6). In doing so, we discovered a
+vulnerability that enables an application to probe the existence of
+files outside its sandbox. This capability is very useful in scenarios
+such as jailbreak detection, fingerprinting, or targeted ad delivery.
+
+CCS ’25, October 13–17, 2025, Taipei
+
+A
+
+Type
+NSXPC
+NSXPC
+XPC
+NSXPC
+
+B
+
+NSXPC
+NSXPC
+NSXPC
+
+C
+
+NSXPC
+NSXPC
+NSXPC
+NSXPC
+NSXPC
+NSXPC
+
+D
+
+NSXPC
+
+Service Name
+DistributionKit.xpc
+localspeechrecognition.xpc
+com.apple.CMValidateMovieDataReferenceService.xpc
+com.apple.ImageKit.RecentPictureService.xpc
+com.apple.ifdbundle.xpc
+MetricMeasurementHelper.xpc
+com.apple.PrintKit.
+PrinterTool.xpc
+com.apple.PrintKit.
+PrinterTool.xpc
+SPIHelper.xpc
+SPIHelper.xpc
+SPIHelper.xpc
+SPIHelper.xpc
+SPIHelper.xpc
+com.apple.ImageKit.RecentPictureService.xpc
+
+NSXPC
+
+CloudStorageHelper.xpc
+
+NSXPC
+NSXPC
+NSXPC
+
+CloudStorageHelper.xpc
+MessagesHelper.xpc
+MessagesHelper.xpc
+SiriSuggestionsBookkeepingService.xpc
+
+NSXPC
+
+Minghao Lin et al.
+
+API Method
+fileAtPathExistsOnGraft
+downloadAssetsForConfig
+
+Security Impact
+File existence disclosure
+Sandbox escape (file write)
+
+Status
+CVE-2025-24249
+Fixed
+
+RetrieveSandboxToken
+
+Sandbox escape (file read)
+
+CVE-2025-43273
+
+***
+
+Sandbox escape (file write)
+
+Confirmed
+
+***
+terminateProcessesBeforeIteration
+
+Code exec. / TCC bypass
+Forced shutdown (root kill)
+
+Confirmed
+CVE-2025-43365
+
+***
+
+Unauthorized printer addition
+
+Confirmed
+
+***
+
+Printer UUID leakage
+
+Confirmed
+
+addToCloudKitSharing
+forciblyShareFolder
+addParticipantsToShare
+startFileSharing
+sharingStatusFor
+
+Unauthorized file addition
+Unauthorized folder sharing
+Unauthorized user addition
+TCC bypass (iCloud read)
+Unauthorized iCloud sharing
+
+Fixed
+Fixed
+Fixed
+CVE-2025-30448
+Fixed
+
+***
+
+Unauthorized image read
+
+Confirmed
+
+Unauthorized iCloud data access
+
+CVE-2025-24205
+
+iCloud storage info leak
+Unauthorized iCloud control
+Unauthorized state disclosure
+
+CVE-2025-24205
+CVE-2025-24207
+CVE-2025-24207
+
+Unauthorized account disclosure
+
+CVE-2025-24248
+
+fetchStatesForServicesWithIdentifiers
+fetchCloudStoragePlanDetails
+enableCloudKitMessages
+fetchCloudKitMessagesState
+getAccountDetailsWith
+
+Table 6: Summary of vulnerable XPC services, exploited APIs, security impacts, and disclosure status. A: File System Operation
+B: Process and Memory Control C: System and Kernel Level Control D: TCC Related Operations. Details of the function names
+and CVE numbers are omitted for anonymity and ethical considerations.
+5.4.2 Case Study 2: Arbitrary Code Execution and TCC Bypass. Figure 7 shows a vulnerability in idfbundle PID-domain service. Our
+tool identified that this service is connectable and exports the API,
+which can be invoked by external clients. We treated this exported
+API as a source point in our taint analysis. Our tool extracted the
+entitlement list declared by the service and found that it includes
+the private entitlement security.cs.disable-library-validation
+(Entitlement Line 1). This entitlement grants the service the ability to load third-party libraries into memory without requiring Apple’s code signature verification. Based on this entitlement, our
+tool retrieved the corresponding sink list, which includes the function CFBundleLoadExecutableAndReturnError. The taint analysis was tracked from Exported API Line 1 to Exported API Line 4,
+eventually reaching the sink function, which loads a given thirdparty library into memory. Combined with the declared entitlement, this means the service can load arbitrary, unsigned libraries
+into memory, effectively enabling arbitrary code execution outside
+the sandbox. Furthermore, this service also declares the entitlement
+private.tcc.ifdreader, which includes the entitlement value
+kTCCServiceBluetoothAlways. This grants the service access to
+Bluetooth without user consent, bypassing TCC protections.
+
+is primarily due to two reasons. First, we observed that many PID
+domain services are exclusive to macOS and do not exist on iOS.
+We speculate this is because macOS, as a desktop operating system,
+supports a broader range of functionalities that require more auxiliary services. Second, the overall number of PID domain services
+on iOS is relatively low. Many services that are PID domain services on macOS are implemented as system or user domain services
+on iOS instead. In these cases, connectivity is directly governed by
+the sandbox. Due to iOS’s inherently strict sandboxing policies, the
+number of services that can be connected to is significantly reduced,
+thereby minimizing the exposure of this attack surface on iOS.
+
+6.2
+
+Countermeasures
+
+Apple’s mitigation. Apple’s mitigation against Chekhov’s Gun
+relies on entitlement-based authentication: only requesters with
+the correct entitlement can invoke the sensitive exported APIs of a
+service. While this ensures that only properly signed and entitled
+clients gain access, it also imposes a painstaking remediation process. Apple must first identify every app or service that legitimately
+uses a given PID domain service, then re-sign or update each with
+the new entitlement before pushing a patch. This mitigation strategy was chosen to preserve backward compatibility and to integrate smoothly with its existing code-signing infrastructure. However, it comes at the expense of a slow, service-by-service rollout
+and a gap window in which unpatched services remain exposed.
+
+6 Discussion
+6.1 PID Domain Service in iOS
+We also investigated whether this attack surface exists on the iOS
+platform. Our findings show that the PID domain service attack
+surface on iOS is significantly smaller compared to macOS. This
+
+Potential interim mitigation strategy. As an interim measure,
+we observe that legitimate applications interact with PID domain
+
+3881
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS Application-Sandboxed PID-Domain Services
+
+services via high-level APIs provided by system dylibs, which internally invoke lower-level APIs to perform XPC communication. In
+many cases, the parameters passed from the top-level API to the lowlevel API are not controllable by the caller, which naturally reduces
+exploitability. Building on this, we introduce a secure proxy service
+model: the idea is to isolate a set of sensitive lower-level functions
+into a dedicated proxy service. These functions would be replaced
+in the original dylib with counterparts that delegate calls to this
+proxy. Under this design, all PID domain services would be accessible only by the proxy, and not directly by untrusted applications,
+which could reduce the exposure of PID domain services and lower
+the risk during the entitlement migration and patching period.
+
+6.3
+
+CCS ’25, October 13–17, 2025, Taipei
+
+guards. Unlike Android, macOS lacks explicit, user-visible accesscontrol checks immediately before sensitive operations, so static
+analysis alone cannot directly locate sinks. (2) Closed-source APIs
+and entitlements. (3) Logic-flaw vulnerabilities. The issues we target arise from subtle, service-specific entitlement logic rather than
+generic patterns, which existing static tools are not designed to
+detect. To reduce manual effort, we can involve more LLM agents
+as validators to mimic how we validate data and cross-check. Additionally, once the initial sink catalog and mapping are in place,
+adapting the framework to a new macOS release or to additional
+PID-domain services simply requires updating the catalog to reflect
+newly added or removed functions and incorporating any new entitlements into the mapping. This hybrid approach keeps the framework extensible and maintainable without sacrificing the precision
+that only human review can ensure.
+
+Limitations
+
+Although the proposed detection framework can identify the attack
+surface at scale, our analysis also revealed several limitations.
+Evolving Platform and Format Compatibility. Apple’s ongoing revisions to the Mach-O file format prevent our framework
+from working seamlessly across versions, as it relies on the parsing of specific Objective-C segment structures to locate exported
+APIs. Thus, each new version release therefore demands a quick
+adaptation cycle: (1) reverse-engineer one representative binary
+and record any shifted Objective-C metadata offsets; (2) update the
+parser with those offsets; (3) rescan binaries to refresh the source
+and sink lists for added or removed functions. Adding to this challenge, our analysis pipeline, including all data flow and taint tracking logic, depends on the intermediate representation of IDA Pro.
+When Apple alters its compilation strategies, IDA Pro disassembly
+can suffer from missing instructions or flawed control-flow reconstruction, which in turn degrades the fidelity of our taint analysis. Moreover, Swift also introduces significant complexity. Apple
+has been gradually rewriting parts of its Objective-C codebase in
+Swift. Compared to Objective-C, Swift introduces advanced language features such as generics and functional programming constructs, which pose major challenges for reverse engineering. While
+IDA Pro has added partial support for Swift disassembly and decompilation, it remains imperfect. Swift’s language characteristics,
+such as deep indirection, opaque runtime behaviors, and closureheavy patterns, continue to make data flow analysis difficult.
+
+6.4
+
+Confused-Deputy Attack Comparison
+
+Traditional confused-deputy attacks hinge on an unprivileged caller
+tricking a more privileged ‘deputy’ into performing sensitive actions on its behalf. On Android, for instance, a classic confuseddeputy / permission-re-delegation attacker [17, 48] first (i) locates
+an exported component under a different UID that already holds the
+desired Manifest permission—readily found by Epicc [38], (ii) asks
+that component via Binder/Intent to invoke the protected API, and
+(iii) succeeds because the framework checks only the callee’s UIDpermission pair. Static analyzers such as FlowDroid [10] or crossUID Binder monitors can detect this confused-deputy flow. In Web3,
+Confusum Contractum [21] reveals a parallel pattern: By rewriting a
+CALL / CALLCODE in a victim contract, the attacker causes the victim’s address to become msg.sender in a target contract that trusts
+that address for privileged actions (e.g. token transfers). Here, no
+UIDs exist, only address-based trust, so detection tools usually hunt
+for controllable CALL sites or address mismatches on Ethereum.
+By contrast, macOS breaks each of the classic confused-deputy
+steps in a fundamentally different way. Its ‘deputy’ is a PID-domain
+XPC service that shares the same UID and sandbox profile as the
+caller. Its Mach/XPC endpoint is guarded by a private, code-signed
+entitlement invisible to manifest-style scans; the decisive check
+occurs later in kernel helpers (e.g., apfs_is_task_entitled()),
+which drop all notion of the original caller’s identity. As a result, Android and Web3-centric detection methods, including Epicc, FlowDroid, Binder monitors, and Ethereum address analyses, cannot
+work here. Chekhov’s Gun instead exploits this hidden, entitlementbased trust inside the IPC mechanism, requiring a new pipeline
+of XPC-service enumeration, hidden-entitlement extraction, and
+binary-level taint analysis.
+
+Coverage Gaps and Need for Manual Oversight. Achieving
+completeness in identifying sink functions remains inherently challenging, which is also a common and widely recognized problem
+in bug discovery. Although we combine manual expertise with automated LLM-based methods, the intrinsic limitations of semiautomated analysis flow (such as context window constraints, imperfect semantic understanding, and potential hallucinations in LLMgenerated output) mean that our sink lists and entitlement-to-sink
+mappings could not fully capture all possible cases. To accommodate these limitations, we design the sink list and the entitlementto-sink mapping as two distinct modular documents; each can be
+corrected and extended over time. Moreover, we will release our
+generated lists for future research.
+In addition, the procedure also presence a moderate amount of
+manual effort, largely driven by three macOS-specific challenges
+that a purely automated analysis cannot address: (1) No user-land
+
+6.5
+
+Comparing Static Analysis Methods
+
+Static taint analysis has proven effective in detecting a variety of
+security flaws, from vulnerability discovery in general software [18,
+33, 50] to privacy leaks in mobile applications [32]. Although prior
+work has adapted taint analysis to detect confused-deputy attacks
+on Android, those methods rely on Android’s app-level permission
+
+3882
+
+CCS ’25, October 13–17, 2025, Taipei
+
+Minghao Lin et al.
+
+7.2
+
+checks and open-source APIs (Section 6.4), and thus cannot handle our macOS Chekhov’s Gun scenario directly. Among Applefocused prior work, iService [46] is the only known work that applies static taint analysis to detect confused-deputy vulnerabilities.
+It collects a source list, hand-crafts a small sink list, and enhances
+CFG recovery for Objective-C dispatch. However, its framework
+cannot be applied directly to Chekhov’s Gun for three main reasons.
+Firstly, iService ignores macOS services in the pid domain, which is
+a major attack surface. Consequently, our source definition and collection methodology differ significantly from iService. Secondly, its
+sink list is manually curated, limited in scope, and costly to maintain. Third, iService does not consider the role of entitlements and
+sandboxing in the taint analysis. Our framework addresses each of
+these gaps. We leverage app entitlements as semantic constraints to
+guide sink selection in a scalable and context-aware manner. This
+enables us to generate a comprehensive entitlement-aligned sink
+list with reasonable manual effort, tailored to detect the inconsistency and vulnerabilities caused by entitlement difference.
+
+XPC-based Attacks in macOS
+
+Kobold [15] employed black-box fuzzing to discover callable APIs
+within services. During this process, it also constructed an entitlement mapping table by observing error messages when connection
+attempts failed, thereby inferring which entitlements were required
+to access specific services. Kobold then manually analyzed the accessible APIs to identify those related to sensitive or privacy-critical
+operations. iService [46] also explored the confused deputy problem
+in XPC services. It introduced an automated static analysis tool for
+Objective-C, framing the confused deputy issue as a data-flow reachability problem. After automatically identifying accessible APIs in
+each service, it defined a set of sensitive sink functions, and used
+taint analysis to determine whether attacker-controlled input could
+reach those sinks. However, they focused exclusively on system and
+user domain services, overlooking PID domain services, which account for approximately 40% of all services, a major attack surface.
+In the industry, several works demonstrated entitlement-based
+attacks on sandboxed services. For example, Jin et al. exploited SIP
+entitlements to bypass SIP via the domain service of the xpcroleaccounted system [36, 37], which runs inside a service sandbox. They
+also disclosed the PID-domain attack surface, and demonstrated
+entitlement-based attacks on PID domain services within the service sandbox using SIP- and TCC-related entitlements. However,
+unlike system and user domain services, which generally reside in
+the service sandbox, a significant portion of PID domain services
+operate under the more restrictive application sandbox. Through
+our reverse engineering of the entitlement mechanism, we found
+that entitlements form a foundational layer of user-space security.
+Entitlements grant specific capabilities to a service, and sandbox
+enforcement yields to those entitlements. Therefore, entitlementbased attacks remain applicable to services inside the application
+sandbox, a fact that has been overlooked. Moreover, prior industry efforts to identify entitlement-based attacks have relied heavily
+on manual reverse engineering and have focused only on a small
+subset of known entitlements related to SIP and TCC.
+
+7 Related Work
+7.1 Prior Work on macOS Userspace Protections
+Prior research primarily focused on analyzing the sandbox mechanism. FG1 [19] pioneered the semantic analysis of sandbox profile rules and created a rule reference manual. Subsequent studies by Stefan et al. [40], Census Labs [13], Jonathan et al. [29], and
+Karol et al. [35] systematically reverse-engineered macOS sandbox implementations from user space to kernel space. These works
+demonstrated how Apple utilizes the MACF framework [34] to enforce system resource access control, with primary differences lying in the macOS versions analyzed. Modern sandbox implementations incorporate additional system call hooks to expand protection coverage. For other mechanisms, Keith et al. [26] and Stuart et
+al. [11] detailed TCC’s operation through its TCC.db consent database, while Apple’s official documentation [5] specifies SIP’s ability
+to protect system files from root-privileged modifications. Despite
+this progress, the entitlement mechanism remains understudied
+with limited explaination in Apple’s documentation [2].
+Existing research only provides fragmented insights. For example, Stefan et al. [40] briefly noted kernel-level entitlement checks
+during sandbox analysis but offered no systematic examination. Industry reports [25, 37, 43] revealed attacks abusing undocumented
+entitlements to bypass SIP/TCC, yet failed to explain how attackers
+discovered these capabilities and address the fundamental questions.
+To answer the three questions, we dive into entitlement kernel implementation. Through kernel-level reverse engineering, we identify two critical entitlement enforcement points: 1) During sandbox
+policy evaluation, entitlements relax specific restrictions defined in
+sandbox profiles. 2) When accessing SIP/TCC-protected resources
+or performing privileged operations, entitlements directly bypass
+protection mechanisms. Our analysis shows entitlement-granted
+capabilities depend on the kernel check’s context and location. Notably, entitlement names exhibit strong semantic correlations with
+their functions and associated kernel enforcement paths.
+
+7.3
+
+macOS Security
+
+Research on macOS security has explored several other directions,
+including reverse-engineering of hardware features (e.g., prefetcher
+security [14, 45] and system registers [41, 42], as well as security
+feature bypasses [12, 22, 23]), cross-processor attack surfaces under
+(e.g., GPU-based privilege escalations and jailbreaks [27, 31]), and
+targeted fuzzing on both kernel modules and XPU firmware (e.g.,
+KextFuzz [49], GraphicsFuzz [16], Crossfire [51]).
+
+8
+
+Conclusion
+
+This paper identifies a previously overlooked attack surface in macOS PID-domain services operating within Application Sandboxes,
+termed the Chekhov’s Gun attack. Through reverse engineering
+of entitlement check policies applied to sandboxed services, we
+designed a static detection tool based on taint analysis. Our automated framework discovered 19 zero-day vulnerabilities, highlighting critical risks in entitlement enforcement and underscoring the
+need for stricter entitlement controls, even for PID-domain services
+already confined by Application Sandboxes.
+
+3883
+
+Chekhov’s Gun: Uncovering Hidden Risks in macOS Application-Sandboxed PID-Domain Services
+
+Acknowledgments
+
+CCS ’25, October 13–17, 2025, Taipei
+
+[26] Keith Johnson. 2021. A deep dive into macOS TCC.db. https://www.rainforestqa.
+com/blog/macos-tcc-db-deep-dive.
+[27] Kaspersky. 2023. Operation Triangulation: The last (hardware) mystery. https:
+//securelist.com/operation-triangulation-the-last-hardware-mystery/111669/.
+[28] Aditya Kuppa, Nikon Rasumov-Rahe, and Marc Voses. 2023. Chain of reference
+prompting helps llm to think like a lawyer. In Generative AI+ law workshop. sn.
+[29] Jonathan Levin. 2016. Hack in the (sand)Box. https://newosxbook.com/files/
+HITSB.pdf.
+[30] Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin,
+Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel,
+et al. 2020. Retrieval-augmented generation for knowledge-intensive nlp tasks.
+Advances in neural information processing systems 33 (2020), 9459–9474.
+[31] Asahi Lina. 2023. agx-exploit. https://github.com/asahilina/agx-exploit.
+[32] Dexin Liu, Yue Xiao, Chaoqi Zhang, Kaitao Xie, Xiaolong Bai, Shikun Zhang, and
+Luyi Xing. 2024. {iHunter}: Hunting Privacy Violations at Scale in the Software
+Supply Chain on {iOS}. In 33rd USENIX Security Symposium (USENIX Security
+24). 5663–5680.
+[33] Changhua Luo, Penghui Li, and Wei Meng. 2022. Tchecker: Precise static interprocedural analysis for detecting taint-style vulnerabilities in php applications. In
+Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications
+Security. 2175–2188.
+[34] Karol Mazurek. 2024. MACF on macOS. https://karol-mazurek.medium.com/
+macf-on-macos-004b8a490e2c.
+[35] Karol Mazurek. 2024. SnakeApple VIII — App Sandbox. https://karol-mazurek.
+medium.com/snake-apple-viii-app-sandbox-5aff081f07d5.
+[36] Mickyjin. 2023. CVE-2023-42942: xpcroleaccountd Root Privilege Escalation. https://jhftss.github.io/CVE-2023-42942-xpcroleaccountd-Root-PrivilegeEscalation/.
+[37] Mickyjin. 2024. Endless Exploits: The Saga of a macOS Vulnerability Exploited
+Seven Times. https://objectivebythesea.org/v7/talks/OBTS_v7_mJin.pdf.
+[38] Damien Octeau, Patrick McDaniel, Somesh Jha, Alexandre Bartel, Eric Bodden,
+Jacques Klein, and Yves Le Traon. 2013. Effective {Inter-Component} communication mapping in android: An essential step towards holistic security analysis.
+In 22nd USENIX Security Symposium (USENIX Security 13). 543–558.
+[39] Robert Praas. 2023. Self-Reflection on Chain-of-Thought Reasoning in Large
+Language Models.
+[40] stefan esser. 2014. iOS8 Containers, Sandboxes and Entitlements. https:
+//www.slideshare.net/slideshow/ruxcon-2014-stefan-esser-ios8-containerssandboxes-and-entitlements/42152963#53.
+[41] Sven Peter. 2021. Apple Silicon Hardware Secrets: SPRR and Guarded Exception
+Levels (GXF). https://blog.svenpeter.dev/posts/m1_sprr_gxf/.
+[42] Sven Peter. 2021. HW: SPRR and GXF. https://github.com/AsahiLinux/docs/wiki/
+HW:-SPRR-and-GXF/.
+[43] Space Airborne Systems. 2024. Breaking SIP with Apple-signed Packages. https://www.l3harris.com/newsroom/editorial/2024/03/breaking-sip-applesigned-packages.
+[44] Michael Teslia. 2024. How to Reverse Engineer an iOS App: Tips and Tools.
+https://www.apriorit.com/dev-blog/how-to-reverse-engineer-an-ios-app.
+[45] Jose Rodrigo Sanchez Vicarte, Michael Flanders, Riccardo Paccagnella, Grant
+Garrett-Grossman, Adam Morrison, Christopher W. Fletcher, and David Kohlbrenner. 2022. Augury: Using Data Memory-Dependent Prefetchers to Leak Data at
+Rest. In 2022 IEEE Symposium on Security and Privacy (SP). 1491–1505. doi:10.
+1109/SP46214.2022.9833570
+[46] Yizhuo Wang, Yikun Hu, Xuangan Xiao, and Dawu Gu. 2022. iservice: Detecting
+and evaluating the impact of confused deputy problem in appleos. In Proceedings
+of the 38th Annual Computer Security Applications Conference. 964–977.
+[47] Yaqing Wang, Quanming Yao, James T Kwok, and Lionel M Ni. 2020. Generalizing
+from a few examples: A survey on few-shot learning. ACM computing surveys
+(csur) 53, 3 (2020), 1–34.
+[48] Jianliang Wu, Tingting Cui, Tao Ban, Shanqing Guo, and Lizhen Cui. 2015. Paddyfrog: systematically detecting confused deputy vulnerability in android applications. Security and Communication Networks 8, 13 (2015), 2338–2349.
+[49] Tingting Yin, Zicong Gao, Zhenghang Xiao, Zheyu Ma, Min Zheng, and Chao
+Zhang. 2023. KextFuzz: Fuzzing macOS Kernel EXTensions on Apple Silicon via
+Exploiting Mitigations. In 32nd USENIX Security Symposium (USENIX Security
+23). 5039–5054.
+[50] Jiaxu Zhao, Yuekang Li, Yanyan Zou, Zhaohui Liang, Yang Xiao, Yeting Li, Bingwei
+Peng, Nanyu Zhong, Xinyi Wang, Wei Wang, et al. 2024. Leveraging semantic
+relations in code and data to enhance taint analysis of embedded systems. In 33rd
+USENIX Security Symposium (USENIX Security 24). 7067–7084.
+[51] Jiaxun Zhu, Minghao Lin, Tingting Yin, Zechao Cai, Yu Wang, Rui Chang, and
+Wenbo Shen. 2024. CrossFire: Fuzzing macOS Cross-XPU Memory on Apple
+Silicon. In Proceedings of the 2024 on ACM SIGSAC Conference on Computer and
+Communications Security (Salt Lake City, UT, USA) (CCS ’24). Association for
+Computing Machinery, New York, NY, USA, 3749–3762. doi:10.1145/3658644.
+3690376
+
+We thank the anonymous reviewers for their insightful feedback,
+which greatly improved this paper. We are also grateful to Weiteng
+Chen from Microsoft Research for his valuable insights and help.
+
+References
+[1] Apple. [n. d.]. app-sandbox. https://developer.apple.com/documentation/security/
+app-sandbox.
+[2] Apple. [n. d.]. Entitlement. https://developer.apple.com/documentation/
+bundleresources/entitlements.
+[3] Apple. [n. d.]. SecureCodingGuide. https://developer.apple.com/library/
+archive/documentation/Security/Conceptual/SecureCodingGuide/Articles/
+AccessControl.html.
+[4] Apple. 2014. Working with Blocks. https://developer.apple.com/library/
+archive/documentation/Cocoa/Conceptual/ProgrammingWithObjectiveC/
+WorkingwithBlocks/WorkingwithBlocks.html.
+[5] Apple. 2021. About System Integrity Protection on your Mac. https://support.
+apple.com/en-us/102149.
+[6] Apple. 2024. Page Protection Layer. https://support.apple.com/en-hk/guide/
+security/sec8b776536b/1/web/1#sec314c3af61.
+[7] Apple Inc. 2024. About System Integrity Protection on your Mac. https://support.
+apple.com/en-us/102149
+[8] Apple Inc. 2024. Apple Secure Enclave. https://support.apple.com/zh-cn/guide/
+security/sec59b0b31ff/web
+[9] Apple Inc. 2025. Entitlements - Apple Developer Documentation. https://
+developer.apple.com/documentation/bundleresources/entitlements.
+[10] Steven Arzt, Siegfried Rasthofer, Christian Fritz, Eric Bodden, Alexandre Bartel, Jacques Klein, Yves Le Traon, Damien Octeau, and Patrick McDaniel. 2014.
+Flowdroid: Precise context, flow, field, object-sensitive and lifecycle-aware taint
+analysis for android apps. ACM sigplan notices 49, 6 (2014), 259–269.
+[11] Stuart Ashenbrenner. 2024. Full Transparency: Controlling Apple’s TCC. https:
+//www.huntress.com/blog/full-transparency-controlling-apples-tcc.
+[12] Zechao Cai, Jiaxun Zhu, Wenbo Shen, Yutian Yang, Rui Chang, Yu Wang, Jinku
+Li, and Kui Ren. 2023. Demystifying Pointer Authentication on Apple M1. In
+32nd USENIX Security Symposium (USENIX Security 23). 2833–2848.
+[13] census labs. 2019. vs com.apple.security.sandbox. https://census-labs.com/media/
+sandbox-argp-csw2019-public.pdf.
+[14] Boru Chen, Yingchen Wang, Pradyumna Shome, Christopher Fletcher, David
+Kohlbrenner, Riccardo Paccagnella, and Daniel Genkin. 2024. GoFetch: Breaking
+Constant-Time Cryptographic Implementations Using Data Memory-Dependent
+Prefetchers. In 33rd USENIX Security Symposium (USENIX Security 24). USENIX
+Association, Philadelphia, PA, 1117–1134. https://www.usenix.org/conference/
+usenixsecurity24/presentation/chen-boru
+[15] Luke Deshotels, Costin Carabas, Jordan Beichler, Răzvan Deaconescu, and
+William Enck. 2020. Kobold: Evaluating decentralized access control for remote
+nsxpc methods on iOS. In 2020 IEEE Symposium on Security and Privacy (SP).
+IEEE, 1056–1070.
+[16] Hugues Evrard and Paul Thomson. 2017. GraphicsFuzz: Secure and Robust Graphics Rendering. https://www.khronos.org/assets/uploads/developers/library/2017gdc-webgl-webvr-gltf-meetup/10-ImperialCollegeLondon-GraphicsFuzz_
+Mar17.pdf.
+[17] Adrienne Porter Felt, Helen J Wang, Alexander Moshchuk, Steve Hanna, and
+Erika Chin. 2011. Permission re-delegation: Attacks and defenses.. In USENIX
+security symposium, Vol. 30. 88.
+[18] Siyue Feng, Yueming Wu, Wenjie Xue, Sikui Pan, Deqing Zou, Yang Liu, and Hai
+Jin. 2024. {FIRE}: Combining {Multi-Stage} Filtering with Taint Analysis for
+Scalable Recurring Vulnerability Detection. In 33rd USENIX Security Symposium
+(USENIX Security 24). 1867–1884.
+[19] FG1. 2011. Apple’s Sandbox Guide. https://reverse.put.as/wp-content/uploads/
+2011/09/Apple-Sandbox-Guide-v1.0.pdf.
+[20] Louie Giray. 2023. Prompt engineering with ChatGPT: a guide for academic
+writers. Annals of biomedical engineering 51, 12 (2023), 2629–2633.
+[21] Fabio Gritti, Nicola Ruaro, Robert McLaughlin, Priyanka Bose, Dipanjan Das,
+Ilya Grishchenko, Christopher Kruegel, and Giovanni Vigna. 2023. Confusum
+contractum: Confused deputy vulnerabilities in ethereum smart contracts. In
+32nd USENIX Security Symposium (USENIX Security 23). 1793–1810.
+[22] Linus Henze. 2021. Fugu14 - Untethered iOS 14 Jailbreak. https://github.com/
+LinusHenze/Fugu14.
+[23] Linus Henze. 2022. Fugu15 - The Journey to Jailbreaking iOS 15.4.1. https:
+//objectivebythesea.org/v5/talks/OBTS_v5_lHenze.pdf.
+[24] Zhipeng Huo. 2021. CVE-2020-9971 Abusing XPC Service mechanism to elevate
+privilege in macOS/iOS. 1–7.
+[25] Mikcy Jin. 2023. A New Era of macOS Sandbox Escapes: Diving into an Overlooked Attack Surface and Uncovering 10+ New Vulnerabilities. 1–7.
+
+3884
+
+

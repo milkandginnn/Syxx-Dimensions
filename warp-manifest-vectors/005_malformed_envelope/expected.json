@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "notEvaluated",
+  "htmlState": "notEvaluated",
+  "manifestState": "malformed",
+  "notes": "signature verified but decoded bytes are not parseable JSON.",
+  "signatureState": "verified"
+}

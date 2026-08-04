@@ -1,0 +1,42 @@
+:root {
+  --color-canvas: #0b0518;
+  --color-window: #170c2e;
+  --color-sidebar: #1d1240;
+  --color-violet: #7c5cff;
+  --color-violet-bright: #a78bff;
+  --color-teal: #2dd4bf;
+  --color-gold: #e0b45a;
+  --color-warning: #f7931e;
+  --color-critical: #ff4d6d;
+  --color-text: #efeafe;
+  --color-text-muted: #8f83b8;
+  --color-text-faint: #6f6597;
+  --dimensions-gradient: linear-gradient(90deg, #ff9a3d, #ff2d78, #9a5cff);
+
+  --space-base: 4px;
+  --font-display: Cinzel, Georgia, serif;
+  --font-story: "EB Garamond", Georgia, serif;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --focus-ring: 0 0 0 2px var(--color-teal);
+  --window-max-width: 1040px;
+  --window-max-height: 650px;
+  --motion-fast: 120ms;
+  --motion-standard: 200ms;
+}
+
+@media (min-width: 1008px) {
+  :root { --navigation-mode: sidebar; }
+}
+
+@media (min-width: 641px) and (max-width: 1007px) {
+  :root { --navigation-mode: rail; }
+}
+
+@media (min-width: 401px) and (max-width: 640px) {
+  :root { --navigation-mode: drawer; }
+}
+
+@media (min-width: 345px) and (max-width: 400px) {
+  :root { --navigation-mode: compact-drawer; }
+}

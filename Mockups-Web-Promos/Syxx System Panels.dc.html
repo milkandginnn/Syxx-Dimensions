@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+</style>
+</helmet>
+<div style="min-width:1160px;padding:52px 56px 80px;background:radial-gradient(130% 60% at 30% 0%, #241a48, #0a0713 68%);font-family:'Space Grotesk',-apple-system,sans-serif;color:#fff;display:flex;flex-direction:column;gap:46px;--io-bg:#130d26;--io-surface:#1d1640;--io-surface-elevated:#2a2154;--io-border:#382c66;--io-text:#ffffff;--io-text-secondary:#a99fc8;--io-blue:#8b5cf6;--io-electric:#b98cff;--io-success:#3ecf9a;--io-critical:#f5405e;--syxx-label:#f2ba4a;--wm:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);">
+
+  <div style="display:flex;align-items:center;gap:16px;">
+    <img src="assets/syxx-logo.png" width="44" height="44" alt="Syxx" style="border-radius:11px;box-shadow:0 2px 10px rgba(0,0,0,.5);">
+    <div style="font-family:'Space Grotesk';font-size:30px;font-weight:700;background:var(--wm);-webkit-background-clip:text;background-clip:text;color:transparent;">System Panels</div>
+    <div style="font-size:13px;color:#a99fc8;max-width:520px;line-height:1.5;">Update, About &amp; License — macOS <span style="font-family:'Space Mono';">NSPanel</span> and the Windows dialog equivalent.</div>
+  </div>
+
+  <!-- ==================== SOFTWARE UPDATE ==================== -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--syxx-label);">Check for Updates</div>
+    <div style="display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- macOS -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'Space Mono';font-size:11px;color:#8073a6;">macOS · NSPanel</div>
+        <div style="width:452px;border-radius:12px;overflow:hidden;background:var(--io-surface);border:1px solid rgba(255,255,255,.09);box-shadow:0 34px 80px rgba(0,0,0,.6);">
+          <div style="height:38px;display:flex;align-items:center;padding:0 14px;background:rgba(20,13,40,.85);border-bottom:1px solid var(--io-border);position:relative;">
+            <div style="display:flex;gap:8px;"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840;"></span></div>
+            <div style="position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;pointer-events:none;">Software Update</div>
+          </div>
+          <div style="padding:22px 24px;display:flex;flex-direction:column;gap:17px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <img src="assets/syxx-logo.png" width="52" height="52" style="border-radius:12px;">
+              <div><div style="font-family:'Space Grotesk';font-size:18px;font-weight:700;">Syxx</div><div style="font-size:12px;color:var(--io-text-secondary);">DNS Investigation Suite</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--io-text-secondary);">Version</span><span style="font-family:'Space Mono';">{{ version }} · Build {{ build }}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--io-text-secondary);">Last checked</span><span style="font-family:'Space Mono';color:var(--io-text-secondary);">{{ lastCheck }}</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:8px;background:color-mix(in srgb,var(--io-success) 12%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-success) 32%, transparent);">
+              <span style="width:9px;height:9px;border-radius:50%;background:var(--io-success);box-shadow:0 0 8px var(--io-success);"></span><span style="font-size:13px;font-weight:600;color:var(--io-success);">Syxx is up to date.</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
+              <div><div style="font-size:13px;font-weight:600;">Early access</div><div style="font-size:12px;color:var(--io-text-secondary);line-height:1.45;margin-top:2px;">Receive beta builds before public release. Betas may be unstable.</div></div>
+              <button onClick="{{ ea1.toggle }}" style="width:42px;height:24px;border-radius:999px;border:none;cursor:pointer;flex-shrink:0;background:{{ ea1.track }};position:relative;transition:background .2s;padding:0;margin-top:2px;"><span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transform:{{ ea1.knob }};transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4);"></span></button>
+            </div>
+          </div>
+          <div style="padding:14px 20px;background:rgba(0,0,0,.16);border-top:1px solid var(--io-border);display:flex;justify-content:flex-end;gap:10px;">
+            <button style="font-size:13px;font-weight:600;color:var(--io-text);background:var(--io-surface-elevated);border:1px solid var(--io-border);border-radius:7px;padding:8px 15px;cursor:pointer;">Done</button>
+            <button style="font-size:13px;font-weight:600;color:#fff;background:var(--io-blue);border:none;border-radius:7px;padding:8px 16px;cursor:pointer;">Check for Updates</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Windows -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'Space Mono';font-size:11px;color:#8073a6;">Windows · Dialog</div>
+        <div style="width:452px;border-radius:8px;overflow:hidden;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 34px 80px rgba(0,0,0,.6);">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;background:rgba(20,13,40,.92);border-bottom:1px solid var(--io-border);">
+            <div style="display:flex;align-items:center;gap:9px;padding-left:14px;"><img src="assets/syxx-logo.png" width="16" height="16" style="border-radius:4px;"><span style="font-size:12px;color:var(--io-text-secondary);">Software Update</span></div>
+            <button style="width:46px;height:40px;border:none;background:transparent;color:var(--io-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--io-critical);color:#fff;"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.2"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"></line><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"></line></svg></button>
+          </div>
+          <div style="padding:22px 24px;display:flex;flex-direction:column;gap:17px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <img src="assets/syxx-logo.png" width="52" height="52" style="border-radius:10px;">
+              <div><div style="font-family:'Space Grotesk';font-size:18px;font-weight:700;">Syxx</div><div style="font-size:12px;color:var(--io-text-secondary);">DNS Investigation Suite</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--io-text-secondary);">Version</span><span style="font-family:'Space Mono';">{{ version }} · Build {{ build }}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--io-text-secondary);">Last checked</span><span style="font-family:'Space Mono';color:var(--io-text-secondary);">{{ lastCheck }}</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:6px;background:color-mix(in srgb,var(--io-success) 12%, var(--io-surface));border:1px solid color-mix(in srgb,var(--io-success) 32%, transparent);">
+              <span style="width:9px;height:9px;border-radius:50%;background:var(--io-success);box-shadow:0 0 8px var(--io-success);"></span><span style="font-size:13px;font-weight:600;color:var(--io-success);">Syxx is up to date.</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
+              <div><div style="font-size:13px;font-weight:600;">Early access</div><div style="font-size:12px;color:var(--io-text-secondary);line-height:1.45;margin-top:2px;">Receive beta builds before public release. Betas may be unstable.</div></div>
+              <button onClick="{{ ea2.toggle }}" style="width:42px;height:24px;border-radius:999px;border:none;cursor:pointer;flex-shrink:0;background:{{ ea2.track }};position:relative;transition:background .2s;padding:0;margin-top:2px;"><span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transform:{{ ea2.knob }};transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4);"></span></button>
+            </div>
+          </div>
+          <div style="padding:14px 20px;background:rgba(0,0,0,.16);border-top:1px solid var(--io-border);display:flex;justify-content:flex-end;gap:10px;">
+            <button style="font-size:13px;font-weight:600;color:#fff;background:var(--io-blue);border:none;border-radius:4px;padding:8px 16px;cursor:pointer;">Check for Updates</button>
+            <button style="font-size:13px;font-weight:600;color:var(--io-text);background:var(--io-surface-elevated);border:1px solid var(--io-border);border-radius:4px;padding:8px 15px;cursor:pointer;">Close</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== ABOUT ==================== -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--syxx-label);">About</div>
+    <div style="display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- macOS -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'Space Mono';font-size:11px;color:#8073a6;">macOS · NSPanel</div>
+        <div style="width:400px;border-radius:12px;overflow:hidden;background:var(--io-surface);border:1px solid rgba(255,255,255,.09);box-shadow:0 34px 80px rgba(0,0,0,.6);">
+          <div style="height:38px;display:flex;align-items:center;padding:0 14px;background:rgba(20,13,40,.85);border-bottom:1px solid var(--io-border);position:relative;">
+            <div style="display:flex;gap:8px;"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840;"></span></div>
+            <div style="position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;pointer-events:none;">About Syxx</div>
+          </div>
+          <div style="padding:30px 26px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;">
+            <img src="assets/syxx-logo.png" width="76" height="76" style="border-radius:18px;box-shadow:0 0 42px rgba(140,80,240,.4),0 10px 26px rgba(0,0,0,.5);margin-bottom:6px;">
+            <div style="font-family:'Space Grotesk';font-size:30px;font-weight:700;line-height:1;background:var(--wm);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx</div>
+            <div style="font-size:15px;font-weight:600;color:#efe6ff;">“Lyin’ Eyes”</div>
+            <div style="font-family:'Space Mono';font-size:11.5px;color:var(--io-text-secondary);margin-top:2px;">Version {{ version }} · Build {{ build }}</div>
+            <div style="font-size:13px;color:var(--io-text-secondary);">DNS Investigation Suite</div>
+            <div style="height:1px;background:var(--io-border);align-self:stretch;margin:14px 0 12px;"></div>
+            <div style="font-size:12.5px;color:var(--io-text);">© Joel "J.J." Warne 2026. All Rights Reserved.</div>
+            <div style="font-size:12px;color:var(--io-text-secondary);">MilkandGin</div>
+            <div style="display:flex;gap:14px;margin-top:4px;"><a href="https://syxx.app" target="_blank" rel="noopener" style="font-size:12px;color:var(--io-electric);text-decoration:none;">syxx.app</a><a href="https://milkandgin.com" target="_blank" rel="noopener" style="font-size:12px;color:var(--io-electric);text-decoration:none;">milkandgin.com</a></div>
+          </div>
+          <div style="padding:14px 20px;background:rgba(0,0,0,.16);border-top:1px solid var(--io-border);display:flex;justify-content:flex-end;gap:10px;">
+            <button style="font-size:13px;font-weight:600;color:var(--io-text);background:var(--io-surface-elevated);border:1px solid var(--io-border);border-radius:7px;padding:8px 15px;cursor:pointer;">Acknowledgements</button>
+            <button style="font-size:13px;font-weight:600;color:#fff;background:var(--io-blue);border:none;border-radius:7px;padding:8px 18px;cursor:pointer;">OK</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Windows -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'Space Mono';font-size:11px;color:#8073a6;">Windows · Dialog</div>
+        <div style="width:400px;border-radius:8px;overflow:hidden;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 34px 80px rgba(0,0,0,.6);">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;background:rgba(20,13,40,.92);border-bottom:1px solid var(--io-border);">
+            <div style="display:flex;align-items:center;gap:9px;padding-left:14px;"><img src="assets/syxx-logo.png" width="16" height="16" style="border-radius:4px;"><span style="font-size:12px;color:var(--io-text-secondary);">About Syxx</span></div>
+            <button style="width:46px;height:40px;border:none;background:transparent;color:var(--io-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--io-critical);color:#fff;"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.2"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"></line><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"></line></svg></button>
+          </div>
+          <div style="padding:30px 26px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;">
+            <img src="assets/syxx-logo.png" width="76" height="76" style="border-radius:16px;box-shadow:0 0 42px rgba(140,80,240,.4),0 10px 26px rgba(0,0,0,.5);margin-bottom:6px;">
+            <div style="font-family:'Space Grotesk';font-size:30px;font-weight:700;line-height:1;background:var(--wm);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx</div>
+            <div style="font-size:15px;font-weight:600;color:#efe6ff;">“Lyin’ Eyes”</div>
+            <div style="font-family:'Space Mono';font-size:11.5px;color:var(--io-text-secondary);margin-top:2px;">Version {{ version }} · Build {{ build }}</div>
+            <div style="font-size:13px;color:var(--io-text-secondary);">DNS Investigation Suite</div>
+            <div style="height:1px;background:var(--io-border);align-self:stretch;margin:14px 0 12px;"></div>
+            <div style="font-size:12.5px;color:var(--io-text);">© Joel "J.J." Warne 2026. All Rights Reserved.</div>
+            <div style="font-size:12px;color:var(--io-text-secondary);">MilkandGin</div>
+            <div style="display:flex;gap:14px;margin-top:4px;"><a href="https://syxx.app" target="_blank" rel="noopener" style="font-size:12px;color:var(--io-electric);text-decoration:none;">syxx.app</a><a href="https://milkandgin.com" target="_blank" rel="noopener" style="font-size:12px;color:var(--io-electric);text-decoration:none;">milkandgin.com</a></div>
+          </div>
+          <div style="padding:14px 20px;background:rgba(0,0,0,.16);border-top:1px solid var(--io-border);display:flex;justify-content:flex-end;gap:10px;">
+            <button style="font-size:13px;font-weight:600;color:#fff;background:var(--io-blue);border:none;border-radius:4px;padding:8px 18px;cursor:pointer;">OK</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== LICENSE ==================== -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--syxx-label);">License Agreement</div>
+    <div style="display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- macOS -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'Space Mono';font-size:11px;color:#8073a6;">macOS · NSPanel</div>
+        <div style="width:512px;border-radius:12px;overflow:hidden;background:var(--io-surface);border:1px solid rgba(255,255,255,.09);box-shadow:0 34px 80px rgba(0,0,0,.6);">
+          <div style="height:38px;display:flex;align-items:center;padding:0 14px;background:rgba(20,13,40,.85);border-bottom:1px solid var(--io-border);position:relative;">
+            <div style="display:flex;gap:8px;"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840;"></span></div>
+            <div style="position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;pointer-events:none;">License Agreement</div>
+          </div>
+          <div style="padding:22px 24px;display:flex;flex-direction:column;gap:14px;">
+            <div><div style="font-family:'Space Grotesk';font-size:16px;font-weight:700;">Syxx End User License Agreement</div><div style="font-family:'Space Mono';font-size:11px;color:var(--io-text-secondary);margin-top:3px;">Version 1.0 · Effective July 6, 2026</div></div>
+            <div style="height:214px;overflow-y:auto;background:var(--io-bg);border:1px solid var(--io-border);border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:11px;">
+              <sc-for list="{{ eula }}" as="p" hint-placeholder-count="9">
+                <div style="font-size:12px;color:var(--io-text-secondary);line-height:1.6;">{{ p }}</div>
+              </sc-for>
+            </div>
+            <button onClick="{{ ag1.toggle }}" style="display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;cursor:pointer;text-align:left;">
+              <span style="width:18px;height:18px;border-radius:5px;border:1px solid var(--io-border);background:{{ ag1.box }};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><sc-if value="{{ ag1.on }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></span>
+              <span style="font-size:12.5px;">I have read and agree to the terms above.</span>
+            </button>
+          </div>
+          <div style="padding:14px 20px;background:rgba(0,0,0,.16);border-top:1px solid var(--io-border);display:flex;justify-content:flex-end;gap:10px;">
+            <button style="font-size:13px;font-weight:600;color:var(--io-text);background:var(--io-surface-elevated);border:1px solid var(--io-border);border-radius:7px;padding:8px 15px;cursor:pointer;">Decline</button>
+            <button style="font-size:13px;font-weight:600;color:#fff;background:var(--io-blue);border:none;border-radius:7px;padding:8px 18px;cursor:pointer;">Agree</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Windows -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'Space Mono';font-size:11px;color:#8073a6;">Windows · Dialog</div>
+        <div style="width:512px;border-radius:8px;overflow:hidden;background:var(--io-surface);border:1px solid var(--io-border);box-shadow:0 34px 80px rgba(0,0,0,.6);">
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;background:rgba(20,13,40,.92);border-bottom:1px solid var(--io-border);">
+            <div style="display:flex;align-items:center;gap:9px;padding-left:14px;"><img src="assets/syxx-logo.png" width="16" height="16" style="border-radius:4px;"><span style="font-size:12px;color:var(--io-text-secondary);">License Agreement</span></div>
+            <button style="width:46px;height:40px;border:none;background:transparent;color:var(--io-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--io-critical);color:#fff;"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.2"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"></line><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"></line></svg></button>
+          </div>
+          <div style="padding:22px 24px;display:flex;flex-direction:column;gap:14px;">
+            <div><div style="font-family:'Space Grotesk';font-size:16px;font-weight:700;">Syxx End User License Agreement</div><div style="font-family:'Space Mono';font-size:11px;color:var(--io-text-secondary);margin-top:3px;">Version 1.0 · Effective July 6, 2026</div></div>
+            <div style="height:214px;overflow-y:auto;background:var(--io-bg);border:1px solid var(--io-border);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:11px;">
+              <sc-for list="{{ eula }}" as="p" hint-placeholder-count="9">
+                <div style="font-size:12px;color:var(--io-text-secondary);line-height:1.6;">{{ p }}</div>
+              </sc-for>
+            </div>
+            <button onClick="{{ ag2.toggle }}" style="display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;cursor:pointer;text-align:left;">
+              <span style="width:18px;height:18px;border-radius:4px;border:1px solid var(--io-border);background:{{ ag2.box }};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><sc-if value="{{ ag2.on }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></span>
+              <span style="font-size:12.5px;">I have read and agree to the terms above.</span>
+            </button>
+          </div>
+          <div style="padding:14px 20px;background:rgba(0,0,0,.16);border-top:1px solid var(--io-border);display:flex;justify-content:flex-end;gap:10px;">
+            <button style="font-size:13px;font-weight:600;color:#fff;background:var(--io-blue);border:none;border-radius:4px;padding:8px 18px;cursor:pointer;">Accept</button>
+            <button style="font-size:13px;font-weight:600;color:var(--io-text);background:var(--io-surface-elevated);border:1px solid var(--io-border);border-radius:4px;padding:8px 15px;cursor:pointer;">Decline</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { eaMac: false, eaWin: false, agreeMac: false, agreeWin: false };
+  renderVals() {
+    const sw = k => { const on = !!this.state[k]; return { on, toggle: () => this.setState(s => ({ [k]: !s[k] })), track: on ? "var(--io-electric)" : "var(--io-surface-elevated)", knob: on ? "translateX(18px)" : "translateX(0px)", box: on ? "var(--io-blue)" : "transparent" }; };
+    return {
+      version: "1.0.0",
+      build: "2026.6.1024",
+      lastCheck: "July 6, 2026 \u00b7 2:14 PM",
+      ea1: sw("eaMac"), ea2: sw("eaWin"), ag1: sw("agreeMac"), ag2: sw("agreeWin"),
+      eula: [
+        "1. License. Syxx (\u201cthe Software\u201d) is licensed, not sold, to you by MilkandGin (\u201cthe Licensor\u201d). This agreement grants you a personal, non-exclusive, non-transferable license to install and use the Software on devices you own or control, subject to these terms.",
+        "2. Ownership. The Software \u2014 including all code, interfaces, text, and design \u2014 is owned by Joel “J.J.” Warne and MilkandGin and is protected by copyright and other intellectual-property laws. All rights not expressly granted to you are reserved.",
+        "3. Restrictions. You may not sell, rent, sublicense, reverse-engineer, decompile, or disassemble the Software, nor remove any proprietary notices, except to the extent such a restriction is prohibited by applicable law.",
+        "4. Diagnostics & authorized use. The Software performs DNS and network diagnostics against domains and resolvers you select. You are responsible for ensuring you are authorized to test the networks and endpoints you direct it toward.",
+        "5. Server services. Certain features rely on the syxx.app server as an independent vantage. Those features are provided on a reasonable-availability basis; the Licensor may modify or discontinue them at any time.",
+        "6. No warranty. The Software is provided \u201cAS IS,\u201d without warranty of any kind. It is a diagnostic aid, not a guarantee of network security, and its conclusions should be corroborated by a qualified professional.",
+        "7. Limitation of liability. To the maximum extent permitted by law, the Licensor shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Software.",
+        "8. Termination. This license terminates automatically if you breach its terms. Upon termination you must cease all use and delete all copies of the Software.",
+        "9. Governing law. This agreement is governed by the laws of the jurisdiction in which the Licensor is established, without regard to its conflict-of-law principles.",
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

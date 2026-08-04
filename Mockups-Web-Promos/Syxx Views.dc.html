@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/colors.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;}</style>
+</helmet>
+<div style="min-width:22000px;padding:56px 64px 90px;background:radial-gradient(120% 40% at 30% 0%, #241a48, #0c0820 72%);font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;--wm:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);">
+
+  <!-- ===== TITLE ===== -->
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+    <img src="assets/syxx-logo.png" width="46" height="46" alt="Syxx" style="display:block;border-radius:11px;box-shadow:0 2px 10px rgba(0,0,0,.5);">
+    <div style="font-family:'Space Grotesk';font-size:32px;font-weight:700;background:var(--wm);-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx — All Views &amp; Style Guide</div>
+  </div>
+  <div style="font-size:15px;color:#cabfe6;max-width:900px;line-height:1.6;margin-bottom:36px;">Every pane of the Syxx GUI laid out side by side — the ten macOS views first, then the ten Windows views. Below the reference panels, each screen is captioned with what it does and how a user proceeds through it. All screens are live: click the sidebar items and buttons in any panel.</div>
+
+  <!-- ===== REFERENCE ROW: swatches / gradients / icons ===== -->
+  <div style="display:flex;gap:20px;align-items:stretch;margin-bottom:48px;flex-wrap:nowrap;width:max-content;">
+
+    <!-- Color swatches -->
+    <div style="width:520px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Color Swatch Chart · Dark Theme</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#130d26;border:1px solid #382c66;"></span><div><div style="font-size:12px;font-weight:600;">Background</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#130d26</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#1d1640;border:1px solid #382c66;"></span><div><div style="font-size:12px;font-weight:600;">Surface</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#1d1640</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#2a2154;border:1px solid #382c66;"></span><div><div style="font-size:12px;font-weight:600;">Surface Elevated</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#2a2154</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#382c66;"></span><div><div style="font-size:12px;font-weight:600;">Border</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#382c66</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#8b5cf6;"></span><div><div style="font-size:12px;font-weight:600;">Blue (accent)</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#8b5cf6</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#b98cff;"></span><div><div style="font-size:12px;font-weight:600;">Electric</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#b98cff</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#f0ac38;"></span><div><div style="font-size:12px;font-weight:600;">Accent Start (warm)</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#f0ac38</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#f2ba4a;"></span><div><div style="font-size:12px;font-weight:600;">Label / Divider</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#f2ba4a</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#7c3aed;"></span><div><div style="font-size:12px;font-weight:600;">Accent End</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#7c3aed</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#f5405e;"></span><div><div style="font-size:12px;font-weight:600;">Critical</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#f5405e</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#fa7317;"></span><div><div style="font-size:12px;font-weight:600;">High</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#fa7317</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><span style="width:34px;height:34px;border-radius:8px;background:#0d9487;"></span><div><div style="font-size:12px;font-weight:600;">Success (teal)</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">#0d9487</div></div></div>
+      </div>
+    </div>
+
+    <!-- Gradients -->
+    <div style="width:460px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Gradient Reference</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div><div style="height:40px;border-radius:9px;background:linear-gradient(100deg,#f0ac38,#e6c6dd 52%,#a96ad6);margin-bottom:6px;"></div><div style="font-size:12px;font-weight:600;">Wordmark text</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">linear-gradient(100deg, #f0ac38, #e6c6dd 52%, #a96ad6)</div></div>
+        <div><div style="height:40px;border-radius:9px;background:linear-gradient(135deg,#f0ac38,#7c3aed);margin-bottom:6px;"></div><div style="font-size:12px;font-weight:600;">Accent tile / Pro badge</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">linear-gradient(135deg, #f0ac38, #7c3aed)</div></div>
+        <div><div style="height:40px;border-radius:9px;background:radial-gradient(120% 90% at 50% 0%, #241a48, #0c0820 72%);margin-bottom:6px;"></div><div style="font-size:12px;font-weight:600;">App / page background</div><div style="font-family:'Space Mono';font-size:11px;color:#a99fc8;">radial-gradient(120% 90% at 50% 0%, #241a48, #0c0820 72%)</div></div>
+      </div>
+    </div>
+
+    <!-- Icon locations -->
+    <div style="width:520px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Icon &amp; Image Locations</div>
+      <div style="font-size:12px;color:#cabfe6;line-height:1.5;margin-bottom:14px;">Raster assets live in the project's <span style="font-family:'Space Mono';color:#f0ac38;">assets/</span> folder. Inline UI glyphs are hand-drawn SVG (Lucide-style, 2px stroke) inside each pane.</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div style="display:flex;align-items:center;gap:11px;"><img src="assets/syxx-logo.png" width="30" height="30" style="border-radius:7px;"><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/syxx-logo.png</span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><img src="assets/nnyx-logo.png" width="30" height="30" style="border-radius:7px;"><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/nnyx-logo.png</span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><img src="assets/zzyn-logo.png" width="30" height="30" style="border-radius:7px;"><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/zzyn-logo.png</span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><span style="width:30px;height:30px;border-radius:7px;background:#0a1120;border:1px solid #382c66;"></span><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/nnyx-1.png · nnyx-2.png <span style="color:#a99fc8;">(Nnyx screenshots)</span></span></div>
+        <div style="display:flex;align-items:center;gap:11px;"><span style="width:30px;height:30px;border-radius:7px;background:#0a1120;border:1px solid #382c66;"></span><span style="font-family:'Space Mono';font-size:12px;color:#e9deff;">assets/zzyn-1.png · zzyn-2.png <span style="color:#a99fc8;">(Zzyn screenshots)</span></span></div>
+      </div>
+      <div style="font-size:11px;color:#a99fc8;line-height:1.5;margin-top:14px;">Source components: <span style="font-family:'Space Mono';">SyxxApp.dc.html</span> (app), <span style="font-family:'Space Mono';">Syxx Web.dc.html</span> (site), <span style="font-family:'Space Mono';">Syxx GUI.dc.html</span> (mac/win frames).</div>
+    </div>
+
+    <!-- How to read -->
+    <div style="width:460px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">How the app works</div>
+      <div style="font-size:12.5px;color:#cabfe6;line-height:1.65;">Syxx is navigated entirely from the left <b style="color:#fff;">sidebar</b>. The top item is the entry point (What's New on macOS, Welcome on Windows), followed by the six <b style="color:#fff;">Diagnostics</b> — Prophets, Mirrors, Portals, Gluttons, Cages, Witnesses — a <b style="color:#fff;">Dimensions</b> link to syxx.app framed by two orange dividers, and the <b style="color:#fff;">Account · License</b> pane. Each diagnostic takes a domain (default <span style="font-family:'Space Mono';color:#f0ac38;">github.com</span>), runs on a button click, and returns labelled output cards. Severity is color-coded: teal = safe, orange = warning/high, red = critical.</div>
+    </div>
+
+    <!-- Dimensions -->
+    <div style="width:520px;background:#1d1640;border:1px solid #382c66;border-radius:16px;padding:24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f2ba4a;margin-bottom:16px;">Dimensions &amp; Type Scale</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a99fc8;margin-bottom:2px;">Spacing &amp; Layout</div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Sidebar width</span><span style="font-family:'Space Mono';color:#e9deff;">258px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Pane inset</span><span style="font-family:'Space Mono';color:#e9deff;">32px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Section gap</span><span style="font-family:'Space Mono';color:#e9deff;">24px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Card padding</span><span style="font-family:'Space Mono';color:#e9deff;">16–18px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Grid gap</span><span style="font-family:'Space Mono';color:#e9deff;">16px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">App pane</span><span style="font-family:'Space Mono';color:#e9deff;">1180×800</span></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a99fc8;margin-bottom:2px;">Corner Radii</div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Badge</span><span style="font-family:'Space Mono';color:#e9deff;">4px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Chip</span><span style="font-family:'Space Mono';color:#e9deff;">6px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Button / input</span><span style="font-family:'Space Mono';color:#e9deff;">8px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Card / stat</span><span style="font-family:'Space Mono';color:#e9deff;">12px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Panel / frame</span><span style="font-family:'Space Mono';color:#e9deff;">14–16px</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Pill</span><span style="font-family:'Space Mono';color:#e9deff;">999px</span></div>
+        </div>
+      </div>
+
+      <div style="height:1px;background:#382c66;margin:18px 0 14px;"></div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a99fc8;margin-bottom:8px;">Type Scale</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">View title</span><span style="font-family:'Space Mono';color:#e9deff;">28 / 600</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Card title</span><span style="font-family:'Space Mono';color:#e9deff;">20 / 700</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Body</span><span style="font-family:'Space Mono';color:#e9deff;">14</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Caption</span><span style="font-family:'Space Mono';color:#e9deff;">13.5</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Meta / small</span><span style="font-family:'Space Mono';color:#e9deff;">12</span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span style="color:#cabfe6;">Eyebrow</span><span style="font-family:'Space Mono';color:#e9deff;">10 · .06em</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== macOS ROW ===== -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#f0ac38,#7c3aed);">macOS 26 · Liquid Glass</span>
+    <span style="font-size:13px;color:#a99fc8;">Nine views, left to right in sidebar order</span>
+  </div>
+  <div style="display:flex;gap:28px;align-items:flex-start;width:max-content;margin-bottom:56px;">
+    <sc-for list="{{ macViews }}" as="v" hint-placeholder-count="10">
+      <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+        <div style="width:1180px;height:150px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Mono';font-size:12px;color:#0c0820;font-weight:700;background:#f0ac38;border-radius:6px;padding:2px 8px;">{{ v.n }}</span><span style="font-family:'Space Grotesk';font-size:20px;font-weight:700;">{{ v.title }}</span><span style="font-size:12px;color:#a99fc8;">{{ v.tag }}</span></div>
+          <div style="font-size:13.5px;color:#cabfe6;line-height:1.5;">{{ v.what }}</div>
+          <div style="font-size:13px;color:#e9deff;line-height:1.5;"><b style="color:#f2ba4a;">Proceed:</b> {{ v.how }}</div>
+        </div>
+        <dc-import name="SyxxApp" platform="mac" section="{{ v.section }}" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ===== Windows ROW ===== -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#b98cff,#7c3aed);">Windows 11 · Fluent</span>
+    <span style="font-size:13px;color:#a99fc8;">Same ten views; entry point is Welcome instead of What's New</span>
+  </div>
+  <div style="display:flex;gap:28px;align-items:flex-start;width:max-content;">
+    <sc-for list="{{ winViews }}" as="v" hint-placeholder-count="10">
+      <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+        <div style="width:1180px;height:150px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Mono';font-size:12px;color:#0c0820;font-weight:700;background:#b98cff;border-radius:6px;padding:2px 8px;">{{ v.n }}</span><span style="font-family:'Space Grotesk';font-size:20px;font-weight:700;">{{ v.title }}</span><span style="font-size:12px;color:#a99fc8;">{{ v.tag }}</span></div>
+          <div style="font-size:13.5px;color:#cabfe6;line-height:1.5;">{{ v.what }}</div>
+          <div style="font-size:13px;color:#e9deff;line-height:1.5;"><b style="color:#b98cff;">Proceed:</b> {{ v.how }}</div>
+        </div>
+        <dc-import name="SyxxApp" platform="win" section="{{ v.section }}" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ===== TALL PANELS · FULL LAYOUT ===== -->
+  <div style="display:flex;align-items:center;gap:12px;margin:56px 0 20px;">
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#0d9487,#7c3aed);">Full layout · unclipped</span>
+    <span style="font-size:13px;color:#a99fc8;">Panels that scroll inside the 800px window, shown here at full height so the whole layout reads in one continuous piece.</span>
+  </div>
+  <div style="display:flex;gap:28px;align-items:flex-start;width:max-content;margin-bottom:40px;">
+    <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+      <div style="width:1180px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:14px 20px;font-size:13px;color:#cabfe6;"><b style="color:#fff;">Conclusion</b> — in the app (800px window; scrolls internally, so the lower sections are hidden)</div>
+      <dc-import name="SyxxApp" platform="mac" section="conclusion" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+      <div style="width:1180px;background:#1d1640;border:1px solid #382c66;border-radius:14px;padding:14px 20px;font-size:13px;color:#cabfe6;"><b style="color:#f2ba4a;">Same panel, full height</b> — every section visible, nothing behind a scrollbar</div>
+      <dc-import name="SyxxApp" platform="mac" section="conclusion" vh="1560" theme="dark" style="width:1180px;height:1560px;" hint-size="1180px,1560px"></dc-import>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const diag = [
+      { section: "prophet", title: "Prophets", tag: "· Resolver accuracy", what: "Foretells the records your resolver returns and whether they can be cryptographically trusted.", how: "Type a domain → Check. Read the four output cards: local DNS server, encryption status, returned records, and DNSSEC." },
+      { section: "mirror", title: "Mirrors", tag: "· Censorship & tampering (Pro)", what: "Compares the resolvers and static web content you see locally against a remote off-network vantage.", how: "Enter a domain → Check. Compare the two 'Result:' blocks — resolver agreement, then content-hash match." },
+      { section: "portal", title: "Portals", tag: "· LAN & route", what: "Maps your local network, then follows the path to a chosen domain to locate redirection.", how: "Enter a domain → Trace. Read resolvers, interfaces, VPN, devices, then the hop list — note where the route goes dark." },
+      { section: "glutton", title: "Gluttons", tag: "· Leak & encryption", what: "Dispatches signed probes to check whether your DNS is encrypted and leaking outside the tunnel.", how: "Click 'Check for Leaks'. Read Feature/VPN status, the probe rows, and the collector's Leak / No-Leak verdict." },
+      { section: "cage", title: "Cages", tag: "· Live DNS capture", what: "Sniffs port 53 in real time and attributes each query to the process behind it.", how: "Optionally set a duration (max 480s). 'Close the Cages' captures live; 'Hide the Cages' runs it behind a countdown." },
+      { section: "witness", title: "Witnesses", tag: "· Signed resolution", what: "Resolves a domain through local and remote witnesses, signed with a secret so forgery is detectable.", how: "Enter a domain + secret. 'Witness Testimony' signs & saves; 'Verify Testimony' shows the report; 'Free the Witnesses' resets the DNS cache." },
+    ];
+    const license = { section: "license", title: "License", tag: "· Account", what: "Lite (free local tools) vs Pro ($2/mo with a 3-day trial) plus a one-time $10 permanent license.", how: "Enter a license key → Activate, or start the Pro trial. Machine ID and activation count show below." };
+    const dash = { section: "dashboard", title: "Dashboard", tag: "· Overview", what: "Trial status, current alerts, why Pro matters, and upgrade options in one place.", how: "Scan the alerts up top, read the 'why pay' note, then jump into any diagnostic from the sidebar." };
+    const conclusion = { section: "conclusion", title: "Conclusion", tag: "· Signed verdict", what: "Fuses all six diagnostics into one confidence-scored verdict for the checked domain.", how: "Read the verdict banner and evidence-confidence score, scan the per-discipline findings, then follow 'What you should do'." };
+
+    const mac = [
+      { section: "beta", title: "What's New", tag: "· Entry point (macOS)", what: "Advertises the upcoming Nnyx & Zzyn betas — the malware scanner and firewall siblings.", how: "Read the two product cards, tick your interest, then open the Dashboard or a diagnostic from the sidebar." },
+      dash, ...diag, conclusion, license,
+    ];
+    const win = [
+      { section: "welcome", title: "Welcome", tag: "· Entry point (Windows)", what: "Explains what Syxx does, how it leans on the syxx.app server, the MilkandGin story, and pricing.", how: "Read the overview, then choose a plan ($2/mo or $10 permanent) or open the Dashboard from the sidebar." },
+      dash, ...diag, conclusion, license,
+    ];
+    const num = arr => arr.map((v, i) => Object.assign({ n: String(i + 1).padStart(2, "0") }, v));
+    return { macViews: num(mac), winViews: num(win) };
+  }
+}
+</script>
+</body>
+</html>

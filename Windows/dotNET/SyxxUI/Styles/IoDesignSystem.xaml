@@ -1,0 +1,198 @@
+<!-- Syxx Dimensions design-system tokens for Windows: dark fantasy "security console" -->
+<!-- Tokens lifted from the canonical artboard (Syxx Artboard.dc.html + WardenSidebar.dc.html) -->
+<!-- Color references use AARRGGBB format -->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ═══ Background palette ═══ -->
+    <!-- Canvas #0b0518 · Window base #170c2e/#0f0720 · Sidebar #1d1240/#160c30 -->
+    <Color x:Key="IoCanvasColor">#FF0B0518</Color>
+    <Color x:Key="IoWindowTopColor">#FF170C2E</Color>
+    <Color x:Key="IoWindowBottomColor">#FF0F0720</Color>
+    <Color x:Key="IoSidebarTopColor">#FF1D1240</Color>
+    <Color x:Key="IoSidebarBottomColor">#FF160C30</Color>
+    <Color x:Key="IoBgColor">#FF0B0518</Color>
+    <Color x:Key="IoSurfaceDarkColor">#FF170C2E</Color>
+    <Color x:Key="IoSurfaceElevatedColor">#FF1D1640</Color>
+    <Color x:Key="IoBackgroundDarkColor">#FF0B0518</Color>
+    <Color x:Key="IoBorderSubtleColor">#FF382C66</Color>
+    <!-- Neutral surface fill #fff .03 / neutral border violet .14 -->
+    <Color x:Key="IoNeutralSurface">#FF080412</Color>
+    <Color x:Key="IoNeutralBorder">#FF231C42</Color>
+
+    <!-- ═══ Text ═══ -->
+    <Color x:Key="IoTextColor">#FFEFEAFE</Color>
+    <Color x:Key="IoTextSecondaryColor">#FFC9C1E6</Color>
+    <Color x:Key="IoTextMutedColor">#FF9A8FC0</Color>
+    <Color x:Key="IoTextFaintColor">#FF6F6597</Color>
+
+    <!-- ═══ Brand (violet) ═══ -->
+    <Color x:Key="IoBlueColor">#FF7C5CFF</Color>
+    <Color x:Key="IoDeepBlueColor">#FF5B3FD6</Color>
+    <Color x:Key="IoElectricColor">#FFA78BFF</Color>
+    <Color x:Key="IoAccentStartColor">#FFD9A441</Color>
+    <Color x:Key="IoAccentEndColor">#FF5B3FD6</Color>
+
+    <!-- ═══ Semantic / severity ═══ -->
+    <Color x:Key="IoSuccessGreenColor">#FF2DD4BF</Color>
+    <!-- Prophet module highlight (owner directive 2026-08-02): rgba(0, 180, 255) = #00b4ff.
+         Parity twin of macOS Color.ioProphetBlue (IoDesignSystem.swift:36). Distinct from
+         IoBlueColor, which is the violet-leaning accent. -->
+    <Color x:Key="IoProphetBlueColor">#FF00B4FF</Color>
+    <Color x:Key="IoWarningAmberColor">#FFF7931E</Color>
+    <Color x:Key="IoCriticalRedColor">#FFFF4D6D</Color>
+    <!-- E149: High must be a distinct orange, not identical to Warning amber. -->
+    <Color x:Key="IoHighOrangeColor">#FFFF7A1A</Color>
+    <!-- E149: Info must be distinct from IoElectricColor (#FFA78BFF). -->
+    <Color x:Key="IoInfoPurpleColor">#FF8B7EC8</Color>
+
+    <!-- ═══ Warden-specific accent colors ═══ -->
+    <Color x:Key="IoGoldColor">#FFE0B45A</Color>
+    <Color x:Key="IoGoldDarkColor">#FFD9A441</Color>
+
+    <!-- ═══ Brushes ═══ -->
+    <SolidColorBrush x:Key="IoCanvasBrush" Color="{StaticResource IoCanvasColor}" />
+    <SolidColorBrush x:Key="IoBgBrush" Color="{StaticResource IoBgColor}" />
+    <SolidColorBrush x:Key="IoSurfaceDarkBrush" Color="{StaticResource IoSurfaceDarkColor}" />
+    <SolidColorBrush x:Key="IoSidebarBrush" Color="{StaticResource IoSidebarTopColor}" />
+    <SolidColorBrush x:Key="IoSurfaceElevatedBrush" Color="{StaticResource IoSurfaceElevatedColor}" />
+    <SolidColorBrush x:Key="IoBackgroundDarkBrush" Color="{StaticResource IoBackgroundDarkColor}" />
+    <SolidColorBrush x:Key="IoBorderSubtleBrush" Color="{StaticResource IoBorderSubtleColor}" />
+    <SolidColorBrush x:Key="IoNeutralSurfaceBrush" Color="{StaticResource IoNeutralSurface}" />
+    <SolidColorBrush x:Key="IoNeutralBorderBrush" Color="{StaticResource IoNeutralBorder}" />
+    <SolidColorBrush x:Key="IoTextBrush" Color="{StaticResource IoTextColor}" />
+    <SolidColorBrush x:Key="IoTextSecondaryBrush" Color="{StaticResource IoTextSecondaryColor}" />
+    <SolidColorBrush x:Key="IoTextMutedBrush" Color="{StaticResource IoTextMutedColor}" />
+    <SolidColorBrush x:Key="IoTextFaintBrush" Color="{StaticResource IoTextFaintColor}" />
+    <SolidColorBrush x:Key="IoBlueBrush" Color="{StaticResource IoBlueColor}" />
+    <SolidColorBrush x:Key="IoDeepBlueBrush" Color="{StaticResource IoDeepBlueColor}" />
+    <SolidColorBrush x:Key="IoElectricBrush" Color="{StaticResource IoElectricColor}" />
+    <SolidColorBrush x:Key="IoAccentStartBrush" Color="{StaticResource IoAccentStartColor}" />
+    <SolidColorBrush x:Key="IoAccentStartFaintBrush" Color="#19D9A441" />
+    <SolidColorBrush x:Key="IoSuccessGreenBrush" Color="{StaticResource IoSuccessGreenColor}" />
+    <SolidColorBrush x:Key="IoProphetBlueBrush" Color="{StaticResource IoProphetBlueColor}" />
+    <SolidColorBrush x:Key="IoWarningAmberBrush" Color="{StaticResource IoWarningAmberColor}" />
+    <SolidColorBrush x:Key="IoCriticalRedBrush" Color="{StaticResource IoCriticalRedColor}" />
+    <SolidColorBrush x:Key="IoHighOrangeBrush" Color="{StaticResource IoHighOrangeColor}" />
+    <SolidColorBrush x:Key="IoInfoPurpleBrush" Color="{StaticResource IoInfoPurpleColor}" />
+    <SolidColorBrush x:Key="IoGoldBrush" Color="{StaticResource IoGoldColor}" />
+    <SolidColorBrush x:Key="IoGoldDarkBrush" Color="{StaticResource IoGoldDarkColor}" />
+
+    <!-- ═══ Typography (Syxx Dimensions type system; Phase A owner-approved role map) ═══
+         Semantic roles mirror macOS IoDesignSystem.swift:172-195 (SyxxTypeRole).
+         bodyLight = Cormorant Garamond 300, body = Cormorant Garamond 400 (Jost retired from body).
+         navLabel = Spectral Light 300 @15pt (sidebar / navigation chrome; new Phase A role).
+         bodyAlternate / deck = Cormorant SC 400/600. emphasis = EB Garamond Italic.
+         uiLabel / eyebrow = Jost Medium 500 (UI chrome stays Jost per owner decision).
+         technical = JetBrains Mono. Marcellus SC is bundled but deliberately role-less.
+         System font is last-resort glyph fallback only. -->
+    <!-- display / sectionHeading -->
+    <FontFamily x:Key="IoTypeDisplay">ms-appx:///Assets/Fonts/Cinzel-Bold.ttf#Cinzel</FontFamily>
+    <FontFamily x:Key="IoTypeSectionHeading">ms-appx:///Assets/Fonts/Cinzel-SemiBold.ttf#Cinzel</FontFamily>
+    <FontFamily x:Key="IoFontDisplay">ms-appx:///Assets/Fonts/Cinzel-SemiBold.ttf#Cinzel</FontFamily>
+    <!-- bodyLight (Cormorant Garamond 300) / body (Cormorant Garamond 400) -->
+    <FontFamily x:Key="IoTypeBodyLight">ms-appx:///Assets/Fonts/CormorantGaramond-Light.ttf#Cormorant Garamond Light</FontFamily>
+    <FontFamily x:Key="IoTypeBody">ms-appx:///Assets/Fonts/CormorantGaramond-Regular.ttf#Cormorant Garamond</FontFamily>
+    <!-- navLabel (Spectral Light 300 @15pt); "#Spectral Light" family-name form UNVERIFIED until a Windows build resolves it -->
+    <FontFamily x:Key="IoTypeNavLabel">ms-appx:///Assets/Fonts/Spectral-Light.ttf#Spectral Light</FontFamily>
+    <!-- bodyAlternate (Cormorant SC 400) / deck (Cormorant SC 600) -->
+    <FontFamily x:Key="IoTypeBodyAlternate">ms-appx:///Assets/Fonts/CormorantSC-Regular.ttf#Cormorant SC</FontFamily>
+    <FontFamily x:Key="IoTypeDeck">ms-appx:///Assets/Fonts/CormorantSC-SemiBold.ttf#Cormorant SC</FontFamily>
+    <FontFamily x:Key="IoFontDeck">ms-appx:///Assets/Fonts/CormorantSC-SemiBold.ttf#Cormorant SC</FontFamily>
+    <!-- emphasis -->
+    <FontFamily x:Key="IoTypeEmphasis">ms-appx:///Assets/Fonts/EBGaramond-Italic.ttf#EB Garamond</FontFamily>
+    <FontFamily x:Key="IoFontLore">ms-appx:///Assets/Fonts/EBGaramond-Italic.ttf#EB Garamond</FontFamily>
+    <!-- uiLabel / eyebrow (Jost 500) -->
+    <FontFamily x:Key="IoTypeUiLabel">ms-appx:///Assets/Fonts/Jost-Medium.ttf#Jost Medium</FontFamily>
+    <FontFamily x:Key="IoTypeEyebrow">ms-appx:///Assets/Fonts/Jost-Medium.ttf#Jost Medium</FontFamily>
+    <!-- technical -->
+    <FontFamily x:Key="IoTypeTechnical">ms-appx:///Assets/Fonts/JetBrainsMono-Regular.ttf#JetBrains Mono</FontFamily>
+    <FontFamily x:Key="IoFontMono">ms-appx:///Assets/Fonts/JetBrainsMono-Regular.ttf#JetBrains Mono</FontFamily>
+    <FontFamily x:Key="IoFontMonoBold">ms-appx:///Assets/Fonts/JetBrainsMono-SemiBold.ttf#JetBrains Mono</FontFamily>
+    <!-- Compatibility aliases: former UI keys now resolve to Jost body / labels -->
+    <FontFamily x:Key="IoFontUI">ms-appx:///Assets/Fonts/Jost-Regular.ttf#Jost</FontFamily>
+    <FontFamily x:Key="IoFontGrotesk">ms-appx:///Assets/Fonts/Jost-Regular.ttf#Jost</FontFamily>
+
+    <!-- ═══ Spacing ═══ -->
+    <Thickness x:Key="IoPaddingView">34,42,34,14</Thickness>
+    <Thickness x:Key="IoPaddingCard">18</Thickness>
+
+    <!-- ═══ Gradients ═══ -->
+    <!-- Sidebar fill -->
+    <LinearGradientBrush x:Key="IoSidebarFillBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#FF1D1240" Offset="0" />
+        <GradientStop Color="#FF160C30" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Window fill -->
+    <LinearGradientBrush x:Key="IoWindowFillBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#FF170C2E" Offset="0" />
+        <GradientStop Color="#FF0F0720" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Wordmark gradient (orange → pink → violet) -->
+    <LinearGradientBrush x:Key="IoWordmarkBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#FFFF9A3D" Offset="0" />
+        <GradientStop Color="#FFFF2D78" Offset="0.5" />
+        <GradientStop Color="#FF9A5CFF" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Primary button gradient -->
+    <LinearGradientBrush x:Key="IoPrimaryButtonBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#FF7C5CFF" Offset="0" />
+        <GradientStop Color="#FF5B3FD6" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Teal button gradient -->
+    <LinearGradientBrush x:Key="IoTealButtonBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#FF2DD4BF" Offset="0" />
+        <GradientStop Color="#FF14A89A" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Red button gradient -->
+    <LinearGradientBrush x:Key="IoRedButtonBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#FFFF4D6D" Offset="0" />
+        <GradientStop Color="#FFD62A4C" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Active nav item gradient -->
+    <LinearGradientBrush x:Key="IoActiveNavBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#FF7C5CFF" Offset="0" />
+        <GradientStop Color="#FF6A49EF" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Health meter fill (teal → violet) -->
+    <LinearGradientBrush x:Key="IoHealthMeterBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#FF2DD4BF" Offset="0" />
+        <GradientStop Color="#FF7C5CFF" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Pro covenant banner gradient -->
+    <LinearGradientBrush x:Key="IoProCovenantBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#297C5CFF" Offset="0" />
+        <GradientStop Color="#0F2DD4BF" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Canvas radial glow -->
+    <RadialGradientBrush x:Key="IoCanvasGlowBrush"
+                         Center="0.15,0" GradientOrigin="0.15,0"
+                         RadiusX="1.2" RadiusY="1.25"
+                         MappingMode="RelativeToBoundingBox">
+        <GradientStop Color="#FF1A0C33" Offset="0.0" />
+        <GradientStop Color="#FF0B0518" Offset="1.0" />
+    </RadialGradientBrush>
+
+    <!-- Content pane glow (per-pane radial overlay) -->
+    <RadialGradientBrush x:Key="IoContentGlowBrush"
+                         Center="0.7,-0.1" GradientOrigin="0.7,-0.1"
+                         RadiusX="1.2" RadiusY="0.7"
+                         MappingMode="RelativeToBoundingBox">
+        <GradientStop Color="#237C5CFF" Offset="0.0" />
+        <GradientStop Color="#00000000" Offset="0.55" />
+    </RadialGradientBrush>
+
+    <!-- ═══ Gold nav separators ═══ -->
+    <SolidColorBrush x:Key="NavigationViewItemSeparatorForeground" Color="#52D9A441" />
+
+</ResourceDictionary>

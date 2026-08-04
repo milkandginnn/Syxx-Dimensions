@@ -1,0 +1,151 @@
+{
+  "comparison" : {
+    "dohOutcomes" : {
+      "Cloudflare" : {
+        "errorDescription" : "The network connection was lost.",
+        "records" : [
+
+        ],
+        "status" : "transportError"
+      },
+      "Google" : {
+        "errorDescription" : "The network connection was lost.",
+        "records" : [
+
+        ],
+        "status" : "transportError"
+      },
+      "Quad9" : {
+        "errorDescription" : "The network connection was lost.",
+        "records" : [
+
+        ],
+        "status" : "transportError"
+      }
+    },
+    "isDegraded" : false,
+    "isInconclusive" : true,
+    "isRedirectionDetected" : false,
+    "localOutcome" : {
+      "errorDescription" : "The operation couldn’t be completed. (Network.NWError error 57 - Socket is not connected)",
+      "records" : [
+
+      ],
+      "status" : "timeout"
+    },
+    "localRecords" : [
+
+    ],
+    "localServer" : "10.2.0.1",
+    "publicResolverOutcomes" : {
+      "Cloudflare" : {
+        "errorDescription" : "The operation couldn’t be completed. (Network.NWError error 57 - Socket is not connected)",
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      },
+      "Google" : {
+        "errorDescription" : "The operation couldn’t be completed. (Network.NWError error 57 - Socket is not connected)",
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      },
+      "Quad9" : {
+        "errorDescription" : "The operation couldn’t be completed. (Network.NWError error 57 - Socket is not connected)",
+        "records" : [
+
+        ],
+        "status" : "timeout"
+      }
+    },
+    "publicResolverResults" : {
+      "Cloudflare" : [
+
+      ],
+      "Google" : [
+
+      ],
+      "Quad9" : [
+
+      ]
+    }
+  },
+  "evidence" : {
+    "comparisonResult" : {
+      "conclusion" : "inconclusive"
+    },
+    "dohOutcomes" : {
+      "outcomes" : [
+        {
+          "resolverId" : "Cloudflare",
+          "success" : false
+        },
+        {
+          "resolverId" : "Google",
+          "success" : false
+        },
+        {
+          "resolverId" : "Quad9",
+          "success" : false
+        }
+      ]
+    },
+    "expiresAt" : 1788384820979,
+    "formatVersion" : 4,
+    "perResolverAnswers" : [
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "10.2.0.1"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "Cloudflare"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "Google"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "Quad9"
+      }
+    ],
+    "queryId" : "example.com",
+    "resolverQueryOutcomes" : [
+      {
+        "resolverId" : "10.2.0.1",
+        "success" : false
+      },
+      {
+        "resolverId" : "Cloudflare",
+        "success" : false
+      },
+      {
+        "resolverId" : "Google",
+        "success" : false
+      },
+      {
+        "resolverId" : "Quad9",
+        "success" : false
+      }
+    ],
+    "timestamp" : 1785792820979
+  },
+  "expiresAt" : 810077620.97988,
+  "formatVersion" : 4,
+  "keyId" : "4e22f0f074cf2da9",
+  "publicKey" : "G5wOwKZitaDQPxI2fh6fA8YC9XgjK+9Uo63jrFDNmhw=",
+  "signature" : "xHH6afH7AUCApzq\/5IeyIP2pRWfzxEWjGK5k5rGKyzl2lUeIVFgwiVO+dsMqg0NQoliKKDyjmP4raR3B9rAwBQ==",
+  "targetDomain" : "example.com",
+  "timestamp" : 807485620.97988
+}

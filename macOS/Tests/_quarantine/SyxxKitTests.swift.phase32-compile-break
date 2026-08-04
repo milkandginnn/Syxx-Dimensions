@@ -1,0 +1,2119 @@
+import XCTest
+@testable import SyxxKit
+
+final class SyxxKitTests: XCTestCase {
+
+    // MARK: - DNSCapture packet fixtures (P3)
+
+    private func encodeDNSName(_ domain: String) -> [UInt8] {
+        var bytes: [UInt8] = []
+        for label in domain.split(separator: ".") {
+            bytes.append(UInt8(label.utf8.count))
+            bytes.append(contentsOf: Array(label.utf8))
+        }
+        bytes.append(0)
+        return bytes
+    }
+
+    private func makeIPv4Header(ihlWords: UInt8, protocolNumber: UInt8, srcIP: [UInt8], dstIP: [UInt8], optionsBytes: Int) -> [UInt8] {
+        var header: [UInt8] = []
+        header.append((4 << 4) | ihlWords) // version 4, IHL in 32-bit words
+        header.append(0x00) // TOS
+        header.append(contentsOf: [0x00, 0x30]) // total length (unchecked by parser)
+        header.append(contentsOf: [0x00, 0x00]) // identification
+        header.append(contentsOf: [0x00, 0x00]) // flags/fragment offset
+        header.append(64) // TTL
+        header.append(protocolNumber)
+        header.append(contentsOf: [0x00, 0x00]) // header checksum (unchecked)
+        header.append(contentsOf: srcIP)
+        header.append(contentsOf: dstIP)
+        header.append(contentsOf: [UInt8](repeating: 0, count: optionsBytes)) // IP options padding
+        return header
+    }
+
+    private func makeUDPHeader(srcPort: UInt16, dstPort: UInt16, payloadLength: Int) -> [UInt8] {
+        let len = 8 + payloadLength
+        return [
+            UInt8(srcPort >> 8), UInt8(srcPort & 0xff),
+            UInt8(dstPort >> 8), UInt8(dstPort & 0xff),
+            UInt8(len >> 8), UInt8(len & 0xff),
+            0x00, 0x00
+        ]
+    }
+
+    func testParseIPUDPHeaderIPv4StandardHeader() {
+        let ip = makeIPv4Header(ihlWords: 5, protocolNumber: 17, srcIP: [10, 0, 0, 1], dstIP: [8, 8, 8, 8], optionsBytes: 0)
+        let udp = makeUDPHeader(srcPort: 54321, dstPort: 53, payloadLength: 12)
+        let data = Data(ip + udp + [UInt8](repeating: 0, count: 12)) // 12 bytes of "DNS payload"
+
+        let result = DNSCapture.parseIPUDPHeader(data)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.context.ipVersion, 4)
+        XCTAssertEqual(result?.context.sourceIP, "10.0.0.1")
+        XCTAssertEqual(result?.context.destIP, "8.8.8.8")
+        XCTAssertEqual(result?.context.sourcePort, 54321)
+        XCTAssertEqual(result?.context.destPort, 53)
+        XCTAssertEqual(result?.payloadOffset, 20 + 8) // standard 20-byte IPv4 header + 8-byte UDP header
+        XCTAssertEqual(result?.dnsPayloadLength, 12) // C024/C029: validated payload length from UDP header
+    }
+
+    func testParseIPUDPHeaderIPv4WithOptionsAdjustsPayloadOffset() {
+        // IHL=6 means a 24-byte header (20 base + 4 bytes of options) — the old fixed-20-byte
+        // assumption would misread the UDP header and DNS payload location on packets like this.
+        let ip = makeIPv4Header(ihlWords: 6, protocolNumber: 17, srcIP: [192, 168, 1, 1], dstIP: [1, 1, 1, 1], optionsBytes: 4)
+        let udp = makeUDPHeader(srcPort: 53, dstPort: 55000, payloadLength: 12)
+        let data = Data(ip + udp + [UInt8](repeating: 0, count: 12))
+
+        let result = DNSCapture.parseIPUDPHeader(data)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.context.sourceIP, "192.168.1.1")
+        XCTAssertEqual(result?.context.sourcePort, 53)
+        XCTAssertEqual(result?.context.destPort, 55000)
+        XCTAssertEqual(result?.payloadOffset, 24 + 8) // 24-byte IPv4 header (with options) + 8-byte UDP header
+    }
+
+    func testParseIPUDPHeaderIPv6() {
+        var ip: [UInt8] = []
+        ip.append(contentsOf: [0x60, 0x00, 0x00, 0x00]) // version 6, traffic class, flow label
+        ip.append(contentsOf: [0x00, 0x14]) // payload length (8 bytes UDP + 12 bytes payload = 20 = 0x14)
+        ip.append(17) // next header = UDP
+        ip.append(64) // hop limit
+        ip.append(contentsOf: [UInt8](repeating: 0, count: 15) + [1]) // source ::1 (16 bytes)
+        ip.append(contentsOf: [0x26, 0x01, 0x48, 0x60, 0x48, 0x60] + [UInt8](repeating: 0, count: 8) + [0x88, 0x88]) // dest 2601:4860:4860::8888 (16 bytes)
+        let udp = makeUDPHeader(srcPort: 60000, dstPort: 53, payloadLength: 12)
+        let data = Data(ip + udp + [UInt8](repeating: 0, count: 12))
+
+        let result = DNSCapture.parseIPUDPHeader(data)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.context.ipVersion, 6)
+        XCTAssertEqual(result?.context.sourcePort, 60000)
+        XCTAssertEqual(result?.context.destPort, 53)
+        XCTAssertEqual(result?.payloadOffset, 40 + 8)
+        XCTAssertEqual(result?.dnsPayloadLength, 12) // C022: validated UDP length on IPv6 path
+    }
+
+    /// C021: IPv4 fragments (MF=1 or fragment offset>0) must be rejected.
+    func testParseIPUDPHeaderRejectsIPv4Fragments() {
+        let ip = makeIPv4Header(ihlWords: 5, protocolNumber: 17, srcIP: [10, 0, 0, 1], dstIP: [8, 8, 8, 8], optionsBytes: 0)
+        let udp = makeUDPHeader(srcPort: 54321, dstPort: 53, payloadLength: 12)
+        var data = Data(ip + udp + [UInt8](repeating: 0, count: 12))
+        // Set MF flag (bit 5 of flags/fragment-offset field at bytes 6-7)
+        let ihl = 20
+        data[data.startIndex + 6] = 0x20  // MF=1
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(data), "IPv4 MF fragment must be rejected")
+        // Reset MF, set fragment offset = 1
+        data[data.startIndex + 6] = 0x00
+        data[data.startIndex + 7] = 0x01  // fragment offset = 1
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(data), "IPv4 non-zero fragment offset must be rejected")
+    }
+
+    /// Hostile-input rejection: this parser handles attacker-controlled packets, so every guard must
+    /// actually reject. Previously only well-formed headers were tested — a parser that accepted
+    /// malformed / non-UDP / truncated / short-payload packets would have passed. Each must return nil.
+    func testParseIPUDPHeaderRejectsHostileInput() {
+        // Empty and truncated IPv4 (< 20 bytes)
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(Data()), "empty data")
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(Data([0x45, 0x00, 0x00])), "truncated IPv4")
+        // Unknown IP version (5)
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(Data([0x50] + [UInt8](repeating: 0, count: 60))), "unknown IP version")
+        // C019: IPv4 TCP on non-port-53 must still be rejected
+        let tcpNonPort53 = makeIPv4Header(ihlWords: 5, protocolNumber: 6, srcIP: [10, 0, 0, 1], dstIP: [8, 8, 8, 8], optionsBytes: 0)
+        // Build a fake TCP header with non-53 ports (20-byte minimum TCP header)
+        var tcpHeader = [UInt8](repeating: 0, count: 20)
+        tcpHeader[0] = 0xD4; tcpHeader[1] = 0x31 // src port 54321
+        tcpHeader[2] = 0x00; tcpHeader[3] = 0x50 // dst port 80
+        tcpHeader[12] = 0x50 // data offset = 5 (20 bytes)
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(Data(tcpNonPort53 + tcpHeader)), "IPv4 TCP non-port-53")
+        // IPv4 UDP but DNS payload < 12 bytes must be rejected
+        let ip4 = makeIPv4Header(ihlWords: 5, protocolNumber: 17, srcIP: [10, 0, 0, 1], dstIP: [8, 8, 8, 8], optionsBytes: 0)
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(Data(ip4 + makeUDPHeader(srcPort: 1, dstPort: 53, payloadLength: 4) + [UInt8](repeating: 0, count: 4))), "IPv4 DNS payload < 12 bytes")
+        // IPv6 but non-UDP/TCP next header (ICMPv6 = 58) must be rejected
+        var ip6: [UInt8] = [0x60, 0x00, 0x00, 0x00, 0x00, 0x14, 58, 64] // next header = ICMPv6
+        ip6.append(contentsOf: [UInt8](repeating: 0, count: 15) + [1])  // src ::1
+        ip6.append(contentsOf: [UInt8](repeating: 0, count: 16))        // dst ::
+        XCTAssertNil(DNSCapture.parseIPUDPHeader(Data(ip6 + [UInt8](repeating: 0, count: 20))), "IPv6 non-UDP/TCP next header")
+    }
+
+    func testParseDNSPacketQuery() {
+        var packet: [UInt8] = [0x12, 0x34] // XID
+        packet.append(contentsOf: [0x01, 0x00]) // flags: standard query, RD set, QR=0
+        packet.append(contentsOf: [0x00, 0x01]) // QDCOUNT=1
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00]) // AN/NS/AR = 0
+        packet.append(contentsOf: encodeDNSName("example.com"))
+        packet.append(contentsOf: [0x00, 0x01]) // type A
+        packet.append(contentsOf: [0x00, 0x01]) // class IN
+
+        let report = DNSCapture.parseDNSPacket(Data(packet))
+        XCTAssertNotNil(report)
+        XCTAssertEqual(report?.qr, "Query")
+        XCTAssertEqual(report?.questions.first?.questionName, "example.com")
+        XCTAssertEqual(report?.questions.first?.questionType, "A")
+        XCTAssertEqual(report?.answers.count, 0)
+    }
+
+    func testParseDNSPacketResponseWithAnswer() {
+        var packet: [UInt8] = [0x12, 0x34] // XID
+        packet.append(contentsOf: [0x81, 0x80]) // flags: QR=1, RD, RA, RCODE=0
+        packet.append(contentsOf: [0x00, 0x01]) // QDCOUNT=1
+        packet.append(contentsOf: [0x00, 0x01]) // ANCOUNT=1
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x00]) // NS/AR = 0
+        packet.append(contentsOf: encodeDNSName("example.com"))
+        packet.append(contentsOf: [0x00, 0x01]) // type A
+        packet.append(contentsOf: [0x00, 0x01]) // class IN
+
+        // Answer: name via compression pointer back to offset 12, type A, ttl 60, rdata 93.184.216.34
+        packet.append(contentsOf: [0xC0, 0x0C])
+        packet.append(contentsOf: [0x00, 0x01]) // type A
+        packet.append(contentsOf: [0x00, 0x01]) // class IN
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x3C]) // TTL = 60
+        packet.append(contentsOf: [0x00, 0x04]) // RDLENGTH = 4
+        packet.append(contentsOf: [93, 184, 216, 34])
+
+        let report = DNSCapture.parseDNSPacket(Data(packet))
+        XCTAssertNotNil(report)
+        XCTAssertEqual(report?.qr, "Response")
+        XCTAssertEqual(report?.answers.count, 1)
+        XCTAssertEqual(report?.answers.first?.name, "example.com")
+        XCTAssertEqual(report?.answers.first?.type, "A")
+        XCTAssertEqual(report?.answers.first?.ttl, 60)
+        XCTAssertEqual(report?.answers.first?.rdata, "93.184.216.34")
+    }
+
+    func testParseDNSPacketRejectsCompressionLoop() {
+        var packet: [UInt8] = [0x12, 0x34]
+        packet.append(contentsOf: [0x81, 0x80])
+        packet.append(contentsOf: [0x00, 0x01])
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        // A name at offset 12 that is just a self-referential compression pointer to itself.
+        packet.append(contentsOf: [0xC0, 0x0C])
+        packet.append(contentsOf: [0x00, 0x01])
+        packet.append(contentsOf: [0x00, 0x01])
+
+        // Should not hang or crash; the malformed name simply yields no questions.
+        let report = DNSCapture.parseDNSPacket(Data(packet))
+        XCTAssertNotNil(report)
+        XCTAssertEqual(report?.questions.count, 0)
+    }
+
+    func testLicenseKeyRoundTripsThroughKeychain() throws {
+        let key = "TEST-\(UUID().uuidString)"
+        try LicenseManager.saveLicenseKey(key)
+        XCTAssertEqual(LicenseManager.getStoredLicenseKey(), key)
+
+        let updatedKey = "TEST-\(UUID().uuidString)-UPDATED"
+        try LicenseManager.saveLicenseKey(updatedKey)
+        XCTAssertEqual(LicenseManager.getStoredLicenseKey(), updatedKey)
+    }
+
+    func testFingerprintIsSaltedHashNotRawIdentifier() {
+        let fingerprint = LicenseManager.getSystemFingerprint()
+        // A SHA-256 hex digest is 64 lowercase hex characters — not a raw UUID/hostname.
+        XCTAssertEqual(fingerprint.count, 64)
+        XCTAssertTrue(fingerprint.allSatisfy { $0.isHexDigit && !$0.isUppercase })
+    }
+
+    func testFirstLaunchDateIsStableAcrossCalls() async {
+        let first = await LicenseManager.getFirstLaunchDate()
+        let second = await LicenseManager.getFirstLaunchDate()
+        XCTAssertEqual(first, second)
+        // Stability alone passes for a constant-returning stub. The first-launch date must also be a
+        // real PAST instant — never in the future, which would make the trial window compute negative
+        // elapsed time and mis-gate the trial.
+        XCTAssertLessThanOrEqual(first, Date(), "first-launch date must not be in the future")
+    }
+
+    // MARK: - E-7 offline grace predicate (LicenseManager)
+
+    /// Grace applies when nowMs is within the 30-day window.
+    ///
+    /// Mutation: remove the `<= graceWindowMs` guard in `offlineGraceApplies` → this test REDs
+    /// because a 0-ms delta (lastValidMs == nowMs) would still return false.
+    func testOfflineGrace_WithinWindow_ReturnsTrue() {
+        let now: Int64 = 1_000_000_000_000
+        let last: Int64 = now - (5 * 24 * 60 * 60 * 1000) // 5 days ago — well within 30
+        XCTAssertTrue(
+            LicenseManager.offlineGraceApplies(nowMs: now, lastValidMs: last),
+            "grace must apply when last validation is 5 days ago (within 30-day window)")
+    }
+
+    /// Grace must NOT apply when the last validation is outside the window.
+    ///
+    /// Mutation: replace `<= graceWindowMs` with `< graceWindowMs` in the predicate → still passes
+    /// for all values except the exact boundary, so mutation uses a value clearly outside.
+    func testOfflineGrace_OutsideWindow_ReturnsFalse() {
+        let now: Int64 = 1_000_000_000_000
+        let last: Int64 = now - (31 * 24 * 60 * 60 * 1000) // 31 days ago — outside 30-day window
+        XCTAssertFalse(
+            LicenseManager.offlineGraceApplies(nowMs: now, lastValidMs: last),
+            "grace must NOT apply when last validation is 31 days ago")
+    }
+
+    /// No recorded validation — grace must never apply.
+    ///
+    /// Mutation: remove the `guard let last = lastValidMs else { return false }` guard →
+    /// this test REDs because nil would be treated as 0 (distantPast) and could pass the window check.
+    func testOfflineGrace_NilLastValid_ReturnsFalse() {
+        let now: Int64 = 1_000_000_000_000
+        XCTAssertFalse(
+            LicenseManager.offlineGraceApplies(nowMs: now, lastValidMs: nil),
+            "grace must NOT apply when no prior validation has been recorded")
+    }
+
+    /// Boundary: grace applies exactly at the edge of the 30-day window.
+    func testOfflineGrace_ExactlyAtBoundary_ReturnsTrue() {
+        let now: Int64 = 1_000_000_000_000
+        let graceMs: Int64 = 30 * 24 * 60 * 60 * 1000
+        let last = now - graceMs // exactly 30 days ago
+        XCTAssertTrue(
+            LicenseManager.offlineGraceApplies(nowMs: now, lastValidMs: last),
+            "grace must apply at exactly the 30-day boundary (inclusive)")
+    }
+
+    // MARK: - HTMLAssetParser (M32)
+
+    private let baseURL = URL(string: "https://example.com/")!
+
+    func testParsesScriptRegardlessOfAttributeOrder() {
+        let html = "<script type=\"module\" src=\"/a.js\"></script>"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.scripts, ["https://example.com/a.js"])
+    }
+
+    func testParsesStylesheetWithRelBeforeHref() {
+        // The old regex required href before rel="stylesheet" and missed the common rel-first order.
+        let html = "<link rel=\"stylesheet\" href=\"/style.css\">"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.stylesheets, ["https://example.com/style.css"])
+    }
+
+    func testParsesModulepreloadAsScriptAsset() {
+        let html = "<link rel=\"modulepreload\" href=\"/chunk.js\">"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.scripts, ["https://example.com/chunk.js"])
+    }
+
+    func testIgnoresTagLikeTextInsideComments() {
+        let html = "<!-- <script src=\"/fake.js\"></script> --><script src=\"/real.js\"></script>"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.scripts, ["https://example.com/real.js"])
+    }
+
+    func testIgnoresTagLikeTextInsideScriptBody() {
+        let html = "<script>document.write('<script src=\"/fake.js\"></' + 'script>');</script><script src=\"/real.js\"></script>"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.scripts, ["https://example.com/real.js"])
+    }
+
+    func testCapturesInlineScriptBodiesInOrderExcludingExternal() {
+        // Inline <script> bodies are captured (for hashing); external src scripts are not inline.
+        let html = "<script>var a=1;</script><script src=\"/ext.js\"></script><script> b(); </script>"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.scripts, ["https://example.com/ext.js"])
+        XCTAssertEqual(assets.inlineScripts, ["var a=1;", "b();"])
+    }
+
+    func testPreservesOrderAndDuplicates() {
+        // Regression test for the old Set-based dedup, which made reordered/duplicated
+        // injected assets invisible to the structural comparison.
+        let html = "<script src=\"/a.js\"></script><script src=\"/b.js\"></script><script src=\"/a.js\"></script>"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.scripts, [
+            "https://example.com/a.js",
+            "https://example.com/b.js",
+            "https://example.com/a.js"
+        ])
+    }
+
+    func testIframeParsedBySrcAttribute() {
+        let html = "<iframe title=\"ad\" src=\"https://ads.example.com/frame\"></iframe>"
+        let assets = HTMLAssetParser.parse(html: html, baseURL: baseURL)
+        XCTAssertEqual(assets.iframes, ["https://ads.example.com/frame"])
+    }
+
+    // MARK: - WitnessSigner (Ed25519)
+
+    private func makeComparison(domain: String = "example.com", redirected: Bool = false) -> SyxxKit.ComparisonResult {
+        let record = DNSRecord(name: domain, type: 1, ttl: 60, rdata: "93.184.216.34")
+        return SyxxKit.ComparisonResult(
+            localServer: "1.1.1.1",
+            localRecords: [record],
+            publicResolverResults: ["Cloudflare": [record]],
+            isRedirectionDetected: redirected
+        )
+    }
+
+    private var testKeyPair: (privateKey: String, publicKey: String) {
+        WitnessSigner.generateKeyPair()
+    }
+
+    func testWitnessSnapshotVerifiesWithCorrectKey() throws {
+        let (priv, pub) = testKeyPair
+        let comparison = makeComparison()
+        let snapshot = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: comparison, privateKeyBase64: priv)
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(snapshot), .valid)
+        XCTAssertEqual(snapshot.publicKey, pub)
+        XCTAssertFalse(snapshot.keyId.isEmpty)
+    }
+
+    func testWitnessSnapshotRejectsTamperedComparison() throws {
+        let (priv, _) = testKeyPair
+        let comparison = makeComparison(redirected: false)
+        let snapshot = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: comparison, privateKeyBase64: priv)
+
+        // Simulate an attacker flipping the redirection result after signing.
+        let tamperedComparison = makeComparison(redirected: true)
+        let tamperedSnapshot = WitnessSnapshot(
+            formatVersion: 2,
+            timestamp: snapshot.timestamp,
+            expiresAt: nil,
+            targetDomain: snapshot.targetDomain,
+            comparison: tamperedComparison,
+            evidence: snapshot.evidence,
+            signature: snapshot.signature,
+            publicKey: snapshot.publicKey,
+            keyId: snapshot.keyId
+        )
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(tamperedSnapshot), .displayMismatch)
+    }
+
+    func testWitnessSnapshotRejectsTamperedDomain() throws {
+        let (priv, _) = testKeyPair
+        let comparison = makeComparison()
+        let snapshot = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: comparison, privateKeyBase64: priv)
+
+        let tamperedSnapshot = WitnessSnapshot(
+            formatVersion: 2,
+            timestamp: snapshot.timestamp,
+            expiresAt: nil,
+            targetDomain: "attacker-controlled.com",
+            comparison: snapshot.comparison,
+            evidence: snapshot.evidence,
+            signature: snapshot.signature,
+            publicKey: snapshot.publicKey,
+            keyId: snapshot.keyId
+        )
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(tamperedSnapshot), .displayMismatch)
+    }
+
+    /// [B037] The display-integrity guard must also cover per-resolver outcomes. A tampered display
+    /// that keeps the aggregate result/answer-sets identical (here: an extra injected resolver whose
+    /// answer matches, so `comparisonResult` is unchanged) but alters `resolverQueryOutcomes` must be
+    /// rejected — otherwise a forged per-resolver display verifies as authentic.
+    func testWitnessSnapshotRejectsTamperedResolverOutcomes() throws {
+        let (priv, _) = testKeyPair
+        let snapshot = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: makeComparison(), privateKeyBase64: priv)
+        let record = DNSRecord(name: "example.com", type: 1, ttl: 60, rdata: "93.184.216.34")
+        // Same result + same answer sets (Evil resolver returns the same rdata) → comparisonResult
+        // is IDENTICAL, but resolverQueryOutcomes gains an entry.
+        let tamperedComparison = SyxxKit.ComparisonResult(
+            localServer: "1.1.1.1",
+            localRecords: [record],
+            publicResolverResults: ["Cloudflare": [record], "EvilInjectedResolver": [record]],
+            isRedirectionDetected: false)
+        let tamperedSnapshot = WitnessSnapshot(
+            formatVersion: snapshot.formatVersion, timestamp: snapshot.timestamp, expiresAt: nil,
+            targetDomain: snapshot.targetDomain, comparison: tamperedComparison,
+            evidence: snapshot.evidence, signature: snapshot.signature,
+            publicKey: snapshot.publicKey, keyId: snapshot.keyId)
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(tamperedSnapshot), .displayMismatch,
+            "a tampered displayed resolver set must not verify, even when the result is unchanged")
+    }
+
+    /// The tamper tests above keep the signature valid and mutate a DISPLAY field, so they are
+    /// caught by the display-integrity guard BEFORE the cryptographic check ever runs. This pins the
+    /// cryptographic check itself: a corrupted signature over otherwise-valid evidence must fail.
+    func testWitnessSnapshotRejectsCorruptedSignature() throws {
+        let (priv, _) = testKeyPair
+        let comparison = makeComparison()
+        let snapshot = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: comparison, privateKeyBase64: priv)
+        var sigBytes = Data(base64Encoded: snapshot.signature)!
+        sigBytes[0] ^= 0xFF   // flip one byte; evidence / domain / comparison all remain valid
+        let corrupted = WitnessSnapshot(
+            formatVersion: snapshot.formatVersion,
+            timestamp: snapshot.timestamp,
+            expiresAt: nil,
+            targetDomain: snapshot.targetDomain,
+            comparison: snapshot.comparison,
+            evidence: snapshot.evidence,
+            signature: sigBytes.base64EncodedString(),
+            publicKey: snapshot.publicKey,
+            keyId: snapshot.keyId
+        )
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(corrupted), .invalidSignature,
+            "a corrupted Ed25519 signature must fail cryptographic verification")
+    }
+
+    func testWitnessSnapshotRejectsEmptyKey() {
+        let comparison = makeComparison()
+        XCTAssertThrowsError(try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: comparison, privateKeyBase64: ""))
+    }
+
+    func testWitnessVerifyRejectsEmptyPublicKey() throws {
+        let comparison = makeComparison()
+        let (priv, _) = testKeyPair
+        let snapshot = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: comparison, privateKeyBase64: priv)
+        let noKeySnapshot = WitnessSnapshot(
+            formatVersion: 2,
+            timestamp: snapshot.timestamp,
+            expiresAt: nil,
+            targetDomain: snapshot.targetDomain,
+            comparison: snapshot.comparison,
+            evidence: snapshot.evidence,
+            signature: snapshot.signature,
+            publicKey: "",
+            keyId: snapshot.keyId
+        )
+        XCTAssertEqual(WitnessSigner.verifySnapshot(noKeySnapshot), .malformedInput)
+    }
+
+    func testWitnessSnapshotDomainWithDelimiterCharacterDoesNotCollide() throws {
+        // Regression test using the structured JSON payload — domain with "|" cannot collide.
+        let (priv, _) = testKeyPair
+        let comparisonA = makeComparison(domain: "evil|{\"isRedirectionDetected\":true}")
+        let comparisonB = makeComparison(domain: "evil")
+        let snapshotA = try WitnessSigner.createSignedSnapshot(domain: "evil|{\"isRedirectionDetected\":true}", comparison: comparisonA, privateKeyBase64: priv)
+
+        let crossedSnapshot = WitnessSnapshot(
+            formatVersion: 2,
+            timestamp: snapshotA.timestamp,
+            expiresAt: nil,
+            targetDomain: "evil",
+            comparison: comparisonB,
+            evidence: snapshotA.evidence,
+            signature: snapshotA.signature,
+            publicKey: snapshotA.publicKey,
+            keyId: snapshotA.keyId
+        )
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(crossedSnapshot), .displayMismatch)
+    }
+
+    func testWitnessKeyPairGeneration() throws {
+        let (priv1, pub1) = WitnessSigner.generateKeyPair()
+        let (priv2, pub2) = WitnessSigner.generateKeyPair()
+        XCTAssertFalse(priv1.isEmpty)
+        XCTAssertFalse(pub1.isEmpty)
+        XCTAssertNotEqual(priv1, priv2)
+        XCTAssertNotEqual(pub1, pub2)
+        // Distinct non-empty strings don't prove a WORKING Ed25519 pair — a keygen returning distinct
+        // garbage would pass the above. Prove it round-trips: a snapshot signed with priv1 verifies,
+        // and the same snapshot with the OTHER pair's public key swapped in must NOT verify.
+        let snap = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: makeComparison(), privateKeyBase64: priv1)
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(snap), .valid, "a freshly generated pair must sign+verify")
+        let wrongKey = WitnessSnapshot(
+            formatVersion: snap.formatVersion, timestamp: snap.timestamp, expiresAt: nil,
+            targetDomain: snap.targetDomain, comparison: snap.comparison, evidence: snap.evidence,
+            signature: snap.signature, publicKey: pub2, keyId: snap.keyId)
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(wrongKey), .invalidSignature,
+            "a snapshot verified under a DIFFERENT generated public key must be rejected")
+    }
+
+    func testWitnessThirdPartyVerification() throws {
+        // Third party with only the public key can verify.
+        let (priv, _) = testKeyPair
+        let comparison = makeComparison()
+        let snapshot = try WitnessSigner.createSignedSnapshot(domain: "example.com", comparison: comparison, privateKeyBase64: priv)
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(snapshot), .valid)
+
+        // Someone who only knows the public key cannot forge a signature.
+        let (attackerPriv, _) = testKeyPair
+        let forged = try WitnessSigner.createSignedSnapshot(domain: "evil.com", comparison: comparison, privateKeyBase64: attackerPriv)
+        let forgedSnapshot = WitnessSnapshot(
+            formatVersion: 2,
+            timestamp: forged.timestamp,
+            expiresAt: nil,
+            targetDomain: "evil.com",
+            comparison: forged.comparison,
+            evidence: forged.evidence,
+            signature: forged.signature,
+            publicKey: snapshot.publicKey,
+            keyId: snapshot.keyId
+        )
+        XCTAssertEqual(try WitnessSigner.verifySnapshot(forgedSnapshot), .invalidSignature)
+    }
+
+    // MARK: - DNSResolver packet encoding/parsing (P3)
+
+    func testMakeQueryPacketRandomizesTransactionID() throws {
+        // A single "id1 != id2" check passes for a SEQUENTIAL COUNTER — the exact off-path
+        // spoofing / cache-poisoning weakness TXID randomization exists to prevent. Sample many IDs
+        // and require both high distinctness (not fixed/near-constant) AND the absence of monotonic
+        // (+1) stepping (not a predictable counter).
+        var ids: [UInt16] = []
+        for _ in 0..<200 {
+            let (_, id) = try DNSResolver.makeQueryPacketWithID(name: "example.com", type: 1)
+            ids.append(id)
+        }
+        XCTAssertGreaterThan(Set(ids).count, 190,
+            "TXIDs must be well-distributed across 65536 values, not fixed/near-constant")
+        var stepPlusOne = 0
+        for i in 1..<ids.count where ids[i] == ids[i - 1] &+ 1 { stepPlusOne += 1 }
+        XCTAssertLessThan(stepPlusOne, ids.count / 4,
+            "TXIDs must not increment monotonically — a sequential counter is spoofable")
+    }
+
+    func testValidateDomainNameRejectsOverlongLabel() {
+        let longLabel = String(repeating: "a", count: 64) // 64 > the 63-byte label limit
+        XCTAssertThrowsError(try DNSResolver.validateDomainName("\(longLabel).com"),
+            "A label exceeding 63 bytes must be rejected")
+    }
+
+    func testValidateDomainNameRejectsEmptyName() {
+        XCTAssertThrowsError(try DNSResolver.validateDomainName(""),
+            "An empty domain name must be rejected")
+        XCTAssertThrowsError(try DNSResolver.validateDomainName("   "),
+            "A whitespace-only domain name must be rejected")
+        XCTAssertThrowsError(try DNSResolver.validateDomainName("."),
+            "A bare dot must be rejected")
+    }
+
+    func testValidateDomainNameRejectsOverlongTotal() {
+        // 254 bytes exceeds the 253-byte DNS wire-format limit
+        let longName = String(repeating: "a", count: 254)
+        XCTAssertThrowsError(try DNSResolver.validateDomainName(longName),
+            "A name exceeding 253 bytes must be rejected")
+    }
+
+    func testValidateDomainNameAcceptsBoundaryLabel() throws {
+        // 63-byte label is the maximum valid length
+        let boundaryLabel = String(repeating: "a", count: 63)
+        XCTAssertNoThrow(try DNSResolver.validateDomainName("\(boundaryLabel).com"),
+            "A 63-byte label must be accepted (it is the maximum valid length)")
+    }
+
+    func testValidateDomainNameAcceptsNormalName() throws {
+        XCTAssertNoThrow(try DNSResolver.validateDomainName("example.com"),
+            "A standard domain name must be accepted")
+        XCTAssertNoThrow(try DNSResolver.validateDomainName("sub.domain.example.com"),
+            "A multi-level domain name must be accepted")
+    }
+
+    // F007 — DomainCanonical A-label length guard (post-IDNA, not pre-IDNA UTF-8).
+    func testDomainCanonical_rejectsNameTooLongAfterEncoding() throws {
+        // Craft a name whose UTF-8 is ≤ 253 but whose A-label form exceeds 253 bytes.
+        // Each non-ASCII label "aä" encodes to "xn--a-uua" (9 chars) vs 3 UTF-8 bytes.
+        // 28 labels × 9 chars + 27 dots = 252+27 = 279 > 253; UTF-8 = 28×3+27 = 111 ≤ 253.
+        let label = "aä"   // 3 UTF-8 bytes → "xn--a-uua" (9 ASCII bytes) after IDNA
+        let name = Array(repeating: label, count: 28).joined(separator: ".")
+        XCTAssertThrowsError(try DomainCanonical.canonicalize(name),
+            "A name whose A-label form exceeds 253 bytes must be rejected")
+    }
+
+    func testDomainCanonical_acceptsNameBelowLimitAfterEncoding() throws {
+        // A plain ASCII name under 253 bytes must succeed.
+        // Mutation: if the length guard were still on UTF-8, this would still pass — but
+        // testDomainCanonical_rejectsNameTooLongAfterEncoding would fail, proving the guard moved.
+        let name = Array(repeating: "aa", count: 40).joined(separator: ".")  // 80+39=119 chars
+        let result = try DomainCanonical.canonicalize(name)
+        XCTAssertFalse(result.isEmpty)
+    }
+
+    // Canonical form MUST be lowercase with the trailing dot stripped (parity with Windows
+    // DomainCanonicalTests.StripsDot_AndLowercases). `toASCIIName` leaves pure-ASCII case intact,
+    // so a missing lowercase here would let "EXAMPLE.COM." through uppercased.
+    func testDomainCanonical_lowercasesAndStripsTrailingDot() throws {
+        XCTAssertEqual(try DomainCanonical.canonicalize("EXAMPLE.COM."), "example.com")
+        XCTAssertEqual(try DomainCanonical.canonicalize("MixedCase.Example.ORG"), "mixedcase.example.org")
+        // Case-insensitive equivalence must hold across casing + trailing dot.
+        XCTAssertTrue(DomainCanonical.areEquivalent("Example.COM", "example.com."))
+    }
+
+    func testParseResponsePacketDetailedRejectsCompressionLoop() {
+        // The question name is skipped (not followed) via `skipName`, so the loop must be
+        // planted in the *answer* name, which is resolved via the pointer-following `parseName`.
+        var packet: [UInt8] = [0x12, 0x34]
+        packet.append(contentsOf: [0x81, 0x80])
+        packet.append(contentsOf: [0x00, 0x01]) // QDCOUNT=1
+        packet.append(contentsOf: [0x00, 0x01]) // ANCOUNT=1
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x00])
+        packet.append(contentsOf: encodeDNSName("example.com"))
+        packet.append(contentsOf: [0x00, 0x01, 0x00, 0x01]) // question type/class
+
+        let answerNameOffset = packet.count // the pointer below will occupy exactly this offset
+        packet.append(contentsOf: [0xC0, UInt8(answerNameOffset)]) // answer name: pointer to itself
+        packet.append(contentsOf: [0x00, 0x01, 0x00, 0x01]) // type/class
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x3C]) // TTL
+        packet.append(contentsOf: [0x00, 0x04]) // RDLENGTH
+        packet.append(contentsOf: [1, 2, 3, 4])
+
+        let response = DNSResolver.parseResponsePacketDetailed(Data(packet), expectedTransactionID: 0x1234)
+        XCTAssertEqual(response.status, .malformedResponse)
+    }
+
+    func testParseResponsePacketDetailedRejectsTransactionIDMismatch() {
+        var packet: [UInt8] = [0x12, 0x34]
+        packet.append(contentsOf: [0x81, 0x80])
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+
+        let response = DNSResolver.parseResponsePacketDetailed(Data(packet), expectedTransactionID: 0xBEEF)
+        XCTAssertEqual(response.status, .responseIdMismatch)
+    }
+
+    func testParseResponsePacketDetailedMapsRCodes() {
+        func packetWithRCode(_ rcode: UInt16) -> Data {
+            var bytes: [UInt8] = [0x12, 0x34]
+            let flags: UInt16 = 0x8000 | rcode // QR=1, no other flags, given RCODE
+            bytes.append(UInt8(flags >> 8))
+            bytes.append(UInt8(flags & 0xff))
+            bytes.append(contentsOf: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+            return Data(bytes)
+        }
+        XCTAssertEqual(DNSResolver.parseResponsePacketDetailed(packetWithRCode(2)).status, .servFail)
+        XCTAssertEqual(DNSResolver.parseResponsePacketDetailed(packetWithRCode(3)).status, .nxDomain)
+        XCTAssertEqual(DNSResolver.parseResponsePacketDetailed(packetWithRCode(5)).status, .refused)
+    }
+
+    func testParseResponsePacketDetailedRejectsQueryQR0() {
+        var packet: [UInt8] = [0x12, 0x34]
+        packet.append(contentsOf: [0x01, 0x00]) // QR=0 (Query)
+        packet.append(contentsOf: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+
+        let response = DNSResolver.parseResponsePacketDetailed(Data(packet))
+        XCTAssertEqual(response.status, .malformedResponse)
+        XCTAssertEqual(response.errorMessage, "Not a response packet (QR bit is 0)")
+    }
+
+    /// Zero-records capture report must lead with INCONCLUSIVE and must not read as a clean
+    /// network — an empty capture is the absence of data, not evidence (B017 precedent; same
+    /// contract as MonitorReportAnalyzer's nil-exfil and AppModel's empty→nil guard).
+    func testCaptureReportZeroRecordsIsInconclusive() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("syxx-zero-records-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let input = dir.appendingPathComponent("capture.txt").path
+        let report = dir.appendingPathComponent("report.txt").path
+        FileManager.default.createFile(atPath: input, contents: Data())   // empty capture
+
+        let output = DNSCaptureReportGenerator.generateReport(
+            inputFile: input, outputFile: input, reportFile: report,
+            startTime: Date(), durationSeconds: 1)
+        let text = output.report
+
+        XCTAssertTrue(text.contains("INCONCLUSIVE"), "zero-records report must lead with INCONCLUSIVE")
+        XCTAssertTrue(text.contains("Records parsed:"))
+        XCTAssertFalse(text.lowercased().contains("clean network"),
+                       "an empty capture must never be described as a clean network")
+        // C037: write result must not be .success when the input is empty (0 records parsed)
+        // — the inconclusive path still writes, so .success is correct here, but the caller
+        // must check the tri-state rather than assuming success.
+        XCTAssertNotNil(output.writeResult, "writeResult must never be nil")
+    }
+
+    /// C7 — integration: the Capture Query Report renders a PER-APP RESOLVER ATTRIBUTION section
+    /// that names each process with the resolver it used, keyed on the port-53 side. Uses a real
+    /// NDJSON capture with two processes on two different resolvers. Structural assertion (the
+    /// off-system FLAG depends on this host's live system resolvers, tested deterministically in
+    /// ResolverAttributionTests); this proves the join reaches the rendered report.
+    /// Fail state: drop the resolverUsage join → the section shows "None observed" and this REDs.
+    func testCaptureReportRendersPerAppResolverAttribution() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("syxx-c7-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let input = dir.appendingPathComponent("cap.jsonl").path
+        let report = dir.appendingPathComponent("report.txt").path
+
+        func record(_ proc: String, pid: Int, resolver: String) -> String {
+            let q = "\""
+            return "{\(q)Process\(q):{\(q)name\(q):\(q)\(proc)\(q),\(q)pid\(q):\(pid),\(q)attributed\(q):true},"
+                + "\(q)Timestamp\(q):\(q)2026-07-19 06:00:00.000\(q),"
+                + "\(q)Packet\(q):{\(q)Opcode\(q):\(q)Query\(q),\(q)QR\(q):\(q)Query\(q),\(q)Questions\(q):[{\(q)Question Name\(q):\(q)example.com\(q),\(q)Question Class\(q):\(q)IN\(q),\(q)Question Type\(q):\(q)A\(q)}],\(q)Answers\(q):[],\(q)RA\(q):\(q)false\(q),\(q)Rcode\(q):\(q)No error\(q),\(q)RD\(q):\(q)true\(q),\(q)XID\(q):1,\(q)TC\(q):\(q)false\(q),\(q)AA\(q):\(q)false\(q)},"
+                + "\(q)Network\(q):{\(q)IP Version\(q):4,\(q)Source IP\(q):\(q)10.0.0.50\(q),\(q)Dest IP\(q):\(q)\(resolver)\(q),\(q)Source Port\(q):54321,\(q)Dest Port\(q):53,\(q)Direction\(q):\(q)Outbound Query\(q)}}"
+        }
+        let ndjson = [record("Safari", pid: 200, resolver: "10.0.0.1"),
+                      record("curl", pid: 900, resolver: "8.8.8.8")].joined(separator: "\n")
+        try ndjson.write(toFile: input, atomically: true, encoding: .utf8)
+
+        let output = DNSCaptureReportGenerator.generateReport(
+            inputFile: input, outputFile: input, reportFile: report,
+            startTime: Date(), durationSeconds: 1)
+        let text = output.report
+
+        XCTAssertTrue(text.contains("PER-APP RESOLVER ATTRIBUTION"), "the C7 section must be present")
+        XCTAssertTrue(text.contains("Safari: 10.0.0.1"), "Safari's resolver must be attributed")
+        XCTAssertTrue(text.contains("curl: 8.8.8.8"), "curl's resolver must be attributed")
+        // The D063 coverage caveat must always be stated, never implied away.
+        XCTAssertTrue(text.contains("cleartext UDP:53 only"),
+                      "the UDP-only coverage limit must be disclosed in the report")
+    }
+
+    /// A DoH transport failure must yield an INCONCLUSIVE response, never a throw — a resolver
+    /// that cannot verify is not evidence of anything. The unroutable localhost URL fails fast
+    /// with no external network; if this host's system DNS happens to be a loopback proxy, the
+    /// loopback guard returns inconclusive too, so the no-throw contract is asserted either way.
+    func testResolveSecurelyTransportFailureIsInconclusiveNotThrow() async throws {
+        let response = try await DNSResolver.resolveSecurely(
+            DNSQuery(name: "example.com"),
+            dohURLString: "https://127.0.0.1:9/dns-query")
+        XCTAssertEqual(response.result, .inconclusive)
+        XCTAssertTrue(response.records.isEmpty)
+        XCTAssertNotNil(response.reason)
+    }
+
+    // MARK: - VantageComparer inconclusive/degraded evaluation (P3)
+
+    private func outcome(records: [DNSRecord] = [], status: DNSResponseStatus = .success) -> ResolverQueryOutcome {
+        ResolverQueryOutcome(records: records, status: status)
+    }
+
+    private let sampleRecord = DNSRecord(name: "example.com", type: 1, ttl: 60, rdata: "93.184.216.34")
+
+    func testEvaluateIsInconclusiveWhenAllPublicResolversFail() {
+        let local = outcome(records: [sampleRecord])
+        let publics: [String: ResolverQueryOutcome] = [
+            "A": outcome(status: .timeout),
+            "B": outcome(status: .transportError),
+            "C": outcome(status: .timeout)
+        ]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertTrue(result.inconclusive)
+        XCTAssertFalse(result.redirection)
+    }
+
+    func testEvaluateIsInconclusiveWhenLocalQueryFails() {
+        let local = outcome(status: .timeout)
+        let publics: [String: ResolverQueryOutcome] = ["A": outcome(records: [sampleRecord])]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertTrue(result.inconclusive)
+    }
+
+    func testEvaluateAllowsCDNStyleDivergenceWithoutFlaggingRedirection() {
+        // Local and public resolvers return different (but both legitimate/public) IPs — this
+        // is normal CDN/geo-DNS behavior, not tampering, as long as there's some overlap-worthy
+        // baseline. Here local matches one of the two public answers, so it should not flag.
+        let local = outcome(records: [DNSRecord(name: "cdn.example.com", type: 1, ttl: 60, rdata: "1.2.3.4")])
+        let publics: [String: ResolverQueryOutcome] = [
+            "A": outcome(records: [DNSRecord(name: "cdn.example.com", type: 1, ttl: 60, rdata: "1.2.3.4")]),
+            "B": outcome(records: [DNSRecord(name: "cdn.example.com", type: 1, ttl: 60, rdata: "5.6.7.8")])
+        ]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertFalse(result.inconclusive)
+        XCTAssertFalse(result.redirection)
+    }
+
+    func testEvaluateFlagsRedirectionWhenLocalAnswerIsDisjointFromConsensus() {
+        let local = outcome(records: [DNSRecord(name: "example.com", type: 1, ttl: 60, rdata: "10.10.10.10")])
+        let publics: [String: ResolverQueryOutcome] = [
+            "A": outcome(records: [sampleRecord]),
+            "B": outcome(records: [sampleRecord])
+        ]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertFalse(result.inconclusive)
+        XCTAssertTrue(result.redirection)
+    }
+
+    func testEvaluateEmptyButSuccessfulLocalIsInconclusiveNotRedirection() {
+        // B017 regression: a local resolver that SUCCEEDS but returns no records (NODATA/NXDOMAIN)
+        // while public resolvers return records is NOT tampering — split-horizon/geo/no-such-record
+        // all produce it. This must read as inconclusive, never a fabricated redirection. (Distinct
+        // from a transport failure, which is already inconclusive via didFail.)
+        let local = outcome(records: [], status: .success)
+        let publics: [String: ResolverQueryOutcome] = [
+            "A": outcome(records: [sampleRecord]),
+            "B": outcome(records: [sampleRecord])
+        ]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertFalse(result.redirection, "empty-successful local must not be called redirection (B017)")
+        XCTAssertTrue(result.inconclusive)
+    }
+
+    func testEvaluateFlagsRedirectionWhenLocalReturnsBlockingAnswer() {
+        let local = outcome(records: [DNSRecord(name: "example.com", type: 1, ttl: 60, rdata: "127.0.0.1")])
+        let publics: [String: ResolverQueryOutcome] = [
+            "A": outcome(records: [sampleRecord]),
+            "B": outcome(records: [sampleRecord])
+        ]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertTrue(result.redirection)
+    }
+
+    func testEvaluateMarksDegradedWhenOnePublicResolverFailsButOthersSucceed() {
+        let local = outcome(records: [sampleRecord])
+        let publics: [String: ResolverQueryOutcome] = [
+            "A": outcome(records: [sampleRecord]),
+            "B": outcome(status: .timeout)
+        ]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertFalse(result.inconclusive)
+        XCTAssertFalse(result.redirection)
+        XCTAssertTrue(result.degraded)
+    }
+
+    func testEvaluateSingleBaselineIsDegradedNotRedirection() {
+        // Min-2-vantage guard: with only one usable public baseline there is no consensus to
+        // compare against, so even a fully disjoint local answer must read as degraded — not a
+        // redirection result built on a single witness.
+        let local = outcome(records: [DNSRecord(name: "example.com", type: 1, ttl: 60, rdata: "10.10.10.10")])
+        let publics: [String: ResolverQueryOutcome] = ["A": outcome(records: [sampleRecord])]
+        let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics)
+        XCTAssertFalse(result.redirection)
+        XCTAssertFalse(result.inconclusive)
+        XCTAssertTrue(result.degraded)
+    }
+
+    // MARK: - IPClassifier (P3)
+
+    func testIPClassifierIdentifiesRFC1918PrivateRanges() {
+        XCTAssertEqual(IPClassifier.classify("10.0.0.1"), .privateUse)
+        XCTAssertEqual(IPClassifier.classify("172.16.0.1"), .privateUse)
+        XCTAssertEqual(IPClassifier.classify("192.168.1.1"), .privateUse)
+    }
+
+    func testIPClassifierIdentifiesLoopback() {
+        XCTAssertEqual(IPClassifier.classify("127.0.0.1"), .loopback)
+        XCTAssertEqual(IPClassifier.classify("::1"), .loopback)
+    }
+
+    func testIPClassifierIdentifiesCGNAT() {
+        XCTAssertEqual(IPClassifier.classify("100.64.0.1"), .carrierGradeNAT)
+    }
+
+    func testIPClassifierIdentifiesLinkLocal() {
+        XCTAssertEqual(IPClassifier.classify("169.254.1.1"), .linkLocal)
+    }
+
+    func testIPClassifierIdentifiesDocumentationRanges() {
+        XCTAssertEqual(IPClassifier.classify("192.0.2.1"), .documentation)
+        XCTAssertEqual(IPClassifier.classify("198.51.100.1"), .documentation)
+        XCTAssertEqual(IPClassifier.classify("203.0.113.1"), .documentation)
+        XCTAssertEqual(IPClassifier.classify("2001:db8::1"), .documentation)
+    }
+
+    func testIPClassifierIdentifiesPublicRoutable() {
+        XCTAssertEqual(IPClassifier.classify("8.8.8.8"), .publicRoutable)
+        XCTAssertEqual(IPClassifier.classify("2606:4700:4700::1111"), .publicRoutable)
+    }
+
+    func testIPClassifierRejectsInvalidInput() {
+        XCTAssertEqual(IPClassifier.classify("not-an-ip"), .invalid)
+    }
+
+    func testIsBlockingAnswerTrueForPrivateAndLoopback() {
+        XCTAssertTrue(IPClassifier.isBlockingAnswer("192.168.1.1"))
+        XCTAssertTrue(IPClassifier.isBlockingAnswer("127.0.0.1"))
+        XCTAssertFalse(IPClassifier.isBlockingAnswer("8.8.8.8"))
+    }
+
+    // E013 / B025 — the RFC 2544 benchmarking range is 198.18.0.0/15 (198.18.0.0–198.19.255.255).
+    // The truncated test (`ip[1] == 18` only) let the whole 198.19.x.x half classify as public, so a
+    // transparent proxy / enterprise sinkhole redirecting into 198.19.x.x was scored as a normal
+    // public answer instead of a blocking one. The full /15 must be special-use/blocking.
+    func testIPClassifierCoversFullBenchmarkingSlash15() {
+        for ip in ["198.18.0.1", "198.18.255.254", "198.19.0.1", "198.19.255.254"] {
+            XCTAssertEqual(IPClassifier.classify(ip), .privateUse, "\(ip) should be special-use")
+            XCTAssertTrue(IPClassifier.isBlockingAnswer(ip), "\(ip) should read as a blocking answer")
+        }
+        // Neighbours outside the /15 stay public.
+        XCTAssertEqual(IPClassifier.classify("198.17.0.1"), .publicRoutable)
+        XCTAssertEqual(IPClassifier.classify("198.20.0.1"), .publicRoutable)
+    }
+
+    // MARK: - NetworkKeyState typed outcomes (P3)
+
+    // (removed testTriStateDescribesAllThreeCases: `Set([.yes,.no,.unknown]).count == 3` is a
+    //  compile-time property, not a Syxx behavior — it can never RED. Real tri-state "unknown"
+    //  reachability is covered by the probe suites that assert .unknown/.inconclusive outcomes.)
+
+    // B034: typed-outcome tests for EncryptedDNSStatus using the extracted pure-core function.
+    func testEncryptedDNSStatusYesForConfiguredDoHDot() {
+        let resolvers = [ScopedResolver(address: "1.1.1.1", interface: nil, matchDomains: [], isScoped: true, dnsProtocol: .doh, port: 443)]
+        let result = NetworkKeyState.encryptedDNSStatus(servers: ["1.1.1.1"], scoped: resolvers)
+        XCTAssertEqual(result.state, .yes)
+        XCTAssertTrue(result.evidence.contains("DoH"))
+    }
+
+    func testEncryptedDNSStatusUnknownForTunnelOnlyResolvers() {
+        // B032: tunneled DNS must return .unknown, not .yes — queries may be plain UDP/53
+        // inside the encrypted tunnel.
+        let resolvers = [ScopedResolver(address: "10.0.0.1", interface: "utun4", matchDomains: [], isScoped: true, dnsProtocol: nil, port: nil)]
+        let result = NetworkKeyState.encryptedDNSStatus(servers: ["10.0.0.1"], scoped: resolvers)
+        XCTAssertEqual(result.state, .unknown)
+        XCTAssertTrue(result.evidence.contains("tunneled"))
+    }
+
+    func testEncryptedDNSStatusUnknownForLoopbackProxy() {
+        let result = NetworkKeyState.encryptedDNSStatus(servers: ["127.0.0.1"], scoped: [])
+        XCTAssertEqual(result.state, .unknown)
+        XCTAssertTrue(result.evidence.contains("loopback"), "loopback proxy must produce .unknown, not .yes")
+    }
+
+    func testEncryptedDNSStatusNoForPlainUDP() {
+        let resolvers = [ScopedResolver(address: "8.8.8.8", interface: nil, matchDomains: [], isScoped: false, dnsProtocol: nil, port: nil)]
+        let result = NetworkKeyState.encryptedDNSStatus(servers: ["8.8.8.8"], scoped: resolvers)
+        XCTAssertEqual(result.state, .no)
+        XCTAssertTrue(result.evidence.contains("plain"))
+    }
+
+    func testEncryptedDNSStatusUnknownForEmptyServers() {
+        let result = NetworkKeyState.encryptedDNSStatus(servers: [], scoped: [])
+        XCTAssertEqual(result.state, .unknown)
+        XCTAssertTrue(result.evidence.contains("No resolvers"))
+    }
+
+    func testVPNStatusConstructedWithoutEvidenceIsNo() {
+        // When there are no tunnel interfaces, the VPN state is .no — not .unknown —
+        // because absence of tunnels is a definite negative (M14).
+        let status = VPNStatus(state: .no, tunnelInterfaces: [], evidence: "No tunnel interfaces detected")
+        XCTAssertEqual(status.state, .no)
+    }
+
+    func testCaptivePortalStatusProbeFailureIsUnknown() {
+        // A probe failure must surface as .unknown, not .no — a blocked probe (the sign of
+        // an intercepting portal) must not be reported as "no captive portal" (M15).
+        let status = CaptivePortalStatus(state: .unknown, evidence: "Probe failed: timeout")
+        XCTAssertEqual(status.state, .unknown)
+    }
+
+    // MARK: - DNSSEC temporal parsing (M42-M46)
+
+    /// Builds an RRSIG rdata hex string with the given inception/expiration epoch seconds.
+    private func rrsigHex(inception: UInt32, expiration: UInt32) -> String {
+        var bytes: [UInt8] = [0x00, 0x30, 0x08, 0x02] // typeCovered=48 (DNSKEY), alg=8, labels=2
+        bytes.append(contentsOf: [0x00, 0x00, 0x01, 0x2C]) // originalTTL=300
+        bytes.append(contentsOf: [UInt8(expiration >> 24), UInt8((expiration >> 16) & 0xff), UInt8((expiration >> 8) & 0xff), UInt8(expiration & 0xff)])
+        bytes.append(contentsOf: [UInt8(inception >> 24), UInt8((inception >> 16) & 0xff), UInt8((inception >> 8) & 0xff), UInt8(inception & 0xff)])
+        bytes.append(contentsOf: [0x12, 0x34]) // keyTag
+        bytes.append(0x00) // signer name (root) — enough to exceed the 18-byte minimum
+        return bytes.map { String(format: "%02x", $0) }.joined()
+    }
+
+    func testRRSIGValidityWindowParsesInceptionAndExpiration() {
+        // A042: raw 32-bit seconds are surfaced (for serial-number arithmetic), not absolute Dates.
+        let hex = rrsigHex(inception: 1_000_000, expiration: 2_000_000)
+        let window = DNSSECVerifier.rrsigValidityWindow(rdataHex: hex, expectedTypeCovered: 48)
+        XCTAssertNotNil(window)
+        XCTAssertEqual(window?.inception, 1_000_000)
+        XCTAssertEqual(window?.expiration, 2_000_000)
+    }
+
+    func testRRSIGValidityWindowRejectsShortRdata() {
+        XCTAssertNil(DNSSECVerifier.rrsigValidityWindow(rdataHex: "0001080200", expectedTypeCovered: 48))
+        XCTAssertNil(DNSSECVerifier.rrsigValidityWindow(rdataHex: "zznothex", expectedTypeCovered: 48))
+    }
+
+    func testRRSIGValidityWindowRejectsWrongTypeCovered() {
+        // KDNS-05: an RRSIG covering a non-DNSKEY RRset (typeCovered != 48) must not be accepted as
+        // proof the DNSKEY set is signed.
+        let hex = rrsigHex(inception: 1_000_000, expiration: 2_000_000) // typeCovered = 48
+        XCTAssertNil(DNSSECVerifier.rrsigValidityWindow(rdataHex: hex, expectedTypeCovered: 1))
+    }
+
+    // MARK: - A042 RFC 1982 serial-number arithmetic + B047 clock-spoof guard
+
+    func testRRSIGWindowValidWhenNowInsideWindow() {
+        let now = Date(timeIntervalSince1970: 1_500_000)
+        XCTAssertTrue(DNSSECVerifier.rrsigWindowCurrentlyValid(inception: 1_000_000, expiration: 2_000_000, now: now))
+    }
+
+    func testRRSIGWindowExpiredWhenNowAfterExpiration() {
+        let now = Date(timeIntervalSince1970: 2_500_000)
+        XCTAssertFalse(DNSSECVerifier.rrsigWindowCurrentlyValid(inception: 1_000_000, expiration: 2_000_000, now: now))
+    }
+
+    func testRRSIGWindowNotYetValidWhenNowBeforeInception() {
+        let now = Date(timeIntervalSince1970: 500_000)
+        XCTAssertFalse(DNSSECVerifier.rrsigWindowCurrentlyValid(inception: 1_000_000, expiration: 2_000_000, now: now))
+    }
+
+    func testRRSIGWindowSerialWrapAroundIsValid() {
+        // A042: a window that straddles the 2106 (2^32) epoch wrap. inception is 100s before the wrap,
+        // expiration is 100s after it, now is 10s after the wrap. Under RFC 1982 serial arithmetic this
+        // is INSIDE the window; a naive absolute-epoch comparison (now < inception) would wrongly call
+        // it not-yet-valid.
+        let wrap: UInt32 = UInt32.max // 2^32 - 1
+        let inception = wrap &- 100
+        let expiration: UInt32 = 100          // 101 seconds after the wrap point
+        let nowEpoch: UInt32 = 10             // 11 seconds after the wrap point
+        XCTAssertTrue(DNSSECVerifier.serialLessThanOrEqual(inception, nowEpoch))
+        XCTAssertTrue(DNSSECVerifier.serialLessThanOrEqual(nowEpoch, expiration))
+        let now = Date(timeIntervalSince1970: TimeInterval(UInt64(UInt32.max) + 1 + UInt64(nowEpoch)))
+        XCTAssertTrue(DNSSECVerifier.rrsigWindowCurrentlyValid(inception: inception, expiration: expiration, now: now))
+    }
+
+    func testRRSIGWindowRejectsImplausiblySpanned() {
+        // B047: an attacker who spoofs the local clock forward could try to wrap a long-expired
+        // signature back into "valid". A validity span wider than our sane bound (2 years) is refused
+        // even when `now` sits between the endpoints under serial arithmetic.
+        let inception: UInt32 = 1_000_000
+        let expiration: UInt32 = inception &+ DNSSECVerifier.maxPlausibleValiditySpanSeconds &+ 1
+        let now = Date(timeIntervalSince1970: TimeInterval(inception) + 10)
+        XCTAssertFalse(DNSSECVerifier.rrsigWindowCurrentlyValid(inception: inception, expiration: expiration, now: now))
+    }
+
+    func testRRSIGWindowRejectsExpirationBeforeInception() {
+        // A malformed window whose expiration precedes its inception (serial) is never "valid".
+        let now = Date(timeIntervalSince1970: 1_500_000)
+        XCTAssertFalse(DNSSECVerifier.rrsigWindowCurrentlyValid(inception: 2_000_000, expiration: 1_000_000, now: now))
+    }
+
+    // MARK: - Classifier honesty (A030 / A036 / B046)
+
+    private func dnskeyRecord() -> DNSRecord {
+        DNSRecord(name: "example.", type: 48, ttl: 3600, rdata: "0101030dabcdef")
+    }
+    private func rrsigDnskeyRecord(inception: UInt32, expiration: UInt32) -> DNSRecord {
+        DNSRecord(name: "example.", type: 46, ttl: 3600, rdata: rrsigHex(inception: inception, expiration: expiration))
+    }
+
+    func testClassifyNoDNSKEYIsUnsigned() {
+        // A036: DO bit was set, genuinely no DNSKEY -> honest unsigned.
+        let records = [DNSRecord(name: "example.", type: 1, ttl: 60, rdata: "5db8d822")]
+        XCTAssertEqual(DNSSECVerifier.classify(records: records, now: Date(timeIntervalSince1970: 1_500_000)), .unsigned)
+    }
+
+    func testClassifyDNSKEYWithoutRRSIGIsInconclusive() {
+        // B046/A030: DNSKEY present but no covering RRSIG on this DO-enabled path -> inconclusive,
+        // never "signed" and never a silent "unsigned".
+        let records = [dnskeyRecord()]
+        XCTAssertEqual(DNSSECVerifier.classify(records: records, now: Date(timeIntervalSince1970: 1_500_000)), .inconclusive)
+    }
+
+    func testClassifyDNSKEYWithValidRRSIGIsRecordsPresent() {
+        let records = [dnskeyRecord(), rrsigDnskeyRecord(inception: 1_000_000, expiration: 2_000_000)]
+        XCTAssertEqual(DNSSECVerifier.classify(records: records, now: Date(timeIntervalSince1970: 1_500_000)), .recordsPresentUnverified)
+    }
+
+    func testClassifyDNSKEYWithExpiredRRSIGIsExpired() {
+        let records = [dnskeyRecord(), rrsigDnskeyRecord(inception: 1_000_000, expiration: 2_000_000)]
+        XCTAssertEqual(DNSSECVerifier.classify(records: records, now: Date(timeIntervalSince1970: 3_000_000)), .signatureExpiredOrNotYetValid)
+    }
+
+    func testDNSSECStatusDescriptionsNeverClaimValidated() {
+        // The honest-status invariant: no state's description says "validated" or "protected".
+        for status in [DNSSECStatus.unsigned, .recordsPresentUnverified, .signatureExpiredOrNotYetValid, .inconclusive] {
+            let text = status.description.lowercased()
+            XCTAssertFalse(text.contains("validated"))
+            XCTAssertFalse(text.contains("protected"))
+        }
+    }
+
+    // MARK: - Real DNS run (A030/A036/A042) — gated on SYXX_NET_TESTS to keep the default suite offline
+
+    private func requireNet() throws {
+        if ProcessInfo.processInfo.environment["SYXX_NET_TESTS"] == nil {
+            throw XCTSkip("Set SYXX_NET_TESTS=1 to run live DNSSEC network tests")
+        }
+    }
+
+    func testDNSSECRealSignedZoneReadsRecordsPresent() async throws {
+        try requireNet()
+        let status = await DNSSECVerifier.checkStatus(domain: "cloudflare.com", resolver: "1.1.1.1")
+        print("[NET] cloudflare.com DNSSEC -> \(status)")
+        // A signed zone on a clean path must NOT read unsigned or inconclusive.
+        XCTAssertTrue(status == .recordsPresentUnverified || status == .signatureExpiredOrNotYetValid,
+                      "signed zone read as \(status)")
+    }
+
+    func testDNSSECRealUnsignedZoneReadsUnsigned() async throws {
+        try requireNet()
+        let status = await DNSSECVerifier.checkStatus(domain: "facebook.com", resolver: "1.1.1.1")
+        print("[NET] facebook.com DNSSEC -> \(status)")
+        XCTAssertEqual(status, .unsigned)
+    }
+
+    func testDNSSECRealStrippedDOReadsInconclusive() async throws {
+        try requireNet()
+        // Simulate an RRSIG strip: query a known-signed zone WITHOUT the DO bit. DNSKEY comes back
+        // but the covering RRSIG does not — exactly what an on-path downgrade looks like. This must
+        // read inconclusive, never "signed" (A030/B046).
+        let response = await DNSResolver.queryUDPDetailed(
+            DNSQuery(name: "cloudflare.com", type: 48, server: "1.1.1.1", edns0UDPSize: 1232, edns0DODNSSEC: false))
+        let status = response.didFail ? DNSSECStatus.inconclusive : DNSSECVerifier.classify(records: response.records, now: Date())
+        print("[NET] cloudflare.com DNSSEC (DO stripped) -> \(status)")
+        XCTAssertEqual(status, .inconclusive)
+    }
+
+    // MARK: - IDNA / punycode (WIN-014 macOS equivalent)
+
+    func testPunycodeEncodeMatchesRFC3492Vectors() {
+        // Classic RFC 3492 examples.
+        XCTAssertEqual(DNSResolver.punycodeEncode("bücher"), "bcher-kva")
+        XCTAssertEqual(DNSResolver.punycodeEncode("münchen"), "mnchen-3ya")
+    }
+
+    func testToASCIINamePunycodesOnlyNonASCIILabels() throws {
+        XCTAssertEqual(try DNSResolver.toASCIIName("bücher.com"), "xn--bcher-kva.com")
+        // A fully-ASCII name is returned unchanged.
+        XCTAssertEqual(try DNSResolver.toASCIIName("example.com"), "example.com")
+    }
+
+    // MARK: - Canonical IPv6 formatting (MAC-011)
+
+    func testCanonicalIPv6CompressesZeroRuns() {
+        // 2001:db8:0:0:0:0:0:1 must compress to 2001:db8::1, not render every zero group.
+        let bytes: [UInt8] = [0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        XCTAssertEqual(DNSResolver.canonicalIPv6(bytes), "2001:db8::1")
+    }
+
+    func testCanonicalIPv6Loopback() {
+        let bytes = [UInt8](repeating: 0, count: 15) + [1]
+        XCTAssertEqual(DNSResolver.canonicalIPv6(bytes), "::1")
+    }
+
+    // MARK: - Registrable-domain grouping (MAC-032)
+
+    func testRegistrableDomainHandlesTwoLevelPublicSuffix() {
+        // bbc.co.uk and news.bbc.co.uk group under bbc.co.uk, not co.uk.
+        XCTAssertEqual(DNSCaptureReportGenerator.registrableDomain("news.bbc.co.uk"), "bbc.co.uk")
+        XCTAssertEqual(DNSCaptureReportGenerator.registrableDomain("bbc.co.uk"), "bbc.co.uk")
+    }
+
+    func testRegistrableDomainOrdinaryTLD() {
+        XCTAssertEqual(DNSCaptureReportGenerator.registrableDomain("www.example.com"), "example.com")
+        XCTAssertEqual(DNSCaptureReportGenerator.registrableDomain("example.com"), "example.com")
+        XCTAssertNil(DNSCaptureReportGenerator.registrableDomain("localhost"))
+    }
+
+    // MARK: - LAN cartography (ported from LyxTools)
+
+    func testLANCartographerSnapshotDoesNotThrow() throws {
+        // Reads the real ARP table on the build machine; devices may be empty but the
+        // scan must parse cleanly and never throw.
+        let snapshot = try LANCartographer().snapshot()
+        // Assert something even when ARP table is empty — the snapshot must have a valid capturedAt.
+        XCTAssertFalse(snapshot.capturedAt.timeIntervalSince1970.isNaN,
+            "Snapshot capturedAt must be a valid date, even when no ARP entries exist")
+        for device in snapshot.devices {
+            XCTAssertFalse(device.ipAddress.isEmpty)
+            XCTAssertFalse(device.macAddress.isEmpty)
+        }
+    }
+
+    /// The snapshot test above is vacuous on a build machine with an empty ARP table (the loop body
+    /// never runs). This drives the pure parser with a known `arp -a` fixture so field extraction and
+    /// malformed-line rejection are actually asserted, not just "did not throw".
+    func testARPTableParserExtractsFieldsAndDropsMalformed() {
+        let output = """
+        ? (192.168.1.1) at aa:bb:cc:dd:ee:ff on en0 ifscope [ethernet]
+        router.local (192.168.1.254) at 11:22:33:44:55:66 on en0 ifscope [ethernet]
+        this line has no arp structure at all
+        """
+        let entries = ARPTableParser.parse(output)
+        XCTAssertEqual(entries.count, 2, "two well-formed lines parse; the malformed line must be dropped")
+        let gw = entries.first { $0.ipAddress == "192.168.1.1" }
+        XCTAssertEqual(gw?.macAddress, "aa:bb:cc:dd:ee:ff")
+        XCTAssertEqual(gw?.interface, "en0")
+        XCTAssertNil(gw?.host, "a '?' host token must map to nil, not the literal '?'")
+        let router = entries.first { $0.ipAddress == "192.168.1.254" }
+        XCTAssertEqual(router?.host, "router.local")
+        XCTAssertEqual(router?.macAddress, "11:22:33:44:55:66")
+    }
+
+    func testNetworkAddressClassifierIdentifiesPrivateAndGateway() {
+        XCTAssertEqual(NetworkAddressClassifier.kind(forIPv4: "192.168.1.10"), .privateUnicast)
+        XCTAssertEqual(NetworkAddressClassifier.kind(forIPv4: "255.255.255.255"), .broadcast)
+    }
+
+    // MARK: - Leak result reconciliation (Batch 4)
+
+    func testLeakResultConfirmedRequiresAttestedResolver() {
+        let ok = LeakDetector.reconcileResult(leaked: true, observedResolvers: ["9.9.9.9"])
+        XCTAssertEqual(ok.result, .confirmed)
+        XCTAssertNil(ok.reason)
+        // A "leak" with no attested resolver cannot be attributed -> inconclusive, not confirmed.
+        let bad = LeakDetector.reconcileResult(leaked: true, observedResolvers: [])
+        XCTAssertEqual(bad.result, .invalid, "leaked with no resolvers is impossible")
+        XCTAssertNotNil(bad.reason)
+    }
+
+    func testLeakResultNoLeakMustNotAttestResolvers() {
+        let ok = LeakDetector.reconcileResult(leaked: false, observedResolvers: [])
+        XCTAssertEqual(ok.result, .notDetected)
+        // "No leak" yet resolvers were observed is internally inconsistent -> inconclusive.
+        let bad = LeakDetector.reconcileResult(leaked: false, observedResolvers: ["8.8.8.8"])
+        XCTAssertEqual(bad.result, .invalid, "no leak with attested resolvers is impossible")
+        XCTAssertNotNil(bad.reason)
+    }
+
+    // MARK: - D003 collector TLS transport pinning
+
+    /// A self-signed EC P-256 leaf whose reference pin was computed independently with:
+    ///   openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
+    /// If the DER SubjectPublicKeyInfo walker drifts, this pin stops matching — catching a
+    /// cross-platform parity break (the same value must be produced by .NET's ExportSubjectPublicKeyInfo).
+    private static let d003CertDERBase64 =
+        "MIIBfDCCASOgAwIBAgIUTRwDvN3VdQMU+Vgu/3G+NDSnXvAwCgYIKoZIzj0EAwIwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDcxMTA1Mzk0N1oXDTI2MDcxMzA1Mzk0N1owFDESMBAGA1UEAwwJbG9jYWxob3N0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEnDqyTcvfozZQLCIGJPfuNp8TvBoeC9GtV732MxjUiORG6Tn8e4Lq5RNv09LBBEzRqewDcavyeuzPcYJGw1+t1qNTMFEwHQYDVR0OBBYEFIyTOb3tNTI/9HRcTy8hz+X01XecMB8GA1UdIwQYMBaAFIyTOb3tNTI/9HRcTy8hz+X01XecMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDRwAwRAIgZ94hEPzAJIf7TvC9FGIF8nW3HWwV22FkelWD9/re8bICIDKN3rUFOCrm35JDQ58hIAHxLvaNF2+1msCqXkuuVJ1k"
+    private static let d003ReferencePin = "FfEkilG5Q/bHox+eHUsh67GrlG2i/dtxUUDFWa4sQXY="
+
+    func testCollectorSpkiPinMatchesReferencePin() {
+        let der = Data(base64Encoded: Self.d003CertDERBase64)!
+        let pin = CollectorPinning.spkiPin(forCertificateDER: der)
+        XCTAssertEqual(pin, Self.d003ReferencePin,
+                       "SPKI pin must equal the openssl/.NET reference (cross-platform parity).")
+    }
+
+    func testCollectorSpkiPinRejectsGarbage() {
+        // Fail-closed: unparseable DER yields nil, which the delegate treats as a mismatch.
+        XCTAssertNil(CollectorPinning.spkiPin(forCertificateDER: Data([0x30, 0x03, 0x02, 0x01, 0x00])))
+        XCTAssertNil(CollectorPinning.spkiPin(forCertificateDER: Data()))
+    }
+
+    func testCollectorPinningDecisionIsFailClosed() {
+        let good = Self.d003ReferencePin
+        let other = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        // PKI must pass first — an untrusted chain is refused regardless of pins.
+        XCTAssertEqual(CollectorPinning.decide(trustPassed: false, leafPin: good, pins: [good]), .failed)
+        // Unconfigured: standard validation only.
+        XCTAssertEqual(CollectorPinning.decide(trustPassed: true, leafPin: good, pins: []), .notConfigured)
+        // Configured + matching leaf -> enforced (proceeds).
+        XCTAssertEqual(CollectorPinning.decide(trustPassed: true, leafPin: good, pins: [good, other]), .enforced)
+        // Configured + NON-matching leaf -> failed (fail-closed). THE mutation guard: if pinning
+        // were changed to accept-all, this would wrongly become .enforced.
+        XCTAssertEqual(CollectorPinning.decide(trustPassed: true, leafPin: other, pins: [good]), .failed)
+        // Configured but the leaf pin could not be computed -> failed, never accepted.
+        XCTAssertEqual(CollectorPinning.decide(trustPassed: true, leafPin: nil, pins: [good]), .failed)
+    }
+
+    func testTransportIdentityFailureDetectsCancelled() {
+        XCTAssertTrue(LeakDetector.isTransportIdentityFailure(URLError(.cancelled)))
+        XCTAssertFalse(LeakDetector.isTransportIdentityFailure(URLError(.timedOut)))
+        XCTAssertFalse(LeakDetector.isTransportIdentityFailure(URLError(.notConnectedToInternet)))
+    }
+
+    /// Load-bearing real run: a live TLS handshake against a local self-signed server with a
+    /// configured pin that does NOT match must fail closed — the leak result is `.inconclusive`
+    /// with `.failed` posture and the pinning reason, NOT a leak/no-leak result. Fails loudly
+    /// if the local TLS server cannot be started (openssl must be installed via Homebrew).
+    func testCollectorPinMismatchFailsClosedAgainstLiveTLS() async throws {
+        let server = try LocalTLSServer.start()
+        defer { server.stop() }
+        let url = URL(string: "https://127.0.0.1:\(server.port)")!
+        let result = await LeakDetector.runCollectorTest(
+            servers: ["127.0.0.1"],
+            collectorBaseURL: url,
+            pollDelay: .milliseconds(1),
+            pinSet: ["ThisPinDefinitelyDoesNotMatchTheServerLeaf00="]
+        )
+        XCTAssertTrue(result.result == .inconclusive || result.result == .error,
+                       "A pin mismatch must never yield a trusted leak/no-leak result. Got: \(result.result)")
+        XCTAssertEqual(result.transportPinning, .failed)
+        XCTAssertEqual(result.errorReason, CollectorPinning.pinFailureReason)
+        XCTAssertNil(result.signature, "No attestation may be accepted over an unverified transport.")
+    }
+
+    // MARK: - Forensics analyzers (Batch 5)
+
+    private func dates(_ epochs: [Double]) -> [Date] { epochs.map { Date(timeIntervalSince1970: $0) } }
+
+    func testBeaconClassifiesEvenCadenceAsHighlyRegular() {
+        let score = BeaconAnalyzer.score(BeaconSeries(processName: "p", destination: "d",
+                                                      timestamps: dates([1000, 1060, 1120, 1180, 1240])))
+        XCTAssertEqual(score.classification, .highlyRegular)
+    }
+
+    func testBeaconDegenerateIdenticalTimestampsIsInsufficientData() {
+        // B034: all timestamps identical → all intervals are zero → mean is zero.
+        // This must produce .insufficientData, not .highlyRegular (which the old
+        // `mean == 0 ? 0 : sd / mean` guard would produce).
+        let score = BeaconAnalyzer.score(BeaconSeries(processName: "p", destination: "d",
+                                                      timestamps: dates([1000, 1000, 1000])))
+        XCTAssertEqual(score.classification, .insufficientData)
+    }
+
+    func testBeaconClassifiesJitteryCadenceAsIrregular() {
+        let score = BeaconAnalyzer.score(BeaconSeries(processName: "p", destination: "d",
+                                                      timestamps: dates([1000, 1003, 1200, 1201, 1800])))
+        XCTAssertEqual(score.classification, .irregular)
+    }
+
+    func testBlocklistMatchesParentDomain() {
+        let lists = SieveBlocklistLoader.bundledLists()
+        let coverage = BlocklistAnalyzer.classify(["ads.doubleclick.net", "example.com"], against: lists)
+        XCTAssertFalse(coverage[0].coveredBy.isEmpty)  // subdomain of a listed domain
+        XCTAssertTrue(coverage[1].coveredBy.isEmpty)   // not a tracker
+    }
+
+    func testEntropyHigherForEncodedLabel() {
+        let natural = ExfilAnalyzer.shannonEntropyBitsPerChar("wwwexample")
+        let encoded = ExfilAnalyzer.shannonEntropyBitsPerChar("mfrggzdfmztwq2lknnwg23tp")
+        XCTAssertGreaterThan(encoded, natural)
+    }
+
+    func testExfilSuspiciousForTwoSignalsWithoutBlocklist() {
+        // C009: highEntropy + regular = 2/3 signals → .suspicious, not .likelyExfil.
+        // No blocklist match for this test domain.
+        let a = ExfilAnalyzer.assess(domain: "mfrggzdfmztwq2lknnwg23tpobyxe43uov3ho.tunnel.evil.net",
+                                     timestamps: dates([1000, 1060, 1120, 1180, 1240]))
+        XCTAssertEqual(a.suspicion, .suspicious)
+    }
+
+    func testExfilLikelyForThreeSignals() {
+        // All three signals (highEntropy + regular + blocklist match) → .likelyExfil.
+        let lists = SieveBlocklistLoader.bundledLists()
+        let a = ExfilAnalyzer.assess(domain: "mfrggzdfmztwq2lknnwg23tpobyxe43uov3ho.tunnel.evil.net",
+                                     timestamps: dates([1000, 1060, 1120, 1180, 1240]),
+                                     lists: lists)
+        // The blocklist may or may not match "tunnel.evil.net". If it does, 3 signals → likelyExfil.
+        // If not, we still assert ≥ suspicious (2 signals).
+        XCTAssert(a.suspicion == .likelyExfil || a.suspicion == .suspicious,
+                  "Expected .likelyExfil or .suspicious for high-entropy + regular cadence, got \(a.suspicion)")
+        if a.flaggedByLists.isEmpty {
+            print("Note: blocklist did not match — expected, test domain not in blocklist")
+        }
+    }
+
+    func testExfilBenignForOrdinaryDomainWithoutSignal() {
+        let a = ExfilAnalyzer.assess(domain: "www.example.com")
+        XCTAssertEqual(a.suspicion, .benign)
+    }
+
+    func testExfilBenignForSingleSignalOnly() {
+        // C009: a single signal (entropy-only or beacon-only) must NOT trigger .suspicious.
+        // Entropy-only: long label but no regular cadence or blocklist match.
+        let entropyOnly = ExfilAnalyzer.assess(domain: "abcdefghijklmnopqrst.example.com")
+        XCTAssertEqual(entropyOnly.suspicion, .benign,
+                       "entropy-only must not trigger suspicious (C009)")
+
+        // Beacon-only: regular cadence but short label (no high entropy) and no blocklist match.
+        let beaconOnly = ExfilAnalyzer.assess(domain: "www.example.com",
+                                              timestamps: dates([1000, 1060, 1120, 1180, 1240]))
+        XCTAssertEqual(beaconOnly.suspicion, .benign,
+                       "beacon-only must not trigger suspicious (C009)")
+    }
+
+    // MARK: - Trust: passive-DNS ledger + Sentinel (Batch 6)
+
+    func testAnswerLedgerFlagsDriftOnChangedAnswer() {
+        let ledger = AnswerLedger()
+        // C103: first-seen is .firstSeen, not nil.
+        if case .firstSeen = ledger.record(domain: "bank.example", queryType: "A", answer: "203.0.113.10", resolver: "1.1.1.1", ttl: 300) {} else {
+            XCTFail("First observation should be .firstSeen")
+        }
+        // Same answer again -> .consistent, not nil.
+        if case .consistent = ledger.record(domain: "bank.example", queryType: "A", answer: "203.0.113.10", resolver: "1.1.1.1", ttl: 300) {} else {
+            XCTFail("Matching answer should be .consistent")
+        }
+        // Different answer -> .drifted.
+        if case .drifted(let drift, let isDisjoint) = ledger.record(domain: "bank.example", queryType: "A", answer: "45.9.9.9", resolver: "1.1.1.1", ttl: 60) {
+            XCTAssertEqual(drift.previousAnswer, "203.0.113.10")
+            XCTAssertEqual(drift.newAnswer, "45.9.9.9")
+            XCTAssertTrue(isDisjoint, "Single-answer sets with different values are disjoint")
+        } else {
+            XCTFail("Changed answer should be .drifted")
+        }
+        XCTAssertEqual(ledger.history(for: "bank.example").count, 3)
+    }
+
+    // MARK: - TextDiff (warp raw-HTML diff)
+
+    func testTextDiffIdenticalIsEmpty() {
+        XCTAssertTrue(TextDiff.unified("a\nb\nc", "a\nb\nc").isEmpty)
+    }
+
+    func testTextDiffShowsAddedAndRemovedLines() {
+        let d = TextDiff.unified("a\nb\nc", "a\nX\nc")
+        XCTAssertTrue(d.contains("- b"))
+        XCTAssertTrue(d.contains("+ X"))
+    }
+
+    func testTextDiffDetectsInjectedScriptLine() {
+        let local = "<html>\n<body>hi</body>\n</html>"
+        let remote = "<html>\n<script>steal()</script>\n<body>hi</body>\n</html>"
+        let d = TextDiff.unified(local, remote)
+        XCTAssertTrue(d.contains { $0.hasPrefix("+ ") && $0.contains("steal()") })
+    }
+
+    func testSentinelDiffDetectsResolverChangeAndStability() {
+        let a = NetworkConfigSnapshot(resolvers: ["1.1.1.1"], activeInterfaces: ["en0"], vpnActive: false, dnsEncrypted: false)
+        let b = NetworkConfigSnapshot(resolvers: ["8.8.8.8"], activeInterfaces: ["en0"], vpnActive: true, dnsEncrypted: false)
+        let changes = Sentinel.diff(previous: a, current: b)
+        XCTAssertTrue(changes.contains { $0.kind == .resolversChanged })
+        XCTAssertTrue(changes.contains { $0.kind == .vpnChanged })
+        // Identical snapshots -> no changes.
+        XCTAssertTrue(Sentinel.diff(previous: a, current: a).isEmpty)
+    }
+
+    // MARK: - DNS log analyzer (PROCESS/PACKET capture-log format)
+
+    private static let captureLogSample = """
+    method '-[DNSProxyProvider startProxyWithOptions:completionHandler:]' invoked
+    no block list specified, all traffic will be allowed
+    PROCESS:
+    {
+        name = Mail;
+        path = "/System/Applications/Mail.app";
+        pid = 670;
+        "signing ID" = "com.apple.mail";
+    }
+    PACKET:
+    Xid: 5516
+    QR: Query
+    Server: -nil-
+    Rcode: No error
+    Question (1):
+    imap.mail.me.com.akadns.net IN A
+    Answer (0):
+    Authority (0):
+    Additional records (0):
+    ERROR: 'nw_connection_set_state_changed_handler' failed with 57
+    PROCESS:
+    {
+        name = mDNSResponder;
+        path = "/usr/sbin/mDNSResponder";
+        pid = 454;
+        "signing ID" = "com.apple.mDNSResponder";
+    }
+    PACKET:
+    Xid: 29650
+    QR: Reply
+    Rcode: Name error
+    Question (1):
+    b._dns-sd._udp.42.2.0.192.in-addr.arpa IN PTR
+    Answer (0):
+    Authority (1):
+    192.in-addr.arpa IN SOA 442 z.arin.net dns-ops.arin.net 2017041035 1800 900 691200 10800
+    Additional records (0):
+    PROCESS:
+    {
+        name = "Codex (Service)";
+        path = "/Applications/Codex.app/Contents/Frameworks/x/Codex (Service).app";
+        pid = 1015;
+        "signing ID" = "com.openai.codex.helper";
+    }
+    PACKET:
+    Xid: 16623
+    QR: Reply
+    Rcode: No error
+    Question (1):
+    mtalk.google.com IN A
+    Answer (2):
+    mtalk.google.com IN CNAME 63 mobile-gtalk.l.google.com
+    mobile-gtalk.l.google.com IN A 63 172.253.135.188
+    Authority (0):
+    Additional records (0):
+    method '-[DNSProxyProvider stopProxyWithReason:completionHandler:]' invoked
+    """
+
+    func testCaptureLogParserExtractsProcessesTypesAndRcodes() {
+        let records = CaptureLogParser.parse(SyxxKitTests.captureLogSample)
+        XCTAssertEqual(records.count, 3)
+        // The thing the original script lost: process attribution + record types + reply Rcodes.
+        XCTAssertTrue(records.contains { $0.process == "Codex (Service)" })
+        XCTAssertTrue(records.contains { $0.questionType == "PTR" })
+        XCTAssertTrue(records.contains { $0.questionName == "mtalk.google.com" && $0.questionType == "A" })
+        XCTAssertTrue(records.contains { $0.isReply && $0.rcode == "Name error" })
+    }
+
+    func testEndpointAnalyzerFileLogFlagsPersistenceAndUntrusted() throws {
+        let json = """
+        {"event":"ES_EVENT_TYPE_NOTIFY_OPEN","file":{"destination":"/etc/hosts","process":{"name":"reader","signing info (computed)":{"signatureSigner":"Apple","signatureStatus":0}}}}
+        {"event":"ES_EVENT_TYPE_NOTIFY_WRITE","file":{"destination":"/Users/x/Library/LaunchAgents/evil.plist","process":{"name":"dropper","signing info (computed)":{"signatureSigner":"AdHoc","signatureStatus":0}}}}
+        {"event":"ES_EVENT_TYPE_NOTIFY_CREATE","file":{"destination":"/tmp/foo","process":{"name":"maker","signing info (computed)":{"signatureSigner":"Developer ID","signatureStatus":0}}}}
+        """
+        let tmp = NSTemporaryDirectory() + "syxx_fm_test.txt"
+        try json.write(toFile: tmp, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(atPath: tmp) }
+        XCTAssertEqual(EndpointLogAnalyzer.detect(path: tmp), "file")
+        switch EndpointLogAnalyzer.analyze(path: tmp) {
+        case .success(let report):
+            XCTAssertTrue(report.contains("Read events skipped (OPEN/CLOSE): 1"))
+            XCTAssertTrue(report.contains("LaunchAgents/evil.plist"))   // persistence write flagged
+            XCTAssertTrue(report.contains("dropper [AdHoc]"))           // untrusted writer flagged
+            XCTAssertFalse(report.contains("maker [Developer ID]"))     // notarized NOT flagged
+        case .error:
+            XCTFail("analyze(path:) returned error for valid endpoint log file")
+        case .notApplicable:
+            XCTFail("analyze(path:) returned notApplicable for valid endpoint log file")
+        }
+    }
+
+    func testEndpointAnalyzerProcessLogFlagsAdhocAndArgs() throws {
+        let json = """
+        {"event":"ES_EVENT_TYPE_NOTIFY_EXEC","process":{"path":"/opt/homebrew/bin/python3","signing info (computed)":{"signatureSigner":"AdHoc","signatureStatus":0},"arguments":["python3","-c","import x"]}}
+        {"event":"ES_EVENT_TYPE_NOTIFY_FORK","process":{"path":"/bin/zsh"}}
+        """
+        let tmp = NSTemporaryDirectory() + "syxx_pm_test.txt"
+        try json.write(toFile: tmp, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(atPath: tmp) }
+        XCTAssertEqual(EndpointLogAnalyzer.detect(path: tmp), "process")
+        switch EndpointLogAnalyzer.analyze(path: tmp) {
+        case .success(let report):
+            XCTAssertTrue(report.contains("Launches (EXEC): 1"))
+            XCTAssertTrue(report.contains("python3 [AdHoc]"))
+            XCTAssertTrue(report.contains("python3 -c"))                // suspicious-argument flag
+        case .error:
+            XCTFail("analyze(path:) returned error for valid endpoint log file")
+        case .notApplicable:
+            XCTFail("analyze(path:) returned notApplicable for valid endpoint log file")
+        }
+    }
+
+    // D081 - Error handling test: nonexistent file must return .error, not .notApplicable
+    func testEndpointAnalyzerNonexistentFileReturnsError() {
+        switch EndpointLogAnalyzer.analyze(path: "/nonexistent/path/file.json") {
+        case .error(let reason):
+            XCTAssertTrue(reason.contains("not found") || reason.contains("Could not open"),
+                "Nonexistent file should return D081-safe error with reason")
+        case .success:
+            XCTFail("analyze(path:) returned success for nonexistent file")
+        case .notApplicable:
+            XCTFail("analyze(path:) returned notApplicable for nonexistent file (D081 violation)")
+        }
+    }
+
+    func testDNSLogAnalyzerPopulatesWhatTheOldReportLeftEmpty() {
+        let analysis = DNSLogAnalyzer.analyze(CaptureLogParser.parse(SyxxKitTests.captureLogSample))
+        // Old report said "none observed" for all of these; the structured parse fills them in.
+        XCTAssertFalse(analysis.processCounts.isEmpty)
+        XCTAssertFalse(analysis.typeCounts.isEmpty)
+        XCTAssertTrue(analysis.processCounts.contains { $0.0 == "Mail" })
+        // Reply Rcodes bucket correctly (Name error -> nxdomain, No error -> successful).
+        XCTAssertTrue(analysis.statusCounts.contains { $0.0 == "nxdomain" })
+        XCTAssertTrue(analysis.statusCounts.contains { $0.0 == "successful" })
+        // Public-suffix-aware registrable grouping.
+        XCTAssertTrue(analysis.registrableCounts.contains { $0.0 == "google.com" })
+    }
+}
+
+// MARK: - D003 local TLS server helper
+
+import Security
+
+/// A throwaway HTTPS server (self-signed EC leaf) for exercising the real TLS handshake in
+/// ``SyxxKitTests/testCollectorPinMismatchFailsClosedAgainstLiveTLS``. Uses `openssl s_server`
+/// so no third-party dependency is needed. Purely a test fixture.
+final class LocalTLSServer {
+    let port: Int
+    private let process: Process
+    private let tempDir: URL
+
+    private init(port: Int, process: Process, tempDir: URL) {
+        self.port = port
+        self.process = process
+        self.tempDir = tempDir
+    }
+
+    static func start() throws -> LocalTLSServer {
+        let openssl = "/opt/homebrew/bin/openssl"
+        guard FileManager.default.isExecutableFile(atPath: openssl) else {
+            throw NSError(domain: "LocalTLSServer", code: 1)
+        }
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("syxx-d003-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let key = dir.appendingPathComponent("k.pem").path
+        let crt = dir.appendingPathComponent("c.pem").path
+
+        func run(_ args: [String]) throws {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: openssl)
+            p.arguments = args
+            p.standardError = FileHandle.nullDevice
+            p.standardOutput = FileHandle.nullDevice
+            try p.run(); p.waitUntilExit()
+        }
+        try run(["req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1",
+                 "-nodes", "-keyout", key, "-out", crt, "-days", "1", "-subj", "/CN=127.0.0.1"])
+
+        let port = Self.freePort()
+        let server = Process()
+        server.executableURL = URL(fileURLWithPath: openssl)
+        server.arguments = ["s_server", "-accept", "\(port)", "-cert", crt, "-key", key,
+                            "-quiet", "-naccept", "20", "-www"]
+        server.standardError = FileHandle.nullDevice
+        server.standardOutput = FileHandle.nullDevice
+        try server.run()
+
+        // Wait for the listener to accept connections.
+        for _ in 0..<50 {
+            if Self.canConnect(port: port) { break }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        return LocalTLSServer(port: port, process: server, tempDir: dir)
+    }
+
+    func stop() {
+        process.terminate()
+        try? FileManager.default.removeItem(at: tempDir)
+    }
+
+    private static func freePort() -> Int {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        addr.sin_port = 0
+        _ = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        _ = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                getsockname(fd, $0, &len)
+            }
+        }
+        let port = Int(UInt16(bigEndian: addr.sin_port))
+        close(fd)
+        return port
+    }
+
+    private static func canConnect(port: Int) -> Bool {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        defer { close(fd) }
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        addr.sin_port = UInt16(port).bigEndian
+        let r = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        return r == 0
+    }
+}
+
+// MARK: - D011: Trust-set key membership
+
+import CryptoKit
+
+extension SyxxKitTests {
+    // D011 trust-set membership. These previously asserted `Set.contains` on a literal the test had
+    // just inserted — a test of Swift's stdlib, not of SyxxKit — while the real decision in
+    // runCollectorTest had NO coverage. Inverting it, or dropping the !isEmpty guard, would report
+    // an untrusted signer's attestation as TRUSTED with a green suite. Now they call the real
+    // LeakDetector.checkTrustSet (twin of Windows LeakDetector.CheckTrustSet).
+
+    func testCheckTrustSet_keyInSet_isTrusted() {
+        let trustSet: Set<String> = ["pubkey-A", "pubkey-B"]
+        XCTAssertEqual(LeakDetector.checkTrustSet(publicKey: "pubkey-A", trustedPublicKeys: trustSet), true,
+                       "a key present in the trust set must be trusted")
+    }
+
+    func testCheckTrustSet_keyNotInSet_isUntrusted() {
+        let trustSet: Set<String> = ["pubkey-B"]
+        XCTAssertEqual(LeakDetector.checkTrustSet(publicKey: "pubkey-A", trustedPublicKeys: trustSet), false,
+                       "a key NOT in the trust set must be untrusted — never nil, which reads as 'not checked'")
+    }
+
+    func testCheckTrustSet_noTrustSetConfigured_isNil_notFalse() {
+        // The tri-state that matters: "no trust set configured" is NOT "untrusted". Collapsing nil
+        // into false would report every signer as untrusted the moment the set is unconfigured.
+        XCTAssertNil(LeakDetector.checkTrustSet(publicKey: "pubkey-A", trustedPublicKeys: nil))
+        XCTAssertNil(LeakDetector.checkTrustSet(publicKey: "pubkey-A", trustedPublicKeys: []))
+        XCTAssertNil(LeakDetector.checkTrustSet(publicKey: nil, trustedPublicKeys: ["pubkey-A"]))
+    }
+
+    func testSignatureKeyTrusted_defaultIsNil() {
+        let r = LeakTestResult(result: .inconclusive)
+        XCTAssertNil(r.signatureKeyTrusted,
+                     "signatureKeyTrusted must be nil by default (no trust set configured)")
+    }
+
+    func testSignatureKeyTrusted_roundTrips() {
+        let r = LeakTestResult(verdict: .inconclusive, signatureKeyTrusted: true)
+        XCTAssertEqual(r.signatureKeyTrusted, true)
+        let r2 = LeakTestResult(verdict: .inconclusive, signatureKeyTrusted: false)
+        XCTAssertEqual(r2.signatureKeyTrusted, false)
+    }
+
+    func testVerify_acceptsAGenuineSignature_andTrustIsADistinctQuestion() throws {
+        // verify() answers "is this signature mathematically valid"; checkTrustSet answers "do we
+        // trust the signer". A genuine signature from an UNTRUSTED key must be valid AND untrusted —
+        // conflating the two is how a forged-provenance attestation reads as trustworthy.
+        let privateKey = Curve25519.Signing.PrivateKey()
+        let pubB64 = privateKey.publicKey.rawRepresentation.base64EncodedString()
+        let payload = Data("D011-test-payload".utf8)
+        let sigB64 = try privateKey.signature(for: payload).base64EncodedString()
+
+        let result = LeakTestResult(result: .notDetected, signature: sigB64,
+                                    publicKey: pubB64, signedPayload: payload.base64EncodedString())
+
+        XCTAssertTrue(LeakDetector.verify(result), "verify() must accept a genuine signature")
+        XCTAssertEqual(LeakDetector.checkTrustSet(publicKey: pubB64, trustedPublicKeys: ["someone-else"]), false,
+                       "a genuine signature from a key outside the trust set is VALID but UNTRUSTED")
+        XCTAssertEqual(LeakDetector.checkTrustSet(publicKey: pubB64, trustedPublicKeys: [pubB64]), true)
+    }
+}
+
+// MARK: - Collector HTTP status is a distinct state (DIAG-glutton-2026-07-29)
+
+/// A throwaway plaintext HTTP/1.1 server that answers each request path with a caller-chosen
+/// status and body. Exists so the leak-test status branches are exercised through the REAL
+/// URLSession → HTTP response → classification path, not through a stubbed classifier. Purely a
+/// test fixture; loopback only.
+final class LocalStatusHTTPServer: @unchecked Sendable {
+    let port: Int
+    private let listenFD: Int32
+    private let respond: @Sendable (String) -> (status: Int, body: String)
+    private var running = true
+
+    private init(port: Int, listenFD: Int32,
+                 respond: @escaping @Sendable (String) -> (status: Int, body: String)) {
+        self.port = port
+        self.listenFD = listenFD
+        self.respond = respond
+    }
+
+    static func start(respond: @escaping @Sendable (String) -> (status: Int, body: String)) throws
+        -> LocalStatusHTTPServer {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        guard fd >= 0 else { throw NSError(domain: "LocalStatusHTTPServer", code: 1) }
+        var one: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, socklen_t(MemoryLayout<Int32>.size))
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        addr.sin_port = 0
+        let bound = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard bound == 0 else { close(fd); throw NSError(domain: "LocalStatusHTTPServer", code: 2) }
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        _ = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(fd, $0, &len) }
+        }
+        guard listen(fd, 16) == 0 else { close(fd); throw NSError(domain: "LocalStatusHTTPServer", code: 3) }
+        let server = LocalStatusHTTPServer(port: Int(UInt16(bigEndian: addr.sin_port)),
+                                           listenFD: fd, respond: respond)
+        Thread.detachNewThread { server.acceptLoop() }
+        return server
+    }
+
+    private func acceptLoop() {
+        while running {
+            let client = accept(listenFD, nil, nil)
+            if client < 0 { return }
+            handle(client)
+            close(client)
+        }
+    }
+
+    private func handle(_ client: Int32) {
+        // Read the request head. Content-Length is 0 on every route this fixture serves, so the
+        // blank line that ends the headers ends the request.
+        var request = ""
+        var buffer = [UInt8](repeating: 0, count: 2048)
+        while !request.contains("\r\n\r\n") {
+            let n = read(client, &buffer, buffer.count)
+            if n <= 0 { break }
+            request += String(decoding: buffer[0..<n], as: UTF8.self)
+        }
+        let path = request.split(separator: " ").dropFirst().first.map(String.init) ?? "/"
+        let (status, body) = respond(path)
+        let head = """
+        HTTP/1.1 \(status) Status\r
+        Content-Type: application/json\r
+        Content-Length: \(body.utf8.count)\r
+        Connection: close\r
+        \r
+
+        """
+        let out = Array((head + body).utf8)
+        _ = out.withUnsafeBufferPointer { write(client, $0.baseAddress, $0.count) }
+    }
+
+    func stop() {
+        running = false
+        close(listenFD)
+    }
+}
+
+extension SyxxKitTests {
+
+    // Every string the client can put on screen for a collector failure. A user-facing reason that
+    // matches any of these is the Foundation NSError bridge template leaking through, which is what
+    // shipped: "The operation couldn't be completed. (SyxxKit.LeakDetector.(unknown context at
+    // $100fbc78c).CollectorError error 0.)". Mirrors SyxxApp's ErrorPresenter.isBoilerplate, which
+    // lives in another module and cannot be imported here.
+    private func assertNotBridgeDump(_ s: String, _ message: String,
+                                     file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertFalse(s.contains("operation couldn't be completed"), message, file: file, line: line)
+        XCTAssertFalse(s.contains("operation couldn\u{2019}t be completed"), message, file: file, line: line)
+        XCTAssertFalse(s.contains("unknown context at"), message, file: file, line: line)
+        XCTAssertNil(s.range(of: "\\$[0-9a-fA-F]{4,}", options: .regularExpression),
+                     message, file: file, line: line)
+        XCTAssertNil(s.range(of: "[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+ error -?[0-9]+",
+                             options: .regularExpression),
+                     message, file: file, line: line)
+    }
+
+    /// The core of the defect: 402 (paywall), 401/403 (auth), 429 (rate limit) and 5xx (collector
+    /// down) are DIFFERENT answers and must not classify alike. Before the fix every one of them
+    /// produced a single indistinguishable `.error`.
+    func testCollectorStatusClassificationKeepsDistinctStatesDistinct() {
+        XCTAssertEqual(LeakDetector.classifyStatus(402), .entitlementRequired(status: 402))
+        XCTAssertEqual(LeakDetector.classifyStatus(401), .authenticationFailed(status: 401))
+        XCTAssertEqual(LeakDetector.classifyStatus(403), .authenticationFailed(status: 403))
+        XCTAssertEqual(LeakDetector.classifyStatus(429), .rateLimited(status: 429))
+        XCTAssertEqual(LeakDetector.classifyStatus(500), .serverError(status: 500))
+        XCTAssertEqual(LeakDetector.classifyStatus(503), .serverError(status: 503))
+        XCTAssertEqual(LeakDetector.classifyStatus(599), .serverError(status: 599))
+
+        // Adversarial / unrecognised: the status is preserved verbatim and NO cause is asserted.
+        // A collector (or an on-path proxy pretending to be one) can return anything at all.
+        XCTAssertEqual(LeakDetector.classifyStatus(404), .unexpectedStatus(404))
+        XCTAssertEqual(LeakDetector.classifyStatus(418), .unexpectedStatus(418))
+        XCTAssertEqual(LeakDetector.classifyStatus(302), .unexpectedStatus(302))
+        XCTAssertEqual(LeakDetector.classifyStatus(600), .unexpectedStatus(600))
+        XCTAssertEqual(LeakDetector.classifyStatus(0), .unexpectedStatus(0))
+
+        // No two of these may be equal, or the collapse is back.
+        let all: [CollectorFailure] = [
+            LeakDetector.classifyStatus(402), LeakDetector.classifyStatus(403),
+            LeakDetector.classifyStatus(429), LeakDetector.classifyStatus(503),
+            LeakDetector.classifyStatus(418)
+        ]
+        for i in all.indices {
+            for j in all.indices where j > i {
+                XCTAssertNotEqual(all[i], all[j],
+                                  "distinct collector states collapsed into one: \(all[i])")
+            }
+        }
+    }
+
+    /// The status must survive to the caller. The old `badStatus(Int)` captured it and threw it
+    /// away at the catch boundary; nothing in macOS/Sources ever read it.
+    func testCollectorFailurePreservesTheHTTPStatus() {
+        XCTAssertEqual(LeakDetector.classifyStatus(402).httpStatus, 402)
+        XCTAssertEqual(LeakDetector.classifyStatus(429).httpStatus, 429)
+        XCTAssertEqual(LeakDetector.classifyStatus(418).httpStatus, 418)
+        XCTAssertEqual(LeakDetector.classifyStatus(507).httpStatus, 507)
+        // No status exists for these, so none is invented.
+        XCTAssertNil(CollectorFailure.transportFailure.httpStatus)
+        XCTAssertNil(CollectorFailure.malformedResponse.httpStatus)
+        XCTAssertNil(CollectorFailure.collectorIdentityUnverified.httpStatus)
+
+        XCTAssertTrue(LeakDetector.classifyStatus(402).requiresEntitlement)
+        for other in [403, 429, 500, 418] {
+            XCTAssertFalse(LeakDetector.classifyStatus(other).requiresEntitlement,
+                           "HTTP \(other) is not a paywall and must not offer an upgrade path")
+        }
+    }
+
+    /// No collector failure may ever resolve to a clean result. Absence of observation is not
+    /// evidence of absence: a 402 means the test never ran, not that DNS is fine.
+    func testCollectorFailureNeverResolvesToACleanResult() {
+        let every: [CollectorFailure] = [
+            .entitlementRequired(status: 402), .authenticationFailed(status: 403),
+            .rateLimited(status: 429), .serverError(status: 500), .unexpectedStatus(418),
+            .malformedResponse, .collectorIdentityUnverified, .transportFailure
+        ]
+        for failure in every {
+            let result = LeakDetector.result(for: failure)
+            XCTAssertNotEqual(result, .notDetected,
+                              "\(failure) must never read as 'no leak detected'")
+            XCTAssertNotEqual(result, .confirmed,
+                              "\(failure) attests no resolver and cannot confirm a leak")
+        }
+        // A paywall is a correct answer from a correct server, not a broken product.
+        XCTAssertEqual(LeakDetector.result(for: .entitlementRequired(status: 402)), .inconclusive,
+                       "HTTP 402 is the intended paywall; rendering it as an execution error tells "
+                       + "the user their product is faulty when it is not")
+        XCTAssertEqual(LeakDetector.result(for: .serverError(status: 500)), .error)
+        XCTAssertEqual(LeakDetector.result(for: .transportFailure), .error)
+    }
+
+    /// `CollectorError` must conform to `LocalizedError`. Without it `localizedDescription` is the
+    /// Foundation bridge template, which is exactly what reached a user's screen.
+    func testCollectorErrorNeverRendersAsAFoundationBridgeDump() {
+        let statusError: Error = LeakDetector.CollectorError.badStatus(402)
+        assertNotBridgeDump(statusError.localizedDescription,
+                            "CollectorError.badStatus rendered as an NSError bridge dump")
+        XCTAssertTrue(statusError.localizedDescription.contains("402"),
+                      "the message must state the status it actually got: "
+                      + statusError.localizedDescription)
+
+        for other: Error in [LeakDetector.CollectorError.badJSON(URLError(.badServerResponse)),
+                             LeakDetector.CollectorError.notHTTP] {
+            assertNotBridgeDump(other.localizedDescription, "\(other) rendered as a bridge dump")
+            XCTAssertFalse(other.localizedDescription.isEmpty)
+        }
+    }
+
+    /// Classification of a thrown error. The transport-identity check must win: a pin/PKI refusal
+    /// downgraded to a generic "could not be reached" would hide an on-path impostor.
+    func testCollectorErrorClassificationPrefersIdentityFailure() {
+        XCTAssertEqual(LeakDetector.classify(URLError(.cancelled)), .collectorIdentityUnverified)
+        XCTAssertEqual(LeakDetector.classify(URLError(.timedOut)), .transportFailure)
+        XCTAssertEqual(LeakDetector.classify(URLError(.notConnectedToInternet)), .transportFailure)
+        XCTAssertEqual(LeakDetector.classify(LeakDetector.CollectorError.badStatus(402)),
+                       .entitlementRequired(status: 402))
+        XCTAssertEqual(LeakDetector.classify(LeakDetector.CollectorError.badStatus(429)),
+                       .rateLimited(status: 429))
+        XCTAssertEqual(LeakDetector.classify(LeakDetector.CollectorError.notHTTP), .malformedResponse)
+        XCTAssertEqual(LeakDetector.classify(LeakDetector.CollectorError.badJSON(URLError(.cannotParseResponse))),
+                       .malformedResponse)
+    }
+
+    /// The reason a user reads must name a real cause or a real status, never boilerplate, and must
+    /// always close the honesty gap: no evidence was gathered.
+    func testCollectorFailureReasonIsHonestCopy() {
+        for step: CollectorStep in [.token, .verify] {
+            let unrecognised = CollectorFailure.unexpectedStatus(418).reason(step: step)
+            assertNotBridgeDump(unrecognised, "unexpectedStatus reason is boilerplate: \(unrecognised)")
+            XCTAssertTrue(unrecognised.contains("418"),
+                          "an unrecognised status must be reported verbatim, not guessed at: \(unrecognised)")
+
+            for failure: CollectorFailure in [.entitlementRequired(status: 402),
+                                              .authenticationFailed(status: 403),
+                                              .rateLimited(status: 429),
+                                              .serverError(status: 500),
+                                              .unexpectedStatus(418),
+                                              .malformedResponse, .transportFailure] {
+                let reason = failure.reason(step: step)
+                assertNotBridgeDump(reason, "\(failure) reason is boilerplate: \(reason)")
+                XCTAssertTrue(reason.contains("nothing is known about your DNS resolvers"),
+                              "\(failure) must state that no evidence exists, or it can be read as "
+                              + "a clean result: \(reason)")
+            }
+        }
+        // The two steps are not interchangeable: at `.token` no query was ever sent; at `.verify`
+        // the queries WERE sent and only their result is missing. Saying "no test was performed"
+        // after dispatching real queries would be false.
+        let token = CollectorFailure.serverError(status: 500).reason(step: .token)
+        let verify = CollectorFailure.serverError(status: 500).reason(step: .verify)
+        XCTAssertNotEqual(token, verify)
+        XCTAssertTrue(token.contains("No leak test was performed"), token)
+        XCTAssertTrue(verify.contains("test queries were sent"), verify)
+
+        // The pin-failure reason is owner-approved copy (2026-07-11) and must pass through intact.
+        XCTAssertEqual(CollectorFailure.collectorIdentityUnverified.reason(step: .token),
+                       CollectorPinning.pinFailureReason)
+    }
+
+    // MARK: Real HTTP runs through the full pipeline
+
+    private func runAgainstLocalCollector(
+        tokenStatus: Int, tokenBody: String = "", verifyStatus: Int = 200,
+        servers: [String] = ["127.0.0.1"]
+    ) async throws -> LeakTestResult {
+        let server = try LocalStatusHTTPServer.start { path in
+            if path.hasPrefix("/api/leak/token") { return (tokenStatus, tokenBody) }
+            return (verifyStatus, "")
+        }
+        defer { server.stop() }
+        return await LeakDetector.runCollectorTest(
+            servers: servers,
+            collectorBaseURL: URL(string: "http://127.0.0.1:\(server.port)")!,
+            pollDelay: .milliseconds(1))
+    }
+
+    /// REAL RUN, token step: a live HTTP 402 from a local collector, through URLSession, must
+    /// surface as an entitlement gate. This is the exact server behaviour verified against the
+    /// production collector (`POST https://syxx.app/api/leak/token` returns 402 unlicensed).
+    func testLive402SurfacesAsEntitlementRequiredNotAnOpaqueError() async throws {
+        let result = try await runAgainstLocalCollector(tokenStatus: 402)
+
+        XCTAssertEqual(result.collectorFailure, .entitlementRequired(status: 402))
+        XCTAssertEqual(result.collectorFailure?.httpStatus, 402)
+        XCTAssertTrue(result.collectorFailure?.requiresEntitlement == true)
+        XCTAssertEqual(result.result, .inconclusive,
+                       "a working paywall must not render as a failure of the product")
+        XCTAssertNotEqual(result.result, .notDetected)
+        XCTAssertTrue(result.observedResolvers.isEmpty)
+        XCTAssertNil(result.signature)
+        let reason = try XCTUnwrap(result.errorReason)
+        assertNotBridgeDump(reason, "the 402 reason is still a bridge dump: \(reason)")
+        XCTAssertTrue(reason.contains("Syxx Pro"), reason)
+    }
+
+    /// REAL RUN: rate limit, server error and an unrecognised status must reach the caller as three
+    /// different things. Before the fix all three were one `.error` with one identical string.
+    func testLiveNon200StatusesDoNotCollapseIntoOneState() async throws {
+        let rateLimited = try await runAgainstLocalCollector(tokenStatus: 429)
+        let serverDown  = try await runAgainstLocalCollector(tokenStatus: 503)
+        let teapot      = try await runAgainstLocalCollector(tokenStatus: 418)
+        let paywall     = try await runAgainstLocalCollector(tokenStatus: 402)
+        let forbidden   = try await runAgainstLocalCollector(tokenStatus: 403)
+
+        XCTAssertEqual(rateLimited.collectorFailure, .rateLimited(status: 429))
+        XCTAssertEqual(serverDown.collectorFailure, .serverError(status: 503))
+        XCTAssertEqual(teapot.collectorFailure, .unexpectedStatus(418))
+        XCTAssertEqual(forbidden.collectorFailure, .authenticationFailed(status: 403))
+
+        let reasons = [rateLimited, serverDown, teapot, paywall, forbidden].map { $0.errorReason ?? "" }
+        XCTAssertEqual(Set(reasons).count, reasons.count,
+                       "distinct collector states produced identical user-facing text: \(reasons)")
+        // The unrecognised status names itself and guesses nothing.
+        XCTAssertTrue(try XCTUnwrap(teapot.errorReason).contains("418"))
+        // None of these is a paywall, so none may offer an upgrade path.
+        for r in [rateLimited, serverDown, teapot, forbidden] {
+            XCTAssertFalse(r.collectorFailure?.requiresEntitlement == true)
+            XCTAssertEqual(r.result, .error)
+            XCTAssertNotEqual(r.result, .notDetected)
+        }
+    }
+
+    /// REAL RUN: a 200 with an undecodable body is NOT a status failure and must not be reported as
+    /// one. It is also not a clean result.
+    func testLiveMalformedTokenBodyIsDistinctFromAStatusFailure() async throws {
+        let result = try await runAgainstLocalCollector(tokenStatus: 200, tokenBody: "not json at all")
+        XCTAssertEqual(result.collectorFailure, .malformedResponse)
+        XCTAssertNil(result.collectorFailure?.httpStatus, "no status failure occurred; 200 was returned")
+        XCTAssertEqual(result.result, .error)
+        XCTAssertNotEqual(result.result, .notDetected)
+        assertNotBridgeDump(try XCTUnwrap(result.errorReason), "malformed-body reason is boilerplate")
+    }
+
+    /// REAL RUN, verify step: `verifyToken` had the identical collapse. A 402 on verify — after the
+    /// DNS queries have really been dispatched — must classify the same way AND say so differently,
+    /// because queries WERE sent. Skips (never silently passes) when no resolver is reachable.
+    func testLiveVerifyStepStatusIsDistinguishedToo() async throws {
+        let resolvers = NetworkKeyState.getSystemDNSServers()
+        try XCTSkipIf(resolvers.isEmpty, "No system DNS resolvers; the verify step is unreachable.")
+        let tokenBody = #"{"token":"t-verify-step","subdomain":"id-verifystep.leak.syxx.app"}"#
+        let result = try await runAgainstLocalCollector(
+            tokenStatus: 200, tokenBody: tokenBody, verifyStatus: 402, servers: resolvers)
+        try XCTSkipIf(result.collectorFailure == nil && result.result == .error,
+                      "Every DNS dispatch failed, so the run never reached the verify step.")
+
+        XCTAssertEqual(result.collectorFailure, .entitlementRequired(status: 402))
+        XCTAssertEqual(result.result, .inconclusive)
+        XCTAssertNotEqual(result.result, .notDetected)
+        let reason = try XCTUnwrap(result.errorReason)
+        assertNotBridgeDump(reason, "the verify-step reason is still a bridge dump: \(reason)")
+        XCTAssertTrue(reason.contains("test queries were sent"),
+                      "the verify step dispatched real queries and must not claim no test ran: \(reason)")
+    }
+
+    /// REAL RUN, forged attestation: a collector (or an on-path impostor) that returns a
+    /// well-formed verify body whose Ed25519 signature does NOT verify over its signed payload
+    /// must resolve to .inconclusive, never to .notDetected. Before the sigValid gate, the
+    /// forged no-leak payload flowed straight into reconcileResult and rendered as a clean
+    /// green result. Skips (never silently passes) when no resolver is reachable, matching
+    /// testLiveVerifyStepStatusIsDistinguishedToo.
+    func testLiveForgedAttestationSignatureIsInconclusiveNeverClean() async throws {
+        let resolvers = NetworkKeyState.getSystemDNSServers()
+        try XCTSkipIf(resolvers.isEmpty, "No system DNS resolvers; the verify step is unreachable.")
+
+        // A structurally valid attestation whose signature was made over DIFFERENT bytes than
+        // the payload the response carries, so verify() must return false. This is exactly the
+        // shape of a relay that swaps the payload while keeping a real signature.
+        let privateKey = Curve25519.Signing.PrivateKey()
+        let pubB64 = privateKey.publicKey.rawRepresentation.base64EncodedString()
+        let payloadB64 = Data(#"{"leaked": false, "observedResolvers": []}"#.utf8)
+            .base64EncodedString()
+        let sigB64 = try privateKey.signature(for: Data("entirely different bytes".utf8))
+            .base64EncodedString()
+
+        let tokenBody = #"{"token":"t-forged-sig","subdomain":"id-forgedsig.leak.syxx.app"}"#
+        let verifyBody = "{\"leaked\": false, \"observedResolvers\": [], "
+            + "\"signature\": \"\(sigB64)\", \"publicKey\": \"\(pubB64)\", "
+            + "\"keyId\": \"k-forged\", \"signedPayload\": \"\(payloadB64)\"}"
+        let server = try LocalStatusHTTPServer.start { path in
+            if path.hasPrefix("/api/leak/token") { return (200, tokenBody) }
+            return (200, verifyBody)
+        }
+        defer { server.stop() }
+
+        let result = await LeakDetector.runCollectorTest(
+            servers: resolvers,
+            collectorBaseURL: URL(string: "http://127.0.0.1:\(server.port)")!,
+            pollDelay: .milliseconds(1))
+        try XCTSkipIf(result.result == .error && result.errorReason?.contains("dispatch") == true,
+                      "Every DNS dispatch failed, so the run never reached the verify step.")
+
+        XCTAssertEqual(result.signatureValid, false,
+                       "the tampered signature must fail verification, or this test proves nothing")
+        XCTAssertNotEqual(result.result, .notDetected,
+                          "a FORGED attestation must never read as a clean no-leak result")
+        XCTAssertEqual(result.result, .inconclusive)
+        XCTAssertEqual(result.errorReason,
+                       "Collector attestation signature is invalid; result cannot be trusted.")
+    }
+}

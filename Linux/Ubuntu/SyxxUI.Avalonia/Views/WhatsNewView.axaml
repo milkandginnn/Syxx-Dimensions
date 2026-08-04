@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.WhatsNewView"
+             x:DataType="vm:WhatsNewViewModel">
+
+  <StackPanel Spacing="20">
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="WHAT'S NEW" FontSize="12" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="News from Syxx" FontSize="28" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextBrush}" />
+    </StackPanel>
+
+    <!-- Loading -->
+    <TextBlock Text="Checking for news…" FontSize="14"
+               Foreground="{StaticResource SyxTextSecondaryBrush}"
+               IsVisible="{Binding IsLoading}" />
+
+    <!-- Status / honest offline line -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="16"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1"
+            IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="14"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </Border>
+
+    <!-- Broadcast -->
+    <Border IsVisible="{Binding HasBroadcast}"
+            Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="0"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <Grid ColumnDefinitions="4,*">
+        <Rectangle Grid.Column="0" Fill="{Binding BroadcastAccent}" />
+        <StackPanel Grid.Column="1" Margin="18" Spacing="10">
+          <TextBlock Text="{Binding BroadcastTitle}" FontSize="18" FontWeight="Bold"
+                     TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+          <TextBlock Text="{Binding BroadcastBody}" FontSize="14" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="Read more"
+                    Command="{Binding OpenBroadcastLinkCommand}"
+                    IsVisible="{Binding HasBroadcastLink}" />
+            <Button Content="Dismiss" Command="{Binding DismissBroadcastCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Provenance: a cached MOTD is labelled as cached, never presented as live. -->
+    <TextBlock Text="{Binding ProvenanceText}" FontSize="12" FontStyle="Italic"
+               Foreground="{StaticResource SyxTextSecondaryBrush}"
+               IsVisible="{Binding IsFromCache}" />
+
+    <!-- Link refusal: shown, never a silent no-op. -->
+    <Border IsVisible="{Binding LinkRefusalText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+            CornerRadius="8" Padding="12"
+            Background="{StaticResource SyxSurfaceDarkBrush}"
+            BorderBrush="{StaticResource SyxOrangeBrush}" BorderThickness="1">
+      <TextBlock Text="{Binding LinkRefusalText}" TextWrapping="Wrap" FontSize="13"
+                 Foreground="{StaticResource SyxOrangeBrush}" />
+    </Border>
+
+    <!-- Five-second packaged MOTD fallback (fallback-motd.html). Hero imagery is preserved in the
+         asset; Avalonia 12.1.0 has no pinned multi-RID WebView yet, so the offline notice is shown
+         natively and the HTML is retained for an embedded renderer when one is approved. -->
+    <Border IsVisible="{Binding IsShowingFallback}"
+            Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="WHAT'S NEW (OFFLINE)" FontSize="12" FontWeight="Bold"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <Image Source="avares://Syxx/Assets/syxx-logo-source.png"
+               Width="120" Height="120"
+               IsVisible="{Binding FallbackHasHero}"
+               HorizontalAlignment="Center" />
+        <TextBlock Text="The remote notice did not load within five seconds. Syxx is showing the packaged offline letter (fallback-motd.html), not a blank panel."
+                   TextWrapping="Wrap" FontSize="14"
+                   Foreground="{StaticResource SyxTextBrush}" />
+      </StackPanel>
+    </Border>
+
+    <!-- The full MOTD page opens in the user's own browser until an embedded Linux WebView is pinned. -->
+    <StackPanel Spacing="8" IsVisible="{Binding !IsShowingFallback}">
+      <Button Content="Open the full What's New page" Command="{Binding OpenFullNewsCommand}" />
+      <TextBlock Text="Opens in your browser. Syxx only opens its own https pages."
+                 FontSize="12" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </StackPanel>
+
+  </StackPanel>
+</UserControl>

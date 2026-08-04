@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "futureDated",
+  "htmlState": "notEvaluated",
+  "manifestState": "parsed",
+  "notes": "manifest timestamp is future-dated beyond the 300000 ms skew.",
+  "signatureState": "verified"
+}

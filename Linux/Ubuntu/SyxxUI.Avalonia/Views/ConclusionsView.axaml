@@ -1,0 +1,138 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.ConclusionsView"
+             x:DataType="vm:ConclusionsViewModel">
+
+  <StackPanel Spacing="20">
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="DIAGNOSTICS • SYNTHESIS" FontSize="12" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="Scan my network" FontSize="28" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextBrush}" />
+      <TextBlock Text="One run of every check that needs no setup, then a graded result."
+                 FontSize="14" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </StackPanel>
+
+    <StackPanel Orientation="Horizontal" Spacing="12">
+      <Button Content="Scan my network" Command="{Binding ScanCommand}"
+              IsEnabled="{Binding !IsScanning}" />
+      <TextBlock Text="{Binding ProgressText}" VerticalAlignment="Center" FontSize="13"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <!-- Nothing below renders until a real scan has produced a real conclusion. -->
+    <StackPanel Spacing="20" IsVisible="{Binding HasResult}">
+
+      <!-- A3 report card -->
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <TextBlock Text="{Binding GradeLetter}" FontSize="44" FontWeight="Bold"
+                       Foreground="{Binding SeverityBrush}" VerticalAlignment="Center" />
+            <StackPanel VerticalAlignment="Center" Spacing="4">
+              <TextBlock Text="{Binding GradeLabel}" FontSize="13"
+                         Foreground="{StaticResource SyxTextSecondaryBrush}" />
+              <TextBlock Text="{Binding Headline}" FontSize="17" FontWeight="Bold"
+                         TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+            </StackPanel>
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding TopReasons}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" FontSize="13" TextWrapping="Wrap" Margin="0,2"
+                           Foreground="{StaticResource SyxTextSecondaryBrush}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- A1 conclusion to action -->
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="WHAT THIS MEANS" FontSize="12" FontWeight="Bold"
+                     Foreground="{StaticResource SyxVioletBrightBrush}" />
+          <TextBlock Text="{Binding Meaning}" FontSize="14" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextBrush}" />
+          <TextBlock Text="DO THIS" FontSize="12" FontWeight="Bold" Margin="0,8,0,0"
+                     Foreground="{StaticResource SyxVioletBrightBrush}" />
+          <TextBlock Text="{Binding PrimaryAction}" FontSize="14" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextBrush}" />
+        </StackPanel>
+      </Border>
+
+      <!-- A2 plain explanation -->
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="WHY WE THINK SO" FontSize="12" FontWeight="Bold"
+                     Foreground="{StaticResource SyxVioletBrightBrush}" />
+          <TextBlock Text="{Binding Narrative}" FontSize="14" TextWrapping="Wrap"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Stage-5: renders only when the engine's DTO is present AND valid. -->
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="10">
+          <TextBlock Text="REASONING" FontSize="12" FontWeight="Bold"
+                     Foreground="{StaticResource SyxVioletBrightBrush}" />
+          <StackPanel IsVisible="{Binding HasStage5}" Spacing="8">
+            <TextBlock Text="{Binding Stage5Headline}" FontSize="16" FontWeight="Bold"
+                       TextWrapping="Wrap" Foreground="{Binding SeverityBrush}" />
+            <TextBlock Text="{Binding ConfidenceText}" FontSize="13"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}" />
+            <TextBlock Text="{Binding CompletenessText}" FontSize="13"
+                       Foreground="{StaticResource SyxTextSecondaryBrush}" />
+            <ItemsControl ItemsSource="{Binding HonestyLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}" FontSize="13" TextWrapping="Wrap" Margin="0,2"
+                             Foreground="{StaticResource SyxOrangeBrush}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <TextBlock Text="{Binding Stage5Unavailable}" FontSize="13" TextWrapping="Wrap"
+                     IsVisible="{Binding !HasStage5}"
+                     Foreground="{StaticResource SyxOrangeBrush}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Coverage: what ran and what did not. -->
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="COVERAGE" FontSize="12" FontWeight="Bold"
+                     Foreground="{StaticResource SyxVioletBrightBrush}" />
+          <TextBlock Text="Checks that ran:" FontSize="13"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <ItemsControl ItemsSource="{Binding Ran}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" FontSize="13" Margin="8,1"
+                           Foreground="{StaticResource SyxTextBrush}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="Checks that did not run:" FontSize="13" Margin="0,6,0,0"
+                     Foreground="{StaticResource SyxTextSecondaryBrush}" />
+          <ItemsControl ItemsSource="{Binding Skipped}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" FontSize="13" Margin="8,1"
+                           Foreground="{StaticResource SyxOrangeBrush}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </StackPanel>
+</UserControl>

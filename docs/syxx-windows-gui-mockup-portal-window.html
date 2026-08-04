@@ -1,0 +1,536 @@
+
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Syxx Windows GUI Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse 1000px 700px at 50% 45%, #0c1a30 0%, #060d1a 65%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── Glow halo ── */
+  .portal-glow {
+    position: absolute;
+    width: 800px;
+    height: 720px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at 48% 52%,
+      rgba(140,92,245,0.16) 0%,
+      rgba(232,245,60,0.10) 45%,
+      transparent 72%);
+    filter: blur(42px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Windows portal: slightly different blob — more angular, 
+     echoes Win11's asymmetric rounded-rectangle language ── */
+  .portal-window {
+    position: relative;
+    z-index: 1;
+    width: 740px;
+    height: 660px;
+    /* Slightly more geometric blob — Win11 feels squarer */
+    clip-path: path('M 44 28 C 120 4 480 0 650 18 C 716 28 740 72 738 170 C 736 280 748 360 740 445 C 730 540 714 626 644 648 C 564 672 420 668 300 666 C 180 664 80 672 36 638 C -8 604 4 528 8 440 C 12 354 -2 270 4 186 C 10 102 -32 52 44 28 Z');
+    background: rgba(10, 16, 28, 0.96);
+    /* Mica-style: slightly more matte, less saturated than macOS */
+    backdrop-filter: blur(20px) saturate(1.2) brightness(0.95);
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(140,92,245,0.14),
+      0 0 55px rgba(140,92,245,0.18),
+      0 44px 120px rgba(0,0,0,0.72);
+  }
+
+  /* Mica shimmer — slightly cooler, bluer tint than macOS version */
+  .portal-window::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 55% 35% at 50% 2%, rgba(140,92,245,0.07) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 25% at 10% 95%, rgba(232,245,60,0.06) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Windows titlebar strip — custom, no OS chrome ── */
+  .win-titlebar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 38px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    /* Very subtle Mica top edge */
+    background: linear-gradient(180deg, rgba(140,92,245,0.07) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: move;
+    user-select: none;
+  }
+
+  .win-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .win-brand-icon {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #E8F53C 0%, #8C5CF5 100%);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 7px rgba(232,245,60,.3), 0 0 12px rgba(140,92,245,.2);
+    flex-shrink: 0;
+  }
+  .win-brand-name {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    color: #C7D0E6;
+  }
+  .win-title-text {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    color: #3d5068;
+    letter-spacing: .04em;
+  }
+
+  /* Windows caption buttons — Fluent-style */
+  .win-caption-btns {
+    display: flex;
+    gap: 0;
+  }
+  .win-cap-btn {
+    width: 38px; height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #6E7A96;
+    transition: background 0.15s, color 0.15s;
+  }
+  .win-cap-btn:hover { background: rgba(255,255,255,0.07); color: #E8ECF6; }
+  .win-cap-btn.close:hover { background: #c42b1c; color: white; }
+  .win-cap-btn svg { width: 10px; height: 10px; }
+
+  /* ── Inner layout ── */
+  .inner {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 46px 26px 24px;
+  }
+
+  /* ── Tab bar — Windows uses a slightly more rectangular pill ── */
+  .tab-bar {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 7px 3px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #52637a;
+    cursor: pointer;
+  }
+  .tab.active {
+    background: rgba(140,92,245,0.14);
+    color: #C7A9FF;
+    border: 1px solid rgba(140,92,245,0.25);
+  }
+
+  /* ── Panel ── */
+  .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .section-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: #52637a;
+    margin-bottom: 4px;
+  }
+
+  /* ── Inputs ── */
+  .input-row { display: flex; gap: 7px; align-items: center; }
+  .field {
+    flex: 1;
+    padding: 8px 11px;
+    font-size: 12.5px;
+    font-family: 'Cascadia Code', 'Consolas', ui-monospace, monospace;
+    color: #D8E0F0;
+    background: #0c1624;
+    border: 1px solid #1e3050;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field:focus { border-color: rgba(140,92,245,0.55); box-shadow: 0 0 0 2px rgba(140,92,245,0.1); }
+  .field-sm { width: 84px; flex: none; }
+  select.field { appearance: none; cursor: pointer; }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #8C5CF5 0%, #E8F53C 100%);
+    color: #0A0F1E;
+  }
+  .btn-ghost {
+    background: rgba(255,255,255,0.05);
+    color: #9AA6C0;
+    border: 1px solid rgba(255,255,255,0.09);
+  }
+  .btn-danger {
+    background: rgba(239,68,68,0.14);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+
+  /* ── Results terminal ── */
+  .results-box {
+    flex: 1;
+    background: #050c18;
+    border: 1px solid #182840;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .results-header {
+    background: #09152a;
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid #182840;
+  }
+  .rtitle {
+    font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 10px;
+    color: #334d68;
+    margin: 0 auto;
+  }
+  /* Win terminal uses Cascadia Code, slightly different feel */
+  .results-body {
+    flex: 1;
+    padding: 12px 15px;
+    overflow-y: auto;
+    font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.65;
+  }
+  .t-cmd     { color: #D8E0F0; }
+  .t-success { color: #E8F53C; }
+  .t-info    { color: #3d5572; }
+  .t-warn    { color: #f59e0b; }
+  .t-tamper  { color: #ef4444; }
+  .t-secure  { color: #4ade80; }
+  .t-purple  { color: #C7A9FF; }
+  .t-ps      { color: #C7A9FF; } /* PowerShell-style prompt color */
+
+  /* ── Status bar ── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 0 2px;
+  }
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: #3d5068;
+  }
+  .pulse {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #8C5CF5;
+    box-shadow: 0 0 6px rgba(140,92,245,0.7);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+  .verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 4px; /* Windows uses squarer badges */
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .v-secure       { background: rgba(74,222,128,.12); color: #4ade80; border: 1px solid rgba(74,222,128,.25); }
+  .v-tampered     { background: rgba(239,68,68,.12);  color: #ef4444; border: 1px solid rgba(239,68,68,.25); }
+  .v-inconclusive { background: rgba(245,158,11,.10); color: #f59e0b; border: 1px solid rgba(245,158,11,.22); }
+
+  /* ── Toggle rows ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 11px;
+    background: #0c1624;
+    border: 1px solid #1e3050;
+    border-radius: 6px;
+  }
+  .toggle-label { font-size: 11.5px; color: #B7C1D9; }
+  .toggle-sub   { font-size: 10px; color: #3d5068; }
+  .tog {
+    width: 34px; height: 18px;
+    border-radius: 9px;
+    background: #1e3a5f;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid #2a4a6e;
+    flex-shrink: 0;
+  }
+  .tog.on { background: rgba(140,92,245,0.3); border-color: rgba(140,92,245,0.5); }
+  .tog::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #3d5068;
+    transition: left 0.2s, background 0.2s;
+  }
+  .tog.on::after { left: 18px; background: #C7A9FF; }
+</style>
+</head>
+<body>
+
+<div class="portal-glow"></div>
+
+<div class="portal-window">
+
+  
+  <div class="win-titlebar">
+    <div class="win-brand">
+      <div class="win-brand-icon">
+        <svg width="13" height="13">
+          <defs>
+            
+              <stop offset="0"></stop>
+              <stop offset="1"></stop>
+            
+          </defs>
+          <path d="M10 32 C19 18 45 18 54 32 C45 46 19 46 10 32 Z" fill="none" stroke="url(#wg)" stroke-width="5"></path>
+          <circle cx="32" cy="32" r="8" fill="url(#wg)"></circle>
+          <circle cx="32" cy="32" r="3" fill="#0A0F1E"></circle>
+        </svg>
+      </div>
+      <span class="win-brand-name">SYXX</span>
+    </div>
+    <div class="win-title-text">Syxx Lyin' Eyes · DNS Investigation Suite</div>
+    <div class="win-caption-btns">
+      
+      <div class="win-cap-btn">
+        <svg fill="currentColor"><rect width="10" height="1"></rect></svg>
+      </div>
+      
+      <div class="win-cap-btn">
+        <svg fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".6" y=".6" width="8.8" height="8.8" rx="1"></rect></svg>
+      </div>
+      
+      <div class="win-cap-btn close">
+        <svg fill="none" stroke="currentColor" stroke-width="1.4"><line x1="1" y1="1" x2="9" y2="9"></line><line x1="9" y1="1" x2="1" y2="9"></line></svg>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="inner">
+
+    
+    <div class="tab-bar">
+      <div class="tab">NSLook</div>
+      <div class="tab active">Cages</div>
+      <div class="tab">Mirror</div>
+      <div class="tab">Key</div>
+      <div class="tab">Leak</div>
+      <div class="tab">Witness</div>
+    </div>
+
+    
+    <div class="panel">
+
+      <div>
+        <div class="section-label">Capture, Forensics &amp; Attribution — syxx-cages</div>
+        <div class="input-row">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;background:#0c1624;border:1px solid #1e3050;border-radius:6px;padding:8px 11px">
+            <span style="font-size:11px;color:#52637a;white-space:nowrap">Duration</span>
+            <input class="field" type="range" style="flex:1;accent-color:#8C5CF5;background:none;border:none;padding:0;height:4px" />
+            <span style="font-size:12px;font-family:Consolas,monospace;color:#C7A9FF;white-space:nowrap;min-width:40px">30 s</span>
+          </div>
+          <div class="toggle-row" style="border-radius:6px;gap:10px">
+            <div class="toggle-label" style="font-size:11px;white-space:nowrap">IPv6</div>
+            <div class="tog on"></div>
+          </div>
+          <button class="btn btn-primary">▶ Capture</button>
+          <button class="btn btn-danger">■ Stop</button>
+        </div>
+      </div>
+
+      
+      <div class="results-box" style="flex:1">
+        <div class="results-header">
+          <div style="width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0"></div>
+          <div style="width:9px;height:9px;border-radius:50%;background:#f59e0b;flex-shrink:0"></div>
+          <div style="width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>
+          <div class="rtitle">Syxx Cages · live capture · port 53 · IPv4 + IPv6</div>
+          <div style="font-size:10px;color:#C7A9FF;margin-left:auto;font-family:Consolas,monospace">● LIVE</div>
+        </div>
+        <div class="results-body">
+          
+          <div style="display:flex;gap:10px;padding:0 0 6px;border-bottom:1px solid #14243a;margin-bottom:6px;font-size:10px;color:#3d5572;font-weight:600;letter-spacing:.08em;text-transform:uppercase">
+            <span style="width:76px;flex-shrink:0">Time</span>
+            <span style="width:80px;flex-shrink:0">Process</span>
+            <span style="width:52px;flex-shrink:0">Dir</span>
+            <span style="flex:1">Query</span>
+            <span style="width:60px;text-align:right">Resolver</span>
+          </div>
+          
+          <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)">
+            <span style="width:76px;flex-shrink:0;font-size:11px;color:#3d5572">14:02:33.114</span>
+            <span style="width:80px;flex-shrink:0;font-size:11px;color:#C7A9FF;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Chrome</span>
+            <span style="width:52px;flex-shrink:0;font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(232,245,60,0.1);color:#E8F53C;align-self:center">OUT</span>
+            <span style="flex:1;font-size:11px;color:#9AA6C0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">accounts.google.com A</span>
+            <span style="width:60px;font-size:11px;color:#52637a;text-align:right">8.8.8.8</span>
+          </div>
+          <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)">
+            <span style="width:76px;flex-shrink:0;font-size:11px;color:#3d5572">14:02:33.198</span>
+            <span style="width:80px;flex-shrink:0;font-size:11px;color:#C7A9FF">Chrome</span>
+            <span style="width:52px;flex-shrink:0;font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(140,92,245,0.1);color:#C7A9FF;align-self:center">IN</span>
+            <span style="flex:1;font-size:11px;color:#9AA6C0">accounts.google.com → 142.250.80.45</span>
+            <span style="width:60px;font-size:11px;color:#52637a;text-align:right">8.8.8.8</span>
+          </div>
+          <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)">
+            <span style="width:76px;flex-shrink:0;font-size:11px;color:#3d5572">14:02:34.003</span>
+            <span style="width:80px;flex-shrink:0;font-size:11px;color:#E8F53C;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">svchost</span>
+            <span style="width:52px;flex-shrink:0;font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(232,245,60,0.1);color:#E8F53C;align-self:center">OUT</span>
+            <span style="flex:1;font-size:11px;color:#9AA6C0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">settings-win.data.microsoft.com A</span>
+            <span style="width:60px;font-size:11px;color:#52637a;text-align:right">1.1.1.1</span>
+          </div>
+          <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)">
+            <span style="width:76px;flex-shrink:0;font-size:11px;color:#3d5572">14:02:34.087</span>
+            <span style="width:80px;flex-shrink:0;font-size:11px;color:#E8F53C">svchost</span>
+            <span style="width:52px;flex-shrink:0;font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(140,92,245,0.1);color:#C7A9FF;align-self:center">IN</span>
+            <span style="flex:1;font-size:11px;color:#9AA6C0">settings-win.data.microsoft.com → 20.50.128.8</span>
+            <span style="width:60px;font-size:11px;color:#52637a;text-align:right">1.1.1.1</span>
+          </div>
+          <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)">
+            <span style="width:76px;flex-shrink:0;font-size:11px;color:#3d5572">14:02:35.221</span>
+            <span style="width:80px;flex-shrink:0;font-size:11px;color:#f59e0b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">unknown</span>
+            <span style="width:52px;flex-shrink:0;font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(232,245,60,0.1);color:#E8F53C;align-self:center">OUT</span>
+            <span style="flex:1;font-size:11px;color:#f59e0b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">xmit.exfil-demo.io TXT ⚠</span>
+            <span style="width:60px;font-size:11px;color:#52637a;text-align:right">192.168.1.1</span>
+          </div>
+          <div style="display:flex;gap:10px;padding:5px 0">
+            <span style="width:76px;flex-shrink:0;font-size:11px;color:#3d5572">14:02:35.812</span>
+            <span style="width:80px;flex-shrink:0;font-size:11px;color:#ef4444">unknown</span>
+            <span style="width:52px;flex-shrink:0;font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(239,68,68,0.12);color:#ef4444;align-self:center">IN</span>
+            <span style="flex:1;font-size:11px;color:#ef4444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">xmit.exfil-demo.io → HIGH ENTROPY TXT ⚠</span>
+            <span style="width:60px;font-size:11px;color:#52637a;text-align:right">192.168.1.1</span>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="status-bar">
+        <div class="status-pill">
+          <div class="pulse"></div>
+          Capturing · 18 s remaining
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" style="font-size:10px;padding:5px 12px">Export JSON</button>
+          <button class="btn btn-ghost" style="font-size:10px;padding:5px 12px">Generate Report</button>
+        </div>
+        <div class="verdict v-tampered">⚠ Suspicious TXT</div>
+      </div>
+
+    </div>
+    
+
+  </div>
+</div>
+
+
+<div style="position:absolute;right:18px;top:50%;transform:translateY(-50%);width:168px;z-index:10;display:flex;flex-direction:column;gap:8px">
+  <div style="font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#2e4158;margin-bottom:2px">Windows tabs</div>
+
+  <div style="background:rgba(8,14,26,0.88);border:1px solid #182840;border-radius:6px;padding:10px 11px;font-size:10px;color:#52637a;line-height:1.5">
+    <div style="color:#E8F53C;font-weight:700;margin-bottom:3px">NSLook</div>
+    Domain · record type · resolver fields. DNSSEC toggle. DoH URL. Consolas output.
+  </div>
+
+  <div style="background:rgba(8,14,26,0.88);border:1px solid #182840;border-radius:6px;padding:10px 11px;font-size:10px;color:#52637a;line-height:1.5">
+    <div style="color:#C7A9FF;font-weight:700;margin-bottom:3px">Mirror</div>
+    Domain input. Vantage resolver picker. Two-column diff. Tampered/Secure/Inconclusive badge.
+  </div>
+
+  <div style="background:rgba(8,14,26,0.88);border:1px solid #182840;border-radius:6px;padding:10px 11px;font-size:10px;color:#52637a;line-height:1.5">
+    <div style="color:#4ade80;font-weight:700;margin-bottom:3px">Key</div>
+    DNS resolver list. VPN · Captive Portal · Encrypted DNS tri-state cards. Network interfaces.
+  </div>
+
+  <div style="background:rgba(8,14,26,0.88);border:1px solid #182840;border-radius:6px;padding:10px 11px;font-size:10px;color:#52637a;line-height:1.5">
+    <div style="color:#f59e0b;font-weight:700;margin-bottom:3px">Leak</div>
+    One-tap test. Token issued. Observed resolver. HMAC-verified result. Egress attestation.
+  </div>
+
+  <div style="background:rgba(8,14,26,0.88);border:1px solid #182840;border-radius:6px;padding:10px 11px;font-size:10px;color:#52637a;line-height:1.5">
+    <div style="color:#8C5CF5;font-weight:700;margin-bottom:3px">Witness</div>
+    Sign session. ED25519 key display. Evidence hash. Ledger publication toggle.
+  </div>
+</div>
+
+<div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;border-top:1px solid rgba(255,255,255,0.03);padding-top:9px;color:#1a2a3a;font-size:10px;font-family:'Segoe UI',sans-serif">
+  Made with IBM Bob
+</div>
+
+</body>
+</html>

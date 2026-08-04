@@ -1,0 +1,470 @@
+# Syxx four-runtime reasoning-parity CI (UBUNTU-PORT-PLAN.md WS-A3 / WS-B).
+#
+# The reasoning core (Syxx.Kit) ships as one IL across three .NET runtimes; the
+# macOS twin (SyxxKit) is a separate Swift port. Parity is a deliverable, not a
+# hope: this matrix builds + tests the shared engine on win-x64, linux-x64,
+# linux-arm64 (matching the user's Ubuntu Desktop arm64 ISO) and swift-tests the
+# macOS twin.
+#
+# PARITY GATE (Phase 7.1 QA-3): the `parity` job below used to be a NO-OP — its only
+# reachable path emitted a warning annotation and `exit 0`, because the transcripts it
+# diffed are produced by an emitter (WS-B2) that has never shipped. It therefore rendered
+# as a passing check on every PR while measuring nothing. It now runs
+# scripts/cross-platform-parity-gate.py, which asserts against source that exists TODAY
+# (span names + shared wire vocabularies) and FAILS the build on divergence. The
+# transcript diff remains as a second, additive assertion for when WS-B2 lands.
+#
+# .NET SDK: the pin lives in Windows/global.json (10.0.100 release,
+# rollForward=latestMinor, no prerelease). setup-dotnet reads it directly. The
+# plan's alternative is `dotnet-install.sh --channel 10.0`.
+#
+# NOTE (WS-A / pre-Tier-2): CA1416 stays a WARNING here, not an error. Syxx.Kit
+# still has un-gated Windows-only APIs (LicenseManager DPAPI, HasConfiguredDoHTemplate,
+# CageCommand SIO_RCVALL, WindowsPrincipal) that Tier 2 (WS-C/WS-D) fixes. Turning on
+# <WarningsAsErrors>CA1416</WarningsAsErrors> (WS-A3) before Tier 2 lands would break
+# the Linux build and this matrix. That switch is deferred to the Tier-2 completion
+# commit; see the report to syxx-neural-planner.
+
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# E062: SENTRY_AUTH_TOKEN must be at workflow level so step `if:` conditions can
+# see it. GitHub Actions evaluates step `if:` BEFORE applying that step's own
+# `env:` block, so a step-level env var is always empty when `if:` is checked.
+env:
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  SENTRY_URL: ${{ secrets.SENTRY_URL }}
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            runs-on: macos-14
+            kind: swift
+            transcript: transcript.macos-arm64.json
+          - name: windows-x64
+            runs-on: windows-latest
+            kind: dotnet
+            rid: win-x64
+            transcript: transcript.net-win-x64.json
+          - name: ubuntu-x64
+            runs-on: ubuntu-latest
+            kind: dotnet
+            rid: linux-x64
+            transcript: transcript.net-linux-x64.json
+          - name: ubuntu-arm64
+            runs-on: ubuntu-24.04-arm
+            kind: dotnet
+            rid: linux-arm64
+            transcript: transcript.net-linux-arm64.json
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------- .NET legs
+      - name: Install .NET SDK (from Windows/global.json)
+        if: matrix.kind == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: Windows/global.json
+
+      # Linux builds the WinUI-free solution filter (Syxx.Kit + Syxx CLI + tests);
+      # the full Windows/Syxx.sln cannot restore off Windows (SyxxUI is net10.0-windows).
+      - name: Build Linux solution filter (no WinUI)
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux'
+        run: dotnet build Windows/Syxx.Linux.slnf -c Release
+
+      # F043: Ubuntu witness parity tests. The three-platform witness parity harness
+      # (corpus/witness-testify-parity/) defines three loaders: macOS, Windows, and Ubuntu.
+      # The Ubuntu leg (SyxxUI.Avalonia.Tests) is in Syxx.Linux.slnf but was never executed
+      # by CI — "three-platform parity" was asserted by two platforms. This step runs it.
+      - name: Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux'
+        run: dotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo
+
+      - name: Build reasoning core (Windows)
+        if: matrix.kind == 'dotnet' && runner.os == 'Windows'
+        run: dotnet build Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj -c Release
+
+      # SyxxUI (WinUI 3) has no "Any CPU" platform (see build.ps1) and cannot restore
+      # off Windows, so it is built ONLY here, never via the Linux slnf. windows-latest
+      # runners are x64. This is the only CI leg that ever compiles the GUI project
+      # (AppViewModel.cs, WitnessView/MirrorView/etc.) — without it, a Windows GUI
+      # regression (e.g. delta D091, B195) can ship verified only by static reading,
+      # with no compiler ever seeing the change.
+      - name: Build Windows GUI (SyxxUI, x64)
+        if: matrix.kind == 'dotnet' && runner.os == 'Windows'
+        run: dotnet build Windows/dotNET/SyxxUI/SyxxUI.csproj -c Release -p:Platform=x64
+
+      # SyxxUI.Tests (D101): WinUI-3-TFM'd sibling test project referencing SyxxUI.csproj,
+      # so it shares SyxxUI's windows-only/x64-only build constraints above and can only
+      # run on this leg. This is the FIRST time this project has ever been compiled by
+      # any CI job or agent (D101) — it was scaffolded and statically reviewed only.
+      - name: Test Windows GUI witness regressions (SyxxUI.Tests, x64)
+        if: matrix.kind == 'dotnet' && runner.os == 'Windows'
+        run: dotnet test Windows/dotNET/SyxxUI.Tests/SyxxUI.Tests.csproj -c Release -p:Platform=x64
+
+      - name: Test the shared reasoning core (Syxx.Tests)
+        if: matrix.kind == 'dotnet'
+        run: dotnet test Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj -c Release --nologo
+
+      # Real-run bar: the CLI must self-contained-publish for each Linux RID with its
+      # per-RID libsodium.so. Untrimmed on purpose (NSec + DNS reflection are trim-hostile).
+      - name: Verify self-contained CLI publish (${{ matrix.rid }})
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux'
+        run: >
+          dotnet publish Windows/dotNET/Syxx/Syxx.csproj -c Release
+          -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
+          -o out/${{ matrix.rid }}
+
+      # --------------------------------------------------------------- Swift leg
+      - name: Test the macOS twin (SyxxKit)
+        if: matrix.kind == 'swift'
+        run: swift test --package-path macOS
+
+      # C061: the fabricated preview fixture (`Conclusion.mockInconclusive`) is `#if DEBUG`-gated
+      # and must be structurally absent from every release product. Failure case: remove the
+      # `#if DEBUG` guard in Conclusion.swift → the symbol reappears → this step fails.
+      - name: Release build + mockInconclusive symbol-absence check (C061)
+        if: matrix.kind == 'swift'
+        run: |
+          swift build --package-path macOS -c release
+          found=0
+          # F044: check all three executables declared in Package.swift (syxx, syxx-gui, DeepSyxx)
+          # and fail if any binary is missing — nm on a missing file would silently pass.
+          for bin in macOS/.build/release/syxx macOS/.build/release/syxx-gui macOS/.build/release/DeepSyxx; do
+            if [ ! -f "$bin" ]; then
+              echo "::error title=C061 gate input missing::Expected release binary '$bin' not found. Product rename or layout change may have moved the build output."
+              found=1
+              continue
+            fi
+            if nm "$bin" | grep -q mockInconclusive; then
+              echo "::error title=C061 regression::fabricated fixture symbol 'mockInconclusive' present in release binary $bin"
+              found=1
+            fi
+          done
+          exit $found
+
+      # -------------------------------------------------------- SwiftLint
+      # Enforces safety rules (no force unwrap, no force cast, no force try)
+      # that are critical to the tri-state honesty protocol.
+      - name: SwiftLint (macOS sources)
+        if: matrix.kind == 'swift'
+        run: |
+          brew install swiftlint 2>/dev/null || true
+          swiftlint lint --config .swiftlint.yml --strict
+
+      # ----------------------------------------------- parity transcript (WS-B2)
+      # ---------------------------------------------------------- Sentry symbols
+      # Upload dSYMs (macOS) and PDBs (Windows) to Sentry (self-hosted) for
+      # symbolicated crash reports. No-ops if SENTRY_AUTH_TOKEN is not configured.
+      # SENTRY_URL points sentry-cli at the self-hosted instance.
+      - name: Install sentry-cli
+        if: env.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
+        run: |
+          curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: Upload macOS dSYMs to Sentry
+        if: matrix.kind == 'swift' && env.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
+        run: |
+          sentry-cli debug-files upload \
+            --org ${{ secrets.SENTRY_ORG }} \
+            --project syxx-macos \
+            --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+            macOS/.build/arm64-apple-macosx/release/
+
+      - name: Upload Windows PDBs to Sentry
+        if: matrix.kind == 'dotnet' && runner.os == 'Windows' && env.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
+        run: |
+          sentry-cli debug-files upload \
+            --org ${{ secrets.SENTRY_ORG }} \
+            --project syxx-windows \
+            --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+            Windows/dotNET/SyxxUI/bin/
+
+      - name: Create Sentry release (server)
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux' && matrix.rid == 'linux-x64' && env.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
+        run: |
+          sentry-cli releases new "syxx-server@${{ github.sha }}"
+          sentry-cli releases set-commits "syxx-server@${{ github.sha }}" --auto
+          sentry-cli releases finalize "syxx-server@${{ github.sha }}"
+
+      # Phase 4.2: production-engine behavioral transcript (empty SectionInputs vector).
+      - name: Emit parity transcript (${{ matrix.transcript }})
+        if: matrix.kind == 'swift'
+        run: |
+          swift run --package-path macOS syxx parity-transcript --out=${{ matrix.transcript }}
+      - name: Emit parity transcript (${{ matrix.transcript }})
+        if: matrix.kind == 'dotnet'
+        run: |
+          dotnet run --project Windows/dotNET/Syxx/Syxx.csproj -c Release -- parity-transcript --out=${{ matrix.transcript }}
+      - name: Upload parity transcript (${{ matrix.transcript }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.transcript }}
+          path: ${{ matrix.transcript }}
+          if-no-files-found: error
+
+  # ---------------------------------------------------------- D096: macOS packaging
+  # The macos-arm64 leg runs `swift test` and a release build but never invokes
+  # bundle-app.sh, never runs codesign/notarytool/stapler/spctl, and never uploads
+  # an app or DMG artifact. The .app bundle layout, Info.plist generation,
+  # SMPrivilegedExecutables string, and helper embedding are NEVER exercised by
+  # any automation — which is how D079's missing __launchd_plist and the identifier
+  # mismatches went unnoticed. This job runs the bundler and asserts the four
+  # structural checks that would have caught those defects outright.
+  package-macos:
+    name: macOS app bundle + structural assertions
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build release (swift)
+        run: swift build --package-path macOS -c release
+
+      - name: Bundle the .app
+        run: |
+          chmod +x macOS/bundle-app.sh
+          macOS/bundle-app.sh
+
+      - name: Assert __launchd_plist section in helper binary
+        run: |
+          helper="macOS/Syxx.app/Contents/Library/LaunchServices/com.milkandgin.deepsyxx"
+          if [ ! -f "$helper" ]; then
+            # bundle-app.sh may place the helper elsewhere; search for it
+            helper=$(find macOS/Syxx.app -name "com.milkandgin.deepsyxx" -type f 2>/dev/null | head -1)
+          fi
+          if [ -z "$helper" ] || [ ! -f "$helper" ]; then
+            echo "::error title=D096::helper binary not found in app bundle"
+            exit 1
+          fi
+          if ! otool -l "$helper" | grep -q __launchd_plist; then
+            echo "::error title=D096::__launchd_plist section missing from helper binary — D079 would ship again"
+            exit 1
+          fi
+          echo "OK: __launchd_plist present in $helper"
+
+      - name: Assert __info_plist section in helper binary
+        run: |
+          helper=$(find macOS/Syxx.app -name "com.milkandgin.deepsyxx" -type f 2>/dev/null | head -1)
+          if ! otool -l "$helper" | grep -q __info_plist; then
+            echo "::error title=D096::__info_plist section missing from helper binary"
+            exit 1
+          fi
+          echo "OK: __info_plist present in $helper"
+
+      # Signing and notarization are gated on the presence of the signing certificate
+      # so forks and PRs still run the structural assertions unsigned.
+      - name: Import signing certificate
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          echo "$MACOS_CERT_P12" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "" build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: Sign + verify (when certificate available)
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+        run: |
+          codesign --verify --deep --strict macOS/Syxx.app
+          spctl --assess --type exec macOS/Syxx.app || true  # spctl may reject ad-hoc on CI runners
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Syxx-macos-arm64
+          path: macOS/Syxx.app
+          if-no-files-found: error
+
+  # ----------------------------------------------------------- Linux GUI lane
+  # Ubuntu ships FIRST, and until now NOTHING in CI compiled the Avalonia client.
+  # `Ubuntu/SyxxUI.Avalonia` appeared zero times in this workflow and is excluded by
+  # Windows/Syxx.Linux.slnf, yet it ProjectReferences the shared Syxx.Kit. A Kit change
+  # could therefore break the first-ship platform with every leg green. It has happened:
+  # the client stopped compiling on retired DST types and nothing noticed.
+  linux-gui:
+    name: Ubuntu Avalonia GUI build + test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Pinned from Windows/global.json, exactly like the build-test matrix legs. A floating
+      # `10.0.x` here would let the first-ship platform build on a different SDK from the one
+      # every other leg uses, which is how a "works in CI" divergence starts.
+      - name: Set up .NET (pinned from Windows/global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: Windows/global.json
+
+      - name: Build Avalonia client
+        run: dotnet build Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj -c Release --nologo
+
+      - name: Test Avalonia client
+        run: dotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo
+
+  # --------------------------------------------------------------- Server lane
+  # Server security core (DNS tampering detection, Ed25519 signing, licensing)
+  # has 21 test files but no CI job. This job runs pytest, the honesty-coverage
+  # gate (prevents security guard deletion), and Python lint/security scans.
+  server:
+    name: Server pytest + honesty gate + lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create venv and install dependencies
+        run: |
+          cd Server
+          python -m venv venv
+          ./venv/bin/pip install --upgrade pip
+          ./venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+
+      # --- pytest: the Server suite must be green before anything else runs.
+      - name: Run pytest (Server suite)
+        run: |
+          cd Server
+          ./venv/bin/python -m pytest tests/ -q
+
+      # --- Honesty-coverage gate (Phase 0.4): prevents security guard deletion.
+      # The gate runs the suite under coverage and asserts every registered guard
+      # is exercised. A guard no test reaches can be deleted with a green suite.
+      - name: Run honesty-coverage gate
+        run: |
+          ./scripts/honesty-coverage-gate.py
+
+      # --- Ruff: Python lint (Phase 0.6). Tri-state backsliding has no mechanical
+      # backstop without lint. Errors block merge.
+      - name: Run ruff lint
+        run: |
+          cd Server
+          ./venv/bin/ruff check syxx_server/ tests/
+
+      # --- Bandit: Python security scanning (Phase 0.6). Catches common
+      # security issues (hardcoded passwords, SQL injection, weak crypto).
+      - name: Run bandit security scan
+        run: |
+          cd Server
+          ./venv/bin/bandit -r syxx_server/ -c pyproject.toml
+
+  # ------------------------------------------------------------- parity gate
+  # Phase 7.1 QA-3. This job was previously named `diff` and was a NO-OP: the only
+  # reachable path printed `::warning title=Transcript parity gate inactive` and
+  # `exit 0`, because `transcripts/*.json` is always empty (the WS-B2 emitter has
+  # never shipped). A check that cannot fail has never caught anything, yet showed
+  # green on every PR — the exact defect class this product exists to refuse.
+  #
+  # It is split in two on purpose. `parity` runs against SOURCE and takes no `needs:`,
+  # so it reports even when a build leg is red — the answer to "did the platforms
+  # diverge?" must not be withheld because something else failed. `parity-transcript`
+  # keeps the artifact dependency.
+  #
+  # `parity` CANNOT pass vacuously: if it finds no spans, or cannot read either source
+  # tree, it fails (exit 1) or reports cannot-run (exit 2). It never exits 0 without
+  # having compared something.
+  parity:
+    name: cross-platform parity gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- LIVE. Asserts, and fails the build on divergence:
+      #   * macOS SyxxKit OTel span names == Windows Syxx.Kit ActivitySource span names
+      #   * the four determinative states are present and identically spelled on both
+      #   * shared wire values ("clean"/"threatDetected"/"inconclusive"/"untested",
+      #     TriState, tracer outcomes, section ids, section statuses) are byte-identical
+      # Matches on WIRE STRINGS, never on C#/Swift symbol names, so the in-flight
+      # DeterminativeResult->DeterminativeState rename cannot break or bypass it.
+      - name: Source parity gate (span names + wire vocabularies)
+        run: python3 scripts/cross-platform-parity-gate.py --github
+
+      # --- LIVE (0.3b). Fails when one NuGet package id is pinned at two versions across
+      # the projects that share the reasoning core, which is how the Windows and Linux GUIs
+      # end up linking different code behind identical source. Proven to fail on both known
+      # instances (CommunityToolkit.Mvvm 8.3.2/8.4.2, OpenTelemetry 1.9.0/1.16.0).
+      - name: NuGet pin-parity gate
+        run: python3 scripts/package-pin-parity.py --github
+
+  # Phase 4.2: behavioral transcript parity is BLOCKING. Emitters call production
+  # Synthesizer.conclude / Synthesizer.Conclude on a shared empty-input vector.
+  parity-transcript:
+    name: transcript-diff (blocking)
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download parity transcripts
+        uses: actions/download-artifact@v4
+        with:
+          path: transcripts
+          merge-multiple: true
+
+      - name: Diff conclusion transcripts (blocking)
+        run: |
+          echo "Four-runtime transcript-parity diff."
+          shopt -s nullglob
+          found=(transcripts/transcript.*.json)
+          if [ ${#found[@]} -eq 0 ]; then
+            echo "::error title=Transcript parity gate empty::No conclusion transcripts were produced. Emitters must write transcript.*.json from the production synthesizer."
+            exit 1
+          fi
+          expected=4
+          if [ ${#found[@]} -lt $expected ]; then
+            echo "::error title=Transcript parity gate incomplete::Expected $expected transcripts (one per matrix leg: macos-arm64, windows-x64, ubuntu-x64, ubuntu-arm64) but found ${#found[@]}: ${found[*]}."
+            exit 1
+          fi
+          echo "Transcripts found: ${found[*]}"
+          first="${found[0]}"
+          all_match=true
+          for f in "${found[@]:1}"; do
+            if ! diff <(jq --sort-keys . "$first") <(jq --sort-keys . "$f") > /tmp/transcript-diff.txt 2>&1; then
+              echo "::error title=Transcript parity failure::$first vs $f:"
+              cat /tmp/transcript-diff.txt
+              all_match=false
+            fi
+          done
+          if [ "$all_match" != true ]; then
+            exit 1
+          fi
+          echo "All transcripts match."

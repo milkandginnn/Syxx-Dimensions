@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             x:Class="SyxxUI.Avalonia.Views.MirrorView"
+             x:DataType="vm:MirrorViewModel">
+  <StackPanel Spacing="20">
+    <StackPanel Spacing="6">
+      <TextBlock Text="MIRROR • CENSORSHIP &amp; TAMPERING" FontSize="12" FontWeight="Bold"
+                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      <TextBlock Text="The Mirror answered by showing whether the records born locally matched the ones seen far away, and the witness swore that the same names should not change their faces every time they were asked."
+                 FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
+      <TextBlock Text="Mirror tests your DNS resolver for signs of tampering or censorship by resolving a given domain both locally and remotely, comparing the answers across independent vantages."
+                 FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+    </StackPanel>
+
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBox Grid.Column="0" Watermark="Domain (e.g., github.com)" Text="{Binding Domain}" />
+        <Button Grid.Column="1" Content="Check" Command="{Binding CheckCommand}" IsEnabled="{Binding !IsRunning}" />
+      </Grid>
+    </Border>
+
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18" IsVisible="{Binding HasResult}"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="8">
+        <TextBlock Text="DNS RESOLVER MATCHING" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBlock Text="{Binding MatchLine}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap"
+                   Foreground="{Binding MatchBrush}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Pro/server-backed part, honestly deferred on Linux. -->
+    <Border CornerRadius="10" Padding="14" Background="{StaticResource SyxSurfaceDarkBrush}"
+            BorderBrush="{StaticResource SyxOrangeBrush}" BorderThickness="1">
+      <TextBlock Text="{Binding ProNote}" FontSize="13" TextWrapping="Wrap"
+                 Foreground="{StaticResource SyxOrangeBrush}" />
+    </Border>
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,21 @@
+WARP_ASSEMBLY_V1
+
+===== WARP HTML https://example.test/ =====
+<!doctype html>
+<html>
+<head>
+<link rel="modulepreload" href="mod.js">
+<script src="main.js"></script>
+<link rel="preload" as="script" href="pre.js">
+</head>
+<body><p>Modulepreload</p></body>
+</html>
+
+===== WARP JS https://example.test/mod.js =====
+export const mod = "mod.js";
+
+===== WARP JS https://example.test/main.js =====
+console.log("main.js");
+
+===== WARP JS https://example.test/pre.js =====
+console.log("pre.js");

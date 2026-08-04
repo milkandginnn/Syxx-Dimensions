@@ -1,0 +1,71 @@
+{
+  "_note": "Single source of truth for the Witness 'testify' (seal) three-way terminal-outcome parity harness. Read line-for-line by macOS/Tests/SyxxAppTests/WitnessTestifyParityTests.swift, Windows/Syxx.Tests/WitnessTestifyParityTests.cs, and Ubuntu/SyxxUI.Avalonia.Tests/WitnessTestifyParityTests.cs. Mirrors the corpus/probe-parity + corpus/stage0 single-source-of-truth convention (a shared JSON, each platform loads and asserts its own behavior against it; a missing/empty fixture THROWS rather than passing vacuously). Closes the B195..D103 Witness hardening arc. TWO LAYERS: (1) 'planner' scenarios exercise the pure, UI-free decision core WitnessTestifyPlanner (macOS SyxxKit/Trust/WitnessTestifyPlanner.swift, its byte-twin Windows Syxx.Kit/Trust/WitnessTestifyPlanner.cs; Ubuntu references the SAME Syxx.Kit) — these are TRUE cross-platform parity: identical inputs must yield the identical terminal outcome and identical drift on all three. (2) 'viewModel' scenarios exercise the pre-flight guards (steps 1-4: domain-empty validation, key presence, the live vantage probe) that live ABOVE the planner in each platform's view-model and are DELIBERATELY per-platform (DELTAS.md D103 records these as legitimately divergent) — so each carries a perPlatform expectation. outcomeState is one of the shared behavioral enum states idle/running/signed/failed (macOS AppModel.WitnessTestimonyState, Windows AppViewModel.WitnessTestimonyState, Ubuntu WitnessViewModel.WitnessTestimonyState — not the same type, but the same named states with the same triggers). 'running' is a transient in-flight state and NEVER a terminal outcome, so it is asserted-against (never-stuck-Running) rather than expected. 'n_a' means the platform has no such branch at all. HONESTY: 'signed' means a real Ed25519 seal over a real comparison was produced; 'failed' means an honest guard or a real signer throw fired; no synthetic verdict is ever manufactured. Each loader drives the scenarios it can execute deterministically & offline (loaderDrives=true) and documents-skips the rest with skipReason — never a silent pass.",
+  "_schema": "witness-testify-parity fixture v1. WitnessTestifyPlanner terminal-outcome + drift tri-state replay (shared), plus per-platform view-model pre-flight-guard terminal outcomes.",
+  "scenarios": [
+    {
+      "id": "happy-path",
+      "layer": "planner",
+      "description": "Valid domain, valid Ed25519 key, live comparison succeeds with NO redirection. WitnessTestifyPlanner.seal signs the comparison and, correctly, derives no drift. View-models render this as .signed with an empty drift list.",
+      "planner": { "validKey": true, "redirectionDetected": false },
+      "expected": { "outcomeState": "signed", "producesDrift": false }
+    },
+    {
+      "id": "redirection-detected",
+      "layer": "planner",
+      "description": "Valid domain, valid key, live comparison SUCCEEDS but flags redirection. The seal must succeed AND carry a drift (this is the exact step D093 silently dropped on Windows). previousAnswer=first public resolver's joined rdata, newAnswer=local resolver's joined rdata, resolver=local.",
+      "planner": { "validKey": true, "redirectionDetected": true },
+      "expected": { "outcomeState": "signed", "producesDrift": true }
+    },
+    {
+      "id": "signer-throws",
+      "layer": "planner",
+      "description": "A real comparison exists but the signing key is unusable (empty/invalid base64) so WitnessSigner.createSignedSnapshot throws. seal must PROPAGATE the throw (not swallow it) so the caller's catch renders its 'Could not create witness snapshot: …' message. View-models render this as .failed. No drift.",
+      "planner": { "validKey": false, "redirectionDetected": false },
+      "expected": { "outcomeState": "failed", "producesDrift": false }
+    },
+    {
+      "id": "empty-domain",
+      "layer": "viewModel",
+      "description": "The domain field is empty / whitespace-only. A pre-flight guard fires before any probe or signing. DIVERGENT by design: macOS and Windows surface an explicit .failed (macOS 'Enter a domain to attest.'; Windows folds it into the null-comparison 'Nothing to witness …' path); Ubuntu's SignAsync early-returns as a silent no-op, leaving the state Idle (WitnessViewModel.cs:92 `if (IsRunning || string.IsNullOrWhiteSpace(Domain)) return;`). No drift on any platform.",
+      "producesDrift": false,
+      "perPlatform": {
+        "macos":   { "outcomeState": "failed", "loaderDrives": true,  "skipReason": "" },
+        "windows": { "outcomeState": "failed", "loaderDrives": false, "skipReason": "AppViewModel lives in SyxxUI (WinUI3), unbuildable/untestable on this non-Windows CI host (D101); behavior is pinned by Windows/SyxxUI.Tests/AppViewModelWitnessTests.cs (WitnessTestifyAsync_EmptyDomain_… )." },
+        "ubuntu":  { "outcomeState": "idle",   "loaderDrives": true,  "skipReason": "" }
+      }
+    },
+    {
+      "id": "missing-key",
+      "layer": "viewModel",
+      "description": "A domain is present but there is no signing key. macOS and Windows surface .failed('A signing key is required — a snapshot signed with a default/empty key would be forgeable.'). Ubuntu has NO such branch: its Linux client generates a fresh ephemeral keypair per sign (WitnessViewModel.cs:113) and shows the key for the user to save (key persistence is the documented G16 gap), so 'missing key' is not a reachable state there. No drift.",
+      "producesDrift": false,
+      "perPlatform": {
+        "macos":   { "outcomeState": "failed", "loaderDrives": true,  "skipReason": "" },
+        "windows": { "outcomeState": "failed", "loaderDrives": false, "skipReason": "AppViewModel lives in SyxxUI (WinUI3), unbuildable on this host (D101); behavior is pinned by Windows/SyxxUI.Tests/AppViewModelWitnessTests.cs (WitnessTestifyAsync_NoSigningKey_… )." },
+        "ubuntu":  { "outcomeState": "n_a",    "loaderDrives": false, "skipReason": "No missing-key branch exists on the Linux client — a fresh ephemeral keypair is generated per sign (WitnessViewModel.cs:113); key persistence is the documented G16 gap." }
+      }
+    },
+    {
+      "id": "no-comparison-result",
+      "layer": "viewModel",
+      "description": "The live vantage comparison yields no usable result — the domain did not resolve / a transport failure occurred — so there is nothing to seal. Windows and Ubuntu surface .failed('Nothing to witness — the domain did not resolve, so there is no result to seal.') from an explicit null-comparison branch. macOS reaches the SAME terminal state (.failed) but via a THROWN comparison rather than a null return (VantageComparer.compareVantagePoints returns a non-optional ComparisonResult and throws on failure; the catch produces 'Could not create witness snapshot: …'); macOS AppModel has no injection seam for the comparer, so this is only reachable with real network egress and is pinned by AppModelWitnessTests (real-network) rather than driven offline here. No drift.",
+      "producesDrift": false,
+      "perPlatform": {
+        "macos":   { "outcomeState": "failed", "loaderDrives": false, "skipReason": "macOS AppModel has no injection seam for VantageComparer; reaching the no-result terminal state requires real network egress (a throwing comparison), pinned by macOS/Tests/SyxxAppTests/AppModelWitnessTests.swift, not driven offline in this loader." },
+        "windows": { "outcomeState": "failed", "loaderDrives": false, "skipReason": "Driven via AppViewModel's injected compareVantagePoints seam returning null, but AppViewModel is in SyxxUI (WinUI3), unbuildable on this host (D101); pinned by Windows/SyxxUI.Tests/AppViewModelWitnessTests.cs." },
+        "ubuntu":  { "outcomeState": "failed", "loaderDrives": true,  "skipReason": "" }
+      }
+    },
+    {
+      "id": "redirection-detected-signed",
+      "layer": "viewModel",
+      "description": "A domain resolves to a live comparison that FLAGS redirection, and the seal succeeds. This is the view-model-level counterpart to the planner 'redirection-detected' scenario: it asserts that a platform's VIEW-MODEL, not just the shared planner, actually surfaces the drift the seal implies (the exact wiring D093 dropped on Windows and D105 found missing on Ubuntu). outcomeState=signed AND producesDrift=true. Only Ubuntu drives this offline here — its WitnessViewModel.SignAsync routes the drift through the shared WitnessTestifyPlanner.DriftIfRedirected and stores it on WitnessViewModel.Drift (D105 fix). previousAnswer=first public resolver's joined rdata, newAnswer=local resolver's joined rdata, resolver=local. macOS/Windows produce the SAME drift off the planner Outcome (AppModel.swift / AppViewModel.cs) but their view-models are not offline-drivable on this host and are pinned by their own AppModel/AppViewModel Witness tests.",
+      "producesDrift": true,
+      "perPlatform": {
+        "macos":   { "outcomeState": "signed", "loaderDrives": false, "skipReason": "macOS AppModel has no injection seam for VantageComparer; reaching a live redirected comparison requires real network egress, so the view-model-level drift is pinned by macOS/Tests/SyxxAppTests/AppModelWitnessTests.swift, not driven offline in this loader (the planner-layer 'redirection-detected' scenario already drives the shared core here)." },
+        "windows": { "outcomeState": "signed", "loaderDrives": false, "skipReason": "AppViewModel lives in SyxxUI (WinUI3), unbuildable on this non-Windows host (D101); the view-model-level drift population is pinned by Windows/SyxxUI.Tests/AppViewModelWitnessTests.cs (the planner-layer 'redirection-detected' scenario already drives the shared core here)." },
+        "ubuntu":  { "outcomeState": "signed", "loaderDrives": true,  "skipReason": "" }
+      }
+    }
+  ]
+}

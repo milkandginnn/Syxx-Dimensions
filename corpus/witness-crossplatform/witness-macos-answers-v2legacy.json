@@ -1,0 +1,317 @@
+{
+  "comparison" : {
+    "dohOutcomes" : {
+      "Cloudflare" : {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 60,
+            "type" : 1
+          }
+        ],
+        "status" : "success"
+      },
+      "Google" : {
+        "errorDescription" : "The operation couldn’t be completed. (NSURLErrorDomain error -1005.)",
+        "records" : [
+
+        ],
+        "status" : "transportError"
+      },
+      "OpenDNS" : {
+        "errorDescription" : "answer section truncated mid-record",
+        "records" : [
+
+        ],
+        "status" : "malformedResponse"
+      },
+      "Quad9" : {
+        "errorDescription" : "response id 0x1a2b did not match query id 0x3c4d",
+        "records" : [
+
+        ],
+        "status" : "responseIdMismatch"
+      }
+    },
+    "isDegraded" : true,
+    "isInconclusive" : false,
+    "isRedirectionDetected" : false,
+    "localOutcome" : {
+      "records" : [
+        {
+          "name" : "example.com",
+          "rdata" : "93.184.216.34",
+          "ttl" : 300,
+          "type" : 1
+        },
+        {
+          "name" : "example.com",
+          "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
+          "ttl" : 300,
+          "type" : 28
+        }
+      ],
+      "status" : "success"
+    },
+    "localRecords" : [
+      {
+        "name" : "example.com",
+        "rdata" : "93.184.216.34",
+        "ttl" : 300,
+        "type" : 1
+      },
+      {
+        "name" : "example.com",
+        "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
+        "ttl" : 300,
+        "type" : 28
+      }
+    ],
+    "localServer" : "10.2.0.1",
+    "publicResolverOutcomes" : {
+      "AdGuard" : {
+        "records" : [
+
+        ],
+        "status" : "servFail"
+      },
+      "Cloudflare" : {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 216,
+            "type" : 1
+          }
+        ],
+        "status" : "success"
+      },
+      "Control D" : {
+        "errorDescription" : "TC bit set and TCP fallback failed",
+        "records" : [
+
+        ],
+        "status" : "truncated"
+      },
+      "Google" : {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 300,
+            "type" : 1
+          },
+          {
+            "name" : "example.com",
+            "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
+            "ttl" : 120,
+            "type" : 28
+          }
+        ],
+        "status" : "success"
+      },
+      "NextDNS" : {
+        "records" : [
+
+        ],
+        "status" : "refused"
+      },
+      "OpenDNS" : {
+        "records" : [
+
+        ],
+        "status" : "nxDomain"
+      },
+      "Quad9" : {
+        "records" : [
+
+        ],
+        "status" : "noData"
+      }
+    },
+    "publicResolverResults" : {
+      "AdGuard" : [
+
+      ],
+      "Cloudflare" : [
+        {
+          "name" : "example.com",
+          "rdata" : "93.184.216.34",
+          "ttl" : 216,
+          "type" : 1
+        }
+      ],
+      "Control D" : [
+
+      ],
+      "Google" : [
+        {
+          "name" : "example.com",
+          "rdata" : "93.184.216.34",
+          "ttl" : 300,
+          "type" : 1
+        },
+        {
+          "name" : "example.com",
+          "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
+          "ttl" : 120,
+          "type" : 28
+        }
+      ],
+      "NextDNS" : [
+
+      ],
+      "OpenDNS" : [
+
+      ],
+      "Quad9" : [
+
+      ]
+    }
+  },
+  "evidence" : {
+    "comparisonResult" : {
+      "authoritativeSet" : [
+        "2606:2800:220:1:248:1893:25c8:1946",
+        "93.184.216.34"
+      ],
+      "authoritativeTtls" : [
+        120,
+        216
+      ],
+      "authoritativeTypes" : [
+        28,
+        1
+      ],
+      "conclusion" : "degraded",
+      "vantageSet" : [
+        "2606:2800:220:1:248:1893:25c8:1946",
+        "93.184.216.34"
+      ]
+    },
+    "expiresAt" : 1788196935380,
+    "formatVersion" : 2,
+    "perResolverAnswers" : [
+      {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 300,
+            "type" : 1
+          },
+          {
+            "name" : "example.com",
+            "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
+            "ttl" : 300,
+            "type" : 28
+          }
+        ],
+        "resolverId" : "10.2.0.1"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "AdGuard"
+      },
+      {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 216,
+            "type" : 1
+          }
+        ],
+        "resolverId" : "Cloudflare"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "Control D"
+      },
+      {
+        "records" : [
+          {
+            "name" : "example.com",
+            "rdata" : "93.184.216.34",
+            "ttl" : 300,
+            "type" : 1
+          },
+          {
+            "name" : "example.com",
+            "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
+            "ttl" : 120,
+            "type" : 28
+          }
+        ],
+        "resolverId" : "Google"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "NextDNS"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "OpenDNS"
+      },
+      {
+        "records" : [
+
+        ],
+        "resolverId" : "Quad9"
+      }
+    ],
+    "queryId" : "example.com",
+    "resolverQueryOutcomes" : [
+      {
+        "resolverId" : "10.2.0.1",
+        "success" : true
+      },
+      {
+        "resolverId" : "AdGuard",
+        "success" : true
+      },
+      {
+        "resolverId" : "Cloudflare",
+        "success" : true
+      },
+      {
+        "errorMessage" : "TC bit set and TCP fallback failed",
+        "resolverId" : "Control D",
+        "success" : false
+      },
+      {
+        "resolverId" : "Google",
+        "success" : true
+      },
+      {
+        "resolverId" : "NextDNS",
+        "success" : true
+      },
+      {
+        "resolverId" : "OpenDNS",
+        "success" : true
+      },
+      {
+        "resolverId" : "Quad9",
+        "success" : true
+      }
+    ],
+    "timestamp" : 1785604935380
+  },
+  "expiresAt" : 809889735.380303,
+  "formatVersion" : 2,
+  "keyId" : "4e22f0f074cf2da9",
+  "publicKey" : "G5wOwKZitaDQPxI2fh6fA8YC9XgjK+9Uo63jrFDNmhw=",
+  "signature" : "bLlrASLWWVeoNxd9odG2whwSHZ3BOa6pjEupfr0m5HLOgoXz1eKUIUWCsmQKJq1zRrG38cAeRFE2dDAw7i7OCQ==",
+  "targetDomain" : "example.com",
+  "timestamp" : 807297735.380303
+}

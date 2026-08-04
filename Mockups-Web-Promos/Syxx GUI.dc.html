@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/colors.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/tokens/typography.css">
+<link rel="stylesheet" href="_ds/nnyx-design-system-cfde7ea3-fc3c-4059-b88b-70a9fea0db9b/styles.css">
+<style>*{box-sizing:border-box;}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</helmet>
+<div style="min-width:2560px;padding:56px 64px;background:radial-gradient(120% 90% at 50% 0%, #241a48, #0c0820 72%);font-family:var(--font-sans);color:var(--io-text);--io-bg:#130d26;--io-surface:#1d1640;--io-surface-elevated:#2a2154;--io-border:#382c66;--io-text-secondary:#a99fc8;--io-blue:#8b5cf6;--io-electric:#b98cff;--io-accent-start:#f0ac38;--io-accent-end:#7c3aed;--font-sans:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--font-rounded:'Space Grotesk',-apple-system,system-ui,sans-serif;--font-mono:'Space Mono',ui-monospace,'SF Mono',Menlo,monospace;">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;">
+    <img src="assets/syxx-logo.png" width="38" height="38" alt="Syxx" style="display:block;border-radius:9px;box-shadow:0 2px 8px rgba(0,0,0,.4);">
+    <div style="font-family:var(--font-rounded);font-size:26px;font-weight:700;background:linear-gradient(100deg,var(--io-accent-start),#e6c6dd 52%,var(--io-accent-end));-webkit-background-clip:text;background-clip:text;color:transparent;">Syxx — Lyin' Eyes · GUI</div>
+  </div>
+  <div style="font-size:14px;color:var(--io-text-secondary);margin-bottom:40px;max-width:720px;">DNS Investigation Suite by MilkandGin. Six diagnostics — Prophet, Mirror, Portal, Glutton, Cage, Witness — plus licensing and a What's New pane, shown as native macOS 26 and Windows 11 builds. Click the sidebar in either window; each is fully interactive.</div>
+
+  <div style="display:flex;gap:56px;align-items:flex-start;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-blue);white-space:nowrap;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--io-blue) 14%, transparent);align-self:flex-start;">macOS 26 · Liquid Glass</span>
+      <dc-import name="SyxxApp" platform="mac" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--io-electric);white-space:nowrap;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--io-electric) 14%, transparent);align-self:flex-start;">Windows 11 · Fluent</span>
+      <dc-import name="SyxxApp" platform="win" theme="dark" style="width:1180px;height:800px;" hint-size="1180px,800px"></dc-import>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

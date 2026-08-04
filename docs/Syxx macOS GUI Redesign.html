@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syxx Dimensions · macOS GUI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(130% 80% at 15% 0%, #1a0c33 0%, #0b0518 55%);
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #c9c1e6;
+  }
+
+  /* macOS Menu Bar / Status Bar Strip */
+  .macos-statusbar {
+    width: 100%;
+    max-width: 1040px;
+    height: 32px;
+    background: rgba(20, 12, 36, 0.95);
+    border-radius: 10px 10px 0 0;
+    border: 1px solid rgba(148, 120, 246, 0.22);
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    font-size: 12px;
+    color: #b3a7d6;
+    position: relative;
+    user-select: none;
+  }
+  .status-glyph {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    transition: all .15s;
+  }
+  .status-glyph:hover { background: rgba(124, 92, 255, 0.2); color: #fff; }
+  .glyph-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* Popover Menu */
+  .popover-menu {
+    display: none;
+    position: absolute;
+    top: 36px;
+    right: 14px;
+    width: 320px;
+    background: rgba(28, 17, 52, 0.96);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(160, 140, 255, 0.3);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    z-index: 9999;
+  }
+  .popover-menu.open { display: block; }
+
+  /* Window Container */
+  .app-window {
+    width: 100%;
+    max-width: 1040px;
+    height: 650px;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+    display: flex;
+    background: linear-gradient(180deg, #170c2e 0%, #0f0720 100%);
+    border: 1px solid rgba(148, 120, 246, 0.2);
+    position: relative;
+  }
+
+  @media (max-width: 768px) {
+    .app-window { flex-direction: column; height: 760px; max-width: 345px; }
+    .sidebar { width: 100% !important; height: auto !important; min-width: 100% !important; padding: 14px !important; }
+    .content-area { padding: 16px !important; }
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 236px;
+    min-width: 236px;
+    height: 100%;
+    background: linear-gradient(180deg, #1d1240 0%, #160c30 100%);
+    border-right: 1px solid rgba(148, 120, 246, 0.14);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 14px 14px;
+  }
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 120, 246, 0.16);
+  }
+  .logo-text {
+    font: 700 24px 'Cinzel', serif;
+    background: linear-gradient(90deg, #ff9a3d, #ff2d78, #9a5cff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .nav-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-top: 10px; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: #b3a7d6;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .14s;
+  }
+  .nav-item:hover { background: rgba(124, 92, 255, 0.12); color: #efeafe; }
+  .nav-item.active {
+    background: linear-gradient(90deg, #7c5cff, #6a49ef);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 6px 18px rgba(124, 92, 255, 0.4);
+  }
+  .nav-divider { height: 1px; background: rgba(148, 120, 246, 0.16); margin: 6px 4px; }
+
+  /* Main Content Area */
+  .content-area { flex: 1; overflow-y: auto; padding: 24px 34px; position: relative; }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  .pane-eyebrow { font: 700 10.5px system-ui; letter-spacing: .24em; text-transform: uppercase; }
+  .pane-title { font: 600 28px 'Cinzel', serif; color: #efeafe; margin: 4px 0 2px; }
+  .pane-subtitle { font-family: 'EB Garamond', serif; font-style: italic; font-size: 15.5px; color: #9a8fc0; margin-bottom: 18px; line-height: 1.4; }
+
+  .rune-tile {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    font: 600 26px 'Cinzel', serif;
+    flex-shrink: 0;
+  }
+
+  .pane-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: rgba(10, 6, 20, 0.6);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .input-field {
+    background: rgba(10, 6, 20, 0.7);
+    border: 1px solid rgba(148, 120, 246, 0.24);
+    border-radius: 8px;
+    padding: 7px 12px;
+    color: #efeafe;
+    font-size: 12.5px;
+    outline: none;
+  }
+
+  /* Module Cards & Color Rotation Themes */
+  .card-theme {
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all .15s;
+  }
+
+  /* 1. Prophet Theme (GREEN #22c55e) */
+  .theme-prophet { background: rgba(34, 197, 94, 0.04); border: 1px solid rgba(34, 197, 94, 0.22); }
+  .theme-prophet .pane-eyebrow { color: #22c55e; }
+  .btn-prophet { background: linear-gradient(120deg, #22c55e, #16a34a); color: #042f14; font-weight: 700; box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35); }
+  .btn-prophet-sec { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80; }
+
+  /* 2. Mirror Theme (WHITE #ffffff) */
+  .theme-mirror { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.25); }
+  .theme-mirror .pane-eyebrow { color: #ffffff; }
+  .btn-mirror { background: linear-gradient(120deg, #ffffff, #e5e7eb); color: #111827; font-weight: 700; box-shadow: 0 6px 16px rgba(255, 255, 255, 0.35); }
+  .btn-mirror-sec { background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.35); color: #ffffff; }
+
+  /* 3. Portal Theme (BLUE #3b82f6) */
+  .theme-portal { background: rgba(59, 130, 246, 0.04); border: 1px solid rgba(59, 130, 246, 0.22); }
+  .theme-portal .pane-eyebrow { color: #3b82f6; }
+  .btn-portal { background: linear-gradient(120deg, #3b82f6, #2563eb); color: #fff; font-weight: 700; box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35); }
+  .btn-portal-sec { background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; }
+
+  /* 4. Glutton Theme (YELLOW #eab308) */
+  .theme-glutton { background: rgba(234, 179, 8, 0.04); border: 1px solid rgba(234, 179, 8, 0.22); }
+  .theme-glutton .pane-eyebrow { color: #eab308; }
+  .btn-glutton { background: linear-gradient(120deg, #eab308, #ca8a04); color: #2e1d02; font-weight: 700; box-shadow: 0 6px 16px rgba(234, 179, 8, 0.35); }
+  .btn-glutton-sec { background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.3); color: #fde047; }
+
+  /* 5. Cage Theme (PINK #ff2d78) */
+  .theme-cage { background: rgba(255, 45, 120, 0.04); border: 1px solid rgba(255, 45, 120, 0.22); }
+  .theme-cage .pane-eyebrow { color: #ff2d78; }
+  .btn-cage { background: linear-gradient(120deg, #ff2d78, #ec4899); color: #fff; font-weight: 700; box-shadow: 0 6px 16px rgba(255, 45, 120, 0.35); }
+  .btn-cage-sec { background: rgba(255, 45, 120, 0.12); border: 1px solid rgba(255, 45, 120, 0.3); color: #f472b6; }
+
+  /* 6. Witness Theme (ORANGE #f97316) */
+  .theme-witness { background: rgba(249, 115, 22, 0.04); border: 1px solid rgba(249, 115, 22, 0.22); }
+  .theme-witness .pane-eyebrow { color: #f97316; }
+  .btn-witness { background: linear-gradient(120deg, #f97316, #ea580c); color: #fff; font-weight: 700; box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35); }
+  .btn-witness-sec { background: rgba(249, 115, 22, 0.12); border: 1px solid rgba(249, 115, 22, 0.3); color: #fb923c; }
+
+  .check-header { display: flex; justify-content: space-between; align-items: center; }
+  .check-title { font-weight: 600; color: #efeafe; font-size: 14px; }
+  .check-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .badge-secure { background: rgba(34, 197, 94, 0.14); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+  .badge-unrun { background: rgba(255, 255, 255, 0.06); color: #8f83b8; border: 1px solid rgba(148, 120, 246, 0.2); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font: 600 13px system-ui;
+    cursor: pointer;
+    transition: all .15s;
+    border: none;
+    user-select: none;
+  }
+  .btn-secondary { background: rgba(124, 92, 255, 0.16); border: 1px solid rgba(160, 140, 255, 0.35); color: #c4b3ff; }
+  .btn-secondary:hover { background: #7c5cff; color: #fff; }
+
+  /* Lock Glyphs */
+  .lock-pro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #e0b45a;
+    margin-left: auto;
+    letter-spacing: .08em;
+  }
+
+  .view-switcher {
+    display: inline-flex;
+    background: rgba(10, 6, 20, 0.6);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 120, 246, 0.2);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .view-switcher span { padding: 3px 8px; border-radius: 6px; color: #8f83b8; }
+  .view-switcher span.active { background: #7c5cff; color: #fff; font-weight: 600; }
+
+  /* Process Overlay */
+  .process-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 5, 24, 0.85);
+    backdrop-filter: blur(16px);
+    z-index: 5000;
+    align-items: center;
+    justify-content: center;
+  }
+  .process-overlay.active { display: flex; }
+  .process-card {
+    width: 420px;
+    background: rgba(28, 17, 52, 0.98);
+    border: 1px solid #7c5cff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 30px 90px rgba(124, 92, 255, 0.35);
+    text-align: center;
+  }
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(148, 120, 246, 0.2);
+    border-top-color: #ff2d78;
+    border-right-color: #7c5cff;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  .bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(10, 6, 20, 0.8);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 14px;
+    border: 1px solid rgba(148, 120, 246, 0.2);
+  }
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff2d78, #7c5cff, #22c55e);
+    transition: width .2s ease;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 5, 24, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    width: 90%;
+    max-width: 540px;
+    background: rgba(28, 17, 52, 0.95);
+    border: 1px solid rgba(160, 140, 255, 0.3);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10, 6, 20, 0.6);
+    border: 1px solid rgba(148, 120, 246, 0.2);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .mode-toggle span.active { color: #fff; font-weight: 700; background: #7c5cff; padding: 2px 8px; border-radius: 999px; }
+</style>
+</head>
+<body>
+
+  <!-- macOS Top Status Bar & Compact Glyphs -->
+  <div class="macos-statusbar">
+    <div style="display:flex;gap:6px;margin-right:14px">
+      <span style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></span>
+      <span style="width:10px;height:10px;border-radius:50%;background:#febc2e"></span>
+      <span style="width:10px;height:10px;border-radius:50%;background:#28c840"></span>
+    </div>
+    <span style="font-weight:600;color:#efeafe;margin-right:12px">Syxx Watch</span>
+
+    <!-- Status Glyphs -->
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="status-glyph" title="DNS Encryption Status"><span class="glyph-dot" style="background:#22c55e"></span>Encrypted</span>
+      <span class="status-glyph" title="Encryption Protocol">DoH</span>
+      <span class="status-glyph" title="Unbound Activity"><span class="glyph-dot" style="background:#22c55e;box-shadow:0 0 6px #22c55e"></span>Unbound Active</span>
+      <span class="status-glyph" style="color:#f7931e" title="Scan Status Alert">⌚ Scan >7d</span>
+      <span class="status-glyph" style="color:#a78bff" title="Partial Scan Status">◐ Scan Incomplete</span>
+    </div>
+
+    <span style="flex:1"></span>
+
+    <!-- Mode Switcher -->
+    <div class="mode-toggle" onclick="togglePresentationMode()">
+      <span id="mode-storybook-lbl" class="active">Storybook</span>
+      <span id="mode-lame-lbl">Lame</span>
+    </div>
+
+    <!-- Menu Bar Popover Glyph -->
+    <span class="status-glyph" style="margin-left:10px;font-size:13px" onclick="togglePopover()">✶ Watch Menu</span>
+
+    <!-- Popover Dropdown Menu -->
+    <div id="popoverMenu" class="popover-menu">
+      <div style="font:600 13px system-ui;color:#efeafe;margin-bottom:8px;border-bottom:1px solid rgba(148,120,246,.2);padding-bottom:6px">Syxx Quick Watcher</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px">
+        <div class="status-glyph" onclick="switchPane('pane-dashboard');togglePopover()">⚔ Run Quick Diagnostic</div>
+        <div class="status-glyph" onclick="triggerScanProcess('Flushing DNS Cache...', 1200);togglePopover()">≈ Flush System DNS Cache</div>
+        <div class="status-glyph" onclick="switchPane('pane-settings');togglePopover()">⚙ Open Settings</div>
+        <div class="status-glyph" onclick="switchPane('pane-conclusions');togglePopover()">✒ View Conclusion Record</div>
+        <div class="status-glyph" onclick="openModal('modal-feedback');togglePopover()">✉ Send Feedback</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Main Window -->
+  <div class="app-window">
+
+    <!-- Process Overlay -->
+    <div id="processOverlay" class="process-overlay">
+      <div class="process-card">
+        <div class="spinner"></div>
+        <div style="font:600 18px 'Cinzel',serif;color:#efeafe" id="proc-title">Executing Scan</div>
+        <div style="font-size:13px;color:#9a8fc0;margin-top:4px" id="proc-status">Evaluating DNSSEC signatures and authoritative records...</div>
+        <div class="bar-container">
+          <div id="proc-bar" class="bar-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar with Lock Glyphs for Pro & Exact Color Order -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#7c5cff,#ff2d78);display:grid;place-items:center;font-weight:700;color:#fff">S</div>
+        <div>
+          <div class="logo-text" id="app-title-el">Syxx</div>
+          <div id="sb-subtitle" style="font-size:9.5px;letter-spacing:.2em;color:#8f83b8;text-transform:uppercase">The Six Wardens</div>
+        </div>
+      </div>
+
+      <div class="nav-list">
+        <a class="nav-item active" data-pane="pane-whatsnew" onclick="switchPane('pane-whatsnew')"><span>✦</span><span id="nav-lbl-whatsnew">What's New</span></a>
+        <a class="nav-item" data-pane="pane-dashboard" onclick="switchPane('pane-dashboard')"><span>◈</span><span id="nav-lbl-dashboard">Dashboard</span></a>
+
+        <div class="nav-divider"></div>
+
+        <!-- 1. GREEN: Prophet -->
+        <a class="nav-item" data-pane="pane-prophet" onclick="switchPane('pane-prophet')"><span style="color:#22c55e">ᚨ</span><span id="nav-lbl-prophet">Prophet</span></a>
+        <!-- 2. WHITE: Mirror (PRO with Lock SVG) -->
+        <a class="nav-item" data-pane="pane-mirror" onclick="switchPane('pane-mirror')">
+          <span style="color:#ffffff">ᛞ</span><span id="nav-lbl-mirror">Mirror</span> 
+          <span class="lock-pro-badge">
+            <svg width="10" height="11" viewBox="0 0 26 30" fill="none"><path d="M7 13 V10 a6 6 0 0 1 12 0 V13" stroke="#e0b45a" stroke-width="2.6" fill="none"></path><rect x="5" y="13" width="16" height="12.5" rx="3" fill="#e0b45a"></rect></svg>
+            PRO
+          </span>
+        </a>
+        <!-- 3. BLUE: Portal -->
+        <a class="nav-item" data-pane="pane-portal" onclick="switchPane('pane-portal')"><span style="color:#3b82f6">ᛜ</span><span id="nav-lbl-portal">Portal</span></a>
+        <!-- 4. YELLOW: Glutton (PRO with Lock SVG) -->
+        <a class="nav-item" data-pane="pane-glutton" onclick="switchPane('pane-glutton')">
+          <span style="color:#eab308">ᚦ</span><span id="nav-lbl-glutton">Glutton</span> 
+          <span class="lock-pro-badge">
+            <svg width="10" height="11" viewBox="0 0 26 30" fill="none"><path d="M7 13 V10 a6 6 0 0 1 12 0 V13" stroke="#e0b45a" stroke-width="2.6" fill="none"></path><rect x="5" y="13" width="16" height="12.5" rx="3" fill="#e0b45a"></rect></svg>
+            PRO
+          </span>
+        </a>
+        <!-- 5. PINK: Cage -->
+        <a class="nav-item" data-pane="pane-cage" onclick="switchPane('pane-cage')"><span style="color:#ff2d78">ᚾ</span><span id="nav-lbl-cage">Cage</span></a>
+        <!-- 6. ORANGE: Witness (PRO with Lock SVG) -->
+        <a class="nav-item" data-pane="pane-witness" onclick="switchPane('pane-witness')">
+          <span style="color:#f97316">ᛉ</span><span id="nav-lbl-witness">Witness</span> 
+          <span class="lock-pro-badge">
+            <svg width="10" height="11" viewBox="0 0 26 30" fill="none"><path d="M7 13 V10 a6 6 0 0 1 12 0 V13" stroke="#e0b45a" stroke-width="2.6" fill="none"></path><rect x="5" y="13" width="16" height="12.5" rx="3" fill="#e0b45a"></rect></svg>
+            PRO
+          </span>
+        </a>
+
+        <div class="nav-divider"></div>
+
+        <a class="nav-item" data-pane="pane-conclusions" onclick="switchPane('pane-conclusions')"><span>✒</span><span id="nav-lbl-conclusions">Conclusion</span></a>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span class="btn btn-secondary" style="flex:1;font-size:11px;padding:6px" onclick="switchPane('pane-settings')">⚙ Settings</span>
+        <span class="btn btn-secondary" style="font-size:11px;padding:6px 10px" onclick="startTutorial()">? Tutorial</span>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="content-area">
+
+      <!-- WHAT'S NEW PANE -->
+      <div id="pane-whatsnew" class="pane active">
+        <div class="pane-eyebrow" style="color:#8a6ef0">Chronicle Update</div>
+        <div class="pane-title">What's New in Syxx v0.9</div>
+        <div class="pane-subtitle">Sidebar Pro Lock Glyphs + Rotated Color Assignments (Green, White, Blue, Yellow, Pink, Orange).</div>
+
+        <div class="card-theme" style="background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.18)">
+          <div style="font-weight:600;color:#efeafe;margin-bottom:4px">Sidebar Pro Lock Badges & Palette Rotation</div>
+          <div style="font-size:13px;color:#c9c1e6;line-height:1.5">Added lock glyphs next to PRO tags in the sidebar and rotated module themes: Prophet (Green), Mirror (White), Portal (Blue), Glutton (Yellow), Cage (Pink), Witness (Orange).</div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD PANE -->
+      <div id="pane-dashboard" class="pane">
+        <div class="pane-eyebrow" style="color:#8a6ef0">The Watchtower · Realm Overview</div>
+        <div class="pane-title">The Vigil Holds</div>
+        <div class="pane-subtitle">Overview of network trust, active resolvers, and warden readiness.</div>
+
+        <div class="card-theme" style="background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.18);display:flex;flex-direction:row;align-items:center;gap:18px">
+          <svg width="70" height="70" viewBox="0 0 118 118" style="flex-shrink:0">
+            <circle cx="59" cy="59" r="48" stroke="rgba(148,120,246,.15)" stroke-width="10" fill="none"/>
+            <circle cx="59" cy="59" r="48" stroke="#22c55e" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="301" stroke-dashoffset="60" transform="rotate(-90 59 59)"/>
+            <text x="59" y="55" text-anchor="middle" fill="#efeafe" font-size="12" font-family="'Cinzel',serif" font-weight="600">94%</text>
+            <text x="59" y="72" text-anchor="middle" fill="#8f83b8" font-size="10" font-family="ui-monospace,monospace">4 of 6</text>
+          </svg>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="font:600 18px 'Cinzel',serif;color:#efeafe">The Ways are Warded</span>
+              <span style="padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);font:600 11px system-ui;color:#22c55e">DoT · TLS</span>
+              <span style="padding:4px 10px;border-radius:999px;background:rgba(124,92,255,.1);border:1px solid rgba(124,92,255,.3);font-family:ui-monospace,monospace;font-size:11px;color:#b9a9ff">1.1.1.1</span>
+            </div>
+            <div style="height:8px;border-radius:999px;background:rgba(148,120,246,.14);overflow:hidden">
+              <div style="width:94%;height:100%;background:linear-gradient(90deg,#22c55e,#7c5cff)"></div>
+            </div>
+            <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:13.5px;color:#9a8fc0;margin-top:6px">Four wardens keep watch; two await your call: the encrypted road stays sealed.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <button class="btn btn-primary" style="background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff" onclick="triggerScanProcess('Executing All Diagnostic Scans...', 1800)">Conduct All Scans</button>
+          <button class="btn btn-secondary" onclick="triggerScanProcess('Purging DNS Cache...', 1000)">Flush DNS Cache</button>
+          <button class="btn btn-secondary" onclick="triggerScanProcess('Enabling Unbound Resolver...', 1200)">Enable Unbound DNS</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px">
+          <div class="card-theme" style="background:rgba(255,255,255,.02);border:1px solid rgba(148,120,246,.14)">
+            <div style="font:700 10px system-ui;letter-spacing:.2em;color:#8f83b8;text-transform:uppercase;margin-bottom:10px">The Six Wardens</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="padding:10px;border-radius:8px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);cursor:pointer" onclick="switchPane('pane-prophet')">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="color:#22c55e;font-weight:700;font-size:16px">ᚨ</span><span style="font-weight:600;font-size:13px;color:#efeafe">Prophet</span>
+                </div>
+                <div style="font-size:10px;color:#22c55e;margin-top:4px;font-weight:600">PASSED</div>
+              </div>
+              <div style="padding:10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2);cursor:pointer" onclick="switchPane('pane-mirror')">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="color:#ffffff;font-weight:700;font-size:16px">ᛞ</span><span style="font-weight:600;font-size:13px;color:#efeafe">Mirror</span>
+                </div>
+                <div style="font-size:10px;color:#f7931e;margin-top:4px;font-weight:600">NOT RUN</div>
+              </div>
+              <div style="padding:10px;border-radius:8px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);cursor:pointer" onclick="switchPane('pane-portal')">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="color:#3b82f6;font-weight:700;font-size:16px">ᛜ</span><span style="font-weight:600;font-size:13px;color:#efeafe">Portal</span>
+                </div>
+                <div style="font-size:10px;color:#3b82f6;margin-top:4px;font-weight:600">PASSED</div>
+              </div>
+              <div style="padding:10px;border-radius:8px;background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.2);cursor:pointer" onclick="switchPane('pane-glutton')">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="color:#eab308;font-weight:700;font-size:16px">ᚦ</span><span style="font-weight:600;font-size:13px;color:#efeafe">Glutton</span>
+                </div>
+                <div style="font-size:10px;color:#f7931e;margin-top:4px;font-weight:600">NOT RUN</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-theme" style="background:rgba(255,255,255,.02);border:1px solid rgba(148,120,246,.14)">
+            <div style="font:700 10px system-ui;letter-spacing:.2em;color:#8f83b8;text-transform:uppercase;margin-bottom:8px">The Chronicle</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#c9c1e6">
+              <div>• Prophet verified Cloudflare DoH signatures (14ms)</div>
+              <div>• Portal scanned 8 LAN gateways: 0 MITM hops</div>
+              <div>• Cage captured 34 packets for Chrome (PID 4012)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1. PROPHET PANE (GREEN #22c55e) -->
+      <div id="pane-prophet" class="pane theme-prophet" style="padding:16px;border-radius:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="rune-tile" style="background:rgba(34,197,94,.14);color:#22c55e;border:1px solid rgba(34,197,94,.3);box-shadow:0 0 20px rgba(34,197,94,.35)">ᚨ</span>
+            <div>
+              <div class="pane-eyebrow">The Seer · Resolver Accuracy</div>
+              <div class="pane-title">Prophet</div>
+            </div>
+          </div>
+          <div class="view-switcher" onclick="toggleModuleViewState('prophet')">
+            <span id="prophet-v-pre">Pre-Run View</span>
+            <span id="prophet-v-post" class="active">Post-Run View</span>
+          </div>
+        </div>
+        <div class="pane-subtitle">"So the journey begins: the Prophet speaks each city's true name aloud, for a lookup built on a false name is lost before it leaves the gate."</div>
+
+        <div class="pane-toolbar" style="border:1px solid rgba(34,197,94,.3);background:rgba(4,47,20,.4)">
+          <input type="text" class="input-field" value="example.com" style="width:140px;border-color:rgba(34,197,94,.3)">
+          <select class="input-field" style="border-color:rgba(34,197,94,.3)">
+            <option>Cloudflare (1.1.1.1)</option>
+            <option>Quad9 (9.9.9.9)</option>
+            <option>Google (8.8.8.8)</option>
+          </select>
+          <span style="flex:1"></span>
+          <button class="btn btn-prophet" onclick="triggerScanProcess('Executing Prophet Module Scan...', 1400, () => setModuleViewState('prophet', 'post'))">Execute Prophet Scan</button>
+        </div>
+
+        <div id="prophet-pre-view" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(34,197,94,.03);border:1px dashed rgba(34,197,94,.35)">
+              <div class="check-header"><span class="check-title" style="color:#22c55e">1. Authoritative Record Consensus</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Queries 9 global public resolvers and compares returned A/AAAA records against authoritative nameservers.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-prophet-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Running Consensus Check...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(34,197,94,.03);border:1px dashed rgba(34,197,94,.35)">
+              <div class="check-header"><span class="check-title" style="color:#22c55e">2. DNSSEC Chain of Trust & RRSIG Validation</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Validates DNSKEY, DS parent zone records, and cryptographic signatures from root anchor.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-prophet-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Verifying DNSSEC Signatures...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(34,197,94,.03);border:1px dashed rgba(34,197,94,.35)">
+              <div class="check-header"><span class="check-title" style="color:#22c55e">3. EDNS0 & Transport Fallback Probe</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Audits UDP/53 packet truncation, TCP fallback, DoH JSON API, and DoQ handshake.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-prophet-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Auditing EDNS0 Transport...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="prophet-post-view">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.3)">
+              <div class="check-header"><span class="check-title">1. Authoritative Record Consensus</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Local recursive resolver answer matches authoritative nameserver IPs (93.184.216.34). 9/9 agree.</div>
+              <div style="font-family:ui-monospace,monospace;font-size:11px;color:#4ade80;margin-top:6px;background:rgba(4,47,20,.6);padding:6px 10px;border-radius:6px">Cloudflare 1.1.1.1 ➔ 93.184.216.34 (14ms) · Quad9 9.9.9.9 ➔ 93.184.216.34 (22ms)</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-prophet-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Re-testing Authoritative Records...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.3)">
+              <div class="check-header"><span class="check-title">2. DNSSEC Chain of Trust & RRSIG</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Cryptographic chain of trust verified from ICANN Root ➔ .com TLD ➔ example.com DNSKEY.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-prophet-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Re-validating RRSIG...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. MIRROR PANE (WHITE #ffffff) -->
+      <div id="pane-mirror" class="pane theme-mirror" style="padding:16px;border-radius:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="rune-tile" style="background:rgba(255,255,255,.14);color:#ffffff;border:1px solid rgba(255,255,255,.3);box-shadow:0 0 20px rgba(255,255,255,.35)">ᛞ</span>
+            <div>
+              <div class="pane-eyebrow">The Reflection · Remote vs Local</div>
+              <div class="pane-title">Mirror <span style="font:700 9px system-ui;letter-spacing:.08em;color:#e0b45a;vertical-align:middle">🔒 PRO</span></div>
+            </div>
+          </div>
+          <div class="view-switcher" onclick="toggleModuleViewState('mirror')">
+            <span id="mirror-v-pre" class="active">Pre-Run View</span>
+            <span id="mirror-v-post">Post-Run View</span>
+          </div>
+        </div>
+        <div class="pane-subtitle">"Once the name holds, the Mirror lifts the far city's face beside the one you were shown, and marks any impostor wearing it."</div>
+
+        <div class="pane-toolbar" style="border:1px solid rgba(255,255,255,.3);background:rgba(30,30,40,.5)">
+          <input type="text" class="input-field" value="wikipedia.org" style="width:160px;border-color:rgba(255,255,255,.3)">
+          <span style="flex:1"></span>
+          <button class="btn btn-mirror" onclick="triggerScanProcess('Executing Mirror Module Scan...', 1400, () => setModuleViewState('mirror', 'post'))">Execute Mirror Scan</button>
+        </div>
+
+        <div id="mirror-pre-view">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.4)">
+              <div class="check-header"><span class="check-title" style="color:#ffffff">1. Remote Asset SHA-256 Hash Matching</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Compare SHA-256 payload digest fetched from remote syxx.app vantage vs local network.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-mirror-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Fetching Remote Digest...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.4)">
+              <div class="check-header"><span class="check-title" style="color:#ffffff">2. HTTP Header & TLS Cert Fingerprinting</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Audit Server headers, TLS issuer thumbprints, and JA3 cipher suite fingerprints.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-mirror-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Auditing TLS Certs...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="mirror-post-view" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.3)">
+              <div class="check-header"><span class="check-title" style="color:#ffffff">1. Remote Asset SHA-256 Match</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">SHA-256 Remote: 3f9a8b1...c21 == SHA-256 Local: 3f9a8b1...c21. Byte-identical.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-mirror-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Lifting Mirror again...', 900)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.3)">
+              <div class="check-header"><span class="check-title" style="color:#ffffff">2. HTTP Header & TLS Fingerprint</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Issuer: GlobalSign RSA OV SSL CA 2018 · Fingerprint SHA-256: 8f7e...91b. Valid.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-mirror-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Auditing Headers...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. PORTAL PANE (BLUE #3b82f6) -->
+      <div id="pane-portal" class="pane theme-portal" style="padding:16px;border-radius:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="rune-tile" style="background:rgba(59,130,246,.14);color:#3b82f6;border:1px solid rgba(59,130,246,.3);box-shadow:0 0 20px rgba(59,130,246,.35)">ᛜ</span>
+            <div>
+              <div class="pane-eyebrow">The Gatekeeper · LAN & Route Trace</div>
+              <div class="pane-title">Portal</div>
+            </div>
+          </div>
+          <div class="view-switcher" onclick="toggleModuleViewState('portal')">
+            <span id="portal-v-pre">Pre-Run View</span>
+            <span id="portal-v-post" class="active">Post-Run View</span>
+          </div>
+        </div>
+        <div class="pane-subtitle">"With the destination proven, the Portal walks the road ahead, naming every gate and stranger your message must pass."</div>
+
+        <div class="pane-toolbar" style="border:1px solid rgba(59,130,246,.3);background:rgba(10,30,60,.4)">
+          <input type="text" class="input-field" value="1.1.1.1" style="width:140px;border-color:rgba(59,130,246,.3)">
+          <select class="input-field" style="border-color:rgba(59,130,246,.3)">
+            <option>UDP / ICMP</option>
+            <option>TCP SYN</option>
+          </select>
+          <span style="flex:1"></span>
+          <button class="btn btn-portal" onclick="triggerScanProcess('Tracing Gateway Hops...', 1200, () => setModuleViewState('portal', 'post'))">Execute Portal Scan</button>
+        </div>
+
+        <div id="portal-pre-view" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.4)">
+              <div class="check-header"><span class="check-title" style="color:#3b82f6">1. LAN Hop Route Traceroute & Latency</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Trace hop-by-hop path from local gateway through ISP core to destination.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-portal-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Tracing Hops...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.4)">
+              <div class="check-header"><span class="check-title" style="color:#3b82f6">2. Port 53 Interception & Proxy Probe</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Send targeted probe packets to detect ISP transparent DNS proxies and middleboxes.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-portal-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Probing Port 53...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="portal-post-view">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.3)">
+              <div class="check-header"><span class="check-title">1. LAN Hop Route Traceroute</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Hop 1: 192.168.1.1 (1.2ms) · Hop 2: 10.0.0.1 (8.4ms) · Hop 3: 1.1.1.1 (14.1ms).</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-portal-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Re-scanning Gateway Hops...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.3)">
+              <div class="check-header"><span class="check-title">2. Port 53 Interception Probe</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">No Interception Detected · Direct UDP socket established to Cloudflare Anycast AS13335.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-portal-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Testing Port 53 Probe...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. GLUTTON PANE (YELLOW #eab308) -->
+      <div id="pane-glutton" class="pane theme-glutton" style="padding:16px;border-radius:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="rune-tile" style="background:rgba(234,179,8,.14);color:#eab308;border:1px solid rgba(234,179,8,.3);box-shadow:0 0 20px rgba(234,179,8,.35)">ᚦ</span>
+            <div>
+              <div class="pane-eyebrow">The Devourer · DNS Leak Test</div>
+              <div class="pane-title">Glutton <span style="font:700 9px system-ui;letter-spacing:.08em;color:#e0b45a;vertical-align:middle">🔒 PRO</span></div>
+            </div>
+          </div>
+          <div class="view-switcher" onclick="toggleModuleViewState('glutton')">
+            <span id="glutton-v-pre" class="active">Pre-Run View</span>
+            <span id="glutton-v-post">Post-Run View</span>
+          </div>
+        </div>
+        <div class="pane-subtitle">"Swallows leaked packets and tests unencrypted fallback queries escaping outside VPN tunnels."</div>
+
+        <div class="pane-toolbar" style="border:1px solid rgba(234,179,8,.3);background:rgba(46,29,2,.4)">
+          <input type="text" class="input-field" value="utun2 (WireGuard)" style="width:160px;border-color:rgba(234,179,8,.3)">
+          <span style="flex:1"></span>
+          <button class="btn btn-glutton" onclick="triggerScanProcess('Testing VPN Leak Sockets...', 1400, () => setModuleViewState('glutton', 'post'))">Execute Glutton Scan</button>
+        </div>
+
+        <div id="glutton-pre-view">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(234,179,8,.04);border:1px dashed rgba(234,179,8,.4)">
+              <div class="check-header"><span class="check-title" style="color:#eab308">1. VPN Tunnel DNS Leak Detection</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Generate unique randomized subdomains to verify zero queries leak to ISP resolvers.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-glutton-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Probing Tunnel Sockets...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(234,179,8,.04);border:1px dashed rgba(234,179,8,.4)">
+              <div class="check-header"><span class="check-title" style="color:#eab308">2. IPv6 Dual-Stack Leak Audit</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Test IPv6 DNS resolution fallback when VPN tunnel is IPv4-only.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-glutton-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Auditing IPv6 Fallback...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="glutton-post-view" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.3)">
+              <div class="check-header"><span class="check-title" style="color:#fde047">1. VPN Tunnel DNS Leak Detection</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Active Interface: utun2 · All 12 probe queries resolved through encrypted tunnel. 0 Leaks.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-glutton-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Re-testing Tunnel Sockets...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.3)">
+              <div class="check-header"><span class="check-title" style="color:#fde047">2. IPv6 Dual-Stack Protection</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">IPv6 Traffic Encapsulated · No unencrypted ISP fallback queries detected.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-glutton-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Testing IPv6 Sockets...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. CAGE PANE (PINK #ff2d78) -->
+      <div id="pane-cage" class="pane theme-cage" style="padding:16px;border-radius:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="rune-tile" style="background:rgba(255,45,120,.14);color:#ff2d78;border:1px solid rgba(255,45,120,.3);box-shadow:0 0 20px rgba(255,45,120,.35)">ᚾ</span>
+            <div>
+              <div class="pane-eyebrow">The Warden · Live Query Capture</div>
+              <div class="pane-title">Cage</div>
+            </div>
+          </div>
+          <div class="view-switcher" onclick="toggleModuleViewState('cage')">
+            <span id="cage-v-pre">Pre-Run View</span>
+            <span id="cage-v-post" class="active">Post-Run View</span>
+          </div>
+        </div>
+        <div class="pane-subtitle">"Traps live messengers and maps active sockets to originating processes."</div>
+
+        <div class="pane-toolbar" style="border:1px solid rgba(255,45,120,.3);background:rgba(45,10,25,.4)">
+          <input type="text" class="input-field" value="en0 (Wi-Fi)" style="width:120px;border-color:rgba(255,45,120,.3)">
+          <input type="text" class="input-field" value="port 53 or 853" style="width:140px;border-color:rgba(255,45,120,.3)">
+          <span style="flex:1"></span>
+          <button class="btn btn-cage" onclick="triggerScanProcess('Capturing DNS Packets...', 1200, () => setModuleViewState('cage', 'post'))">Start Packet Capture</button>
+        </div>
+
+        <div id="cage-pre-view" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(255,45,120,.04);border:1px dashed rgba(255,45,120,.4)">
+              <div class="check-header"><span class="check-title" style="color:#ff2d78">1. Real-Time Packet Stream Capture</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Capture raw DNS traffic packets across port 53/853/443 on local interface.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-cage-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Starting Capture Stream...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(255,45,120,.04);border:1px dashed rgba(255,45,120,.4)">
+              <div class="check-header"><span class="check-title" style="color:#ff2d78">2. Process Attribution & Socket Mapping</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Map every captured packet to its originating system process ID (PID).</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-cage-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Mapping Socket PIDs...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="cage-post-view">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(255,45,120,.06);border:1px solid rgba(255,45,120,.3)">
+              <div class="check-header"><span class="check-title">1. Real-Time Packet Stream Log</span><span class="check-badge badge-secure">Active</span></div>
+              <div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#c9c1e6;line-height:1.6;margin-top:4px;background:rgba(45,10,25,.6);padding:8px 10px;border-radius:6px">
+                <div>13:55:01 UDP 192.168.1.24:53210 ➔ 1.1.1.1:53 [PID: 4012 firefox] Q: A api.github.com (18ms)</div>
+                <div>13:55:03 DoH 192.168.1.24:443 ➔ 9.9.9.9:443 [PID: 819 mDNSResponder] Q: AAAA syxx.app (12ms)</div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-cage-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Filtering Stream...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(255,45,120,.06);border:1px solid rgba(255,45,120,.3)">
+              <div class="check-header"><span class="check-title">2. Process Attribution Summary</span><span class="check-badge badge-secure">Secure</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">PID 4012 (firefox) ➔ 24 queries · PID 819 (mDNSResponder) ➔ 18 queries. 0 Malicious.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-cage-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Auditing PIDs...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. WITNESS PANE (ORANGE #f97316) -->
+      <div id="pane-witness" class="pane theme-witness" style="padding:16px;border-radius:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="rune-tile" style="background:rgba(249,115,22,.14);color:#f97316;border:1px solid rgba(249,115,22,.3);box-shadow:0 0 20px rgba(249,115,22,.35)">ᛉ</span>
+            <div>
+              <div class="pane-eyebrow">The Sealbearer · Testimony Proof</div>
+              <div class="pane-title">Witness <span style="font:700 9px system-ui;letter-spacing:.08em;color:#e0b45a;vertical-align:middle">🔒 PRO</span></div>
+            </div>
+          </div>
+          <div class="view-switcher" onclick="toggleModuleViewState('witness')">
+            <span id="witness-v-pre" class="active">Pre-Run View</span>
+            <span id="witness-v-post">Post-Run View</span>
+          </div>
+        </div>
+        <div class="pane-subtitle">"Signs tamper-proof testimony payloads using local Ed25519 cryptographic keypairs."</div>
+
+        <div class="pane-toolbar" style="border:1px solid rgba(249,115,22,.3);background:rgba(45,20,5,.4)">
+          <select class="input-field" style="border-color:rgba(249,115,22,.3)">
+            <option>Ed25519 (Secure Enclave)</option>
+            <option>RSA-4096 (Software)</option>
+          </select>
+          <span style="flex:1"></span>
+          <button class="btn btn-witness" onclick="triggerScanProcess('Signing Diagnostic State with Ed25519 Key...', 1200, () => setModuleViewState('witness', 'post'))">Sign Current State</button>
+        </div>
+
+        <div id="witness-pre-view">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(249,115,22,.04);border:1px dashed rgba(249,115,22,.4)">
+              <div class="check-header"><span class="check-title" style="color:#f97316">1. Cryptographic Evidence Bundle Signing</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Sign entire scan diagnostic JSON DTO using hardware Ed25519 key.</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-witness-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Signing DTO Bundle...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(249,115,22,.04);border:1px dashed rgba(249,115,22,.4)">
+              <div class="check-header"><span class="check-title" style="color:#f97316">2. RFC 3161 Timestamp Seal</span><span class="check-badge badge-unrun">Not Run</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">Obtain cryptographic time-stamp token from trusted TSA authority (freetsa.org).</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-witness-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Requesting TSA Stamp...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="witness-post-view" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card-theme" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.3)">
+              <div class="check-header"><span class="check-title" style="color:#fb923c">1. Cryptographic Signature Verified</span><span class="check-badge badge-secure">Signed</span></div>
+              <div style="font-family:ui-monospace,monospace;font-size:11px;color:#f97316;margin-top:4px">Signature: ed25519:7f8a9b4c5d6e7f8a9b4c5d6e8f0a1b2c3d4e5f6a</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-witness-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Re-verifying Signature...', 800)">Run Check</button></div>
+            </div>
+            <div class="card-theme" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.3)">
+              <div class="check-header"><span class="check-title" style="color:#fb923c">2. RFC 3161 Timestamp Seal</span><span class="check-badge badge-secure">Signed</span></div>
+              <div style="font-size:12px;color:#9a8fc0;margin-top:4px">TSA Authority: freetsa.org · Timestamp Token Verified (2026-07-25T14:11:00Z).</div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-witness-sec" style="font-size:11px;padding:4px 10px" onclick="triggerScanProcess('Validating TSA Token...', 800)">Run Check</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONCLUSION PANE -->
+      <div id="pane-conclusions" class="pane">
+        <div class="pane-eyebrow" style="color:#8a6ef0">Diagnostic Summary</div>
+        <div class="pane-title">Conclusion Report</div>
+        <div class="pane-subtitle">Synthesized assessment across all diagnostic components.</div>
+
+        <div style="padding:12px 16px;border-radius:12px;background:rgba(247,147,30,.1);border:1px solid rgba(247,147,30,.3);margin-bottom:16px">
+          <div style="font-weight:600;color:#f7931e;font-size:13px;display:flex;align-items:center;gap:8px">
+            <span>⚠️</span><span>Incomplete Diagnostic Run Notice</span>
+          </div>
+          <div style="font-size:12.5px;color:#c9c1e6;margin-top:4px">
+            The following 3 modules have not been completed prior to generating this report: 
+            <b style="color:#f7931e">Mirror</b>, <b style="color:#f7931e">Glutton</b>, and <b style="color:#f7931e">Witness</b>. Findings below reflect partial diagnostic data.
+          </div>
+        </div>
+
+        <div class="card-theme" style="background:rgba(255,255,255,.03);border-left:4px solid #f7931e;border:1px solid rgba(148,120,246,.18);padding:18px">
+          <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px">
+            <div style="width:74px;height:74px;border-radius:50%;border:6px solid #f7931e;display:grid;place-items:center;font-weight:700;font-size:18px;color:#f7931e">68%</div>
+            <div>
+              <div style="font:600 20px 'Cinzel',serif;color:#efeafe" id="conc-summary-title">Council's Conclusion: Partial Diagnostic Summary</div>
+              <div style="font-size:13px;color:#9a8fc0;margin-top:2px">Hard-Gate Penalty: 3 unexecuted modules limit confidence rating.</div>
+            </div>
+          </div>
+
+          <button class="btn btn-secondary" style="margin-top:14px" onclick="openModal('modal-save')">Save Conclusion Record (.txt)</button>
+        </div>
+      </div>
+
+      <!-- SETTINGS PANE -->
+      <div id="pane-settings" class="pane">
+        <div class="pane-eyebrow" style="color:#8a6ef0">Configuration</div>
+        <div class="pane-title">Settings</div>
+        <div class="pane-subtitle">Manage DNS resolvers, encryption protocols, and presentation modes.</div>
+
+        <div class="card-theme" style="background:rgba(255,255,255,.03);border:1px solid rgba(148,120,246,.18);display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="font-weight:600;font-size:13.5px;color:#efeafe">Default Resolver</label>
+            <select style="width:100%;padding:8px 12px;margin-top:4px;border-radius:8px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.2);color:#efeafe">
+              <option>Cloudflare (1.1.1.1)</option>
+              <option>Quad9 (9.9.9.9)</option>
+              <option>Google (8.8.8.8)</option>
+            </select>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:6px">
+            <button class="btn btn-secondary" onclick="openModal('modal-eula')">View EULA</button>
+            <button class="btn btn-secondary" onclick="openModal('modal-license')">Add License Key</button>
+            <button class="btn btn-secondary" onclick="openModal('modal-about')">About Syxx</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div id="modal-save" class="modal-overlay">
+    <div class="modal-card">
+      <div style="font:600 20px 'Cinzel',serif;color:#efeafe;margin-bottom:8px" id="modal-save-title">Save Testimony Record</div>
+      <textarea style="width:100%;height:120px;background:rgba(10,6,20,.8);border:1px solid rgba(148,120,246,.2);border-radius:8px;color:#c9c1e6;font-family:ui-monospace,monospace;padding:10px;font-size:11px" readonly>
+[SYXX DIAGNOSTIC REPORT]
+Generated: 2026-07-25 13:55:00
+Confidence: 68% (Partial Data)
+Incomplete Modules: Mirror, Glutton, Witness
+Conclusion: Partial diagnostic summary complete.
+      </textarea>
+      <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal('modal-save')">Cancel</button>
+        <button class="btn btn-primary" style="background:#7c5cff;color:#fff" onclick="alert('Saved file to Downloads/Syxx-Report.txt');closeModal('modal-save')">Save File (.txt)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-eula" class="modal-overlay">
+    <div class="modal-card" style="max-width:640px;max-height:500px;overflow-y:auto">
+      <div style="font:600 20px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">End-User License Agreement</div>
+      <div style="font-size:13px;line-height:1.5;color:#c9c1e6">
+        <p>This is the license agreement between you and <b>Joel J. “J.J.” Warne, doing business as MilkandGin</b> for the Syxx app.</p>
+        <p>1. <b>What you can do:</b> Personal license for up to 5 devices.</p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-secondary" onclick="closeModal('modal-eula')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-license" class="modal-overlay">
+    <div class="modal-card">
+      <div style="font:600 20px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Add Existing License Key</div>
+      <input type="text" placeholder="SYXX-PRO-XXXX-XXXX-XXXX" style="width:100%;padding:10px;border-radius:8px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.3);color:#efeafe;font-family:ui-monospace,monospace">
+      <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal('modal-license')">Cancel</button>
+        <button class="btn btn-primary" style="background:#7c5cff;color:#fff" onclick="alert('License key activated!');closeModal('modal-license')">Activate Key</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-about" class="modal-overlay">
+    <div class="modal-card" style="text-align:center">
+      <div style="font:700 24px 'Cinzel',serif;color:#efeafe">Syxx v0.9</div>
+      <div style="font-family:'EB Garamond',serif;font-style:italic;color:#9a8fc0;margin:6px 0 14px">DNS Protection Suite</div>
+      <button class="btn btn-secondary" onclick="closeModal('modal-about')">Close</button>
+    </div>
+  </div>
+
+  <div id="modal-feedback" class="modal-overlay">
+    <div class="modal-card">
+      <div style="font:600 20px 'Cinzel',serif;color:#efeafe;margin-bottom:8px">Send Feedback</div>
+      <input type="text" placeholder="Subject" style="width:100%;padding:8px;margin-bottom:10px;border-radius:8px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.2);color:#efeafe">
+      <textarea placeholder="Your message..." style="width:100%;height:90px;padding:8px;border-radius:8px;background:rgba(10,6,20,.6);border:1px solid rgba(148,120,246,.2);color:#efeafe"></textarea>
+      <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal('modal-feedback')">Cancel</button>
+        <button class="btn btn-primary" style="background:#7c5cff;color:#fff" onclick="alert('Feedback sent to feedback@milkandgin.com');closeModal('modal-feedback')">Send Feedback</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let currentMode = 'storybook';
+
+  function switchPane(paneId) {
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    const targetPane = document.getElementById(paneId);
+    if(targetPane) targetPane.classList.add('active');
+
+    const targetNav = document.querySelector(`.nav-item[data-pane="${paneId}"]`);
+    if(targetNav) targetNav.classList.add('active');
+  }
+
+  function togglePopover() {
+    document.getElementById('popoverMenu').classList.toggle('open');
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  function triggerScanProcess(title, duration, callback) {
+    const ov = document.getElementById('processOverlay');
+    const t = document.getElementById('proc-title');
+    const bar = document.getElementById('proc-bar');
+    t.innerText = title;
+    bar.style.width = '0%';
+    ov.classList.add('active');
+
+    let p = 0;
+    const interval = setInterval(() => {
+      p += 25;
+      bar.style.width = p + '%';
+      if (p >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          ov.classList.remove('active');
+          if (callback) callback();
+        }, 200);
+      }
+    }, duration / 4);
+  }
+
+  function toggleModuleViewState(mod) {
+    const pre = document.getElementById(`${mod}-pre-view`);
+    const post = document.getElementById(`${mod}-post-view`);
+    const preBtn = document.getElementById(`${mod}-v-pre`);
+    const postBtn = document.getElementById(`${mod}-v-post`);
+
+    if (pre.style.display === 'none') {
+      pre.style.display = 'block';
+      post.style.display = 'none';
+      preBtn.className = 'active';
+      postBtn.className = '';
+    } else {
+      pre.style.display = 'none';
+      post.style.display = 'block';
+      preBtn.className = '';
+      postBtn.className = 'active';
+    }
+  }
+
+  function setModuleViewState(mod, state) {
+    const pre = document.getElementById(`${mod}-pre-view`);
+    const post = document.getElementById(`${mod}-post-view`);
+    const preBtn = document.getElementById(`${mod}-v-pre`);
+    const postBtn = document.getElementById(`${mod}-v-post`);
+
+    if (state === 'pre') {
+      pre.style.display = 'block';
+      post.style.display = 'none';
+      preBtn.className = 'active';
+      postBtn.className = '';
+    } else {
+      pre.style.display = 'none';
+      post.style.display = 'block';
+      preBtn.className = '';
+      postBtn.className = 'active';
+    }
+  }
+
+  function togglePresentationMode() {
+    currentMode = currentMode === 'storybook' ? 'lame' : 'storybook';
+    updateModeUI();
+  }
+
+  function updateModeUI() {
+    const isSb = currentMode === 'storybook';
+    document.getElementById('mode-storybook-lbl').className = isSb ? 'active' : '';
+    document.getElementById('mode-lame-lbl').className = !isSb ? 'active' : '';
+    applyPipedCopy();
+  }
+
+  function applyPipedCopy() {
+    const saved = localStorage.getItem('syxx_copy_catalog');
+    const isSb = currentMode === 'storybook';
+
+    if (saved) {
+      try {
+        const catalog = JSON.parse(saved);
+        catalog.forEach(item => {
+          const val = isSb ? item.sb : item.lm;
+          if (item.key === 'app_title') document.getElementById('app-title-el').innerText = val;
+          if (item.key === 'app_subtitle') document.getElementById('sb-subtitle').innerText = val;
+          if (item.key === 'nav_whatsnew') document.getElementById('nav-lbl-whatsnew').innerText = val;
+          if (item.key === 'nav_dashboard') document.getElementById('nav-lbl-dashboard').innerText = val;
+          if (item.key === 'nav_prophet') document.getElementById('nav-lbl-prophet').innerText = val;
+          if (item.key === 'conc_summary') document.getElementById('conc-summary-title').innerText = val;
+        });
+      } catch(e) {}
+    }
+  }
+
+  window.addEventListener('storage', applyPipedCopy);
+  applyPipedCopy();
+</script>
+
+</body>
+</html>

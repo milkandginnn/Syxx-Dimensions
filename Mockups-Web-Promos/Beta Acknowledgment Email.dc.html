@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+  </style>
+</helmet>
+<div style="background:#070B16; padding:40px 16px; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased;">
+  <div style="max-width:640px; margin:0 auto; background:#0F1629; border:1px solid #26304A; border-radius:20px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.55);">
+
+    <!-- Brand bar -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 32px; border-bottom:1px solid #1E2740;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:9px; height:9px; border-radius:50%; background:#0D9487; box-shadow:0 0 8px rgba(13,148,135,0.6), 0 0 12px rgba(13,148,135,0.35);"></div>
+        <span style="font-size:11px; font-weight:600; letter-spacing:2.5px; text-transform:uppercase; color:#8C9CBE;">MilkandGin&nbsp;·&nbsp;Beta Program</span>
+      </div>
+      <span style="font-family:'SF Mono',ui-monospace,Menlo,monospace; font-size:11px; color:#5A6A8C;">confirmed</span>
+    </div>
+
+    <!-- Hero -->
+    <div style="padding:44px 32px 32px;">
+      <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background:rgba(5,181,212,0.08); border:1px solid rgba(5,181,212,0.3); margin-bottom:24px;">
+        <span style="font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#05B5D4;">You're on the list</span>
+      </div>
+      <h1 style="margin:0 0 16px; font-family:-apple-system,'SF Pro Rounded',BlinkMacSystemFont,sans-serif; font-size:34px; line-height:1.12; font-weight:700; letter-spacing:-0.6px; color:#F3F6FC;">Thank you for signing up for the&nbsp;beta.</h1>
+      <p style="margin:0; font-size:16px; line-height:1.6; color:#AEBAD4;">It was genuinely a thrill to meet you. Your interest in <span style="color:#EAF0FA; font-weight:600;">Nnyx</span> and <span style="color:#EAF0FA; font-weight:600;">Zzyn</span> means a great deal to us as we get these tools ready for real hands and real machines.</p>
+    </div>
+
+    <!-- Timing callout -->
+    <div style="margin:0 32px 36px; padding:20px 22px; background:#141C30; border:1px solid #26304A; border-left:3px solid #F59E0A; border-radius:12px;">
+      <div style="font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#F59E0A; margin-bottom:8px;">On timing</div>
+      <p style="margin:0; font-size:14px; line-height:1.6; color:#C4CFE6;">We don't have a precise start date for the beta just yet — we'd rather ship it right than ship it early. The moment something solid is on the line, you'll be the first to know. Expect updates from us as milestones land; no action is needed from you in the meantime.</p>
+    </div>
+
+    <!-- Section label -->
+    <div style="padding:0 32px 4px;">
+      <div style="font-size:10px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:#5A6A8C;">What you'll be testing</div>
+    </div>
+
+    <!-- Nnyx block -->
+    <div style="padding:20px 32px 8px;">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+        <img src="assets/email/nnyx-icon.svg" alt="Nnyx" width="52" height="52" style="width:52px; height:52px; border-radius:13px; display:block;">
+        <div>
+          <div style="font-family:-apple-system,'SF Pro Rounded',sans-serif; font-size:20px; font-weight:700; color:#F3F6FC; letter-spacing:-0.2px;">Nnyx</div>
+          <div style="font-size:12px; color:#8C9CBE; letter-spacing:0.2px;">Rootkit &amp; threat scanner · macOS Tahoe</div>
+        </div>
+      </div>
+      <p style="margin:0 0 16px; font-size:14px; line-height:1.65; color:#B4C0D8;">A security control plane for your Mac. Nnyx runs a multi-engine sweep — baseline hashing, threat signatures, and behavioral pattern rules — to surface rootkits, malware, and stealth persistence. Every finding is framed plainly: what it saw, the evidence, what Nnyx already did, and what you should do next. Its governed trust subsystem keeps auto-derived known-good binaries separate from your own trust overrides, and every change is admin-authenticated, audited, and reversible.</p>
+      <div style="border:1px solid #26304A; border-radius:12px; overflow:hidden; background:#0A0F1E;">
+        <img src="assets/email/nnyx-scan.png" alt="Nnyx scan in progress" style="width:100%; display:block;">
+      </div>
+    </div>
+
+    <!-- Zzyn block -->
+    <div style="padding:28px 32px 8px;">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+        <img src="assets/email/zzyn-icon.svg" alt="Zzyn" width="52" height="52" style="width:52px; height:52px; border-radius:13px; display:block;">
+        <div>
+          <div style="font-family:-apple-system,'SF Pro Rounded',sans-serif; font-size:20px; font-weight:700; color:#F3F6FC; letter-spacing:-0.2px;">Zzyn</div>
+          <div style="font-size:12px; color:#8C9CBE; letter-spacing:0.2px;">Network monitor &amp; outbound firewall · macOS</div>
+        </div>
+      </div>
+      <p style="margin:0 0 16px; font-size:14px; line-height:1.65; color:#B4C0D8;">See — and decide — exactly what your Mac talks to. Zzyn maps every process to its live connections, shows flows, bytes, and destinations in real time, and blocks trackers and unwanted endpoints at the filter. When a new app reaches out, you get a clear prompt with full provenance, so you can allow or deny with confidence. Community-verified rules and per-process profiles keep the noise down and the control in your hands.</p>
+      <div style="border:1px solid #26304A; border-radius:12px; overflow:hidden; background:#0A0F1E;">
+        <img src="assets/email/zzyn-activity.png" alt="Zzyn activity monitor" style="width:100%; display:block;">
+      </div>
+      <div style="margin-top:16px; padding:20px 22px; background:#141C30; border:1px solid #26304A; border-left:3px solid #05B5D4; border-radius:12px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#05B5D4; margin-bottom:8px;">Sound complicated?</div>
+        <p style="margin:0; font-size:14px; line-height:1.65; color:#C4CFE6;">Not to worry. Zzyn helps with the heavy lifting by using skill-adaptive controls to automate processes for those with less experience. You're free to take control whenever you like — simply by adjusting your skill level.</p>
+      </div>
+    </div>
+
+    <!-- Sign off -->
+    <div style="padding:32px 32px 8px;">
+      <p style="margin:0 0 4px; font-size:15px; line-height:1.6; color:#C4CFE6;">Thanks again for putting your trust in us this early. We'll be in touch soon.</p>
+      <p style="margin:16px 0 0; font-size:15px; line-height:1.5; color:#EAF0FA; font-weight:600;">— The MilkandGin team</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top:32px; padding:22px 32px 26px; border-top:1px solid #1E2740; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <span style="font-size:11px; color:#5A6A8C;">MilkandGin · Nnyx &amp; Zzyn for macOS</span>
+      <span style="font-size:11px; color:#5A6A8C;">You received this because you joined the beta waitlist.</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:720,&quot;height&quot;:1600}}"></script>
+</body>
+</html>

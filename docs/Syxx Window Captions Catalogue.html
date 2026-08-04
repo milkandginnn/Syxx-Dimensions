@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syxx Dimensions · Window Captions & Copy Catalogue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 36px 48px 80px;
+    background: radial-gradient(130% 80% at 15% 0%, #1a0c33 0%, #0b0518 55%);
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #c9c1e6;
+    min-height: 100vh;
+  }
+  .header-block {
+    max-width: 960px;
+    margin-bottom: 24px;
+  }
+  .eyebrow {
+    font: 700 11px system-ui;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: #8a6ef0;
+  }
+  .title {
+    font: 700 32px 'Cinzel', serif;
+    color: #efeafe;
+    margin: 8px 0 6px;
+  }
+  .subtitle {
+    font-family: 'EB Garamond', serif;
+    font-style: italic;
+    font-size: 16px;
+    color: #9a8fc0;
+    line-height: 1.5;
+  }
+  .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,.03);
+    padding: 16px 20px;
+    border-radius: 14px;
+    border: 1px solid rgba(148,120,246,.16);
+  }
+  .search-box {
+    flex: 1;
+    min-width: 240px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: rgba(10,6,20,.6);
+    border: 1px solid rgba(148,120,246,.24);
+    color: #efeafe;
+    font-size: 13.5px;
+    outline: none;
+  }
+  .search-box:focus {
+    border-color: #7c5cff;
+  }
+  .btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: linear-gradient(120deg, #7c5cff, #5b3fd6);
+    border: none;
+    color: #fff;
+    font: 600 13px system-ui;
+    cursor: pointer;
+    transition: all .15s;
+    box-shadow: 0 6px 18px rgba(124, 92, 255, 0.4);
+  }
+  .btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .btn-sec {
+    background: rgba(124,92,255,.16);
+    border: 1px solid rgba(160,140,255,.35);
+    color: #c4b3ff;
+    box-shadow: none;
+  }
+  .btn-sec:hover { background: #7c5cff; color: #fff; }
+  .table-container {
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(15,8,28,.7);
+    border: 1px solid rgba(148,120,246,.18);
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13.5px;
+  }
+  th {
+    background: rgba(28,17,52,.9);
+    padding: 14px 18px;
+    font: 700 11px system-ui;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #8f83b8;
+    border-bottom: 1px solid rgba(148,120,246,.2);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(148,120,246,.1);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  td[contenteditable="true"] {
+    background: rgba(10, 6, 20, 0.4);
+    border-radius: 6px;
+    outline: none;
+    transition: all .15s;
+  }
+  td[contenteditable="true"]:focus {
+    background: rgba(124, 92, 255, 0.15);
+    box-shadow: inset 0 0 0 1px #7c5cff;
+  }
+  .location-tag {
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    color: #a78bff;
+    background: rgba(124,92,255,.12);
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+  .storybook-text { color: #efeafe; font-weight: 500; }
+  .lame-text { color: #2dd4bf; font-weight: 500; }
+  .notes { font-size: 12px; color: #8f83b8; }
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(45, 212, 191, 0.95);
+    color: #0b0518;
+    padding: 10px 24px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    display: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 9999;
+  }
+</style>
+</head>
+<body>
+
+  <div id="toast" class="toast">✓ Saved changes! Copy piped directly to Syxx mockups.</div>
+
+  <div class="header-block">
+    <div class="eyebrow">Syxx Architecture · Interactive Copy Management</div>
+    <div class="title">Window Captions & Dialogue Catalogue</div>
+    <div class="subtitle">Click any text cell below to edit captions directly. Click "Save & Pipe to App" to store changes and instantly update the Syxx application mockups.</div>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="searchInput" class="search-box" placeholder="Search by location, Storybook copy, or Lame copy..." onkeyup="filterTable()">
+    <button class="btn" onclick="saveAndPipeCopy()">💾 Save &amp; Pipe to App</button>
+    <button class="btn btn-sec" onclick="resetDefaultCopy()">⟲ Reset to Defaults</button>
+  </div>
+
+  <div class="table-container">
+    <table id="copyTable">
+      <thead>
+        <tr>
+          <th style="width: 170px;">Key / Location</th>
+          <th style="width: 340px;">Storybook Mode (Editable Fantasy Text)</th>
+          <th style="width: 340px;">Lame Mode (Editable Technical Text)</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <!-- Rows populated dynamically -->
+      </tbody>
+    </table>
+  </div>
+
+<script>
+  const defaultCatalog = [
+    { key: "app_title", sb: "Syxx Dimensions: The Six Wardens", lm: "Syxx Suite: DNS Security Console", notes: "Main window title" },
+    { key: "app_subtitle", sb: "The Six Wardens trace every road between your device and distant realms.", lm: "Comprehensive DNS security diagnostics and path verification.", notes: "Sidebar header subtitle" },
+    { key: "nav_whatsnew", sb: "What's New (The Chronicle)", lm: "What's New (Release Notes)", notes: "Sidebar nav 1" },
+    { key: "nav_dashboard", sb: "Dashboard (The Watchtower)", lm: "Dashboard (System Overview)", notes: "Sidebar nav 2" },
+    { key: "warden_prophet", sb: "Prophet: Oracles of Name Resolution", lm: "Prophet: DNS Resolver Accuracy Check", notes: "Module 1" },
+    { key: "warden_mirror", sb: "Mirror: Reflection of Distant Vantages", lm: "Mirror: Remote vs Local DNS Comparison", notes: "Module 2" },
+    { key: "warden_portal", sb: "Portal: Gatekeeper of Local Paths", lm: "Portal: Network Path Diagnostics", notes: "Module 3" },
+    { key: "warden_glutton", sb: "Glutton: Devourer of Leaked Queries", lm: "Glutton: DNS Leak Detector", notes: "Module 4" },
+    { key: "warden_cage", sb: "Cage: Trapper of Live Messengers", lm: "Cage: Real-Time Packet Capture", notes: "Module 5" },
+    { key: "warden_witness", sb: "Witness: Keeper of Testimony Seal", lm: "Witness: Cryptographic Evidence Signer", notes: "Module 6" },
+    { key: "conc_summary", sb: "Council's Conclusion: All road paths verified clean.", lm: "Diagnostic Summary: All DNS queries verified secure.", notes: "Report summary title" },
+    { key: "btn_scan", sb: "Conduct All Scans (Invoke Wardens)", lm: "Run Full Diagnostic Scan", notes: "Primary scan button" },
+    { key: "btn_flush", sb: "Purge Sacred Memory (Flush Cache)", lm: "Flush System DNS Cache", notes: "Flush cache button" },
+    { key: "btn_enc", sb: "Weave Encrypted Shield (DoH / DoT)", lm: "Enable Encrypted DNS", notes: "Encrypted DNS button" }
+  ];
+
+  function getCatalogData() {
+    const saved = localStorage.getItem('syxx_copy_catalog');
+    if (saved) {
+      try { return JSON.parse(saved); } catch(e) {}
+    }
+    return defaultCatalog;
+  }
+
+  function renderTable() {
+    const data = getCatalogData();
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = data.map((row, index) => `
+      <tr data-index="${index}">
+        <td><span class="location-tag">${row.key}</span></td>
+        <td class="storybook-text" contenteditable="true" data-field="sb">${row.sb}</td>
+        <td class="lame-text" contenteditable="true" data-field="lm">${row.lm}</td>
+        <td class="notes">${row.notes}</td>
+      </tr>
+    `).join('');
+  }
+
+  function saveAndPipeCopy() {
+    const rows = document.querySelectorAll('#tableBody tr');
+    const updated = [];
+    rows.forEach(r => {
+      const index = r.getAttribute('data-index');
+      const key = r.querySelector('.location-tag').innerText;
+      const sb = r.querySelector('[data-field="sb"]').innerText;
+      const lm = r.querySelector('[data-field="lm"]').innerText;
+      const notes = r.querySelector('.notes').innerText;
+      updated.push({ key, sb, lm, notes });
+    });
+
+    localStorage.setItem('syxx_copy_catalog', JSON.stringify(updated));
+    showToast();
+  }
+
+  function resetDefaultCopy() {
+    localStorage.removeItem('syxx_copy_catalog');
+    renderTable();
+    showToast("Reset copy to defaults.");
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    if (msg) t.innerText = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2400);
+  }
+
+  function filterTable() {
+    const input = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#tableBody tr');
+    rows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      row.style.display = text.includes(input) ? '' : 'none';
+    });
+  }
+
+  renderTable();
+</script>
+
+</body>
+</html>

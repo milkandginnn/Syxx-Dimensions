@@ -1,0 +1,67 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    
+    <linearGradient id="brand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05B5D4"></stop>
+      <stop offset="55%" stop-color="#0066CC"></stop>
+      <stop offset="100%" stop-color="#8C5CF5"></stop>
+    </linearGradient>
+    <linearGradient id="brandBar" gradientUnits="userSpaceOnUse" x1="282" y1="762" x2="686" y2="762">
+      <stop offset="0%" stop-color="#05B5D4"></stop>
+      <stop offset="55%" stop-color="#0066CC"></stop>
+      <stop offset="100%" stop-color="#8C5CF5"></stop>
+    </linearGradient>
+    <linearGradient id="dial" x1="10%" y1="90%" x2="90%" y2="10%">
+      <stop offset="0%" stop-color="#05B5D4"></stop>
+      <stop offset="60%" stop-color="#4A8BE0"></stop>
+      <stop offset="100%" stop-color="#8C5CF5"></stop>
+    </linearGradient>
+    <radialGradient id="tile" cx="50%" cy="32%" r="90%">
+      <stop offset="0%" stop-color="#16223C"></stop>
+      <stop offset="60%" stop-color="#0E1730"></stop>
+      <stop offset="100%" stop-color="#0A0F1E"></stop>
+    </radialGradient>
+    <linearGradient id="amber" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFC24D"></stop>
+      <stop offset="100%" stop-color="#F59E0A"></stop>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="b"></feGaussianBlur>
+      <feComponentTransfer in="b" result="bf"><feFuncA type="linear" slope="0.55"></feFuncA></feComponentTransfer>
+      <feMerge><feMergeNode in="bf"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+    </filter>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="b"></feGaussianBlur>
+      <feComponentTransfer in="b" result="bf"><feFuncA type="linear" slope="0.5"></feFuncA></feComponentTransfer>
+      <feMerge><feMergeNode in="bf"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+    </filter>
+  </defs>
+
+  
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="url(#tile)"></rect>
+  <rect x="32.5" y="32.5" width="959" height="959" rx="223.5" fill="none" stroke="#2A3A5E" stroke-opacity="0.55" stroke-width="1.5"></rect>
+
+  
+  <circle cx="512" cy="512" r="320" fill="#05B5D4" opacity="0.03"></circle>
+  <circle cx="512" cy="512" r="240" fill="#8C5CF5" opacity="0.04"></circle>
+
+  
+  <circle cx="512" cy="512" r="360" fill="none" stroke="#4A8BE0" stroke-opacity="0.42" stroke-width="4.5"></circle>
+  <circle cx="512" cy="512" r="376" fill="none" stroke="url(#dial)" stroke-opacity="0.72" stroke-width="28" stroke-dasharray="5 60.66" stroke-linecap="butt" transform="rotate(-8 512 512)"></circle>
+
+  
+  <g filter="url(#glow)">
+    <path d="M 352 661 V 297 L 672 661 V 297" fill="none" stroke="url(#brand)" stroke-width="82" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+
+  
+  <g filter="url(#glow)">
+    <path d="M 282 762 H 686" fill="none" stroke="url(#brandBar)" stroke-width="36" stroke-linecap="round"></path>
+  </g>
+
+  
+  <g filter="url(#softGlow)" transform="translate(718,752) scale(0.92) rotate(14)">
+    <path d="M 0 -78 L 20.5 -25.5 L 76 -22 L 33 13.5 L 47 68 L 0 38 L -47 68 L -33 13.5 L -76 -22 L -20.5 -25.5 Z" fill="url(#amber)"></path>
+  </g>
+
+</svg>

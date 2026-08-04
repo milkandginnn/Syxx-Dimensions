@@ -1,0 +1,28 @@
+{
+  "//": "Copilot CLI MCP config — copy to ~/.copilot/mcp-config.json (or add via `/mcp add`).",
+  "//1": "Reuses the three Syxx MCP servers already built under ~/Documents/Cline/MCP — they are standard MCP servers, usable by Copilot CLI and Cline alike. Adjust the absolute paths if your home dir differs, then `npm run build` in each server folder if build/ is missing.",
+  "//2": "Copilot custom agents can also scope these per-agent via the `mcp-servers:` frontmatter block; see .github/agents/*.agent.md and COPILOT-BUILD-PROMPTS.md.",
+  "mcpServers": {
+    "syxx-dns": {
+      "type": "local",
+      "command": "node",
+      "args": ["/Users/masterrabbit/Documents/Cline/MCP/syxx-dns-server/build/index.js"],
+      "tools": ["*"],
+      "//": "DNS query/analysis — tools: dns_query, dns_doh_query (multi-vantage evidence for Prophet/Mirror)"
+    },
+    "syxx-sqlite": {
+      "type": "local",
+      "command": "node",
+      "args": ["/Users/masterrabbit/Documents/Cline/MCP/syxx-sqlite-server/build/index.js"],
+      "tools": ["*"],
+      "//": "SQLite browser for Syxx server DBs — tools: sqlite_query, syxx_db_stats, syxx_db_inspect_{audit,kv,leak_tokens,passive_dns}"
+    },
+    "syxx-http": {
+      "type": "local",
+      "command": "node",
+      "args": ["/Users/masterrabbit/Documents/Cline/MCP/syxx-http-server/build/index.js"],
+      "tools": ["*"],
+      "//": "HTTP API testing for the Python server — tools: http_request, syxx_server_health, syxx_api_{startup,diff,leak_verify,pubkey}"
+    }
+  }
+}

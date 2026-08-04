@@ -1,0 +1,194 @@
+<Page
+    x:Class="SyxxUI.Views.CageView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="using:SyxxUI.Views"
+    Background="Transparent">
+
+    <Grid Padding="32,18,32,32">
+        <ScrollViewer>
+            <StackPanel Spacing="20">
+
+                <!-- Header (parity with macOS CageView). -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="CAGE • DNS CAPTURE"
+                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                               Foreground="{StaticResource IoBlueBrush}" />
+                    <TextBlock Text="Live Query Capture"
+                               FontFamily="{StaticResource IoFontDisplay}" FontSize="18" FontWeight="Bold"
+                               Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="The Cage trapped the DNS queries so they could be inspected without escape, their headers and answers laid bare for judgment."
+                               FontFamily="{StaticResource IoFontLore}" FontSize="14"
+                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <TextBlock Text="Cage (syxx cage / DNSCapture) performs live packet capture, extracting DNS header flags, transaction IDs, query entropy, and query rates to detect exfiltration, beaconing, or DNS tunneling."
+                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
+                           Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+
+                <!-- B-5: start/stop a REAL elevated capture from the GUI (macOS toggleCapture twin).
+                     The button re-execs the unified syxx CLI under a UAC prompt; this pane tails the
+                     NDJSON stream the capture writes. Nothing here fabricates a running capture. -->
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button x:Name="CaptureBtn" Content="Close the Cages"
+                            Click="CaptureBtn_Click"
+                            Background="{StaticResource IoBlueBrush}"
+                            Foreground="{StaticResource IoTextBrush}" />
+                    <TextBlock x:Name="CaptureStatusText" Text=""
+                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
+                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Live status pill + events counter (parity with macOS). -->
+                <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                    <Border x:Name="CapturingPill" CornerRadius="999" Padding="10,4" Visibility="Collapsed"
+                            VerticalAlignment="Center">
+                        <Border.Background>
+                            <SolidColorBrush Color="{StaticResource IoCriticalRedColor}" Opacity="0.12" />
+                        </Border.Background>
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource IoCriticalRedBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock Text="CAPTURING"
+                                       FontFamily="{StaticResource IoFontGrotesk}" FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource IoCriticalRedBrush}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="IdlePill" CornerRadius="999" Padding="10,4"
+                            Background="{StaticResource IoSurfaceElevatedBrush}" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource IoTextSecondaryBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock Text="IDLE"
+                                       FontFamily="{StaticResource IoFontGrotesk}" FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Events captured: "
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="EventsCountText" Text="0"
+                                   FontFamily="{StaticResource IoFontMonoBold}" FontSize="14"
+                                   Foreground="{StaticResource IoTextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Captured queries grid with column headers (parity with macOS). -->
+                <StackPanel Spacing="8">
+                    <Grid Padding="14,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="80" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Time"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        <TextBlock Grid.Column="1" Text="Domain"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        <TextBlock Grid.Column="2" Text="Process · PID"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        <TextBlock Grid.Column="3" Text="Resolver"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        <TextBlock Grid.Column="4" Text="Result" TextAlignment="Right"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                    </Grid>
+
+                    <TextBlock x:Name="CaptureEmptyText"
+                               Text="No captured queries to show. Close the Cages to start a capture, then browse and use your apps as normal so DNS queries are produced."
+                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
+                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+
+                    <ItemsControl x:Name="CaptureList" ItemsSource="{x:Bind CaptureRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="views:CageDisplayRow">
+                                <Border Background="{StaticResource IoBackgroundDarkBrush}"
+                                        CornerRadius="8" Margin="0,2"
+                                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="3" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Grid.Column="0" Fill="{x:Bind AccentBrush}"
+                                                   RadiusX="2" RadiusY="2" />
+                                        <Grid Grid.Column="1" Padding="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="100" />
+                                                <ColumnDefinition Width="80" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{x:Bind Time}"
+                                                       FontFamily="{StaticResource IoFontMono}" FontSize="13"
+                                                       Foreground="{StaticResource IoTextSecondaryBrush}"
+                                                       VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Bind Domain}"
+                                                           FontFamily="{StaticResource IoFontMono}" FontSize="14"
+                                                           Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{x:Bind Note}" Visibility="{x:Bind NoteVisibility}"
+                                                           FontFamily="{StaticResource IoFontGrotesk}" FontSize="11"
+                                                           Foreground="{StaticResource IoTextSecondaryBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{x:Bind Process}"
+                                                       FontFamily="{StaticResource IoFontMono}" FontSize="13"
+                                                       Foreground="{StaticResource IoTextSecondaryBrush}"
+                                                       VerticalAlignment="Center" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="3" Text="{x:Bind Resolver}"
+                                                       FontFamily="{StaticResource IoFontMono}" FontSize="13"
+                                                       Foreground="{StaticResource IoTextSecondaryBrush}"
+                                                       VerticalAlignment="Center" TextWrapping="Wrap" />
+                                            <!-- Severity badge: dot + label on a faint tint of the same colour -->
+                                            <Border Grid.Column="4" CornerRadius="6" Padding="8,4"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                    Background="{x:Bind BadgeBackground}">
+                                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                    <Ellipse Width="6" Height="6" Fill="{x:Bind AccentBrush}"
+                                                             VerticalAlignment="Center" />
+                                                    <TextBlock Text="{x:Bind SeverityLabel}"
+                                                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="10" FontWeight="Bold"
+                                                               Foreground="{x:Bind AccentBrush}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- CLI capture note — the command-line alternative to the GUI button above. -->
+                <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="LIVE CAPTURE:"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        <TextBlock Text="Live packet capture needs elevated privileges, so starting it shows a Windows administrator prompt. Prefer the command line? Run the command below from an elevated prompt instead. Either way, browse and use your apps as normal so DNS queries are produced. A capture on its own is not a security conclusion."
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <Border Background="{StaticResource IoBackgroundDarkBrush}"
+                                CornerRadius="8" Padding="12">
+                            <TextBlock Text="&gt; syxx cage --duration 30"
+                                       FontFamily="{StaticResource IoFontMono}" FontSize="12"
+                                       Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

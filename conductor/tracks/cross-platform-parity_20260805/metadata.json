@@ -1,0 +1,46 @@
+{
+  "id": "cross-platform-parity_20260805",
+  "title": "Cross-Platform Parity Detection",
+  "type": "feature",
+  "status": "in_progress",
+  "created": "2026-08-05T00:00:00Z",
+  "updated": "2026-08-05T00:00:00Z",
+  "scope": {
+    "mode": "detection-only",
+    "axes": [
+      "engine-conclusions",
+      "cli-input-output",
+      "behavioral-functional",
+      "runtime-matrix"
+    ],
+    "excluded": [
+      "gui-parity",
+      "divergence-remediation",
+      "contract-amendment",
+      "python-server"
+    ],
+    "contract_changes": "proposal-only; owner ratifies"
+  },
+  "phases": {
+    "total": 7,
+    "completed": 0
+  },
+  "tasks": {
+    "total": 31,
+    "completed": 1
+  },
+  "current_phase": 1,
+  "current_task": "1.2",
+  "findings": [
+    {
+      "id": "F-01",
+      "state": "open",
+      "summary": "resolverSubstituted (B174) macOS-only; Mirror degraded-cap absent on Windows/Linux"
+    },
+    {
+      "id": "F-02",
+      "state": "open",
+      "summary": "transportObservation absent from C# SectionInputs though DNSTransportWindow exists"
+    }
+  ]
+}

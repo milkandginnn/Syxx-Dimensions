@@ -1,0 +1,33 @@
+{
+  "status": "complete",
+  "project_type": "brownfield",
+  "current_section": "complete",
+  "current_question": null,
+  "completed_sections": ["product", "guidelines", "tech_stack", "workflow", "styleguides"],
+  "answers": {
+    "product.name": "Syxx",
+    "product.users": "security-conscious individuals",
+    "product.goals": ["honesty over reassurance", "fail-closed conclusions", "cross-platform parity", "verifiable evidence", "confirmable results"],
+    "guidelines.voice": "one register for everything",
+    "tech_stack.detected": ["Swift 6.0 tools / macOS 14+", "C# net10.0", "Python 3.12", "Avalonia 12.1.0"],
+    "workflow.tdd": "evidence-gated, not test-first",
+    "workflow.commits": "descriptive sentences, no conventional prefix, correcting commits first-class",
+    "workflow.review": "required for non-trivial; parity/crypto/lattice always non-trivial",
+    "workflow.checkpoints": "per claim, five-state ledger vocabulary",
+    "styleguides.languages": ["swift (authored)", "csharp", "python", "general"]
+  },
+  "files_created": [
+    "conductor/index.md",
+    "conductor/product.md",
+    "conductor/product-guidelines.md",
+    "conductor/tech-stack.md",
+    "conductor/workflow.md",
+    "conductor/tracks.md",
+    "conductor/code_styleguides/swift.md",
+    "conductor/code_styleguides/csharp.md",
+    "conductor/code_styleguides/python.md",
+    "conductor/code_styleguides/general.md"
+  ],
+  "started_at": "2026-08-05T00:00:00Z",
+  "last_updated": "2026-08-05T00:00:00Z"
+}

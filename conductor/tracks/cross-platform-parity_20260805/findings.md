@@ -252,3 +252,51 @@ two-platform contract is the one missing half of it.
 
 Fix belongs to Phase 8: port `testGoldenVectorsEvaluateToExpectedResults` and
 `testEveryVectorFileIsClassified` to C#, including the evaluated-count assertion.
+
+---
+
+## F-08 · `-v` means different things on different platforms — two documented decisions in conflict
+
+**State:** `open` (owner decision required) · **Found by:** Task 8.8 · **Severity:** Medium
+
+### Correction to the earlier claim
+
+The track spec and `index.md` record this as *"the .NET dispatcher accepts `-h` and `-v`; the Swift
+dispatcher accepts only `--help` and `--version`."* **That is wrong.** Swift has `-h`, and it has
+`-V`. My extraction used `case "[a-z0-9-]+"`, which is lowercase-only, so it never matched `-V` and
+I reported an absence that my own regex created. The spec's version of this finding should be read
+as superseded by this entry.
+
+### What is actually true
+
+| Flag | Swift | C# |
+|---|---|---|
+| `-h` | help (`SyxxCLI.swift:88`) | help (`Program.cs:101`) |
+| `-V` | version (`SyxxCLI.swift:93`) | version (`SyxxConfig.cs:33`) |
+| `-v` | **verbose** (`SyxxConfig.swift:67`) | **version** (`Program.cs:95`, `SyxxConfig.cs:33`) |
+
+`syxx -v` prints a version string on Windows and Linux, and enables verbose output on macOS. A
+script written on one platform behaves differently on the other, silently.
+
+### Two decisions, both documented, that contradict each other
+
+- **B240** (`SyxxCLI.swift:91`): *"reserve -V for version (not -v) to avoid collision with -v =
+  verbose in SyxxConfig.isVerbose. --version is the canonical long form."*
+- **E088** (`SyxxConfig.cs:32`): *"accept both -v and -V for --version to match the top-level
+  dispatcher."*
+
+Each is locally reasonable. Together they guarantee the divergence. Note also that C# has **no
+verbose flag at all** — `grep -i verbose Windows/dotNET/Syxx.Kit/SyxxConfig.cs` returns nothing —
+so E088's cost is invisible today and lands the moment C# gains one.
+
+### Why this is not fixed here despite remediation being in scope
+
+Resolving it changes the meaning of a shipped CLI flag on at least one platform. Following B240 —
+the decision with the stronger rationale — means `-v` stops printing a version on Windows and Linux,
+which breaks any existing invocation that relies on it. That is an outward-facing behavior change
+with a user-visible consequence, and it is the owner's call which way it goes, not an agent's.
+
+**Options:** (a) follow B240 — `-v` becomes verbose everywhere, C# gains verbose parsing, `-v` stops
+reporting version; (b) follow E088 — Swift drops `-v` as verbose, which contradicts B240's stated
+reason; (c) accept both meanings per platform and document the divergence deliberately, which this
+product's own honesty doctrine argues against.

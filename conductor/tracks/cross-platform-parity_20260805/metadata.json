@@ -68,6 +68,11 @@
       "id": "F-07",
       "state": "open",
       "summary": "C# MatrixGoldenCorpusTests documents two assertions, implements one; no vector-evaluation test on that side"
+    },
+    {
+      "id": "F-08",
+      "state": "open",
+      "summary": "-v means verbose on macOS and version on Windows/Linux; B240 and E088 contradict; owner decision"
     }
   ]
 }

@@ -78,9 +78,10 @@ struct PortalView: View {
                 }
             }
             .padding(14)
+            .background(Color.ioSuccessGreen.opacity(0.05))
             .background(Color.ioSurfaceDark)
             .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioBorderSubtle, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
             
             // Resolvers & Interfaces Row
             HStack(spacing: 16) {
@@ -121,9 +122,10 @@ struct PortalView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, maxHeight: 140, alignment: .leading)
+                .background(Color.ioSuccessGreen.opacity(0.05))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
                 
                 // Active Interfaces — real data from portalReport
                 VStack(alignment: .leading, spacing: 8) {
@@ -171,9 +173,10 @@ struct PortalView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, maxHeight: 140, alignment: .leading)
+                .background(Color.ioSuccessGreen.opacity(0.05))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
             }
             
             // Side-by-side section: LAN Devices & Traceroute Hop Path
@@ -192,9 +195,10 @@ struct PortalView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
+                .background(Color.ioSuccessGreen.opacity(0.05))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
 
                 // Right side: Traceroute — real system traceroute, honest tri-state rendering.
                 VStack(alignment: .leading, spacing: 10) {
@@ -243,9 +247,10 @@ struct PortalView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
+                .background(Color.ioSuccessGreen.opacity(0.05))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)

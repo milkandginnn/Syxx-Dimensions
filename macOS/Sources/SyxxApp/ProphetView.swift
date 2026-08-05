@@ -335,16 +335,16 @@ struct ProphetView: View {
             }
             .padding(16)
         }
-        // Owner directive 2026-08-02: the container fill is the state colour on a VARIABLE
-        // alpha ramp (for agree: rgba(0, 180, 255, 0.14) down to rgba(0, 180, 255, 0.03)),
-        // and the border a brighter step of the same colour. A non-matching or otherwise
-        // non-agreeing state keeps its own colour here — only the alpha channel is shared.
+        // Owner directive 2026-08-05: highlight tone-down. The container fill is the state
+        // colour on a VARIABLE alpha ramp, reduced from 0.14→0.03 to 0.08→0.02 so the
+        // module highlight reads as a tint rather than a wash. Border reduced from 0.28
+        // to 0.18 for the same reason. A non-matching state keeps its own colour here.
         .background(
-            LinearGradient(colors: [pres.color.opacity(0.14), pres.color.opacity(0.03)],
+            LinearGradient(colors: [pres.color.opacity(0.08), pres.color.opacity(0.02)],
                            startPoint: .top, endPoint: .bottom)
         )
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.28), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.18), lineWidth: 1))
     }
 
     // MARK: - Resolver roster (inner scrollable; the 12 oracles + honest per-leg answer state)
@@ -515,14 +515,15 @@ struct ProphetView: View {
             }
         }
         .padding(16)
-        // Same variable-alpha ramp as the consensus container. `pres.color` is #00b4ff only for
-        // the configured-but-unverified state; unsigned / broken / inconclusive keep their own.
+        // Same toned-down variable-alpha ramp as the consensus container (0.08→0.02 fill,
+        // 0.18 border). `pres.color` is #00b4ff only for the configured-but-unverified state;
+        // unsigned / broken / inconclusive keep their own.
         .background(
-            LinearGradient(colors: [pres.color.opacity(0.14), pres.color.opacity(0.03)],
+            LinearGradient(colors: [pres.color.opacity(0.08), pres.color.opacity(0.02)],
                            startPoint: .top, endPoint: .bottom)
         )
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.28), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.18), lineWidth: 1))
     }
 
     // MARK: - DNSSEC presentation (tri-state: unsigned / configured / broken / inconclusive)

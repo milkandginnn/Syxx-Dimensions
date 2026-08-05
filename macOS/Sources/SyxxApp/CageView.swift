@@ -98,6 +98,7 @@ struct CageView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
+                            .background(Color.ioCageCyan.opacity(0.05))
                             .background(Color.ioSurfaceElevated)
                             .cornerRadius(999)
                         }

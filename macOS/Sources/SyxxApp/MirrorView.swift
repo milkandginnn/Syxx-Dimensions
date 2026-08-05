@@ -107,7 +107,7 @@ struct MirrorView: View {
                             .fill(Color.ioMirrorYellow.opacity(0.07))
                     )
             )
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioMirrorYellow.opacity(0.55), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioMirrorYellow.opacity(0.25), lineWidth: 1))
 
             // E110: DNS resolver comparison is always available; hash comparison requires Pro.
             // `.lineLimit(nil)` alone did NOT wrap this: it removes the line cap but does not

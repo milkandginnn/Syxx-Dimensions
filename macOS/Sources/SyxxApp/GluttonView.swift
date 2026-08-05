@@ -95,9 +95,10 @@ struct GluttonView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.ioGluttonPink.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioGluttonPink.opacity(0.15), lineWidth: 1))
 
                     // VPN / DNS Encryption status — real portalReport
                     VStack(alignment: .leading, spacing: 8) {
@@ -127,9 +128,10 @@ struct GluttonView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.ioGluttonPink.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioGluttonPink.opacity(0.15), lineWidth: 1))
                 }
 
                 // Local Probes Table — real probe results

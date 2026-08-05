@@ -276,9 +276,10 @@ struct WitnessView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: 820, alignment: .leading)
+                    .background(Color.ioWitnessRed.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioWitnessRed.opacity(0.15), lineWidth: 1))
                 }
                 
                 // Validation Report
@@ -341,9 +342,10 @@ struct WitnessView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: 820, alignment: .leading)
+                    .background(Color.ioWitnessRed.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioWitnessRed.opacity(0.15), lineWidth: 1))
                 }
     
                 Spacer(minLength: 24)

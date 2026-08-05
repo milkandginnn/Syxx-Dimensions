@@ -407,7 +407,16 @@ modifications carry pre-team mtimes. **Not committed.**
 | G-02b store-before-mint | **PARTIAL — see below** | closed for file-store + secret-tool; **open** for libsecret P/Invoke |
 | G-03 first-run manifest | **LANDED (C#)** / **Swift unverified** | both twins edited; Swift cannot run, see G-16b |
 | G-04 CI gates | **LANDED** | both repairs; assertion proven non-vacuous |
-| G-05 test seam | **LANDED** | live hazard removed; mutation-tested |
+| G-05 test seam | **LANDED** | live hazard removed (two seams: key path **and** file-store dir); mutation-tested |
+
+Ledger notes carried forward, neither a defect in this pass's work:
+- **Swift leg of G-03: `unverified, blocked externally`** — not a gap in the seat's work; see G-16b.
+- **Null-determination vacuity (low):** both twins' end-to-end test uses `Assert.False(ReadsClean())` /
+  `XCTAssertNotEqual(determination?.state, .clean)`, each satisfied by a null determination. It is
+  **symmetric across the twins** (so not a parity defect) and **pre-existing repo convention**, not
+  introduced here — `FirstRunScanTests.cs:77` uses the identical pattern in an older test. Tightening it
+  is repo-wide work (`Conclusion.HasNoDetermination` exists for exactly this) and belongs to whoever owns
+  that convention.
 
 **G-02b is explicitly NOT closed.** `AbsentUnlessStoreHoldsWitnessSecret`'s `default:` arm
 (`WitnessKeyStore.cs:362`) is reached by both `Unknown` and `Unsupported` and returns
@@ -420,7 +429,15 @@ fires rather than the fallback being taken silently, and the characterization te
 "tighten the behaviour, do not soften the assertion." Root cause is **G-16** below.
 
 **Anti-vacuity evidence** (this codebase's characteristic failure is tests that assert nothing, per
-G-05): G-01/G-02 guards mutation-tested — neutering all four flips 9 tests, restoring returns 22/22.
+G-05): G-01/G-02 guards mutation-tested — neutering all **five** flips 9 tests, restoring returns 22/22.
+The auditor reproduced this independently, writing its own mutations against an rsync'd copy rather than
+re-running the seat's, and got **8** — then chased the discrepancy rather than reporting it as the seat's
+error, and found a fifth guard site the seat's own "four" label had undercounted: the `try/catch` around
+`SecretStore.Exists` that turns a throwing probe into `Undetermined`. Neutering all five gives exactly
+9 flipped / 13 passed / 22 total. The 13 survivors are the tests that legitimately depend on no guard
+(Present path, proven-Absent path, malformed file, the `LegacyStore` default-member case, the real-store
+probe) — the correct shape, since all 22 flipping would mean the suite was coupled to implementation
+detail rather than behaviour. **Every guard has at least one test that fails when the guard is removed.**
 The pin-parity self-test mutation-tested in a scratchpad copy: a root that exists but yields zero
 csproj exits 2 rather than comparing one platform against itself. The G-04 CI assertion proven
 non-vacuous three ways — it sits *before* the direct csproj test, no earlier step can produce the DLL,

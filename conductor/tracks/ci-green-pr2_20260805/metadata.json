@@ -1,8 +1,8 @@
 {
   "id": "ci-green-pr2_20260805",
-  "title": "CI Green for PR #2 — no softened tests, only fixed code",
+  "title": "CI Green for PR #2 \u2014 no softened tests, only fixed code",
   "type": "bug",
-  "status": "complete",
+  "status": "blocked",
   "created": "2026-08-05T00:00:00Z",
   "updated": "2026-08-05T00:00:00Z",
   "phases": {
@@ -15,13 +15,12 @@
   },
   "current_phase": null,
   "current_task": null,
-  "note": "Track complete per acceptance criteria: 16/24 checks green, 8 exceptions ledgered in PARITY-LEDGER.md §CI. No tests softened.",
+  "note": "Track complete per acceptance criteria: 16/24 checks green, 8 exceptions ledgered in PARITY-LEDGER.md \u00a7CI. No tests softened.",
   "ci": {
-    "pass": 16,
+    "last_executed_run": "9d25c98",
+    "pass": 6,
     "fail": 8,
-    "pending": 1,
-    "skipping": 1,
-    "percent_green": 62,
-    "exceptions_ledgered": 8
-  }
+    "note": "newer runs refused at scheduling, 0 steps"
+  },
+  "blocker": "GitHub Actions refusing to start jobs \u2014 billing/spending limit (C-06). Owner-only."
 }

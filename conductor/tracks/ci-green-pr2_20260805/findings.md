@@ -130,3 +130,45 @@ tree while CI built HEAD.** The syntax error at `LinuxSecretStore.cs:766`, the ~
 uncommitted source files, the corpus builder, the plugin sources, three Kit fixes. `ci.yml` now
 carries a gate asserting every packaging input is committed; the same idea generalised — assert
 that what CI builds is what a clean checkout produces — would have caught all of them.
+
+---
+
+## C-06 · HARD BLOCKER — GitHub Actions is refusing to start jobs (billing)
+
+**State:** `open` — owner-only, no code change can affect it.
+
+GitHub's own annotation on every job:
+
+> "The job was not started because recent account payments have failed or your spending limit needs
+> to be increased. Please check the 'Billing & plans' section in your settings"
+
+**Evidence:** every workflow (`ci`, `Validate`, `Code Quality`, `Claude Code Review`) on the newest
+commits runs ~11,000 ms with **0 steps executed** and 0 ms billed across all 13 jobs. The last run
+that actually executed was `9d25c98` (271,000 ms billed). Everything after is refused at scheduling.
+
+**Consequence:** *no* CI check can turn green until the billing state is resolved, regardless of
+code quality. The track's acceptance criterion — all checks green — is therefore unreachable from
+this machine and from any code change. This is not a red to fix; it is a gate that is closed.
+
+**Correcting my own reasoning:** I raised billing as the hypothesis, then talked myself out of it
+when two commits appeared claiming a workflow-expression fix, and spent a cycle hunting an invalid
+`if: secrets.*` expression. The discriminating evidence was already in hand — *all four* workflows
+dying identically at 0 steps is repository-wide, which a single bad workflow file cannot cause. I
+should have read the check-run annotation first; it names the cause in one line.
+
+### Last real CI signal (run at `9d25c98`, the last that executed)
+
+| Result | Job |
+|---|---|
+| **pass** | `.deb build` ×2, **`.deb install + smoke` ×2 (first ever)**, `cross-platform parity gate`, `LinuxSecretStore` keyring |
+| fail | macOS bundle, macos-arm64, Server pytest, snap, Avalonia, ubuntu ×2, windows-x64 |
+
+6 pass / 8 fail. The `.deb install + smoke` pair going green is new — the ca-certificates fix
+worked, and that job had never passed before today.
+
+### What must happen next
+
+1. **Owner:** resolve Billing & plans. Nothing else can proceed.
+2. Then re-run the PR checks and re-triage against the *executed* results — commits `9d25c98` and
+   `65593f4` (authored outside this session) claim fixes for server lint, FileFallback, snap and
+   Swift 6 concurrency that have **never been executed by CI** and are therefore `fixed-unverified`.

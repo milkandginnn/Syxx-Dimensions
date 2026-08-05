@@ -551,6 +551,66 @@ pane needing one *added* rather than redirected when `SessionModel` lands. It is
 shared session in this wave so nobody touches the reserved file — which is part of why D1-00 closes for
 4 of 6 wardens.
 
+### 1.21 Kit tri-state — mostly clean, one landmine, and two rules for every seat
+
+**The core of spine #3 is in genuine parity and is the best-maintained axis surveyed.** Verified member
+by member including wire strings: `TriState` (explicit `TriStateJsonConverter` emitting the lowercase
+strings Swift's raw values use), `SectionStatus` (6 members, identical order, both with explicit
+converters, identical `BlocksClean` semantics), `EvidenceUsability` (6 members, **doc comments verbatim
+identical line for line**, identical `IsUsable` partition, and C# adds a `RawValue()` helper annotated
+"the exact Swift rawValue string … parity-relevant"), and the `completeness` [0,1] clamp on both sides.
+**Do not open these and do not let a seat "improve" them.**
+
+**★ T-03 — THE LANDMINE. Read before touching `Synthesizer.cs`.** Verified by execution:
+`dotnet test --filter "~TriState|~MatrixUntested|~MatrixAllNegative|~ResultProvenance"` → **21 passed,
+2 failed**. Both failures are pure boolean-casing assertions in `ResultProvenanceTests` — expected
+`"False"`, actual `"false"`.
+
+**The production code is right and the tests are stale.** `Synthesizer.cs:1001` emits lowercase
+(`"true"`/`"false"`), and the Swift twin test asserts lowercase (`ResultProvenanceTests.swift:85,109`).
+The wire casing was aligned to Swift in production and the two C# assertions were left expecting .NET
+`bool.ToString()` PascalCase. **Fix is two characters in each test.**
+
+> **A seat that sees a red test and "fixes the code to match the test" would change `Synthesizer.cs:1001`
+> to PascalCase and silently break wire parity with Swift on a degradation-provenance signal — spine
+> #3's own telemetry. The seat brief covering `Synthesizer.cs` must state the direction explicitly.**
+
+These two are inside the ~12 known-baseline failures, but they are **not noise** — they are the residue of
+a completed parity fix, and treating them as baseline is how the landmine stays armed.
+
+**★ Rule for every seat brief: a cross-platform parity claim in a comment is not evidence.** Three
+Swift-side "Windows parity" assertions were tested; **two were false** — `DNSLogAnalyzer.swift:308` claims
+underscore support was already added on the Windows twin (it was not, K-17), and `Stage5Copy.swift:9`
+points at `Windows/SyxxUI/Presentation/Stage5Copy.cs`, **which does not exist** — a byte-for-byte
+copy-parity contract aimed at a missing file. Only the `cage --duration` ceiling claim held. Checking
+costs one file open and it changed the reviewer's conclusion twice.
+
+**T-01 — `ConditionState` is the one tri-state with no JSON converter on C#.** Swift emits
+`"yes"/"no"/"unknown"`; C# has no `[JsonConverter]`, so the default would emit numbers and the stock
+`JsonStringEnumConverter` would emit PascalCase — neither matches. Member order is identical so there is
+no ordinal hazard. Latent, not live: it does not reach the signed wire payload, but `Trust.cs:215` holds a
+`ConditionState VpnActive` that `ContinuousMonitor.cs:112` compares across samples, so it becomes live the
+day that state is persisted as JSON and read cross-platform. One attribute plus a converter mirroring
+`TriStateJsonConverter`. Same class as K-07 — do both before anything starts serializing them.
+
+**T-02 — C# emits two wire fields Swift has never heard of.** `SectionStatusEntry` carries
+`datapointsObserved`/`datapointsExpected`; ★ grepping the **entire macOS tree** for either returns **zero
+matches**, and Swift's `CodingKeys` enumerates only `section, status, completeness`. Swift's decoder
+ignores unknown keys so nothing crashes, but the fields are silently dropped on any round-trip and any
+byte-identical golden-vector comparison over a `Conclusion` would diverge. Aggravating: Swift has **no
+active test coverage** for that type — it appears only under `macOS/Tests/_quarantine/` — so no Swift test
+could catch it. **Owner decision, see §4.**
+
+**T-04 — the Stage5 question is resolved, and in the opposite direction from how it was framed.** It was
+"either Swift is stale or the C# removal was premature". It is the first, but the C# removal was not
+merely complete — it was **followed through into the UI**. `ConclusionsView.xaml.cs:311` still has a
+`RenderStage5`, repointed to take `DeterminativeResult?` and called with `conclusion.Determination`, with
+a migration note saying it "previously consumed `Stage5Presentation`". Swift never did this:
+`Stage5Presentation.swift` is still a live 533-line `Codable` struct with a consumer and two active test
+files. **C# is the reference; Swift should finish MATRIX-MIGRATION Phase 3.3, repoint its Stage-5 view at
+`DeterminativeResult`, then delete `Stage5Presentation.swift` and its two tests.** Third case in D2 where
+C#/Linux is the correct side, after `-v` and the `S`/`SCAN` menu key.
+
 ---
 
 ## 2. Findings — macOS behind Linux (adopt from Linux)
@@ -684,6 +744,96 @@ the precise condition §1.3 cites for reserving the other two. Recommend adding 
 
 ---
 
+## 3a. Owner-directed feature: EFF dice passphrase for the witness key at rest
+
+**Directed 2026-08-04.** Both clients generate a three-word passphrase from EFF short wordlist #1
+(`https://www.eff.org/dice`, `eff_short_wordlist_1.txt`). This is the answer to owner decision 3 — the
+Linux at-rest posture — and it is the right shape: it introduces the **user secret** the current KDF
+entirely lacks, and generating it removes the weak-user-chosen-password failure mode.
+
+★ Verified against the source: the list is **1,296 lines**, format `NNNN<TAB>word` where each digit is a
+d6 roll, `1111 acid` … `6666 zoom`.
+
+### The one thing to decide before building: three words is 31 bits
+
+log2(1296) = 10.34 bits/word, so **three words = 31.0 bits** (2,176,782,336 combinations). Under the
+existing PBKDF2-HMAC-SHA256 at 350k iterations that is roughly **11,000 guesses/sec on one modern GPU**,
+i.e. the whole keyspace in **on the order of a day or two on a single card**, hours on a small rented
+cluster.
+
+**Why that is disqualifying here specifically, rather than a general quibble:** the threat this feature
+exists to close (§1.12) is *a local user who already holds the ciphertext file*. They attack **offline**,
+with no rate limit and no lockout. A three-word passphrase is defensible for a network login with
+server-side throttling; it is not defensible as the sole protection on an offline file holding a signing
+identity whose compromise means forged testimony in the owner's name.
+
+**And no KDF choice rescues it.** Moving to Argon2id is worth doing regardless, but memory-hardness buys
+two to four orders of magnitude, where closing a 31-bit gap needs about ten. The entropy floor is the
+binding constraint.
+
+**Recommendation, keeping the owner's wordlist:** **six words from the same short list = 62 bits**
+(≈ 4.6 × 10^18). Same list, same typing ergonomics — the short list exists precisely to keep long
+passphrases typable. EFF's own dice guidance recommends six words. If six is too long to accept, four
+words (41 bits) plus Argon2id is a middle position; three plus Argon2id is still weak.
+
+**Implement the generator parameterised on word count with a named constant, defaulting to the owner's
+choice, so this is a one-line change either way** — and put the computed entropy in the UI beside the
+passphrase, so the number is visible rather than implied. That is the honest form: the app states what
+the passphrase is worth instead of asserting it is "strong".
+
+### Design — three surfaces, not two
+
+"Both of them" is read as both GUI clients; note the **shared CLI is a third surface**, because on Linux
+the CLI is what actually holds the key and it is where the existing `--key` flag lives.
+
+1. **Wordlist ships embedded; never fetched at runtime.** An embedded resource on each platform, with its
+   **SHA-256 pinned** and a test asserting exactly 1,296 entries and well-formed `1111`–`6666` indices.
+   Fetching key-generation material over the network would add a supply-chain and an availability failure
+   to a security primitive. The pinned hash also makes a truncated or corrupted resource a build failure
+   rather than a silently smaller keyspace.
+2. **CSPRNG with rejection sampling, never modulo.** `RandomNumberGenerator.GetInt32` in C#;
+   `SecRandomCopyBytes` / `SystemRandomNumberGenerator` in Swift. Modulo over a raw byte biases toward low
+   indices — an entropy loss on the one operation whose entire job is entropy. Add a test that the
+   selector is uniform over all 1,296 indices.
+3. **Offer real dice too, and be honest about which happened.** `eff.org/dice` describes a *physical*
+   procedure. Provide both: "Generate for me" (CSPRNG) and "I rolled dice — enter the numbers" (four
+   digits per word, validated 1–6). Label the result with which path produced it. Claiming the user rolled
+   dice when a PRNG chose would be exactly the fabrication class this codebase legislates against.
+4. **Never on argv, never logged, never in a breadcrumb.** This lands with **C-11**: the passphrase takes
+   the same rule as the private key — prompt, or `SYXX_WITNESS_PASSPHRASE` env, or `--passphrase-file`,
+   and never a positional or `--passphrase` argument. On Linux `/proc/<pid>/cmdline` is world-readable.
+   Add a test asserting the passphrase never reaches `SyxxDiagnostics`.
+5. **KDF replacement, landing with the per-store salt.** Argon2id with a **per-store random salt**
+   persisted beside the ciphertext, replacing the constant-salt machine-derived KDF of §1.12. These must
+   land together — a user secret over a constant salt still permits one precomputation against every
+   install.
+6. **Prompt cadence is a UX decision with a security consequence.** Per-sign is safest and most
+   irritating; per-session caches the derived key in process memory. Recommend per-session with an idle
+   timeout, the derived key zeroed on timeout, and never the passphrase itself retained.
+7. **Recovery: there is none, and the UI must say so before generating.** If the passphrase is lost the
+   key is unrecoverable and **every previously sealed testimony becomes unverifiable** — the same outcome
+   as C-10, reached by a different route. Require an explicit "I have written this down" confirmation, and
+   show the passphrase once in a copyable form. Whether to offer any escrow path is an owner decision; any
+   escrow weakens the property this feature exists to create.
+8. **macOS is additive, Linux is load-bearing.** On macOS the Keychain already gates the key on the user's
+   login, so the passphrase is defence-in-depth. On Linux it *replaces* machine-derived material and is
+   the only thing standing between a local attacker and a forged signing identity. Same feature, different
+   necessity — worth saying in the copy rather than implying equivalence.
+
+### Ownership
+
+New shared code, so it belongs in the Kit twins rather than either GUI: `Syxx.Kit/DicePassphrase.cs` +
+`SyxxKit/DicePassphrase.swift` (generator, wordlist resource, entropy calculation), consumed by the
+Witness surfaces. **Assign to E4 (secret-store hardening)** — it already owns `LinuxSecretStore.cs` and
+the salt/KDF work, and splitting the KDF from the secret that feeds it across two seats would put two
+writers in one contract. The GUI entry points go to the Witness stream, which already holds those files.
+`E9 (macOS-adopts)` takes the macOS surface.
+
+**Sequencing:** decide the word count first — it changes nothing structurally but changes every test
+vector — then land the generator and the Argon2id/per-store-salt change together, then the three surfaces.
+
+---
+
 ## 4. Owner decisions — none of these are an implementer's call
 
 1. **Packaging and command surface (blocks E3, gates P-09).** Recommended: both packages ship both
@@ -705,10 +855,11 @@ the precise condition §1.3 cites for reserving the other two. Recommend adding 
 5. **Node-lock on Linux.** Wire the hardware-id `postinst`, or accept non-node-lockable installs
    permanently? Snap cannot do the `postinst` either way, so this also decides whether snap and `.deb`
    have different licensing behaviour.
-6. **Stage5 (blocks E8 touching `Conclusion.cs`).** `Stage5Presentation.swift` is 533 lines with live
-   tests and consumers, while `Conclusion.cs:20` records `Stage5` as **deliberately removed** in the
-   MATRIX-MIGRATION rewrite. Either Swift is stale or the C# removal was premature. Nothing in the tree
-   settles it.
+6. **Stage5 — now answered, but the action still needs your approval.** T-04 settled it: C# is ahead and
+   its removal was followed through into the UI (`ConclusionsView.xaml.cs:311` repointed to
+   `DeterminativeResult`), while Swift never finished the same migration. **Approve Swift finishing
+   MATRIX-MIGRATION Phase 3.3 — repoint its Stage-5 view, then delete `Stage5Presentation.swift` and its
+   two test files?** That is a deletion of 533 lines plus tests, so it is yours, not an implementer's.
 7. **The decoy CLI.** `Linux/dotNET/Syxx.Linux/Program.cs` — every subcommand prints "(implementation
    pending)". Recommended: **delete, not repair** — a stub sharing the product name is a live
    mis-signal about shipped capability. This is a `git rm`.
@@ -727,6 +878,10 @@ the precise condition §1.3 cites for reserving the other two. Recommend adding 
 12. **The Mirror/licence contradiction.** Mirror's honest deferral note says licence activation is
     unavailable on Linux; `LicenseView.axaml` is in the nav advertising a monthly price. Either the note
     is stale or the pane sells something that cannot be activated. Outside every seat's file set.
+13. **Are `datapointsObserved`/`datapointsExpected` wire contract or C#-local enrichment?** (T-02, gates
+    the `Conclusion.cs` lease.) If contract → add them to Swift. If local → mark `JsonIgnore` or document
+    them as non-contract. Both defensible; guessing is not, because C# currently emits two keys that exist
+    nowhere in the macOS tree and Swift silently drops them.
 
 ---
 

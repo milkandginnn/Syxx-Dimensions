@@ -23,7 +23,7 @@ namespace SyxxUI.Views;
 public sealed partial class ProphetView : Page
 {
     // 12-oracle resolver list shown in the consensus card (replaces the old raw-records list).
-    public ObservableCollection<ResolverRow> ResolverRows { get; } = [];
+    public ObservableCollection<ConsensusResolverRow> ResolverRows { get; } = [];
 
     private AppViewModel? _vm;
 
@@ -232,11 +232,13 @@ public sealed partial class ProphetView : Page
 }
 
 // 12-oracle resolver row for the consensus card list (replaces the old RecordRow).
-public sealed class ResolverRow
+// Named ConsensusResolverRow: MirrorView.xaml.cs:232 already defines a DIFFERENT ResolverRow in
+// this same namespace (5 display properties vs these 2) — CS0101 on real Windows CI, first build.
+public sealed class ConsensusResolverRow
 {
     public string Resolver { get; set; } = "";
     public string Ip { get; set; } = "";
-    public ResolverRow(string resolver, string ip)
+    public ConsensusResolverRow(string resolver, string ip)
     {
         Resolver = resolver;
         Ip = ip;

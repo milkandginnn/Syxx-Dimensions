@@ -26,11 +26,11 @@
     "completed": 0
   },
   "tasks": {
-    "total": 31,
-    "completed": 1
+    "total": 32,
+    "completed": 2
   },
   "current_phase": 1,
-  "current_task": "1.2",
+  "current_task": "1.3",
   "findings": [
     {
       "id": "F-01",
@@ -41,6 +41,11 @@
       "id": "F-02",
       "state": "open",
       "summary": "transportObservation absent from C# SectionInputs though DNSTransportWindow exists"
+    },
+    {
+      "id": "F-03",
+      "state": "open",
+      "summary": "matrix golden corpus loaded by C# only; Swift twin quarantined outside both test targets"
     }
   ]
 }

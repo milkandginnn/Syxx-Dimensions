@@ -29,12 +29,16 @@ depends on it.
 
 - [x] Task 1.1: Define the vector format — JSON, one file per case, `vectorId` plus a `SectionInputs`
       payload. Write it down as a short contract document before writing either loader
-- [ ] Task 1.2: Inventory existing corpora against that format. Record which can feed the emitter
+- [x] Task 1.2: Inventory existing corpora against that format. Record which can feed the emitter
       directly, which need a shim, and which cannot — with the reason for each
 - [ ] Task 1.3: Swift loader in `SyxxCLI`
 - [ ] Task 1.4: C# loader in `Syxx/Commands`
 - [ ] Task 1.5: Decide and document the behavior for a malformed vector — it must fail loudly, never
       be skipped
+- [ ] Task 1.6: Author the initial vector set — no existing corpus is feed-ready (see
+      [corpus-inventory.md](./corpus-inventory.md)). Cover each of the 6 sections populated, plus the
+      fail-closed boundaries: unfetchable, unverifiable, degenerate. Mirror the
+      `warp-manifest-vectors` per-case directory layout
 
 ### Verification
 

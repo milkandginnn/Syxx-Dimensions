@@ -76,6 +76,53 @@ Same reasoning as F-01: threading a new input into a shipping conclusion path is
 
 ---
 
+## F-03 · The matrix golden corpus is loaded by C# only; its Swift twin is quarantined
+
+**State:** `open`
+**Found by:** Task 1.2 (corpus inventory)
+**Severity:** High — the corpus exists specifically to cross-check the Swift transcription, and does not
+
+### Evidence
+
+| | |
+|---|---|
+| C# loader, live | `Windows/dotNET/Syxx.Tests/MatrixGoldenCorpusTests.cs` |
+| Swift loader, disabled | `macOS/Tests/_quarantine/MatrixGoldenCorpusTests.swift.phase32-compile-break` |
+| Why it never runs | `macOS/Package.swift:29,77` declare test targets `SyxxKitTests` and `SyxxAppTests`. SwiftPM resolves those to `Tests/SyxxKitTests` and `Tests/SyxxAppTests`; `Tests/_quarantine/` is inside neither, so nothing there is compiled — including the 19 files still carrying a plain `.swift` extension |
+| Live Swift test files | 90 |
+| Quarantined entries | 43 |
+
+### What it means
+
+The quarantined file's own header states why it was written:
+
+> "Before this file, no test on any platform loaded these vectors, so the ~100 hand-transcribed
+> weights and thresholds across `SyxxMatrixIntegration.swift` had zero mechanical cross-check
+> against the shared oracle."
+
+It then names the C# file as "Twin of … (to be created)". The C# twin was created and runs. The
+Swift original was quarantined. The net effect is that the ~100 hand-transcribed values in
+`SyxxMatrixIntegration.swift` — the exact thing the corpus was built to verify — **still have no
+mechanical cross-check**, while the corpus reports green from the C# side.
+
+This is the shape the `parity` CI job was rewritten to prevent: a check that renders as covering both
+platforms while executing on one. It is also the shape already recorded for the Ubuntu witness
+harness, where three-platform parity was asserted by two platforms.
+
+### Not fixed here
+
+Un-quarantining requires fixing whatever `phase32-compile-break` denotes, which is a code change to
+the Swift test target. Detection-only track.
+
+### Adjacent, not investigated
+
+`macOS/Tests/_quarantine/` holds 43 entries in three categories — `*-compile-break`,
+`*-active-dup`, and 19 plain `.swift` files — including a 115 KB `SyxxKitTests.swift.phase32-compile-break`.
+Whether each is deliberate and recorded is a separate audit; this track observed the directory while
+inventorying corpora and did not audit it. Flagged so the observation is not lost.
+
+---
+
 ## Consequence for the vector format
 
 `PARITY_VECTOR_V1` (`docs/parity-vector-v1-spec.md`) covers the **32 shared fields only**, and both

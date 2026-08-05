@@ -1,16 +1,21 @@
 {
   "id": "gui-complete-macos_20260805",
-  "title": "Complete macOS GUI — SwiftUI View Parity",
+  "title": "Complete macOS GUI — Mockup-Faithful SwiftUI Implementation",
   "type": "feature",
-  "status": "pending",
+  "status": "in_progress",
   "created": "2026-08-05T00:00:00Z",
   "updated": "2026-08-05T00:00:00Z",
+  "current_phase": 2,
+  "current_task": null,
   "phases": {
-    "total": 4,
-    "completed": 0
+    "total": 5,
+    "completed": 1
   },
   "tasks": {
-    "total": 28,
-    "completed": 0
-  }
+    "total": 31,
+    "completed": 4
+  },
+  "commits": [
+    "1afd972: Phase 1.1-1.2 — tone down highlight containers across all Wardens"
+  ]
 }

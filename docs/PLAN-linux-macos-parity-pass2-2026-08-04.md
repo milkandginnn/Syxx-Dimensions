@@ -52,7 +52,7 @@ final areas were still arriving when this document was written.
 | Dimension | Scope | Status |
 |---|---|---|
 | **D3** platform, packaging, privilege, CI | 5 areas | **complete** — 22 findings |
-| **D1** GUI surface + behavioural honesty | 5 areas | **partial** — feature surface + Conclusions/Witness done; shell/menu, remaining-pane honesty & copy, Mirror/Cage inventory **pending** |
+| **D1** GUI surface + behavioural honesty | 5 areas | **complete** — D1-00 … D1-39, all five areas |
 | **D2** Kit twins + CLI | 4 areas | **partial** — transport subsystem + behavioural divergence done; CLI subcommand parity, Kit tri-state **pending** |
 
 **Not surveyed at all, and worth commissioning separately:** Prophet and Mirror pane internals (both
@@ -102,6 +102,13 @@ mode as a fabricated value — the user believes an action occurred.
 - Dashboard warden tiles do not navigate (macOS tiles set `model.selection`,
   `DashboardView.swift:277-278`).
 
+**★ And this class is not Linux-only — D1-33.** macOS has one too, in the same shell chrome:
+`ContentView.swift:109` declares `@State localDarkMode`, `:116` passes it into `WardenSidebar`, `:232`
+declares the `@Binding` — and the sidebar body never reads it (verified: the only consumer is
+`.preferredColorScheme` at `:174`, inside `ContentView` itself). A binding threaded into the sidebar for a
+light/dark toggle that was never built. Low severity, recorded because **a parity pass that only ever
+moves fixes in one direction will not find it.**
+
 `flushDNSCache` has **no C# twin at all** — macOS shells `dscacheutil -flushcache`
 (`AppModel.swift:651-663`); Linux needs `resolvectl flush-caches` with an honest elevation-required
 result. `witnessFree` likewise exists on macOS and Windows and nowhere on Linux.
@@ -121,7 +128,25 @@ result. `witnessFree` likewise exists on macOS and Windows and nowhere on Linux.
 - **D1-06:** Linux still carries "THE COUNCIL'S CONCLUSION" and "THE CHRONICLE", which macOS removed
   by owner directive 2026-07-23 as result-shaped cards that the Dashboard should not carry.
 
-### 1.4 Conclusions drops honesty signals the Kit already computes — MEDIUM-HIGH
+### 1.4 Conclusions — and ★ WINDOWS, NOT macOS, IS THE REFERENCE HERE
+
+**★ D1-12 — read this before briefing the Conclusions seat.** Three different designs are live and
+**Windows carries all three halves**, verified: per-warden Collected Evidence cards
+(`Windows/dotNET/SyxxUI/Views/ConclusionsView.xaml` — `ProphetCard:159`, `MirrorCard:175`, `WarpCard:191`,
+`PortalCard:207`, `GluttonCard:223`), the one-shot scan (`ScanBtn:132`), and a reset (`ResetBtn:110`,
+"Reset Diagnosis"). macOS has the per-warden half and the module-status gate but ★ **no one-shot scan at
+all** (grep for "scan" in `ConclusionsView.swift`: 0 hits). **Linux kept only the one-shot half.**
+
+So the correct framing is not "Linux forked the product" — **Linux dropped the half that connects the six
+wardens to the result**, and that half already exists **in C#, in the sibling project Linux's own csproj
+references.** A seat pointed at `ConclusionsView.swift` would hand-rebuild it in the same language it is
+already written in. That is the most expensive avoidable mistake in the wave set.
+
+> **Seat brief line, verbatim:** port the evidence half from
+> `Windows/dotNET/SyxxUI/Views/ConclusionsView.xaml`; consult macOS **only** for the module-status gate
+> (`ConclusionsView.swift:133-140,:198`) and the QUALIFIED pill (`:309-316`).
+
+### 1.4a Conclusions drops honesty signals the Kit already computes — MEDIUM-HIGH
 
 - **D1-14:** `ResultAction.Qualified` — documented as "true when confidence is limited or a required
   check did not run", set on four of five arms — is rendered by macOS as a **QUALIFIED** pill whose
@@ -715,7 +740,7 @@ to prevent. A seat that needs another's file sends a request; it does not edit.
 | **E2 encrypted-DNS** | `EncryptedDNSConfigurator.cs`, `EncryptedDNSConfig.cs`, `EncryptedTransportProbe.cs`, `SyxxSettings.cs`, `DNSCryptProxyConfig.cs` (new), `DNSCryptProxyManager.cs` (new), + 2 new test files | **Merged seat** (D2-B into D3-S2 — do not run both). Blocked by E1. Internal order **K-06 → K-04 → K-05 → K-03**: K-06 first because it is the only one that makes *shipped* behaviour lie; K-04 before K-03 because the nullable-catalog reshape is what makes DNSCrypt entries representable. |
 | **E10 dashboard** | `DashboardView.axaml{,.cs}`, `DashboardViewModel.cs`, `Windows/dotNET/SyxxUI/Presentation/DashboardWardenState.cs` (new), `DashboardViewModelTests.cs` (new) | D1-01…D1-08. Blocked by `SessionModel`. Warden-state helper goes in the Windows presentation folder and is **linked** into Linux — authoring it Linux-side means writing it twice and re-opening spine #6. |
 | **E11 portal** | `PortalView.axaml{,.cs}`, `PortalViewModel.cs`, `PortalViewModelTests.cs` (new) | D1-09/10/11. Reads `TracerouteRunner.cs`, does not own it. |
-| **E12 conclusions** | `ConclusionsView.axaml{,.cs}`, `ConclusionsViewModel.cs`, `ConclusionsViewModelTests.cs` (new) | D1-13…D1-18. |
+| **E12 conclusions** | `ConclusionsView.axaml{,.cs}`, `ConclusionsViewModel.cs`, `ConclusionsViewModelTests.cs` (new) | **D1-12…D1-16.** Reference is the **Windows XAML**, not macOS — see §1.4. D1-17 and D1-18 are macOS-adopt items and belong to **E9**, which owns the Swift file; do not sweep them into a seat that cannot touch Swift. |
 | **E13 panels+copy** | Onboarding/WhatsNew/License/Settings views + their VMs, `Services/*`, new panel files, **and both output catalogs as sole writer** | Includes the two-line P-05d fix. **Catalog rule:** each seat writes rows to its own scratchpad file; E13 performs one append per catalog at the end. Append-only prevents reordering but not a git conflict at a shared tail, and the Mirror stream is appending concurrently. |
 | **E14 CLI parity** | `Windows/dotNET/Syxx/Program.cs`, all 16 `Commands/*.cs`, **and `Syxx.Kit/Capture/CaptureEngine.cs`** (C-09/C-12 land there, not in `Commands/`) | C-10…C-16. **Sequence C-10 and C-11 first** — both are in `WitnessCommand.cs` and both are security/data-loss class, ahead of any flag-naming work. The seat's brief must require a **full re-diff of `SyxxWitness.swift` against `WitnessCommand.cs`**, not a two-item patch: the D086 comment proves a partial port of that exact pairing already happened once and missed B249. |
 | **E15 shell+tray** | `MainWindow.axaml{,.cs}` and `Converters/NavAspectConverter.cs` — **coordinate with E-keystone, which also owns `MainWindow`**; give the reset pill (D1-28) to the keystone seat since it owns `ResetAll()`, and give tray/menu/nav to E15 | D1-24…D1-30, D1-32. `TrayIndicator.cs` already compiles into the Linux binary — no new reasoning code, only a caller. |

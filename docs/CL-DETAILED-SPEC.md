@@ -1,7 +1,7 @@
 # CL-1/CL-2/CL-3 Detailed Technical Specification — syxx-neural-planner
 
 **Generated:** 2026-07-11 · **Agent:** syxx-neural-planner  
-**Spec:** [`HANDOFF-CLINE.md`](HANDOFF-CLINE.md) · **Master:** [`REASONING-SYSTEM-DESIGN.md`](REASONING-SYSTEM-DESIGN.md)  
+**Spec:** [`HANDOFF-CLINE.md`](HANDOFF-CLINE-IMPLEMENTATION.md) · **Master:** [`REASONING-SYSTEM-DESIGN.md`](REASONING-SYSTEM-DESIGN.md)  
 **Status:** Ready for syxx-neural-executor
 
 ---

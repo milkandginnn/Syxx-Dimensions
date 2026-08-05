@@ -630,14 +630,45 @@ final class WarpRedirectController: NSObject, URLSessionTaskDelegate, @unchecked
         // completion handler, so evaluate the full decision in a task and answer when it lands.
         // URLSession invokes this delegate once per hop and expects exactly one reply, so the
         // handler is never called concurrently — safe to carry into the task despite not being Sendable.
-        nonisolated(unsafe) let reply = completionHandler
+        // Swift 6 treats the delegate's completion handler as a `sending` parameter, so
+        // `nonisolated(unsafe)` alone does not let it cross into the Task (error at this line on
+        // the CI release build). Box it: the box is Sendable, and the invariant that makes this
+        // safe is unchanged — URLSession calls this delegate once per hop and expects exactly one
+        // reply, so the handler is never invoked concurrently. callOnce enforces that rather than
+        // asserting it.
+        let reply = RedirectReplyBox(completionHandler)
         Task {
             if await self.shouldFollowHop(from: from, to: to) {
-                reply(request)
+                reply.callOnce(request)
             } else {
                 self.markBlocked()
-                reply(nil)
+                reply.callOnce(nil)
             }
         }
+    }
+}
+
+
+/// Carries a URLSession redirect completion handler across a concurrency boundary.
+///
+/// The handler is not `Sendable` and Swift 6 treats it as a `sending` parameter, but the delegate
+/// contract guarantees a single invocation per hop. This box makes that guarantee mechanical: the
+/// lock serialises access and `called` ensures the handler runs at most once, so a future edit that
+/// adds a second reply path fails silently-safely rather than tripping URLSession's "completion
+/// handler called twice" trap.
+private final class RedirectReplyBox: @unchecked Sendable {
+    private let handler: (URLRequest?) -> Void
+    private let lock = NSLock()
+    private var called = false
+
+    init(_ handler: @escaping (URLRequest?) -> Void) { self.handler = handler }
+
+    func callOnce(_ request: URLRequest?) {
+        lock.lock()
+        let alreadyCalled = called
+        called = true
+        lock.unlock()
+        guard !alreadyCalled else { return }
+        handler(request)
     }
 }

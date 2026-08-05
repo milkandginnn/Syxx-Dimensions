@@ -310,8 +310,11 @@ public sealed partial class AppViewModel : ObservableObject
 
     /// E129: tri-state outcome for the last update check, so the UI can distinguish
     /// "server said current" from "server never answered" or "served from stale cache."
-    public enum UpdateCheckOutcome { Live, Cached, Failed }
-    [ObservableProperty] private UpdateCheckOutcome _updateCheckOutcome = UpdateCheckOutcome.Failed;
+    // Named ...State, not ...Outcome: [ObservableProperty] on _updateCheckOutcome generates a
+    // PROPERTY called UpdateCheckOutcome, and a nested type of that name collides with it
+    // (CS0102 from the source generator — surfaced by the first real Windows build in CI).
+    public enum UpdateCheckState { Live, Cached, Failed }
+    [ObservableProperty] private UpdateCheckState _updateCheckOutcome = UpdateCheckState.Failed;
 
     /// Called once on launch — one phone-home per day. Shows broadcast if undismissed.
     /// Mirrors macOS checkStartup() which calls validateLicenseOnLaunch() FIRST, before
@@ -325,10 +328,10 @@ public sealed partial class AppViewModel : ObservableObject
         StartupResponse = resp;
         // E129: record whether the check actually succeeded live, fell back to cache, or failed entirely.
         UpdateCheckOutcome = resp is null
-            ? UpdateCheckOutcome.Failed
+            ? UpdateCheckState.Failed
             : DimensionService.Shared.LastResponseWasCached
-                ? UpdateCheckOutcome.Cached
-                : UpdateCheckOutcome.Live;
+                ? UpdateCheckState.Cached
+                : UpdateCheckState.Live;
         if (resp?.Update is not null)
         {
             UpdateAvailable = resp.Update.Available;

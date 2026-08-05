@@ -17,7 +17,7 @@
 
 The mockup overrides the Nnyx/Io base with a **violet/gold** palette in `SyxxApp.dc.html`
 `renderVals()` darkT object. These are the authoritative values; they differ from Nnyx's
-cyan-electric palette. The existing [`IoDesignSystem.swift`](macOS/Sources/SyxxApp/Views/Components/IoDesignSystem.swift)
+cyan-electric palette. The existing [`IoDesignSystem.swift`](../macOS/Sources/SyxxApp/Views/Components/IoDesignSystem.swift)
 already uses these exact hex values — no changes needed.
 
 | Token | Hex (dark) | Swift name | Use |
@@ -89,7 +89,7 @@ Fonts are already bundled in `macOS/Sources/SyxxApp/Resources/` and referenced i
 
 ### Current state
 
-[`ContentView.swift`](macOS/Sources/SyxxApp/ContentView.swift) and the embedded `CustomSidebar`
+[`ContentView.swift`](../macOS/Sources/SyxxApp/ContentView.swift) and the embedded `CustomSidebar`
 are substantially correct. The following gaps need closing:
 
 ### 1.1 Title Bar

@@ -229,9 +229,14 @@ public sealed class DicePassphraseTests
     [Fact]
     public void NoEscrowApiExists()
     {
+        // The constant NoRecoveryWarning is the user-facing warning STRING this feature exists to
+        // show — it contains "Recovery" by design and is not an API. Excluding it by exact name
+        // keeps the guard on anything that could actually escrow or recover a passphrase, which is
+        // what owner decision 15 forbids. Widening past this exclusion would ban the warning text.
         var names = typeof(DicePassphrase).GetMembers()
             .Concat(typeof(DicePassphraseOffer).GetMembers())
             .Select(m => m.Name)
+            .Where(n => n != nameof(DicePassphraseOffer.NoRecoveryWarning))
             .ToList();
 
         Assert.DoesNotContain(names, n =>

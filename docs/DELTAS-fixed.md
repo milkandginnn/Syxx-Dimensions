@@ -484,7 +484,7 @@ with the corroboration-weighted design above.
 
 ## USER's Delta of the Week # 2
 
-Audit complete. The audited list of external wrappers and system dependencies has been moved to [DEPENDENCIES.md](file:///Users/masterrabbit/Software/Syxx/DEPENDENCIES.md) in the workspace root, and archived in the [Changelog](file:///Users/masterrabbit/Software/Syxx/CHANGELOG.md) under date `2026-07-05`. This delta is marked as closed.
+Audit complete. The audited list of external wrappers and system dependencies has been moved to `DEPENDENCIES.md` (referenced file was never committed) in the workspace root, and archived in the [Changelog](../CHANGELOG.md) under date `2026-07-05`. This delta is marked as closed.
 
 ---
 

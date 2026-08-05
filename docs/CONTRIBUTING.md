@@ -10,8 +10,8 @@ usually right is worse than useless in this domain, because a user acts on its r
 |----------|-----|
 | [`AGENTS.md`](AGENTS.md) | **Binding.** The authoritative rules. **Never edit it.** A PreToolUse hook blocks edits, and only the owner may change it. |
 | [`PROJECT-STATE.md`](PROJECT-STATE.md) | Canonical current state. If what you are about to do contradicts it, stop and reconcile rather than freelance. |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How evidence flows from probe to conclusion. |
-| [`DELTAS.md`](DELTAS.md), [`ROADMAP.md`](ROADMAP.md), [`DESIGN.md`](DESIGN.md) | Open defects, status, and the functional map. |
+| [`REASONING-SYSTEM-DESIGN.md`](REASONING-SYSTEM-DESIGN.md) | How evidence flows from probe to conclusion. |
+| [`DELTAS.md`](../DELTAS.md), [`ROADMAP.md`](../ROADMAP.md), [`DESIGN.md`](DESIGN.md) | Open defects, status, and the functional map. |
 
 Where a document and the code disagree, **the code is the truth and the document is a defect.** Fix
 the document; do not fix reality to match the document.
@@ -226,7 +226,7 @@ wait for approval. Ship only approved copy; an unknown token must fail closed to
 
 ## Building and testing
 
-See [`docs/BUILDING.md`](docs/BUILDING.md) for per-platform commands. Every command there carries an
+See [`docs/BUILDING.md`](BUILDING.md) for per-platform commands. Every command there carries an
 explicit marker for what evidence backs it, and commands that genuinely cannot be run in a given
 environment are marked UNVERIFIED rather than presented as tested. Please preserve that convention.
 

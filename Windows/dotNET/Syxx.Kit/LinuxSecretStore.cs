@@ -278,10 +278,16 @@ public sealed class LinuxSecretStore : ISecretStore
 
     public void Store(string keyType, string keyId, string secret)
     {
-        // 1. Try libsecret P/Invoke
+        // 1. Try libsecret P/Invoke — and VERIFY, for the same reason as the secret-tool branch
+        // below. `LibSecretNative.Store` returning true means the library call reported success,
+        // not that a Secret Service persisted anything. On a headless Linux box the shared object
+        // is present (it ships as a GUI dependency) while no daemon backs it: the write reports
+        // success, the read returns nothing, and returning here made the file fallback — the one
+        // backend that always works — unreachable precisely when it was the only one left.
         if (LibSecretNative.IsAvailable)
         {
-            if (LibSecretNative.Store(keyType, keyId, secret))
+            if (LibSecretNative.Store(keyType, keyId, secret)
+                && LibSecretNative.Retrieve(keyType, keyId) == secret)
                 return;
         }
 

@@ -43,7 +43,7 @@ Pro modules (**Mirror**, **Glutton**, **Witness**) display a gold lock SVG icon 
 
 ## 4. Web Server & Dimensions Application Architecture
 
-The Web Server application ([Syxx Web Server GUI Redesign.html](file:///Users/masterrabbit/Software/Syxx/Syxx%20Web%20Server%20GUI%20Redesign.html)) matches the offline standalone bundle format (`Syxx Dimensions (offline).html`) served from `syxx.app` and provides:
+The Web Server application (`Syxx Web Server GUI Redesign.html` (design artifact, not tracked in the repo)) matches the offline standalone bundle format (`Syxx Dimensions (offline).html`) served from `syxx.app` and provides:
 
 1. **Offline Standalone Assets**: Embedded WOFF2 font glyphs for Cinzel and EB Garamond, data URI logo assets, and offline script unpacker.
 2. **OS Preview Switcher**: Dynamic window chrome switching between macOS, Windows 11, and Ubuntu Linux.

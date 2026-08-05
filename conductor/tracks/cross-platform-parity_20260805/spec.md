@@ -89,10 +89,20 @@ Depends on existing code; no incomplete tracks.
 | `outputs-catalog-{general,story}-mode.csv` | Authority for expected output strings |
 | `Server/venv/bin/python` | Corpus rebuild — system `python3` lacks `brotli` |
 
+## Scope amendment — 2026-08-05
+
+**Remediation is now in scope.** The track was created detection-only; the owner moved behavior-change
+remediation into it after the first six findings landed. Recorded here rather than silently rewritten,
+because "detection only" is what shaped the original phase structure.
+
+Consequences: Phase 8 added for remediation; the "fixing is out of scope" exclusion below is struck;
+and several tasks that said *file, do not fix* now have a follow-on fix task. The instruction to file
+each finding with evidence **still stands** — remediation does not replace the record.
+
 ## Out of Scope
 
 - **GUI parity** across SwiftUI / WinUI / Avalonia — separate track
-- **Fixing** any divergence this track surfaces — each becomes its own track
+- ~~**Fixing** any divergence this track surfaces~~ — **struck 2026-08-05, now in scope (Phase 8)**
 - **Amending** `docs/warp-manifest-v1-spec.md` — this track may produce a dated amendment
   *proposal*; ratification is the owner's, matching how A1–A11 were handled
 - **Python server parity** — single implementation, no twin to compare against

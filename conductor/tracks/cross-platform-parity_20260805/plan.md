@@ -173,6 +173,38 @@ The same defect this track exists to prevent, one layer down.
 
 ---
 
+## Phase 8: Remediation (added 2026-08-05 — scope amendment)
+
+The track was created detection-only. The owner moved behavior-change remediation into it. Each
+finding keeps its filed record; these tasks fix them.
+
+### Tasks
+
+- [x] Task 8.1: F-04 — make `MatrixSpec` encoding deterministic. `knownSections` and
+      `mappableIndicators` are `Set`s and were emitted in hash order; three runs on one build gave
+      three orders. Custom `encode(to:)` sorts both by `rawValue`
+- [ ] Task 8.2: F-04 twin — audit the C# `MatrixSpec` for the same hazard.
+      `IReadOnlySet<SectionId> KnownSections` has the same latent instability
+- [ ] Task 8.3: F-05 — reconcile `default-spec.frozen.json`. It predates B156's
+      `mappableIndicators` and carries `knownSections` in neither platform's order.
+      `MATRIX-MIGRATION-PLAN.md:358` requires regeneration to be an explicit spec-version bump
+      commit — owner-gated, not an agent edit
+- [ ] Task 8.4: F-05 — decide the forward-slash escaping contract. The oracle escapes (`\/`),
+      C# does not. One of the two must change; pick deliberately and record why
+- [ ] Task 8.5: F-01 — add `resolverSubstituted` and the Mirror degraded-cap to the C# twin, so
+      substituted evidence cannot read clean on Windows and Linux
+- [ ] Task 8.6: F-02 — thread `DNSTransportWindow` into the C# `SectionInputs`
+- [ ] Task 8.7: F-06 — correct the `DELTAS-fixed.md` record for F042. It is not fixed
+- [ ] Task 8.8: The `-h` / `-v` CLI asymmetry from Task 3.3 — now fixable in-track
+
+### Verification
+
+- [ ] Each fix is verified by a test that fails without it
+- [ ] No fix lands without its finding's record being updated to the state the evidence supports
+- [ ] `swift test --filter Matrix` and the C# twin agree on the spec bytes
+
+---
+
 ## Final Verification
 
 - [ ] All acceptance criteria in `spec.md` met, or explicitly carried with a state and a reason

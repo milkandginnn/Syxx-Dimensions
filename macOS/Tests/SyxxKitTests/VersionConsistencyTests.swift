@@ -51,21 +51,39 @@ final class VersionConsistencyTests: XCTestCase {
         let pattern = try NSRegularExpression(pattern: #"Syxx (\d+\.\d+\.\d+)"#)
         var offenders: [String] = []
 
-        let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)?
-            .compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" } ?? []
+        guard let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else {
+            return XCTFail("cannot enumerate \(root.path) — a scan that reaches no file must not read as a clean scan")
+        }
+        let files = walker.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
 
+        var scanned = 0
         for file in files {
-            guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
+            // An unreadable source file used to be skipped here, which shrank the scan silently:
+            // the offender that could not be read is exactly the one this test exists to catch.
+            let text: String
+            do { text = try String(contentsOf: file, encoding: .utf8) } catch {
+                XCTFail("cannot read \(file.path) as UTF-8 (\(error)) — the version scan must not skip a source file")
+                continue
+            }
             let range = NSRange(text.startIndex..., in: text)
             for m in pattern.matches(in: text, range: range) {
-                guard let r = Range(m.range(at: 1), in: text) else { continue }
+                guard let r = Range(m.range(at: 1), in: text) else {
+                    XCTFail("\(file.lastPathComponent): matched \"Syxx <version>\" but its capture group did not map back to the source")
+                    continue
+                }
                 let found = String(text[r])
                 if found != canonical {
                     offenders.append("\(file.lastPathComponent): \"Syxx \(found)\" != canonical \(canonical)")
                 }
             }
+            scanned += 1
         }
 
+        // Same rule the warp corpus oracle follows: a scan proves how many files it read, or its
+        // green means nothing.
+        print("[version scan] scanned \(scanned) of \(files.count) Swift sources under \(root.path)")
+        XCTAssertGreaterThan(scanned, 0, "no Swift source was scanned — a vacuous pass, not a clean tree")
+        XCTAssertEqual(scanned, files.count, "every discovered source must be scanned; \(scanned) of \(files.count) were")
         XCTAssertTrue(offenders.isEmpty,
                       "hardcoded version(s) contradicting SyxxConfig.version:\n" + offenders.joined(separator: "\n"))
     }

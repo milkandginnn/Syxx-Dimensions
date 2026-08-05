@@ -456,6 +456,101 @@ macOS reaches it by ⌘U menu, Linux embeds it in Settings — justified idiom, 
 `MotdLoadController` exists on all three platforms, so What's New load-state policy is genuine parity
 despite different renderers.
 
+### 1.17 The most important operational note in this document
+
+**D1-36 — Linux's result-rendering honesty is already correct. The risk to implementers is regression,
+not absence.** Verified: `IsVisible="{Binding HasResult}"` gating on Conclusions, Witness and Mirror;
+every view model sets `HasResult` only after a real outcome and distinguishes never-ran from failed.
+`MirrorViewModel.cs` carries five distinct states with only `MATCHES` green — *"No comparison was
+produced — inconclusive, not clean"*, *"INCONCLUSIVE — This is not a clean result"*, *"DEGRADED — some
+vantages could not be reached, so confidence is reduced"* — plus a refusal to fabricate a resolver.
+`WitnessViewModel.cs:96-101` makes `HasResult` true for `Failed` so a failure can never fall back to the
+never-ran appearance. `ConclusionsViewModel.cs:103-104` renders *"That is a gap in the evidence, not a
+clean result"* on a null determination. And `Presentation/SeverityColor.cs` is the **reference**
+implementation of the severity mapping — five tones, `High` explicitly orange "(NOT red)", catch-all
+documented as *"neutral, never green"*, with a header naming "the green-on-inconclusive defect class this
+project has shipped before" and recording a fixed regression where a retired path collapsed five Kit
+severities into three tones.
+
+**Every seat brief must carry this sentence.** The seats are bolting commands, navigation and shared
+state onto panes whose honesty logic is already right. The failure mode to guard against is breaking it.
+
+**Two exceptions to note:** `WitnessViewModel.cs:180-182` and `MirrorViewModel.cs:73,88` define their own
+brushes rather than using `SeverityColor`, so the app ships **two different reds for the critical tier**
+(`#FF4D6D` in Witness, `#FF5C7A` in `SeverityColor` and Mirror). Cosmetically minor; structurally it is
+exactly the drift `SeverityColor` exists to prevent, and a future change to the shared mapper will
+silently not reach those two panes.
+
+### 1.18 Settings fabricates a system-state claim — HIGH, and Linux is the platform that added it
+
+**D1-34** is D3's `SettingsViewModel.cs:71` finding with the mechanism established, and the cross-platform
+comparison reassigns fault. When the toggle goes false, `OnEncryptEnabledChanged` constructs
+`new EncryptedDNSApplyResult(Failed, Reason: "disabled")` **locally — no configurator call, no probe, no
+read-back** — hands that invented object to `Describe(turningOn: false)`, and renders **"Encryption is
+off."** Worse, `:67` `Persist()` runs *before* the apply, so the stored preference and the live
+systemd-resolved config are left disagreeing **persistently**.
+
+- **macOS is correct:** a real `disable()` exists, both directions route through one `applyEncryption`,
+  and D097 is spelled out — *"do NOT persist before the operation — persist only after confirmation. The
+  prior value is passed so applyEncryption can revert on failure."*
+- **Windows is incomplete but does not lie:** no disable API, the configurator is called only when
+  turning on, and its `Describe` has no `turningOn` branch at all. `turningOn` is vestigial there.
+- **So Linux added the branch that fabricates**, and its adjacent comment claiming *"character-for-
+  character parity with Windows"* is true for two arms and **false for the `_ =>` arm where the
+  fabrication lives** — a fourth instance of the self-contradicting-doc-comment pattern.
+
+**D097 is fixed only on macOS.** Linux and Windows both persist before confirming and neither reverts.
+
+Do not over-correct: **the Linux enable path is honest and good** — `Inconclusive` renders *"Saved, but
+not yet confirmed encrypted… Treated as NOT protected until confirmed."* The same method is honest in one
+direction and fabricated in the other, which is why it survived.
+
+### 1.19 Stale results and unattributed results — MEDIUM
+
+**D1-37 — no pane invalidates its result when the domain changes.** No `OnDomainChanged` handler exists
+in Mirror, Witness or Portal. Run Mirror on `github.com`, get the green MATCHES line, type
+`example.com` — the green line stays, beside a domain it was never measured against. Commands do clear at
+the *start* of a new run, so the exposure is the window between edit and re-run. macOS shares the shape
+but has **one** domain; on Linux, D1-00 means **six independently-stale results can coexist against six
+different domains**. Fix belongs in `SessionModel.Domain`'s setter — one place — which is only possible
+once the keystone lands.
+
+**D1-38 — no Linux result names what produced it.** macOS attributes six evidence rows by warden name and
+renders *"Creating signed Witness Testimony for `<domain>` via `<resolver>`"* with an honest "resolver not
+determined" fallback. Linux says "the local resolver" and "the public resolver consensus" and names
+neither, despite having obtained the resolver IP moments earlier; Witness renders only "Sealed.
+Signature: …" while domain and resolver are local variables in scope. Copy fix, not plumbing.
+
+### 1.20 Mirror and Cage — inventory only, routed to their streams
+
+Both are reserved and mid-transition. **No seat in this plan owns either.**
+
+**Mirror** — Linux is **40 lines** against macOS's **451**. Absent: the entire side-by-side comparison
+table (per-resolver rows, the local resolver row, result label and wrapping evidence detail) and the
+static content-hash column including the E110 work that *"names the actual failing predicate instead of
+always 'structures'"*. **Linux renders one sentence where macOS shows the evidence, so the answers being
+compared are never displayed** — the same shape as the Witness finding above. *Trap for the porting
+stream:* the obvious-looking legacy result field is retired and never populated; reading it yields a
+permanently empty column. **Preserve Linux's honest deferral wording** — *"it is not being run or assumed
+to pass"* — that clause is the honesty spine done right. One thing to reconcile, outside this plan's file
+set: that note says licence activation is unavailable on Linux while `LicenseView.axaml` sits in the nav
+advertising $3.95/month. Either the note is stale or the pane is selling something unactivatable.
+
+**Cage** — Linux is 33 lines of view, a 10-line code-behind that sets no DataContext, and **no
+`CageViewModel` at all**. macOS has 306 lines: start/stop capture, a live CAPTURING/IDLE line, an
+engine-computed result message, a streaming feed of captured queries, and a five-column results grid with
+per-row severity accents. Linux prints one command instead. Two handovers: ★ its own comment claims it
+points at the CLI *"exactly as the macOS and Windows clients do"* — **macOS does not**, it has a working
+in-app capture button (fifth self-contradicting comment); and D3 established **the printed command is not
+installed by the `.deb`**, so the pane is honest that it cannot capture and then hands the user a dead
+end, which is worse than either half. Keep what Linux gets right: *"A capture on its own is not a security
+conclusion"* and the plain statement that pkexec elevation is planned but not yet wired.
+
+**Structural note for the Cage agent:** because `CageView.axaml.cs` sets no DataContext, Cage is the only
+pane needing one *added* rather than redirected when `SessionModel` lands. It is deliberately off the
+shared session in this wave so nobody touches the reserved file — which is part of why D1-00 closes for
+4 of 6 wardens.
+
 ---
 
 ## 2. Findings — macOS behind Linux (adopt from Linux)
@@ -621,6 +716,17 @@ the precise condition §1.3 cites for reserving the other two. Recommend adding 
 9. **The narrow Prophet/Mirror lift** (§3) — declined by default, yours to overrule.
 10. **Conclusions eyebrow copy.** macOS says "THE COUNCIL · SYNTHESIS"; Linux and Windows say
     "DIAGNOSTICS • SYNTHESIS". macOS is the outlier. A copy question, not a defect.
+11. **Does the catalog seat backfill, or only append its own new strings?** House rule 2 is broadly unmet
+    on Linux today: only **34 catalogued rows across 8 Linux files**, against 800 and 812 total rows in
+    the two catalogs. **Seventeen files are uncatalogued entirely**, including `SettingsViewModel.cs`,
+    `LicenseView.axaml`, `MainWindow.axaml`, `MirrorViewModel.cs`, `ConclusionsViewModel.cs` and
+    `PortalViewModel.cs`. This is not bookkeeping — **several copy defects in this document sit in files
+    you cannot see from the catalogs**: the `$3.95 / month` that contradicts the Dashboard's `$2 / moon`,
+    the fabricated "Encryption is off.", and the "Conclusion"/"Conclusions" nav drift. Backfilling is the
+    difference between being able to edit this copy and not, but it is a real scope increase on one seat.
+12. **The Mirror/licence contradiction.** Mirror's honest deferral note says licence activation is
+    unavailable on Linux; `LicenseView.axaml` is in the nav advertising a monthly price. Either the note
+    is stale or the pane sells something that cannot be activated. Outside every seat's file set.
 
 ---
 

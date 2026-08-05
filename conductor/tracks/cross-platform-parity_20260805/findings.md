@@ -123,6 +123,81 @@ inventorying corpora and did not audit it. Flagged so the observation is not los
 
 ---
 
+## F-04 · Swift `defaultSpecJSON()` is nondeterministic — the same build emits a different spec each run
+
+**State:** `open` · **Found by:** A-03 (restoring the quarantined loader) · **Severity:** High
+
+### Evidence
+
+Three consecutive runs of `testDefaultSpecMatchesFrozenOracle` on one machine, one build:
+
+```
+run 1  "knownSections":["portal","mirror","prophet","glutton","witness","cage"]
+run 2  "knownSections":["prophet","mirror","witness","portal","cage","glutton"]
+run 3  "knownSections":["mirror","prophet","glutton","cage","witness","portal"]
+```
+
+| | |
+|---|---|
+| Source | `macOS/Sources/SyxxKit/Synthesis/SyxxMatrixIntegration.swift:206` — `let mappableIndicators = Set(…)` |
+| Type | `macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:286` — `public let mappableIndicators: Set<IndicatorID>?` |
+
+`Set` has no stable iteration order, and Swift hashing is seeded per process, so the serialized order
+varies run to run.
+
+### What it means
+
+The spec serialization can never equal a frozen oracle — not because the values are wrong, but
+because the *bytes* are unstable. Any hash, signature, or comparison taken over this output is
+unstable with it. `docs/MATRIX-MIGRATION-PLAN.md:358` designates macOS as the reference platform
+whose output is "GENERATED once … then frozen"; a nondeterministic emitter cannot serve that role.
+
+This is the ordering hazard `docs/parity-vector-v1-spec.md` warns about, found in production rather
+than in the harness.
+
+---
+
+## F-05 · Neither platform matches the frozen oracle, and they fail differently
+
+**State:** `open` · **Found by:** A-03 · **Severity:** High
+
+| Platform | Test | Diverges from oracle by |
+|---|---|---|
+| Swift | `MatrixGoldenCorpusTests.testDefaultSpecMatchesFrozenOracle` | Emits an extra top-level key `mappableIndicators`; `knownSections` order unstable (F-04) |
+| C# | `Syxx.Tests.MatrixGoldenCorpusTests.DefaultSpecMatchesFrozenOracle` | Forward-slash escaping — oracle has `"DNSspoofing\/poisoning"`, C# emits `"DNSspoofing/poisoning"` (pos 1721) |
+
+The frozen oracle's top-level keys are `["diagnoses","knownSections","thresholds"]` — no
+`mappableIndicators`. Swift matches the oracle on slash escaping; C# matches on key set. **Neither
+matches on both, and the two platforms would not match each other.**
+
+The C# half is live and runs in CI (`ci.yml:142`, full `Syxx.Tests` suite, no filter), so this has
+been failing there. It appears in `docs/PLAN-linux-parity-master-2026-08-04.md:938` inside a list
+described as baseline — the list this project already resolved to treat as unaudited rather than
+cleared. It is now audited: a real defect, three ways.
+
+---
+
+## F-06 · F042 is recorded as FIXED on the strength of a file that never compiled
+
+**State:** `open` · **Found by:** A-03 · **Severity:** Medium — a process defect, not a code one
+
+`docs/DELTAS-fixed.md:64844`:
+
+> "**[F042] FIXED 2026-07-30 (qwen-code).** macOS loader exists (`MatrixGoldenCorpusTests.swift`) —
+> asserts `defaultSpecJSON()` equals `default-spec.frozen.json` byte-for-byte and evaluates each
+> golden vector. Windows twin created."
+
+Every clause is literally true. The file existed, and it did contain those assertions. It also sat
+in `macOS/Tests/_quarantine/` outside both test targets, so none of them ever executed — and when
+executed for the first time today, the byte-for-byte assertion **fails**.
+
+This is the exact failure `Linux/PARITY-LEDGER.md` refuses the word "fixed" to prevent, quoted from
+its own header: *a change is in the tree, nothing has executed it, and the fix was real but nobody
+could have known.* Here is a concrete instance. F042 should be `fixed-unverified` at best, and is
+actually `open`.
+
+---
+
 ## Consequence for the vector format
 
 `PARITY_VECTOR_V1` (`docs/parity-vector-v1-spec.md`) covers the **32 shared fields only**, and both

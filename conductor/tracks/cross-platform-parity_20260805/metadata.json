@@ -46,6 +46,21 @@
       "id": "F-03",
       "state": "open",
       "summary": "matrix golden corpus loaded by C# only; Swift twin quarantined outside both test targets"
+    },
+    {
+      "id": "F-04",
+      "state": "open",
+      "summary": "Swift defaultSpecJSON() nondeterministic: knownSections/mappableIndicators are Set-derived, different order every run"
+    },
+    {
+      "id": "F-05",
+      "state": "open",
+      "summary": "neither platform matches default-spec.frozen.json, and they diverge differently (Swift extra key + order; C# slash escaping)"
+    },
+    {
+      "id": "F-06",
+      "state": "open",
+      "summary": "F042 recorded FIXED on a file that never compiled; first execution fails"
     }
   ]
 }

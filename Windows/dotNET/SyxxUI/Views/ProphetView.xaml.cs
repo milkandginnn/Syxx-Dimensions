@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 using SyxxUI.ViewModels;
 using Syxx.Kit;
 using System.Collections.ObjectModel;

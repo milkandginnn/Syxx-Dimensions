@@ -640,7 +640,7 @@ public sealed partial class AppViewModel : ObservableObject
             data: new Dictionary<string, string>
             {
                 ["result"] = determination?.State.ToString() ?? "none",
-                ["section_count"] = (SectionInputs?.Count() ?? 0).ToString(),
+                ["has_inputs"] = (SectionInputs is not null).ToString(),
                 ["engine_version"] = "matrix.1"
             });
     }

@@ -183,7 +183,7 @@ finding keeps its filed record; these tasks fix them.
 - [x] Task 8.1: F-04 — make `MatrixSpec` encoding deterministic. `knownSections` and
       `mappableIndicators` are `Set`s and were emitted in hash order; three runs on one build gave
       three orders. Custom `encode(to:)` sorts both by `rawValue`
-- [ ] Task 8.2: F-04 twin — audit the C# `MatrixSpec` for the same hazard.
+- [x] Task 8.2: F-04 twin — audit the C# `MatrixSpec` for the same hazard.
       `IReadOnlySet<SectionId> KnownSections` has the same latent instability
 - [ ] Task 8.3: F-05 — reconcile `default-spec.frozen.json`. It predates B156's
       `mappableIndicators` and carries `knownSections` in neither platform's order.
@@ -195,6 +195,7 @@ finding keeps its filed record; these tasks fix them.
       substituted evidence cannot read clean on Windows and Linux
 - [ ] Task 8.6: F-02 — thread `DNSTransportWindow` into the C# `SectionInputs`
 - [ ] Task 8.7: F-06 — correct the `DELTAS-fixed.md` record for F042. It is not fixed
+- [ ] Task 8.9: F-07 — port the vector-evaluation and classification tests to the C# twin
 - [ ] Task 8.8: The `-h` / `-v` CLI asymmetry from Task 3.3 — now fixable in-track
 
 ### Verification

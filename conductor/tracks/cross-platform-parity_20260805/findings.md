@@ -215,3 +215,24 @@ loudly keeps the gap visible until F-01 and F-02 are resolved by their own track
 
 Both findings need rows in `Linux/PARITY-LEDGER.md` under Task 7.2. Recorded here first so the
 evidence is not lost if the track pauses.
+
+---
+
+## F-07 · The C# golden-corpus twin implements half of what its own header promises
+
+**State:** `open` · **Found by:** Task 8.2 · **Severity:** Medium
+
+`Windows/dotNET/Syxx.Tests/MatrixGoldenCorpusTests.cs:16-19` states:
+
+> "Both platforms must assert: 1. `DefaultSpecJson()` equals `default-spec.frozen.json`
+> byte-for-byte 2. Each golden vector in `corpus/matrix/vectors/*.json` drives `Evaluate()` and
+> produces the expected `DeterminativeResult` JSON."
+
+The file implements assertion 1 only. There is no vector-evaluation test on the C# side.
+
+Combined with F-03, the history is: the vectors were evaluated by **neither** platform (Swift
+quarantined, C# never written), and as of today by **Swift only**. The file that declares the
+two-platform contract is the one missing half of it.
+
+Fix belongs to Phase 8: port `testGoldenVectorsEvaluateToExpectedResults` and
+`testEveryVectorFileIsClassified` to C#, including the evaluated-count assertion.

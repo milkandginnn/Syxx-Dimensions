@@ -93,6 +93,34 @@ final class MatrixGoldenCorpusTests: XCTestCase {
                        "defaultSpecJSON() must match default-spec.frozen.json byte-for-byte (whitespace-normalized)")
     }
 
+    /// F-04: knownSections must be emitted in ordinal-sorted order.
+    ///
+    /// It is backed by a `Set`, which has no order, so encoding it directly leaks hash order into
+    /// the bytes — and Swift seeds its hasher per process, so the emitted spec differed on every
+    /// launch. Three consecutive runs of one build produced three different orders before the fix.
+    ///
+    /// Asserting SORTED rather than merely STABLE is deliberate: two encodings inside one process
+    /// share a hash seed and would agree even while the defect was present.
+    ///
+    /// Twin: MatrixGoldenCorpusTests.DefaultSpecKnownSectionsAreOrdinalSorted (C#).
+    func testDefaultSpecKnownSectionsAreOrdinalSorted() throws {
+        // defaultSpecJSON() is pretty-printed; normalize so the literal search is whitespace-proof.
+        let spec = try SyxxMatrixIntegration.defaultSpecJSON()
+            .replacingOccurrences(of: "\\s+", with: "", options: .regularExpression)
+
+        guard let range = spec.range(of: "\"knownSections\":[", options: .literal),
+              let close = spec[range.upperBound...].firstIndex(of: "]") else {
+            XCTFail("knownSections array not found in emitted spec")
+            return
+        }
+        let emitted = spec[range.upperBound..<close]
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "\" ")) }
+
+        XCTAssertFalse(emitted.isEmpty, "knownSections must not be empty")
+        XCTAssertEqual(emitted, emitted.sorted(), "knownSections must be emitted ordinal-sorted")
+    }
+
     /// Every .json in the vectors directory is either an engine vector or explicitly named as a
     /// non-engine one. An unclassified file fails the suite: that is how a new vector shape gets
     /// noticed instead of quietly reducing what this test covers.

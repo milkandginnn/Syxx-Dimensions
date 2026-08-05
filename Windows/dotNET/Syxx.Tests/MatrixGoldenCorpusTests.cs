@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Syxx.Kit;
@@ -51,4 +54,33 @@ public class MatrixGoldenCorpusTests
         Assert.Equal(oracleString, specString);
     }
 
+    /// <summary>
+    /// F-04: knownSections must be emitted in ordinal-sorted order.
+    ///
+    /// It is backed by a set, which has no order, so serializing it directly leaks hash order into
+    /// the bytes — and SectionId is a record struct over string, whose hash .NET randomizes per
+    /// process. Without a sort the emitted spec differs between launches, which makes it unusable
+    /// as a frozen oracle and unstable under any hash, signature, or byte-comparison taken over it.
+    ///
+    /// Asserting SORTED rather than merely STABLE is deliberate: two serializations inside one
+    /// process share a hash seed and would agree even while the defect was present.
+    ///
+    /// Twin: MatrixGoldenCorpusTests.testDefaultSpecKnownSectionsAreOrdinalSorted (Swift).
+    /// </summary>
+    [Fact]
+    public void DefaultSpecKnownSectionsAreOrdinalSorted()
+    {
+        var spec = SyxxMatrixIntegration.DefaultSpecJson(prettyPrinted: false);
+
+        var match = Regex.Match(spec, "\"knownSections\"\\s*:\\s*\\[(?<body>[^\\]]*)\\]");
+        Assert.True(match.Success, $"knownSections array not found in emitted spec: {spec[..Math.Min(200, spec.Length)]}");
+
+        var emitted = match.Groups["body"].Value
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim().Trim('"'))
+            .ToList();
+
+        Assert.NotEmpty(emitted);
+        Assert.Equal(emitted.OrderBy(s => s, StringComparer.Ordinal).ToList(), emitted);
+    }
 }

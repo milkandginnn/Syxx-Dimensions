@@ -208,6 +208,12 @@ public partial class WitnessViewModel : ObservableObject
     internal const string SelfVerifyNoSnapshotMessage =
         "Seal a testimony first — there is no last seal to re-verify yet.";
 
+    /// G-12 Route B: shown when the retained seal belongs to a different domain than the one now
+    /// entered. Deliberately contains no form of the word "Verified" — this line renders beside the
+    /// CURRENT domain, and any positive-sounding word here reads as a claim about it.
+    internal const string SelfVerifyDomainMismatchFormat =
+        "The last seal belongs to {0}, not {1}. Seal {1} first to check it.";
+
     // Canonical snapshot reader options — the SAME contract the CLI verify path and the golden-vector
     // tests use (WitnessCommand.cs / WitnessCrossPlatformGoldenVectorTests.cs). The date/status wire
     // converters are attribute-bound on the types, so no extra registration is needed here.
@@ -439,6 +445,18 @@ public partial class WitnessViewModel : ObservableObject
         if (snap is null)
         {
             VerifyLine = SelfVerifyNoSnapshotMessage;
+            VerifyBrush = CautionBrush;
+            return;
+        }
+        // G-12 Route B (SelfVerify_StaleSnapshot_DoesNotShowGreen): the retained seal may belong
+        // to a different domain than the one now shown — seal a.com, switch to b.com, fail the
+        // b.com seal, self-verify. Verifying a.com's snapshot here would render a green "Verified"
+        // that the user reads as a claim about b.com: a false-confidence defect. The nullity guard
+        // above is not enough; the seal must also be ABOUT the current domain.
+        var current = Domain?.Trim() ?? "";
+        if (!string.Equals(snap.TargetDomain, current, StringComparison.OrdinalIgnoreCase))
+        {
+            VerifyLine = string.Format(SelfVerifyDomainMismatchFormat, snap.TargetDomain, current);
             VerifyBrush = CautionBrush;
             return;
         }

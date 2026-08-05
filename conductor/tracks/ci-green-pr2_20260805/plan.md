@@ -6,9 +6,9 @@ Loop: fix → push → `gh pr checks 2 --watch` → re-read logs → repeat unti
 unrelated fixes in one commit; each names its check and cause.
 
 ## Phase 1: The honesty-critical one
-- [ ] 1.1 Investigate SelfVerify_StaleSnapshot false-green: reproduce, read the ViewModel path,
+- [x] 1.1 Investigate SelfVerify_StaleSnapshot false-green: reproduce, read the ViewModel path,
       decide product-bug vs stale-test WITH evidence; write the conclusion into findings
-- [ ] 1.2 Fix accordingly (product change or evidenced test correction)
+- [x] 1.2 Fix accordingly (product change or evidenced test correction)
 ### Verification: the test fails on a stale snapshot rendered green, passes on correct behavior
 
 ## Phase 2: Deterministic harness/env fixes

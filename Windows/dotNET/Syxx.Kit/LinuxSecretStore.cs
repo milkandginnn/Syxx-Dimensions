@@ -814,6 +814,14 @@ public sealed class LinuxSecretStore : ISecretStore
             // a read-back (G-01). Swallowing silently is what made that verification necessary, so
             // the failure is at least recorded here.
             Breadcrumb("keystore write failed", ex);
+            // …and named on stderr. A breadcrumb goes to the telemetry sink, which is absent in CI
+            // and in any offline run, so the only symptom of a failed write was a later read
+            // returning null with nothing to say why. This is the store the product falls back to
+            // when every other backend is gone; when it cannot write, that must be legible where
+            // the failure is actually being read.
+            Console.Error.WriteLine(
+                $"[syxx keystore] file-fallback write failed for {keyType}/{keyId} in "
+                + $"{StoreDirForInstance}: {ex.GetType().Name}: {ex.Message}");
         }
         finally
         {

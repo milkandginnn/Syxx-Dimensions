@@ -795,7 +795,11 @@ jobs:
           # Recommends, and every apt line in this job carries --no-install-recommends, so without
           # naming it the GUI step below dies on "xauth: command not found" and reports it as
           # "GUI cannot start" — a false failure pointing at the wrong file.
-          apt-get install -y --no-install-recommends git libxml2-utils xvfb xauth
+          # ca-certificates: the bare ubuntu:24.04 container has no CA bundle, so git's HTTPS
+          # fetch of this repo fails with 'server certificate verification failed. CAfile: none'.
+          # It is installed HERE, after the Depends test above has already run against the
+          # untouched base image, so it cannot mask a dependency the package failed to declare.
+          apt-get install -y --no-install-recommends ca-certificates git libxml2-utils xvfb xauth
 
       - name: Checkout (for the source-vs-shipped comparisons below)
         uses: actions/checkout@v4

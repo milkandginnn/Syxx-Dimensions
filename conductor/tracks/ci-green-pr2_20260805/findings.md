@@ -57,3 +57,53 @@ acknowledgment.
 | windows-x64 | 3 real C# breaks, first Windows build ever | Suspending removed, ResolverRow renamed, Evaluation→Result |
 | markdownlint | 50 real violations incl. records misparsed | fixed content-preservingly to zero |
 | Validate | plugin sources behind committed artifacts | sources committed, validate green locally |
+
+---
+
+## C-05 · Closing state: what this track fixed, and what it uncovered that it cannot finish
+
+### Fixed and verified (green on CI unless noted)
+
+| # | Red | Root cause | Evidence |
+|---|---|---|---|
+| 1 | SelfVerify false-green | product: `_lastSnapshot` never re-scoped; no domain check | C-01; 4 tests green |
+| 2 | 7 Witness tests | tests read self-verify panel, not external; exact-type assert masked it | C-02; 10 green |
+| 3 | keyring leg | empty `--unlock` password → no login collection | **green on CI run 5** |
+| 4 | markdownlint | 50 real violations | **green on CI run 5**; 0 locally |
+| 5 | `.deb` build ×2 | payload/committed-input gaps | **green on CI runs 4–5** |
+| 6 | Warp corpus drift | committed builder ≠ committed corpus | gate passes |
+| 7 | doc-gardener | 11 dead links | `make garden` 0 errors |
+| 8 | Server lint | 475 → 98 (ruff fix/format; 418 tests still pass) | partial, see below |
+| 9 | 3 Windows C# breaks | Suspending, ResolverRow, Evaluation→Result | superseded by newly-visible errors |
+| 10 | `.deb` smoke CA | container has no CA bundle | fix pushed, unverified |
+
+### Uncovered, NOT finishable inside this track
+
+Each is a first-ever compile of code on a platform that had never built it. They are not CI
+plumbing; they are ports.
+
+1. **Windows GUI has never compiled on Windows.** Fixing the first three C# errors revealed the
+   next layer (`Loaded` unresolved, `SolidColorBrush`/`Color` unresolved, CS0411 in AppViewModel).
+   Expect several rounds. `docs/CLAUDE.md` already records that WinUI cannot build on macOS, so
+   every round costs a CI run.
+2. **macOS SyxxApp has never compiled under Swift 6.** Moving the runner to macos-15 (required —
+   macos-14 ships Swift 5.10 and cannot parse a tools-6.0 package) exposed real strict-concurrency
+   errors in `SyxxApp.swift:279` (`NSImage` static), `PurpleScrollView.swift:269` (main-actor
+   mutation) and a test type error. `SyxxKit` itself builds clean in debug and release.
+3. **FileFallback ×4 on Linux only.** Not reproducible on this Mac — CI has libsecret and
+   secret-tool present with no Secret Service behind them. Two fixes landed (round-trip
+   verification on both backends); a third guess would be unevidenced, so the store now names its
+   failure on stderr and the next run will say why.
+4. **Server lint, 98 remaining.** Not mechanical: `S310` urlopen audits inside the SSRF fetcher,
+   `B904` raise-from, `E402` deliberate late imports, `S608`. Each needs a per-site decision — fix
+   or justified `noqa` — and a sweep would be exactly the softening this track forbids.
+5. **snap build.** Pinning `dotnet-sdk/10.0/stable` did not clear it; cause not yet read.
+6. **claude-review** — C-03, repository secret, owner-only.
+
+### The pattern worth keeping
+
+Every root cause found in the first three runs was the same: **a fix that existed only in a working
+tree while CI built HEAD.** The syntax error at `LinuxSecretStore.cs:766`, the ~50 referenced-but-
+uncommitted source files, the corpus builder, the plugin sources, three Kit fixes. `ci.yml` now
+carries a gate asserting every packaging input is committed; the same idea generalised — assert
+that what CI builds is what a clean checkout produces — would have caught all of them.

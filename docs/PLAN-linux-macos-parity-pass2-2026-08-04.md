@@ -333,6 +333,129 @@ class. **P-19:** no Linux artifact is uploaded from any CI run, on the platform 
 **P-20:** eight macOS suites have no Linux equivalent, notably `CLIExitCodeProcessTests.swift` — the
 shared CLI *is* the Linux CLI, so nothing pins its exit codes anywhere.
 
+### 1.15 The shipped CLI destroys keys and leaks keys — HIGH, worst findings in the survey
+
+`Windows/dotNET/Syxx/` is the binary Linux actually ships. Two of these are irreversible-user-harm class.
+
+★ **C-10 — `syxx witness --gen-keypair` silently destroys an existing signing identity.** macOS refuses
+without `--force`: *"Re-running --gen-keypair would destroy your current signing identity"*
+(`SyxxWitness.swift:69-74`, B249), because silently destroying it "makes previously signed snapshots
+orphaned from their signer". ★ `grep force|Exists|fileExists` over `WitnessCommand.cs` returns **0** —
+no existence check anywhere, and `--force` is not in the C# flag surface at all. Run it twice on Linux
+and every previously signed testimony becomes unverifiable, with the old key unrecoverable.
+
+**The aggravating context matters more than the bug.** `WitnessCommand.cs:87-91` cites *"D086 (Windows
+regression of the same defect already fixed on macOS SyxxWitness.swift:9-40)"*. This exact file has
+already been through **one round of porting a witness-key safety fix from macOS**, and B249 sits a few
+lines from the ported fix and was not taken. **Action: a full file-level re-diff of `SyxxWitness.swift`
+against `WitnessCommand.cs`, not a two-item patch.**
+
+★ **C-11 — the private key is accepted on argv with no gate, and the help text advertises it.** macOS
+gates `--key` behind `--insecure-key-arg` (`:131`) and warns (`:161`, B189) that argv is exposed via
+`ps -ww`, shell history and CI logs. ★ `grep -ci 'insecure|ps -ww|shell history'` over
+`WitnessCommand.cs`: **0**. And ★ the C# usage string (`:79`) leads with
+`create <domain> --key <b64-private-key>` — the insecure form is the *documented* one, where macOS's
+usage leads with `--key-file` and annotates `--key` as requiring the opt-in.
+
+**This is worse on Linux than it would be on macOS**, inverting the usual assumption: stock Ubuntu
+mounts `/proc` without `hidepid`, so `/proc/<pid>/cmdline` is world-readable and any local user can read
+the Ed25519 private key of a running `syxx witness create`. Recent macOS restricts argv visibility
+across users. *(`hidepid` default is inferred — distro-dependent, unverified on a host. The code
+asymmetry is verified.)* C# already supports `--key-file`, so this is a gate plus a help correction, not
+new capability.
+
+**C-09 — `syxx cage` on Linux probably captures nothing while reporting success. TEST FIRST, do not fix
+first.** `CaptureEngine.cs:323-324` asserts "on Linux/macOS, SOCK_RAW + **IPPROTO_UDP** already receives
+all UDP packets". The call sites pass `ProtocolType.IP` (0) and `ProtocolType.IPv6` (41) — ★ `grep
+ProtocolType.Udp` across the Kit returns **0**, so the comment's precondition is never met. No socket
+option is applied on non-Windows (both `IP_HDRINCL` and `SIO_RCVALL` are Windows-gated), the socket is
+bound to a single unicast address, and no `AF_PACKET`/`libpcap` path exists anywhere in the tree.
+Expected outcome: little or nothing captured, reported as a successful session — the exact defect class
+this repo keeps legislating against. Confirming it needs a root run on Linux. If confirmed, the remedy
+is an `AF_PACKET` or libpcap path, not a flag tweak.
+
+**C-12 — `sudo syxx cage` leaves root-owned files.** macOS hands ownership back via fd-based `fchown`
+(never path-based, to avoid symlink following, C076) with a uid-validation guard. ★ `grep
+SUDO_UID|SUDO_GID|chown` over `CageCommand.cs` and `Capture/*.cs`: **0**. The user cannot read or delete
+their own capture without sudo. **Port the capability, not the flags** — macOS's `--owner-uid/--owner-gid`
+exist only because its GUI escalates via XPC where `SUDO_UID` is unset; on Linux those variables are set.
+
+**C-13/C-14 — `cage` flag divergence.** C# uses `--out` where Swift uses `--output`/`-o`, so any
+documented macOS invocation fails on Linux — and C#'s own `witness` uses `--output`, so it is internally
+inconsistent. C# also has no `--interface`/`-i` override, so on a multi-homed host, a container bridge,
+or with a VPN up there is no way to choose the capture interface; it auto-picks the default-gateway
+adapter with no override. That is precisely the split-tunnel case Syxx cares about.
+
+**Copy nit, user-facing:** C#'s `cage` usage says "requires **administrator**" where Swift says "requires
+sudo". Linux users are told to become an administrator.
+
+**Verified non-gaps:** all 15 subcommands dispatch 1:1 with identical tokens on both sides; flag surfaces
+are identical for 9 of 14 commands; the `--duration` 86400s ceiling and 10.0s default match exactly
+(checked specifically because the last such cross-platform parity *claim* — K-17's underscore comment —
+proved false); the exit-code contract is shared, and its undocumented-in-`--help` TODO is unresolved on
+**both** platforms, so it is a shared gap not a parity gap.
+
+### 1.16 Shell, tray and chrome — HIGH in aggregate
+
+★ **D1-24 — no menu bar, no tray icon, no keyboard shortcut anywhere on Linux.** `grep
+TrayIcon|NativeMenu|KeyGesture|HotKey|KeyBinding` over the Linux GUI: **0 hits**. Avalonia supports both
+`NativeMenu` and `TrayIcon`, so this is a build gap, not a framework limit. macOS has About/Settings ⌘,/
+License/Check-for-Updates ⌘U/Help ⌘?, plus number-key accelerators 1–8 on every sidebar row.
+
+**D1-25 — Linux is the only client with no trust indicator outside the window, and the logic is already
+compiled into its binary.** macOS has a `MenuBarExtra` whose severity dot comes from
+`TrayIndicators.For(model.conclusion)` — *"the SAME mapping the grade and result badge use, so the three
+can never disagree — and `.unknown` is grey, never the green of a measured-clean network."* Its dropdown
+carries a **latched** monitor change with Acknowledge (*"so the user cannot miss 'your DNS changed' by
+not having the window open when it happened"*), a watch toggle, and B247's *"⚠︎ Notifications denied —
+monitoring cannot alert you"* under the rule *"never present monitoring as armed when it cannot alert."*
+`Syxx.Kit/Synthesis/TrayIndicator.cs` exists and Linux takes `Syxx.Kit` by `ProjectReference`, so **it
+already compiles into the Linux binary and is simply never called.** The honesty cost: Linux has no
+surface that could ever tell the user monitoring is armed but cannot alert, and no latched channel for a
+change detected while the window was closed.
+
+**D1-26 — the sidebar PRO lock pills are hardcoded.** `NavAspectConverter.cs:26-39` sets `Locked: true`
+for Mirror, Glutton and Witness as literals. A paying Pro subscriber sees a 🔒 PRO badge on three wardens
+**forever**, in the most persistent chrome in the app. macOS drives the same pills from
+`isLocked: !model.isPro`.
+
+★ **D1-28 — the reset pill is the eleventh inert affordance, and the first in shell chrome.** macOS's is
+a real `Button` → confirmation dialog → *"Erase session results"* / Cancel, with the message "This clears
+every result and collected piece of evidence from this session," because §9.5 requires destructive
+actions to confirm. Linux has the pill, no command, no confirmation, and no `ResetAll()`.
+
+**D1-27 — nav divergence, one item provably unfinished:** the gold "Dimensions" external row exists on
+macOS and is absent on Linux — and `NavAspectConverter.cs:41` defines a `GoldGlyph` that **nothing ever
+returns**, with a header comment describing "gold for Dimensions". The converter was written to serve a
+row that was never added. Also: result pane is "Conclusion"/`✒` on macOS vs "Conclusions"/`⟐` on Linux,
+and Linux has no per-warden selected-row accent (one violet gradient for every row).
+
+**D1-29 — Linux panes render flush to the window edge.** macOS defines one shell-owned origin with the
+invariant *"the shell owns the pane origin; child panes must not add another outer inset."* Linux's shell
+`ScrollViewer` has no padding and none of the eleven pane roots carry a margin. One-line fix on the
+shell, which preserves the invariant. Related: Linux scrolls once at the shell rather than per pane, so
+scroll position is the one piece of state the held-view design does not preserve.
+
+**D1-30 — a broadcast arriving mid-session is never surfaced on Linux.** macOS shows it as a floating
+panel from any pane; Linux references broadcasts *only* in the What's New pane, which is the launch
+destination — so one present at launch is seen and one arriving later is not.
+
+**D1-32 — startup typography: macOS fails loud, Linux fails silent.** macOS escalates a tri-state at
+launch and traps a debug build if no face registered, with the rationale that a font failing to register
+"renders as the system font with no error anywhere … a silent-fallback defect that survived a full
+release cycle." Linux has a *test-time* guard but **no runtime check**, while addressing bundled faces by
+`avares://` URI whose failure mode is a silent fallback. Given §1.13 already found the `.deb` doesn't
+install the CLI, packaging regressions are a live risk on this platform specifically.
+
+**D1-31 — the EULA cannot be re-read after acceptance on Linux** (macOS keeps it under Help). And
+**About** is absent from *both* C# clients, not just Linux.
+
+**Corrections to my own earlier framing, verified:** Linux's **update surface is real and complete**
+(`SettingsView.axaml:32-56` → `UpdateViewModel` with live check/download over the same `UpdateService`);
+macOS reaches it by ⌘U menu, Linux embeds it in Settings — justified idiom, **not a gap**. Likewise
+`MotdLoadController` exists on all three platforms, so What's New load-state policy is genuine parity
+despite different renderers.
+
 ---
 
 ## 2. Findings — macOS behind Linux (adopt from Linux)
@@ -414,6 +537,8 @@ to prevent. A seat that needs another's file sends a request; it does not edit.
 | **W0-a** | Unblock the Swift build — claim or fix the untracked `macOS/Sources/SyxxKit/DNSPathConfirmation.swift:90` (`DNSPathSnapshot` does not conform to `Equatable`) | ★ `SyxxKit` does not compile in-tree, so **no Swift test can run at any scope**. Every twin claim below would be *asserted, not verified*. This is another stream's file — it needs claiming, not seizing. |
 | **W0-b** | Interface stubs: `SessionModel` (D1) and the `NetworkKeyState` seam (D3) land alone, as their own commits | Dependents cannot start against a moving contract. |
 | **W0-c** | Request the resolver verification pack from the owner (§5) | Unblocks the highest-severity finding at a cost of under a minute. |
+| **W0-d** | **Fix C-10 and C-11 immediately, ahead of the plan.** Both are in one file, both are irreversible-harm class, and neither depends on anything else in this document | A user running `syxx witness --gen-keypair` twice today destroys their signing identity with no warning; a user following the documented `--key` form today exposes their private key to every local account. These should not wait for a wave. |
+| **W0-e** | **Test C-09 on a real Linux host with root** before any Cage work is planned | If `syxx cage` captures nothing while reporting success, the remedy is a new capture mechanism, not a fix — and that changes the plan's shape. Test first. |
 
 ### Wave 1 — parallel, no shared files
 
@@ -437,7 +562,8 @@ to prevent. A seat that needs another's file sends a request; it does not edit.
 | **E11 portal** | `PortalView.axaml{,.cs}`, `PortalViewModel.cs`, `PortalViewModelTests.cs` (new) | D1-09/10/11. Reads `TracerouteRunner.cs`, does not own it. |
 | **E12 conclusions** | `ConclusionsView.axaml{,.cs}`, `ConclusionsViewModel.cs`, `ConclusionsViewModelTests.cs` (new) | D1-13…D1-18. |
 | **E13 panels+copy** | Onboarding/WhatsNew/License/Settings views + their VMs, `Services/*`, new panel files, **and both output catalogs as sole writer** | Includes the two-line P-05d fix. **Catalog rule:** each seat writes rows to its own scratchpad file; E13 performs one append per catalog at the end. Append-only prevents reordering but not a git conflict at a shared tail, and the Mirror stream is appending concurrently. |
-| **E14 CLI parity** | `Windows/dotNET/Syxx/Program.cs` + all 16 `Commands/*.cs` | Pending D2's report 4. Sequence after E6 (a by-name enum compare rebases cleanly, but avoid even that). |
+| **E14 CLI parity** | `Windows/dotNET/Syxx/Program.cs`, all 16 `Commands/*.cs`, **and `Syxx.Kit/Capture/CaptureEngine.cs`** (C-09/C-12 land there, not in `Commands/`) | C-10…C-16. **Sequence C-10 and C-11 first** — both are in `WitnessCommand.cs` and both are security/data-loss class, ahead of any flag-naming work. The seat's brief must require a **full re-diff of `SyxxWitness.swift` against `WitnessCommand.cs`**, not a two-item patch: the D086 comment proves a partial port of that exact pairing already happened once and missed B249. |
+| **E15 shell+tray** | `MainWindow.axaml{,.cs}` and `Converters/NavAspectConverter.cs` — **coordinate with E-keystone, which also owns `MainWindow`**; give the reset pill (D1-28) to the keystone seat since it owns `ResetAll()`, and give tray/menu/nav to E15 | D1-24…D1-30, D1-32. `TrayIndicator.cs` already compiles into the Linux binary — no new reasoning code, only a caller. |
 | **E-audit** | nothing — read-only | Continuous honesty audit. Non-negotiable: this codebase's characteristic failure is **tests that assert nothing** (three were found in pass 1, two more here). Mutation-test every guard. |
 
 ### Not seats — routed out

@@ -2,20 +2,24 @@
   "id": "gui-complete-macos_20260805",
   "title": "Complete macOS GUI — Mockup-Faithful SwiftUI Implementation",
   "type": "feature",
-  "status": "in_progress",
+  "status": "complete",
   "created": "2026-08-05T00:00:00Z",
   "updated": "2026-08-05T00:00:00Z",
-  "current_phase": 2,
+  "current_phase": null,
   "current_task": null,
   "phases": {
     "total": 5,
-    "completed": 1
+    "completed": 5
   },
   "tasks": {
     "total": 31,
-    "completed": 4
+    "completed": 31
   },
   "commits": [
-    "1afd972: Phase 1.1-1.2 — tone down highlight containers across all Wardens"
+    "1afd972: Phase 1.1-1.2 — tone down highlight containers across all Wardens",
+    "d64bc2d: Phase 2 — EULA glass card + Guided Setup mockup match",
+    "77e6379: Phase 3.1-3.5,3.9 — Dashboard + Settings mockup match",
+    "42176b0: Phase 3 complete, metadata update",
+    "9c5d48f: Phase 4-5 — Warden parity verified, output catalogs updated"
   ]
 }

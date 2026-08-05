@@ -337,6 +337,14 @@ public sealed class SyxxMatrixBuilder
             exclusionaryIndicators: Array.Empty<IndicatorId>(),
             mutuallyExclusiveWith: new[] { SyxxDiagnosis.Clean.Id() });
 
+        // B156: the set of indicator IDs that have at least one reachable EvidenceId mapping.
+        // Support rules referencing unmapped indicators (e.g. resolverAgreement,
+        // remoteLocalDivergence, trustedWitnessOK) are excluded from the coverage denominator,
+        // preventing unmapped rules from creating permanent dead weight that hard-caps coverage
+        // below the minimum thresholds and makes entire diagnoses unreachable.
+        // Twin of SyxxMatrixIntegration.swift:206; ported 2026-08-05 (F-09).
+        var mappableIndicators = SynthesisEngine.MappableIndicatorIds();
+
         return new MatrixSpec(
             diagnoses: new[]
             {
@@ -362,7 +370,8 @@ public sealed class SyxxMatrixBuilder
                 MinimumIndependentSupportGroupsForConclusive: 2,
                 RequireDecisiveOrTwoMajorsForConclusive: true,
                 HardGateOnMissingRequiredSections: true,
-                FailClosedOnInvalidatedRequiredSections: true));
+                FailClosedOnInvalidatedRequiredSections: true),
+            mappableIndicators: mappableIndicators);
     }
 }
 

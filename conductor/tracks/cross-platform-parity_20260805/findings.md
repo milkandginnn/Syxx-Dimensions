@@ -175,7 +175,17 @@ than in the harness.
 
 ## F-05 · Neither platform matches the frozen oracle, and they fail differently
 
-**State:** `open` · **Found by:** A-03 · **Severity:** High
+**State:** `verified-by-real-run` (fixed 2026-08-05, Tasks 8.3 + 8.4 + 8.10) · **Found by:** A-03 · **Severity:** High
+
+**Fix:** three coupled changes. (8.4) unescaped `/` declared canonical — Swift `defaultSpecJSON`
+gains `.withoutEscapingSlashes`, matching C#'s deliberate `UnsafeRelaxedJsonEscaping`; the
+function's only callers are the oracle tests, so no wire format moves. (8.10/F-09) B156 ported to
+C# so both builders emit `mappableIndicators`. (8.3) oracle regenerated from the reference
+platform via an env-gated generator (`_MatrixSpecOracleGenerator.swift`), under the
+spec-version-bump protocol, with a mechanical hand-review: 309 scalar constants deep-equal under
+parse; the byte diff decomposes into exactly three declared classes (slash unescaping, sorted
+`knownSections`, added `mappableIndicators`). **Both platforms now match the same oracle bytes**
+— which is itself the first cross-serializer byte-parity result in the repo.
 
 | Platform | Test | Diverges from oracle by |
 |---|---|---|
@@ -236,7 +246,10 @@ evidence is not lost if the track pauses.
 
 ## F-07 · The C# golden-corpus twin implements half of what its own header promises
 
-**State:** `open` · **Found by:** Task 8.2 · **Severity:** Medium
+**State:** `verified-by-real-run` (fixed 2026-08-05, Task 8.9) · **Found by:** Task 8.2 · **Severity:** Medium
+
+**Fix:** the vector-evaluation and classification twins now exist on C#, including the
+evaluated-count assertion. Original finding:
 
 `Windows/dotNET/Syxx.Tests/MatrixGoldenCorpusTests.cs:16-19` states:
 
@@ -300,3 +313,36 @@ with a user-visible consequence, and it is the owner's call which way it goes, n
 reporting version; (b) follow E088 — Swift drops `-v` as verbose, which contradicts B240's stated
 reason; (c) accept both meanings per platform and document the divergence deliberately, which this
 product's own honesty doctrine argues against.
+
+---
+
+## F-09 · B156 (`mappableIndicators`) was Swift-only — the engines computed coverage differently
+
+**State:** `verified-by-real-run` (fixed 2026-08-05, Task 8.10) · **Found by:** Task 8.3 pre-flight · **Severity:** High
+
+### What was missing
+
+C# had the source data (`SynthesisEngine.cs` `IndicatorMapping`) but neither the spec field nor the
+coverage filter (Swift: `MatrixDeterminativeEngine.swift:789-800`). Support rules referencing
+unmappable indicators were permanent dead weight in the C# denominator, hard-capping coverage —
+diagnoses reachable on macOS could be unreachable on Windows and Linux from identical evidence.
+
+### Fix
+
+`MatrixSpec.MappableIndicators` + `SortedIndicatorIdSetConverter` + the engine filter + builder
+wiring, all twinned against the Swift lines.
+
+### Honesty notes
+
+- **The shared golden vectors do not discriminate on B156.** Verified by neutralizing the filter:
+  gv-1/gv-3 pass either way. gv-3's stored `coverage` (0.560976) equals the *unfiltered* ratio
+  2.3/4.1, so that stored number predates B156 — the comparisons read state and diagnosis IDs, not
+  the numeric block, on both platforms. The discriminating evidence is the twin
+  `MappableIndicatorsCoverageTests` (half the support weight unmappable; emitted with the filter,
+  not emitted without), proven red with the filter neutralized. B156 itself had no test on either
+  platform before this.
+- **gv-3's numeric block is now stale on both platforms.** Informational-only today; whether to
+  regenerate the vectors is a separate decision, deliberately not folded into 8.3.
+- **My builder edit was initially incomplete** — it computed the set and never passed it. The C#
+  oracle test caught it (emission jumped `knownSections`→`thresholds`). The gate caught a real
+  wiring bug before it shipped, which is the argument for the gate.

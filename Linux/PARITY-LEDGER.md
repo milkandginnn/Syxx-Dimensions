@@ -220,14 +220,15 @@ Swift-vs-C# engine parity. Full evidence in
 | F-02 | `verified-by-real-run` | `transportObservation` was absent from the C# `SectionInputs`. Added for structural parity. **Neither platform reads the field**, so no conclusion depended on it — my first report of this overstated the consequence |
 | F-03 | `open` | The matrix golden corpus was loaded by C# only; the Swift twin sat in `_quarantine`. Restored 2026-08-05 and it now runs — but see F-05 for what it found, and F-07 for the half still missing on C# |
 | F-04 | `verified-by-real-run` | Spec serialization was nondeterministic on BOTH platforms — `Set`-derived arrays emitted in per-process hash order. Three runs, three orders. Both sides now sort; twin tests assert *sorted*, not merely stable. Recorded during the port at `MatrixDeterminativeEngine.cs:365` and deferred to a rule that never landed |
-| F-05 | `open` | Neither platform matches `default-spec.frozen.json`, and they fail differently — Swift has an extra `mappableIndicators` key, C# unescapes the `/` the oracle escapes. The oracle is stale; regenerating it is an explicit spec-version bump per `MATRIX-MIGRATION-PLAN.md:358` |
+| F-05 | `verified-by-real-run` | Fixed 2026-08-05: unescaped-slash canon (8.4), B156 ported (F-09), oracle regenerated under the spec-version-bump protocol with a mechanical review — 309 constants deep-equal, byte diff decomposed into three declared classes. **Both platforms now match the same oracle bytes** |
 | F-06 | `open` | F042 was recorded FIXED on a file that never compiled. `docs/DELTAS-fixed.md` corrected 2026-08-05 |
-| F-07 | `open` | `MatrixGoldenCorpusTests.cs` documents two assertions and implements one; no vector-evaluation test on the C# side |
+| F-07 | `verified-by-real-run` | Fixed 2026-08-05 (8.9): vector-evaluation and classification twins on C#, with the evaluated-count assertion |
+| F-09 | `verified-by-real-run` | B156 `mappableIndicators` was Swift-only: C# counted unmappable rules in the coverage denominator, so diagnoses reachable on macOS could be unreachable on Windows/Linux. Ported; discriminating twin tests proven red without the filter. The golden vectors do NOT discriminate on it — gv-3's stored coverage equals the unfiltered ratio and predates B156 |
 | F-08 | `open` | `-v` means verbose on macOS and version on Windows/Linux. B240 and E088 are both documented and contradict each other. Owner decision — it changes a shipped CLI flag |
 
 **Not covered by this track so far:** the six matrix tests failing before this work began (four in
 `MatrixDeterminativeEngineTests`, one each in `MatrixAllNegativeParityTests` and
-`MatrixUntestedStateTests`); the 21 files / 351 test functions in `macOS/Tests/_quarantine/` beyond
+`MatrixUntestedStateTests`); gv-3's stored numeric block (coverage/fit/margin), stale since B156, read by no comparison; the 21 files / 351 test functions in `macOS/Tests/_quarantine/` beyond
 the one restored; GUI parity, which is a separate track.
 
 ---

@@ -81,8 +81,10 @@ emitted strings, not symbol names, so renames stay cheap and contract drift stay
       on an empty extraction rather than passing vacuously
 - [ ] Task 3.3: File the known `-h` / `-v` asymmetry with `file:line` evidence. **Do not fix it** —
       remediation is a separate track
-- [ ] Task 3.4: Choose a set of invocations whose output is deterministic offline (`--help`,
+- [x] Task 3.4: Choose a set of invocations whose output is deterministic offline (`--help`,
       `--version`, and each command's usage text) and capture both builds' output
+      (verified-by-real-run 2026-08-05; report + 36 raw captures in cli-capture-report.md,
+      five divergence classes D1–D5, worst: Swift firstrun executes on --help)
 - [ ] Task 3.5: Reconcile captured output against `outputs-catalog-{general,story}-mode.csv`,
       appending rows where a string is absent — append only, never reorder
 
@@ -119,12 +121,12 @@ The same defect this track exists to prevent, one layer down.
 
 ### Tasks
 
-- [ ] Task 5.1: `WarpEngineTests.swift` — brotli cases currently `return nil` and the caller
+- [~] Task 5.1: `WarpEngineTests.swift` — brotli cases currently `return nil` and the caller
       `continue`s, with no skip marker and no counter. Either decode (the justifying comment is
       wrong: `COMPRESSION_BROTLI` ships in the macOS SDK from macOS 12 and the package targets 14)
       or emit an explicit `XCTSkip`
-- [ ] Task 5.2: Add an evaluated-case counter to that suite, asserted equal to the case count
-- [ ] Task 5.3: Audit the other harnesses for the same `return nil` → `continue` shape and fix any
+- [~] Task 5.2: Add an evaluated-case counter to that suite, asserted equal to the case count
+- [~] Task 5.3: Audit the other harnesses for the same `return nil` → `continue` shape and fix any
       found
 
 ### Verification

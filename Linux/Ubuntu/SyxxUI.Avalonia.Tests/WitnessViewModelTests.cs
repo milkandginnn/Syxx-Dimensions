@@ -434,14 +434,14 @@ public class WitnessViewModelTests
     }
 
     [Fact]
-    public void VerifyExternal_EmptyInput_PromptsWithoutClaimingAVerdict()
+    public void VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult()
     {
         var vm = NewIdleViewModel();
         vm.ExternalSnapshotJson = "   ";
 
         vm.VerifyExternalCommand.Execute(null);
 
-        // No verdict for no input: a caution-tier prompt, not green/valid and not red/forged.
+        // No result for no input: a caution-tier prompt, not green/valid and not red/forged.
         Assert.Equal(AmberHex, ColorOf(vm.VerifyBrush));
         Assert.DoesNotContain("valid", vm.VerifyLine, StringComparison.OrdinalIgnoreCase);
     }

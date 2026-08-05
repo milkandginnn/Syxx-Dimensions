@@ -400,7 +400,7 @@ public class AppViewModelWitnessTests
             Assert.Equal(SnapshotVerification.Valid, WitnessSigner.VerifySnapshotDetailed(roundTripped!));
 
             // The contract: a FRESH view-model (no prior self-verify state) verifies the paste to the
-            // identical verdict through WitnessVerifyExternal.
+            // identical result through WitnessVerifyExternal.
             var verifier = new AppViewModel(compareVantagePoints: NeverCalled("external verify does not probe"));
             verifier.ExternalSnapshotJson = json;
             verifier.WitnessVerifyExternalCommand.Execute(null);

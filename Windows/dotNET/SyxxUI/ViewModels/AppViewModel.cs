@@ -898,7 +898,7 @@ public sealed partial class AppViewModel : ObservableObject
             }
             catch (System.Text.Json.JsonException)
             {
-                // Unreadable bytes are a MalformedInput outcome, not a guessed verdict — fall through
+                // Unreadable bytes are a MalformedInput outcome, not a guessed result — fall through
                 // with parsed still null.
             }
         }

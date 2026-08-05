@@ -1703,9 +1703,9 @@ extension SyxxKitTests {
     }
 
     func testSignatureKeyTrusted_roundTrips() {
-        let r = LeakTestResult(verdict: .inconclusive, signatureKeyTrusted: true)
+        let r = LeakTestResult(result: .inconclusive, signatureKeyTrusted: true)
         XCTAssertEqual(r.signatureKeyTrusted, true)
-        let r2 = LeakTestResult(verdict: .inconclusive, signatureKeyTrusted: false)
+        let r2 = LeakTestResult(result: .inconclusive, signatureKeyTrusted: false)
         XCTAssertEqual(r2.signatureKeyTrusted, false)
     }
 

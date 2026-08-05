@@ -24,7 +24,7 @@ TYPE_AAAA = 28
 # A034: per-source-IP rate limit for the DNS collector. A simple sliding-window
 # counter prevents a single resolver from flooding the collector with queries.
 # Uses a dict of {ip: [count, window_start]} with periodic pruning.
-import threading as _threading
+import threading as _threading  # noqa: E402
 
 _dns_rate_lock = _threading.Lock()
 _dns_rate_buckets = {}  # ip -> [count, window_start]
@@ -226,13 +226,13 @@ def _bind():
             # "listening"; on the fallback it is "degraded-fallback" — because delegation still
             # points at :53, so a collector on :5053 is up but unreachable by real clients, which
             # /readyz must surface rather than hide behind a blanket 200.
-            listeners.set_state("dns", "listening", detail="port %d (%d socket(s))" % (port, len(socks)))
+            listeners.set_state("dns", "listening", detail=f"port {port} ({len(socks)} socket(s))")
         else:
             logging_util.warn("dns_fallback_port", port=port)
             listeners.set_state(
                 "dns",
                 "degraded-fallback",
-                detail="serving on :%d; delegation points at :%d — unreachable by clients" % (port, config.DNS_PORT),
+                detail=f"serving on :{port}; delegation points at :{config.DNS_PORT} — unreachable by clients",
             )
         return socks
     logging_util.error("dns_disabled", reason="no available UDP port; leak collector inactive")
@@ -372,6 +372,6 @@ def _rebind_with_backoff():
     logging_util.error(
         "dns_rebind_exhausted",
         attempts=_MAX_REBIND_ATTEMPTS,
-        detail="could not rebind after %d attempts; collector stays down" % _MAX_REBIND_ATTEMPTS,
+        detail=f"could not rebind after {_MAX_REBIND_ATTEMPTS} attempts; collector stays down",
     )
     # State remains "down" as set by the caller.

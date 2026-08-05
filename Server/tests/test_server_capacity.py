@@ -178,14 +178,14 @@ class BoundedServerCapacityTests(unittest.TestCase):
         try:
             # With the slot held, the next incoming request must get 503.
             try:
-                r = urllib.request.urlopen("http://127.0.0.1:%d/api/pubkey" % self._port, timeout=5)
+                r = urllib.request.urlopen(f"http://127.0.0.1:{self._port}/api/pubkey", timeout=5)
                 code = r.status
             except urllib.error.HTTPError as e:
                 code = e.code
             except Exception as exc:
                 self.fail(f"unexpected exception: {exc}")
 
-            self.assertEqual(code, 503, "at-capacity request must return 503, not %d" % code)
+            self.assertEqual(code, 503, f"at-capacity request must return 503, not {code}")
         finally:
             # Release so tearDown can process its requests cleanly.
             self._server._worker_sema.release()

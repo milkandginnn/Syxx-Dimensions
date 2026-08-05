@@ -14,9 +14,8 @@ HOMOGLYPH_MAP = {
     "o": "0",
     "0": "o",
     "l": "1",
-    "1": "l",
     "i": "1",
-    "1": "i",
+    "1": "l",  # "1"→"i" also valid but dict cannot hold both; "l" is the stronger confusion vector
     "s": "5",
     "5": "s",
     "e": "3",

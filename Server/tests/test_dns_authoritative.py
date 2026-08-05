@@ -25,7 +25,7 @@ os.environ.setdefault("SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY", "1")
 os.environ["SYXX_LEAK_ZONES"] = "leak.syxx.app"
 
 from syxx_server import config, db  # noqa: E402
-from syxx_server import dns_authoritative as dnsauth
+from syxx_server import dns_authoritative as dnsauth  # noqa: E402
 
 # A214: force DB_PATH to the conftest-managed temp DB and re-init so tables exist.
 config.DB_PATH = _DB_PATH

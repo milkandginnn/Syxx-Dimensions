@@ -108,10 +108,10 @@ parts:
     plugin: nil
     source: .
     build-snaps:
-      - dotnet-sdk/10.0/stable
+      - dotnet-sdk-100
     build-environment:
-      - DOTNET_ROOT: /snap/dotnet-sdk/current
-      - PATH: /snap/dotnet-sdk/current:$PATH
+      - DOTNET_ROOT: /snap/dotnet-sdk-100/current/usr/lib/dotnet
+      - PATH: /snap/dotnet-sdk-100/current/usr/bin:$PATH
       - DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       - DOTNET_NOLOGO: "1"
 
@@ -181,10 +181,10 @@ parts:
     source: .
     after: [syxx-cli]
     build-snaps:
-      - dotnet-sdk/10.0/stable
+      - dotnet-sdk-100
     build-environment:
-      - DOTNET_ROOT: /snap/dotnet-sdk/current
-      - PATH: /snap/dotnet-sdk/current:$PATH
+      - DOTNET_ROOT: /snap/dotnet-sdk-100/current/usr/lib/dotnet
+      - PATH: /snap/dotnet-sdk-100/current/usr/bin:$PATH
       - DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       - DOTNET_NOLOGO: "1"
 

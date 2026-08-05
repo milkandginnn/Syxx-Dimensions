@@ -44,7 +44,7 @@ class BackupTests(unittest.TestCase):
 
     def test_rotation_keeps_the_newest_and_prunes_the_rest(self):
         for i in range(5):
-            db.backup(dest_dir=self.bdir, keep=3, stamp="20260717T12000%dZ" % i)
+            db.backup(dest_dir=self.bdir, keep=3, stamp=f"20260717T12000{i}Z")
         kept = sorted(f for f in os.listdir(self.bdir) if f.endswith(".db"))
         self.assertEqual(len(kept), 3)
         # Newest three by timestamp — name-sort == time-sort by construction.
@@ -55,7 +55,7 @@ class BackupTests(unittest.TestCase):
 
     def test_keep_zero_disables_pruning(self):
         for i in range(3):
-            db.backup(dest_dir=self.bdir, keep=0, stamp="20260717T13000%dZ" % i)
+            db.backup(dest_dir=self.bdir, keep=0, stamp=f"20260717T13000{i}Z")
         self.assertEqual(len([f for f in os.listdir(self.bdir) if f.endswith(".db")]), 3)
 
 

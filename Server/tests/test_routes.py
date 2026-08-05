@@ -78,7 +78,7 @@ def tearDownModule():
 
 def _get(path):
     try:
-        r = urllib.request.urlopen("http://127.0.0.1:%d%s" % (_port, path), timeout=5)
+        r = urllib.request.urlopen(f"http://127.0.0.1:{_port}{path}", timeout=5)
         return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e:
         with e:
@@ -87,7 +87,7 @@ def _get(path):
 
 def _post(path, obj):
     req = urllib.request.Request(
-        "http://127.0.0.1:%d%s" % (_port, path),
+        f"http://127.0.0.1:{_port}{path}",
         data=json.dumps(obj).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -101,7 +101,7 @@ def _post(path, obj):
 
 
 def _post_raw(path, data, headers):
-    req = urllib.request.Request("http://127.0.0.1:%d%s" % (_port, path), data=data, headers=headers, method="POST")
+    req = urllib.request.Request(f"http://127.0.0.1:{_port}{path}", data=data, headers=headers, method="POST")
     try:
         r = urllib.request.urlopen(req, timeout=5)
         return r.status, json.loads(r.read())
@@ -111,7 +111,7 @@ def _post_raw(path, data, headers):
 
 
 def _delete(path):
-    req = urllib.request.Request("http://127.0.0.1:%d%s" % (_port, path), method="DELETE")
+    req = urllib.request.Request(f"http://127.0.0.1:{_port}{path}", method="DELETE")
     try:
         r = urllib.request.urlopen(req, timeout=5)
         return r.status, json.loads(r.read())
@@ -177,7 +177,7 @@ class StripeWebhookRouteTests(unittest.TestCase):
         import hashlib
         import hmac
 
-        return hmac.new(secret, ("%d." % ts).encode() + payload, hashlib.sha256).hexdigest()
+        return hmac.new(secret, f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
 
     def test_forged_signature_is_rejected_and_never_fulfilled(self):
         payload = b'{"id":"evt_forged","type":"checkout.session.completed"}'
@@ -192,7 +192,7 @@ class StripeWebhookRouteTests(unittest.TestCase):
 
         payload = b'{"id":"evt_ok","type":"checkout.session.completed"}'
         ts = int(_t.time())
-        hdr = "t=%d,v1=%s" % (ts, self._sign(payload, ts))
+        hdr = f"t={ts},v1={self._sign(payload, ts)}"
         status, _ = _post_raw(
             "/api/webhooks/stripe", payload, {"Stripe-Signature": hdr, "Content-Type": "application/json"}
         )
@@ -339,7 +339,7 @@ class PubkeyEndpointTests(unittest.TestCase):
 
 def _get_html(path, host=None):
     """Fetch a route as raw text (the whats-new routes serve HTML, not JSON)."""
-    req = urllib.request.Request("http://127.0.0.1:%d%s" % (_port, path), method="GET")
+    req = urllib.request.Request(f"http://127.0.0.1:{_port}{path}", method="GET")
     if host:
         req.add_header("Host", host)
     try:
@@ -638,8 +638,8 @@ class MonitorDeleteTenantScopeTests(unittest.TestCase):
     the results delete must turn test_foreign_subject_cannot_delete_results RED."""
 
     def setUp(self):
-        self.mid_a = "mon-a-%d" % time.time_ns()
-        self.mid_b = "mon-b-%d" % time.time_ns()
+        self.mid_a = f"mon-a-{time.time_ns()}"
+        self.mid_b = f"mon-b-{time.time_ns()}"
         self.mine = "tenant-a"
         self.theirs = "tenant-b"
         db.monitor_create(self.mid_a, self.mine, "a.example", "prophet")
@@ -741,7 +741,7 @@ class StripeWebhookSignatureRouteTests(unittest.TestCase):
 
     def test_a_tampered_signature_is_rejected_and_never_reaches_fulfillment(self):
         payload = json.dumps({"id": "evt_bad", "type": "charge.refunded", "data": {"object": {}}}).encode()
-        status, body = self._send(payload, "t=%d,v1=%s" % (int(time.time()), "0" * 64))
+        status, body = self._send(payload, f"t={int(time.time())},v1={'0' * 64}")
         self.assertEqual(status, 400)
         self.assertEqual(self.handled, [], "an unverified event was processed anyway")
 

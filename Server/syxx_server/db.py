@@ -397,8 +397,8 @@ def _validate_env_secret(env):
         raise RuntimeError(
             "SYXX_SESSION_SECRET is too short or low-entropy. Session tokens are "
             "HMAC-signed with it; a weak secret makes them forgeable. Provide at "
-            "least %d bytes of high-entropy material (e.g. `openssl rand -hex 32`), "
-            "or unset it to let the server generate and persist a strong one." % _MIN_SECRET_BYTES
+            f"least {_MIN_SECRET_BYTES} bytes of high-entropy material (e.g. `openssl rand -hex 32`), "
+            "or unset it to let the server generate and persist a strong one."
         )
     return raw
 
@@ -831,11 +831,11 @@ def _cap_rows(conn, table, order_col, max_rows):
     Table and column names here are internal constants, never caller input."""
     if max_rows <= 0:
         return
-    row = conn.execute(f"SELECT COUNT(*) c FROM {table}").fetchone()
+    row = conn.execute(f"SELECT COUNT(*) c FROM {table}").fetchone()  # noqa: S608
     excess = (row["c"] if row else 0) - max_rows
     if excess > 0:
         conn.execute(
-            f"DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} ORDER BY {order_col} ASC LIMIT ?)",
+            f"DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} ORDER BY {order_col} ASC LIMIT ?)",  # noqa: S608
             (excess,),
         )
 

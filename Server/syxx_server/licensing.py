@@ -333,10 +333,10 @@ def _validate_keygen(key):
         base = config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}"
         url = base.rstrip("/") + "/licenses/actions/validate-key"
         req_body = json.dumps({"meta": {"key": key}}).encode("utf-8")
-        req = urllib.request.Request(url, data=req_body, method="POST")
+        req = urllib.request.Request(url, data=req_body, method="POST")  # noqa: S310
         req.add_header("Content-Type", "application/vnd.api+json")
         req.add_header("Accept", "application/vnd.api+json")
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as resp:  # noqa: S310
             raw_body = resp.read()
             body_str = raw_body.decode("utf-8", errors="ignore")
             data = json.loads(body_str)
@@ -438,13 +438,13 @@ def check_keygen_license_status(subject):
         return None
     base = config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}"
     url = base.rstrip("/") + "/licenses/{}".format(urllib.parse.quote(license_id, safe=""))
-    req = urllib.request.Request(url, method="GET")
+    req = urllib.request.Request(url, method="GET")  # noqa: S310
     req.add_header("Authorization", f"Bearer {config.KEYGEN_ADMIN_TOKEN}")
     req.add_header("Accept", "application/vnd.api+json")
     if not _keygen_sem.acquire(timeout=config.KEYGEN_TIMEOUT):
         return None
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as resp:  # noqa: S310
             data = json.loads(resp.read().decode("utf-8", errors="ignore"))
         lic = data.get("data", {})
         attrs = lic.get("attributes", {})

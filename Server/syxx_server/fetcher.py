@@ -89,7 +89,7 @@ def _resolve_public(host):
     try:
         infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
     except socket.gaierror as e:
-        raise FetchError(f"dns resolution failed: {e}")
+        raise FetchError(f"dns resolution failed: {e}") from e
     ips = {i[4][0] for i in infos}
     if not ips:
         raise FetchError("no addresses for host")
@@ -103,7 +103,7 @@ def _resolve_public(host):
     return next(iter(ips))
 
 
-import time as _time
+import time as _time  # noqa: E402
 
 
 def _one_request(url, timeout, max_bytes, deadline=None):
@@ -117,7 +117,7 @@ def _one_request(url, timeout, max_bytes, deadline=None):
     # A033: reject non-web ports. This runs on every hop (fetch() re-enters here per
     # redirect), so an http->https:PORT redirect cannot bypass a first-request-only check.
     if port not in _ALLOWED_PORTS:
-        raise BlockedError("port not allowed: %d" % port)
+        raise BlockedError(f"port not allowed: {port}")
     ip = _resolve_public(host)
 
     # A164: derive per-hop timeout from the remaining deadline budget so the
@@ -147,7 +147,7 @@ def _one_request(url, timeout, max_bytes, deadline=None):
     # which carries any user:pass@ userinfo (credential leak to the target) and is a
     # CRLF-injection surface. hostname is already normalized and separator-free.
     default_port = 443 if parts.scheme == "https" else 80
-    host_header = host if port == default_port else "{}:{}".format(host, port)
+    host_header = host if port == default_port else f"{host}:{port}"
 
     try:
         conn.putrequest("GET", path, skip_host=True, skip_accept_encoding=True)
@@ -206,7 +206,7 @@ def _fetch_loop(url, timeout, max_bytes, max_redirects):
             current = urllib.parse.urljoin(current, location)  # re-validated next loop
             continue
         if status >= 400:
-            raise FetchError("upstream status %d" % status)
+            raise FetchError(f"upstream status {status}")
         return body, ctype, cenc, current
     raise FetchError("too many redirects")
 

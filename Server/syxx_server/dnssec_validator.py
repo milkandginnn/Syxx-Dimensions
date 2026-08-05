@@ -17,7 +17,6 @@ import time
 from .resolver import (
     ROOT_SERVERS,
     TYPE_DNSKEY,
-    TYPE_RRSIG,
     DNSError,
     _addr_family,
     _build_query,
@@ -138,8 +137,8 @@ def _q(name, qtype, srv, to=5, deadline=None):
         s.connect((srv, 53))
         s.send(pk)
         d = s.recv(65535)
-    except OSError:
-        raise DNSError("network error")
+    except OSError as e:
+        raise DNSError("network error") from e
     finally:
         s.close()
     p = _parse(d, tid, qn=qn, qt=qt)
@@ -256,7 +255,7 @@ def _dsm(ds, dk, ow):
         return None
     h = w + struct.pack(">HBB", kf, kp, ka) + kk
     if dt == 1:
-        return hashlib.sha1(h).digest() == dd
+        return hashlib.sha1(h).digest() == dd  # noqa: S324
     if dt == 2:
         return hashlib.sha256(h).digest() == dd
     if dt == 4:
@@ -467,7 +466,7 @@ def validate_chain(domain, qtype=1, timeout=5):
     if rkp is None:
         _step(ch, ".", "root-dnskey", "inconclusive", detail="bad root DNSKEY")
         return _r(domain, "inconclusive", False, None, ch, er)
-    ra = _ALGO.get(rkp[2], "algorithm-%d" % rkp[2])
+    ra = _ALGO.get(rkp[2], f"algorithm-{rkp[2]}")
     _step(ch, ".", "root-dnskey", "valid", algorithm=ra, keyTag=_kt(rk["rd"]), detail=f"root DNSKEY ({ra})")
     pv_s, inv, inc, la = rv, False, False, ra
     apex = "."  # A158: track deepest zone with valid ds-match for answer-path verification
@@ -539,7 +538,7 @@ def validate_chain(domain, qtype=1, timeout=5):
         else:
             _step(ch, zone, "dnskey-rrsig", "inconclusive", detail="DNSKEY RRSIG unverifiable")
             inc = True
-        la = _ALGO.get(mkp[2], "algorithm-%d" % mkp[2])
+        la = _ALGO.get(mkp[2], f"algorithm-{mkp[2]}")
         pv_s = zv
     # A156: compute signed BEFORE the answer-RRSIG block uses it (the old
     # position at line 381 caused UnboundLocalError when the answer path

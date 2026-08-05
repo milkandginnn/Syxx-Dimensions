@@ -56,12 +56,12 @@ def _keygen_create_license(policy_id, email):
             }
         }
     ).encode()
-    req = urllib.request.Request(base + "/licenses", data=body, method="POST")
+    req = urllib.request.Request(base + "/licenses", data=body, method="POST")  # noqa: S310
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Content-Type", "application/vnd.api+json")
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310
             data = json.loads(r.read()).get("data", {})
         return data.get("attributes", {}).get("key"), data.get("id")
     except (urllib.error.HTTPError, OSError, ValueError) as e:
@@ -75,11 +75,11 @@ def _keygen_suspend_license(license_id):
     if not config.KEYGEN_ADMIN_TOKEN or not license_id:
         return False
     base = (config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}").rstrip("/")
-    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/suspend", data=b"", method="POST")
+    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/suspend", data=b"", method="POST")  # noqa: S310
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310
             r.read()
         return True
     except (urllib.error.HTTPError, OSError, ValueError) as e:
@@ -98,11 +98,11 @@ def _keygen_reinstate_license(license_id):
     if not config.KEYGEN_ADMIN_TOKEN or not license_id:
         return False
     base = (config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}").rstrip("/")
-    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/reinstate", data=b"", method="POST")
+    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/reinstate", data=b"", method="POST")  # noqa: S310
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310
             r.read()
         return True
     except (urllib.error.HTTPError, OSError, ValueError) as e:
@@ -147,7 +147,7 @@ def _log_chargeback(obj, event_id, etype):
         amount_cents=amount,
         currency=currency,
         event_id=event_id,
-        detail="%s event received for charge %s (%d %s)" % (etype, charge_id, amount, currency.upper()),
+        detail=f"{etype} event received for charge {charge_id} ({amount} {currency.upper()})",
     )
     db.audit(customer or charge_id, f"stripe:{etype}", 200, "stripe")
     return "chargeback-logged"
@@ -357,8 +357,8 @@ def handle_event(event):
                         "stripe_event_lock_reclaimed",
                         event_id=event_id,
                         age_seconds=age,
-                        detail="processing lock older than %ds — "
-                        "reclaiming (original handler likely crashed)" % _PROCESSING_LEASE_SECONDS,
+                        detail=f"processing lock older than {_PROCESSING_LEASE_SECONDS}s — "
+                        "reclaiming (original handler likely crashed)",
                     )
                     db.kv_set(evt_key, "processing")
                 elif existing == "failed":

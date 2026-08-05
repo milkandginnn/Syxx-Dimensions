@@ -169,11 +169,11 @@ def run(stop_event=None):
         # acquiring a slot.
         server = _BoundedThreadingTCPServer((config.DOT_HOST, config.DOT_PORT), _Handler, ssl_context=ctx)
     except OSError as e:
-        listeners.set_state("dot", "down", detail="bind :%d failed: %s" % (config.DOT_PORT, e))
+        listeners.set_state("dot", "down", detail=f"bind :{config.DOT_PORT} failed: {e}")
         logging_util.error("dot_bind_failed", port=config.DOT_PORT, err=str(e))
         return
 
-    listeners.set_state("dot", "listening", detail="TLS on :%d" % config.DOT_PORT)
+    listeners.set_state("dot", "listening", detail=f"TLS on :{config.DOT_PORT}")
     logging_util.info("dot_listening", port=config.DOT_PORT)
     try:
         server.serve_forever()

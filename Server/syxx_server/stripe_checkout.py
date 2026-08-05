@@ -40,7 +40,7 @@ def _request(path, method, params=None, idempotency_key=None):
         data = None
     else:
         data = qs.encode() if qs else None
-    req = urllib.request.Request(url, data=data, method=method)
+    req = urllib.request.Request(url, data=data, method=method)  # noqa: S310
     req.add_header("Authorization", "Bearer " + config.STRIPE_SECRET_KEY)
     req.add_header("Stripe-Version", config.STRIPE_API_VERSION)
     if data is not None:
@@ -48,17 +48,17 @@ def _request(path, method, params=None, idempotency_key=None):
     if idempotency_key:
         req.add_header("Idempotency-Key", idempotency_key)  # safe retries (Stripe API reference)
     try:
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:  # noqa: S310
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         detail = ""
         try:
             detail = json.loads(e.read()).get("error", {}).get("message", "")
-        except Exception:
+        except Exception:  # noqa: S110
             pass
-        raise StripeError("stripe %d: %s" % (e.code, detail or "request failed"))
+        raise StripeError(f"stripe {e.code}: {detail or 'request failed'}") from e
     except OSError as e:
-        raise StripeError(f"stripe unreachable: {e}")
+        raise StripeError(f"stripe unreachable: {e}") from e
 
 
 def create_checkout_session(sku, idempotency_key=None):
@@ -174,8 +174,8 @@ def verify_webhook(payload_bytes, sig_header, tolerance=None, now=None):
             webhook_time=int(ts),
             skew_seconds=skew,
             tolerance=tolerance,
-            detail="webhook rejected: server clock and Stripe timestamp "
-            "differ by %ds (tolerance %ds). Check NTP sync." % (skew, tolerance),
+            detail=f"webhook rejected: server clock and Stripe timestamp "
+            f"differ by {skew}s (tolerance {tolerance}s). Check NTP sync.",
         )
         raise StripeError("timestamp outside tolerance")
     signed = ts.encode() + b"." + payload_bytes

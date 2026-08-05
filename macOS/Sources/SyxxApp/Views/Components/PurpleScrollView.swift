@@ -242,6 +242,10 @@ struct PurpleScrollView<Content: View>: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
+    /// All coordinator state is UI-bound and mutated exclusively from the main thread
+    /// (updateNSView, notification callbacks with `queue: .main`, animation completion handlers).
+    /// `@MainActor` makes this isolation explicit for Swift 6 strict concurrency.
+    @MainActor
     final class Coordinator {
         var host: NSHostingView<PurpleScrollDocument<Content>>?
         /// Explicit document height, driven by the measured SwiftUI content height.
@@ -253,8 +257,11 @@ struct PurpleScrollView<Content: View>: NSViewRepresentable {
         /// auto-follow when this is true.
         var userPinnedToBottom: Bool = true
         var isProgrammaticScroll: Bool = false
-        private var boundsObserver: NSObjectProtocol?
-        private var frameObserver: NSObjectProtocol?
+        // `nonisolated(unsafe)`: these observers are only accessed from deinit (nonisolated)
+        // and installObservers (main actor). NSObjectProtocol is not Sendable, so the properties
+        // cannot be main-actor-isolated — deinit must read them to unregister.
+        nonisolated(unsafe) private var boundsObserver: NSObjectProtocol?
+        nonisolated(unsafe) private var frameObserver: NSObjectProtocol?
 
         deinit {
             if let boundsObserver {

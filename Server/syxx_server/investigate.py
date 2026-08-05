@@ -202,22 +202,16 @@ def _consensus_one(by_vantage):
         # confidence even when a majority agrees.
         any_non_ok = any(d.get("status") != "ok" for d in by_vantage.values())
         if any_non_ok:
-            return "consistent-degraded", "majority of vantages agree (%d/%d); some vantages unreachable" % (
-                best_count,
-                total_with_vals,
-            )
+            return "consistent-degraded", f"majority of vantages agree ({best_count}/{total_with_vals}); some vantages unreachable"
         if total_with_vals == 1:
             return "single-vantage", (
                 "only one vantage was reachable (this network blocks the others); cannot cross-check for tampering"
             )
-        return "consistent", "vantages agree ({}/{})".format(best_count, total_with_vals)
+        return "consistent", f"vantages agree ({best_count}/{total_with_vals})"
     else:
         # No majority — genuine disagreement. Could be tampering, or could be
         # geo-split / CDN with equal distribution.
-        return "divergent", "vantages disagree — no majority (%d/%d agree); possible geo/CDN split or tampering" % (
-            best_count,
-            total_with_vals,
-        )
+        return "divergent", f"vantages disagree — no majority ({best_count}/{total_with_vals} agree); possible geo/CDN split or tampering"
 
 
 # Worst-to-best ordering so the overall result surfaces the strongest signal.

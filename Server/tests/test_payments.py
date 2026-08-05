@@ -939,7 +939,7 @@ class WebhookTests(unittest.TestCase):
         import hashlib
         import hmac
 
-        return hmac.new(b"whsec_test", ("%d." % ts).encode() + payload, hashlib.sha256).hexdigest()
+        return hmac.new(b"whsec_test", f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
 
     def test_valid_signature_parses_event(self):
         payload = b'{"id":"evt_1","type":"checkout.session.completed"}'

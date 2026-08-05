@@ -62,7 +62,7 @@ def rcode_name(rcode):
         n = int(rcode)
     except (TypeError, ValueError):
         return "UNKNOWN"
-    return RCODE_NAMES.get(n, "RCODE%d" % n)
+    return RCODE_NAMES.get(n, f"RCODE{n}")
 
 
 # ---------- IP-to-arpa conversion (RFC 1035 for IPv4, RFC 3596 for IPv6) ----------
@@ -73,8 +73,8 @@ def ip_to_arpa(ip_str):
     Raises DNSError on invalid input."""
     try:
         addr = ipaddress.ip_address(ip_str)
-    except ValueError:
-        raise DNSError(f"invalid IP address: {ip_str}")
+    except ValueError as e:
+        raise DNSError(f"invalid IP address: {ip_str}") from e
     if isinstance(addr, ipaddress.IPv4Address):
         octets = ip_str.split(".")
         return ".".join(reversed(octets)) + ".in-addr.arpa"
@@ -242,7 +242,7 @@ def _parse_response(data, expected_txid, qtype, expected_qname=None, expected_qc
     # question. QDCOUNT==0 lets a spoof skip question validation entirely; QDCOUNT>1
     # is malformed for our single-question queries. Reject both outright.
     if qd != 1:
-        raise DNSError("unexpected question count: %d" % qd)
+        raise DNSError(f"unexpected question count: {qd}")
     offset = 12
     for _ in range(qd):
         qname, offset = _read_name(data, offset)
@@ -258,8 +258,7 @@ def _parse_response(data, expected_txid, qtype, expected_qname=None, expected_qc
             # RFC 4343: qname comparison is case-insensitive.
             if qname.lower() != expected_qname.lower() or qtype_parsed != qtype or qclass_parsed != expected_qclass:
                 raise DNSError(
-                    "question mismatch: asked %s/%d/%d, got %s/%d/%d"
-                    % (expected_qname, qtype, expected_qclass, qname, qtype_parsed, qclass_parsed)
+                    f"question mismatch: asked {expected_qname}/{qtype}/{expected_qclass}, got {qname}/{qtype_parsed}/{qclass_parsed}"
                 )
         break  # only validate the first question
     records = []
@@ -269,7 +268,7 @@ def _parse_response(data, expected_txid, qtype, expected_qname=None, expected_qc
             # A077: truncated RR header — the packet is malformed; raise rather
             # than silently returning a partial record set that would be treated
             # as the complete answer.
-            raise DNSError("truncated RR header at offset %d" % offset)
+            raise DNSError(f"truncated RR header at offset {offset}")
         rtype, rclass, ttl, rdlength = struct.unpack(">HHIH", data[offset : offset + 10])
         offset += 10
         rdata_offset = offset
@@ -278,7 +277,7 @@ def _parse_response(data, expected_txid, qtype, expected_qname=None, expected_qc
         # rdata slice and the parser returns a partial answer set as complete.
         if offset + rdlength > len(data):
             raise DNSError(
-                "truncated rdlength at offset %d (need %d bytes, have %d)" % (offset, rdlength, len(data) - offset)
+                f"truncated rdlength at offset {offset} (need {rdlength} bytes, have {len(data) - offset})"
             )
         rdata = data[offset : offset + rdlength]
         offset += rdlength
@@ -325,7 +324,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
         try:
             preference = struct.unpack(">H", rdata[:2])[0]
             exchange, _ = _read_name(full, rdata_offset + 2)
-            return "{} {}".format(preference, exchange)
+            return f"{preference} {exchange}"
         except Exception:
             return rdata.hex()
     # --- TXT (one or more character-strings: length-prefixed) ---
@@ -349,7 +348,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
             mname, off = _read_name(full, rdata_offset)
             rname, off = _read_name(full, off)
             serial, refresh, retry, expire, minimum = struct.unpack(">IIIII", full[off : off + 20])
-            return "{} {} {} {} {} {} {}".format(mname, rname, serial, refresh, retry, expire, minimum)
+            return f"{mname} {rname} {serial} {refresh} {retry} {expire} {minimum}"
         except Exception:
             return rdata.hex()
     # --- SRV (priority, weight, port, target name) ---
@@ -357,7 +356,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
         try:
             priority, weight, port = struct.unpack(">HHH", rdata[:6])
             target, _ = _read_name(full, rdata_offset + 6)
-            return "{} {} {} {}".format(priority, weight, port, target)
+            return f"{priority} {weight} {port} {target}"
         except Exception:
             return rdata.hex()
     # --- CAA (flags byte, tag length, tag string, value bytes) ---
@@ -369,7 +368,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
                 return rdata.hex()
             tag = rdata[2 : 2 + tag_len].decode("ascii", "replace")
             value = rdata[2 + tag_len :].decode("utf-8", "replace")
-            return '{} {} "{}"'.format(flags, tag, value)
+            return f'{flags} {tag} "{value}"'
         except Exception:
             return rdata.hex()
     return rdata.hex()
@@ -391,7 +390,7 @@ def query(name, qtype, server, timeout=3):
         # A163: catch all OSError subclasses (socket.timeout, ConnectionRefusedError,
         # ENETUNREACH, EHOSTUNREACH, etc.) so one refusing server does not abort
         # the walk or surface as HTTP 500.
-        raise DNSError(str(e) if str(e) else "network error")
+        raise DNSError(str(e) if str(e) else "network error") from e
     finally:
         sock.close()
     parsed = _parse_response(data, txid, qtype_, expected_qname=qname, expected_qclass=qclass_)
@@ -412,7 +411,7 @@ def _query_tcp(name, qtype, server, timeout):
         (length,) = struct.unpack(">H", length_bytes)
         # SD-72: cap server-declared TCP response length to prevent OOM.
         if length > _MAX_TCP_LENGTH:
-            raise DNSError("server-declared TCP length exceeds %d" % _MAX_TCP_LENGTH)
+            raise DNSError(f"server-declared TCP length exceeds {_MAX_TCP_LENGTH}")
         data = _recv_exact(sock, length)
     finally:
         sock.close()
@@ -471,7 +470,7 @@ def forward_wire(query_wire, server, timeout=5):
         resp = sock.recv(65535)
     except OSError as e:
         # A163: catch all OSError subclasses so upstream failures are honest DNSError
-        raise DNSError(str(e) if str(e) else "upstream network error")
+        raise DNSError(str(e) if str(e) else "upstream network error") from e
     finally:
         sock.close()
 
@@ -486,7 +485,7 @@ def forward_wire(query_wire, server, timeout=5):
             (rlen,) = struct.unpack(">H", _recv_exact(tsock, 2))
             # SD-72: cap server-declared TCP response length to prevent OOM.
             if rlen > _MAX_TCP_LENGTH:
-                raise DNSError("server-declared TCP length exceeds %d" % _MAX_TCP_LENGTH)
+                raise DNSError(f"server-declared TCP length exceeds {_MAX_TCP_LENGTH}")
             resp = _recv_exact(tsock, rlen)
         finally:
             tsock.close()
@@ -496,8 +495,8 @@ def forward_wire(query_wire, server, timeout=5):
         raise DNSError("response txid mismatch")
     try:
         _rtxid, rquestion = _question_bytes(resp)
-    except DNSError:
-        raise DNSError("response has no parseable question")
+    except DNSError as e:
+        raise DNSError("response has no parseable question") from e
     if rquestion != question:
         raise DNSError("response question does not match the query")
     return resp
@@ -520,7 +519,7 @@ def query_system(name, qtype):
     try:
         infos = socket.getaddrinfo(name, None, family=family, type=socket.SOCK_STREAM)
     except socket.gaierror as e:
-        raise DNSError(f"system: {e}")
+        raise DNSError(f"system: {e}") from e
     values = set()
     for info in infos:
         ip = info[4][0].split("%")[0]  # strip any scope id
@@ -617,11 +616,11 @@ def query_doh(name, qtype, ip, sni, path, timeout=5):
         conn.endheaders()
         resp = conn.getresponse()
         if resp.status != 200:
-            raise DNSError("doh http %d" % resp.status)
+            raise DNSError(f"doh http {resp.status}")
         data = json.loads(resp.read(1 << 20).decode("utf-8", "ignore"))
     except (OSError, ssl.SSLError, ValueError) as e:
         # ValueError covers json.JSONDecodeError for a non-JSON / error body.
-        raise DNSError(f"doh: {e}")
+        raise DNSError(f"doh: {e}") from e
     finally:
         conn.close()
     return _parse_doh_json(data)
@@ -715,7 +714,7 @@ def _parse_sections(data, expected_txid, expected_qname=None, expected_qtype=Non
         raise DNSError("not a response")
     # A061: reject QDCOUNT != 1 (same guard as _parse_response).
     if qd != 1:
-        raise DNSError("unexpected question count: %d" % qd)
+        raise DNSError(f"unexpected question count: {qd}")
     offset = 12
     for _ in range(qd):
         qname, offset = _read_name(data, offset)
@@ -733,8 +732,7 @@ def _parse_sections(data, expected_txid, expected_qname=None, expected_qtype=Non
                 or qclass_parsed != expected_qclass
             ):
                 raise DNSError(
-                    "question mismatch: asked %s/%d/%d, got %s/%d/%d"
-                    % (expected_qname, expected_qtype, expected_qclass, qname, qtype_parsed, qclass_parsed)
+                    f"question mismatch: asked {expected_qname}/{expected_qtype}/{expected_qclass}, got {qname}/{qtype_parsed}/{qclass_parsed}"
                 )
         break  # only validate the first question
     answers, offset, ans_complete = _read_records(data, offset, an)
@@ -771,7 +769,7 @@ def _query_sections(name, qtype, server, timeout=3, do=False, rd=False):
         data = sock.recv(65535)
     except OSError as e:
         # A163: catch all OSError subclasses so one dead server does not end the walk
-        raise DNSError(str(e) if str(e) else "network error")
+        raise DNSError(str(e) if str(e) else "network error") from e
     finally:
         sock.close()
     parsed = _parse_sections(data, txid, expected_qname=qname, expected_qtype=qtype_, expected_qclass=qclass_)
@@ -785,7 +783,7 @@ def _query_sections(name, qtype, server, timeout=3, do=False, rd=False):
             (length,) = struct.unpack(">H", _recv_exact(tsock, 2))
             # SD-72: cap server-declared TCP response length to prevent OOM.
             if length > _MAX_TCP_LENGTH:
-                raise DNSError("server-declared TCP length exceeds %d" % _MAX_TCP_LENGTH)
+                raise DNSError(f"server-declared TCP length exceeds {_MAX_TCP_LENGTH}")
             parsed = _parse_sections(
                 _recv_exact(tsock, length), txid, expected_qname=qname, expected_qtype=qtype_, expected_qclass=qclass_
             )

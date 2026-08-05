@@ -43,7 +43,7 @@ def _keygen_key_error():
     except ValueError:
         return "not valid hex (expected 64 hex chars / 32 bytes)"
     if len(key_bytes) != 32:
-        return "32 bytes of hex expected, got %d bytes" % len(key_bytes)
+        return f"32 bytes of hex expected, got {len(key_bytes)} bytes"
     try:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 

@@ -186,7 +186,7 @@ class S15MonitorAdvanceTests(_TempDbMixin, unittest.TestCase):
         self.assertEqual(
             counter.opened,
             counter.closed,
-            "monitor_advance leaked %d connection(s)" % (counter.opened - counter.closed),
+            f"monitor_advance leaked {counter.opened - counter.closed} connection(s)",
         )
 
     def test_monitor_advance_still_advances_next_run(self):

@@ -119,23 +119,23 @@ def _query_crtsh(domain, timeout):
         if resp.status == 503:
             raise _CrtshError("service unavailable (503)")
         if resp.status != 200:
-            raise _CrtshError("unexpected status %d" % resp.status)
+            raise _CrtshError(f"unexpected status {resp.status}")
 
         # A165: read body BEFORE closing, with an explicit byte cap
         body = resp.read(_CRTSH_MAX_BODY + 1)
         if len(body) > _CRTSH_MAX_BODY:
-            raise _CrtshError("response body exceeds %d bytes" % _CRTSH_MAX_BODY)
+            raise _CrtshError(f"response body exceeds {_CRTSH_MAX_BODY} bytes")
     except _CrtshError:
         raise
     except Exception as exc:
-        raise _CrtshError(f"connection failed: {exc}")
+        raise _CrtshError(f"connection failed: {exc}") from exc
     finally:
         conn.close()
 
     try:
         entries = json.loads(body.decode("utf-8"))
     except Exception as exc:
-        raise _CrtshError(f"invalid response: {exc}")
+        raise _CrtshError(f"invalid response: {exc}") from exc
     if not isinstance(entries, list):
         raise _CrtshError("response is not a JSON array")
     return entries
@@ -197,7 +197,7 @@ def _resolve_subdomains(names, deadline):
             for fut in concurrent.futures.as_completed(futures, timeout=remaining):
                 try:
                     name, ips = fut.result()
-                except Exception:
+                except Exception:  # noqa: S112
                     continue
                 # A166: store all queried names (including empty results).
                 # None means deadline-skipped (absent from dict); [] means queried-and-empty.
@@ -218,7 +218,7 @@ def _resolve_one_sequential(name, resolvers):
         for qtype in (resolver.TYPE_A, resolver.TYPE_AAAA):
             try:
                 resp = resolver.query(name, qtype, server, timeout=_RESOLVE_TIMEOUT)
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
             if resp.get("rcode") == 0 and resp.get("records"):
                 return [a["value"] for a in resp["records"] if a.get("type") in ("A", "AAAA")]

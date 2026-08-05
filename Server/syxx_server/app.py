@@ -79,7 +79,7 @@ try:
             send_default_pii=False,
             enable_tracing=True,
         )
-except Exception:
+except Exception:  # noqa: S110
     pass  # Sentry is best-effort; never crash the server for it
 
 # --- OpenTelemetry error reporting to bugsmasher.syxx.app ---
@@ -1233,7 +1233,7 @@ class Handler(BaseHTTPRequestHandler):
         # unbounded Stripe API sessions.
         window = int(time.time()) // 3600
         client_ip = self.client_address[0]
-        idem_key = "checkout-%s-%s-%d" % (sku, hashlib.sha256(client_ip.encode()).hexdigest()[:16], window)
+        idem_key = f"checkout-{sku}-{hashlib.sha256(client_ip.encode()).hexdigest()[:16]}-{window}"
         try:
             url, _sid = stripe_checkout.create_checkout_session(sku, idempotency_key=idem_key)
         except stripe_checkout.StripeError as e:
@@ -2509,7 +2509,7 @@ class Handler(BaseHTTPRequestHandler):
                 # all already-collected results.
                 try:
                     results.append(fut.result())
-                except Exception:
+                except Exception:  # noqa: S110
                     pass
         except concurrent.futures.TimeoutError:
             pass
@@ -3114,8 +3114,8 @@ def _start_beta_digest_thread():
         ok = mailer.send(
             config.BETA_DIGEST_TO,
             f"Syxx beta signups — weekly digest ({stamp})",
-            "Attached: %d beta signup(s) as of %s UTC.\n\n"
-            "Automated weekly export from the Syxx server." % (len(rows), stamp),
+            f"Attached: {len(rows)} beta signup(s) as of {stamp} UTC.\n\n"
+            "Automated weekly export from the Syxx server.",
             attachments=[(f"syxx-beta-signups-{stamp}.csv", "text/csv", _beta_digest_csv(rows))],
         )
         if ok:
@@ -3169,5 +3169,5 @@ def serve():
         logging_util.info("http_listening", port=config.HTTP_PORT)
     # D-0: the HTTP listener is up by the time we reach serve_forever(). Report it so /readyz
     # reflects reality rather than defaulting to "unknown" for the very server answering the request.
-    listeners.set_state("http", "listening", detail="port %d" % config.HTTP_PORT)
+    listeners.set_state("http", "listening", detail=f"port {config.HTTP_PORT}")
     httpd.serve_forever()

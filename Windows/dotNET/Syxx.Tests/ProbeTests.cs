@@ -277,6 +277,94 @@ namespace Syxx.Tests
             Assert.False(DenialOfExistenceProbe.IsAncestor("example.com", "notexample.com"));
             Assert.False(DenialOfExistenceProbe.IsAncestor("evil.net", "example.com"));
         }
+
+        // -----------------------------------------------------------------------------------------
+        // D1.4 / C126 — an injected NSEC must not bypass the SOA-ancestry test.
+        // Nothing here validates the NSEC interval or its RRSIG (an honest documented v1 limit), so
+        // NSEC presence is cheap for an on-path injector to manufacture. It may upgrade a CONSISTENT
+        // denial; it must never rescue an inconsistent one. Twin of DenialOfExistenceProbe.swift:105-116.
+        // -----------------------------------------------------------------------------------------
+
+        [Fact]
+        public void InjectedNsecDoesNotRescueAWrongZoneSoa()
+        {
+            // The block-page shape: an ISP answers NXDOMAIN with an SOA for its OWN zone and staples
+            // on an NSEC. Before C126 the hasNSEC branch returned NsecProven — "authenticated denial
+            // of existence" — and the wrong-zone SOA, the only real test, was never reached.
+            var r = DenialOfExistenceProbe.Classify("nope.example.com", DNSResponseStatus.NXDomain,
+                answers: [], authority: [Soa("blockpage.isp.net"), Nsec("blockpage.isp.net")]);
+
+            Assert.Equal(DenialStatus.Contradictory, r.Status);
+            Assert.NotEqual(DenialStatus.NsecProven, r.Status);
+            Assert.True(r.HasNSEC, "the NSEC observation itself is still reported honestly");
+        }
+
+        [Fact]
+        public void NsecStillUpgradesAConsistentDenial()
+        {
+            // Guard on the fix: an ancestor-zone SOA with NSEC is a genuine authenticated denial and
+            // must still grade NsecProven. C126 reorders the checks; it does not disable NSEC.
+            var r = DenialOfExistenceProbe.Classify("nope.example.com", DNSResponseStatus.NXDomain,
+                answers: [], authority: [Soa("example.com"), Nsec("example.com")]);
+            Assert.Equal(DenialStatus.NsecProven, r.Status);
+        }
+
+        [Fact]
+        public void NsecWithNoSoaAtAllIsStillNsecProven()
+        {
+            // No SOA means no ancestry test to fail, so the NSEC branch is reached as before.
+            var r = DenialOfExistenceProbe.Classify("nope.example.com", DNSResponseStatus.NXDomain,
+                answers: [], authority: [Nsec("example.com")]);
+            Assert.Equal(DenialStatus.NsecProven, r.Status);
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // D1.5 / C127 — NODATA is not NXDOMAIN, and a missing SOA means different things for each.
+        // RFC 2308 §5 makes the SOA a SHOULD for authoritative answers only; resolvers routinely omit
+        // it on a cached NODATA. Twin of DenialOfExistenceProbe.swift:126-133.
+        // -----------------------------------------------------------------------------------------
+
+        [Fact]
+        public void BareNoDataIsInconclusiveNotASuspiciousBareDenial()
+        {
+            // Routine traffic: the name exists, has no record of the requested type, and the cached
+            // answer carries no SOA. This was graded BareDenial — "likely injected", corroborate —
+            // which is a fabricated suspicion on an ordinary answer.
+            var r = DenialOfExistenceProbe.Classify("example.com", DNSResponseStatus.NoData,
+                answers: [], authority: []);
+
+            Assert.Equal(DenialStatus.Inconclusive, r.Status);
+            Assert.NotEqual(DenialStatus.BareDenial, r.Status);
+            Assert.Equal(DenialNegativeKind.TypeHasNoData, r.NegativeKind);
+        }
+
+        [Fact]
+        public void BareNxdomainIsStillABareDenial()
+        {
+            // The other half of C127, and proof the change above is not a blanket downgrade: a
+            // genuine authoritative NXDOMAIN does include an SOA, so its absence stays a signature.
+            var r = DenialOfExistenceProbe.Classify("nope.example.com", DNSResponseStatus.NXDomain,
+                answers: [], authority: []);
+
+            Assert.Equal(DenialStatus.BareDenial, r.Status);
+            Assert.Equal(DenialNegativeKind.NameDoesNotExist, r.NegativeKind);
+        }
+
+        [Fact]
+        public void NegativeKindIsRecordedForEveryGradedStatus()
+        {
+            // NXDOMAIN and NODATA are different facts (RFC 2308 §2.1/§2.2) and both must survive to
+            // the caller; a transport failure has no kind at all and must stay null rather than
+            // defaulting to either one.
+            Assert.Equal(DenialNegativeKind.NameDoesNotExist,
+                DenialOfExistenceProbe.Classify("nope.example.com", DNSResponseStatus.NXDomain,
+                    answers: [], authority: [Soa("example.com")]).NegativeKind);
+            Assert.Equal(DenialNegativeKind.TypeHasNoData,
+                DenialOfExistenceProbe.Classify("example.com", DNSResponseStatus.NoData,
+                    answers: [], authority: [Soa("example.com")]).NegativeKind);
+            Assert.Null(DenialOfExistenceProbe.Classify("example.com", DNSResponseStatus.Timeout,
+                    answers: [], authority: []).NegativeKind);
+        }
     }
 
     public class AuthoritativeVantageClassifyTests

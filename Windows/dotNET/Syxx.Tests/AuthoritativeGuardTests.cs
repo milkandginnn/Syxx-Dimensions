@@ -10,9 +10,13 @@ namespace Syxx.Tests
     //
     //   * B036 resolverDidFail — the one branch stopping a FAILED resolver query from reading
     //     "consistent with authoritative". Without it, a timeout looks like agreement.
-    //   * NetworkCohort.SharedProvider — DOWNGRADES Diverges -> Inconclusive when both answer sets
-    //     sit in one CDN's ranges. That is a result DAMPENER: if a range is overbroad or a mask is
-    //     wrong, a genuine rewrite into a CDN-adjacent address is silently softened away.
+    //   * NetworkCohort.SharedProvider — ANNOTATES a disjoint result with the shared CDN provider
+    //     when both answer sets sit in one CDN's ranges. It USED TO downgrade Diverges ->
+    //     Inconclusive; K-16 removed that softening on both platforms, because an attacker can rent
+    //     space inside the provider's own ASN, and because Inconclusive fell through Synthesizer's
+    //     `default:` and emitted NO evidence item at all — the finding did not soften, it
+    //     DISAPPEARED. The provider name must still reach the detail string, so an overbroad range
+    //     or a wrong mask stays detectable here.
     public class AuthoritativeGuardTests
     {
         private static HashSet<string> S(params string[] ips) => new(ips);
@@ -43,11 +47,18 @@ namespace Syxx.Tests
         // MARK: - SharedProvider (the dampener)
 
         [Fact]
-        public void DisjointAnswers_InOneCdn_AreSoftenedToInconclusive_NotDiverges()
+        public void DisjointAnswers_InOneCdn_RetainDivergence_ProviderNoted()
         {
-            // Both sets are Fastly (151.101.0.0/16). Real CDN/geo routing, not a rewrite.
+            // AMENDED DELIBERATELY (K-16), not softened to go green. Both sets are Fastly
+            // (151.101.0.0/16). This test used to assert Inconclusive and was therefore pinning the
+            // exact behaviour K-16 corrected: same-provider is NOT evidence of benign geo-routing,
+            // and the softened result emitted no evidence item at all. The corrected contract is
+            // that the divergence is RETAINED and the shared provider is surfaced as a
+            // corroboration note. Equivalent, richer coverage also lives in
+            // ForensicsAnalyzerTests.AuthoritativeSameProviderTests (which additionally asserts
+            // "divergence retained"), so this amendment loses no coverage.
             var r = AuthoritativeVantage.Classify(S("151.101.1.1"), S("151.101.2.2"), NoNs, "x");
-            Assert.Equal(AuthComparisonStatus.Inconclusive, r.Status);
+            Assert.Equal(AuthComparisonStatus.Diverges, r.Status);
             Assert.Contains("Fastly", r.Detail);
         }
 

@@ -9,7 +9,7 @@ import CryptoKit
 // server is the only parser. This engine verifies the Ed25519 signature over the received bytes
 // BEFORE any JSON parse (§4), checks freshness/origin/nonce, fetches each DECLARED asset from the
 // client's own vantage under the declared redirect policy (§6), hashes raw bytes, compares to the
-// manifest, and applies the fail-closed conclusion lattice (§5). "verdict" is banned — result/conclusion.
+// manifest, and applies the fail-closed conclusion lattice (§5). Identifiers here use result/conclusion.
 // =====================================================================================
 
 /// §4 signature-stage outcome. `malformed` is reserved for an unparseable TRANSPORT ENVELOPE (a

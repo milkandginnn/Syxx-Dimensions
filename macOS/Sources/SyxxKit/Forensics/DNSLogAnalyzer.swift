@@ -149,6 +149,14 @@ public struct DNSLogAnalysis {
     /// C083 — count of records whose question name failed normalizeDomain and were excluded
     /// from every forensic tally. Surfaced so the coverage gap is disclosed rather than implied away.
     public let namesExcludedCount: Int
+    /// D022 — count of records whose key could not be recorded because its tally had already hit
+    /// the 50,000-distinct-key memory cap. **Non-zero means the affected tallies are TRUNCATED:**
+    /// `uniqueDomains` / `uniqueRegistrable` are then FLOORS ("at least N"), not measurements, and
+    /// the "top N" lists are drawn only from the keys seen before the cap was reached.
+    public let keysDroppedAtCapCount: Int
+    /// D022 — which tallies actually hit the cap, e.g. `["domains", "registrable domains"]`.
+    /// Empty when nothing was truncated.
+    public let cappedTallies: [String]
     public let interpretation: [String]
 }
 
@@ -162,35 +170,37 @@ public enum DNSLogAnalyzer {
         // (e.g., exfil captures with millions of unique domains). Once the cap is reached, new
         // keys are not added, but existing keys continue to accumulate counts.
         let maxDistinctKeys = 50_000
+        // D022 DISCLOSURE — the cap stays (it exists for a real memory reason), but a truncated
+        // tally must ANNOUNCE itself. Dropping keys silently makes `uniqueDomains` a fabricated
+        // measurement: past the cap the figure sticks at 50,000 while true cardinality keeps
+        // climbing, and nothing tells the reader. That is honesty spine #2 (missing data is not
+        // clean data) and #4 (no fabricated value shown as measured) — and it bites exactly where
+        // the product matters most, since the cap's own stated trigger is an exfil capture with
+        // millions of unique domains. `bump` records every drop and names the tally, so `render`
+        // can report the affected counts as FLOORS rather than measurements.
+        var keysDroppedAtCap = 0
+        var cappedTallySet = Set<String>()
+        func bump(_ map: inout [String: Int], _ key: String, _ tally: String) {
+            if map.count < maxDistinctKeys || map[key] != nil {
+                map[key, default: 0] += 1
+            } else {
+                keysDroppedAtCap += 1
+                cappedTallySet.insert(tally)
+            }
+        }
 
         for r in records {
-            if let p = r.process, !p.isEmpty, process.count < maxDistinctKeys || process[p] != nil {
-                process[p, default: 0] += 1
-            }
-            if let t = r.questionType, t != "?????" {
-                let key = t.uppercased()
-                if type.count < maxDistinctKeys || type[key] != nil {
-                    type[key, default: 0] += 1
-                }
-            }
+            if let p = r.process, !p.isEmpty { bump(&process, p, "processes") }
+            if let t = r.questionType, t != "?????" { bump(&type, t.uppercased(), "record types") }
             // Rcode is only meaningful on replies (a query carries a placeholder "No error").
-            if r.isReply, let rc = r.rcode, !rc.isEmpty {
-                let key = statusBucket(rc)
-                if status.count < maxDistinctKeys || status[key] != nil {
-                    status[key, default: 0] += 1
-                }
-            }
+            if r.isReply, let rc = r.rcode, !rc.isEmpty { bump(&status, statusBucket(rc), "statuses") }
 
             // C083: count names excluded by normalizeDomain so the coverage gap is disclosed.
             guard let raw = r.questionName else { continue }
             guard let d = normalizeDomain(raw) else { namesExcluded += 1; continue }
-            if domain.count < maxDistinctKeys || domain[d] != nil {
-                domain[d, default: 0] += 1
-            }
+            bump(&domain, d, "domains")
             if let reg = DNSCaptureReportGenerator.registrableDomain(d) {
-                if registrable.count < maxDistinctKeys || registrable[reg] != nil {
-                    registrable[reg, default: 0] += 1
-                }
+                bump(&registrable, reg, "registrable domains")
             }
             let labels = d.split(separator: ".").map(String.init)
             if d.count >= 100 || labels.contains(where: { $0.count >= 48 }) { long.insert(d) }
@@ -230,6 +240,8 @@ public enum DNSLogAnalyzer {
             exfilCandidates: exfil,
             lookalikeFindings: lookalikes,
             namesExcludedCount: namesExcluded,
+            keysDroppedAtCapCount: keysDroppedAtCap,
+            cappedTallies: cappedTallySet.sorted(),
             interpretation: interp
         )
     }
@@ -256,11 +268,22 @@ public enum DNSLogAnalyzer {
         out.append("")
         out.append("Source: \(source)")
         out.append("Parsed records: \(a.recordCount)")
-        out.append("Unique domains: \(a.uniqueDomains)  |  Unique registrable domains: \(a.uniqueRegistrable)")
+        // D022: a tally that hit the distinct-key cap yields a FLOOR, not a measurement. Say
+        // "at least" rather than printing a truncated number as though it were the real count.
+        let domainFloor = a.cappedTallies.contains("domains") ? "at least " : ""
+        let registrableFloor = a.cappedTallies.contains("registrable domains") ? "at least " : ""
+        out.append("Unique domains: \(domainFloor)\(a.uniqueDomains)  |  Unique registrable domains: \(registrableFloor)\(a.uniqueRegistrable)")
         // C083: disclose names excluded from analysis by normalizeDomain — the coverage gap
         // must be visible so the record count's completeness claim is honest.
         if a.namesExcludedCount > 0 {
             out.append("Names excluded from analysis: \(a.namesExcludedCount) (non-ASCII, single-label, or invalid characters)")
+        }
+        // D022: disclose cap-driven truncation. Without this the counts above silently stop
+        // growing at 50,000 and are read as measured values — the exact defect shape as K-17.
+        if a.keysDroppedAtCapCount > 0 {
+            out.append("TRUNCATED — distinct-key cap (50,000) reached for: \(a.cappedTallies.joined(separator: ", "))")
+            out.append("  \(a.keysDroppedAtCapCount) record(s) could not be tallied. The counts and the top-N lists")
+            out.append("  above are INCOMPLETE lower bounds, not measurements. Re-run on a narrowed capture to measure.")
         }
         out.append("")
         section("Top Domains", a.domainCounts)

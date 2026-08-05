@@ -1,7 +1,12 @@
 # Findings — cross-platform-parity_20260805
 
-Detection-only track. Every entry here is **filed, not fixed**. Each carries one of the five states
-from `conductor/workflow.md` and `file:line` evidence.
+Each entry carries one of the five states from `conductor/workflow.md` and `file:line` evidence.
+
+**Scope amended 2026-08-05:** the track was created detection-only, and the "Not fixed here" notes
+below were written under that constraint. The owner has since moved remediation into this track
+(Phase 8). Those notes are left as written rather than edited away — they record what was true when
+each finding was filed. The **State** line is the current truth; where a finding has since been
+fixed, its state says so.
 
 ---
 
@@ -123,9 +128,20 @@ inventorying corpora and did not audit it. Flagged so the observation is not los
 
 ---
 
-## F-04 · Swift `defaultSpecJSON()` is nondeterministic — the same build emits a different spec each run
+## F-04 · Spec serialization was nondeterministic on BOTH platforms — different bytes every launch
 
-**State:** `open` · **Found by:** A-03 (restoring the quarantined loader) · **Severity:** High
+**State:** `verified-by-real-run` (fixed 2026-08-05, Tasks 8.1 + 8.2) · **Found by:** A-03 · **Severity:** High
+
+**Fix:** Swift sorts in `MatrixSpec.encode(to:)`; C# sorts via `SortedSectionIdSetConverter`. Twin
+tests on both platforms assert the emitted order is *sorted*, not merely stable — two serializations
+inside one process share a hash seed and would agree even with the defect present. Both pass.
+
+**Not newly discovered.** `MatrixDeterminativeEngine.cs:365` recorded this during the port and
+deferred it to "the Phase 5 canonical-encoding rule (sort the set on BOTH platforms)". That rule
+never landed on either side. The note's one error was scope: it called the hazard Swift's alone, but
+`SectionId` is a record struct over `string` and .NET randomizes string hashing per process, so the
+C# set enumerated per-process too — and `MatrixCanonicalJson` sorts object keys while preserving
+array order, so nothing corrected it.
 
 ### Evidence
 

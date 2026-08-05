@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -74,6 +75,49 @@ public static class KeystorePassphraseSession
         _cachedKey = null;
         _cachedSaltHex = null;
         _cachedMode = 0;
+        // Nothing left to evict; stop the timer rather than let it wake a sleeping process.
+        _evictionTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>S-5: drives idle eviction from a timer instead of only from the next access.
+    ///
+    /// <para>Before this, <see cref="ExpireIfIdleLocked"/> ran only when someone called in, so a
+    /// process that derived a key and then went idle — the overwhelmingly common case for a desktop
+    /// app left open — held the key in memory until exit. <see cref="IdleTimeout"/> described an
+    /// intention that nothing enforced. The timer makes the documented window the real one.</para>
+    ///
+    /// <para>It is armed only while a key is actually cached and is stopped by
+    /// <see cref="ClearLocked"/>, so an idle process is not woken for nothing.</para></summary>
+    private static Timer? _evictionTimer;
+
+    private static void ScheduleEvictionLocked(TimeSpan due)
+    {
+        if (due < TimeSpan.Zero) due = TimeSpan.Zero;
+        _evictionTimer ??= new Timer(
+            static _ => EvictIfIdle(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        try
+        {
+            _evictionTimer.Change(due, Timeout.InfiniteTimeSpan);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Racing process shutdown. The key is zeroed on exit anyway; never take the app down
+            // over a timer that is already gone.
+        }
+    }
+
+    private static void EvictIfIdle()
+    {
+        lock (Gate)
+        {
+            ExpireIfIdleLocked();
+
+            // Still here means it was used after the timer was armed. Re-arm for the time it has
+            // actually got left, so a key used at the last moment is not granted a whole extra
+            // window.
+            if (_cachedKey is not null)
+                ScheduleEvictionLocked(IdleTimeout - (DateTime.UtcNow - _lastUsedUtc));
+        }
     }
 
     /// <summary>True when a derived key is currently held. For honest UI: report the observed state,
@@ -135,6 +179,7 @@ public static class KeystorePassphraseSession
                 && string.Equals(_cachedSaltHex, saltHex, StringComparison.Ordinal))
             {
                 _lastUsedUtc = DateTime.UtcNow;
+                ScheduleEvictionLocked(IdleTimeout);   // S-5
                 return (_cachedKey.AsSpan().ToArray(), actualMode);
             }
 
@@ -145,6 +190,7 @@ public static class KeystorePassphraseSession
             _cachedSaltHex = saltHex;
             _cachedMode = actualMode;
             _lastUsedUtc = DateTime.UtcNow;
+            ScheduleEvictionLocked(IdleTimeout);   // S-5
             return (_cachedKey.AsSpan().ToArray(), actualMode);
         }
     }
@@ -482,13 +528,13 @@ public sealed class LinuxSecretStore : ISecretStore
     /// </summary>
     private static byte[] DeriveMasterKey(string? passphrase, byte[] salt, int mode)
     {
-        var material = new StringBuilder();
         int machineSources = 0;
 
         // /etc/machine-id — stable per installation
+        string machineId = string.Empty;
         try
         {
-            material.Append(File.ReadAllText("/etc/machine-id").Trim());
+            machineId = File.ReadAllText("/etc/machine-id").Trim();
             machineSources++;
         }
         catch (Exception ex)
@@ -498,9 +544,10 @@ public sealed class LinuxSecretStore : ISecretStore
 
         // /sys/class/dmi/id/product_uuid — hardware-bound, mode 0400 so root-only, and absent on
         // most arm64. Expected to fail for an ordinary user; recorded so the loss is visible.
+        string productUuid = string.Empty;
         try
         {
-            material.Append(File.ReadAllText("/sys/class/dmi/id/product_uuid").Trim());
+            productUuid = File.ReadAllText("/sys/class/dmi/id/product_uuid").Trim();
             machineSources++;
         }
         catch (Exception ex)
@@ -510,7 +557,7 @@ public sealed class LinuxSecretStore : ISecretStore
 
         // Hostname — volatile but provides uniqueness in containers. Never counted as a real source:
         // it is guessable and often published.
-        material.Append(Environment.MachineName);
+        string hostName = Environment.MachineName;
 
         bool havePassphrase = !string.IsNullOrEmpty(passphrase);
         if (!havePassphrase)
@@ -545,24 +592,59 @@ public sealed class LinuxSecretStore : ISecretStore
 
         // The passphrase leads, so it dominates the first block of the derivation; the machine
         // material follows. A NUL separator keeps the two from being confusable by concatenation.
-        var password = havePassphrase
-            ? Encoding.UTF8.GetBytes(passphrase + "\0" + material.ToString())
-            : Encoding.UTF8.GetBytes("\0" + material.ToString());
+        //
+        // S-4, ZEROING CONTRACT — read this before changing the assembly below, and do not
+        // restate it more strongly than it is.
+        //
+        // WHAT IS ZEROED: the assembled password bytes, in a pooled buffer wiped in the `finally`
+        // before it is returned to the pool. That buffer is the only place the passphrase and the
+        // machine material appear together.
+        //
+        // WHY IT IS ASSEMBLED THIS WAY: the previous version built the same bytes with
+        // `passphrase + "\0" + material.ToString()`. String concatenation materialises an immutable
+        // heap `string` CONTAINING THE PASSPHRASE IN PLAINTEXT, which cannot be zeroed and survives
+        // until an indeterminate GC. It then zeroed only the `byte[]` and called `material.Clear()`
+        // under a comment claiming the material had been zeroed. `StringBuilder.Clear()` sets
+        // `Length = 0`; it does not wipe the backing `char[]`. Both claims were false, which is the
+        // fabricated-assurance class this file exists to refuse (spine #4). Encoding straight into
+        // the pooled buffer means the passphrase is never copied into a string here at all.
+        //
+        // WHAT IS *NOT* ZEROED, STATED PLAINLY: `machineId`, `productUuid` and `hostName` are
+        // `string`s returned by the runtime, and .NET cannot reliably wipe a `string` — the GC may
+        // already have copied it. Those three are machine IDENTIFIERS, not user secrets: an attacker
+        // who can read this process's heap can equally read `/etc/machine-id`. The passphrase is the
+        // only value here whose disclosure is fatal, and it is the one this method keeps out of the
+        // heap. The caller's `passphrase` string is owned by the provider and is likewise not
+        // zeroable; closing that would take a `SecureString`/`char[]` provider contract, which is
+        // recorded as open work rather than implied to be done.
+        int capacity = 1 + Encoding.UTF8.GetMaxByteCount(machineId.Length)
+                         + Encoding.UTF8.GetMaxByteCount(productUuid.Length)
+                         + Encoding.UTF8.GetMaxByteCount(hostName.Length)
+                         + (havePassphrase ? Encoding.UTF8.GetMaxByteCount(passphrase!.Length) : 0);
 
+        var password = ArrayPool<byte>.Shared.Rent(capacity);
+        int written = 0;
         try
         {
+            if (havePassphrase)
+                written += Encoding.UTF8.GetBytes(passphrase.AsSpan(), password.AsSpan(written));
+            password[written++] = 0;   // the NUL separator, byte-identical to the "\0" above
+            written += Encoding.UTF8.GetBytes(machineId.AsSpan(), password.AsSpan(written));
+            written += Encoding.UTF8.GetBytes(productUuid.AsSpan(), password.AsSpan(written));
+            written += Encoding.UTF8.GetBytes(hostName.AsSpan(), password.AsSpan(written));
+
             var argon2id = new Argon2id(new Argon2Parameters
             {
                 DegreeOfParallelism = 1,
                 MemorySize = Argon2MemoryBytes,
                 NumberOfPasses = Argon2Passes,
             });
-            return argon2id.DeriveBytes(password, salt, 32);
+            return argon2id.DeriveBytes(password.AsSpan(0, written), salt, 32);
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(password);
-            material.Clear();   // S-4: zero the machine-ID material once the password bytes exist
+            CryptographicOperations.ZeroMemory(password.AsSpan(0, written));
+            ArrayPool<byte>.Shared.Return(password);
             _ = mode;   // bound into the AEAD's associated data by the caller, not into the key
         }
     }
@@ -763,7 +845,7 @@ public sealed class LinuxSecretStore : ISecretStore
         // S-1: For reads, preferPassphrase matches the file's recorded mode — if the file was
         // sealed with a passphrase, attempt the passphrase; if machine-only, skip it.
         // S-2: masterKey is a defensive copy — zero it in finally.
-        var (masterKey, int actualMode) = KeystorePassphraseSession.GetOrDeriveKey(
+        var (masterKey, actualMode) = KeystorePassphraseSession.GetOrDeriveKey(
             salt, preferPassphrase: mode == KdfModePassphrase,
             (pass, m) => DeriveMasterKey(pass, salt, m));
         var entryKey = DeriveEntryKey(masterKey, keyType, keyId);
@@ -816,7 +898,10 @@ public sealed class LinuxSecretStore : ISecretStore
             iterations: 350000,
             HashAlgorithmName.SHA256,
             outputLength: 32);
-        material.Clear();   // S-4: zero machine-ID material once the key bytes exist
+        // S-4: no passphrase takes part in the v1 derivation, so nothing secret passes through this
+        // StringBuilder — only machine identifiers, which are readable from the filesystem anyway.
+        // No Clear() call here: it would set Length = 0 without wiping the backing char[], and a
+        // wipe that does not wipe is worse than an honest absence.
 
         var plaintext = new byte[fileBytes.Length - NonceSize - TagSize];
         try

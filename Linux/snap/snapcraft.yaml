@@ -168,6 +168,12 @@ parts:
       # TracerouteRunner shells out to `traceroute` on Linux; absent, Portal's path evidence is
       # unavailable rather than wrong, but it is unavailable every single time.
       - traceroute
+      # LAN/LanCartography.cs:715 runs `ip neigh show`, catching the failure and falling back to
+      # `arp -a`. A snap sees only what is staged into it, so without this NEITHER command exists
+      # and the neighbour table is unreadable on every single run. Twin of the `iproute2` entry in
+      # Linux/Ubuntu/build_deb.sh's Depends. Reading the kernel neighbour table also needs the
+      # network-observe plug, which is declared on both apps above.
+      - iproute2
 
   # ---------------------------------------------------------------------------- GUI
   syxx-gui:

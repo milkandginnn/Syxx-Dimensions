@@ -184,13 +184,23 @@ The `LinuxSecretStoreTests` run does not complete here. Three attempts, each aba
 CI** (191 tests). `WitnessViewModelTests` alone completes in under a second, so it is specific to the
 secret-store tests.
 
-**Most likely explanation, stated as unproven:** the file-fallback derives an Argon2id key at
-64 MiB × 3 passes (`LinuxSecretStore.cs:470-471`). Each test now uses a fresh temp directory, so
-each gets a fresh salt and a fresh derivation, and xunit has no parallelism configuration in this
-project — collections run concurrently by default. Many simultaneous 64 MiB memory-hard derivations
-on a memory-constrained machine is a plausible path from "slow" to "thrashing", and the owner
-independently observed this session using a lot of memory. I did not prove this, and it should be
-measured before anyone acts on it.
+**CORRECTION — my first explanation was wrong.** I attributed the hang to concurrent Argon2id
+derivations (64 MiB × 3 passes, `LinuxSecretStore.cs:470-471`) with xunit's default parallel
+collections. **Tested and refuted:** re-running with
+`-- xunit.parallelizeTestCollections=false xunit.maxParallelThreads=1` hangs identically. Whatever
+this is, it is not concurrency.
+
+**Ruled out — my own change is not implicated.** The round-trip verification I added calls
+`LibSecretNative.Retrieve`, but `LibSecretNative.TryLoad` does
+`NativeLibrary.Load("libsecret-1.so.0")` — a Linux SO name that cannot load on macOS — so
+`IsAvailable` is false here and that branch never executes. On this machine `Store` goes straight
+to the file path, exactly as it did before my edit.
+
+**Remaining candidates, none verified:** the Argon2id derivation itself under memory pressure
+(single derivation, 64 MiB, memory-hard); or a confound I created — this session left several
+concurrent `swift build` and `dotnet test` processes running and the owner observed high memory
+use, so the machine was not a clean measurement environment. A clean-machine re-run is the next
+step, not another hypothesis.
 
 **Why it matters beyond convenience:** if the cause is memory pressure from concurrent derivations,
 it is latent on any constrained CI runner too, and would appear as a job timeout rather than a test

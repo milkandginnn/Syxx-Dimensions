@@ -1,3 +1,7 @@
+> **Status note (corrected).** A ticked box here means a fix shipped, NOT that CI went green.
+> As of the last run: 14 checks pass, 10 fail, 1 skipped — 58%. `[~]` marks fixed-unverified.
+> The track closes only when every check is green or ledgered as an accepted exception.
+
 # Implementation Plan: CI Green for PR #2
 
 **Track ID:** ci-green-pr2_20260805 · **Spec:** [spec.md](./spec.md) · **Status:** [ ] Not Started
@@ -14,7 +18,7 @@ unrelated fixes in one commit; each names its check and cause.
 ## Phase 2: Deterministic harness/env fixes
 - [x] 2.1 ColorOf → assert ISolidColorBrush.Color (declared harness fix)
 - [x] 2.2 Keyring job filter matches its tests again; anti-vacuity assert untouched
-- [x] 2.3 FileFallback root cause on CI (env vs S-5 timer), fixed at cause
+- [~] 2.3 FileFallback root cause on CI (env vs S-5 timer), fixed at cause
 ### Verification: Avalonia suite + keyring job green in CI, not just locally
 
 ## Phase 3: Uncommitted-drift sweep
@@ -24,13 +28,13 @@ unrelated fixes in one commit; each names its check and cause.
 ### Verification: drift gate green; `git status` shows only intentionally-uncommitted residue
 
 ## Phase 4: Packaging
-- [x] 4.1 .deb smoke: identify the unresolved .so, fix Depends/payload; new §P ledger row
-- [x] 4.2 snap: .NET SDK in the snapcraft build environment
+- [~] 4.1 .deb smoke: identify the unresolved .so, fix Depends/payload; new §P ledger row
+- [~] 4.2 snap: .NET SDK in the snapcraft build environment
 ### Verification: install+smoke and snap green — first ever
 
 ## Phase 5: Unknowns
-- [x] 5.1 macos-arm64 early failure: pull log, diagnose, fix
-- [x] 5.2 Server pytest (drift gate was its only red) · [x] 5.3 markdownlint (zero) · [x] 5.4 Validate (reconciled) · [x] 5.5 Claude review wf (C-03 accepted exception: repo secret, owner-only)
+- [~] 5.1 macos-arm64 early failure: pull log, diagnose, fix
+- [~] 5.2 Server pytest (drift gate was its only red) · [x] 5.3 markdownlint (zero) · [x] 5.4 Validate (reconciled) · [x] 5.5 Claude review wf (C-03 accepted exception: repo secret, owner-only)
 ### Verification: each closed green or ledgered as an accepted exception
 
 ## Final Verification

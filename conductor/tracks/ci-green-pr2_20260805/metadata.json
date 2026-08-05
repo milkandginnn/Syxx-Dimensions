@@ -2,7 +2,7 @@
   "id": "ci-green-pr2_20260805",
   "title": "CI Green for PR #2 \u2014 no softened tests, only fixed code",
   "type": "bug",
-  "status": "blocked-on-ports",
+  "status": "in_progress",
   "created": "2026-08-05T00:00:00Z",
   "updated": "2026-08-05T00:00:00Z",
   "phases": {
@@ -15,5 +15,11 @@
   },
   "current_phase": 1,
   "current_task": "awaiting-ci-verification",
-  "note": "10 of 16 reds fixed; 6 remaining are first-ever platform ports or owner-only (C-05)"
+  "note": "task boxes track fixes shipped, not CI green; 58% of checks pass",
+  "ci": {
+    "pass": 14,
+    "fail": 10,
+    "skipped": 1,
+    "percent_green": 58
+  }
 }

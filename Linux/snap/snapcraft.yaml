@@ -108,7 +108,7 @@ parts:
     plugin: nil
     source: .
     build-snaps:
-      - dotnet-sdk/latest/stable
+      - dotnet-sdk/10.0/stable
     build-environment:
       - DOTNET_ROOT: /snap/dotnet-sdk/current
       - PATH: /snap/dotnet-sdk/current:$PATH
@@ -181,7 +181,7 @@ parts:
     source: .
     after: [syxx-cli]
     build-snaps:
-      - dotnet-sdk/latest/stable
+      - dotnet-sdk/10.0/stable
     build-environment:
       - DOTNET_ROOT: /snap/dotnet-sdk/current
       - PATH: /snap/dotnet-sdk/current:$PATH

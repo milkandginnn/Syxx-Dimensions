@@ -52,7 +52,7 @@ jobs:
       matrix:
         include:
           - name: macos-arm64
-            runs-on: macos-14
+            runs-on: macos-15
             kind: swift
             transcript: transcript.macos-arm64.json
           - name: windows-x64
@@ -274,7 +274,7 @@ jobs:
   # structural checks that would have caught those defects outright.
   package-macos:
     name: macOS app bundle + structural assertions
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -554,6 +554,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      # THE GATE THAT WAS MISSING, and the defect it exists for was live when it was written
+      # (2026-08-05). build_deb.sh is committed and fails closed on
+      # Linux/Ubuntu/polkit/app.syxx.policy (:209-213) and Linux/Ubuntu/debian/{postinst,postrm}
+      # (:225-236) — and none of those three had ever been `git add`ed. They existed only in one
+      # developer's working tree. So HEAD carried a build script that could not run on HEAD: a
+      # clean checkout could not produce a .deb at all, and the failure surfaced as a bare
+      # "cp: No such file or directory" eight minutes into the job, after the dotnet publishes,
+      # with nothing pointing at "somebody forgot to commit three files."
+      #
+      # `git ls-files --error-unmatch` is the right check because it exits non-zero for every way
+      # a path can fail to be in the repository — absent, untracked, or gitignored — which the
+      # `test -f` guards inside build_deb.sh cannot distinguish from present-and-committed.
+      # Deliberately before setup-dotnet so the diagnosis arrives first.
+      - name: Assert every packaging input is committed, not just present locally
+        run: |
+          fail=0
+          for p in Linux/Ubuntu/build_deb.sh \
+                   Linux/Ubuntu/debian/postinst \
+                   Linux/Ubuntu/debian/postrm \
+                   Linux/Ubuntu/polkit/app.syxx.policy \
+                   scripts/syxx-capture-hardware-id.sh \
+                   Design/logos/syxx-logo-source.png; do
+            if ! git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+              echo "::error title=packaging input not committed::$p is required by Linux/Ubuntu/build_deb.sh, which fails closed without it, but git does not track it. It exists only in a working tree, so no clean checkout can build the .deb."
+              fail=1
+            fi
+          done
+          exit $fail
+
       - name: Set up .NET (pinned from Windows/global.json)
         uses: actions/setup-dotnet@v4
         with:
@@ -572,7 +601,6 @@ jobs:
           echo "Inspecting $deb"
           dpkg-deb -c "$deb" > /tmp/contents.txt
           dpkg-deb -I "$deb" > /tmp/control.txt
-          dpkg-deb -I "$deb" postinst > /tmp/postinst.txt || true
 
           fail=0
           require_path() {
@@ -762,7 +790,12 @@ jobs:
       - name: Install smoke tooling
         run: |
           export DEBIAN_FRONTEND=noninteractive
-          apt-get install -y --no-install-recommends git libxml2-utils xvfb
+          # xauth is named explicitly and it is not optional: xvfb-run generates an MIT-MAGIC-COOKIE
+          # and pipes it to `xauth source -` before starting the server. On xvfb, xauth is a
+          # Recommends, and every apt line in this job carries --no-install-recommends, so without
+          # naming it the GUI step below dies on "xauth: command not found" and reports it as
+          # "GUI cannot start" — a false failure pointing at the wrong file.
+          apt-get install -y --no-install-recommends git libxml2-utils xvfb xauth
 
       - name: Checkout (for the source-vs-shipped comparisons below)
         uses: actions/checkout@v4
@@ -788,6 +821,15 @@ jobs:
           action=/usr/share/polkit-1/actions/app.syxx.policy
           test -f "$action" || { echo "::error title=P-02 regression::$action is missing"; exit 1; }
           xmllint --noout --nonet "$action" || { echo "::error title=P-02::$action is not well-formed XML"; exit 1; }
+          # Same discipline the node-lock helper gets below: the SHIPPED action must be the
+          # REVIEWED action. Every assertion after this one reads the installed file, so without
+          # this line they would all pass on a build that quietly substituted a different policy —
+          # and a policy is exactly the kind of file where a substituted copy is the attack.
+          if ! cmp -s "$action" Linux/Ubuntu/polkit/app.syxx.policy; then
+            echo "::error title=P-02::the installed polkit action differs from Linux/Ubuntu/polkit/app.syxx.policy."
+            diff "$action" Linux/Ubuntu/polkit/app.syxx.policy || true
+            exit 1
+          fi
           path=$(sed -n 's|.*<annotate key="org.freedesktop.policykit.exec.path">\(.*\)</annotate>.*|\1|p' "$action")
           echo "exec.path -> $path"
           if [ -z "$path" ]; then
@@ -919,6 +961,11 @@ jobs:
       # for both). Confirmed by building the .deb and comparing.
       - name: Assert the snap carries BOTH programs
         run: |
+          # unsquashfs comes from squashfs-tools, which reaches the runner only as a transitive
+          # dependency of snapd. That is an assumption about somebody else's image, and the failure
+          # mode if it ever stops holding is this job reporting a packaging regression it did not
+          # observe. Naming it costs one cached apt call.
+          command -v unsquashfs >/dev/null 2>&1 || sudo apt-get install -y --no-install-recommends squashfs-tools
           sudo unsquashfs -d /tmp/snapfs "${{ steps.build.outputs.snap }}" >/dev/null
           fail=0
           for p in opt/syxx/cli/Syxx opt/syxx/cli/Syxx.dll opt/syxx/gui/Syxx opt/syxx/gui/Syxx.dll; do
@@ -989,7 +1036,10 @@ jobs:
       - name: Start the keyring, prove it answers, then run the secret-store tests
         run: |
           dbus-run-session -- bash -euo pipefail -c '
-            echo -n "" | gnome-keyring-daemon --unlock --components=secrets --daemonize > /tmp/gk.env 2>/tmp/gk.err || true
+            # A NON-EMPTY password: fed an empty string, --unlock creates no login collection and
+            # secret-tool then fails with "Object does not exist at path .../collection/login"
+            # (run 3). The password is throwaway CI state, not a secret.
+            printf 'syxx-ci-keyring' | gnome-keyring-daemon --unlock --components=secrets --daemonize > /tmp/gk.env 2>/tmp/gk.err || true
             if [ -s /tmp/gk.env ]; then set -a; . /tmp/gk.env; set +a; fi
             sleep 2
 

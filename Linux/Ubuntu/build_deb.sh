@@ -102,6 +102,13 @@ mkdir -p "${PKG_DIR}/usr/share/polkit-1/actions"
 cp -R "${CLI_PUBLISH}/." "${PKG_DIR}/opt/syxx/cli/"
 cp -R "${GUI_PUBLISH}/." "${PKG_DIR}/opt/syxx/gui/"
 
+# P-11: drop the LTTng tracepoint provider from both payloads. It is dlopen'd only when LTTng
+# tracing is explicitly enabled, and it links liblttng-ust, which ubuntu:24.04 does not ship —
+# the install-smoke ldd gate rightly refuses it. Removing the optional provider is honest;
+# adding a distro dependency for tracing nobody uses is not.
+rm -f "${PKG_DIR}/opt/syxx/cli/libcoreclrtraceptprovider.so" \
+      "${PKG_DIR}/opt/syxx/gui/libcoreclrtraceptprovider.so"
+
 STAGED_CLI="${PKG_DIR}/opt/syxx/cli/Syxx"
 STAGED_GUI="${PKG_DIR}/opt/syxx/gui/Syxx"
 
@@ -215,6 +222,13 @@ cp "${POLKIT_SRC}" "${PKG_DIR}/usr/share/polkit-1/actions/app.syxx.policy"
 chmod 0644 "${PKG_DIR}/usr/share/polkit-1/actions/app.syxx.policy"
 
 # Maintainer scripts (P-10). There were none at all before this.
+#
+# THERE IS DELIBERATELY NO prerm, and that is a decision rather than an omission. A prerm exists
+# to stop something before dpkg unlinks the files under it: a daemon, an init script, an
+# update-alternatives registration, an ldconfig-visible library. This package installs none of
+# those. Its only state outside the file list is /var/lib/syxx/hardware-id, which postrm handles
+# on purge — Debian Policy §6.8 puts it there, not in prerm. A no-op prerm would be one more
+# script dpkg has to run and one more place a `set -e` slip can wedge an uninstall.
 for script in postinst postrm; do
     src="${ROOT}/Linux/Ubuntu/debian/${script}"
     if [ ! -f "${src}" ]; then
@@ -296,13 +310,30 @@ ICU_DEPENDS="$(resolve_icu_depends)"
 # libx11-6          Avalonia's X11 backend dlopens these. Same failure mode: no window, no error
 #   libice6         the user can act on.
 #   libsm6
+# iproute2          LAN/LanCartography.cs:715 runs `ip neigh show`. It catches and falls back to
+#                   `arp -a`, but net-tools is NOT installed by default on modern Ubuntu, so with
+#                   neither present the neighbour table is simply unreadable on every run. Priority
+#                   is 'important' on Debian so this costs nothing in practice; declaring it is
+#                   what makes the container leg in install-smoke-deb prove it.
 #
-# Recommends rather than Depends: a Secret Service provider (the keyring daemon itself) and
-# traceroute. Both are real functional gaps when absent, but both degrade to an honest
-# inconclusive rather than to a wrong answer, and neither is present on a server install where
-# the CLI alone is perfectly usable.
-DEB_DEPENDS="${ICU_DEPENDS}, libsecret-1-0, libsecret-tools, pkexec | policykit-1, libfontconfig1, libstdc++6, libgcc-s1, libx11-6, libice6, libsm6"
-DEB_RECOMMENDS="gnome-keyring, traceroute"
+# NOT listed, and each of these was checked rather than assumed:
+#   libglib2.0-0t64 / libgobject-2.0  LinuxSecretStore.cs:1162,1175 dlopen them, but libsecret-1-0
+#                   depends on both, so they arrive with it. A second declaration would only be a
+#                   name that has to be kept in step across suites.
+#   bind9-host      A grep for a shelled `host` matches only IndependenceGroup: "host" in
+#                   Synthesis/SyxxMatrixIntegration.cs and a <paramref name="host"/> in
+#                   DimensionClient.cs. The product does not shell `host`. Do not re-add this.
+#   dpkg            UpdateService.cs:399/409 shells it, but dpkg is Essential: yes. Depending on an
+#                   Essential package is noise Debian Policy §3.5 tells you not to write.
+#
+# Recommends rather than Depends: a Secret Service provider (the keyring daemon itself),
+# traceroute, and systemd-resolved. All three are real functional gaps when absent, but all three
+# degrade to an honest inconclusive rather than to a wrong answer — NetworkKeyState.cs:340 falls
+# back to /etc/resolv.conf when `resolvectl status` cannot run, and EncryptedDNSConfigurator.cs:105
+# reports the failure rather than claiming a configuration it did not make. None is present on a
+# server install where the CLI alone is perfectly usable.
+DEB_DEPENDS="${ICU_DEPENDS}, libsecret-1-0, libsecret-tools, pkexec | policykit-1, libfontconfig1, libstdc++6, libgcc-s1, libx11-6, libice6, libsm6, iproute2"
+DEB_RECOMMENDS="gnome-keyring, traceroute, systemd-resolved"
 DEB_SUGGESTS="unbound, unbound-anchor"
 
 # Create control file

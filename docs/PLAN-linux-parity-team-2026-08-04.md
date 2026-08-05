@@ -426,7 +426,25 @@ secret that libsecret P/Invoke stored successfully**. The fail-open choice is de
 mapping `Unknown` → `Undetermined` would make first-run minting impossible on every GNOME/KDE desktop,
 leaving no route to a first identity — a worse failure than the one it prevents. A Warning breadcrumb
 fires rather than the fallback being taken silently, and the characterization test is labelled
-"tighten the behaviour, do not soften the assertion." Root cause is **G-16** below.
+"tighten the behaviour, do not soften the assertion." See **G-16** below — but note the causal chain
+precisely, because an earlier draft stated it wrongly: G-16 is **not** why `Exists` answers `Unknown`.
+`Exists` answers `Unknown` because **no search/enumerate entry point is bound at all** — the bound
+`secret_password_lookup_sync` requires the exact keyId that the lost token file was holding, so there is
+no query to make, attribute bug or not. What G-16 is upstream of is **whether a search binding would have
+worked**: a search by `syxx-key-type` would have returned nothing even once bound, because `Store` files
+under the name `"witness"`.
+
+Also open, self-reported by the implementing seat and the one place its own probe could manufacture a
+**false Absent** — the worst outcome in this subsystem: `SecretTool.Exists` reads "exit 0 + empty stdout"
+as proof of absence (`LinuxSecretStore.cs:686-700`). That holds only if a locked-but-populated keyring can
+never produce the same signature. It probably cannot (libsecret's search returns locked items, and
+secret-tool's search asks to unlock and load values, so a locked collection should fail loudly rather than
+answer emptily), but it is **unverified** — there is no keyring on the authoring host. It costs nothing
+today because the caller's `Unknown` arm also mints, so `Absent` and `Unknown` are behaviourally identical
+at that call site; it starts mattering the day that arm fails closed. The assumption and the exact check to
+run are written into the code rather than left as a silent load-bearing guess: populate the keyring, lock
+it, assert `Present` or `Unknown`, never `Absent`. **First item on whatever real-keyring leg gets
+authorised.**
 
 **Anti-vacuity evidence** (this codebase's characteristic failure is tests that assert nothing, per
 G-05): G-01/G-02 guards mutation-tested — neutering all **five** flips 9 tests, restoring returns 22/22.
@@ -837,11 +855,27 @@ Service answers. Remove `libsecret-tools`, or probe while the keyring is locked 
 SSH — the state G-02 is actually about), and `SecretTool.Exists` returns `Unknown` → fail-open → mint
 over a live identity. Ledger wording to use verbatim:
 
-> *G-02 — mint-guard closed for the file-store backend (where every Linux secret actually lands today)
-> and for a keyring that secret-tool can still query. **OPEN** where a keyring secret cannot be queried
-> at probe time: `libsecret-tools` removed after the key was minted, or the Secret Service
-> locked/absent. The libsecret P/Invoke backend is not a route to this defect because it cannot store
-> at all.*
+> *G-02 — mint-guard closed wherever the secret is enumerable **without the keyring's cooperation**: the
+> AES-GCM file store (where every Linux secret lands today, including every case where the keyring was
+> locked, missing or unusable **at mint time**) and a keyring that secret-tool can still successfully
+> query **at probe time**. **OPEN** where the secret is in the keyring but unanswerable **at probe
+> time** — `libsecret-tools` removed after minting, or the Secret Service locked/absent when we probe
+> (headless, SSH). The libsecret P/Invoke backend is not a route to this defect because it cannot store
+> at all (G-16); **if G-16 is repaired that route opens and the fail-open arm becomes load-bearing, so
+> the two must land together.***
+
+**The boundary is TEMPORAL, not per-backend** — it turns on *when* the keyring was unavailable, not
+which backend was used. Locked or missing **at mint** → the secret went to the file store → enumerable
+with no service at all → **closed**. Available at mint but locked or gone **at probe** → the secret is in
+the keyring and unanswerable → **open**.
+
+*Two errors in an earlier draft of this section, corrected here because the durable record is what
+whoever picks up G-16 will read, and both erred toward reassurance:* (1) it described G-02 as open only
+"for a secret that libsecret P/Invoke stored successfully" — **an empty set**, since every such write
+returns FALSE, so the line would have read as effectively closed; and (2) it placed the **locked** case
+on the closed side, when locked is exactly where `secret-tool search` cannot answer — a locked or absent
+Secret Service exits non-zero with stderr that is not "No such secret", which maps to `Unknown`
+(`LinuxSecretStore.cs:693-700`) → fail-open → mint.
 
 **Why a search binding is still the right long-term fix, for a reason neither the plan nor the audit
 originally gave:** a Secret Service *search* answers existence **without unlocking** — matching is on
@@ -857,10 +891,19 @@ carry `xdg:schema = org.freedesktop.Secret.Generic` rather than ours and a schem
 miss every secret actually stored; and `g_object_unref`/`g_list_free` on every exit path. **Any single
 mistake yields zero results, which the combinator reads as `Absent`, which mints over a live identity** —
 manufacturing by hand the exact false-Absent the audit went hunting for. Spine #5: the bar is a real run.
-Add the **migration hazard** — correcting the attribute names makes any already-stored P/Invoke secret
-unfindable by the corrected `Retrieve`, and with G-01/G-02 in place that user hits `Undetermined` and
-**cannot mint, i.e. is locked out of signing** — and repairing G-16 makes the fail-open arm load-bearing,
-so the two must land together.
+**G-16 needs NO migration path — an earlier draft of this section wrongly recorded one.** The claim was
+that correcting the attribute names would strand already-stored P/Invoke secrets. Those secrets **do not
+exist**, for the same reason the OPEN clause above was empty: every such write returned FALSE, so nothing
+was ever stored under the `"witness"` attribute name to be orphaned. **G-16 is therefore a smaller change
+than that hold implied**, and the phantom requirement is removed rather than left for the owner to
+inherit. What *does* still bind: repairing G-16 makes the fail-open arm load-bearing, so the two must
+land together.
+
+*Evidence caveat, stated because it is the one part not closable from the authoring host:* the libsecret
+behaviour is read from **master-branch** source (`g_critical` + NULL on an undeclared attribute name, then
+`if (!attributes) return FALSE;`). That check is longstanding but was not run against 0.18/0.20 or a
+distro-patched build. If the owner wants insurance a legacy read path costs little — it simply should not
+be recorded as a *known* requirement when the evidence says the set is empty.
 
 **Two routes, both needing an owner decision:**
 1. **Verify on real Linux.** A `ci.yml` leg with `libsecret-1-0`, `libsecret-tools`, `gnome-keyring`, run

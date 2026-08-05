@@ -35,7 +35,8 @@ These predate Conductor and remain authoritative in their areas:
 
 | Track | Type | Status | Progress |
 |---|---|---|---|
-| [Cross-Platform Parity Detection](./tracks/cross-platform-parity_20260805/index.md) | Feature | Pending | 0/7 phases · 0/31 tasks |
+| [Cross-Platform Parity Detection](./tracks/cross-platform-parity_20260805/index.md) | Feature | In Progress | 17/43 done (see plan) |
+| [CI Green for PR #2 — no softened tests](./tracks/ci-green-pr2_20260805/spec.md) | Bug | Pending | 0/5 phases · 0/13 tasks |
 
 **Planned, not yet created:** GUI parity across SwiftUI / WinUI / Avalonia — deliberately split out
 of the track above.

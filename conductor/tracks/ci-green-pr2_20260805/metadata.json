@@ -1,0 +1,16 @@
+{
+  "id": "ci-green-pr2_20260805",
+  "title": "CI Green for PR #2 \u2014 no softened tests, only fixed code",
+  "type": "bug",
+  "status": "pending",
+  "created": "2026-08-05T00:00:00Z",
+  "updated": "2026-08-05T00:00:00Z",
+  "phases": {
+    "total": 5,
+    "completed": 0
+  },
+  "tasks": {
+    "total": 13,
+    "completed": 0
+  }
+}

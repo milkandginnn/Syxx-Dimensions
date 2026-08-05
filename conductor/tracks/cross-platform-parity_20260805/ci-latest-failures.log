@@ -1,0 +1,954 @@
+Ubuntu Avalonia GUI build + test	Test Avalonia client	﻿2026-08-05T17:35:56.5577655Z ##[group]Run dotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:56.5578487Z ^[[36;1mdotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo^[[0m
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:56.6482762Z shell: /usr/bin/bash -e {0}
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:56.6483231Z env:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:56.6483575Z   SENTRY_AUTH_TOKEN: 
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:56.6483971Z   SENTRY_URL: 
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:56.6484333Z   DOTNET_ROOT: /usr/share/dotnet
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:56.6484762Z ##[endgroup]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:35:58.0016822Z   Determining projects to restore...
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:00.2809482Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:02.9490673Z   Restored /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj (in 2.66 sec).
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:02.9508785Z   3 of 4 projects are up-to-date for restore.
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:03.6490410Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:03.8863171Z   Syxx.Kit -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/bin/Release/net10.0/Syxx.Kit.dll
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:04.0412822Z   Syxx.Telemetry -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Telemetry/bin/Release/net10.0/Syxx.Telemetry.dll
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:04.5006251Z   SyxxUI.Avalonia -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/bin/Release/net10.0/Syxx.dll
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:09.3777936Z   SyxxUI.Avalonia.Tests -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin/Release/net10.0/SyxxUI.Avalonia.Tests.dll
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:09.3957614Z Test run for /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin/Release/net10.0/SyxxUI.Avalonia.Tests.dll (.NETCoreApp,Version=v10.0)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:10.7527145Z A total of 1 test files matched the specified pattern.
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.4265313Z [xUnit.net 00:00:01.54]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6278009Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen [176 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6306435Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6347142Z [xUnit.net 00:00:01.74]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6348417Z    Assert.DoesNotContain() Failure: Sub-string found
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6366650Z          ↓ (pos 0)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6386838Z String: "Verified: the seal is valid and the testi"···
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6426526Z Found:  "Verified"
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6427906Z [xUnit.net 00:00:01.75]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6466278Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6487547Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 513
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.6517275Z --- End of stack trace from previous location ---
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.7738028Z [xUnit.net 00:00:01.88]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.7793710Z [xUnit.net 00:00:01.89]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8140618Z [xUnit.net 00:00:01.92]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8142506Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed [4 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8186408Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8237969Z    Assert.IsType() Failure: Value is not the exact type
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8246690Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8306670Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8400471Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8428271Z [xUnit.net 00:00:01.95]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8430647Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8453055Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 432
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8496795Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8545558Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8576961Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber [6 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8578011Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8578488Z    Assert.IsType() Failure: Value is not the exact type
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8579216Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8580109Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8580804Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8582260Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8585079Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 392
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8587587Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8588889Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8590420Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen [1 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8612948Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8646471Z    Assert.IsType() Failure: Value is not the exact type
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8647267Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8648172Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8648898Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8650296Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8653249Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 379
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8655545Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8657247Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8658829Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult [2 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8660368Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8660852Z    Assert.IsType() Failure: Value is not the exact type
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8661555Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8662411Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8663133Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8664583Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8668146Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 445
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8670893Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.8672231Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:13.9992316Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature [1 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0036333Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0076460Z    Assert.IsType() Failure: Value is not the exact type
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0127039Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0156738Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0176308Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0231793Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0257736Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 406
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0316697Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0336820Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0376979Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch [3 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0416270Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0436558Z    Assert.IsType() Failure: Value is not the exact type
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0437307Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0438140Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0438799Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0440248Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0443273Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 420
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0445583Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.0447159Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.5501682Z [xUnit.net 00:00:02.66]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.5537396Z [xUnit.net 00:00:02.66]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.5576958Z [xUnit.net 00:00:02.67]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6090467Z [xUnit.net 00:00:02.72]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6136987Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret [7 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6196568Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6249603Z    Assert.Equal() Failure: Strings differ
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6286524Z Expected: "SYXX-ABCD-1234-EF56-7890"
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6307361Z Actual:   null
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6336457Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6380041Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 54
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6409596Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6466820Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6491433Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull [1 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6536587Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6563267Z    file-fallback store should have written a blob on this platform
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6577946Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6607948Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 114
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6656914Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6686983Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6727397Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue [< 1 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6760557Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6786417Z    Assert.Equal() Failure: Strings differ
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6826577Z Expected: "second-value"
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6856416Z Actual:   null
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6889183Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6912474Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 79
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.6976959Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7026866Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7046946Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret [< 1 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7092112Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7137716Z    Assert.Equal() Failure: Strings differ
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7138527Z Expected: "to-be-deleted"
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7196536Z Actual:   null
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7216551Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7249659Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 94
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7288338Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:14.7305080Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4667796Z [xUnit.net 00:00:05.57]     SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists [FAIL]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4706928Z   Failed SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists [3 ms]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4726550Z   Error Message:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4746678Z    Assert.DoesNotContain() Failure: Filter matched in collection
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4798271Z                                                                               ↓ (pos 33)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4800189Z Collection: [···, "EntropyBits", "EntropyDisplay", "OriginDisplay", "Phrase", "NoRecoveryWarning"]
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4801096Z   Stack Trace:
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4802585Z      at SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/DicePassphraseTests.cs:line 237
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4804661Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.4826819Z    at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.5806429Z 
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.5857277Z Failed!  - Failed:    12, Passed:   179, Skipped:     0, Total:   191, Duration: 4 s - SyxxUI.Avalonia.Tests.dll (net10.0)
+Ubuntu Avalonia GUI build + test	Test Avalonia client	2026-08-05T17:36:17.6880877Z ##[error]Process completed with exit code 1.
+macOS app bundle + structural assertions	Build release (swift)	﻿2026-08-05T17:35:07.9122920Z ##[group]Run swift build --package-path macOS -c release
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:07.9123460Z ^[[36;1mswift build --package-path macOS -c release^[[0m
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:07.9271930Z shell: /bin/bash -e {0}
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:07.9272240Z env:
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:07.9272510Z   SENTRY_AUTH_TOKEN: 
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:07.9272680Z   SENTRY_URL: 
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:07.9272850Z ##[endgroup]
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:10.8615410Z error: 'macos': package 'macos' is using Swift tools version 6.0.0 but the installed version is 5.10.0
+macOS app bundle + structural assertions	Build release (swift)	2026-08-05T17:35:10.8743070Z ##[error]Process completed with exit code 1.
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	﻿2026-08-05T17:36:04.1158577Z ##[group]Run Server/venv/bin/python warp-manifest-vectors/_build_vectors.py
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1159193Z ^[[36;1mServer/venv/bin/python warp-manifest-vectors/_build_vectors.py^[[0m
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1159667Z ^[[36;1mgit diff --exit-code -- warp-manifest-vectors/^[[0m
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1203632Z shell: /usr/bin/bash -e {0}
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1203904Z env:
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1204104Z   SENTRY_AUTH_TOKEN: 
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1204332Z   SENTRY_URL: 
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1204617Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1205078Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1205524Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1205917Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1206490Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1206920Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.1207316Z ##[endgroup]
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2246338Z keys:
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2248889Z   trusted   key_id = 0cf10c32ed311e86bd0cccec182a9aaef8550508ec1bbf0b5d9f005057c46cdd
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2250332Z   untrusted key_id = aa8cdb8c8aa8b9eea003fea9da02e9cb8707ee4a7fb4eb983c6223d981285fdd
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2251216Z cases:
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2251750Z   001_all_good             -> VERIFIED_MATCH     OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2252479Z   002_asset_mismatch       -> TAMPERING_DETECTED OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2253178Z   003_html_mismatch        -> TAMPERING_DETECTED OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2253883Z   004_invalid_signature    -> TAMPERING_DETECTED OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2254585Z   005_malformed_envelope   -> INCONCLUSIVE       OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2255301Z   006_untrusted_signer     -> INCONCLUSIVE       OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2256194Z   007_expired              -> INCONCLUSIVE       OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2256941Z   008_future_dated         -> INCONCLUSIVE       OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2257660Z   009_nonce_mismatch       -> INCONCLUSIVE       OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2258400Z   010_origin_mismatch      -> INCONCLUSIVE       OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2259126Z   011_fetch_failed_asset   -> INCONCLUSIVE       OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2259849Z   012_css_import_closure   -> VERIFIED_MATCH     OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2260590Z   013_gzip_identity        -> VERIFIED_MATCH     OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2261350Z   014_br_identity          -> VERIFIED_MATCH     OK
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2262017Z done.
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2446442Z diff --git a/warp-manifest-vectors/013_gzip_identity/inputs/example.test__app.js b/warp-manifest-vectors/013_gzip_identity/inputs/example.test__app.js
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2448050Z index 08d2870..123ef2d 100644
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2449568Z Binary files a/warp-manifest-vectors/013_gzip_identity/inputs/example.test__app.js and b/warp-manifest-vectors/013_gzip_identity/inputs/example.test__app.js differ
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2452061Z diff --git a/warp-manifest-vectors/014_br_identity/inputs/example.test__app.js b/warp-manifest-vectors/014_br_identity/inputs/example.test__app.js
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2453448Z index 6c2dd7f..a112317 100644
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.2454847Z Binary files a/warp-manifest-vectors/014_br_identity/inputs/example.test__app.js and b/warp-manifest-vectors/014_br_identity/inputs/example.test__app.js differ
+Server pytest + honesty gate + lint	Warp manifest corpus — regeneration drift gate	2026-08-05T17:36:04.8321483Z ##[error]Process completed with exit code 1.
+macos-arm64	Test the macOS twin (SyxxKit)	﻿2026-08-05T17:35:04.3337500Z ##[group]Run swift test --package-path macOS
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:04.3337940Z ^[[36;1mswift test --package-path macOS^[[0m
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:04.3420870Z shell: /bin/bash -e {0}
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:04.3421120Z env:
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:04.3421270Z   SENTRY_AUTH_TOKEN: 
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:04.3421440Z   SENTRY_URL: 
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:04.3421590Z ##[endgroup]
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:07.8776360Z error: 'macos': package 'macos' is using Swift tools version 6.0.0 but the installed version is 5.10.0
+macos-arm64	Test the macOS twin (SyxxKit)	2026-08-05T17:35:07.8861430Z ##[error]Process completed with exit code 1.
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	﻿2026-08-05T17:35:07.8988840Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8990280Z ##[group]Run actions/upload-artifact@v4
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8990490Z with:
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8990670Z   name: transcript.macos-arm64.json
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8990900Z   path: transcript.macos-arm64.json
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8991130Z   if-no-files-found: error
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8991420Z   compression-level: 6
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8991640Z   overwrite: false
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8991850Z   include-hidden-files: false
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8992070Z env:
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8992320Z   SENTRY_AUTH_TOKEN: 
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8992510Z   SENTRY_URL: 
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:07.8992660Z ##[endgroup]
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:08.0887270Z (node:6113) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:08.0989960Z (Use `node --trace-deprecation ...` to show where the warning was created)
+macos-arm64	Upload parity transcript (transcript.macos-arm64.json)	2026-08-05T17:35:08.1874330Z ##[error]No files were found with the provided path: transcript.macos-arm64.json. No artifacts will be uploaded.
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	﻿2026-08-05T17:35:29.9876826Z ##[group]Run dbus-run-session -- bash -euo pipefail -c '
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9877652Z ^[[36;1mdbus-run-session -- bash -euo pipefail -c '^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9878228Z ^[[36;1m  echo -n "" | gnome-keyring-daemon --unlock --components=secrets --daemonize > /tmp/gk.env 2>/tmp/gk.err || true^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9878838Z ^[[36;1m  if [ -s /tmp/gk.env ]; then set -a; . /tmp/gk.env; set +a; fi^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9879177Z ^[[36;1m  sleep 2^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9879391Z ^[[36;1m^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9879740Z ^[[36;1m  # STRICT: a round-trip through the real Secret Service. If this fails, the leg is^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9880254Z ^[[36;1m  # measuring the file fallback and must not report success.^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9880716Z ^[[36;1m  printf "probe-secret" | secret-tool store --label=syxx-ci-probe \^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9881130Z ^[[36;1m    syxx-key-type ci-probe syxx-key-id probe^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9881536Z ^[[36;1m  got=$(secret-tool lookup syxx-key-type ci-probe syxx-key-id probe)^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9881970Z ^[[36;1m  if [ "$got" != "probe-secret" ]; then^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9882535Z ^[[36;1m    echo "::error title=Secret Service not live::stored probe-secret, read back [$got]. This leg cannot measure the keyring paths."^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9883080Z ^[[36;1m    cat /tmp/gk.err || true^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9883335Z ^[[36;1m    exit 1^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9883543Z ^[[36;1m  fi^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9883832Z ^[[36;1m  secret-tool clear syxx-key-type ci-probe syxx-key-id probe^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9884209Z ^[[36;1m  echo "Secret Service round-trip OK."^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9884496Z ^[[36;1m^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9884713Z ^[[36;1m  export SYXX_CI_SECRET_SERVICE=1^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9885135Z ^[[36;1m  dotnet test Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj -c Release --nologo \^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9885871Z ^[[36;1m    --filter "Category=SecretService|FullyQualifiedName~WitnessKeyStoreLoadResult|FullyQualifiedName~MachineFingerprint" \^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9886579Z ^[[36;1m    --logger "trx;LogFileName=secret-service.trx" --results-directory /tmp/trx^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9887179Z ^[[36;1m'^[[0m
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9935981Z shell: /usr/bin/bash -e {0}
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9936237Z env:
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9936444Z   SENTRY_AUTH_TOKEN: 
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9936659Z   SENTRY_URL: 
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9936872Z   DOTNET_ROOT: /usr/share/dotnet
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:29.9937378Z ##[endgroup]
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:32.0351171Z dbus-daemon[3132]: [session uid=1001 pid=3132] Activating service name='org.gnome.keyring.SystemPrompter' requested by ':1.0' (uid=1001 pid=3137 comm="gnome-keyring-daemon --unlock --components=secrets" label="unconfined")
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:32.0766380Z 
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:32.0767566Z (gcr-prompter:3151): Gtk-WARNING **: 17:35:32.076: cannot open display: 
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:32.0788716Z dbus-daemon[3132]: [session uid=1001 pid=3132] Activated service 'org.gnome.keyring.SystemPrompter' failed: Process org.gnome.keyring.SystemPrompter exited with status 1
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:32.0807175Z secret-tool: Object does not exist at path “/org/freedesktop/secrets/collection/login”
+LinuxSecretStore against a real GNOME Keyring	Start the keyring, prove it answers, then run the secret-store tests	2026-08-05T17:35:32.0848976Z ##[error]Process completed with exit code 1.
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	﻿2026-08-05T17:35:32.0901898Z ##[group]Run python3 - <<'PY'
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0902245Z ^[[36;1mpython3 - <<'PY'^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0902541Z ^[[36;1mimport glob, sys, xml.etree.ElementTree as ET^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0902929Z ^[[36;1mfiles = glob.glob('/tmp/trx/**/*.trx', recursive=True)^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0903265Z ^[[36;1mif not files:^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0903655Z ^[[36;1m    print("::error title=Secret-store leg measured nothing::no .trx was produced.")^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0904114Z ^[[36;1m    sys.exit(1)^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0904342Z ^[[36;1mtotal = 0^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0904562Z ^[[36;1mfor f in files:^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0904828Z ^[[36;1m    for c in ET.parse(f).getroot().iter():^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0905158Z ^[[36;1m        if c.tag.endswith('Counters'):^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0905472Z ^[[36;1m            total += int(c.get('total', 0))^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0905863Z ^[[36;1mprint(f"executed {total} test(s) across {len(files)} trx file(s)")^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0906232Z ^[[36;1mif total == 0:^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0906704Z ^[[36;1m    print("::error title=Secret-store leg measured nothing::the --filter matched zero tests.")^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0907403Z ^[[36;1m    sys.exit(1)^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0907635Z ^[[36;1mPY^[[0m
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0956154Z shell: /usr/bin/bash -e {0}
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0956424Z env:
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0956631Z   SENTRY_AUTH_TOKEN: 
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0956879Z   SENTRY_URL: 
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0957415Z   DOTNET_ROOT: /usr/share/dotnet
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.0957666Z ##[endgroup]
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.1290520Z ##[error]no .trx was produced.
+LinuxSecretStore against a real GNOME Keyring	Assert the filtered run actually executed tests	2026-08-05T17:35:32.1328179Z ##[error]Process completed with exit code 1.
+windows-x64	Build Windows GUI (SyxxUI, x64)	﻿2026-08-05T17:36:33.1123085Z ##[group]Run dotnet build Windows/dotNET/SyxxUI/SyxxUI.csproj -c Release -p:Platform=x64
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:33.1124282Z ^[[36;1mdotnet build Windows/dotNET/SyxxUI/SyxxUI.csproj -c Release -p:Platform=x64^[[0m
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:33.1251159Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:33.1251779Z env:
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:33.1252075Z   SENTRY_AUTH_TOKEN: 
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:33.1252446Z   SENTRY_URL: 
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:33.1252780Z   DOTNET_ROOT: C:\Program Files\dotnet
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:33.1253209Z ##[endgroup]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:35.9253764Z   Determining projects to restore...
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:57.8460767Z   Restored D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Telemetry\Syxx.Telemetry.csproj (in 19.72 sec).
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:36:57.8914264Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:25.6442278Z   Restored D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj (in 47.55 sec).
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:25.6483750Z   1 of 3 projects are up-to-date for restore.
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:26.5853265Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8271486Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\AuthoritativeVantage.cs(73,49): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8276143Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\CNAMEChainProbe.cs(30,44): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8281723Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\SVCBProbe.cs(28,43): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8289624Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\Conclusion.cs(304,6): warning CS0657: 'property' is not a valid attribute location for this declaration. Valid attribute locations for this declaration are 'param'. All attributes in this block will be ignored. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8296173Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\Synthesizer.cs(130,117): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8301796Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\Synthesizer.cs(144,134): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8307846Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\EncryptedTransportProbe.cs(23,27): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8314290Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\TTLAnomalyProbe.cs(28,43): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8325574Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\SignedIncidentReport.cs(123,49): warning CS8604: Possible null reference argument for parameter 'source' in 'IOrderedEnumerable<KeyValuePair<string, ResolverQueryOutcome>> Enumerable.OrderBy<KeyValuePair<string, ResolverQueryOutcome>, string>(IEnumerable<KeyValuePair<string, ResolverQueryOutcome>> source, Func<KeyValuePair<string, ResolverQueryOutcome>, string> keySelector, IComparer<string>? comparer)'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8337120Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(61,32): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8344070Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(74,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSResponse>' doesn't match target type 'Task<DNSResponse?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8352283Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(79,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8359488Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(81,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8365711Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(83,13): warning CS8619: Nullability of reference types in value of type 'Task<DenialOfExistence>' doesn't match target type 'Task<DenialOfExistence?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8372273Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(85,13): warning CS8619: Nullability of reference types in value of type 'Task<WildcardSynthesis>' doesn't match target type 'Task<WildcardSynthesis?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8378258Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(87,13): warning CS8619: Nullability of reference types in value of type 'Task<EDNS0Capability>' doesn't match target type 'Task<EDNS0Capability?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8384365Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(105,46): warning CS8619: Nullability of reference types in value of type 'Task<EncryptedTransport>' doesn't match target type 'Task<EncryptedTransport?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8391195Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(118,17): warning CS8619: Nullability of reference types in value of type 'Task<ECSLeak>' doesn't match target type 'Task<ECSLeak?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8397206Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(41,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSResponse>' doesn't match target type 'Task<DNSResponse?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8402804Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(47,17): warning CS8619: Nullability of reference types in value of type 'Task<DNSResponse>' doesn't match target type 'Task<DNSResponse?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8410238Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(55,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8416194Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(57,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8421799Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(61,13): warning CS8619: Nullability of reference types in value of type 'Task<ResolverLatency>' doesn't match target type 'Task<ResolverLatency?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8427622Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(63,13): warning CS8619: Nullability of reference types in value of type 'Task<AnswerStability>' doesn't match target type 'Task<AnswerStability?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8433350Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(65,13): warning CS8619: Nullability of reference types in value of type 'Task<WildcardSynthesis>' doesn't match target type 'Task<WildcardSynthesis?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8439188Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(67,13): warning CS8619: Nullability of reference types in value of type 'Task<DenialOfExistence>' doesn't match target type 'Task<DenialOfExistence?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8444697Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(69,13): warning CS8619: Nullability of reference types in value of type 'Task<DualStackAudit>' doesn't match target type 'Task<DualStackAudit?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8450440Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(71,13): warning CS8619: Nullability of reference types in value of type 'Task<EDNS0Capability>' doesn't match target type 'Task<EDNS0Capability?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8455947Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(73,13): warning CS8619: Nullability of reference types in value of type 'Task<VersionBindResult>' doesn't match target type 'Task<VersionBindResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8461932Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(113,13): warning CS8619: Nullability of reference types in value of type 'Task<AuthoritativeComparison>' doesn't match target type 'Task<AuthoritativeComparison?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8468294Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(135,13): warning CS8619: Nullability of reference types in value of type 'Task<SVCBFinding>' doesn't match target type 'Task<SVCBFinding?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8474169Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(137,13): warning CS8619: Nullability of reference types in value of type 'Task<TTLAnomaly>' doesn't match target type 'Task<TTLAnomaly?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8479945Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(139,13): warning CS8619: Nullability of reference types in value of type 'Task<CNAMEChainAudit>' doesn't match target type 'Task<CNAMEChainAudit?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8485909Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(166,13): warning CS8619: Nullability of reference types in value of type 'Task<WarpManifestResult>' doesn't match target type 'Task<WarpManifestResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8492256Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(184,13): warning CS8619: Nullability of reference types in value of type 'Task<EncryptedTransport>' doesn't match target type 'Task<EncryptedTransport?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8497932Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(190,17): warning CS8619: Nullability of reference types in value of type 'Task<OpenResolverFinding>' doesn't match target type 'Task<OpenResolverFinding?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8503099Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(218,13): warning CS8619: Nullability of reference types in value of type 'Task<ECSLeak>' doesn't match target type 'Task<ECSLeak?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8508866Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(222,13): warning CS8619: Nullability of reference types in value of type 'Task<Dictionary<string, bool>>' doesn't match target type 'Task<Dictionary<string, bool>?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8513580Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\LeakDetector.cs(566,35): warning CS8603: Possible null reference return. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8522818Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\DNSCapture.cs(728,34): warning SYSLIB0057: 'X509Certificate.CreateFromSignedFile(string)' is obsolete: 'Loading certificate data through the constructor or Import is obsolete. Use X509CertificateLoader instead to load certificates.' (https://aka.ms/dotnet-warnings/SYSLIB0057) [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:35.8527750Z   Syxx.Kit -> D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\bin\x64\Release\net10.0\Syxx.Kit.dll
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:36.8874373Z   Syxx.Telemetry -> D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Telemetry\bin\x64\Release\net10.0\Syxx.Telemetry.dll
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:53.8478116Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\App.xaml.cs(150,46): error CS0246: The type or namespace name 'SuspendingEventArgs' could not be found (are you missing a using directive or an assembly reference?) [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:53.8501138Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\Views\ProphetView.xaml.cs(235,21): error CS0101: The namespace 'SyxxUI.Views' already contains a definition for 'ResolverRow' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:53.8510354Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\obj\x64\Release\net10.0-windows10.0.26100.0\intermediatexaml\CommunityToolkit.Mvvm.SourceGenerators\CommunityToolkit.Mvvm.SourceGenerators.ObservablePropertyGenerator\SyxxUI.ViewModels.AppViewModel.g.cs(909,74): error CS0102: The type 'AppViewModel' already contains a definition for 'UpdateCheckOutcome' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:37:53.8518887Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\Presentation\AuthorizedNavigation.cs(70,64): error CS0426: The type name 'Evaluation' does not exist in the type 'RemoteUrlPolicy' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9325123Z C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk.winui\2.2.1\buildTransitive\Microsoft.UI.Xaml.Markup.Compiler.interop.targets(847,9): XamlCompiler warning WMC1509: No LocalAssembly parameter given during MarkupCompilePass2 for the currently building project.  This will likely cause type resolution errors for any types from the current project. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9349053Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\MainWindow.xaml(436,10): XamlCompiler error WMC0001: Unknown type 'FirstRunView' in XML namespace 'using:SyxxUI.Views' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9370072Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\Views\CageView.xaml(112,30): XamlCompiler error WMC0909: Cannot resolve DataType views:CageDisplayRow [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9378778Z Views\CageView.xaml(121,42): XamlCompiler error WMC1111: DataTemplates containing x:Bind need a DataType to be specified using 'x:DataType' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9393874Z C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk.winui\2.2.1\buildTransitive\Microsoft.UI.Xaml.Markup.Compiler.interop.targets(847,9): Xaml Internal Error error WMC9999: Object reference not set to an instance of an object. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9674915Z 
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9677493Z Build FAILED.
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9678033Z 
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9681032Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9685572Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9690671Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\AuthoritativeVantage.cs(73,49): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9698216Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\CNAMEChainProbe.cs(30,44): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9707311Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\SVCBProbe.cs(28,43): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9714125Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\Conclusion.cs(304,6): warning CS0657: 'property' is not a valid attribute location for this declaration. Valid attribute locations for this declaration are 'param'. All attributes in this block will be ignored. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9721867Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\Synthesizer.cs(130,117): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9727860Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\Synthesizer.cs(144,134): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9733062Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\EncryptedTransportProbe.cs(23,27): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9738392Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\TTLAnomalyProbe.cs(28,43): warning CS8625: Cannot convert null literal to non-nullable reference type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9748840Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\SignedIncidentReport.cs(123,49): warning CS8604: Possible null reference argument for parameter 'source' in 'IOrderedEnumerable<KeyValuePair<string, ResolverQueryOutcome>> Enumerable.OrderBy<KeyValuePair<string, ResolverQueryOutcome>, string>(IEnumerable<KeyValuePair<string, ResolverQueryOutcome>> source, Func<KeyValuePair<string, ResolverQueryOutcome>, string> keySelector, IComparer<string>? comparer)'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9756654Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(61,32): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9764151Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(74,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSResponse>' doesn't match target type 'Task<DNSResponse?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9778134Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(79,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9785717Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(81,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9792350Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(83,13): warning CS8619: Nullability of reference types in value of type 'Task<DenialOfExistence>' doesn't match target type 'Task<DenialOfExistence?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9800490Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(85,13): warning CS8619: Nullability of reference types in value of type 'Task<WildcardSynthesis>' doesn't match target type 'Task<WildcardSynthesis?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9807276Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(87,13): warning CS8619: Nullability of reference types in value of type 'Task<EDNS0Capability>' doesn't match target type 'Task<EDNS0Capability?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9813837Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(105,46): warning CS8619: Nullability of reference types in value of type 'Task<EncryptedTransport>' doesn't match target type 'Task<EncryptedTransport?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9820485Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Synthesis\FirstRunScan.cs(118,17): warning CS8619: Nullability of reference types in value of type 'Task<ECSLeak>' doesn't match target type 'Task<ECSLeak?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9826722Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(41,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSResponse>' doesn't match target type 'Task<DNSResponse?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9832690Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(47,17): warning CS8619: Nullability of reference types in value of type 'Task<DNSResponse>' doesn't match target type 'Task<DNSResponse?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9839392Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(55,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9845974Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(57,13): warning CS8619: Nullability of reference types in value of type 'Task<DNSCanaries.CanaryResult>' doesn't match target type 'Task<DNSCanaries.CanaryResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9852312Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(61,13): warning CS8619: Nullability of reference types in value of type 'Task<ResolverLatency>' doesn't match target type 'Task<ResolverLatency?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9859041Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(63,13): warning CS8619: Nullability of reference types in value of type 'Task<AnswerStability>' doesn't match target type 'Task<AnswerStability?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9876185Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(65,13): warning CS8619: Nullability of reference types in value of type 'Task<WildcardSynthesis>' doesn't match target type 'Task<WildcardSynthesis?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:02.9987515Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(67,13): warning CS8619: Nullability of reference types in value of type 'Task<DenialOfExistence>' doesn't match target type 'Task<DenialOfExistence?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0060824Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(69,13): warning CS8619: Nullability of reference types in value of type 'Task<DualStackAudit>' doesn't match target type 'Task<DualStackAudit?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0165371Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(71,13): warning CS8619: Nullability of reference types in value of type 'Task<EDNS0Capability>' doesn't match target type 'Task<EDNS0Capability?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0532209Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(73,13): warning CS8619: Nullability of reference types in value of type 'Task<VersionBindResult>' doesn't match target type 'Task<VersionBindResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0658446Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(113,13): warning CS8619: Nullability of reference types in value of type 'Task<AuthoritativeComparison>' doesn't match target type 'Task<AuthoritativeComparison?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0720730Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(135,13): warning CS8619: Nullability of reference types in value of type 'Task<SVCBFinding>' doesn't match target type 'Task<SVCBFinding?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0890634Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(137,13): warning CS8619: Nullability of reference types in value of type 'Task<TTLAnomaly>' doesn't match target type 'Task<TTLAnomaly?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0925193Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(139,13): warning CS8619: Nullability of reference types in value of type 'Task<CNAMEChainAudit>' doesn't match target type 'Task<CNAMEChainAudit?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0935139Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(166,13): warning CS8619: Nullability of reference types in value of type 'Task<WarpManifestResult>' doesn't match target type 'Task<WarpManifestResult?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0942140Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(184,13): warning CS8619: Nullability of reference types in value of type 'Task<EncryptedTransport>' doesn't match target type 'Task<EncryptedTransport?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.0949186Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(190,17): warning CS8619: Nullability of reference types in value of type 'Task<OpenResolverFinding>' doesn't match target type 'Task<OpenResolverFinding?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.1064515Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(218,13): warning CS8619: Nullability of reference types in value of type 'Task<ECSLeak>' doesn't match target type 'Task<ECSLeak?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.4889252Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\ProbePlan.cs(222,13): warning CS8619: Nullability of reference types in value of type 'Task<Dictionary<string, bool>>' doesn't match target type 'Task<Dictionary<string, bool>?>'. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.6117135Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\LeakDetector.cs(566,35): warning CS8603: Possible null reference return. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.6255035Z ##[warning]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\DNSCapture.cs(728,34): warning SYSLIB0057: 'X509Certificate.CreateFromSignedFile(string)' is obsolete: 'Loading certificate data through the constructor or Import is obsolete. Use X509CertificateLoader instead to load certificates.' (https://aka.ms/dotnet-warnings/SYSLIB0057) [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\Syxx.Kit\Syxx.Kit.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.6435579Z C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk.winui\2.2.1\buildTransitive\Microsoft.UI.Xaml.Markup.Compiler.interop.targets(847,9): XamlCompiler warning WMC1509: No LocalAssembly parameter given during MarkupCompilePass2 for the currently building project.  This will likely cause type resolution errors for any types from the current project. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.6625082Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\App.xaml.cs(150,46): error CS0246: The type or namespace name 'SuspendingEventArgs' could not be found (are you missing a using directive or an assembly reference?) [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.6701776Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\Views\ProphetView.xaml.cs(235,21): error CS0101: The namespace 'SyxxUI.Views' already contains a definition for 'ResolverRow' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7132894Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\obj\x64\Release\net10.0-windows10.0.26100.0\intermediatexaml\CommunityToolkit.Mvvm.SourceGenerators\CommunityToolkit.Mvvm.SourceGenerators.ObservablePropertyGenerator\SyxxUI.ViewModels.AppViewModel.g.cs(909,74): error CS0102: The type 'AppViewModel' already contains a definition for 'UpdateCheckOutcome' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7279260Z ##[error]D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\Presentation\AuthorizedNavigation.cs(70,64): error CS0426: The type name 'Evaluation' does not exist in the type 'RemoteUrlPolicy' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7348065Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\MainWindow.xaml(436,10): XamlCompiler error WMC0001: Unknown type 'FirstRunView' in XML namespace 'using:SyxxUI.Views' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7362016Z D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\Views\CageView.xaml(112,30): XamlCompiler error WMC0909: Cannot resolve DataType views:CageDisplayRow [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7368197Z Views\CageView.xaml(121,42): XamlCompiler error WMC1111: DataTemplates containing x:Bind need a DataType to be specified using 'x:DataType' [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7372902Z C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk.winui\2.2.1\buildTransitive\Microsoft.UI.Xaml.Markup.Compiler.interop.targets(847,9): Xaml Internal Error error WMC9999: Object reference not set to an instance of an object. [D:\a\Syxx-Dimensions\Syxx-Dimensions\Windows\dotNET\SyxxUI\SyxxUI.csproj]
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7376480Z     43 Warning(s)
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7484395Z     8 Error(s)
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7689700Z 
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.7718221Z Time Elapsed 00:01:28.47
+windows-x64	Build Windows GUI (SyxxUI, x64)	2026-08-05T17:38:03.9083429Z ##[error]Process completed with exit code 1.
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	﻿2026-08-05T17:38:03.9470576Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9472912Z ##[group]Run actions/upload-artifact@v4
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9473341Z with:
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9473647Z   name: transcript.net-win-x64.json
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9474077Z   path: transcript.net-win-x64.json
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9474489Z   if-no-files-found: error
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9474840Z   compression-level: 6
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9475179Z   overwrite: false
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9475514Z   include-hidden-files: false
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9475863Z env:
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9476118Z   SENTRY_AUTH_TOKEN: 
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9476424Z   SENTRY_URL: 
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9476735Z   DOTNET_ROOT: C:\Program Files\dotnet
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:03.9477135Z ##[endgroup]
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:04.5127820Z (node:4956) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:04.5150677Z (Use `node --trace-deprecation ...` to show where the warning was created)
+windows-x64	Upload parity transcript (transcript.net-win-x64.json)	2026-08-05T17:38:04.5572653Z ##[error]No files were found with the provided path: transcript.net-win-x64.json. No artifacts will be uploaded.
+snap build (snapcraft)	Build the snap	﻿2026-08-05T17:35:15.3008779Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3010008Z ##[group]Run snapcore/action-build@v1
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3010216Z with:
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3010374Z   path: .
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3010530Z   build-info: true
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3010710Z   snapcraft-channel: stable
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3010895Z env:
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3011052Z   SENTRY_AUTH_TOKEN: 
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3011230Z   SENTRY_URL: 
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3011385Z ##[endgroup]
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3562348Z Building Snapcraft project in "."...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3566296Z ##[group]Installing Snapcraft plus dependencies
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3613488Z Ensuring runner is in the lxd group...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3672255Z [command]/usr/bin/sudo groupadd --force --system lxd
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.3828614Z [command]/usr/bin/sudo usermod --append --groups lxd runner
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.4909697Z Installing LXD...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:15.5043056Z [command]/usr/bin/sudo snap install lxd
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:21.7397422Z 2026-08-05T17:35:21Z INFO Waiting for automatic snapd restart...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:22.2514788Z 2026-08-05T17:35:22Z INFO Waiting for automatic snapd restart...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:23.2762321Z 2026-08-05T17:35:23Z INFO Waiting for automatic snapd restart...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:24.4300287Z 2026-08-05T17:35:24Z INFO Waiting for automatic snapd restart...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:47.4865620Z lxd (5.21/stable) 5.21.6-78b046a from Canonical** installed
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:47.4890979Z Initialising LXD...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:47.4905194Z [command]/usr/bin/sudo lxd init --auto
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:55.5962703Z Installed docker related packages might interfere with LXD networking: 
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:55.5971509Z [command]/usr/bin/sudo iptables -P FORWARD ACCEPT
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:55.6088992Z Installing Snapcraft...
+snap build (snapcraft)	Build the snap	2026-08-05T17:35:55.6139159Z [command]/usr/bin/sudo snap install --channel stable --classic snapcraft
+snap build (snapcraft)	Build the snap	2026-08-05T17:36:08.5937137Z snapcraft 9.0.1 from Canonical** installed
+snap build (snapcraft)	Build the snap	2026-08-05T17:36:08.5957127Z ##[endgroup]
+snap build (snapcraft)	Build the snap	2026-08-05T17:36:08.5973036Z [command]/usr/bin/sudo -u runner -E snapcraft
+snap build (snapcraft)	Build the snap	2026-08-05T17:36:10.2015084Z Running snapcraft without a command will not be possible in future releases. Use 'snapcraft pack' instead.
+snap build (snapcraft)	Build the snap	2026-08-05T17:36:10.8546911Z Launching managed ubuntu 24.04 instance...
+snap build (snapcraft)	Build the snap	2026-08-05T17:36:11.5185081Z Creating new instance from remote
+snap build (snapcraft)	Build the snap	2026-08-05T17:36:11.5185829Z Creating new base instance from remote
+snap build (snapcraft)	Build the snap	2026-08-05T17:39:58.8031400Z Creating new instance from base instance
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:04.6918626Z Starting instance
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:19.9457487Z Running snapcraft without a command will not be possible in future releases. Use 'snapcraft pack' instead.
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:20.0423820Z Initializing lifecycle
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:20.0443516Z Installing build-packages
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:20.0444768Z Installing build-snaps
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:45.7088208Z Pulling syxx-cli
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:45.7089797Z Fetching stage-packages
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:47.9027750Z Downloading package: libsecret-1-0
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:48.7205489Z Downloading package: debconf
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:49.4525913Z Downloading package: libsecret-tools
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:49.7582185Z Downloading package: traceroute
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:50.4346657Z Downloading package: libsecret-common
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:50.6315488Z Downloading package: libicu74
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:55.2973449Z Downloading package: iproute2
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7558583Z Extracting stage package: libsecret-1-0
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7562080Z Extracting stage package: debconf
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7567288Z Extracting stage package: libsecret-tools
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7567898Z Extracting stage package: traceroute
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7574700Z Extracting stage package: libsecret-common
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7577022Z Extracting stage package: libicu74
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7583456Z Extracting stage package: iproute2
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:56.7669590Z :: + craftctl default
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:58.3205268Z :: ++ sed -n 's/.*public const string Version[^"]*"\([^"]*\)".*/\1/p' Windows/dotNET/Syxx.Kit/SyxxConfig.cs
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:58.3213416Z :: ++ head -1
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:58.3235688Z :: + syxx_version=2.0.0
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:58.3244117Z :: + '[' -z 2.0.0 ']'
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:58.3245393Z :: + craftctl set version=2.0.0
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:59.1291894Z Pulling syxx-gui
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:59.1292324Z Fetching stage-packages
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:59.5425524Z Downloading package: lsb-base
+snap build (snapcraft)	Build the snap	2026-08-05T17:40:59.8688932Z Downloading package: x11-common
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:00.3583770Z Downloading package: libxau6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:00.6435043Z Downloading package: libxcb1
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:01.1896332Z Downloading package: libfontconfig1
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:01.9341564Z Downloading package: fontconfig-config
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:02.5305920Z Downloading package: libx11-data
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:03.8725553Z Downloading package: libice6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:04.1501494Z Downloading package: fonts-dejavu-mono
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:05.7898847Z Downloading package: fonts-dejavu-core
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:07.2332081Z Downloading package: libx11-6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:08.5815848Z Downloading package: libicu74
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:08.8285521Z Downloading package: libsm6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:09.2455651Z Downloading package: libstdc++6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.4637469Z Downloading package: libxdmcp6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7952484Z Extracting stage package: lsb-base
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7961688Z Extracting stage package: x11-common
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7962100Z Extracting stage package: libxau6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7964974Z Extracting stage package: libxcb1
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7965230Z Extracting stage package: libfontconfig1
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7970230Z Extracting stage package: fontconfig-config
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7972517Z Extracting stage package: libx11-data
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7976375Z Extracting stage package: libice6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7979833Z Extracting stage package: fonts-dejavu-mono
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7983807Z Extracting stage package: fonts-dejavu-core
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7989751Z Extracting stage package: libx11-6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7994271Z Extracting stage package: libicu74
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.7997539Z Extracting stage package: libsm6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.8002363Z Extracting stage package: libstdc++6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:10.8010556Z Extracting stage package: libxdmcp6
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:11.6295333Z Building syxx-cli
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.6152007Z :: + case "amd64" in
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.6153327Z :: + rid=linux-x64
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.6173218Z :: + dotnet publish Windows/dotNET/Syxx/Syxx.csproj -c Release -r linux-x64 --self-contained true -o /root/parts/syxx-cli/install/opt/syxx/cli
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7205312Z :: The command could not be loaded, possibly because:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7206715Z ::   * You intended to execute a .NET application:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7209926Z ::       The application 'publish' does not exist.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7211568Z ::   * You intended to execute a .NET SDK command:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7212378Z ::       A compatible .NET SDK was not found.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7213251Z ::
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7234183Z :: Requested SDK version: 10.0.100
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7236793Z :: global.json file: /root/parts/syxx-cli/build/global.json
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7237843Z ::
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7238374Z :: Installed SDKs:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7239729Z ::
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7240320Z :: Install the [10.0.100] .NET SDK or update [/root/parts/syxx-cli/build/global.json] to match an installed SDK.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7242035Z ::
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7243181Z :: Learn about SDK resolution:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7247659Z :: https://aka.ms/dotnet/sdk-not-found
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7250162Z :: 8.0.407 [/snap/dotnet-sdk/256/sdk]
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7311417Z 'override-build' in part 'syxx-cli' failed with code 145.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7312894Z Detailed information: 
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7313719Z :: + case "amd64" in
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7314311Z :: + rid=linux-x64
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7319477Z :: + dotnet publish Windows/dotNET/Syxx/Syxx.csproj -c Release -r linux-x64 --self-contained true -o /root/parts/syxx-cli/install/opt/syxx/cli
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7323643Z :: The command could not be loaded, possibly because:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7324103Z ::   * You intended to execute a .NET application:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7324836Z ::       The application 'publish' does not exist.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7325290Z ::   * You intended to execute a .NET SDK command:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7330540Z ::       A compatible .NET SDK was not found.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7331770Z :: Requested SDK version: 10.0.100
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7335693Z :: global.json file: /root/parts/syxx-cli/build/global.json
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7336600Z :: Installed SDKs:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7353109Z :: Install the [10.0.100] .NET SDK or update [/root/parts/syxx-cli/build/global.json] to match an installed SDK.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7357505Z :: Learn about SDK resolution:
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7358480Z :: https://aka.ms/dotnet/sdk-not-found
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7395823Z Recommended resolution: Review the scriptlet and make sure it's correct.
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:12.7398125Z For more information, check out: https://documentation.ubuntu.com/snapcraft/9.0.1/reference/plugins/
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:22.2007047Z Failed to run snapcraft in instance
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:22.2071889Z Full execution log: '/home/runner/.local/state/snapcraft/log/snapcraft-20260805-173610.183687.log'
+snap build (snapcraft)	Build the snap	2026-08-05T17:41:22.3611113Z ##[error]The process '/usr/bin/sudo' failed with exit code 1
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	﻿2026-08-05T17:36:10.1503347Z ##[group]Run dotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:10.1504815Z ^[[36;1mdotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo^[[0m
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:10.1565719Z shell: /usr/bin/bash -e {0}
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:10.1566157Z env:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:10.1566866Z   SENTRY_AUTH_TOKEN: 
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:10.1567269Z   SENTRY_URL: 
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:10.1567614Z   DOTNET_ROOT: /usr/share/dotnet
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:10.1568049Z ##[endgroup]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:11.5143228Z   Determining projects to restore...
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:13.4351134Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:13.4360033Z   All projects are up-to-date for restore.
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:14.1373449Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:14.4697435Z   Syxx.Kit -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/bin/Release/net10.0/Syxx.Kit.dll
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:14.9135922Z   Syxx.Telemetry -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Telemetry/bin/Release/net10.0/Syxx.Telemetry.dll
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:20.9469899Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/GluttonView.axaml(196,14,196,14): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:20.9489347Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/MirrorView.axaml(19,10,19,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:20.9493844Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/WitnessView.axaml(19,10,19,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:20.9498588Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/WitnessView.axaml(55,10,55,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:20.9503065Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/WitnessView.axaml(75,10,75,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:22.2477133Z   SyxxUI.Avalonia -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/bin/Release/net10.0/Syxx.dll
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.3475238Z   SyxxUI.Avalonia.Tests -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin/Release/net10.0/SyxxUI.Avalonia.Tests.dll
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.3745874Z Test run for /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin/Release/net10.0/SyxxUI.Avalonia.Tests.dll (.NETCoreApp,Version=v10.0)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.8268754Z A total of 1 test files matched the specified pattern.
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2618549Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen [95 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2627977Z [xUnit.net 00:00:01.13]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2647181Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2654599Z    Assert.DoesNotContain() Failure: Sub-string found
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2660496Z          ↓ (pos 0)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2677627Z String: "Verified: the seal is valid and the testi"···
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2697216Z Found:  "Verified"
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2717166Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2719271Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 513
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.2737380Z --- End of stack trace from previous location ---
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.4828269Z [xUnit.net 00:00:01.47]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.4928407Z [xUnit.net 00:00:01.49]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.5978365Z [xUnit.net 00:00:01.59]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.5998033Z [xUnit.net 00:00:01.59]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6150079Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed [8 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6160167Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6202588Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6247288Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6248773Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6283024Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6318098Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6335986Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 432
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6358040Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6418000Z [xUnit.net 00:00:01.63]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6419700Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6437355Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber [10 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6462389Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6467303Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6487947Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6507041Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6521514Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6548181Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6551503Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 392
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6577509Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6584424Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6607684Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen [1 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6609126Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6627326Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6647329Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6660834Z [xUnit.net 00:00:01.66]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6662361Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6672529Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6698418Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6701813Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 379
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6727625Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6738243Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6747906Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult [< 1 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6767140Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6771113Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6787418Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6807469Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6827135Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6828987Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6848711Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 445
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6867567Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6887591Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6907859Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature [5 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6917128Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6927366Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6943120Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6967199Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6987075Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6988891Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.6994095Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 406
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7017570Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7023905Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7047628Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch [1 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7049080Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7067276Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7082838Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7107434Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7108497Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7128354Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7148576Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 420
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7166261Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7184225Z [xUnit.net 00:00:01.71]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7185862Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7248879Z [xUnit.net 00:00:01.72]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7267820Z [xUnit.net 00:00:01.72]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7687999Z [xUnit.net 00:00:01.76]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7727769Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret [5 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7744985Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7760907Z    Assert.Equal() Failure: Strings differ
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7797252Z Expected: "SYXX-ABCD-1234-EF56-7890"
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7804799Z Actual:   null
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7847152Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7865574Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 54
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7896406Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7898341Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7917842Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull [4 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7920212Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7937291Z    file-fallback store should have written a blob on this platform
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7941109Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7958678Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 114
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.7987343Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8017692Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8057639Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue [< 1 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8062886Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8107242Z    Assert.Equal() Failure: Strings differ
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8130277Z Expected: "second-value"
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8147125Z Actual:   null
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8197076Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8218413Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 79
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8237596Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8277511Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8297543Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret [< 1 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8335966Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8357101Z    Assert.Equal() Failure: Strings differ
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8397058Z Expected: "to-be-deleted"
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8417083Z Actual:   null
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8456990Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8478407Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 94
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8497541Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.8537519Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0694822Z [xUnit.net 00:00:05.06]     SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists [FAIL]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0696222Z   Failed SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists [3 ms]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0735855Z   Error Message:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0757285Z    Assert.DoesNotContain() Failure: Filter matched in collection
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0781712Z                                                                               ↓ (pos 33)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0797804Z Collection: [···, "EntropyBits", "EntropyDisplay", "OriginDisplay", "Phrase", "NoRecoveryWarning"]
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0798737Z   Stack Trace:
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0810387Z      at SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/DicePassphraseTests.cs:line 237
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0837050Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.0846111Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.2487046Z 
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.2628225Z Failed!  - Failed:    12, Passed:   179, Skipped:     0, Total:   191, Duration: 4 s - SyxxUI.Avalonia.Tests.dll (net10.0)
+ubuntu-x64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.3711136Z ##[error]Process completed with exit code 1.
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	﻿2026-08-05T17:36:30.3978499Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3981000Z ##[group]Run actions/upload-artifact@v4
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3981490Z with:
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3981855Z   name: transcript.net-linux-x64.json
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3982394Z   path: transcript.net-linux-x64.json
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3982891Z   if-no-files-found: error
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3983324Z   compression-level: 6
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3983697Z   overwrite: false
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3984064Z   include-hidden-files: false
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3984479Z env:
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3984778Z   SENTRY_AUTH_TOKEN: 
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3985140Z   SENTRY_URL: 
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3985504Z   DOTNET_ROOT: /usr/share/dotnet
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.3985928Z ##[endgroup]
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.6930819Z (node:2907) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.6957796Z (Use `node --trace-deprecation ...` to show where the warning was created)
+ubuntu-x64	Upload parity transcript (transcript.net-linux-x64.json)	2026-08-05T17:36:30.7160971Z ##[error]No files were found with the provided path: transcript.net-linux-x64.json. No artifacts will be uploaded.
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	﻿2026-08-05T17:36:23.4689298Z ##[group]Run dotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.4690084Z ^[[36;1mdotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo^[[0m
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.4714074Z shell: /usr/bin/bash -e {0}
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.4714426Z env:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.4714707Z   SENTRY_AUTH_TOKEN: 
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.4714897Z   SENTRY_URL: 
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.4715431Z   DOTNET_ROOT: /usr/share/dotnet
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:23.4715660Z ##[endgroup]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:24.8906683Z   Determining projects to restore...
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.3307805Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.3483093Z   All projects are up-to-date for restore.
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:26.9137737Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj : warning NU1510: PackageReference System.Diagnostics.DiagnosticSource will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:27.1937852Z   Syxx.Kit -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Kit/bin/Release/net10.0/Syxx.Kit.dll
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:27.6133752Z   Syxx.Telemetry -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Windows/dotNET/Syxx.Telemetry/bin/Release/net10.0/Syxx.Telemetry.dll
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.6847188Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/GluttonView.axaml(196,14,196,14): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.6849976Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/MirrorView.axaml(19,10,19,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.6867034Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/WitnessView.axaml(19,10,19,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.6886939Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/WitnessView.axaml(55,10,55,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:30.6906763Z /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/Views/WitnessView.axaml(75,10,75,10): Avalonia warning AVLN5001: 'TextBox.Watermark' is obsolete: Use PlaceholderText instead. [/home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:31.4469012Z   SyxxUI.Avalonia -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia/bin/Release/net10.0/Syxx.dll
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:32.6846259Z   SyxxUI.Avalonia.Tests -> /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin/Release/net10.0/SyxxUI.Avalonia.Tests.dll
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:32.7008115Z Test run for /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin/Release/net10.0/SyxxUI.Avalonia.Tests.dll (.NETCoreApp,Version=v10.0)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:33.4662315Z A total of 1 test files matched the specified pattern.
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9346793Z [xUnit.net 00:00:00.70]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9436385Z [xUnit.net 00:00:00.71]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9537783Z [xUnit.net 00:00:00.72]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9538668Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret [39 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9581657Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9645319Z    Assert.Equal() Failure: Strings differ
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9646487Z Expected: "SYXX-ABCD-1234-EF56-7890"
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9697150Z Actual:   null
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9755819Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9796238Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_StoreThenRetrieve_ReturnsSameSecret() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 54
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9837791Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9890316Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9939900Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull [4 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:34.9965872Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0014166Z [xUnit.net 00:00:00.78]     SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0014853Z    file-fallback store should have written a blob on this platform
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0055869Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0079189Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_TamperedCiphertext_FailsAuthentication_ReturnsNull() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 114
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0115986Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0158364Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0176744Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue [6 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0215743Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0246147Z    Assert.Equal() Failure: Strings differ
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0265971Z Expected: "second-value"
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0285819Z Actual:   null
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0286448Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0306575Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Overwrite_ReturnsLatestValue() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 79
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0325973Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.0346063Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1106759Z   Failed SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret [2 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1120486Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1156308Z    Assert.Equal() Failure: Strings differ
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1175643Z Expected: "to-be-deleted"
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1196083Z Actual:   null
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1215735Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1247630Z      at SyxxUI.Avalonia.Tests.LinuxSecretStoreTests.FileFallback_Delete_RemovesSecret() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/LinuxSecretStoreTests.cs:line 94
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1259837Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.1296126Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.2266836Z [xUnit.net 00:00:01.00]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3083745Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen [43 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3095815Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3105804Z    Assert.DoesNotContain() Failure: Sub-string found
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3123939Z          ↓ (pos 0)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3139400Z String: "Verified: the seal is valid and the testi"···
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3146393Z Found:  "Verified"
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3161793Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3166511Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.SelfVerify_StaleSnapshot_DoesNotShowGreen() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 513
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3170215Z --- End of stack trace from previous location ---
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3872541Z [xUnit.net 00:00:01.16]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.3915284Z [xUnit.net 00:00:01.17]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4047840Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed [2 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4064255Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4066438Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4067068Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4069904Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4070420Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4071284Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4073814Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_GarbageInput_RendersRedMalformed() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 432
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4075902Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4076701Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4093690Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber [3 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4094370Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4094753Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4095428Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4095998Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4096454Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4097291Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4098830Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ExpiredTestimony_RendersAmber() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 392
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4100019Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4100764Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4273442Z [xUnit.net 00:00:01.20]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4316488Z [xUnit.net 00:00:01.20]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4416125Z [xUnit.net 00:00:01.21]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4475434Z [xUnit.net 00:00:01.22]     SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4476628Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen [< 1 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4515857Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4518873Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4545339Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4565916Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4593032Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4636259Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4656380Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_ValidPastedTestimony_RendersGreen() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 379
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4672509Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4695667Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4736033Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult [< 1 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4755679Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4775711Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4811244Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4833519Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4875602Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4876426Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4916412Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_EmptyInput_PromptsWithoutClaimingAResult() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 445
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4945809Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4951817Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.4993966Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature [1 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5015541Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5055790Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5056242Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5105399Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5115711Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5146146Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5186334Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedSignature_RendersRedInvalidSignature() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 406
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5225877Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5245846Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5260878Z   Failed SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch [< 1 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5305684Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5335653Z    Assert.IsType() Failure: Value is not the exact type
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5336117Z Expected: typeof(Avalonia.Media.SolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5395817Z Actual:   typeof(Avalonia.Media.Immutable.ImmutableSolidColorBrush)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5420823Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5436208Z      at SyxxUI.Avalonia.Tests.WitnessViewModelTests.ColorOf(IBrush brush) in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 333
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5465433Z    at SyxxUI.Avalonia.Tests.WitnessViewModelTests.VerifyExternal_TamperedDisplayField_RendersRedDisplayMismatch() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/WitnessViewModelTests.cs:line 420
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5485802Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:35.5525795Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:36.9856581Z [xUnit.net 00:00:02.76]     SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists [FAIL]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:36.9917971Z   Failed SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists [22 ms]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:36.9936382Z   Error Message:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.0006463Z    Assert.DoesNotContain() Failure: Filter matched in collection
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.0041533Z                                                                               ↓ (pos 33)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.0043759Z Collection: [···, "EntropyBits", "EntropyDisplay", "OriginDisplay", "Phrase", "NoRecoveryWarning"]
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.0045467Z   Stack Trace:
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.0050232Z      at SyxxUI.Avalonia.Tests.DicePassphraseTests.NoEscrowApiExists() in /home/runner/work/Syxx-Dimensions/Syxx-Dimensions/Linux/Ubuntu/SyxxUI.Avalonia.Tests/DicePassphraseTests.cs:line 237
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.0053167Z    at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.0062004Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.1075726Z 
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.1103672Z Failed!  - Failed:    12, Passed:   179, Skipped:     0, Total:   191, Duration: 2 s - SyxxUI.Avalonia.Tests.dll (net10.0)
+ubuntu-arm64	Test Ubuntu witness parity (SyxxUI.Avalonia.Tests)	2026-08-05T17:36:37.1849856Z ##[error]Process completed with exit code 1.
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	﻿2026-08-05T17:36:37.1991954Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1993305Z ##[group]Run actions/upload-artifact@v4
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1993699Z with:
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1993941Z   name: transcript.net-linux-arm64.json
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1994297Z   path: transcript.net-linux-arm64.json
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1994635Z   if-no-files-found: error
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1994896Z   compression-level: 6
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1995549Z   overwrite: false
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1995797Z   include-hidden-files: false
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1996043Z env:
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1996300Z   SENTRY_AUTH_TOKEN: 
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1996550Z   SENTRY_URL: 
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1996799Z   DOTNET_ROOT: /usr/share/dotnet
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.1997062Z ##[endgroup]
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.3622075Z (node:2962) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.3629517Z (Use `node --trace-deprecation ...` to show where the warning was created)
+ubuntu-arm64	Upload parity transcript (transcript.net-linux-arm64.json)	2026-08-05T17:36:37.3689279Z ##[error]No files were found with the provided path: transcript.net-linux-arm64.json. No artifacts will be uploaded.
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	﻿2026-08-05T17:37:38.0432061Z ##[group]Run fail=0
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0432477Z ^[[36;1mfail=0^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0432867Z ^[[36;1mchecked=0^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0433207Z ^[[36;1mfor f in /opt/syxx/cli/Syxx /opt/syxx/gui/Syxx \^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0433680Z ^[[36;1m         $(find /opt/syxx -name '*.so' -o -name '*.so.*' | sort); do^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0434260Z ^[[36;1m  [ -f "$f" ] || continue^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0434687Z ^[[36;1m  checked=$((checked + 1))^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0435100Z ^[[36;1m  if ldd "$f" 2>/dev/null | grep -q "not found"; then^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0435557Z ^[[36;1m    echo "::error title=P-11 missing dependency::$f has unresolved libraries:"^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0436022Z ^[[36;1m    ldd "$f" | grep "not found"^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0436305Z ^[[36;1m    fail=1^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0436525Z ^[[36;1m  fi^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0436795Z ^[[36;1mdone^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0437165Z ^[[36;1m# Cannot pass vacuously: a find that matched nothing would otherwise report success.^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0437795Z ^[[36;1mif [ "$checked" -lt 3 ]; then^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0438307Z ^[[36;1m  echo "::error title=gate input missing::only $checked native objects were checked; the package layout changed."^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0439214Z ^[[36;1m  exit 1^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0439433Z ^[[36;1mfi^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0439786Z ^[[36;1mecho "Checked $checked native objects; all shared-library references resolved."^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0440259Z ^[[36;1mexit $fail^[[0m
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0440668Z shell: sh -e {0}
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0440897Z env:
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0441179Z   SENTRY_AUTH_TOKEN: 
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0441401Z   SENTRY_URL: 
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.0441637Z ##[endgroup]
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.1472528Z ##[error]/opt/syxx/cli/libcoreclrtraceptprovider.so has unresolved libraries:
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.1519511Z 	liblttng-ust.so.0 => not found
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.2266569Z ##[error]/opt/syxx/gui/libcoreclrtraceptprovider.so has unresolved libraries:
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.2309555Z 	liblttng-ust.so.0 => not found
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.2537366Z Checked 34 native objects; all shared-library references resolved.
+.deb install + smoke (arm64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:38.2576535Z ##[error]Process completed with exit code 1.
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	﻿2026-08-05T17:37:34.5312469Z ##[group]Run fail=0
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5312781Z ^[[36;1mfail=0^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5313007Z ^[[36;1mchecked=0^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5313294Z ^[[36;1mfor f in /opt/syxx/cli/Syxx /opt/syxx/gui/Syxx \^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5313733Z ^[[36;1m         $(find /opt/syxx -name '*.so' -o -name '*.so.*' | sort); do^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5314138Z ^[[36;1m  [ -f "$f" ] || continue^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5314431Z ^[[36;1m  checked=$((checked + 1))^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5314781Z ^[[36;1m  if ldd "$f" 2>/dev/null | grep -q "not found"; then^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5315249Z ^[[36;1m    echo "::error title=P-11 missing dependency::$f has unresolved libraries:"^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5315671Z ^[[36;1m    ldd "$f" | grep "not found"^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5315954Z ^[[36;1m    fail=1^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5316184Z ^[[36;1m  fi^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5316403Z ^[[36;1mdone^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5317099Z ^[[36;1m# Cannot pass vacuously: a find that matched nothing would otherwise report success.^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5317606Z ^[[36;1mif [ "$checked" -lt 3 ]; then^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5318122Z ^[[36;1m  echo "::error title=gate input missing::only $checked native objects were checked; the package layout changed."^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5318645Z ^[[36;1m  exit 1^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5319059Z ^[[36;1mfi^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5319423Z ^[[36;1mecho "Checked $checked native objects; all shared-library references resolved."^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5319852Z ^[[36;1mexit $fail^[[0m
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5320197Z shell: sh -e {0}
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5320414Z env:
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5320634Z   SENTRY_AUTH_TOKEN: 
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5320864Z   SENTRY_URL: 
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.5321077Z ##[endgroup]
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.7042682Z ##[error]/opt/syxx/cli/libcoreclrtraceptprovider.so has unresolved libraries:
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.7063053Z 	liblttng-ust.so.0 => not found
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.7945073Z ##[error]/opt/syxx/gui/libcoreclrtraceptprovider.so has unresolved libraries:
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.7998133Z 	liblttng-ust.so.0 => not found
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.8269007Z Checked 34 native objects; all shared-library references resolved.
+.deb install + smoke (amd64, ubuntu:24.04 container)	Assert the dynamic linker resolves every shipped native library	2026-08-05T17:37:34.8306065Z ##[error]Process completed with exit code 1.

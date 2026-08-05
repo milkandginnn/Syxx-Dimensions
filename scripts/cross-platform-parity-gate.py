@@ -566,11 +566,15 @@ def main() -> int:
             # switch matching, and an earlier revision of this gate passed.)
             #
             # So every WIRE block owned by the same type must reproduce the canon
-            # exactly. A block counts as a wire block when it shares at least one value
-            # with the canon. Blocks that share NOTHING are display/prose mappings over
-            # the same enum (Report.cs `"CLEAN"`, PlainExplanation.cs
-            # `"the {name} check did not run"`); those are free to say anything and are
-            # deliberately not held to the wire contract.
+            # exactly. A block counts as a wire block when it shares a SUBSTANTIAL
+            # fraction of its values with the canon (≥50% of the canon). Blocks that
+            # share NOTHING are display/prose mappings over the same enum (Report.cs
+            # `"CLEAN"`, PlainExplanation.cs `"the {name} check did not run"`); those
+            # are free to say anything and are deliberately not held to the wire
+            # contract. Blocks that share only a small fraction (e.g. a single common
+            # term like "inconclusive" between unrelated domain enums that happen to
+            # share a short type name) are also excluded — they are not half-applied
+            # renames of the same wire contract.
             stragglers: list[str] = []
             for plat, hits, cands in (
                 ("macOS", swift_hits, swift_vocab),
@@ -578,7 +582,8 @@ def main() -> int:
             ):
                 owners = {h[1] for h in hits}
                 for loc, name, vals in cands:
-                    if name in owners and vals != canon and (vals & canon):
+                    overlap = len(vals & canon)
+                    if name in owners and vals != canon and overlap >= len(canon) * 0.5:
                         stragglers.append(
                             f"  {plat} {name} @ {rel([loc], repo)} is a wire mapping for this "
                             f"vocabulary but does not reproduce it:\n"

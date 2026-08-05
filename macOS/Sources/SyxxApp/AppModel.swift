@@ -439,6 +439,9 @@ final class AppModel: ObservableObject {
 
     // Witness states
     @Published var witnessSignature: String = ""
+    /// 5(b): plaintext of a testimony pasted from another machine, bound to the external-verify
+    /// TextField. Verified via `witnessVerifyExternal`; never signed or persisted.
+    @Published var externalSnapshotJson: String = ""
     @Published var showTestimony: Bool = false
     @Published var showValidation: Bool = false
     @Published var witnessSnapshot: WitnessSnapshot? = nil
@@ -449,7 +452,12 @@ final class AppModel: ObservableObject {
     @Published var witnessResult: WitnessResult = .notVerified
     enum WitnessResult: Equatable {
         case notVerified
-        case noKey
+        /// M-01 (adopted from Linux RG-2 / the .NET G-02a fix): the Keychain could not supply a
+        /// usable signing key. The payload says WHICH, because "there is no key" and "I could not
+        /// ask" are different facts and only ONE of them justifies telling the user to type a new
+        /// key in. Collapsing them is how macOS came to instruct a user with a locked Keychain into
+        /// overwriting the very key every sealed testimony depends on.
+        case noKey(WitnessKeyAbsence)
         case valid
         case expired
         case stale
@@ -460,6 +468,57 @@ final class AppModel: ObservableObject {
         case malformedInput
         case unsupportedFormat
     }
+
+    /// M-01: why the Keychain could not supply a signing key. Mirrors
+    /// `WitnessKeyManager.KeyPresence` (D084) into the view layer WITHOUT flattening it, which is
+    /// exactly what `WitnessKeyManager.hasKey` does and what its own doc comment warns callers off.
+    ///
+    /// `.confirmedAbsent` is an answer: `errSecItemNotFound`. There is genuinely no key, so asking
+    /// the user to supply one is correct and destroys nothing.
+    /// `.undetermined` is MISSING DATA (spine #2): the Keychain was not readable at all — locked,
+    /// auth failed, the prompt was cancelled. A key may well exist. Any copy that reads as "no key"
+    /// here, or that invites the user to enter one, points them straight at an irreversible
+    /// overwrite of the identity every previously sealed testimony verifies against.
+    enum WitnessKeyAbsence: Equatable {
+        case confirmedAbsent
+        case undetermined(OSStatus)
+    }
+
+    /// M-01: the gate every signing-key WRITE passes through. Reads the Keychain tri-state
+    /// (`checkKeyPresence`) rather than the collapsed `hasKey`, because a write is irreversible:
+    /// overwriting the key silently invalidates every testimony ever sealed with the old one.
+    ///
+    /// Linux (`WitnessViewModel.LoadOrCreatePersistentSigningKey`, RG-2) refuses outright on
+    /// `Undetermined` — "the identity exists and is simply out of reach." macOS adopts that, and
+    /// additionally requires explicit confirmation for the `.present` case, which had no check at
+    /// all: `saveWitnessKey` called `saveKey` straight through.
+    enum WitnessKeyWriteGate: Equatable {
+        /// No key on this machine (`errSecItemNotFound`) — a first write destroys nothing.
+        case proceed
+        /// A key is present. The write would replace it; the user must say so explicitly.
+        case needsOverwriteConfirmation
+        /// The Keychain could not be read. Refuse: a key may exist and would be destroyed.
+        case refusedStoreUnreachable(OSStatus)
+    }
+
+    /// M-01 copy. Never says "no key" — the whole point is that we do not know.
+    static let witnessKeyStoreUnreachableMessage =
+        "Your signing key could not be checked because the Keychain could not be read (it may be "
+        + "locked, or the request was cancelled). This does not mean you have no key. Nothing was "
+        + "saved and your existing identity is untouched — unlock the Keychain and try again."
+
+    /// M-01: consult the Keychain tri-state before any write to the signing key.
+    func witnessKeyWriteGate() -> WitnessKeyWriteGate {
+        switch WitnessKeyManager.checkKeyPresence() {
+        case .absent: return .proceed
+        case .present: return .needsOverwriteConfirmation
+        case .undetermined(let status): return .refusedStoreUnreachable(status)
+        }
+    }
+
+    /// M-01: set when a signing-key write was refused because a key already exists here. The view
+    /// raises the confirmation from this; **nothing has been written while it is true.**
+    @Published var witnessKeyOverwritePending: Bool = false
 
     /// B195: honest lifecycle state of the last Witness Testimony (sealing) action, distinct from
     /// `witnessResult` (which is the VERIFY outcome). The testimony card renders from this so a
@@ -1298,8 +1357,15 @@ final class AppModel: ObservableObject {
             let msg = "Enter a domain."
             witnessTestimonyState = .failed(msg); return msg
         }
-        guard WitnessKeyManager.hasKey else {
+        // G-17: tri-state, not `hasKey` — see witnessTestify().
+        switch WitnessKeyManager.checkKeyPresence() {
+        case .present:
+            break
+        case .absent:
             let msg = "A signing key is required — use syxx witness --gen-keypair or WitnessSigner.generateKeyPair() to create one."
+            witnessTestimonyState = .failed(msg); return msg
+        case .undetermined:
+            let msg = Self.witnessKeyStoreUnreachableMessage
             witnessTestimonyState = .failed(msg); return msg
         }
         let local = NetworkKeyState.getSystemDNSServers().first ?? server
@@ -1880,15 +1946,42 @@ final class AppModel: ObservableObject {
     /// caller does NOT proceed to testify/verify (which would otherwise mislead with a generic
     /// "a signing key is required" message) and does NOT clear the input field.
     /// - Returns: `true` when the key was saved or there was nothing to save (empty input);
-    ///   `false` when the Keychain write threw.
+    ///   `false` when the Keychain write threw, was refused, or is awaiting confirmation.
+    ///
+    /// M-01 (Linux RG-2 adoption): the write is now gated on the Keychain PRESENCE tri-state. It
+    /// previously called `saveKey` unconditionally, so a user following the old "no signing key —
+    /// enter your key above" message overwrote the key their existing testimonies verify against,
+    /// with no prompt and no way back. `confirmOverwrite` is the user's explicit "yes, replace it";
+    /// an unreadable Keychain is refused outright, never guessed at.
+    /// - Parameter confirmOverwrite: pass `true` only after the user has confirmed replacement of
+    ///   an existing key. Never default this to `true`.
     @discardableResult
-    func saveWitnessKey(_ base64Key: String) -> Bool {
+    func saveWitnessKey(_ base64Key: String, confirmOverwrite: Bool = false) -> Bool {
         let trimmed = base64Key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return true }
+        switch witnessKeyWriteGate() {
+        case .proceed:
+            break
+        case .needsOverwriteConfirmation:
+            guard confirmOverwrite else {
+                witnessKeyOverwritePending = true
+                return false
+            }
+        case .refusedStoreUnreachable:
+            let msg = Self.witnessKeyStoreUnreachableMessage
+            output = msg
+            showValidation = false
+            showTestimony = true
+            witnessTestimonyState = .failed(msg)
+            return false
+        }
         do {
             try WitnessKeyManager.saveKey(trimmed)
         } catch {
-            hasWitnessKey = WitnessKeyManager.hasKey
+            // G-17: do NOT re-derive `hasWitnessKey` from `hasKey` here. On an unreadable Keychain
+            // that reports "no key on this machine" from a state where we could not ask — the same
+            // collapse M-01 closes. Only a determinate answer may move the flag.
+            refreshHasWitnessKeyIfDeterminate()
             let detail = ErrorPresenter.userDetail(for: error, component: "witness.saveKey")
             let msg = detail.map { "Could not save the signing key to the Keychain: \($0)" }
                 ?? "Could not save the signing key to the Keychain."
@@ -1898,15 +1991,50 @@ final class AppModel: ObservableObject {
             witnessTestimonyState = .failed(msg)
             return false
         }
-        hasWitnessKey = WitnessKeyManager.hasKey
+        // The write succeeded, so a key is present by construction — no need to re-ask a Keychain
+        // that might now refuse and make the UI claim there is no key one line after storing one.
+        hasWitnessKey = true
         return true
+    }
+
+    /// G-17: move `hasWitnessKey` only on a determinate Keychain answer. `.undetermined` leaves the
+    /// flag as it was — an unreadable Keychain is not evidence that the key is gone.
+    private func refreshHasWitnessKeyIfDeterminate() {
+        switch WitnessKeyManager.checkKeyPresence() {
+        case .present: hasWitnessKey = true
+        case .absent: hasWitnessKey = false
+        case .undetermined: break
+        }
     }
 
     // E045: generate a new Ed25519 keypair and store the private key in the Keychain.
     // Surfaces the public key so the user can share it for trust-set configuration.
     // Previously, WitnessKeyManager.generateAndStoreKey() existed but was never exposed
     // through the GUI, forcing users to CLI tools or external generators.
-    func generateWitnessKey() {
+    ///
+    /// M-01: gated identically to `saveWitnessKey`. `generateAndStoreKey()` calls the same
+    /// unconditional `saveKey`, so this button was the shorter road to the same irreversible loss —
+    /// one click, no typing, every previously sealed testimony stops verifying.
+    /// - Returns: `true` when a keypair was generated; `false` when the write was refused or is
+    ///   awaiting the user's explicit confirmation.
+    @discardableResult
+    func generateWitnessKey(confirmOverwrite: Bool = false) -> Bool {
+        switch witnessKeyWriteGate() {
+        case .proceed:
+            break
+        case .needsOverwriteConfirmation:
+            guard confirmOverwrite else {
+                witnessKeyOverwritePending = true
+                return false
+            }
+        case .refusedStoreUnreachable:
+            let msg = Self.witnessKeyStoreUnreachableMessage
+            output = msg
+            showValidation = false
+            showTestimony = true
+            witnessTestimonyState = .failed(msg)
+            return false
+        }
         do {
             let publicKey = try WitnessKeyManager.generateAndStoreKey()
             hasWitnessKey = true
@@ -1921,7 +2049,9 @@ final class AppModel: ObservableObject {
             showValidation = false
             showTestimony = true
             witnessTestimonyState = .failed(msg)
+            return false
         }
+        return true
     }
 
     func witnessTestify() {
@@ -1942,8 +2072,17 @@ final class AppModel: ObservableObject {
             let msg = "Enter a domain to attest."
             output = msg; witnessTestimonyState = .failed(msg); witnessTask = nil; return
         }
-        guard WitnessKeyManager.hasKey else {
+        // G-17: same tri-state as witnessVerify. "I could not read the Keychain" must not be
+        // reported as "you have no signing key" — that reading is what sends the user to the
+        // overwrite.
+        switch WitnessKeyManager.checkKeyPresence() {
+        case .present:
+            break
+        case .absent:
             let msg = "A signing key is required — a snapshot signed with a default/empty key would be forgeable."
+            output = msg; witnessTestimonyState = .failed(msg); witnessTask = nil; return
+        case .undetermined:
+            let msg = Self.witnessKeyStoreUnreachableMessage
             output = msg; witnessTestimonyState = .failed(msg); witnessTask = nil; return
         }
         guard let key = WitnessKeyManager.loadKey() else {
@@ -2001,16 +2140,74 @@ final class AppModel: ObservableObject {
             showValidation = true
             return
         }
-        guard WitnessKeyManager.hasKey else {
+        // M-01: read the D084 tri-state, not `hasKey`. `hasKey` maps `.undetermined -> false`
+        // (WitnessKeyManager.swift:38-44) and its own doc comment tells callers that need to tell
+        // "no key" from "could not ask" to use `checkKeyPresence()` — this call site ignored that,
+        // so a merely locked Keychain rendered as a definite "no signing key on this machine.
+        // Enter your key above" and walked the user into overwriting the key they still had.
+        switch WitnessKeyManager.checkKeyPresence() {
+        case .present:
+            break
+        case .absent:
             witnessValid = false
-            witnessResult = .noKey
+            witnessResult = .noKey(.confirmedAbsent)
+            showValidation = true
+            return
+        case .undetermined(let status):
+            witnessValid = false
+            witnessResult = .noKey(.undetermined(status))
             showValidation = true
             return
         }
-        // D011: pass configured trusted keys so verification checks the signer against
-        // a known trust set, not just the snapshot's own embedded key.
-        let trustedKeys = Array(CollectorPinning.configuredTrustedSigningKeys())
+        // D011/B081: pass configured trusted WITNESS keys so verification checks the witness
+        // signer against the correct trust set, not just the snapshot's own embedded key.
+        // Previously this read the COLLECTOR trust set (CollectorPinning), so an honest witness
+        // seal rendered .untrustedSigner whenever a collector key was configured. Windows/Linux
+        // pass no trust arg and auto-load the witness set (WitnessSigner.swift:254-257); passing
+        // the witness keys here (empty -> nil) reproduces that same auto-load behavior.
+        let trustedKeys = Array(WitnessPinning.configuredTrustedWitnessKeys())
         let result = WitnessSigner.verifySnapshotDetailed(snap, trustedPublicKeys: trustedKeys.isEmpty ? nil : trustedKeys)
+        applyWitnessVerification(result)
+    }
+
+    /// 5(b): verify a testimony pasted from another machine. Unlike `witnessVerify` (which checks the
+    /// SELF snapshot), this decodes an external `WitnessSnapshot` from JSON and routes it through the
+    /// SAME `verifySnapshotDetailed` + result switch. No local signing key is required — verification
+    /// uses the snapshot's embedded public key against the configured witness trust set, exactly as
+    /// the CLI (`SyxxWitness.swift`) does. Malformed JSON yields an honest `.malformedInput` result,
+    /// never a crash.
+    func witnessVerifyExternal() {
+        let trimmed = externalSnapshotJson.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let data = trimmed.data(using: .utf8) else {
+            witnessSnapshot = nil
+            witnessValid = false
+            witnessResult = .malformedInput
+            showValidation = true
+            return
+        }
+        guard let snap = try? JSONDecoder().decode(WitnessSnapshot.self, from: data) else {
+            // Decode failure is an honest malformed/inconclusive result — not a tamper accusation
+            // and never a crash. Clear any stale self-snapshot so the report renders the paste's
+            // outcome alone.
+            witnessSnapshot = nil
+            witnessValid = false
+            witnessResult = .malformedInput
+            showValidation = true
+            return
+        }
+        // Surface the pasted snapshot's own metadata/signature in the SAME validation report the
+        // self-verify path renders.
+        witnessSnapshot = snap
+        witnessSignature = snap.signature
+        let trustedKeys = Array(WitnessPinning.configuredTrustedWitnessKeys())
+        let result = WitnessSigner.verifySnapshotDetailed(snap, trustedPublicKeys: trustedKeys.isEmpty ? nil : trustedKeys)
+        applyWitnessVerification(result)
+    }
+
+    /// Shared mapping from the forensic tri-state to the honest, non-contradictory `witnessResult`
+    /// the view renders. Both self-verify and external-paste verify funnel through here so the two
+    /// paths can never drift into rendering the same outcome differently (E021 / D069/B049).
+    private func applyWitnessVerification(_ result: WitnessSigner.SnapshotVerification) {
         switch result {
         case .valid:
             witnessValid = true
@@ -2042,7 +2239,7 @@ final class AppModel: ObservableObject {
         }
         showValidation = true
     }
-    
+
     func witnessFree() {
         // Cancel any in-flight testify first so its completion handler can't fire afterward and
         // resurrect the state we're about to clear (the task body guards on Task.isCancelled).

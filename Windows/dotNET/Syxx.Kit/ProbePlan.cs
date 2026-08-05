@@ -159,8 +159,11 @@ public static class ProbePlan
 
         string origin = targetURL ?? $"https://{domain}";
         string? licenseKey = LicenseManager.GetStoredLicenseKey();
+        // Fresh per-run replay nonce (§4.5): the server must echo it inside the signed manifest,
+        // so a captured manifest cannot be replayed into a later run within the freshness window.
+        string nonce = WarpEngine.MakeNonce();
         return await ProbeRunner.RunAsync<WarpManifestResult>("warp", budget, () =>
-            WarpEngine.RunVantageCheckAsync(origin, SyxxConfig.DimensionBaseURL, licenseKey));
+            WarpEngine.RunVantageCheckAsync(origin, SyxxConfig.DimensionBaseURL, licenseKey, nonce));
     }
 
     // MARK: - Portal

@@ -263,6 +263,33 @@ public enum WarpEngine {
                 rawManifestJSON: rawManifestJSON)
         }
 
+        // §4.4 structural gate on the AUTHENTICATED manifest (spec Amendment A4).
+        // Version gate: this client speaks exactly one dialect. Any other version — including a
+        // well-formed future one — is unverifiable content, never a guess at forward-compat semantics.
+        guard manifest["warp_manifest_version"] as? String == "WARP_MANIFEST_V1" else {
+            return stopped(signature: .verified, manifest: .malformed, freshness: .notEvaluated,
+                reason: "Signature verified but warp_manifest_version is not WARP_MANIFEST_V1 (unsupported dialect).",
+                keyId: keyId, rawManifestJSON: rawManifestJSON)
+        }
+        // Assets gate: `assets` is REQUIRED, must be an array, and every element must be a JSON
+        // object. The old `as? [[String: Any]] ?? []` collapsed a corrupt asset list to "nothing
+        // declared" — which, with a matching page hash, produced a false VERIFIED_MATCH.
+        guard let assetsAny = manifest["assets"] as? [Any] else {
+            return stopped(signature: .verified, manifest: .malformed, freshness: .notEvaluated,
+                reason: "Signature verified but the manifest has no assets array.",
+                keyId: keyId, rawManifestJSON: rawManifestJSON)
+        }
+        var declaredAssets: [[String: Any]] = []
+        declaredAssets.reserveCapacity(assetsAny.count)
+        for element in assetsAny {
+            guard let dict = element as? [String: Any] else {
+                return stopped(signature: .verified, manifest: .malformed, freshness: .notEvaluated,
+                    reason: "Signature verified but a declared asset entry is not a JSON object.",
+                    keyId: keyId, rawManifestJSON: rawManifestJSON)
+            }
+            declaredAssets.append(dict)
+        }
+
         let manifestOrigin = manifest["origin_url"] as? String ?? ""
         let finalURL = manifest["final_url"] as? String
         let declaredHtmlSha = (manifest["html_sha256"] as? String)?.lowercased()
@@ -271,7 +298,6 @@ public enum WarpEngine {
         let policy = WarpRedirectPolicy.parse(manifest["redirect_policy"] as? String)
         let allowedRedirects = (manifest["allowed_redirects"] as? [Any])?.compactMap { $0 as? String } ?? []
         let manifestNonce = manifest["nonce"] as? String
-        let declaredAssets = (manifest["assets"] as? [[String: Any]]) ?? []
 
         // §4.5 — freshness / origin / nonce (only meaningful on a verified, parsed manifest).
         let freshness = evaluateFreshness(nowMs: nowMs, timestamp: timestamp, freshnessSeconds: freshnessSeconds,
@@ -374,11 +400,24 @@ public enum WarpEngine {
     /// B085-style 300 000 ms clock-skew tolerance, matching WitnessSigner.
     static let skewToleranceMillis: UInt64 = 300_000
 
+    /// Verifier-side ceiling on the manifest-declared freshness window, in seconds (spec Amendment
+    /// A4): `effectiveFreshness = min(freshness_seconds, 600)`. A signed manifest cannot extend its
+    /// own replayable lifetime past this ceiling, and the clamp is applied BEFORE the millisecond
+    /// conversion so an absurd declared value can never overflow (unclamped, `* 1000` on a value
+    /// near `UInt64.max / 1000` traps — corpus case 031). Twin constant:
+    /// WarpEngine.cs `MaxFreshnessWindowSeconds`.
+    static let maxFreshnessWindowSeconds: UInt64 = 600
+
     static func evaluateFreshness(nowMs: UInt64, timestamp: UInt64?, freshnessSeconds: UInt64,
                                   manifestOrigin: String, requestedOrigin: String,
                                   clientNonce: String?, manifestNonce: String?) -> WarpFreshnessState {
         guard let timestamp else { return .expired }   // no timestamp = cannot establish freshness
-        if nowMs > timestamp && (nowMs - timestamp) > freshnessSeconds * 1000 { return .expired }
+        // Amendment A4 freshness ceiling: clamp BEFORE any multiplication (an unclamped absurd
+        // freshness_seconds traps on `* 1000`). The reporting multiply is kept as belt-and-braces
+        // so no future edit can reintroduce the trap; post-clamp it can never overflow.
+        let effectiveFreshnessSeconds = min(freshnessSeconds, maxFreshnessWindowSeconds)
+        let (windowMs, overflowed) = effectiveFreshnessSeconds.multipliedReportingOverflow(by: 1000)
+        if nowMs > timestamp && !overflowed && (nowMs - timestamp) > windowMs { return .expired }
         if timestamp > nowMs && (timestamp - nowMs) > skewToleranceMillis { return .futureDated }
         if manifestOrigin != requestedOrigin { return .originMismatch }
         if let clientNonce, manifestNonce != clientNonce { return .replayNonceMismatch }
@@ -411,15 +450,36 @@ public enum WarpEngine {
 
     // MARK: - Small helpers
 
+    /// Fresh per-run replay nonce: 16 random bytes, base64url without padding (22 chars — fits the
+    /// server's `[A-Za-z0-9_-]{1,64}` nonce gate). Generated client-side per verification run so
+    /// the signed manifest must echo it (§4.5) — replay resistance no longer rests on the freshness
+    /// window alone. Uses `SystemRandomNumberGenerator` (cryptographically secure on Apple
+    /// platforms). Twin: WarpEngine.cs `MakeNonce()`.
+    public static func makeNonce() -> String {
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for i in bytes.indices { bytes[i] = UInt8.random(in: .min ... .max) }
+        return Data(bytes).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
     static func sha256Hex(_ bytes: [UInt8]) -> String {
         SHA256.hash(data: Data(bytes)).map { String(format: "%02x", $0) }.joined()
     }
 
     private static func uintValue(_ any: Any?) -> UInt64? {
-        if let n = any as? UInt64 { return n }
-        if let n = any as? Int { return n >= 0 ? UInt64(n) : nil }
-        if let n = any as? Double { return n >= 0 ? UInt64(n) : nil }
-        if let n = any as? NSNumber { return n.uint64Value }
+        // Spec §2: timestamps are INTEGER milliseconds. Reject any floating-point value (a JSON
+        // `1754179200000.5` arrives as a float-typed NSNumber) to match the C# `GetUInt`
+        // (`TryGetUInt64` refuses non-integral numbers) — a lenient parse here would let the two
+        // engines disagree on the same signed manifest.
+        if let n = any as? NSNumber {
+            if CFGetTypeID(n) == CFBooleanGetTypeID() { return nil }   // JSON true/false is not a number
+            if CFNumberIsFloatType(n) { return nil }                    // strict: integer only
+            if String(cString: n.objCType) == "Q" { return n.uint64Value }   // large unsigned
+            let v = n.int64Value
+            return v >= 0 ? UInt64(v) : nil
+        }
         if let s = any as? String { return UInt64(s) }
         return nil
     }
@@ -470,9 +530,11 @@ public enum WarpEngine {
     /// SSRF-safe client-vantage fetch that honors the §6 redirect policy. TLS SNI + certificate
     /// validation stay bound to the ORIGINAL HOSTNAME (the request URL keeps the hostname — the fix
     /// for the retired `pinnedRequest`, which rewrote the host to the IP literal and so validated the
-    /// certificate against the IP). SSRF is enforced by resolving+classifying the host to a public IP
-    /// before the fetch and re-validating each redirect hop. Fail closed: any non-2xx, any disallowed
-    /// redirect, or any non-public host → `.failed`.
+    /// certificate against the IP). SSRF is enforced by resolving+classifying the INITIAL host to a
+    /// public IP here, and by `WarpRedirectController`, which applies the same `validatePublicHost`
+    /// gate to EVERY redirect-hop target before allowing it (previously only the initial URL was
+    /// validated — a policy-permitted redirect could bounce the fetch into RFC1918/loopback space).
+    /// Fail closed: any non-2xx, any disallowed redirect, or any non-public host → `.failed`.
     static let vantageFetch: @Sendable (WarpAssetRequest) async -> WarpFetchOutcome = { req in
         guard let url = URL(string: req.url), let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https", url.host != nil else {
@@ -485,6 +547,11 @@ public enum WarpEngine {
         defer { session.finishTasksAndInvalidate() }
         var request = URLRequest(url: url)   // hostname preserved → TLS SNI/cert bind to hostname.
         request.httpMethod = "GET"
+        // §8 transfer-encoding note: URLSession/CFNetwork transparently decodes Content-Encoding
+        // gzip/br, so `data` below is ALWAYS the decoded plaintext (measured; no production change
+        // needed for brotli). CFNetwork nevertheless leaves the original `Content-Encoding: br`
+        // header visible in `http.allHeaderFields` after decoding — downstream code must NEVER
+        // branch on that header to re-decode (double-decoding corrupts the bytes it hashes).
         guard let (data, resp) = try? await session.data(for: request),
               let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             return .failed
@@ -515,38 +582,62 @@ public enum WarpEngine {
     }
 }
 
-/// §6 redirect-policy enforcer for the client-vantage fetch. Blocks any hop the policy forbids
+/// §6 redirect-policy enforcer for the client-vantage fetch. Blocks any hop the policy forbids AND
+/// any hop whose target does not pass the same `validatePublicHost` SSRF gate the initial URL passed
 /// (fail closed); an attempted forbidden hop is recorded so the caller can mark the fetch failed.
 final class WarpRedirectController: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private let policy: WarpRedirectPolicy
     private let allowed: Set<String>
-    private(set) var blockedRedirect = false
+    private let lock = NSLock()
+    private var _blockedRedirect = false
+
+    var blockedRedirect: Bool { lock.withLock { _blockedRedirect } }
+    private func markBlocked() { lock.withLock { _blockedRedirect = true } }
 
     init(policy: WarpRedirectPolicy, allowed: Set<String>) {
         self.policy = policy
         self.allowed = allowed
     }
 
+    /// Pure §6 policy half of the hop decision (no I/O) — split out so it is unit-testable.
+    func hopPermittedByPolicy(from: URL, to: URL) -> Bool {
+        switch policy {
+        case .none:
+            return false   // no redirect permitted.
+        case .sameOrigin:
+            return from.scheme == to.scheme && from.host == to.host && (from.port ?? -1) == (to.port ?? -1)
+        case .list:
+            return allowed.contains(to.absoluteString)
+        }
+    }
+
+    /// Full hop decision: §6 policy AND the per-hop SSRF gate. The C# twin validates per-connection
+    /// (its ConnectCallback re-resolves every hop); this is the Swift equivalent — without it a
+    /// policy-permitted redirect (same-origin or listed) could bounce the fetch into
+    /// RFC1918/loopback space that the initial-URL check never saw.
+    func shouldFollowHop(from: URL, to: URL) async -> Bool {
+        guard hopPermittedByPolicy(from: from, to: to) else { return false }
+        return await WarpEngine.validatePublicHost(to)
+    }
+
     func urlSession(_ session: URLSession, task: URLSessionTask,
                     willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
                     completionHandler: @escaping (URLRequest?) -> Void) {
         guard let from = task.originalRequest?.url ?? response.url, let to = request.url else {
-            blockedRedirect = true; completionHandler(nil); return
+            markBlocked(); completionHandler(nil); return
         }
-        let ok: Bool
-        switch policy {
-        case .none:
-            ok = false   // no redirect permitted.
-        case .sameOrigin:
-            ok = from.scheme == to.scheme && from.host == to.host && (from.port ?? -1) == (to.port ?? -1)
-        case .list:
-            ok = allowed.contains(to.absoluteString)
-        }
-        if ok {
-            completionHandler(request)
-        } else {
-            blockedRedirect = true
-            completionHandler(nil)
+        // The SSRF half is async (may resolve DNS); the delegate contract permits deferring the
+        // completion handler, so evaluate the full decision in a task and answer when it lands.
+        // URLSession invokes this delegate once per hop and expects exactly one reply, so the
+        // handler is never called concurrently — safe to carry into the task despite not being Sendable.
+        nonisolated(unsafe) let reply = completionHandler
+        Task {
+            if await self.shouldFollowHop(from: from, to: to) {
+                reply(request)
+            } else {
+                self.markBlocked()
+                reply(nil)
+            }
         }
     }
 }

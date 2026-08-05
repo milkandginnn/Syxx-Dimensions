@@ -150,6 +150,19 @@ jobs:
           -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
           -o out/${{ matrix.rid }}
 
+      # P-19 (part 1 of 2). Until now this publish produced a binary that was thrown away at the
+      # end of the job: `upload-artifact` appeared exactly twice in this workflow — the parity
+      # transcripts and the macOS .app — so NO Linux artifact left any run, on the platform that
+      # ships first. The packaged .deb/.snap in the jobs below are part 2; this covers the bare
+      # per-RID CLI, which is what anyone bisecting a Linux-only defect actually wants.
+      - name: Upload the self-contained CLI (${{ matrix.rid }})
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: syxx-cli-${{ matrix.rid }}
+          path: out/${{ matrix.rid }}
+          if-no-files-found: error
+
       # --------------------------------------------------------------- Swift leg
       - name: Test the macOS twin (SyxxKit)
         if: matrix.kind == 'swift'
@@ -505,3 +518,518 @@ jobs:
             exit 1
           fi
           echo "All transcripts match."
+
+  # ====================================================================== E3: Linux packaging
+  # WHY THESE JOBS EXIST AT ALL (P-09..P-12, P-17..P-19)
+  #   Before them, `grep -rE 'build_deb|snapcraft|dpkg' .github/` returned ZERO hits. No CI job
+  #   had ever built either Linux package. That is the mechanism, not a coincidence: the .deb
+  #   shipped only the GUI, the snap shipped only the CLI, both assemblies are named `Syxx` so
+  #   neither omission was visible, the snap version was hardcoded, there were no maintainer
+  #   scripts at all, and the licence node-lock helper was never invoked — for as long as nothing
+  #   built the packages, every one of those was invisible and stayed fixed.
+  #
+  #   macOS already learned this. The `package-macos` job above says why it exists: the bundle
+  #   layout and helper embedding "were never exercised, which is how D079's missing
+  #   __launchd_plist went unnoticed." These jobs are the Linux half of that lesson.
+  #
+  #   A build that produces a file proves little, so `install-smoke-deb` installs the package in
+  #   a clean container and asserts the properties a user depends on.
+  package-deb:
+    name: .deb build + payload assertions (${{ matrix.arch }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    steps:
+      # Full history: build_deb.sh derives the package build number from
+      # `git rev-list --count HEAD`. A shallow clone silently yields 1 for every build, so every
+      # package would carry Version: <ver>-1 and be indistinguishable from every other.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET (pinned from Windows/global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: Windows/global.json
+
+      - name: Build the .deb
+        run: |
+          chmod +x Linux/Ubuntu/build_deb.sh
+          SYXX_DEB_ARCH=${{ matrix.arch }} Linux/Ubuntu/build_deb.sh release
+
+      # P-09/P-17. build_deb.sh has its own fail-closed staging guard, but that guard runs on the
+      # staging tree; this checks the ARCHIVE, which is the artifact a user actually receives.
+      - name: Assert the archive carries BOTH programs and the new packaging files
+        run: |
+          deb=$(ls dist/syxx_*_${{ matrix.arch }}.deb)
+          echo "Inspecting $deb"
+          dpkg-deb -c "$deb" > /tmp/contents.txt
+          dpkg-deb -I "$deb" > /tmp/control.txt
+          dpkg-deb -I "$deb" postinst > /tmp/postinst.txt || true
+
+          fail=0
+          require_path() {
+            if ! grep -qE " \./${1}\$| \./${1} " /tmp/contents.txt; then
+              echo "::error title=P-09/P-17 regression::the .deb does not contain /${1}. $2"
+              fail=1
+            fi
+          }
+          # The CLI. Its absence is the original defect: /usr/bin/syxx resolved to the GUI, so
+          # `sudo syxx cage --duration 30` — a string the GUI itself prints — launched the GUI as
+          # root with an argument it ignores.
+          require_path "opt/syxx/cli/Syxx" "The CLI half of the product is missing."
+          require_path "usr/bin/syxx"      "The CLI launcher is missing."
+          # The GUI. Its absence would be the mirror-image defect the snap had.
+          require_path "opt/syxx/gui/Syxx" "The GUI half of the product is missing."
+          require_path "usr/bin/syxx-gui"  "The GUI launcher is missing."
+          # P-02: the polkit action.
+          require_path "usr/share/polkit-1/actions/app.syxx.policy" "No polkit action is shipped."
+          # P-03: the node-lock helper must be IN the package; postinst runs where no repo exists.
+          require_path "usr/lib/syxx/syxx-capture-hardware-id.sh" \
+            "Without it postinst cannot node-lock and every reinstall burns an activation."
+
+          # P-10: maintainer scripts live in the control archive, not the data archive.
+          if ! grep -q "postinst" /tmp/control.txt; then
+            echo "::error title=P-10 regression::the .deb declares no postinst. The hardware id is never captured."
+            fail=1
+          fi
+          if ! grep -q "postrm" /tmp/control.txt; then
+            echo "::error title=P-10 regression::the .deb declares no postrm."
+            fail=1
+          fi
+
+          # P-11: the two dependencies whose absence silently degrades behaviour rather than
+          # failing loudly. libsecret-tools is the load-bearing one — see the audit comment in
+          # build_deb.sh — and pkexec backs both UpdateService.cs:409 and the polkit action.
+          for dep in libsecret-1-0 libsecret-tools pkexec; do
+            if ! grep -E '^ Depends:' /tmp/control.txt | grep -q "$dep"; then
+              echo "::error title=P-11 regression::Depends: does not list '$dep'."
+              fail=1
+            fi
+          done
+
+          # P-12's .deb half: the version must match SyxxConfig.Version, not a typed constant.
+          want=$(sed -n 's/.*public const string Version[^"]*"\([^"]*\)".*/\1/p' \
+                 Windows/dotNET/Syxx.Kit/SyxxConfig.cs | head -1)
+          if [ -z "$want" ]; then
+            echo "::error title=version gate input missing::could not read SyxxConfig.Version"
+            fail=1
+          elif ! grep -E "^ Version: ${want}-" /tmp/control.txt >/dev/null; then
+            echo "::error title=version drift::package Version does not start with SyxxConfig.Version ($want)."
+            grep -E '^ Version:' /tmp/control.txt
+            fail=1
+          fi
+
+          echo "--- control ---"; cat /tmp/control.txt
+          exit $fail
+
+      # P-19 (part 2 of 2).
+      - name: Upload the .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: syxx-deb-${{ matrix.arch }}
+          path: dist/*.deb
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- install + smoke the package
+  # The standing bar for this wave is that P-09..P-13 and P-17..P-19 become closable by CI ALONE.
+  # Building an archive does not reach that bar: the archive can be well-formed and still be
+  # uninstallable, or install and leave a program that cannot start. This job installs it into a
+  # bare ubuntu:24.04 — deliberately NOT the runner image, which has hundreds of libraries
+  # preinstalled and would mask exactly the missing-Depends class P-11 is about.
+  install-smoke-deb:
+    name: .deb install + smoke (${{ matrix.arch }}, ubuntu:24.04 container)
+    needs: package-deb
+    runs-on: ${{ matrix.runs-on }}
+    container:
+      image: ubuntu:24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    steps:
+      # ORDER IS LOAD-BEARING. Everything that tests the package's DEPENDS runs first, on a
+      # container carrying nothing but the base image. `actions/checkout` is deliberately NOT
+      # first: it needs git, and apt-installing git before the package under test would drag in
+      # a pile of libraries that could satisfy a dependency the package failed to declare —
+      # exactly the masking effect that makes the runner image useless for this question.
+      - name: Download the .deb
+        uses: actions/download-artifact@v4
+        with:
+          name: syxx-deb-${{ matrix.arch }}
+          path: /tmp/deb
+
+      # --no-install-recommends on purpose: Recommends must not be able to rescue a Depends the
+      # package failed to declare. If apt cannot satisfy the dependency graph, it fails HERE.
+      - name: Install with apt (this is the Depends test — P-11)
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends /tmp/deb/*.deb
+
+      # A failing postinst leaves dpkg in "half-configured"/"iF". "install ok installed" is
+      # therefore direct evidence that DEBIAN/postinst ran and exited 0 (P-10).
+      - name: Assert the maintainer script ran and the package is fully configured
+        run: |
+          status=$(dpkg-query -W -f='${Status}' syxx)
+          echo "dpkg status: $status"
+          if [ "$status" != "install ok installed" ]; then
+            echo "::error title=P-10 regression::syxx is not fully configured ('$status'). DEBIAN/postinst failed."
+            exit 1
+          fi
+
+      # P-09/P-17: the CLI must be the thing `syxx` resolves to. `syxx --version` prints
+      # "syxx <version>" (Program.cs:94-99). The GUI has no such output — if the launcher were
+      # wired to the GUI again this command would hang or print nothing, which is precisely the
+      # shipped defect.
+      - name: Assert `syxx` is the CLI and answers
+        run: |
+          out=$(timeout 60 syxx --version)
+          echo "syxx --version -> $out"
+          # Program.cs:94-99 prints "syxx <version>" for --version. The Avalonia GUI has no such
+          # output — under the shipped defect this command opened a window or printed nothing.
+          # Exact-version equality is asserted after checkout; this runs here, before any tooling
+          # is installed, so it doubles as proof the CLI starts on a bare container.
+          case "$out" in
+            "syxx "[0-9]*) : ;;
+            *)
+              echo "::error title=P-09 regression::'syxx --version' printed '$out'. /usr/bin/syxx is not the CLI."
+              exit 1
+              ;;
+          esac
+
+      - name: Assert `syxx-gui` is installed and is a distinct program
+        run: |
+          test -x /usr/bin/syxx-gui || { echo "::error title=P-17 regression::/usr/bin/syxx-gui is missing"; exit 1; }
+          test -x /opt/syxx/gui/Syxx || { echo "::error title=P-17 regression::/opt/syxx/gui/Syxx is missing"; exit 1; }
+          test -x /opt/syxx/cli/Syxx || { echo "::error title=P-09 regression::/opt/syxx/cli/Syxx is missing"; exit 1; }
+
+          # The two native apphosts ARE byte-identical, and that is correct, not a defect: the
+          # .NET apphost is a generic launcher patched with the name of the managed assembly to
+          # load, and both projects set <AssemblyName>Syxx</AssemblyName>, so both get patched
+          # with "Syxx.dll" and come out to the same 78256 bytes. Verified by building the
+          # package and comparing. Do NOT "fix" this by diffing the apphosts — that check fails
+          # on a CORRECT package. The real product lives in the managed assembly beside them.
+          if cmp -s /opt/syxx/cli/Syxx.dll /opt/syxx/gui/Syxx.dll; then
+            echo "::error title=P-09/P-17 regression::/opt/syxx/cli/Syxx.dll and /opt/syxx/gui/Syxx.dll are byte-identical — one publish overwrote the other, so the package ships one program twice."
+            exit 1
+          fi
+          # Positive identification, so this cannot pass on two copies of the wrong half.
+          test -f /opt/syxx/gui/Avalonia.dll || {
+            echo "::error title=P-17 regression::/opt/syxx/gui has no Avalonia.dll — that tree is not the GUI."; exit 1; }
+          if [ -f /opt/syxx/cli/Avalonia.dll ]; then
+            echo "::error title=P-09 regression::/opt/syxx/cli contains Avalonia.dll — the GUI was published into the CLI's directory."
+            exit 1
+          fi
+
+      # P-11, precisely: every shared library the shipped native code needs must resolve using
+      # ONLY the declared Depends. Deterministic, and it is the exact question "is libsecret /
+      # fontconfig / libX11 in Depends?" reduced to something a machine can answer.
+      - name: Assert the dynamic linker resolves every shipped native library
+        run: |
+          fail=0
+          checked=0
+          for f in /opt/syxx/cli/Syxx /opt/syxx/gui/Syxx \
+                   $(find /opt/syxx -name '*.so' -o -name '*.so.*' | sort); do
+            [ -f "$f" ] || continue
+            checked=$((checked + 1))
+            if ldd "$f" 2>/dev/null | grep -q "not found"; then
+              echo "::error title=P-11 missing dependency::$f has unresolved libraries:"
+              ldd "$f" | grep "not found"
+              fail=1
+            fi
+          done
+          # Cannot pass vacuously: a find that matched nothing would otherwise report success.
+          if [ "$checked" -lt 3 ]; then
+            echo "::error title=gate input missing::only $checked native objects were checked; the package layout changed."
+            exit 1
+          fi
+          echo "Checked $checked native objects; all shared-library references resolved."
+          exit $fail
+
+      # ---- The Depends test is over. From here the container may gain tooling. ----
+      - name: Install smoke tooling
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get install -y --no-install-recommends git libxml2-utils xvfb
+
+      - name: Checkout (for the source-vs-shipped comparisons below)
+        uses: actions/checkout@v4
+
+      # P-12's .deb half, asserted against the running program rather than the control file.
+      - name: Assert the installed CLI reports SyxxConfig.Version
+        run: |
+          out=$(timeout 60 syxx --version)
+          want=$(sed -n 's/.*public const string Version[^"]*"\([^"]*\)".*/\1/p' \
+                 Windows/dotNET/Syxx.Kit/SyxxConfig.cs | head -1)
+          test -n "$want" || { echo "::error title=version gate input missing::could not read SyxxConfig.Version"; exit 1; }
+          if [ "$out" != "syxx $want" ]; then
+            echo "::error title=version drift::the installed CLI printed '$out', expected 'syxx $want'."
+            exit 1
+          fi
+          echo "installed CLI reports $out"
+
+      # P-02. The action file must land where polkitd reads it, be well-formed, and — the part
+      # that actually matters — annotate a path that EXISTS. An action pointing at a renamed
+      # binary matches nothing and silently falls back to the generic pkexec dialog.
+      - name: Assert the polkit action landed, parses, and points at a real program
+        run: |
+          action=/usr/share/polkit-1/actions/app.syxx.policy
+          test -f "$action" || { echo "::error title=P-02 regression::$action is missing"; exit 1; }
+          xmllint --noout --nonet "$action" || { echo "::error title=P-02::$action is not well-formed XML"; exit 1; }
+          path=$(sed -n 's|.*<annotate key="org.freedesktop.policykit.exec.path">\(.*\)</annotate>.*|\1|p' "$action")
+          echo "exec.path -> $path"
+          if [ -z "$path" ]; then
+            echo "::error title=P-02::the action declares no org.freedesktop.policykit.exec.path annotation."
+            exit 1
+          fi
+          if [ ! -x "$path" ]; then
+            echo "::error title=P-02::the action annotates '$path', which is not an executable on this system."
+            exit 1
+          fi
+          # Per-capture prompt is an owner decision (decision 2). auth_admin_keep would cache the
+          # authorization for ~5 minutes and let a second capture start silently.
+          # Matched inside the <allow_*> elements only: a bare `grep auth_admin_keep` also hits
+          # the file's own comment explaining why it is not used, and fails on a correct policy.
+          if grep -Eq '<allow_(any|inactive|active)>auth_admin_keep</' "$action"; then
+            echo "::error title=P-02::the action grants auth_admin_keep; the decision is a prompt PER CAPTURE."
+            exit 1
+          fi
+          # And the positive form: every decision arm must actually require admin auth. A file
+          # that reached `yes` on any arm would authorize root with no prompt at all.
+          for arm in any inactive active; do
+            if ! grep -Eq "<allow_${arm}>auth_admin</allow_${arm}>" "$action"; then
+              echo "::error title=P-02::allow_${arm} is not auth_admin in $action:"
+              grep -E "<allow_${arm}>" "$action" || echo "  (element absent)"
+              exit 1
+            fi
+          done
+
+      # P-03. The container has no readable DMI UUID, so the shipped helper correctly wrote
+      # nothing during postinst — which means "the file exists" is NOT an available assertion and
+      # claiming it would be dishonest. What IS provable here: the helper ships at the path
+      # postinst calls, it is byte-identical to the reviewed source, and it produces a correct
+      # hash when given a DMI UUID.
+      - name: Assert the node-lock helper ships intact and works
+        run: |
+          helper=/usr/lib/syxx/syxx-capture-hardware-id.sh
+          test -x "$helper" || { echo "::error title=P-03 regression::$helper is missing or not executable"; exit 1; }
+          if ! cmp -s "$helper" scripts/syxx-capture-hardware-id.sh; then
+            echo "::error title=P-03::the packaged helper differs from scripts/syxx-capture-hardware-id.sh."
+            diff "$helper" scripts/syxx-capture-hardware-id.sh || true
+            exit 1
+          fi
+          printf '4c4c4544-0037-3210-8044-b8c04f4e4d32\n' > /tmp/fake-dmi
+          SYXX_DMI_PATH=/tmp/fake-dmi "$helper" /tmp/hwid
+          if ! grep -qE '^[0-9a-f]{64}$' /tmp/hwid; then
+            echo "::error title=P-03::the helper did not write a SHA-256 hash:"; cat /tmp/hwid || true; exit 1
+          fi
+          # The all-zero placeholder must be REFUSED: every machine reporting it would otherwise
+          # share one fingerprint, which is worse than having none because it looks legitimate.
+          printf '00000000-0000-0000-0000-000000000000\n' > /tmp/zero-dmi
+          rm -f /tmp/hwid-zero
+          SYXX_DMI_PATH=/tmp/zero-dmi "$helper" /tmp/hwid-zero
+          if [ -f /tmp/hwid-zero ]; then
+            echo "::error title=P-03::the helper accepted the all-zero placeholder UUID."; exit 1
+          fi
+          echo "node-lock helper OK (real UUID hashed; placeholder refused)"
+
+      # The one check here with real flake risk, kept fatal on purpose. It is the only automated
+      # evidence that has ever existed that the shipped GUI STARTS. A bare container is harsher
+      # than a real desktop (no GL, no session bus, no system fonts), so a failure here is not
+      # automatically a user-facing bug — but it is always a real finding about what the package
+      # declares, and the alternative is going on shipping a GUI nothing has ever launched.
+      - name: Assert the GUI starts (xvfb, minimal container)
+        run: |
+          set +e
+          xvfb-run -a --server-args="-screen 0 1280x1024x24" \
+            timeout 15 /usr/bin/syxx-gui > /tmp/gui.log 2>&1
+          rc=$?
+          set -e
+          echo "--- syxx-gui output ---"; cat /tmp/gui.log || true
+          # timeout kills a still-running process with 124. That is the success case: the GUI was
+          # alive 15 seconds after launch. Anything else means it exited on its own.
+          if [ "$rc" -ne 124 ]; then
+            echo "::error title=GUI cannot start::/usr/bin/syxx-gui exited with $rc within 15s on a minimal Ubuntu carrying only the package's declared Depends. Either a Depends is missing or the GUI genuinely cannot start there."
+            exit 1
+          fi
+          echo "GUI survived 15s under Xvfb."
+
+  # ------------------------------------------------------------------------------- snap package
+  # P-12 + P-09/P-17 for the snap. Linux/snap/snapcraft.yaml has never been built by anything;
+  # it still carried a committed UNVERIFIED marker on its own stage path. This job is what turns
+  # that marker into an answer. It is BLOCKING on purpose — a packaging job allowed to fail
+  # quietly is indistinguishable from the zero jobs that existed before it.
+  package-snap:
+    name: snap build (snapcraft)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # snapcraft resolves `source: .` against the directory containing snap/snapcraft.yaml, and
+      # the parts reference repo-root paths (Windows/dotNET/Syxx, Linux/Ubuntu/SyxxUI.Avalonia).
+      # Copying rather than moving keeps Linux/snap/snapcraft.yaml the single source of truth.
+      - name: Stage snapcraft.yaml at the project root
+        run: |
+          mkdir -p snap
+          cp Linux/snap/snapcraft.yaml snap/snapcraft.yaml
+
+      - name: Build the snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      # P-12: the snap version must now come from SyxxConfig.Version via adopt-info, not from a
+      # hardcoded string under a comment asking a human to keep it in step. The filename carries
+      # the adopted version, so it is checkable without unpacking.
+      - name: Assert the snap version was adopted from SyxxConfig.Version
+        run: |
+          snapfile="${{ steps.build.outputs.snap }}"
+          echo "built: $snapfile"
+          want=$(sed -n 's/.*public const string Version[^"]*"\([^"]*\)".*/\1/p' \
+                 Windows/dotNET/Syxx.Kit/SyxxConfig.cs | head -1)
+          test -n "$want" || { echo "::error title=version gate input missing::could not read SyxxConfig.Version"; exit 1; }
+          case "$(basename "$snapfile")" in
+            syxx_${want}_*.snap) echo "snap version == $want" ;;
+            *)
+              echo "::error title=P-12 regression::snap filename '$(basename "$snapfile")' does not carry SyxxConfig.Version ($want)."
+              exit 1
+              ;;
+          esac
+
+      # P-09/P-17 for the snap: both programs, in separate directories. Both projects set
+      # <AssemblyName>Syxx</AssemblyName>, so a single prime directory would silently keep only
+      # one — which is the shape of the original defect on both packages.
+      #
+      # Discriminate on the MANAGED assembly, not the apphost: the two native apphosts are
+      # legitimately byte-identical (a generic launcher patched with "Syxx.dll", the same string
+      # for both). Confirmed by building the .deb and comparing.
+      - name: Assert the snap carries BOTH programs
+        run: |
+          sudo unsquashfs -d /tmp/snapfs "${{ steps.build.outputs.snap }}" >/dev/null
+          fail=0
+          for p in opt/syxx/cli/Syxx opt/syxx/cli/Syxx.dll opt/syxx/gui/Syxx opt/syxx/gui/Syxx.dll; do
+            if [ ! -f "/tmp/snapfs/$p" ]; then
+              echo "::error title=P-09/P-17 regression::the snap does not contain $p"
+              fail=1
+            fi
+          done
+          if [ "$fail" -eq 0 ] && cmp -s /tmp/snapfs/opt/syxx/cli/Syxx.dll /tmp/snapfs/opt/syxx/gui/Syxx.dll; then
+            echo "::error title=P-09/P-17 regression::the two Syxx.dll are byte-identical — one publish overwrote the other, so the snap ships one program twice."
+            fail=1
+          fi
+          test -f /tmp/snapfs/opt/syxx/gui/Avalonia.dll || {
+            echo "::error title=P-17 regression::the snap's gui tree has no Avalonia.dll — that tree is not the GUI."; fail=1; }
+          if [ -f /tmp/snapfs/opt/syxx/cli/Avalonia.dll ]; then
+            echo "::error title=P-09 regression::the snap's cli tree contains Avalonia.dll — the GUI was published into the CLI's directory."
+            fail=1
+          fi
+          exit $fail
+
+      - name: Upload the snap
+        uses: actions/upload-artifact@v4
+        with:
+          name: syxx-snap-amd64
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+
+  # -------------------------------------------------- real Secret Service leg (owner decision 8)
+  # Every existing test of LinuxSecretStore runs on a host with no libsecret, no secret-tool and
+  # no keyring, so the ONLY backend they have ever exercised is the encrypted file fallback.
+  # WitnessKeyStoreLoadResultTests.cs:402 says so in as many words. That means the keyring paths
+  # — the ones a real Ubuntu desktop user gets — have never been executed anywhere.
+  #
+  # Owner decision 8 chose route (a): stand up a real Secret Service in CI. Route (b), an interim
+  # keyType presence record, was rejected because a stale record bricks the user into a permanent
+  # Undetermined with no in-app recovery.
+  #
+  # FOR SEAT E4 — HOW TO OPT IN
+  #   Job name: `linux-secret-store`. Mark any test that needs a live keyring with
+  #     [Trait("Category", "SecretService")]
+  #   and it runs here and nowhere else. The environment variable SYXX_CI_SECRET_SERVICE=1 is
+  #   also exported, for tests that want to assert "a Secret Service is present" rather than skip.
+  #   The existing WitnessKeyStoreLoadResult and MachineFingerprint classes are included by name
+  #   so this leg measures something real today rather than waiting on new tests.
+  linux-secret-store:
+    name: LinuxSecretStore against a real GNOME Keyring
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET (pinned from Windows/global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: Windows/global.json
+
+      - name: Install a Secret Service
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libsecret-1-0 libsecret-tools gnome-keyring dbus-x11
+
+      # dbus-run-session gives the job its own session bus, which gnome-keyring-daemon needs to
+      # claim org.freedesktop.secrets on. The daemon is started tolerantly; the PROBE below is
+      # the strict gate, and it is what stops this leg passing vacuously. Without it, a keyring
+      # that failed to start would leave the tests exercising the file fallback again and
+      # reporting green — the same shape as the transcript gate this workflow already calls out.
+      - name: Start the keyring, prove it answers, then run the secret-store tests
+        run: |
+          dbus-run-session -- bash -euo pipefail -c '
+            echo -n "" | gnome-keyring-daemon --unlock --components=secrets --daemonize > /tmp/gk.env 2>/tmp/gk.err || true
+            if [ -s /tmp/gk.env ]; then set -a; . /tmp/gk.env; set +a; fi
+            sleep 2
+
+            # STRICT: a round-trip through the real Secret Service. If this fails, the leg is
+            # measuring the file fallback and must not report success.
+            printf "probe-secret" | secret-tool store --label=syxx-ci-probe \
+              syxx-key-type ci-probe syxx-key-id probe
+            got=$(secret-tool lookup syxx-key-type ci-probe syxx-key-id probe)
+            if [ "$got" != "probe-secret" ]; then
+              echo "::error title=Secret Service not live::stored probe-secret, read back [$got]. This leg cannot measure the keyring paths."
+              cat /tmp/gk.err || true
+              exit 1
+            fi
+            secret-tool clear syxx-key-type ci-probe syxx-key-id probe
+            echo "Secret Service round-trip OK."
+
+            export SYXX_CI_SECRET_SERVICE=1
+            dotnet test Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj -c Release --nologo \
+              --filter "Category=SecretService|FullyQualifiedName~WitnessKeyStoreLoadResult|FullyQualifiedName~MachineFingerprint" \
+              --logger "trx;LogFileName=secret-service.trx" --results-directory /tmp/trx
+          '
+
+      # A filter that matches nothing makes this leg another check that cannot fail. Assert a
+      # positive test count explicitly rather than trusting the runner exit code.
+      - name: Assert the filtered run actually executed tests
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, sys, xml.etree.ElementTree as ET
+          files = glob.glob('/tmp/trx/**/*.trx', recursive=True)
+          if not files:
+              print("::error title=Secret-store leg measured nothing::no .trx was produced.")
+              sys.exit(1)
+          total = 0
+          for f in files:
+              for c in ET.parse(f).getroot().iter():
+                  if c.tag.endswith('Counters'):
+                      total += int(c.get('total', 0))
+          print(f"executed {total} test(s) across {len(files)} trx file(s)")
+          if total == 0:
+              print("::error title=Secret-store leg measured nothing::the --filter matched zero tests.")
+              sys.exit(1)
+          PY

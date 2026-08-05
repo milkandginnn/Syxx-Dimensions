@@ -41,7 +41,9 @@ public sealed partial class WitnessView : Page
     {
         if (_vm is null) return;
         _vm.Domain = DomainBox.Text;
-        SaveKeyBoxToViewModel();
+        // Item 4-Win: gate on the save actually succeeding. A non-empty key that failed to persist
+        // must NOT go on to seal with a stale prior key while "Could not save the signing key" shows.
+        if (!SaveKeyBoxToViewModel()) { Refresh(); return; }
         // WitnessTestify now performs a live network probe (D051) — disable the button for the
         // duration so a second click cannot start a concurrent sealing attempt.
         TestifyBtn.IsEnabled = false;
@@ -65,8 +67,19 @@ public sealed partial class WitnessView : Page
     {
         if (_vm is null) return;
         _vm.Domain = DomainBox.Text;
-        SaveKeyBoxToViewModel();
+        // Item 4-Win: same gate as Testify — refuse to verify with a stale key after a save error.
+        if (!SaveKeyBoxToViewModel()) { Refresh(); return; }
         _vm.WitnessVerifyCommand.Execute(null);
+        Refresh();
+    }
+
+    // Item 5(b)-Windows: verify a testimony sealed on another device by pasting its snapshot JSON.
+    // Routes through the SAME VerifySnapshotDetailed + result switch as self-verify (WitnessVerify).
+    private void ExternalVerifyBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm is null) return;
+        _vm.ExternalSnapshotJson = ExternalSnapshotBox.Text;
+        _vm.WitnessVerifyExternalCommand.Execute(null);
         Refresh();
     }
 
@@ -81,6 +94,11 @@ public sealed partial class WitnessView : Page
     private void GenerateKeyBtn_Click(object sender, RoutedEventArgs e)
     {
         _vm?.GenerateWitnessKey();
+        // A fresh keypair is generated and stored directly; clear any stale typed text so the next
+        // "Witness Testimony" doesn't re-validate it and fail while a valid key is already persisted.
+        // Mirror the post-save clear guard in SaveKeyBoxToViewModel (present key, no reported error).
+        if (_vm is not null && _vm.HasWitnessKey && !_vm.WitnessKeySaveFailed)
+            KeyBox.Password = string.Empty;
         Refresh();
     }
 
@@ -89,9 +107,16 @@ public sealed partial class WitnessView : Page
     /// signing secret should not linger, readable, in a UI control after it has been persisted.
     /// Leaves the box untouched (nothing to clear, nothing to hide) when it was empty or the save
     /// failed, so the user can see and retry what they typed.
-    private void SaveKeyBoxToViewModel()
+    ///
+    /// Item 4-Win: returns whether it is safe to PROCEED to seal/verify, mirroring macOS
+    /// WitnessView (`if model.saveWitnessKey(witnessKeyInput) { … }`, WitnessView.swift:118). A
+    /// non-empty key that FAILED to save (e.g. a DPAPI write error while a stale prior key is still
+    /// on disk) returns false so the caller does NOT go on to sign/verify with the OLD key while the
+    /// screen shows "Could not save the signing key." An empty box proceeds (the user is relying on a
+    /// key saved earlier), as does a genuine save success.
+    private bool SaveKeyBoxToViewModel()
     {
-        if (_vm is null) return;
+        if (_vm is null) return false;
         var keyInput = KeyBox.Password;
         _vm.SaveWitnessKey(keyInput);
         // Ask the FAILURE flag, not the detail string. Defect-2 made WitnessKeyError the presented
@@ -99,6 +124,9 @@ public sealed partial class WitnessView : Page
         // emptiness as success here would clear the user's typed key after a save that failed.
         if (!string.IsNullOrEmpty(keyInput) && _vm.HasWitnessKey && !_vm.WitnessKeySaveFailed)
             KeyBox.Password = string.Empty;
+        // Proceed on an empty box (fall back to a previously-saved key) or a confirmed save; refuse
+        // when a typed key did not persist, so we never seal/verify with a stale key after a failure.
+        return string.IsNullOrEmpty(keyInput) || (_vm.HasWitnessKey && !_vm.WitnessKeySaveFailed);
     }
 
     private void Refresh()
@@ -188,11 +216,13 @@ public sealed partial class WitnessView : Page
 
         string glyph, text, colorKey;
 
-        if (snap is null)
+        if (snap is null && _vm.WitnessVerification is null)
         {
-            // No snapshot to compare — WitnessVerify() was never given evidence to check. This is
-            // a fact about WitnessSnapshot itself (kept in lockstep by WitnessTestify/WitnessFree),
-            // not an independently re-derived flag.
+            // No snapshot AND no verification outcome — neither self-verify nor an external paste has
+            // produced anything to judge. This is a fact about WitnessSnapshot itself (kept in
+            // lockstep by WitnessTestify/WitnessFree), not an independently re-derived flag.
+            // (An external paste that failed to parse leaves snap null but WitnessVerification set to
+            // MalformedInput, so it falls through to the switch below, not to this pre-seal prompt.)
             (glyph, colorKey, text) = (xGlyph, "IoWarningAmberBrush",
                 "No signed snapshot available for comparison — press Witness Testimony first.");
         }

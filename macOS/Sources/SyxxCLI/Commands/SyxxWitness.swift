@@ -169,12 +169,25 @@ struct SyxxWitnessCLI {
                 printUsage()
                 return .error
             }
-            let systemResolver = NetworkKeyState.getSystemDNSServers().first
-            if systemResolver == nil {
-                print("[WARNING] System resolver undetectable — falling back to 8.8.8.8")
-                print("[HINT] Specify a resolver explicitly via environment variable or system DNS settings")
+            // E079 (ported from the C# twin `WitnessCommand.cs:212-219`): REFUSE to sign a snapshot
+            // measured against a substituted resolver.
+            //
+            // This previously warned and then fell back to 8.8.8.8 — and signed anyway. The result
+            // was an Ed25519 signature over a comparison the user never made, sealed into a
+            // `WitnessSnapshot` whose `localServer` field presents Google's resolver as the user's
+            // own local vantage. That is spine #1 (a result emitted before its input was
+            // established) and spine #4 (a fabricated value shipped as measured) at once, with a
+            // cryptographic signature on top making the fabrication look authoritative to whoever
+            // the evidence is later shown to.
+            //
+            // A warning on stdout is not a mitigation: the snapshot outlives the terminal it was
+            // printed in, and `witness verify` on the resulting file reports a perfectly valid
+            // signature — because the signature IS valid. It attests to the wrong measurement.
+            // The only honest outcome is to produce no snapshot at all.
+            guard let resolver = NetworkKeyState.getSystemDNSServers().first else {
+                print("INCONCLUSIVE: No system DNS resolvers were detected. Refusing to fall back to public resolvers for a witness snapshot.")
+                return .inconclusive
             }
-            let resolver = systemResolver ?? "8.8.8.8"
             print("Resolving vantage data for \(domain) via \(resolver)...")
             do {
                 let comparison = try await VantageComparer.compareVantagePoints(domain: domain, localServer: resolver)
@@ -302,9 +315,23 @@ struct SyxxWitnessCLI {
                         print("  Key Source: \(keySource)")
                     }
                     print("  Redirection Detected: \(snapshot.comparison.isRedirectionDetected)")
+                    // B100 (ported from `WitnessCommand.cs:397-398`): surface network-evidence
+                    // quality alongside the cryptographic result. A valid signature over degraded
+                    // or inconclusive evidence must not read as a clean bill of health — the
+                    // signature attests that the measurement was not altered, never that the
+                    // measurement succeeded. `--detailed` printed neither of these.
+                    print("  Inconclusive: \(snapshot.comparison.isInconclusive)")
+                    print("  Degraded: \(snapshot.comparison.isDegraded)")
                     print("  Signature: \(snapshot.signature)")
                     print("  Verification: \(resultLabel)")
                     print("  Detailed Result: \(detailText)")
+                    // B211 (ported from `WitnessCommand.cs:402-405`): disclose trust posture on the
+                    // detailed path too. `--detailed` is the forensic surface, and it was the one
+                    // path that never said whether the signer was anchored — so the most careful
+                    // reader got the least information about who signed.
+                    if result == .valid {
+                        print("  Trust: \(Self.trustPostureLabel(pubKey, trustedKeys: trustedKeys))")
+                    }
                     return WitnessExitStatus.forVerification(result)
                 } else {
                     // D099: this used to reduce verification to a bare Bool via the throwing
@@ -331,6 +358,10 @@ struct SyxxWitnessCLI {
                     }
                     print("  Redirection Detected: \(snapshot.comparison.isRedirectionDetected)")
                     print("  Inconclusive: \(snapshot.comparison.isInconclusive)")
+                    // B100: `isDegraded` was disclosed on neither macOS path, though the C# twin
+                    // prints it on both (`WitnessCommand.cs:398`, `:434`). Degraded evidence is a
+                    // distinct state from inconclusive and must not be collapsed into it.
+                    print("  Degraded: \(snapshot.comparison.isDegraded)")
                     print("  Signature: \(snapshot.signature)")
                     // B081: distinguish pinned vs unpinned verification. A crypto-valid signature
                     // by an unanchored key is self-attestation, not Syxx-endorsed validity.
@@ -435,7 +466,13 @@ struct SyxxWitnessCLI {
     /// prints the domain, timestamp, key ID, public key and the specific failure reason, under a
     /// header that makes no integrity claim.
     ///
-    /// Byte-for-byte twin of `WitnessCommand.PrintReportRefusal` on Windows.
+    /// Byte-for-byte twin of `WitnessCommand.PrintReportRefusal` on Windows — and as of E14 that is
+    /// actually TRUE. It was not: this function's literals matched, but the `Result:` line is
+    /// rendered by `describeVerification`, which returned `❌ EXPIRED` here against `[INCONCLUSIVE]
+    /// EXPIRED` there. The two refusals therefore differed on every non-valid state, which is every
+    /// state this function can be reached in. The claim is now backed by both platforms returning
+    /// the same bracketed tri-state labels; if either side's `describeVerification` changes alone,
+    /// this comment becomes false again.
     static func printReportRefusal(filePath: String, result: WitnessSigner.SnapshotVerification) {
         let (label, detail) = Self.describeVerification(result)
         print("")
@@ -452,27 +489,64 @@ struct SyxxWitnessCLI {
         print("")
     }
 
+    /// B211 (ported from `WitnessCommand.TrustPostureLabel`): the trust posture as a third state
+    /// alongside the cryptographic result. A snapshot whose signature verifies but whose signer is
+    /// not in the trust set must not read identically to one whose signer IS trusted — an
+    /// unqualified "VALID" is a reassuring claim about provenance that the signature alone does not
+    /// support.
+    ///
+    /// Takes the already-resolved trust set rather than fetching it, so the label cannot disagree
+    /// with the set that was actually passed to the verifier a few lines earlier.
+    ///
+    /// NOTE, deliberately not fixed here: macOS resolves this set from
+    /// `CollectorPinning.configuredTrustedSigningKeys()` (`collector_trusted_keys` /
+    /// `SYXX_COLLECTOR_TRUSTED_KEYS`) while the C# twin reads `SYXX_WITNESS_TRUSTED_KEYS`
+    /// (`WitnessSigner.cs:402`). The same environment variable does not anchor both platforms, and
+    /// macOS conflates the COLLECTOR trust set with the WITNESS SIGNING trust set. That is tracked
+    /// as re-diff row 11 and collides with an open `key_id` alignment question; changing it here
+    /// would pre-empt that decision.
+    static func trustPostureLabel(_ publicKey: String, trustedKeys: [String]) -> String {
+        if trustedKeys.isEmpty { return "signer unverified (no trust set configured)" }
+        return trustedKeys.contains(publicKey) ? "signer trusted" : "signer NOT in your trust set"
+    }
+
     /// Map a SnapshotVerification to a (label, detail) pair for user-facing output.
+    ///
+    /// The bracketed prefix carries the TRI-STATE CLASSIFICATION, not decoration. This previously
+    /// rendered every non-valid state as `❌ <NAME>`, so `❌ EXPIRED` — a snapshot that may be
+    /// perfectly honest and merely out of date — was visually identical to `❌ INVALID SIGNATURE`,
+    /// which is an accusation that someone forged evidence. D099 fixed the *reason text* but left
+    /// the two classes wearing the same glyph, which is spine #3: a tri-state collapsed to a
+    /// boolean at the last hop before the user.
+    ///
+    /// The prefix now names the class the exit code will carry, so the printed line and `$?` cannot
+    /// tell different stories: `[VALID]` -> 0, `[TAMPERED]` -> 1, `[INCONCLUSIVE]` -> 2. Twin of
+    /// `WitnessCommand.DescribeVerification`.
+    ///
+    /// `.malformedInput` and `.unsupportedFormat` are `[INCONCLUSIVE]`, not `[INVALID]`. The C#
+    /// twin labelled them `[INVALID]` while `ForVerification` mapped them to exit 2 — a label that
+    /// reads as an accusation on a state the contract classifies as unjudgeable. Both sides were
+    /// corrected together; see the E14 report.
     static func describeVerification(_ result: WitnessSigner.SnapshotVerification) -> (String, String) {
         switch result {
         case .valid:
-            return ("✅ VALID", "Tamper-evident — Ed25519 signed content matches.")
+            return ("[VALID]", "Tamper-evident — Ed25519 signed content matches.")
         case .malformedInput:
-            return ("❌ MALFORMED INPUT", "Could not parse snapshot or public key.")
+            return ("[INCONCLUSIVE] MALFORMED INPUT", "Could not parse snapshot or public key.")
         case .unsupportedFormat:
-            return ("❌ UNSUPPORTED FORMAT", "Snapshot format version not recognized.")
+            return ("[INCONCLUSIVE] UNSUPPORTED FORMAT", "Snapshot format version not recognized.")
         case .expired:
-            return ("❌ EXPIRED", "The snapshot's expiry date has passed.")
+            return ("[INCONCLUSIVE] EXPIRED", "The snapshot's expiry date has passed.")
         case .stale:
-            return ("❌ STALE", "Snapshot is older than the allowed freshness window.")
+            return ("[INCONCLUSIVE] STALE", "Snapshot is older than the allowed freshness window.")
         case .futureDated:
-            return ("❌ FUTURE-DATED", "Snapshot timestamp is ahead of system clock.")
+            return ("[INCONCLUSIVE] FUTURE-DATED", "Snapshot timestamp is ahead of system clock.")
         case .untrustedSigner:
-            return ("❌ UNTRUSTED SIGNER", "Public key is not in the trust set.")
+            return ("[INCONCLUSIVE] UNTRUSTED SIGNER", "Public key is not in the trust set.")
         case .displayMismatch:
-            return ("❌ DISPLAY MISMATCH", "Display fields do not match the signed evidence — tampered presentation.")
+            return ("[TAMPERED] DISPLAY MISMATCH", "Display fields do not match the signed evidence — tampered presentation.")
         case .invalidSignature:
-            return ("❌ INVALID SIGNATURE", "Ed25519 signature does not match the content.")
+            return ("[TAMPERED] INVALID SIGNATURE", "Ed25519 signature does not match the content.")
         }
     }
 

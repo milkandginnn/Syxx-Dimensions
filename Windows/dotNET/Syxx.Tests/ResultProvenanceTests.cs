@@ -96,7 +96,7 @@ public class ResultProvenanceTests : IDisposable
 
         var evt = Assert.Single(_sink.Events.Where(e => e.ErrorClass == "result.unattributed_degradation"));
         Assert.Equal("cage", evt.Tags!["syxx.section"]);
-        Assert.Equal("False", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
+        Assert.Equal("false", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
     }
 
     /// The converse — an explained degradation must NOT be flagged, or the invariant cries wolf.
@@ -120,7 +120,7 @@ public class ResultProvenanceTests : IDisposable
         Synthesizer.ReportResultProvenance(Make(statuses, det));
 
         Assert.Empty(_sink.Events.Where(e => e.ErrorClass == "result.unattributed_degradation"));
-        Assert.Equal("True", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
+        Assert.Equal("true", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
     }
 
     /// Abstentions are the interesting case; a decided run is routine.

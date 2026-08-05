@@ -78,16 +78,26 @@ public enum LookalikeDetector {
 
     // MARK: - Edit distance (bounded)
 
-    /// Damerau-Levenshtein distance, capped: returns `cap + 1` the moment it is exceeded so a
-    /// pair of long unrelated names is cheap to reject.
-    /// B140: the recurrence now includes the adjacent-transposition term
-    /// (d[i-2][j-2] + 1 when x[i-1]==y[j-2] && x[i-2]==y[j-1]), matching the documented
-    /// Damerau-Levenshtein algorithm. Without it, an adjacent swap like "payapl" had distance 2,
-    /// exceeded the cap of 1, and returned no suspicious finding for a documented typosquat shape.
+    /// Damerau-Levenshtein distance in its OPTIMAL STRING ALIGNMENT (OSA) form, capped: returns
+    /// `cap + 1` the moment it is exceeded so a pair of long unrelated names is cheap to reject.
+    /// B140: the recurrence includes the adjacent-transposition term
+    /// (d[i-2][j-2] + 1 when x[i-1]==y[j-2] && x[i-2]==y[j-1]). Without it, an adjacent swap like
+    /// "payapl" had distance 2, exceeded the cap of 1, and returned no suspicious finding for a
+    /// documented typosquat shape.
+    ///
+    /// This is OSA, not unrestricted Damerau-Levenshtein: each substring may be edited at most once,
+    /// so a transposed pair is never edited again afterwards. The two variants differ on inputs such
+    /// as "ca" -> "abc" (OSA 3, unrestricted 2). K-18 ported this exact variant to the Windows twin
+    /// (`Syxx.Kit/LookalikeDetector.cs`), which until 2026-08-04 used plain Levenshtein over two
+    /// rolling rows and so could not carry the transposition term at all.
     public static func editDistance(_ a: String, _ b: String, cap: Int) -> Int {
         let x = Array(a), y = Array(b)
         if abs(x.count - y.count) > cap { return cap + 1 }
         let m = x.count, n = y.count
+        // An empty operand makes the `1...m` / `1...n` loops below a range precondition failure.
+        // Distance from the empty string is just the other length; return it directly.
+        if m == 0 { return n }
+        if n == 0 { return m }
         // Two rows are insufficient for transposition (needs i-2, j-2); keep a full matrix.
         var d = [[Int]](repeating: [Int](repeating: 0, count: n + 1), count: m + 1)
         for i in 0...m { d[i][0] = i }

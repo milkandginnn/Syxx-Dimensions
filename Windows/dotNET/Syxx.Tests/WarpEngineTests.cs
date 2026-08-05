@@ -216,6 +216,7 @@ public class WarpEngineTests
         byte[] html = Encoding.UTF8.GetBytes("<html>ok</html>");
         byte[] asset = Encoding.UTF8.GetBytes("console.log(1)");
         string manifest = "{" +
+            "\"warp_manifest_version\":\"WARP_MANIFEST_V1\"," +
             "\"origin_url\":\"" + origin + "\",\"final_url\":\"" + origin + "\"," +
             "\"html_sha256\":\"" + WarpEngine.Sha256Hex(html) + "\"," +
             "\"assets\":[{\"url\":\"https://example.test/app.js\",\"final_url\":\"https://example.test/app.js\"," +
@@ -240,6 +241,7 @@ public class WarpEngineTests
         byte[] html = Encoding.UTF8.GetBytes("<html>ok</html>");
         byte[] asset = Encoding.UTF8.GetBytes("body{}");
         string manifest = "{" +
+            "\"warp_manifest_version\":\"WARP_MANIFEST_V1\"," +
             "\"origin_url\":\"" + origin + "\",\"final_url\":\"" + origin + "\"," +
             "\"html_sha256\":\"" + WarpEngine.Sha256Hex(html) + "\"," +
             "\"assets\":[{\"url\":\"https://example.test/x.css\",\"class\":\"CSS\"," +

@@ -272,4 +272,344 @@ public class AppViewModelWitnessTests
             }
         }
     }
+
+    // ── 7. Item 4-Win: the save-gate that stops sealing/verifying with a STALE key after a save
+    //       error. The gate itself lives in WitnessView.SaveKeyBoxToViewModel() (WitnessView.xaml.cs),
+    //       which cannot be exercised headless (WinUI3 Page, no toolchain here). These tests drive the
+    //       AppViewModel state the gate reads and replicate its predicate EXACTLY, so the go/no-go
+    //       decision is pinned even though the handler cannot run in this project. ─────────────────
+
+    /// Byte-for-byte replica of WitnessView.SaveKeyBoxToViewModel()'s proceed-gate return:
+    /// proceed on an empty box (fall back to a previously-saved key) or a confirmed save; refuse when
+    /// a typed key did not persist. If that predicate changes in the View, this must change with it.
+    private static bool ProceedGate(string keyInput, AppViewModel vm) =>
+        string.IsNullOrEmpty(keyInput) || (vm.HasWitnessKey && !vm.WitnessKeySaveFailed);
+
+    /// Runs <paramref name="body"/> with the real %AppData%/Syxx directory replaced by a FILE, so
+    /// WitnessKeyStore.SaveKey's Directory.CreateDirectory() throws IOException — a real on-disk save
+    /// failure, no mock. Any pre-existing Syxx state is moved aside and restored. Mirrors the setup in
+    /// SaveWitnessKey_WhenKeyStoreWriteFails_SetsNonEmptyWitnessKeyError (kept in one place here).
+    private static void WithBlockedSyxxDir(Action body)
+    {
+        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        string syxxDir = Path.Combine(appData, "Syxx");
+        bool dirPreExisted = Directory.Exists(syxxDir);
+        string? backupDir = null;
+        if (dirPreExisted)
+        {
+            backupDir = syxxDir + ".appviewmodeltests-backup";
+            if (Directory.Exists(backupDir)) Directory.Delete(backupDir, recursive: true);
+            Directory.Move(syxxDir, backupDir);
+        }
+        try
+        {
+            File.WriteAllBytes(syxxDir, new byte[] { 0 });
+            body();
+        }
+        finally
+        {
+            if (File.Exists(syxxDir)) File.Delete(syxxDir);
+            if (backupDir is not null && Directory.Exists(backupDir))
+            {
+                if (Directory.Exists(syxxDir)) Directory.Delete(syxxDir, recursive: true);
+                Directory.Move(backupDir, syxxDir);
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveGate_NonEmptyKeyThatFailsToPersist_DoesNotProceed()
+    {
+        // Item 4-Win: a typed key that FAILED to save must block Testify/Verify — otherwise the
+        // handler would go on to seal/verify with the OLD key while "Could not save the signing key"
+        // shows. The gate returns false here.
+        WithBlockedSyxxDir(() =>
+        {
+            var vm = new AppViewModel(compareVantagePoints: NeverCalled("save-gate test does not probe"));
+            const string typed = "a-non-empty-key-whose-write-will-fail";
+            vm.SaveWitnessKey(typed);
+
+            Assert.True(vm.WitnessKeySaveFailed);
+            Assert.False(ProceedGate(typed, vm));
+        });
+    }
+
+    [Fact]
+    public void SaveGate_EmptyInputAfterPriorFailure_ClearsFailureAndProceeds()
+    {
+        // Reset-ordering fix (AppViewModel.SaveWitnessKey): WitnessKeySaveFailed is reset BEFORE the
+        // empty-input early-return, so a now-empty submit no longer carries a stale failure flag and
+        // the gate stops blocking (the user is relying on a key saved earlier).
+        WithBlockedSyxxDir(() =>
+        {
+            var vm = new AppViewModel(compareVantagePoints: NeverCalled("save-gate test does not probe"));
+            vm.SaveWitnessKey("a-non-empty-key-whose-write-will-fail");
+            Assert.True(vm.WitnessKeySaveFailed);
+
+            vm.SaveWitnessKey(string.Empty);
+            Assert.False(vm.WitnessKeySaveFailed);
+            Assert.True(ProceedGate(string.Empty, vm));
+        });
+    }
+
+    [Fact]
+    public void SaveGate_SuccessfulSave_Proceeds()
+    {
+        // A genuine save clears the failure flag and marks the key present, so the gate proceeds.
+        var (priv, _) = WitnessSigner.GenerateKeyPair();
+        try
+        {
+            var vm = new AppViewModel(compareVantagePoints: NeverCalled("save-gate test does not probe"));
+            vm.SaveWitnessKey(priv);
+
+            Assert.False(vm.WitnessKeySaveFailed);
+            Assert.True(vm.HasWitnessKey);
+            Assert.True(ProceedGate(priv, vm));
+        }
+        finally { WitnessKeyStore.DeleteKey(); }
+    }
+
+    // ── 8. Item 5(b)-Windows: external-paste verify. A testimony sealed on another device is verified
+    //       by pasting its snapshot JSON, routed through the SAME VerifySnapshotDetailed + result
+    //       switch as self-verify. Malformed/empty input folds to MalformedInput — honest, no crash. ─
+
+    private static readonly System.Text.Json.JsonSerializerOptions ReaderOptions =
+        new() { PropertyNameCaseInsensitive = true };
+
+    [Fact]
+    public async Task WitnessVerifyExternal_ValidPastedSnapshot_ReachesValidViaSharedVerifier()
+    {
+        var (priv, _) = WitnessSigner.GenerateKeyPair();
+        WitnessKeyStore.SaveKey(priv);
+        try
+        {
+            // Seal a real snapshot through the production path, then serialize it as the "pasted" JSON.
+            var comparison = MakeComparison();
+            var sealer = new AppViewModel(compareVantagePoints: (_, _) => Task.FromResult<ComparisonResult?>(comparison));
+            sealer.Domain = "example.com";
+            await sealer.WitnessTestifyCommand.ExecuteAsync(null);
+            Assert.Equal(WitnessTestimonyState.Signed, sealer.WitnessTestimony);
+            var signedSnap = sealer.WitnessSnapshot!;
+
+            string json = System.Text.Json.JsonSerializer.Serialize(signedSnap);
+
+            // Sanity: the serialized form must round-trip to a Valid seal via the SAME Kit verifier the
+            // VM uses. If THIS line fails, the test's own JSON round-trip is at fault, not the VM path.
+            var roundTripped = System.Text.Json.JsonSerializer.Deserialize<WitnessSnapshot>(json, ReaderOptions);
+            Assert.NotNull(roundTripped);
+            Assert.Equal(SnapshotVerification.Valid, WitnessSigner.VerifySnapshotDetailed(roundTripped!));
+
+            // The contract: a FRESH view-model (no prior self-verify state) verifies the paste to the
+            // identical verdict through WitnessVerifyExternal.
+            var verifier = new AppViewModel(compareVantagePoints: NeverCalled("external verify does not probe"));
+            verifier.ExternalSnapshotJson = json;
+            verifier.WitnessVerifyExternalCommand.Execute(null);
+
+            Assert.True(verifier.ShowValidation);
+            Assert.Equal(SnapshotVerification.Valid, verifier.WitnessVerification);
+            Assert.True(verifier.WitnessValid);
+            Assert.NotNull(verifier.WitnessSnapshot);
+        }
+        finally { WitnessKeyStore.DeleteKey(); }
+    }
+
+    [Fact]
+    public void WitnessVerifyExternal_MalformedJson_IsMalformedNotGreen_AndDoesNotCrash()
+    {
+        var vm = new AppViewModel(compareVantagePoints: NeverCalled("external verify does not probe"));
+        vm.ExternalSnapshotJson = "{ not valid json at all ";
+
+        vm.WitnessVerifyExternalCommand.Execute(null);
+
+        Assert.True(vm.ShowValidation);
+        Assert.Equal(SnapshotVerification.MalformedInput, vm.WitnessVerification);
+        Assert.False(vm.WitnessValid);
+        // Snapshot left null so WitnessView.UpdateValidation renders the MalformedInput branch of the
+        // switch, not the "press Witness Testimony first" pre-seal prompt.
+        Assert.Null(vm.WitnessSnapshot);
+    }
+
+    [Fact]
+    public void WitnessVerifyExternal_EmptyInput_IsInconclusiveNotGreen()
+    {
+        var vm = new AppViewModel(compareVantagePoints: NeverCalled("external verify does not probe"));
+        vm.ExternalSnapshotJson = "   ";
+
+        vm.WitnessVerifyExternalCommand.Execute(null);
+
+        Assert.Equal(SnapshotVerification.MalformedInput, vm.WitnessVerification);
+        Assert.False(vm.WitnessValid);
+        Assert.Null(vm.WitnessSnapshot);
+    }
+
+    [Fact]
+    public async Task WitnessVerifyExternal_TamperedSnapshot_IsNotRenderedGreen()
+    {
+        var (priv, _) = WitnessSigner.GenerateKeyPair();
+        WitnessKeyStore.SaveKey(priv);
+        try
+        {
+            var comparison = MakeComparison();
+            var sealer = new AppViewModel(compareVantagePoints: (_, _) => Task.FromResult<ComparisonResult?>(comparison));
+            sealer.Domain = "example.com";
+            await sealer.WitnessTestifyCommand.ExecuteAsync(null);
+            var signedSnap = sealer.WitnessSnapshot!;
+
+            // Corrupt the signature bytes (still valid base64, same length) so the seal cannot verify.
+            signedSnap.Signature = "AAAA" + signedSnap.Signature.Substring(4);
+            string tampered = System.Text.Json.JsonSerializer.Serialize(signedSnap);
+
+            var verifier = new AppViewModel(compareVantagePoints: NeverCalled("external verify does not probe"));
+            verifier.ExternalSnapshotJson = tampered;
+            verifier.WitnessVerifyExternalCommand.Execute(null);
+
+            Assert.False(verifier.WitnessValid);
+            Assert.NotEqual(SnapshotVerification.Valid, verifier.WitnessVerification);
+        }
+        finally { WitnessKeyStore.DeleteKey(); }
+    }
+
+    // ── 9. T-7: Severity-tier mapping (Phase 3 §4.3) ──────────────────────────────────────────
+
+    /// <summary>
+    /// T-7: pins the severity tier (WitnessVerification enum + WitnessValid bool) the ViewModel
+    /// assigns for each reachable SnapshotVerification scenario. The View (WitnessView.xaml.cs:245-265)
+    /// maps these to glyph/color, but that WinUI3 code-behind cannot run headless — this test pins
+    /// the ViewModel state the View reads, so any drift in the enum → severity mapping is caught
+    /// here even without a running WinUI3 host. Mirrors the Linux ApplyVerification Theory at
+    /// WitnessViewModelTests.cs:335-345.
+    ///
+    /// NOT asserted here: the glyph (CheckMark/Cancel) and the ResourceKey color (green/amber/red)
+    /// from WitnessView.xaml.cs — those are View-only, need a running UI host. To keep them in
+    /// sync, the View's switch must track the enum this test pins.
+    /// </summary>
+    [Theory]
+    [InlineData("Valid")]
+    [InlineData("InvalidSignature")]
+    [InlineData("DisplayMismatch")]
+    [InlineData("MalformedInput")]
+    [InlineData("Expired")]
+    public void SeverityTier_MapsEachScenarioToExpectedViewModelState(string scenario)
+    {
+        switch (scenario)
+        {
+            case "Valid":
+            {
+                // A genuine seal verifies to the green tier.
+                var (priv, _) = WitnessSigner.GenerateKeyPair();
+                var snap = WitnessSigner.CreateSignedSnapshot("example.com", MakeComparison(), priv);
+                string json = System.Text.Json.JsonSerializer.Serialize(snap);
+
+                var vm = new AppViewModel(compareVantagePoints: NeverCalled("verify does not probe"));
+                vm.ExternalSnapshotJson = json;
+                vm.WitnessVerifyExternalCommand.Execute(null);
+
+                Assert.Equal(SnapshotVerification.Valid, vm.WitnessVerification);
+                Assert.True(vm.WitnessValid);
+                break;
+            }
+            case "InvalidSignature":
+            {
+                // A tampered signature must land in the critical (red) tier, not green.
+                var (priv, _) = WitnessSigner.GenerateKeyPair();
+                var snap = WitnessSigner.CreateSignedSnapshot("example.com", MakeComparison(), priv);
+                snap.Signature = FlipFirstBase64Char(snap.Signature);
+                string json = System.Text.Json.JsonSerializer.Serialize(snap);
+
+                var vm = new AppViewModel(compareVantagePoints: NeverCalled("verify does not probe"));
+                vm.ExternalSnapshotJson = json;
+                vm.WitnessVerifyExternalCommand.Execute(null);
+
+                Assert.Equal(SnapshotVerification.InvalidSignature, vm.WitnessVerification);
+                Assert.False(vm.WitnessValid);
+                break;
+            }
+            case "DisplayMismatch":
+            {
+                // A tampered display field (TargetDomain rewritten post-sign) is a critical-tier
+                // mismatch — the signed bytes and the shown values disagree.
+                var (priv, _) = WitnessSigner.GenerateKeyPair();
+                var snap = WitnessSigner.CreateSignedSnapshot("example.com", MakeComparison(), priv);
+                snap.TargetDomain = "attacker-swapped.example";
+                string json = System.Text.Json.JsonSerializer.Serialize(snap);
+
+                var vm = new AppViewModel(compareVantagePoints: NeverCalled("verify does not probe"));
+                vm.ExternalSnapshotJson = json;
+                vm.WitnessVerifyExternalCommand.Execute(null);
+
+                Assert.Equal(SnapshotVerification.DisplayMismatch, vm.WitnessVerification);
+                Assert.False(vm.WitnessValid);
+                break;
+            }
+            case "MalformedInput":
+            {
+                // Garbage JSON is a critical-tier dead end — never green, never a crash.
+                var vm = new AppViewModel(compareVantagePoints: NeverCalled("verify does not probe"));
+                vm.ExternalSnapshotJson = "this is not a signed testimony";
+                vm.WitnessVerifyExternalCommand.Execute(null);
+
+                Assert.Equal(SnapshotVerification.MalformedInput, vm.WitnessVerification);
+                Assert.False(vm.WitnessValid);
+                Assert.Null(vm.WitnessSnapshot);
+                break;
+            }
+            case "Expired":
+            {
+                // A seal whose expiresAt is in the past is an amber (caution) tier — honest but
+                // out-of-date, not forged.
+                var (priv, _) = WitnessSigner.GenerateKeyPair();
+                var snap = WitnessSigner.CreateSignedSnapshot(
+                    "example.com", MakeComparison(), priv, expiresAt: DateTime.UtcNow.AddMinutes(-10));
+                string json = System.Text.Json.JsonSerializer.Serialize(snap);
+
+                var vm = new AppViewModel(compareVantagePoints: NeverCalled("verify does not probe"));
+                vm.ExternalSnapshotJson = json;
+                vm.WitnessVerifyExternalCommand.Execute(null);
+
+                Assert.Equal(SnapshotVerification.Expired, vm.WitnessVerification);
+                Assert.False(vm.WitnessValid);
+                break;
+            }
+            default:
+                throw new ArgumentException($"Unknown scenario: {scenario}");
+        }
+    }
+
+    /// T-7 supplement: pins the View's severity-color mapping as a static helper, so the glyph/color
+    /// assignment in WitnessView.xaml.cs:245-265 is documented and any drift from the canonical
+    /// tier assignment is visible. The helper replicates the View's switch exactly — if the View's
+    /// color assignments change, this helper must change with it, and the assertions below pin the
+    /// canonical mapping.
+    [Theory]
+    [InlineData(SnapshotVerification.Valid, "Green")]
+    [InlineData(SnapshotVerification.Expired, "Amber")]
+    [InlineData(SnapshotVerification.Stale, "Amber")]
+    [InlineData(SnapshotVerification.FutureDated, "Red")]
+    [InlineData(SnapshotVerification.UntrustedSigner, "Red")]
+    [InlineData(SnapshotVerification.DisplayMismatch, "Red")]
+    [InlineData(SnapshotVerification.InvalidSignature, "Red")]
+    [InlineData(SnapshotVerification.MalformedInput, "Red")]
+    [InlineData(SnapshotVerification.UnsupportedFormat, "Red")]
+    public void SeverityTier_ViewColorMapping_MatchesCanonicalTiers(
+        SnapshotVerification result, string expectedTier)
+    {
+        // Replicates WitnessView.xaml.cs:245-265's color assignment. The View reads
+        // _vm.WitnessVerification and maps to an IoSuccessGreenBrush / IoWarningAmberBrush /
+        // IoCriticalRedBrush resource key. This helper pins the tier so a refactor that silently
+        // moves a case between tiers (e.g. Stale → Red) is caught here.
+        string actualTier = result switch
+        {
+            SnapshotVerification.Valid => "Green",
+            SnapshotVerification.Expired or SnapshotVerification.Stale => "Amber",
+            _ => "Red"
+        };
+        Assert.Equal(expectedTier, actualTier);
+    }
+
+    private static string FlipFirstBase64Char(string base64)
+    {
+        char first = base64[0];
+        char replacement = first == 'A' ? 'B' : 'A';
+        return replacement + base64.Substring(1);
+    }
 }

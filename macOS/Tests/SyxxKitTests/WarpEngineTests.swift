@@ -123,11 +123,15 @@ final class WarpEngineTests: XCTestCase {
         XCTAssertFalse(names.isEmpty, "warp-manifest-vectors corpus is missing — a vacuously-green oracle is the green that lies.")
         for name in names {
             guard let c = try loadCase(name) else { continue }   // skipped (missing codec)
+            // Capture only the Sendable payload: CaseData carries the expectations as [String: Any],
+            // which is not Sendable, so the struct itself cannot cross into a @Sendable closure.
+            let html = c.originHTML
+            let byURL = c.bytesByURL
             let fetch: @Sendable (WarpAssetRequest) async -> WarpFetchOutcome = { req in
                 if req.isHTML {
-                    return c.originHTML.isEmpty ? .failed : .fetched(bytes: c.originHTML, terminalURL: req.url)
+                    return html.isEmpty ? .failed : .fetched(bytes: html, terminalURL: req.url)
                 }
-                guard let bytes = c.bytesByURL[req.url] else { return .failed }
+                guard let bytes = byURL[req.url] else { return .failed }
                 return .fetched(bytes: bytes, terminalURL: req.url)   // corpus policy is "none": no redirect.
             }
             let result = await WarpEngine.verify(originURL: c.origin, envelopeBytes: c.envelope,
@@ -161,9 +165,11 @@ final class WarpEngineTests: XCTestCase {
     /// The C# twin (WarpEngineTests.AllGood_IsVerifiedMatch) asserts the byte-identical tuple.
     func testParityAllGood() async throws {
         guard let c = try loadCase("001_all_good") else { return XCTFail("001_all_good missing") }
+        let html = c.originHTML
+        let byURL = c.bytesByURL
         let fetch: @Sendable (WarpAssetRequest) async -> WarpFetchOutcome = { req in
-            if req.isHTML { return .fetched(bytes: c.originHTML, terminalURL: req.url) }
-            return c.bytesByURL[req.url].map { .fetched(bytes: $0, terminalURL: req.url) } ?? .failed
+            if req.isHTML { return .fetched(bytes: html, terminalURL: req.url) }
+            return byURL[req.url].map { .fetched(bytes: $0, terminalURL: req.url) } ?? .failed
         }
         let r = await WarpEngine.verify(originURL: c.origin, envelopeBytes: c.envelope,
                                         pinnedKeys: c.pinnedKeys, nonce: c.nonce, nowMs: c.nowMs, fetch: fetch)

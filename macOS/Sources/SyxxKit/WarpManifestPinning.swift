@@ -9,8 +9,9 @@ import CryptoKit
 /// by a non-pinned key is `untrustedSigner` (→ INCONCLUSIVE), never a match (the D011 rule already
 /// enforced for Witness/Glutton: valid-but-untrusted must not render green).
 ///
-/// A pinned entry binds a `key_id` (the server's `leak.collector_key_id()` — base64 of the raw
-/// public key's first 8 bytes) to the raw Ed25519 public-key bytes the client verifies against.
+/// A pinned entry binds a `key_id` (lowercase hex of the FULL 32-byte raw Ed25519 public key — see
+/// `deriveKeyId`; this matches the corpus and the server) to the raw Ed25519 public-key bytes the
+/// client verifies against.
 ///
 /// OWNER DELIVERABLE: distribute/bake the pinned manifest key(s) into clients exactly as Witness
 /// keys are. Nothing is hardcoded here.
@@ -55,12 +56,20 @@ public enum WarpManifestPinning {
             let token = String(part)
             if token.isEmpty { continue }
 
-            // Explicit `keyid=base64` / `keyid:base64` form.
-            if let sep = token.firstIndex(where: { $0 == "=" || $0 == ":" }) {
+            // Explicit `keyid=base64` / `keyid:base64` pin. IMPORTANT: base64 of a 32-byte key
+            // always ends in exactly one '=' pad, so a bare-base64 token also CONTAINS '='. Only
+            // treat the separator as an explicit pin when the remainder is non-empty AND parses as
+            // a valid key; otherwise fall through to the bare forms. (The old first-'=' split
+            // consumed the pad, parsed an empty key, and silently emptied every documented
+            // bare-base64 trust set → permanent INCONCLUSIVE.)
+            if let sep = token.firstIndex(where: { $0 == "=" || $0 == ":" }),
+               sep > token.startIndex, token.index(after: sep) < token.endIndex {
                 let keyId = String(token[..<sep])
                 let pubToken = String(token[token.index(after: sep)...])
-                if let pubData = validPubKey(base64: pubToken) { out[keyId] = pubData }
-                continue
+                if let pubData = validPubKey(base64: pubToken) {
+                    out[keyId] = pubData
+                    continue
+                }
             }
 
             // Bare 64-char hex key_id (the public key hex-encoded).

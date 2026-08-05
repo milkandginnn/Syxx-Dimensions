@@ -1,6 +1,9 @@
 # WARP_MANIFEST_V1 — signed-manifest content-integrity protocol (frozen contract)
 
 - **Status:** Frozen contract. Supersedes `docs/warp-assembly-v1-spec.md` (raw-concatenation, retired).
+  Amended 2026-08-04 — the original normative text below is unchanged; every amendment is recorded
+  in the [Amendments — 2026-08-04](#amendments--2026-08-04) changelog section at the end, with inline
+  "(amended 2026-08-04)" pointers at each affected section.
 - **Why:** a 5-agent parity+security audit proved three hand-written HTML parsers / URL resolvers cannot
   hold byte-parity (11 divergence classes; even C# vs Swift disagreed) and that the prior response was
   unsigned (a MITM could forge the declared hash into a false match). This protocol moves ALL parsing +
@@ -55,7 +58,15 @@ Rules:
 - The manifest MUST cover the full transitive closure (HTML + JS + CSS + CSS `@import`, deduped,
   depth-bounded). Initial-load only (no JS execution) — a deliberate, declared boundary.
 
+*(amended 2026-08-04 — see Amendment A6: `bytes` is advisory/display-only and MUST NOT participate
+in comparison.)*
+
 ## 4. Client verification order (MANDATORY sequence)
+
+*(amended 2026-08-04 — see Amendments A1 (new step 0: envelope structural integrity), A2 (decodable
+signature that fails to verify is `invalidSignature`), A7 (nonce asymmetry made explicit), and A8
+(freshness short-circuit is deliberate).)*
+
 1. base64-decode `manifest_b64` → `B`.
 2. Resolve `key_id` in the **pinned key set** (§7). Unknown key → `signatureState = untrustedSigner`.
 3. Ed25519-verify `signature_ed25519` over `B` — **before any JSON parse**. Fail → `invalidSignature`.
@@ -77,6 +88,9 @@ Rules:
 - Precedence: confirmed tampering (a real byte mismatch under a verified manifest, or an invalid signature)
   outranks missing data; missing data never upgrades to match.
 
+*(amended 2026-08-04 — see Amendments A3 (`malformed` added to the signature-state vocabulary, on the
+INCONCLUSIVE side) and A9 (escalation-telemetry note on repeated soft failures).)*
+
 ## 6. Redirect policy (part of the protocol, fail-closed)
 `redirect_policy ∈ {none, same-origin, list}`. The server records each asset's requested `url` and its
 post-redirect `final_url` (every hop SSRF-re-validated server-side). The client, fetching an asset:
@@ -85,6 +99,8 @@ post-redirect `final_url` (every hop SSRF-re-validated server-side). The client,
 - `list` → follow only hops whose targets are in `allowed_redirects`; terminal must equal `final_url`.
 Any deviation (unexpected hop, host/scheme change, terminal ≠ `final_url`) → the asset is `fetchError`,
 never hash-compared → INCONCLUSIVE. Fail closed.
+
+*(amended 2026-08-04 — see Amendment A11: corpus-coverage note for this section.)*
 
 ## 7. Signing key + pinning (security-critical)
 - Server signs with the **collector Ed25519 key** (`leak.sign_content`); `key_id = leak.collector_key_id()`.
@@ -99,6 +115,9 @@ never hash-compared → INCONCLUSIVE. Fail closed.
 - Hash SHA-256 over **envelope-decoded raw bytes** (un-gzip / br / deflate to plaintext; both sides MUST
   support br — deterministic). Never charset-decode, trim, or normalize the hashed bytes. Lowercase hex.
 - `html_sha256` over the raw HTML; per-asset `sha256` over each raw asset body.
+
+*(amended 2026-08-04 — see Amendments A5 (hex casing pinned: emit lowercase, compare
+case-insensitively) and A10 (brotli availability on Apple platforms).)*
 
 ## 9. Diff overlay (owner UX; display only)
 On an asset `state == mismatch`, the client fetches the server's clean copy of that ONE asset via
@@ -120,3 +139,72 @@ Delete: the raw-concatenation assembler (server `warp.py` blob/seam/subtree mach
 paths, and the test that enshrined trusting an unsigned declared hash. Repurpose the corpus into a
 signed-manifest fixture corpus (`warp-manifest-vectors/`). Reuse: SSRF fetcher, `WitnessSigner` Ed25519
 verify + pinning discipline, `TextDiff`, `DimensionClient`, `ResolverConsensusStore`.
+
+## Amendments — 2026-08-04
+
+Changelog of every amendment applied 2026-08-04. The original normative text above is preserved
+verbatim; where an amendment refines it, the amendment text below is normative. Amendment **A4 is
+reserved** (deferred to a later wave; the number is kept so cross-references stay stable).
+
+### A1 — §4 new step 0: envelope structural integrity
+Before step 1, the client MUST check the transport envelope's structure. If the envelope is not
+parseable JSON, or lacks any of `manifest_b64` / `signature_ed25519` / `key_id` as strings, or either
+base64 field is undecodable, then: `signatureState = malformed`, `manifestState = notEvaluated`,
+conclusion **INCONCLUSIVE**. Rationale: this is the **absence** of a signature, not a signature that
+failed — §5 forbids labelling an ambiguous failure "tampering"; transport corruption must not paint a
+page red. This aligns the reference evaluator to the two shipped engines (`WarpEngine.cs`,
+`WarpEngine.swift`), the only direction that keeps the shipped clients conformant. Pinned by corpus
+cases 026/027/028.
+
+### A2 — §4.3 clarification: decodable-but-failing signature
+A **decodable** signature that does not verify over `B` — including a signature of the wrong length
+(e.g. 32 bytes instead of 64) — is `invalidSignature` → **TAMPERING_DETECTED**. Only an
+*undecodable* signature field is `malformed` (A1). The boundary is pinned by corpus case 020
+(decodable wrong-length → `invalidSignature`) vs 026 (undecodable → `malformed`).
+
+### A3 — §5 vocabulary: `malformed` signature state
+`malformed` is added to the signature-state vocabulary, sitting with `untrustedSigner` on the
+INCONCLUSIVE side of the lattice. It was always a member of both shipped client enums; this
+amendment makes it part of the contract and of the corpus `expected.json` schema.
+
+### A5 — §8 hex casing
+Declared hex digests (`html_sha256`, per-asset `sha256`, `key_id`) are **emitted lowercase** and
+**compared case-insensitively** (the client lowercases the declared value before comparing). An
+uppercase declared digest MUST NOT produce a false mismatch. Pinned by corpus case 022.
+
+### A6 — §3 `bytes` is advisory
+The per-asset `bytes` field is advisory/display-only. It MUST NOT participate in comparison: a wrong
+`bytes` value with a correct `sha256` is still a match. Pinned by corpus case 023.
+
+### A7 — §4.5 nonce asymmetry made explicit
+If the client sent a nonce, the manifest `nonce` must equal it — **including when the manifest
+`nonce` is null** (a stripped/absent echo of a sent nonce is `replayNonceMismatch`). If the client
+sent no nonce, no nonce check is performed regardless of what the manifest carries. Pinned by corpus
+cases 015 (sent nonce, null echo → `replayNonceMismatch`) and 025 (no nonce sent, manifest carries
+one → no check, `fresh`).
+
+### A8 — §4 freshness short-circuit is deliberate
+A freshness failure (`expired` / `futureDated` / `originMismatch` / `replayNonceMismatch`) **stops
+the sequence**: content is not fetched and not compared, and the conclusion is INCONCLUSIVE even if
+the bytes would have mismatched. A content comparison against a baseline that is not authenticated
+*in time* is not evidence. Pinned by corpus case 021.
+
+### A9 — §5 escalation note (informative, not a lattice change)
+A live adversary always prefers an outcome on the soft side of the lattice: `untrustedSigner`
+(INCONCLUSIVE) over `invalidSignature` (TAMPERING_DETECTED). A1 widens the soft side (a garbled
+signature is also soft). Therefore the operative detector for an active interception campaign is the
+**frequency of `untrustedSigner` + `malformed` per origin** — repeated soft failures on one origin
+deserve escalation telemetry. This is a note only; the lattice is unchanged.
+
+### A10 — §8/§9: brotli on Apple platforms
+Any implication that brotli is unavailable on Apple platforms is deleted. The platform `Compression`
+framework provides `COMPRESSION_BROTLI` (macOS 12+; the Swift package targets macOS 14), so the
+Swift client needs no new dependency to satisfy §8's "both sides MUST support br". Mirrored in
+`warp-manifest-vectors/README.md` §9.
+
+### A11 — §6 corpus-coverage note
+Until the redirect batch lands in `warp-manifest-vectors/`, §6 (redirect policy) is covered only by
+per-client injected tests (C# and Swift each carry their own), **not** cross-language arbitrated by
+the shared corpus. Every current corpus case carries `redirect_policy: "none"` with no redirects,
+and the production `same-origin` + per-asset `final_url` shape is not yet modelled. Deliberately
+deferred; do not treat corpus greenness as §6 coverage.

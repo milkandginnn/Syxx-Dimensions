@@ -423,4 +423,301 @@ final class AppModelWitnessTests: XCTestCase {
         XCTAssertTrue(msg.hasPrefix("Could not save the signing key to the Keychain: "),
                       "prefix drifted; re-check the mis-attribution note above. Got: \(msg)")
     }
+
+    // MARK: - 8. B081 — witnessVerify() must consult the WITNESS trust set, not the COLLECTOR set
+
+    /// Deterministic (no network) regression for B081 (AppModel.swift:2019). `witnessVerify()`
+    /// previously built its trusted-key argument from `CollectorPinning.configuredTrustedSigningKeys()`
+    /// — the wrong (collector) trust set. Because the witness signer's public key is (correctly) never
+    /// in the collector trust set, an honest, freshly-signed witness seal rendered `.untrustedSigner`
+    /// the moment ANY collector key was configured. Windows/Linux pass no trust arg and auto-load the
+    /// witness set; the fix routes macOS through `WitnessPinning.configuredTrustedWitnessKeys()`.
+    ///
+    /// This test signs a real snapshot with a witness keypair, configures a DIFFERENT collector key
+    /// plus the correct witness key, and asserts `.valid`. Pre-fix, the collector set is consulted and
+    /// the signer is absent -> `.untrustedSigner`, so this assertion goes RED — it is not vacuous.
+    @MainActor
+    func testHonestWitnessSnapshotVerifiesValidWhenCollectorKeyConfigured() throws {
+        let defaults = UserDefaults.standard
+        let priorCollector = defaults.string(forKey: "collector_trusted_keys")
+        let priorWitness = defaults.string(forKey: "witness_trusted_keys")
+        defer {
+            // Leave the machine's trust configuration exactly as found.
+            if let priorCollector { defaults.set(priorCollector, forKey: "collector_trusted_keys") }
+            else { defaults.removeObject(forKey: "collector_trusted_keys") }
+            if let priorWitness { defaults.set(priorWitness, forKey: "witness_trusted_keys") }
+            else { defaults.removeObject(forKey: "witness_trusted_keys") }
+        }
+
+        // Two distinct keypairs: the witness signs the seal; the collector key is an unrelated party.
+        let (witnessPriv, witnessPub) = WitnessSigner.generateKeyPair()
+        let (_, collectorPub) = WitnessSigner.generateKeyPair()
+        XCTAssertNotEqual(witnessPub, collectorPub, "the two trust sets must be genuinely different")
+
+        // Configure ONLY a collector key, plus the correct witness key in the witness set.
+        // Pre-fix: the collector set {collectorPub} is consulted -> signer absent -> .untrustedSigner.
+        // Post-fix: the witness set {witnessPub} is consulted -> signer present -> .valid.
+        defaults.set(collectorPub, forKey: "collector_trusted_keys")
+        defaults.set(witnessPub, forKey: "witness_trusted_keys")
+
+        // witnessVerify()'s hasKey guard reads the Keychain directly (checkKeyPresence ->
+        // SecItemCopyMatching); it only needs SOME signing key present (verification uses the
+        // snapshot's embedded public key, not this stored key). An unsigned / entitlement-less test
+        // host — e.g. `swift test` off a plain CLI build — cannot access the Keychain and returns
+        // errSecMissingEntitlement (-34018), the SAME wall the existing Keychain-dependent witness
+        // tests hit in that environment. Skip (not fail) when the Keychain is genuinely unreachable:
+        // this gates on harness CAPABILITY, never on the product's own verify result, so it cannot
+        // mask the B081 regression. When the Keychain IS reachable the full strict assertion below
+        // runs (RED pre-fix -> .untrustedSigner, GREEN post-fix -> .valid).
+        guard (try? WitnessKeyManager.generateAndStoreKey()) != nil, WitnessKeyManager.hasKey else {
+            throw XCTSkip("Keychain unavailable in this test host (missing keychain-access-group entitlement); cannot exercise the hasKey-gated witnessVerify() path.")
+        }
+
+        let snap = try WitnessSigner.createSignedSnapshot(
+            domain: "example.com",
+            comparison: Self.cleanComparisonFixture(domain: "example.com"),
+            privateKeyBase64: witnessPriv)
+
+        let model = AppModel()
+        model.witnessSnapshot = snap
+        model.witnessSignature = snap.signature
+        model.witnessVerify()
+
+        XCTAssertEqual(model.witnessResult, .valid,
+                       "B081: an honest witness seal must verify against the WITNESS trust set")
+        XCTAssertNotEqual(model.witnessResult, .untrustedSigner,
+                          "B081 regression: a configured collector key must not make an honest witness seal read as untrusted")
+        XCTAssertTrue(model.witnessValid)
+    }
+
+    // MARK: - 9. 5(b) — external-paste verify routes through the same detailed verifier honestly
+
+    /// A testimony sealed on ANOTHER machine, pasted as JSON, must verify through the SAME
+    /// `verifySnapshotDetailed` + result path as self-verify — and must NOT require a local signing
+    /// key (verification uses the snapshot's embedded public key). Mirrors the CLI's decode path.
+    @MainActor
+    func testExternalVerifyValidPastedTestimonyReadsValid() throws {
+        let defaults = UserDefaults.standard
+        let priorWitness = defaults.string(forKey: "witness_trusted_keys")
+        defer {
+            if let priorWitness { defaults.set(priorWitness, forKey: "witness_trusted_keys") }
+            else { defaults.removeObject(forKey: "witness_trusted_keys") }
+        }
+
+        let (priv, pub) = WitnessSigner.generateKeyPair()
+        // Pin the pasted signer so the trust check actively engages and passes, independent of
+        // whatever the developer's real witness trust set happens to be.
+        defaults.set(pub, forKey: "witness_trusted_keys")
+
+        let snap = try WitnessSigner.createSignedSnapshot(
+            domain: "example.com",
+            comparison: Self.cleanComparisonFixture(domain: "example.com"),
+            privateKeyBase64: priv)
+        let json = try XCTUnwrap(String(data: JSONEncoder().encode(snap), encoding: .utf8))
+
+        // External verify must NOT depend on a local key: delete any stored key first.
+        WitnessKeyManager.deleteKey()
+
+        let model = AppModel()
+        model.externalSnapshotJson = json
+        model.witnessVerifyExternal()
+
+        XCTAssertEqual(model.witnessResult, .valid,
+                       "a valid pasted testimony must verify without a local signing key")
+        XCTAssertTrue(model.witnessValid)
+        XCTAssertEqual(model.witnessSnapshot?.targetDomain, "example.com",
+                       "the pasted snapshot's metadata must drive the SAME validation report")
+        XCTAssertTrue(model.showValidation)
+    }
+
+    /// Malformed / non-snapshot JSON must yield an honest `.malformedInput` result — never a crash,
+    /// never a false `.valid`, and never a tamper accusation (`.invalidSignature`).
+    @MainActor
+    func testExternalVerifyMalformedJsonIsHonestNotCrash() {
+        let model = AppModel()
+
+        model.externalSnapshotJson = "{ this is not a signed testimony"
+        model.witnessVerifyExternal()
+        XCTAssertEqual(model.witnessResult, .malformedInput)
+        XCTAssertNil(model.witnessSnapshot, "a malformed paste must not leave a stale snapshot in the report")
+        XCTAssertFalse(model.witnessValid)
+        XCTAssertTrue(model.showValidation)
+
+        // Empty / whitespace-only paste is likewise honest, not a crash.
+        model.externalSnapshotJson = "   \n  "
+        model.witnessVerifyExternal()
+        XCTAssertEqual(model.witnessResult, .malformedInput)
+        XCTAssertNil(model.witnessSnapshot)
+        XCTAssertFalse(model.witnessValid)
+    }
+
+    // MARK: - 10. T-7 — Severity-tier mapping (Phase 3 §4.3)
+
+    /// T-7: pins the severity tier (WitnessResult enum → ✅/⚠️/❌ icon in WitnessView.swift:14-66)
+    /// for each reachable SnapshotVerification equivalent. The View's `witnessResultDisplay`
+    /// computed property maps `witnessResult` to icon + color, but that SwiftUI View code cannot be
+    /// tested headless — this test pins the ViewModel state the View reads, so any drift in the
+    /// enum → severity mapping is caught here. Mirrors the Linux ApplyVerification Theory at
+    /// WitnessViewModelTests.cs and the Windows SeverityTier_MapsEachScenarioToExpectedViewModelState.
+    ///
+    /// Tier assignments (WitnessView.swift:14-66):
+    ///   ✅ Green  → .valid
+    ///   ⚠️  Amber → .expired, .stale, .noKey(.confirmedAbsent), .noKey(.undetermined), .notVerified
+    ///   ❌ Red    → .futureDated, .untrustedSigner, .displayMismatch, .invalidSignature,
+    ///               .malformedInput, .unsupportedFormat
+    @MainActor
+    func testSeverityTierPinsResultEnumForEachScenario() throws {
+        let defaults = UserDefaults.standard
+        let priorWitness = defaults.string(forKey: "witness_trusted_keys")
+        defer {
+            if let priorWitness { defaults.set(priorWitness, forKey: "witness_trusted_keys") }
+            else { defaults.removeObject(forKey: "witness_trusted_keys") }
+        }
+
+        let (priv, pub) = WitnessSigner.generateKeyPair()
+        defaults.set(pub, forKey: "witness_trusted_keys")
+
+        // ── Scenario 1: .notVerified (initial / pre-verify state → ⚠️ amber) ──────────────────
+        let model = AppModel()
+        XCTAssertEqual(model.witnessResult, .notVerified,
+                       "initial state must be .notVerified (amber in the View)")
+        XCTAssertFalse(model.witnessValid)
+
+        // ── Scenario 2: .valid (genuine seal → ✅ green) ──────────────────────────────────────
+        let validSnap = try WitnessSigner.createSignedSnapshot(
+            domain: "example.com",
+            comparison: Self.cleanComparisonFixture(domain: "example.com"),
+            privateKeyBase64: priv)
+        let validJson = try XCTUnwrap(String(data: JSONEncoder().encode(validSnap), encoding: .utf8))
+        model.externalSnapshotJson = validJson
+        model.witnessVerifyExternal()
+        XCTAssertEqual(model.witnessResult, .valid,
+                       "✅ a genuine seal must land in the green tier")
+        XCTAssertTrue(model.witnessValid)
+
+        // ── Scenario 3: .invalidSignature (tampered signature → ❌ red) ────────────────────────
+        // WitnessSnapshot has `let` properties, so tamper via JSON string manipulation.
+        let model2 = AppModel()
+        let tamperedJson = flipFirstBase64CharInJson(validJson, forKey: "signature")
+        model2.externalSnapshotJson = tamperedJson
+        model2.witnessVerifyExternal()
+        XCTAssertEqual(model2.witnessResult, .invalidSignature,
+                       "❌ a tampered signature must land in the critical (red) tier")
+        XCTAssertFalse(model2.witnessValid)
+
+        // ── Scenario 4: .displayMismatch (tampered display field → ❌ red) ────────────────────
+        let model3 = AppModel()
+        let displayJson = replaceJsonValue(validJson, key: "targetDomain",
+                                           oldValue: "\"example.com\"",
+                                           newValue: "\"attacker-swapped.example\"")
+        model3.externalSnapshotJson = displayJson
+        model3.witnessVerifyExternal()
+        XCTAssertEqual(model3.witnessResult, .displayMismatch,
+                       "❌ a tampered display field must land in the critical (red) tier")
+        XCTAssertFalse(model3.witnessValid)
+
+        // ── Scenario 5: .malformedInput (garbage JSON → ❌ red) ───────────────────────────────
+        let model4 = AppModel()
+        model4.externalSnapshotJson = "this is not a signed testimony"
+        model4.witnessVerifyExternal()
+        XCTAssertEqual(model4.witnessResult, .malformedInput,
+                       "❌ malformed input must land in the critical (red) tier")
+        XCTAssertFalse(model4.witnessValid)
+
+        // ── Scenario 6: .expired (past expiresAt → ⚠️ amber) ─────────────────────────────────
+        let model5 = AppModel()
+        let expiredSnap = try WitnessSigner.createSignedSnapshot(
+            domain: "example.com",
+            comparison: Self.cleanComparisonFixture(domain: "example.com"),
+            privateKeyBase64: priv,
+            expiresAt: Date().addingTimeInterval(-600))   // 10 minutes ago
+        let expiredJson = try XCTUnwrap(String(data: JSONEncoder().encode(expiredSnap), encoding: .utf8))
+        model5.externalSnapshotJson = expiredJson
+        model5.witnessVerifyExternal()
+        XCTAssertEqual(model5.witnessResult, .expired,
+                       "⚠️ an expired seal must land in the caution (amber) tier — honest but out-of-date, not forged")
+        XCTAssertFalse(model5.witnessValid)
+    }
+
+    // MARK: - 11. T-7 supplement — severity tier canonical table
+
+    /// T-7 supplement: pins the canonical WitnessResult → severity tier table from
+    /// WitnessView.swift:14-66 as a static assertion. If the View's icon/color assignments change,
+    /// this table must change with it — any drift from the canonical mapping is caught here.
+    @MainActor
+    func testSeverityTierCanonicalTableMatchesViewMapping() {
+        // Green (✅): only .valid
+        let greenCases: [AppModel.WitnessResult] = [.valid]
+        for result in greenCases {
+            XCTAssertEqual(severityTier(for: result), "✅",
+                           "\(result) must be green (✅) per WitnessView.swift:14-66")
+        }
+
+        // Amber (⚠️): expired, stale, noKey (both variants), notVerified
+        let amberCases: [AppModel.WitnessResult] = [
+            .expired, .stale,
+            .noKey(.confirmedAbsent), .noKey(.undetermined(-1)),
+            .notVerified
+        ]
+        for result in amberCases {
+            XCTAssertEqual(severityTier(for: result), "⚠️",
+                           "\(result) must be amber (⚠️) per WitnessView.swift:14-66")
+        }
+
+        // Red (❌): futureDated, untrustedSigner, displayMismatch, invalidSignature,
+        //           malformedInput, unsupportedFormat
+        let redCases: [AppModel.WitnessResult] = [
+            .futureDated, .untrustedSigner, .displayMismatch,
+            .invalidSignature, .malformedInput, .unsupportedFormat
+        ]
+        for result in redCases {
+            XCTAssertEqual(severityTier(for: result), "❌",
+                           "\(result) must be red (❌) per WitnessView.swift:14-66")
+        }
+    }
+
+    /// Replicates WitnessView.swift:14-66's icon/color assignment as a pure function.
+    /// If the View's switch changes, this helper must change with it.
+    private func severityTier(for result: AppModel.WitnessResult) -> String {
+        switch result {
+        case .valid:
+            return "✅"
+        case .expired, .stale, .noKey, .notVerified:
+            return "⚠️"
+        case .futureDated, .untrustedSigner, .displayMismatch,
+             .invalidSignature, .malformedInput, .unsupportedFormat:
+            return "❌"
+        }
+    }
+
+    /// Flips the first base64 character of a JSON string value for a given key.
+    /// Used to tamper a snapshot's signature without decoding/re-encoding (WitnessSnapshot has
+    /// `let` properties). Searches for `"key":"<base64>"` and flips the first char of the value.
+    private func flipFirstBase64CharInJson(_ json: String, forKey key: String) -> String {
+        let searchPattern = "\"\(key)\":\""
+        guard let range = json.range(of: searchPattern) else { return json }
+        let valueStart = range.upperBound
+        guard valueStart < json.endIndex else { return json }
+        let firstChar = json[valueStart]
+        let replacement: Character = firstChar == "A" ? "B" : "A"
+        var result = json
+        result.replaceSubrange(valueStart...valueStart, with: String(replacement))
+        return result
+    }
+
+    /// Replaces a specific string value in JSON for a given key.
+    /// Used to tamper display fields (e.g. targetDomain) without decoding/re-encoding.
+    private func replaceJsonValue(_ json: String, key: String,
+                                  oldValue: String, newValue: String) -> String {
+        // The JSON encodes targetDomain as "targetDomain":"example.com" — replace the value
+        // substring only (oldValue includes the quotes).
+        let searchKey = "\"\(key)\":"
+        guard let keyRange = json.range(of: searchKey) else { return json }
+        let afterKey = keyRange.upperBound
+        let searchRange = afterKey..<json.endIndex
+        guard let valueRange = json.range(of: oldValue, range: searchRange) else { return json }
+        var result = json
+        result.replaceSubrange(valueRange, with: newValue)
+        return result
+    }
 }

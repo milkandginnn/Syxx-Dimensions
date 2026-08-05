@@ -14,7 +14,9 @@ public enum ConditionState: String, Codable, Sendable {
     case unknown
 }
 
-public struct VPNStatus: Codable, Sendable {
+// G-16b: added Equatable so DNSPathSnapshot's synthesised conformance works.
+// All stored properties (ConditionState: raw-value enum, [String], String) are Equatable.
+public struct VPNStatus: Codable, Sendable, Equatable {
     public let state: ConditionState
     public let tunnelInterfaces: [String]
     public let evidence: String
@@ -25,7 +27,9 @@ public struct CaptivePortalStatus: Codable, Sendable {
     public let evidence: String
 }
 
-public struct EncryptedDNSStatus: Codable, Sendable {
+// G-16b: added Equatable so DNSPathSnapshot's synthesised conformance works.
+// All stored properties (ConditionState, String, DNSProtocol?) are Equatable.
+public struct EncryptedDNSStatus: Codable, Sendable, Equatable {
     public let state: ConditionState
     public let evidence: String
     /// The transport the system is CONFIGURED to use, when `scutil --dns` actually named one, and

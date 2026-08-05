@@ -61,6 +61,20 @@ public static class PlatformSecretStore
     /// Convenience: initialises both <see cref="LicenseManager"/> and
     /// <see cref="WitnessKeyStore"/> with the platform-appropriate store.
     /// Call once at application startup before any store operations.
+    ///
+    /// <para>BLAST RADIUS — verified, and worth stating because it is easy to read this subsystem as
+    /// witness-only. ONE store instance is handed to BOTH consumers on the two lines below. On Linux
+    /// that instance is <see cref="LinuxSecretStore"/>, so the licence key rides exactly the same
+    /// backend chain, the same key derivation and the same file permissions as the Ed25519 signing
+    /// key. Every property claimed of one holds of the other, including the weak ones: before the
+    /// P-04 repairs, the licence key was also wrapped with a machine-derived key over a constant
+    /// salt and was also written into a world-readable file before being narrowed.</para>
+    ///
+    /// <para>The two differ in consequence, not in exposure. A stolen licence key is a commercial
+    /// loss; a stolen signing key means testimony forged in the owner's name. That is why §8's
+    /// passphrase is described in terms of the signing key — but a passphrase installed via
+    /// <see cref="KeystorePassphraseSession.SetProvider"/> protects both, because there is only
+    /// one store.</para>
     /// </summary>
     public static void Initialise()
     {

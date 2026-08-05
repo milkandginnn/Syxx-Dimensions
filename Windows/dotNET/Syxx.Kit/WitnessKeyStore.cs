@@ -310,6 +310,64 @@ namespace Syxx.Kit
         }
 
         /// <summary>
+        /// C-10: the tri-state a destructive command asks BEFORE it acts — is it safe to mint a new
+        /// signing identity here? <see cref="KeyPresence.Absent"/> is the only answer that says yes.
+        ///
+        /// <para>WHY THIS IS SEPARATE FROM <see cref="LoadKeyResult"/>. LoadKeyResult decrypts, and
+        /// decrypting now costs a user passphrase (§8): the file store derives its key with Argon2id
+        /// over the passphrase, so on a passphrase-protected install LoadKeyResult can only answer
+        /// after a prompt. A guard that has to prompt is a guard people route around, and worse, a
+        /// guard that returns "could not decrypt" would be indistinguishable from "no key" to a
+        /// caller that only looked at the key being null. This probe asks the same two oracles — the
+        /// token file and <see cref="ISecretStore.Exists"/> — and never asks for the secret itself,
+        /// so it is answerable with the keyring locked and with no passphrase in hand.</para>
+        ///
+        /// <para>WHAT Present MEANS HERE. "A key was established at this path" — proved by a
+        /// well-formed token file or by the store holding a witness secret. It does NOT claim the key
+        /// is currently decryptable; a probe that had to decrypt to say so would be the thing this
+        /// method exists to avoid. For the C-10 decision the distinction does not matter: both are
+        /// "do not overwrite".</para>
+        ///
+        /// <para>The fail-open arm on an uninterrogable store is inherited from
+        /// <see cref="AbsentUnlessStoreHoldsWitnessSecret"/> deliberately and unchanged — see that
+        /// method's RESIDUAL note for why refusing to mint there would be the worse failure, and for
+        /// the Warning breadcrumb that keeps it from being silent.</para>
+        /// </summary>
+        public static KeyPresence ProbeKeyPresence()
+        {
+            var probe = ProbeTokenFile(readContent: true);
+            switch (probe.State)
+            {
+                case TokenFileState.Missing:
+                    return AbsentUnlessStoreHoldsWitnessSecret("no witness.key token file").Presence;
+
+                case TokenFileState.Empty:
+                    return AbsentUnlessStoreHoldsWitnessSecret("witness.key is empty").Presence;
+
+                case TokenFileState.Unreadable:
+                    return Undetermined("witness.key could not be read", probe.Error).Presence;
+            }
+
+            var fileBytes = probe.Bytes!;
+
+            // A well-formed reference token is itself proof that a key was established here. The
+            // store is NOT consulted: whether it can hand the secret back right now is a question
+            // about reachability, and answering it would require the passphrase this probe refuses
+            // to need.
+            if (fileBytes[0] == (byte)'_')
+            {
+                var stored = Encoding.UTF8.GetString(fileBytes);
+                return stored.StartsWith(RefTokenPrefix, StringComparison.Ordinal)
+                    ? KeyPresence.Present
+                    : Undetermined("witness.key holds an unrecognized non-empty token").Presence;
+            }
+
+            // A legacy Windows DPAPI blob is equally proof of an established key. Its decryptability
+            // is not asked, for the same reason.
+            return KeyPresence.Present;
+        }
+
+        /// <summary>
         /// G-02(b): decides Absent vs Undetermined when the token file is gone or blank.
         ///
         /// A missing token file is NOT proof that no identity exists. The token and the secret resolve
@@ -334,17 +392,15 @@ namespace Syxx.Kit
         /// first identity at all, with no in-app route out. So this arm fails OPEN, deliberately, and
         /// emits a Warning breadcrumb rather than taking it silently.
         ///
-        /// The cost is precise and worth naming: on Linux, a secret written into the keyring through
-        /// <c>secret-tool</c> becomes unqueryable if that package is later removed, or if the Secret
-        /// Service is locked or absent when we probe (headless, SSH). Lose the token file in that
-        /// state and this arm mints a second identity over a live one — the G-02 harm, narrowed but not
-        /// eliminated. It does NOT apply to the AES-GCM file store, which needs no service to
-        /// enumerate and is where every Linux secret actually lands today
-        /// (<c>LinuxSecretStore.Exists</c> documents why). Closing the remainder needs a store that can
-        /// answer existence without the keyring's cooperation — a libsecret search binding that can see
-        /// locked items, or a keyType-level presence record beside the file store — which is a
-        /// persistence-design decision, not a classification one, and is tracked outside this
-        /// method.</para>
+        /// The cost is precise and worth naming: on Linux, the libsecret search binding
+        /// (<c>LinuxSecretStore.SearchForKeyType</c>) now closes the locked-keyring case — search
+        /// matches on attributes without unlock, so a locked but populated keyring returns Present
+        /// (→ Undetermined, not Absent). The "<c>libsecret-tools</c> removed after minting" case is
+        /// also closed for P/Invoke-stored secrets, because the shared library that performed the
+        /// write is by construction still present. What remains open is a Secret Service that is
+        /// entirely absent at probe time (headless SSH with no session bus, no D-Bus daemon) —
+        /// there, every backend returns Unknown and this arm mints. It does NOT apply to the
+        /// AES-GCM file store, which needs no service to enumerate.</para>
         /// </summary>
         private static KeyLoadResult AbsentUnlessStoreHoldsWitnessSecret(string tokenFileReason)
         {

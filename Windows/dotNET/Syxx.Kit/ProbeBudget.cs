@@ -60,15 +60,29 @@ public class ProbeBudget
 
     // ── Factory methods for section defaults ──
 
-    /// <summary>Default budget for Prophet (30s total, 2.5s per-probe, max 15 probes).</summary>
-    public static ProbeBudget DefaultProphet => new(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(2.5), 15);
+    /// <remarks>
+    /// C058: the per-probe timeout is derived from the transport worst case (UDP:
+    /// <c>MaxUDPAttempts</c> × the 2000 ms receive timeout in <c>DNSResolver.SendUDPAsync</c> =
+    /// 4.0s, plus slack; DoH: request timeout + slack) instead of the flat 2.5s that sat
+    /// <b>below every transport timeout beneath it</b>. A probe whose deadline fires before the
+    /// transport completes discards arriving evidence — the UDP retry's answer, the DoH
+    /// blocked-state observation — while still charging the full transport wall-clock to the
+    /// section budget. At 2.5s a UDP probe that needed its retry could never return an answer.
+    /// Values are the macOS <c>ProbeBudget.swift</c> twin's, exactly.
+    /// </remarks>
 
-    /// <summary>Default budget for Mirror (30s total, 2.5s per-probe, max 10 probes).</summary>
-    public static ProbeBudget DefaultMirror => new(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(2.5), 10);
+    /// <summary>Default budget for Prophet (45s total, 5s per-probe, max 15 probes).</summary>
+    public static ProbeBudget DefaultProphet => new(TimeSpan.FromSeconds(45), TimeSpan.FromSeconds(5.0), 15);
 
-    /// <summary>Default budget for Portal (15s total, 2.5s per-probe, max 5 probes).</summary>
-    public static ProbeBudget DefaultPortal => new(TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(2.5), 5);
+    /// <summary>
+    /// Default budget for Mirror (50s total, 6s per-probe, max 10 probes).
+    /// Mirror includes DoH vantage comparisons whose request timeout is 5s.
+    /// </summary>
+    public static ProbeBudget DefaultMirror => new(TimeSpan.FromSeconds(50), TimeSpan.FromSeconds(6.0), 10);
 
-    /// <summary>Default budget for Glutton (20s total, 2.5s per-probe, max 5 probes).</summary>
-    public static ProbeBudget DefaultGlutton => new(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(2.5), 5);
+    /// <summary>Default budget for Portal (30s total, 5s per-probe, max 5 probes).</summary>
+    public static ProbeBudget DefaultPortal => new(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(5.0), 5);
+
+    /// <summary>Default budget for Glutton (25s total, 5s per-probe, max 5 probes).</summary>
+    public static ProbeBudget DefaultGlutton => new(TimeSpan.FromSeconds(25), TimeSpan.FromSeconds(5.0), 5);
 }

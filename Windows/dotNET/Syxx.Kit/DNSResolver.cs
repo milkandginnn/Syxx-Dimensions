@@ -1142,7 +1142,12 @@ namespace Syxx.Kit
                 throw new FormatException("DNS name is empty.");
             }
 
-            string trimmed = name.TrimEnd('.');
+            // K-19: trim leading dots as well as trailing. `MakeQueryPacket` below already splits on
+            // `name.Trim('.')`, so a leading dot was encoded correctly on the wire while THIS
+            // validator rejected the same input — the guard was stricter than the encoder it guards.
+            // macOS `validateDomainName` trims both ends too, so ".example.com" was accepted there
+            // and refused here for identical bytes. (C116 covers the trailing-dot half.)
+            string trimmed = name.Trim('.');
             if (Encoding.UTF8.GetByteCount(trimmed) > 253)
             {
                 throw new FormatException("DNS name exceeds 253 bytes.");

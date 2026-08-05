@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Syxx.Kit;
@@ -812,10 +813,14 @@ namespace Syxx.Tests
             });
 
             // elapsed >= PerProbeTimeout (timeout fired at ~10ms); well under the probe's full sleep.
+            // C058: the bound is now 10ms + the 1.5s grace drain, because the deadline no longer
+            // ends the probe — the runner waits out the grace window for a late answer before
+            // recording an absence. The assertion still catches what it was written to catch: that
+            // Elapsed is real wall-clock and never the operation's full 10s sleep.
             Assert.Equal(1, budget.ProbesRun);
             Assert.True(budget.Elapsed >= TimeSpan.FromMilliseconds(9));
-            Assert.True(budget.Elapsed <= TimeSpan.FromSeconds(1),
-                "Elapsed must not be the full probe sleep duration — operation was cancelled");
+            Assert.True(budget.Elapsed <= TimeSpan.FromSeconds(3),
+                $"Elapsed must not be the full probe sleep duration — was {budget.Elapsed.TotalSeconds:F2}s");
         }
 
         [Fact]
@@ -839,6 +844,72 @@ namespace Syxx.Tests
             Assert.True(budget.Elapsed >= TimeSpan.FromMilliseconds(18),
                 "Two timed-out probes must accumulate real elapsed time");
             Assert.Equal(2, budget.ProbesRun);
+        }
+
+        // ── C058 / K-09(a): the grace drain ──
+        //
+        // The longer per-probe deadline (K-15) is only half the fix. Without a recovery window an
+        // answer that arrives just after the deadline is still discarded and reported as an
+        // absence — the timing changes but the evidence loss does not. Twin: the `gracePeriod`
+        // branch in macOS ProbeRunner.swift.
+
+        /// An answer arriving AFTER the deadline but INSIDE the grace window is returned, not
+        /// discarded. A real (late) answer is preferred over a fabricated absence.
+        /// Failure case: delete the grace drain → result is null → red.
+        [Fact]
+        public async Task Run_AnswerArrivingInsideGraceWindow_IsReturnedNotDiscarded()
+        {
+            var budget = new ProbeBudget(TimeSpan.FromSeconds(60), TimeSpan.FromMilliseconds(50), 10);
+
+            var result = await ProbeRunner.RunAsync("late", budget, async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(400));   // past the 50ms deadline, inside the 1.5s grace
+                return "arrived-late";
+            });
+
+            Assert.Equal("arrived-late", result);
+        }
+
+        /// The same recovery on the CancellationToken overload. This is the arm that matters most
+        /// in production: a COOPERATIVE probe is torn down by its own token, so if cancellation
+        /// still fired at the deadline the drain would have nothing left to recover and the fix
+        /// would be inert exactly where it is needed.
+        /// Failure case: arm the CTS at PerProbeTimeout instead of PerProbeTimeout + grace → the
+        /// operation is cancelled at 50ms, returns null, and the drain recovers nothing → red.
+        [Fact]
+        public async Task Run_CooperativeProbe_IsNotCancelledDuringTheGraceWindow()
+        {
+            var budget = new ProbeBudget(TimeSpan.FromSeconds(60), TimeSpan.FromMilliseconds(50), 10);
+
+            var result = await ProbeRunner.RunAsync<string>("coop-late", budget, async ct =>
+            {
+                try { await Task.Delay(TimeSpan.FromMilliseconds(400), ct).ConfigureAwait(false); }
+                catch (OperationCanceledException) { return null; }   // cooperative: returns, not throws
+                return "arrived-late";
+            });
+
+            Assert.Equal("arrived-late", result);
+        }
+
+        /// The grace window is bounded. A probe that never answers must still be cut off — at
+        /// deadline + grace, not at the deadline, and never at the operation's own duration.
+        /// Failure case: drop the grace timer and await the operation → ~5s → red.
+        [Fact]
+        public async Task Run_AnswerArrivingAfterTheGraceWindow_IsStillAnAbsence()
+        {
+            var budget = new ProbeBudget(TimeSpan.FromSeconds(60), TimeSpan.FromMilliseconds(50), 10);
+
+            var sw = Stopwatch.StartNew();
+            var result = await ProbeRunner.RunAsync("too-late", budget, async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                return "never";
+            });
+            sw.Stop();
+
+            Assert.Null(result);
+            Assert.True(sw.Elapsed < TimeSpan.FromSeconds(4),
+                $"deadline + grace must bound the probe; took {sw.Elapsed.TotalSeconds:F2}s");
         }
 
         // ── Exhaustion between probes ──
@@ -898,12 +969,20 @@ namespace Syxx.Tests
         }
 
         // ── Factory defaults ──
+        //
+        // C058. These four assertions were internally inconsistent as written: they pinned a 5s
+        // per-probe timeout (correct for Prophet/Portal/Glutton) against the pre-C058 totals, and
+        // 5s for Mirror where the macOS twin uses 6s because Mirror's DoH vantage comparisons have
+        // a 5s request timeout of their own. Both columns are now the macOS ProbeBudget.swift
+        // values. The per-probe floor is the transport worst case — UDP is MaxUDPAttempts(2) ×
+        // the 2000 ms receive timeout = 4.0s on BOTH platforms — so the old flat 2.5s fired 1.5s
+        // before a retried UDP query could possibly answer.
 
         [Fact]
         public void DefaultProphet_HasExpectedValues()
         {
             var b = ProbeBudget.DefaultProphet;
-            Assert.Equal(30, b.TotalTimeout.TotalSeconds, 1);
+            Assert.Equal(45, b.TotalTimeout.TotalSeconds, 1);
             Assert.Equal(5, b.PerProbeTimeout.TotalSeconds, 1);
             Assert.Equal(15, b.MaxProbes);
         }
@@ -912,8 +991,8 @@ namespace Syxx.Tests
         public void DefaultMirror_HasExpectedValues()
         {
             var b = ProbeBudget.DefaultMirror;
-            Assert.Equal(30, b.TotalTimeout.TotalSeconds, 1);
-            Assert.Equal(5, b.PerProbeTimeout.TotalSeconds, 1);
+            Assert.Equal(50, b.TotalTimeout.TotalSeconds, 1);
+            Assert.Equal(6, b.PerProbeTimeout.TotalSeconds, 1);
             Assert.Equal(10, b.MaxProbes);
         }
 
@@ -921,7 +1000,7 @@ namespace Syxx.Tests
         public void DefaultPortal_HasExpectedValues()
         {
             var b = ProbeBudget.DefaultPortal;
-            Assert.Equal(15, b.TotalTimeout.TotalSeconds, 1);
+            Assert.Equal(30, b.TotalTimeout.TotalSeconds, 1);
             Assert.Equal(5, b.PerProbeTimeout.TotalSeconds, 1);
             Assert.Equal(5, b.MaxProbes);
         }
@@ -930,9 +1009,33 @@ namespace Syxx.Tests
         public void DefaultGlutton_HasExpectedValues()
         {
             var b = ProbeBudget.DefaultGlutton;
-            Assert.Equal(20, b.TotalTimeout.TotalSeconds, 1);
+            Assert.Equal(25, b.TotalTimeout.TotalSeconds, 1);
             Assert.Equal(5, b.PerProbeTimeout.TotalSeconds, 1);
             Assert.Equal(5, b.MaxProbes);
+        }
+
+        /// C058 / K-15: the defect this fix exists to remove, pinned so it cannot return.
+        /// A per-probe deadline below the transport worst case means a UDP probe that needs its
+        /// retry can never return an answer — the deadline fires while the answer is in flight,
+        /// and the section records a fabricated absence. Every section default must leave room
+        /// for MaxUDPAttempts(2) × 2000 ms.
+        [Fact]
+        public void EverySectionDefault_PerProbeTimeout_ExceedsUDPTransportWorstCase()
+        {
+            var udpWorstCase = TimeSpan.FromSeconds(4.0);   // 2 attempts × 2000 ms (DNSResolver)
+
+            foreach (var (name, b) in new (string, ProbeBudget)[]
+                     {
+                         ("Prophet", ProbeBudget.DefaultProphet),
+                         ("Mirror",  ProbeBudget.DefaultMirror),
+                         ("Portal",  ProbeBudget.DefaultPortal),
+                         ("Glutton", ProbeBudget.DefaultGlutton),
+                     })
+            {
+                Assert.True(b.PerProbeTimeout > udpWorstCase,
+                    $"{name} per-probe timeout {b.PerProbeTimeout.TotalSeconds}s does not exceed the " +
+                    $"{udpWorstCase.TotalSeconds}s UDP transport worst case — a retried query cannot answer in time.");
+            }
         }
     }
 
@@ -1144,6 +1247,70 @@ namespace Syxx.Tests
         {
             Assert.Equal(FilteringProbe.Enforcement.Active, FilteringProbe.Aggregate(new[] { FilteringProbe.DomainOutcome.Unknown, FilteringProbe.DomainOutcome.Sinkholed }));
             Assert.Equal(FilteringProbe.Enforcement.Inactive, FilteringProbe.Aggregate(new[] { FilteringProbe.DomainOutcome.Unknown, FilteringProbe.DomainOutcome.Resolved }));
+        }
+    }
+
+    // K-19 / K-20 — domain name validation and canonicalization parity with the macOS twins.
+    public class DomainNameParityTests
+    {
+        /// K-19: a leading dot was accepted by macOS `validateDomainName` and rejected by the C#
+        /// twin, so identical input succeeded on one platform and failed on the other. C#'s own
+        /// encoder already trimmed both ends, so the validator was stricter than the code it
+        /// guards — and the wire bytes it refused to produce were correct.
+        /// Failure case: revert `Trim('.')` to `TrimEnd('.')` → the leading dot leaves an empty
+        /// first label → FormatException → red.
+        [Fact]
+        public void LeadingDot_IsAccepted_AndProducesTheSameWireBytesAsWithoutIt()
+        {
+            var withDot = DNSResolver.MakeQueryPacket(".example.com", 1, out _);
+            var without = DNSResolver.MakeQueryPacket("example.com", 1, out _);
+
+            // Skip the first two bytes: the transaction ID is random per call.
+            Assert.Equal(without.Skip(2).ToArray(), withDot.Skip(2).ToArray());
+        }
+
+        /// The leading-dot trim must not weaken the empty-label check it shares code with: an
+        /// INTERIOR empty label still writes a premature root terminator and must stay rejected.
+        [Fact]
+        public void InteriorEmptyLabel_IsStillRejected()
+        {
+            Assert.Throws<FormatException>(() => DNSResolver.MakeQueryPacket("example..com", 1, out _));
+        }
+
+        /// K-20: a rejected domain must say WHY. A bare null told the caller only that a domain
+        /// vanished — an unexplained silent drop. macOS throws a typed `DomainCanonical.Error`
+        /// with descriptions; C# now reports the same three cases.
+        /// Failure case: collapse the error to null → red.
+        [Fact]
+        public void RejectedDomains_ReportTheReason_NotABareNull()
+        {
+            Assert.Null(DomainCanonical.TryCanonicalize("   ", out var emptyError));
+            Assert.IsType<DomainCanonical.DomainCanonicalError.Empty>(emptyError);
+            Assert.Equal("domain is empty", emptyError!.ToString());
+
+            var overlong = string.Join(".", Enumerable.Repeat("abcdefghijklmnopqrstuvwxyz012345678901234567890123456789012", 5));
+            Assert.Null(DomainCanonical.TryCanonicalize(overlong, out var longError));
+            var tooLong = Assert.IsType<DomainCanonical.DomainCanonicalError.TooLong>(longError);
+            Assert.True(tooLong.Length > 253);
+            Assert.Contains("exceeds 253", tooLong.ToString(), StringComparison.Ordinal);
+        }
+
+        /// A successful canonicalization reports no error — the reason channel must not fire on
+        /// the happy path, or callers learn to ignore it.
+        [Fact]
+        public void AcceptedDomain_ReportsNoReason_AndStillCanonicalizes()
+        {
+            var result = DomainCanonical.TryCanonicalize("EXAMPLE.COM.", out var error);
+            Assert.Equal("example.com", result);
+            Assert.Null(error);
+        }
+
+        /// The convenience wrapper must keep behaving exactly as before for existing callers.
+        [Fact]
+        public void CanonicalizeOrNull_IsUnchangedByTheTypedErrorAddition()
+        {
+            Assert.Equal("example.com", DomainCanonical.CanonicalizeOrNull("Example.com."));
+            Assert.Null(DomainCanonical.CanonicalizeOrNull("   "));
         }
     }
 }

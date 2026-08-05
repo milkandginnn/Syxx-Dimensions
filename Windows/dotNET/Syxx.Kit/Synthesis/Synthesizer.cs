@@ -475,10 +475,17 @@ public static class EvidenceAdapters
                     }
                     else
                     {
+                        // K-16 COUPLING — the rationale below is load-bearing on the classifier.
+                        // It used to end "(benign CDN/geo routing is already excluded for a full
+                        // divergence)". That was only true because AuthoritativeVantage.Classify
+                        // softened a same-provider disjoint result to Inconclusive. K-16 removed that
+                        // softening (an attacker may sit inside the provider's own ASN), so a
+                        // `Diverges` can now legitimately carry a shared provider and the old claim
+                        // would be false. The wording states what is actually established.
                         ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.AuthoritativeDiverges,
                             "Recursive answer diverges from the domain's authoritative nameservers"
                                 + (ac.Nameservers is { Count: > 0 } ? $" ({string.Join(", ", ac.Nameservers.Take(2))})" : ""),
-                            "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite (benign CDN/geo routing is already excluded for a full divergence)."));
+                            "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite. CDN/geo routing can also produce this shape, including when both answers sit in one provider's ranges, so corroborate before concluding."));
                     }
                     subs.Add(SectionStatus.Positive);
                     break;

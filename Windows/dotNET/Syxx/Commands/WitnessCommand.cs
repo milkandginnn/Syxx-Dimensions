@@ -76,7 +76,7 @@ namespace Syxx.Commands
                 Console.Error.WriteLine($"[warning] Console UTF-8 encoding unavailable: {ex.Message}");
             }
             if (SyxxConfig.HandleGlobalFlags(args, "syxx witness",
-                "Usage: syxx witness create <domain> --key <b64-private-key> [--output f] | verify <file> [--pubkey <b64>] [--fetch-pubkey <url>] [--detailed] [--max-age <seconds>] | report <file> [--conclusion <file>] | --gen-keypair [--key-file <path>]"))
+                "Usage: syxx witness create <domain> --key-file <path> [--output f] | verify <file> [--pubkey <b64>] [--fetch-pubkey <url>] [--detailed] [--max-age <seconds>] | report <file> [--conclusion <file>] | --gen-keypair [--key-file <path>] [--force]"))
             {
                 Exit(ExitStatus.Clean);
                 return;
@@ -90,6 +90,7 @@ namespace Syxx.Commands
                 // forgeable. Write it to an owner-only-permission file instead; print only the
                 // file path and the public key. Override the default location with --key-file.
                 string? keyFilePath = null;
+                bool forceOverwrite = false;
                 for (int i = 1; i < args.Length; i++)
                 {
                     if (args[i] == "--key-file" && i + 1 < args.Length)
@@ -97,9 +98,48 @@ namespace Syxx.Commands
                         keyFilePath = args[i + 1];
                         i++;
                     }
+                    // B249: opt in to destroying the current signing identity.
+                    else if (args[i] == "--force")
+                    {
+                        forceOverwrite = true;
+                    }
                 }
                 string keyFile = keyFilePath ?? Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".syxx", "witness.key");
+
+                // B249 (C-10) — the Windows/Linux half of the guard macOS has carried since
+                // SyxxWitness.swift:69-77. Without it this command minted a fresh keypair straight
+                // over an existing one: `FileMode.Create` truncates, `File.WriteAllBytesAsync`
+                // overwrites, and neither asks first. Every snapshot ever sealed with the old key
+                // is then orphaned from its signer — the signatures still verify against a public
+                // key nothing on the machine can produce again, and no warning was printed.
+                //
+                // The probe is TRI-STATE on purpose (RG-2 / spine #2). `File.Exists` cannot be used
+                // here: it returns false for permission-denied and IO failure exactly as it does for
+                // a missing file, so it converts "I could not look" into "there is nothing there" —
+                // which is the same class of defect as G-02a in WitnessKeyStore and M-01 on macOS.
+                // An Undetermined probe refuses EVEN WITH --force: --force means "I know a key is
+                // there and I accept destroying it", not "proceed without looking". The way out is
+                // --key-file <path>, which the message names.
+                var presence = ProbeKeyFilePresence(keyFile);
+                if (presence.Presence == KeyPresence.Undetermined)
+                {
+                    Console.WriteLine($"[ERROR] Could not determine whether a private key already exists at: {keyFile}");
+                    Console.WriteLine($"[ERROR] Reason: {presence.Error?.Message ?? "unknown"}");
+                    Console.WriteLine("[ERROR] Refusing to mint a keypair without establishing that nothing is there — overwriting an existing key would orphan every snapshot you have already signed from its signer.");
+                    Console.WriteLine("[ERROR] Fix the path's permissions, or use --key-file <path> to write to a location Syxx can read.");
+                    Exit(ExitStatus.Error);
+                    return;
+                }
+                if (presence.Presence == KeyPresence.Present && !forceOverwrite)
+                {
+                    Console.WriteLine($"[ERROR] Private key already exists at: {keyFile}");
+                    Console.WriteLine("[ERROR] Re-running --gen-keypair would destroy your current signing identity.");
+                    Console.WriteLine("[ERROR] Every snapshot you have already sealed would be orphaned from its signer.");
+                    Console.WriteLine("[ERROR] Use --force to overwrite, or --key-file <path> to write to a different location.");
+                    Exit(ExitStatus.Error);
+                    return;
+                }
 
                 var (priv, pub) = WitnessSigner.GenerateKeyPair();
                 try
@@ -174,12 +214,32 @@ namespace Syxx.Commands
             {
                 string domain = args[1];
                 string? key = null;
+                string? createKeyFilePath = null;
+                bool insecureKeyArg = false;
                 string outputPath = "witness.json";
 
                 int idx = 2;
                 while (idx < args.Length)
                 {
-                    if (args[idx] == "--key" || args[idx] == "-k")
+                    // B189 (C-11): --key-file reads the key from an owner-only file. This is the
+                    // preferred form and the one the help documents; it never puts key material on
+                    // argv. macOS has had it since SyxxWitness.swift:125-130 — this side had only
+                    // --key, so the leaking form was the ONLY form the shared CLI offered, and
+                    // `--gen-keypair` wrote a key file that `create` had no way to read back.
+                    if (args[idx] == "--key-file")
+                    {
+                        if (idx + 1 < args.Length)
+                        {
+                            createKeyFilePath = args[idx + 1];
+                            idx++;
+                        }
+                    }
+                    // B189: explicit opt-in that silences the argv-exposure warning below.
+                    else if (args[idx] == "--insecure-key-arg")
+                    {
+                        insecureKeyArg = true;
+                    }
+                    else if (args[idx] == "--key" || args[idx] == "-k")
                     {
                         if (idx + 1 < args.Length)
                         {
@@ -199,10 +259,48 @@ namespace Syxx.Commands
                     idx++;
                 }
 
+                // B189: --key-file takes precedence — read from an owner-only file, never argv.
+                // Twin of SyxxWitness.swift:147-160.
+                if (createKeyFilePath is not null)
+                {
+                    try
+                    {
+                        WarnIfKeyFileIsGroupOrWorldAccessible(createKeyFilePath);
+                        key = (await File.ReadAllTextAsync(createKeyFilePath)).Trim();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ERROR] Could not read key file {createKeyFilePath}: {ex.Message}");
+                        Exit(ExitStatus.Error);
+                        return;
+                    }
+                }
+
+                // B189 (C-11): a private key on argv is readable by any local account for as long
+                // as the process lives, and it persists afterwards in shell history and CI logs.
+                // This is WORSE on Linux than on the platform the warning was written for: stock
+                // Ubuntu mounts /proc without `hidepid`, so /proc/<pid>/cmdline is world-readable
+                // and `ps -ww` needs no privilege at all. The shared CLI's help used to LEAD with
+                // this form, which made the leaking path the documented one.
+                //
+                // Deliberately a WARNING and not a refusal, byte-for-byte with macOS
+                // SyxxWitness.swift:161-165: the two CLIs are one contract, and hardening only this
+                // side would mean the same command line succeeds on macOS and fails on Linux. See
+                // the E14 report — whether BOTH should refuse is an owner call, not a seat call.
+                if (key is not null && createKeyFilePath is null && !insecureKeyArg)
+                {
+                    Console.WriteLine("[WARNING] Passing the private key on argv exposes it via `ps -ww`, shell history, and CI logs.");
+                    if (OperatingSystem.IsLinux())
+                    {
+                        Console.WriteLine("  On Linux /proc/<pid>/cmdline is world-readable unless /proc is mounted with hidepid — any local account can read this key while the command runs.");
+                    }
+                    Console.WriteLine("  Use --key-file <path> or set SYXX_WITNESS_KEY instead. To suppress this warning, pass --insecure-key-arg.");
+                }
+
                 key ??= Environment.GetEnvironmentVariable("SYXX_WITNESS_KEY");
                 if (string.IsNullOrEmpty(key))
                 {
-                    Console.WriteLine("[ERROR] --key/-k is required (pass --key, set SYXX_WITNESS_KEY, or use --gen-keypair to create a new keypair).");
+                    Console.WriteLine("[ERROR] Private key required (use --key-file <path>, set SYXX_WITNESS_KEY, or --gen-keypair to create a keypair).");
                     PrintUsage();
                     Exit(ExitStatus.Error);
                     return;
@@ -569,7 +667,13 @@ namespace Syxx.Commands
         /// already prints the domain, timestamp, key ID, public key and the specific failure
         /// reason, under a header that makes no integrity claim.
         ///
-        /// Byte-for-byte twin of `SyxxWitnessCLI.printReportRefusal` on macOS.
+        /// Byte-for-byte twin of `SyxxWitnessCLI.printReportRefusal` on macOS — and as of E14 that
+        /// is actually TRUE. It was not: this method's literals matched, but the `Result:` line is
+        /// rendered by <see cref="DescribeVerification"/>, which returned `[INCONCLUSIVE] EXPIRED`
+        /// here against macOS's `❌ EXPIRED`. The two refusals therefore differed on every non-valid
+        /// state, which is every state this method can be reached in. The claim is now backed by
+        /// both platforms returning the same bracketed tri-state labels; if either side's
+        /// DescribeVerification changes alone, this comment becomes false again.
         /// </summary>
         static void PrintReportRefusal(string filePath, SnapshotVerification result)
         {
@@ -588,14 +692,29 @@ namespace Syxx.Commands
             Console.WriteLine();
         }
 
+        /// <summary>
         /// Map a SnapshotVerification to a (label, detail) pair for user-facing output.
+        ///
+        /// The bracketed prefix names the class the EXIT CODE will carry, so the printed line and
+        /// `$?` cannot tell different stories: `[VALID]` -> 0, `[TAMPERED]` -> 1,
+        /// `[INCONCLUSIVE]` -> 2. Byte-for-byte twin of `SyxxWitnessCLI.describeVerification`.
+        ///
+        /// E14: MalformedInput and UnsupportedFormat were labelled `[INVALID]` while
+        /// <see cref="ForVerification"/> mapped both to <see cref="ExitStatus.Inconclusive"/> — so
+        /// the text read as an accusation ("this file is invalid") on exactly the two states the
+        /// contract classifies as UNJUDGEABLE, and no other label used `[INVALID]` at all. A
+        /// snapshot Syxx cannot parse may be perfectly honest and merely from a newer format; that
+        /// is the same claim as EXPIRED, not the same claim as INVALID SIGNATURE. Corrected on both
+        /// platforms in the same change. No test asserted the prefix — the suites assert the bare
+        /// tokens ("MALFORMED INPUT", "DISPLAY MISMATCH"), which are unchanged.
+        /// </summary>
         static (string Label, string Detail) DescribeVerification(SnapshotVerification result)
         {
             return result switch
             {
                 SnapshotVerification.Valid => ("[VALID]", "Tamper-evident — Ed25519 signed content matches."),
-                SnapshotVerification.MalformedInput => ("[INVALID] MALFORMED INPUT", "Could not parse snapshot or public key."),
-                SnapshotVerification.UnsupportedFormat => ("[INVALID] UNSUPPORTED FORMAT", "Snapshot format version not recognized."),
+                SnapshotVerification.MalformedInput => ("[INCONCLUSIVE] MALFORMED INPUT", "Could not parse snapshot or public key."),
+                SnapshotVerification.UnsupportedFormat => ("[INCONCLUSIVE] UNSUPPORTED FORMAT", "Snapshot format version not recognized."),
                 SnapshotVerification.Expired => ("[INCONCLUSIVE] EXPIRED", "The snapshot's expiry date has passed."),
                 SnapshotVerification.Stale => ("[INCONCLUSIVE] STALE", "Snapshot is older than the allowed freshness window."),
                 SnapshotVerification.FutureDated => ("[INCONCLUSIVE] FUTURE-DATED", "Snapshot timestamp is ahead of system clock."),
@@ -619,6 +738,84 @@ namespace Syxx.Commands
             return trustSet.Contains(publicKey)
                 ? "signer trusted"
                 : "signer NOT in your trust set";
+        }
+
+        /// <summary>
+        /// B189 (C-11): warn when a key file is readable by anyone but its owner — the twin of
+        /// macOS's <c>perms &amp; 0o077 != 0</c> check at <c>SyxxWitness.swift:150-154</c>.
+        ///
+        /// POSIX-only by construction. Windows has no POSIX mode, and
+        /// <see cref="File.GetUnixFileMode(string)"/> is documented to return
+        /// <see cref="UnixFileMode.None"/> there — which would render as a reassuring "0" and read
+        /// as MORE secure than 0600. So the check is skipped on Windows and says nothing, rather
+        /// than printing a number it did not measure (spine #4). Windows key-file ACLs are enforced
+        /// at write time by <see cref="RestrictKeyFileToCurrentUser"/>.
+        ///
+        /// Best-effort: a mode we cannot read is not evidence the file is safe, but it is also not
+        /// evidence it is unsafe, so this stays silent and lets the caller's own read fail if the
+        /// file is genuinely unreachable.
+        /// </summary>
+        private static void WarnIfKeyFileIsGroupOrWorldAccessible(string path)
+        {
+            if (OperatingSystem.IsWindows()) return;
+            UnixFileMode mode;
+            try { mode = File.GetUnixFileMode(path); }
+            catch { return; }
+            const UnixFileMode GroupAndOther =
+                UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
+                UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
+            if ((mode & GroupAndOther) != 0)
+            {
+                Console.WriteLine($"[WARNING] Key file {path} has permissions {Convert.ToString((int)(mode & (UnixFileMode)0x1FF), 8)} — should be 600 (owner-only).");
+            }
+        }
+
+        /// <summary>What <see cref="ProbeKeyFilePresence"/> established, plus the failure that
+        /// prevented it establishing anything. <see cref="KeyPresence"/> is reused from
+        /// <c>Syxx.Kit.WitnessKeyStore</c> so the CLI and the GUI key store speak one vocabulary
+        /// for the same three states.</summary>
+        private readonly record struct KeyFileProbe(KeyPresence Presence, Exception? Error);
+
+        /// <summary>
+        /// B249 (C-10): does a private key already sit at <paramref name="path"/>?
+        ///
+        /// Returns <see cref="KeyPresence.Present"/> only on a file that opened and holds bytes,
+        /// <see cref="KeyPresence.Absent"/> only on POSITIVE proof of absence (the file is not
+        /// there, its directory is not there, or it opened and is zero-length — an interrupted or
+        /// blank write holds no key material, so nothing is destroyed by writing over it), and
+        /// <see cref="KeyPresence.Undetermined"/> for everything else: permission denied, a failing
+        /// mount, a path that is a directory, a locked file.
+        ///
+        /// It opens rather than calling <see cref="File.Exists"/> deliberately. <c>File.Exists</c>
+        /// returns false on <see cref="UnauthorizedAccessException"/> and on IO failure exactly as
+        /// it does for a missing file, so a key that is sitting right there behind a traversal
+        /// permission reads as "no key" — and the caller mints over it. That is G-02a in
+        /// <c>WitnessKeyStore</c> and M-01 on macOS, and it is the specific way this guard would
+        /// fail open if written the obvious way. Never throws.
+        /// </summary>
+        private static KeyFileProbe ProbeKeyFilePresence(string path)
+        {
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                return new KeyFileProbe(
+                    stream.Length == 0 ? KeyPresence.Absent : KeyPresence.Present, null);
+            }
+            catch (FileNotFoundException)
+            {
+                return new KeyFileProbe(KeyPresence.Absent, null);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return new KeyFileProbe(KeyPresence.Absent, null);
+            }
+            catch (Exception ex)
+            {
+                // UnauthorizedAccessException (no read/traverse permission, or the path names a
+                // directory), IOException (failing mount, locked file), PathTooLongException, ...
+                // The key may well be there; we simply could not look.
+                return new KeyFileProbe(KeyPresence.Undetermined, ex);
+            }
         }
 
         /// <summary>
@@ -651,10 +848,14 @@ namespace Syxx.Commands
 
         static void PrintUsage()
         {
-            Console.WriteLine(@"Usage: syxx witness create <domain> --key <b64-private-key> [--output f] | verify <file> [--pubkey <b64>] [--fetch-pubkey <url>] [--detailed] [--max-age <seconds>] | report <file> [--conclusion <file>] | --gen-keypair [--key-file <path>]
+            Console.WriteLine(@"Usage: syxx witness create <domain> --key-file <path> [--output f] | verify <file> [--pubkey <b64>] [--fetch-pubkey <url>] [--detailed] [--max-age <seconds>] | report <file> [--conclusion <file>] | --gen-keypair [--key-file <path>] [--force]
 
   create <domain>       Create a signed witness snapshot for the given domain
-    --key, -k           Base64-encoded Ed25519 private key (required; set SYXX_WITNESS_KEY env var)
+    --key-file <path>   Read the Ed25519 private key from a 0600 file (preferred)
+    --key, -k           Base64-encoded key on argv — INSECURE, exposed via `ps -ww`,
+                        /proc/<pid>/cmdline, shell history and CI logs. Prefer --key-file
+                        or the SYXX_WITNESS_KEY env var; pass --insecure-key-arg to silence
+                        the warning.
     --output, -o        Output path (default: witness.json)
   verify <file>         Verify a witness snapshot
     --pubkey <b64>      Verify with an externally-supplied public key (instead of embedded)
@@ -665,6 +866,9 @@ namespace Syxx.Commands
     --conclusion, -c    Optional path to a Conclusion JSON for the plain-language explanation
   --gen-keypair         Generate a new Ed25519 keypair, write it to a private key file, and exit
     --key-file <path>   Override the default key file location (~/.syxx/witness.key)
+    --force             Overwrite an existing private key. Without it, --gen-keypair REFUSES
+                        when a key is already there: replacing it orphans every snapshot you
+                        have already sealed from its signer.
   --help, -h            Show this help");
         }
     }

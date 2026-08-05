@@ -305,7 +305,12 @@ public enum DNSLogAnalyzer {
         if labels.contains(where: { $0.isEmpty || $0.count > 63 }) { return nil }
         // C083: allow underscores — valid in DNS (RFC 8552) and ubiquitous in SRV, DKIM,
         // DMARC, mDNS service discovery (_dmarc.example.com, _sip._udp.example.com).
-        // Windows parity: WSK-015 already added underscore support on the Windows twin.
+        // Windows parity: this comment previously claimed "WSK-015 already added underscore
+        // support on the Windows twin." That was FALSE — `Syxx.Kit/Forensics/DNSLogAnalyzer.cs`
+        // rejected `_` outright, so those names returned null and the caller dropped the record
+        // from every tally including exfil detection. K-17 added underscore support and the
+        // matching `NamesExcludedCount` disclosure to the Windows twin on 2026-08-04; the two
+        // character sets and the exclusion counter now genuinely agree.
         let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789._-")
         if s.contains(where: { !allowed.contains($0) }) { return nil }
         return s

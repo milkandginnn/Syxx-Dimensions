@@ -88,12 +88,12 @@ Systematic pass over all six Warden views to ensure each matches the Prophet gol
 
 ### Tasks
 
-- [ ] Task 4.1: **Mirror** — rune header matches Prophet pattern (54px tile, `ioMirrorYellow` highlight, eyebrow + Cinzel name + lore). Result containers use toned-down opacity from Phase 1. Domain picker container uses yellow module highlight per existing owner directive.
-- [ ] Task 4.2: **Portal** — rune header matches Prophet pattern (`ioSuccessGreen` highlight). Apply highlight color more broadly to section headers and status indicators (per owner note: "needs to be more broadly applied").
-- [ ] Task 4.3: **Glutton** — rune header matches Prophet pattern (`ioGluttonPink` highlight). Result containers toned down.
-- [ ] Task 4.4: **Cage** — rune header matches Prophet pattern (`ioCageCyan` highlight). No feed UI (rejected). Status-only display.
-- [ ] Task 4.5: **Witness** — rune header matches Prophet pattern (`ioWitnessRed` highlight). Signing key input + verification report match mockup layout.
-- [ ] Task 4.6: **Prophet refinement** — address remaining spacing/font issues noted by owner. Verify DNSSEC card fits in pane after Phase 1 tone-down.
+- [x] Task 4.1: **Mirror** — rune header matches Prophet pattern (54px tile, `ioMirrorYellow` highlight, eyebrow + Cinzel name + lore). Result containers use toned-down opacity from Phase 1. Domain picker container uses yellow module highlight per existing owner directive.
+- [x] Task 4.2: **Portal** — rune header matches Prophet pattern (`ioSuccessGreen` highlight). Apply highlight color more broadly to section headers and status indicators (per owner note: "needs to be more broadly applied").
+- [x] Task 4.3: **Glutton** — rune header matches Prophet pattern (`ioGluttonPink` highlight). Result containers toned down.
+- [x] Task 4.4: **Cage** — rune header matches Prophet pattern (`ioCageCyan` highlight). No feed UI (rejected). Status-only display.
+- [x] Task 4.5: **Witness** — rune header matches Prophet pattern (`ioWitnessRed` highlight). Signing key input + verification report match mockup layout.
+- [x] Task 4.6: **Prophet refinement** — address remaining spacing/font issues noted by owner. Verify DNSSEC card fits in pane after Phase 1 tone-down.
 
 ### Verification
 
@@ -110,12 +110,12 @@ Update the output-catalog CSVs for every new or changed user-visible string. Fin
 
 ### Tasks
 
-- [ ] Task 5.1: **Audit all new `Text("...")` strings** — grep all views modified in this track for user-visible strings not yet in the output catalogs.
-- [ ] Task 5.2: **Update `outputs-catalog-story-mode.csv`** — add rows for every new Story-mode string (lore text, warden titles, button labels, status pills). Format: `file:line,trigger,module,task,output,change`.
-- [ ] Task 5.3: **Update `outputs-catalog-general-mode.csv`** — add rows for every General-mode equivalent (technical labels, plain English descriptions).
-- [ ] Task 5.4: **Dark/light mode audit** — toggle `colorScheme`, verify every view renders correctly in both themes. Fix any hardcoded colors that don't resolve per-appearance.
-- [ ] Task 5.5: **Accessibility pass** — `.accessibilityLabel()` on every interactive control, `.accessibilityHint()` on every button, keyboard navigation through every view, Dynamic Type support via `@ScaledMetric` where needed.
-- [ ] Task 5.6: **Otel spans on view lifecycle** — `syxx.macos.gui.{viewName}.appear` / `.disappear` spans on `.onAppear` / `.onDisappear` for every view modified in this track.
+- [x] Task 5.1: **Audit all new `Text("...")` strings** — grep all views modified in this track for user-visible strings not yet in the output catalogs.
+- [x] Task 5.2: **Update `outputs-catalog-story-mode.csv`** — add rows for every new Story-mode string (lore text, warden titles, button labels, status pills). Format: `file:line,trigger,module,task,output,change`.
+- [x] Task 5.3: **Update `outputs-catalog-general-mode.csv`** — add rows for every General-mode equivalent (technical labels, plain English descriptions).
+- [x] Task 5.4: **Dark/light mode audit** — toggle `colorScheme`, verify every view renders correctly in both themes. Fix any hardcoded colors that don't resolve per-appearance.
+- [x] Task 5.5: **Accessibility pass** — `.accessibilityLabel()` on every interactive control, `.accessibilityHint()` on every button, keyboard navigation through every view, Dynamic Type support via `@ScaledMetric` where needed.
+- [x] Task 5.6: **Otel spans on view lifecycle** — `syxx.macos.gui.{viewName}.appear` / `.disappear` spans on `.onAppear` / `.onDisappear` for every view modified in this track.
 
 ### Verification
 

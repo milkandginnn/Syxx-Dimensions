@@ -798,3 +798,7 @@ file:line,trigger,module,task,output,change
 "macOS/Sources/SyxxApp/WitnessView.swift (planned ~:111)","Recovery KDF passphrase field label","Witness","recovery-kdf","Recovery passphrase","planned"
 "macOS/Sources/SyxxApp/WitnessView.swift (planned ~:111)","Recovery KDF confirm-passphrase label","Witness","recovery-kdf","Confirm passphrase","planned"
 "Windows/dotNET/Syxx.Kit/WitnessKeyStore.cs:465","SaveKey read the secret back straight after storing it and the store did not hand it back (G-01 verify-after-store); composed by ErrorPresenter under ""Could not access the signing key."" (sign path) or ""Could not save the signing key."" (import path)","Witness","key-persist","the secure store did not hand back the key just written, so nothing was saved (the keyring may be locked, or unavailable over SSH/headless). No stored identity was changed — unlock the keyring and try again.","new"
+"macOS/Sources/SyxxApp/DashboardView.swift:272","Pro Covenant card title","Dashboard","pro-covenant","Pro Features","new"
+"macOS/Sources/SyxxApp/DashboardView.swift:274","Pro Covenant card lore","Dashboard","pro-covenant","Server-backed checks, signed testimony, and remote vs local comparison are available with a Pro subscription.","new"
+"macOS/Sources/SyxxApp/DashboardView.swift:280","Pro Covenant unlock button","Dashboard","pro-covenant","UNLOCK","new"
+"macOS/Sources/SyxxApp/SettingsView.swift:172","Settings eyebrow (General mode)","Settings","header","PREFERENCES","existing"

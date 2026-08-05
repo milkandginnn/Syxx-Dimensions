@@ -172,3 +172,31 @@ worked, and that job had never passed before today.
 2. Then re-run the PR checks and re-triage against the *executed* results — commits `9d25c98` and
    `65593f4` (authored outside this session) claim fixes for server lint, FileFallback, snap and
    Swift 6 concurrency that have **never been executed by CI** and are therefore `fixed-unverified`.
+
+---
+
+## C-07 · The Avalonia suite cannot be verified on this machine — and that is worth recording
+
+**State:** `open` — a local-verification gap, not a CI red.
+
+The `LinuxSecretStoreTests` run does not complete here. Three attempts, each abandoned after
+8–20 minutes with test hosts still alive and no result line; the same filter runs in **4 seconds on
+CI** (191 tests). `WitnessViewModelTests` alone completes in under a second, so it is specific to the
+secret-store tests.
+
+**Most likely explanation, stated as unproven:** the file-fallback derives an Argon2id key at
+64 MiB × 3 passes (`LinuxSecretStore.cs:470-471`). Each test now uses a fresh temp directory, so
+each gets a fresh salt and a fresh derivation, and xunit has no parallelism configuration in this
+project — collections run concurrently by default. Many simultaneous 64 MiB memory-hard derivations
+on a memory-constrained machine is a plausible path from "slow" to "thrashing", and the owner
+independently observed this session using a lot of memory. I did not prove this, and it should be
+measured before anyone acts on it.
+
+**Why it matters beyond convenience:** if the cause is memory pressure from concurrent derivations,
+it is latent on any constrained CI runner too, and would appear as a job timeout rather than a test
+failure — the hardest kind of red to attribute. Worth a deliberate look: either pin the suite's
+parallelism, or share one derived key across the tests that do not specifically exercise derivation.
+
+**Consequence for this track:** the FileFallback fixes (round-trip verification on both keyring
+backends, plus the per-test temp directory) are reasoned from code and from CI's own logs, and are
+`fixed-unverified`. They have not been executed anywhere since being written, because CI cannot run.

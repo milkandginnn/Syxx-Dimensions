@@ -191,9 +191,9 @@ finding keeps its filed record; these tasks fix them.
       commit — owner-gated, not an agent edit
 - [ ] Task 8.4: F-05 — decide the forward-slash escaping contract. The oracle escapes (`\/`),
       C# does not. One of the two must change; pick deliberately and record why
-- [ ] Task 8.5: F-01 — add `resolverSubstituted` and the Mirror degraded-cap to the C# twin, so
+- [x] Task 8.5: F-01 — add `resolverSubstituted` and the Mirror degraded-cap to the C# twin, so
       substituted evidence cannot read clean on Windows and Linux
-- [ ] Task 8.6: F-02 — thread `DNSTransportWindow` into the C# `SectionInputs`
+- [x] Task 8.6: F-02 — thread `DNSTransportWindow` into the C# `SectionInputs`
 - [ ] Task 8.7: F-06 — correct the `DELTAS-fixed.md` record for F042. It is not fixed
 - [ ] Task 8.9: F-07 — port the vector-evaluation and classification tests to the C# twin
 - [ ] Task 8.8: The `-h` / `-v` CLI asymmetry from Task 3.3 — now fixable in-track

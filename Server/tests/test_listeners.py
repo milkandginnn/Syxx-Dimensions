@@ -5,6 +5,7 @@ where the DNS collector fell back to :5053 and /healthz still said 200. So the t
 three transitions and, above all, that /readyz turns 503 the moment any listener is `down` and NOT
 before.
 """
+
 import os
 import unittest
 

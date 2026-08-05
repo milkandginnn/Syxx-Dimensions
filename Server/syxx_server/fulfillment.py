@@ -5,6 +5,7 @@ lapsed subscription or failed payment, note it (and revoke, once the customer->l
 Idempotent by Stripe event id so re-delivered webhooks never double-provision. All Keygen-admin bits are
 env-configured — with none set, the sale is recorded as PENDING (audit), never silently dropped.
 """
+
 import json
 import urllib.error
 import urllib.request
@@ -40,18 +41,21 @@ def _keygen_create_license(policy_id, email):
     """
     if not config.KEYGEN_ADMIN_TOKEN or not policy_id:
         return None, None
-    base = (config.KEYGEN_BASE_URL
-            or "https://api.keygen.sh/v1/accounts/%s" % config.KEYGEN_ACCOUNT_ID).rstrip("/")
+    base = (config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}").rstrip("/")
     attributes = {}
     if email:
         attributes["metadata"] = {"email": email}
     if config.KEYGEN_MAX_MACHINES > 0:
         attributes["maxMachines"] = config.KEYGEN_MAX_MACHINES
-    body = json.dumps({"data": {
-        "type": "licenses",
-        "attributes": attributes,
-        "relationships": {"policy": {"data": {"type": "policies", "id": policy_id}}},
-    }}).encode()
+    body = json.dumps(
+        {
+            "data": {
+                "type": "licenses",
+                "attributes": attributes,
+                "relationships": {"policy": {"data": {"type": "policies", "id": policy_id}}},
+            }
+        }
+    ).encode()
     req = urllib.request.Request(base + "/licenses", data=body, method="POST")
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Content-Type", "application/vnd.api+json")
@@ -70,10 +74,8 @@ def _keygen_suspend_license(license_id):
     never raises. No-op (False) if the admin token or license id is missing."""
     if not config.KEYGEN_ADMIN_TOKEN or not license_id:
         return False
-    base = (config.KEYGEN_BASE_URL
-            or "https://api.keygen.sh/v1/accounts/%s" % config.KEYGEN_ACCOUNT_ID).rstrip("/")
-    req = urllib.request.Request(base + "/licenses/%s/actions/suspend" % license_id,
-                                 data=b"", method="POST")
+    base = (config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}").rstrip("/")
+    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/suspend", data=b"", method="POST")
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
@@ -95,10 +97,8 @@ def _keygen_reinstate_license(license_id):
     """
     if not config.KEYGEN_ADMIN_TOKEN or not license_id:
         return False
-    base = (config.KEYGEN_BASE_URL
-            or "https://api.keygen.sh/v1/accounts/%s" % config.KEYGEN_ACCOUNT_ID).rstrip("/")
-    req = urllib.request.Request(base + "/licenses/%s/actions/reinstate" % license_id,
-                                 data=b"", method="POST")
+    base = (config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}").rstrip("/")
+    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/reinstate", data=b"", method="POST")
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
@@ -121,9 +121,13 @@ _CHARGEBACK_REVOKE_EVENTS = ("charge.refunded", "charge.dispute.created", "dispu
 # A085: the reinstatement gap is now partially closed — _keygen_reinstate_license handles
 # subscription reactivation (customer.subscription.updated with status=active). A customer whose
 # dispute is later WON still requires operator action (no automatic dispute-win reinstatement).
-_CHARGEBACK_LOG_ONLY_EVENTS = ("charge.dispute.updated", "charge.dispute.closed",
-                               "charge.dispute.funds_reinstated",
-                               "dispute.updated", "dispute.closed")
+_CHARGEBACK_LOG_ONLY_EVENTS = (
+    "charge.dispute.updated",
+    "charge.dispute.closed",
+    "charge.dispute.funds_reinstated",
+    "dispute.updated",
+    "dispute.closed",
+)
 
 
 def _log_chargeback(obj, event_id, etype):
@@ -136,15 +140,16 @@ def _log_chargeback(obj, event_id, etype):
     currency = obj.get("currency", "usd") if isinstance(obj, dict) else "usd"
     customer = obj.get("customer", "") if isinstance(obj, dict) else ""
     reason = "refund" if "refund" in etype else "dispute"
-    logging_util.warn("stripe_%s" % reason,
-                       charge_id=charge_id,
-                       customer=customer or "unknown",
-                       amount_cents=amount,
-                       currency=currency,
-                       event_id=event_id,
-                       detail="%s event received for charge %s (%d %s)" % (
-                           etype, charge_id, amount, currency.upper()))
-    db.audit(customer or charge_id, "stripe:%s" % etype, 200, "stripe")
+    logging_util.warn(
+        f"stripe_{reason}",
+        charge_id=charge_id,
+        customer=customer or "unknown",
+        amount_cents=amount,
+        currency=currency,
+        event_id=event_id,
+        detail="%s event received for charge %s (%d %s)" % (etype, charge_id, amount, currency.upper()),
+    )
+    db.audit(customer or charge_id, f"stripe:{etype}", 200, "stripe")
     return "chargeback-logged"
 
 
@@ -211,8 +216,9 @@ def _revoke_for_chargeback(obj, event_id, etype):
                 # This event id already carries a DIFFERENT event's outcome. Stripe never reuses
                 # an event id, so this means a collision we do not understand; refuse to
                 # overwrite another event's record and report it rather than guessing.
-                logging_util.error("stripe_chargeback_event_id_collision",
-                                   event_id=event_id, etype=etype, existing=existing)
+                logging_util.error(
+                    "stripe_chargeback_event_id_collision", event_id=event_id, etype=etype, existing=existing
+                )
                 return "duplicate"
             # "revoke-failed" / "revoke-unresolved" are deliberately NOT terminal: a Stripe
             # redelivery after a Keygen outage, or after a late-arriving mint, must be able to
@@ -222,14 +228,19 @@ def _revoke_for_chargeback(obj, event_id, etype):
 
     license_id = _license_for_chargeback(obj)
     if not license_id:
-        logging_util.error("stripe_%s_unrevoked" % reason,
-                           charge_id=charge_id, customer=customer or "unknown",
-                           amount_cents=amount, currency=currency, event_id=event_id,
-                           detail="%s received but NO minted license could be mapped to this "
-                                  "charge, so nothing was revoked. The customer has their money "
-                                  "back AND a working license. Resolve by hand from the charge "
-                                  "id." % etype)
-        db.audit(customer or charge_id or "stripe", "fulfill:%s:unresolved" % etype, 500, "stripe")
+        logging_util.error(
+            f"stripe_{reason}_unrevoked",
+            charge_id=charge_id,
+            customer=customer or "unknown",
+            amount_cents=amount,
+            currency=currency,
+            event_id=event_id,
+            detail=f"{etype} received but NO minted license could be mapped to this "
+            "charge, so nothing was revoked. The customer has their money "
+            "back AND a working license. Resolve by hand from the charge "
+            "id.",
+        )
+        db.audit(customer or charge_id or "stripe", f"fulfill:{etype}:unresolved", 500, "stripe")
         if evt_key:
             db.kv_set(evt_key, "revoke-unresolved")
         return "revoke-unresolved"
@@ -246,31 +257,42 @@ def _revoke_for_chargeback(obj, event_id, etype):
         try:
             db.api_key_revoke_all_for_subject(subject)
         except Exception as e:
-            logging_util.error("chargeback_local_key_revoke_failed",
-                               license_id=license_id, err=str(e))
+            logging_util.error("chargeback_local_key_revoke_failed", license_id=license_id, err=str(e))
     else:
-        logging_util.warn("chargeback_no_local_subject_for_license",
-                          license_id=license_id, event_id=event_id,
-                          detail="the license was suspended upstream, but no local subject maps "
-                                 "to it, so any API keys it owns on this server were NOT revoked.")
+        logging_util.warn(
+            "chargeback_no_local_subject_for_license",
+            license_id=license_id,
+            event_id=event_id,
+            detail="the license was suspended upstream, but no local subject maps "
+            "to it, so any API keys it owns on this server were NOT revoked.",
+        )
 
     outcome = "revoked" if suspended else "revoke-failed"
     if suspended:
-        logging_util.warn("stripe_%s_revoked" % reason,
-                          charge_id=charge_id, customer=customer or "unknown",
-                          amount_cents=amount, currency=currency, event_id=event_id,
-                          license_id=license_id,
-                          detail="%s: license suspended in Keygen." % etype)
+        logging_util.warn(
+            f"stripe_{reason}_revoked",
+            charge_id=charge_id,
+            customer=customer or "unknown",
+            amount_cents=amount,
+            currency=currency,
+            event_id=event_id,
+            license_id=license_id,
+            detail=f"{etype}: license suspended in Keygen.",
+        )
     else:
-        logging_util.error("stripe_%s_revoke_failed" % reason,
-                           charge_id=charge_id, customer=customer or "unknown",
-                           amount_cents=amount, currency=currency, event_id=event_id,
-                           license_id=license_id,
-                           detail="%s: Keygen did NOT confirm the suspend, so upstream "
-                                  "entitlement is UNKNOWN. Local keys were revoked. A Stripe "
-                                  "redelivery will retry." % etype)
-    db.audit(customer or charge_id or "stripe", "fulfill:%s" % etype,
-             200 if suspended else 500, "stripe")
+        logging_util.error(
+            f"stripe_{reason}_revoke_failed",
+            charge_id=charge_id,
+            customer=customer or "unknown",
+            amount_cents=amount,
+            currency=currency,
+            event_id=event_id,
+            license_id=license_id,
+            detail=f"{etype}: Keygen did NOT confirm the suspend, so upstream "
+            "entitlement is UNKNOWN. Local keys were revoked. A Stripe "
+            "redelivery will retry.",
+        )
+    db.audit(customer or charge_id or "stripe", f"fulfill:{etype}", 200 if suspended else 500, "stripe")
     if evt_key:
         db.kv_set(evt_key, outcome)
     return outcome
@@ -294,10 +316,9 @@ def handle_event(event):
         return _log_chargeback(obj, event_id, etype)
 
     if etype in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
-        paid = (obj.get("payment_status") in ("paid", "no_payment_required")
-                or etype.endswith("async_payment_succeeded"))
+        paid = obj.get("payment_status") in ("paid", "no_payment_required") or etype.endswith("async_payment_succeeded")
         if not paid:
-            return "await-async"   # delayed method still processing — async_payment_succeeded will follow
+            return "await-async"  # delayed method still processing — async_payment_succeeded will follow
         # A013: claim the event ATOMICALLY so two concurrent deliveries can never both mint. A plain
         # kv_get + kv_set is a check-then-act race — both readers see "absent", both proceed, both
         # mint (double-mint). kv_insert_once is a compare-and-set: exactly one caller wins the
@@ -328,14 +349,17 @@ def handle_event(event):
                     # _PROCESSING_LEASE_SECONDS, the original handler likely crashed
                     # and the event is reclaimable. Otherwise it is genuinely in-flight.
                     import time as _time
+
                     age = int(_time.time()) - (created_at or 0)
                     if created_at is None or age < _PROCESSING_LEASE_SECONDS:
                         return "duplicate"
-                    logging_util.warn("stripe_event_lock_reclaimed",
-                                      event_id=event_id, age_seconds=age,
-                                      detail="processing lock older than %ds — "
-                                             "reclaiming (original handler likely crashed)"
-                                             % _PROCESSING_LEASE_SECONDS)
+                    logging_util.warn(
+                        "stripe_event_lock_reclaimed",
+                        event_id=event_id,
+                        age_seconds=age,
+                        detail="processing lock older than %ds — "
+                        "reclaiming (original handler likely crashed)" % _PROCESSING_LEASE_SECONDS,
+                    )
                     db.kv_set(evt_key, "processing")
                 elif existing == "failed":
                     # "failed" -> re-enter so a Stripe retry can mint the
@@ -355,9 +379,13 @@ def handle_event(event):
             legacy = meta.get("product") or obj.get("client_reference_id") or ""
             sku = config.sku_for_legacy_product(legacy)
             if sku:
-                logging_util.warn("stripe_legacy_product_metadata", product=legacy, sku=sku,
-                                  detail="pre-SKU-refactor session fulfilled via the legacy product "
-                                         "map; remove the map once these can no longer arrive")
+                logging_util.warn(
+                    "stripe_legacy_product_metadata",
+                    product=legacy,
+                    sku=sku,
+                    detail="pre-SKU-refactor session fulfilled via the legacy product "
+                    "map; remove the map once these can no longer arrive",
+                )
         policy = config.keygen_policy_for(sku)
         key, license_id = _keygen_create_license(policy, email)
         # A047: mailer.send() returns False (never raises) when SMTP is unconfigured or the send
@@ -389,14 +417,18 @@ def handle_event(event):
         # A047: a minted-but-undelivered sale is NOT a 200. It is a paying customer with no key,
         # and it must be loud enough for an operator to find and act on.
         if key and not delivered:
-            logging_util.warn("license_minted_but_undelivered",
-                              license_id=license_id or "", sku=sku or "unknown",
-                              detail="license minted; the key email FAILED to send (SMTP unconfigured "
-                                     "or send error). The customer has paid and has no key — resend "
-                                     "manually from the license id.")
+            logging_util.warn(
+                "license_minted_but_undelivered",
+                license_id=license_id or "",
+                sku=sku or "unknown",
+                detail="license minted; the key email FAILED to send (SMTP unconfigured "
+                "or send error). The customer has paid and has no key — resend "
+                "manually from the license id.",
+            )
         audit_code = 200 if (key and delivered) else 500
-        db.audit(obj.get("customer") or obj.get("id") or "stripe",
-                 "fulfill:" + (sku or "unknown"), audit_code, "stripe")
+        db.audit(
+            obj.get("customer") or obj.get("id") or "stripe", "fulfill:" + (sku or "unknown"), audit_code, "stripe"
+        )
         if event_id:
             # Terminal state: "minted" locks the event as done (later deliveries -> duplicate);
             # "failed" leaves it retryable so a Stripe redelivery after a Keygen outage can mint.
@@ -414,8 +446,7 @@ def handle_event(event):
             return "pending-mint"
         return "fulfilled" if delivered else "minted-undelivered"
 
-    if etype in ("customer.subscription.deleted", "invoice.payment_failed",
-                 "checkout.session.async_payment_failed"):
+    if etype in ("customer.subscription.deleted", "invoice.payment_failed", "checkout.session.async_payment_failed"):
         if event_id and not db.kv_insert_once("stripe_evt:" + event_id, "processing"):
             return "duplicate"
         # Only a definitively-ended subscription suspends the license. A single failed invoice is left
@@ -449,7 +480,7 @@ def handle_event(event):
         sub_status = (obj.get("status") or "") if isinstance(obj, dict) else ""
         # For invoice.paid, check the parent subscription status via the invoice object.
         if etype == "invoice.paid":
-            sub_obj = obj.get("subscription") or ""
+            obj.get("subscription") or ""
             # invoice.paid does not directly carry subscription status; look up via the customer.
             customer = obj.get("customer") or ""
             license_id = db.kv_get("stripe_cust:" + str(customer)) if customer else None

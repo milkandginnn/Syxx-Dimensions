@@ -10,6 +10,7 @@ INDEPENDENTLY verifies the emitted signature, so the path can't silently break a
 Skipped when `cryptography` isn't installed (leak signing genuinely requires it).
 Run from Server/:  python3 -m unittest tests.test_leak -v
 """
+
 import base64
 import os
 import unittest
@@ -18,6 +19,7 @@ import unittest
 # The old pattern (creating a per-module temp DB and setting SYXX_DB_PATH after import)
 # was dead code: conftest.py already set the env var and config.DB_PATH was already bound.
 import conftest
+
 _DB_PATH = conftest.SYXX_TEST_DB_PATH
 
 os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_fake")
@@ -38,8 +40,8 @@ db.init()
 @unittest.skipUnless(leak._HAS_CRYPTO, "cryptography not installed")
 class LeakAttestationTests(unittest.TestCase):
     def test_cold_verify_signs_and_signature_validates(self):
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
         from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
         subject = "device-abc123"
         issued = leak.issue_token(subject)
@@ -55,18 +57,20 @@ class LeakAttestationTests(unittest.TestCase):
         # Independent verification: the emitted signature must validate...
         pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(result["publicKey"]))
         payload = base64.b64decode(result["signedPayload"])
-        sig = base64.urlsafe_b64decode(
-            result["signature"] + "=" * (-len(result["signature"]) % 4)
-        )
+        sig = base64.urlsafe_b64decode(result["signature"] + "=" * (-len(result["signature"]) % 4))
         pub.verify(sig, payload)  # raises on failure
 
         # ...the SIGNED payload must bind the SAME facts the attestation DISPLAYS. Otherwise a
         # regression could sign an empty/forged resolver set while displaying the real one
         # ("lying attestation") and still validate. Assert field-equality, not just a valid sig.
         import json as _json
+
         signed_obj = _json.loads(payload)
-        self.assertEqual(signed_obj["observedResolvers"], result["observedResolvers"],
-                         "signed payload resolvers must equal the displayed resolvers (lying attestation)")
+        self.assertEqual(
+            signed_obj["observedResolvers"],
+            result["observedResolvers"],
+            "signed payload resolvers must equal the displayed resolvers (lying attestation)",
+        )
         self.assertEqual(signed_obj["queriesObserved"], result["queriesObserved"])
         self.assertEqual(signed_obj["token"], result["token"])
         self.assertEqual(signed_obj["zone"], result["zone"])
@@ -98,8 +102,7 @@ class LeakAttestationTests(unittest.TestCase):
             os.environ.pop("SYXX_COLLECTOR_PRIVATE_KEY", None)
             with self.assertRaises(RuntimeError):
                 leak._ensure_collector_key()
-            self.assertIsNone(leak._COLLECTOR_PRIV_KEY,
-                              "fail-closed must not leave a silently-minted key behind")
+            self.assertIsNone(leak._COLLECTOR_PRIV_KEY, "fail-closed must not leave a silently-minted key behind")
         finally:
             if saved_escape is not None:
                 os.environ["SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY"] = saved_escape
@@ -132,8 +135,7 @@ class LeakHonestyGuardTests(unittest.TestCase):
         self.assertTrue(result["inconclusive"], "zero observations must be explicitly inconclusive")
         self.assertEqual(result["observedResolvers"], [])
         # The load-bearing assertion: no signature. A signed clean reads as trustworthy to a client.
-        self.assertNotIn("signature", result,
-                         "a clean result on zero evidence must NOT carry an Ed25519 signature")
+        self.assertNotIn("signature", result, "a clean result on zero evidence must NOT carry an Ed25519 signature")
         self.assertNotIn("signedPayload", result)
         # And the token must NOT be consumed, so a late query can still be attested.
         self.assertIsNone(label, "an inconclusive result must not consume the token")
@@ -145,8 +147,9 @@ class LeakHonestyGuardTests(unittest.TestCase):
         index that feeds drift results, via `dig <random>.leak.syxx.app`.
         """
         leak.observe("neverissuedlabel", "203.0.113.9", 1)
-        self.assertEqual(db.leak_observations("neverissuedlabel"), [],
-                         "a never-issued token must record no observations")
+        self.assertEqual(
+            db.leak_observations("neverissuedlabel"), [], "a never-issued token must record no observations"
+        )
 
     def test_a_real_observation_still_signs(self):
         """Mutation guard: the A024 refusal must be specific to the EMPTY case — a genuine

@@ -5,7 +5,7 @@ results into structured results. All queries go through PUBLIC_RESOLVERS
 only (SSRF-safe). DNS failures produce "inconclusive", never crash.
 """
 
-from . import resolver, config
+from . import config, resolver
 
 _FALLBACK_SELECTORS = ["google", "default", "selector1", "k1", "s1"]
 
@@ -23,11 +23,11 @@ def check(domain, dkim_selector=None, timeout=10):
     dmarc = _check_dmarc(domain, server, timeout)
     dkim = _check_dkim(domain, dkim_selector, server, timeout)
     overall = _overall(spf["conclusion"], dmarc["conclusion"], dkim["conclusion"])
-    return {"domain": domain, "spf": spf, "dmarc": dmarc,
-            "dkim": dkim, "overall": overall}
+    return {"domain": domain, "spf": spf, "dmarc": dmarc, "dkim": dkim, "overall": overall}
 
 
 # -- SPF --------------------------------------------------------------------
+
 
 def _check_spf(domain, server, timeout):
     """Query TXT at *domain* and extract the SPF policy."""
@@ -44,8 +44,7 @@ def _check_spf(domain, server, timeout):
     if spf_record is None:
         return {"record": None, "policy": None, "conclusion": "missing"}
     policy = _extract_spf_all(spf_record)
-    return {"record": spf_record, "policy": policy,
-            "conclusion": _spf_result(policy)}
+    return {"record": spf_record, "policy": policy, "conclusion": _spf_result(policy)}
 
 
 def _extract_spf_all(record):
@@ -77,14 +76,13 @@ def _spf_result(policy):
 
 # -- DMARC ------------------------------------------------------------------
 
+
 def _check_dmarc(domain, server, timeout):
     """Query TXT at ``_dmarc.<domain>`` and extract the DMARC policy."""
     try:
-        result = resolver.query("_dmarc." + domain, resolver.TYPE_TXT,
-                                server, timeout=timeout)
+        result = resolver.query("_dmarc." + domain, resolver.TYPE_TXT, server, timeout=timeout)
     except resolver.DNSError:
-        return {"record": None, "policy": None, "pct": None,
-                "conclusion": "inconclusive"}
+        return {"record": None, "policy": None, "pct": None, "conclusion": "inconclusive"}
     dmarc_record = None
     for rec in result.get("records", []):
         val = rec.get("value", "")
@@ -92,12 +90,14 @@ def _check_dmarc(domain, server, timeout):
             dmarc_record = val
             break
     if dmarc_record is None:
-        return {"record": None, "policy": None, "pct": None,
-                "conclusion": "missing"}
+        return {"record": None, "policy": None, "pct": None, "conclusion": "missing"}
     tags = _parse_tags(dmarc_record)
-    return {"record": dmarc_record, "policy": tags.get("p"),
-            "pct": tags.get("pct"),
-            "conclusion": _dmarc_result(tags.get("p"), tags.get("rua"))}
+    return {
+        "record": dmarc_record,
+        "policy": tags.get("p"),
+        "pct": tags.get("pct"),
+        "conclusion": _dmarc_result(tags.get("p"), tags.get("rua")),
+    }
 
 
 def _parse_tags(record):
@@ -127,21 +127,20 @@ def _dmarc_result(policy, rua):
 
 # -- DKIM -------------------------------------------------------------------
 
+
 def _check_dkim(domain, selector, server, timeout):
     """Query DKIM TXT records; tries fallback selectors when none given."""
     selectors = [selector] if selector else _FALLBACK_SELECTORS
     for sel in selectors:
         name = sel + "._domainkey." + domain
         try:
-            result = resolver.query(name, resolver.TYPE_TXT, server,
-                                    timeout=timeout)
+            result = resolver.query(name, resolver.TYPE_TXT, server, timeout=timeout)
         except resolver.DNSError:
             continue
         for rec in result.get("records", []):
             val = rec.get("value", "")
             if "p=" in val.lower():
-                return {"selector": sel, "record": val,
-                        "conclusion": _dkim_result(val)}
+                return {"selector": sel, "record": val, "conclusion": _dkim_result(val)}
     return {"selector": selector, "record": None, "conclusion": "missing"}
 
 
@@ -156,6 +155,7 @@ def _dkim_result(record):
 
 
 # -- Overall ----------------------------------------------------------------
+
 
 def _overall(spf_v, dmarc_v, dkim_v):
     """Combine per-protocol results.

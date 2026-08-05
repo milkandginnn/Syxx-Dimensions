@@ -1,10 +1,12 @@
 """Focused regression tests for server hardening deltas A001-A018."""
+
 import io
 import os
 import time
 import unittest
 
 import conftest
+
 _DB_PATH = conftest.SYXX_TEST_DB_PATH
 
 os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_fake")
@@ -76,11 +78,14 @@ class ResolverAuthoritativeTests(unittest.TestCase):
         # Production passes do=True (DNSSEC OK); accept **kw so the fixture stays compatible.
         def _sections(name, qtype, server, timeout=3, **_kw):
             return {
-                "rcode": 0, "aa": False, "truncated": False,
-                "answers": [{"owner": name, "type": "A", "rtype": resolver.TYPE_A,
-                             "ttl": 60, "value": "203.0.113.10"}],
-                "authority": [], "additional": [],
+                "rcode": 0,
+                "aa": False,
+                "truncated": False,
+                "answers": [{"owner": name, "type": "A", "rtype": resolver.TYPE_A, "ttl": 60, "value": "203.0.113.10"}],
+                "authority": [],
+                "additional": [],
             }
+
         resolver._query_sections = _sections
         resolver._zone_is_signed = lambda zone, server, timeout: True
         result = resolver.resolve_authoritative("example.com", resolver.TYPE_A, max_depth=1)
@@ -92,23 +97,31 @@ class FetcherTests(unittest.TestCase):
     def test_truncated_response_raises_explicit_error(self):
         class Resp:
             status = 200
+
             def getheader(self, _name, default=None):
                 return default
+
             def read(self, _n):
                 return b"abcdef"
 
         class Conn:
             host = None
+
             def __init__(self, *a, **k):
                 pass
+
             def putrequest(self, *a, **k):
                 pass
+
             def putheader(self, *a, **k):
                 pass
+
             def endheaders(self):
                 pass
+
             def getresponse(self):
                 return Resp()
+
             def close(self):
                 pass
 
@@ -142,19 +155,27 @@ class SSRFBlockTests(unittest.TestCase):
     reject-if-ANY-answer-private rebinding guard is dropped."""
 
     def test_private_loopback_linklocal_cgnat_metadata_are_not_public(self):
-        for ip in ("127.0.0.1", "10.0.0.53", "169.254.169.254", "192.168.1.1",
-                   "172.16.0.1", "100.64.0.1", "0.0.0.0", "::1", "fd00::1", "fe80::1"):
-            self.assertFalse(fetcher._ip_is_public(ip),
-                             "%s must be rejected as non-public (SSRF)" % ip)
+        for ip in (
+            "127.0.0.1",
+            "10.0.0.53",
+            "169.254.169.254",
+            "192.168.1.1",
+            "172.16.0.1",
+            "100.64.0.1",
+            "0.0.0.0",
+            "::1",
+            "fd00::1",
+            "fe80::1",
+        ):
+            self.assertFalse(fetcher._ip_is_public(ip), f"{ip} must be rejected as non-public (SSRF)")
 
     def test_ordinary_public_ips_are_public(self):
         for ip in ("93.184.216.34", "8.8.8.8", "2606:4700:4700::1111"):
-            self.assertTrue(fetcher._ip_is_public(ip), "%s must be accepted" % ip)
+            self.assertTrue(fetcher._ip_is_public(ip), f"{ip} must be accepted")
 
     def test_resolve_public_raises_when_host_maps_to_metadata_ip(self):
         orig = fetcher.socket.getaddrinfo
-        fetcher.socket.getaddrinfo = lambda *a, **k: [
-            (fetcher.socket.AF_INET, 0, 0, "", ("169.254.169.254", 0))]
+        fetcher.socket.getaddrinfo = lambda *a, **k: [(fetcher.socket.AF_INET, 0, 0, "", ("169.254.169.254", 0))]
         try:
             with self.assertRaises(fetcher.BlockedError):
                 fetcher._resolve_public("metadata.internal")
@@ -166,7 +187,8 @@ class SSRFBlockTests(unittest.TestCase):
         orig = fetcher.socket.getaddrinfo
         fetcher.socket.getaddrinfo = lambda *a, **k: [
             (fetcher.socket.AF_INET, 0, 0, "", ("93.184.216.34", 0)),
-            (fetcher.socket.AF_INET, 0, 0, "", ("127.0.0.1", 0))]
+            (fetcher.socket.AF_INET, 0, 0, "", ("127.0.0.1", 0)),
+        ]
         try:
             with self.assertRaises(fetcher.BlockedError):
                 fetcher._resolve_public("rebind.evil")
@@ -184,12 +206,9 @@ class RateLimitDenialTests(unittest.TestCase):
             ratelimit._last_prune_ms = 0
 
     def test_bucket_denies_after_capacity_is_exhausted(self):
-        results = [ratelimit.allow("sub:burst", capacity=3, refill_millis=0)
-                    for _ in range(5)]
-        self.assertEqual(results[:3], [True, True, True],
-                         "first `capacity` requests must be allowed")
-        self.assertEqual(results[3:], [False, False],
-                         "requests past capacity MUST be denied (allow() -> False)")
+        results = [ratelimit.allow("sub:burst", capacity=3, refill_millis=0) for _ in range(5)]
+        self.assertEqual(results[:3], [True, True, True], "first `capacity` requests must be allowed")
+        self.assertEqual(results[3:], [False, False], "requests past capacity MUST be denied (allow() -> False)")
 
     def test_tokens_refill_after_elapsed_time_reenables(self):
         for _ in range(3):
@@ -207,13 +226,17 @@ class SessionForgeryTests(unittest.TestCase):
     the (narrow) malformed-base64 test, which dies before hmac.compare_digest is ever reached."""
 
     def test_wellformed_token_with_forged_signature_is_rejected(self):
-        import base64 as _b64, json as _json, time as _time
+        import base64 as _b64
+        import json as _json
+        import time as _time
+
         payload = {"sub": "attacker", "plan": "pro", "exp": int(_time.time()) + 10_000}
         raw = _json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
         body = _b64.urlsafe_b64encode(raw).decode().rstrip("=")
         forged = body + "." + _b64.urlsafe_b64encode(b"not-the-real-mac").decode().rstrip("=")
-        self.assertIsNone(licensing.verify_session(forged),
-                          "forged-signature session token accepted -> paywall/evidence bypass")
+        self.assertIsNone(
+            licensing.verify_session(forged), "forged-signature session token accepted -> paywall/evidence bypass"
+        )
 
     def test_valid_minted_token_is_accepted(self):
         token, _exp = licensing.mint_session("legit", "pro")
@@ -224,8 +247,7 @@ class SessionForgeryTests(unittest.TestCase):
 
     def test_expired_token_is_rejected(self):
         token, _exp = licensing.mint_session("legit", "pro", ttl=-1)
-        self.assertIsNone(licensing.verify_session(token),
-                          "expired session token accepted")
+        self.assertIsNone(licensing.verify_session(token), "expired session token accepted")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ UNKNOWN (None), never invalid: the sweep must skip it, not revoke.
 
 Run from Server/:  python3 -m unittest tests.test_keygen_status_sync -v
 """
+
 import io
 import json
 import os
@@ -27,8 +28,7 @@ from syxx_server import config, db, licensing, scheduler  # noqa: E402
 
 def _admin_response(status_value):
     """Mock urllib response for the admin GET /licenses/<id> endpoint."""
-    body = json.dumps({"data": {"id": "kg-lic-1",
-                                "attributes": {"status": status_value}}}).encode("utf-8")
+    body = json.dumps({"data": {"id": "kg-lic-1", "attributes": {"status": status_value}}}).encode("utf-8")
     raw = io.BytesIO(body)
     raw.headers = {}
     raw.status = 200
@@ -71,10 +71,13 @@ class CheckStatusUsesStoredIdTests(_TempDbMixin, unittest.TestCase):
         licensing.urllib.request.urlopen = fake_urlopen
         result = licensing.check_keygen_license_status("lic_0123456789abcdef")
         self.assertIs(result, True)
-        self.assertTrue(seen["url"].endswith("/licenses/kg-lic-1"),
-                        "must query the STORED Keygen id, got %s" % seen.get("url"))
-        self.assertNotIn("lic_0123456789abcdef", seen["url"],
-                         "the local subject hash must never be sent as a Keygen id")
+        self.assertTrue(
+            seen["url"].endswith("/licenses/kg-lic-1"),
+            "must query the STORED Keygen id, got {}".format(seen.get("url")),
+        )
+        self.assertNotIn(
+            "lic_0123456789abcdef", seen["url"], "the local subject hash must never be sent as a Keygen id"
+        )
 
     def test_revoked_status_returns_false(self):
         db.keygen_license_id_set("lic_aaaa", "kg-lic-1")
@@ -86,15 +89,16 @@ class CheckStatusUsesStoredIdTests(_TempDbMixin, unittest.TestCase):
         back None (unknown), and no HTTP request may be made at all. The old
         code returned False here (via a 404 on the hash), which is exactly the
         state that revoked every key; this test goes RED on that code."""
+
         def must_not_be_called(req, **kw):
-            raise AssertionError("HTTP query issued for a subject with no stored "
-                                 "license id: %s" % req.full_url)
+            raise AssertionError(f"HTTP query issued for a subject with no stored license id: {req.full_url}")
 
         licensing.urllib.request.urlopen = must_not_be_called
         self.assertIsNone(licensing.check_keygen_license_status("lic_no_stored_id"))
 
     def test_transient_error_returns_none(self):
         import urllib.error
+
         db.keygen_license_id_set("lic_bbbb", "kg-lic-1")
 
         def raise_503(req, **kw):
@@ -107,6 +111,7 @@ class CheckStatusUsesStoredIdTests(_TempDbMixin, unittest.TestCase):
         """With a real stored id, a 404 means the license was deleted at Keygen;
         that IS a revocation signal and must stay False."""
         import urllib.error
+
         db.keygen_license_id_set("lic_cccc", "kg-lic-gone")
 
         def raise_404(req, **kw):
@@ -135,10 +140,13 @@ class ActivationStoresLicenseIdTests(_TempDbMixin, unittest.TestCase):
                 config.KEYGEN_PUBLIC_KEY = orig_pub
 
     def test_valid_key_stores_the_license_id(self):
-        result = self._validate("KEY-STORE-ME", {
-            "meta": {"valid": True},
-            "data": {"id": "kg-lic-777", "type": "licenses"},
-        })
+        result = self._validate(
+            "KEY-STORE-ME",
+            {
+                "meta": {"valid": True},
+                "data": {"id": "kg-lic-777", "type": "licenses"},
+            },
+        )
         self.assertEqual(result, "pro")
         subject = licensing._subject_id("KEY-STORE-ME")
         self.assertEqual(db.keygen_license_id_get(subject), "kg-lic-777")
@@ -149,10 +157,13 @@ class ActivationStoresLicenseIdTests(_TempDbMixin, unittest.TestCase):
         self.assertIsNone(db.keygen_license_id_get(licensing._subject_id("KEY-NO-ID")))
 
     def test_invalid_key_stores_nothing(self):
-        result = self._validate("KEY-BAD", {
-            "meta": {"valid": False},
-            "data": {"id": "kg-lic-evil"},
-        })
+        result = self._validate(
+            "KEY-BAD",
+            {
+                "meta": {"valid": False},
+                "data": {"id": "kg-lic-evil"},
+            },
+        )
         self.assertIsNone(result)
         self.assertIsNone(db.keygen_license_id_get(licensing._subject_id("KEY-BAD")))
 
@@ -173,10 +184,10 @@ class SweepDoesNotMassRevokeTests(_TempDbMixin, unittest.TestCase):
         licensing.urllib.request.urlopen = must_not_be_called
         scheduler._sync_api_keys()
         import hashlib
+
         for raw in (raw_a, raw_b):
             key_hash = hashlib.sha256(raw.encode()).hexdigest()
-            self.assertIsNotNone(db.api_key_lookup(key_hash),
-                                 "sweep revoked a key it could not verify")
+            self.assertIsNotNone(db.api_key_lookup(key_hash), "sweep revoked a key it could not verify")
 
 
 if __name__ == "__main__":

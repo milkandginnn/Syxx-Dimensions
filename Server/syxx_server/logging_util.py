@@ -7,6 +7,7 @@ counters exposed at /metrics.
 When OpenTelemetry is available, error-level events are also exported as OTLP
 log records to bugsmasher.syxx.app.
 """
+
 import json
 import re
 import sys

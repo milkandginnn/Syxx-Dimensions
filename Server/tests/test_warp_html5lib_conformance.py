@@ -15,6 +15,7 @@ Contract enforced:
   * a case that diverges WITHOUT being marked xfail fails the suite — an undocumented gap is not
     allowed to slip in silently.
 """
+
 import json
 import os
 import pathlib
@@ -45,7 +46,7 @@ class Html5libConformanceTests(unittest.TestCase):
         cases = data["cases"]
 
         passed, xfailed, xpassed = [], [], []
-        undocumented = []   # diverged but NOT marked xfail → a regression / new gap
+        undocumented = []  # diverged but NOT marked xfail → a regression / new gap
         for case in cases:
             expected = [list(a) for a in case["expected_assets"]]
             actual = _actual_assets(case["html"], base)

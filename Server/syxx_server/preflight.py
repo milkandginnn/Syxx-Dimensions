@@ -18,9 +18,11 @@ commerce config, so a missing Stripe key must not take the daemon down.
 
 This module reports; it does not decide. It reads config and returns findings.
 """
+
 import os
 
 from . import config, leak, mailer
+
 
 # (env var, what breaks when it is blank, severity)
 #   "blocker" — a customer-visible failure is CERTAIN if this is blank.
@@ -44,9 +46,10 @@ def _keygen_key_error():
         return "32 bytes of hex expected, got %d bytes" % len(key_bytes)
     try:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
         Ed25519PublicKey.from_public_bytes(key_bytes)
     except Exception as e:
-        return "key not loadable: %s" % e
+        return f"key not loadable: {e}"
     return None
 
 
@@ -60,25 +63,39 @@ def _keygen_finding():
     why = _keygen_key_error()
     if why is None:
         return None
-    return ("blocker", "SYXX_KEYGEN_PUBLIC_KEY",
-            "licensing FAILS CLOSED — every live key validation is denied (402), including "
-            "valid keys (%s)" % why)
+    return (
+        "blocker",
+        "SYXX_KEYGEN_PUBLIC_KEY",
+        f"licensing FAILS CLOSED — every live key validation is denied (402), including valid keys ({why})",
+    )
 
 
 _CHECKS = [
-    ("SYXX_KEYGEN_ADMIN_TOKEN", lambda: bool(config.KEYGEN_ADMIN_TOKEN),
-     "a paid webhook cannot mint a license — sales record as pending-mint and no key is issued",
-     "blocker"),
-    ("STRIPE_SECRET_KEY", lambda: bool(config.STRIPE_SECRET_KEY),
-     "checkout cannot create a session — the buy button fails on the first click",
-     "blocker"),
-    ("STRIPE_WEBHOOK_SECRET", lambda: bool(config.STRIPE_WEBHOOK_SECRET),
-     "webhook signatures cannot be verified — paid events cannot be trusted or fulfilled",
-     "blocker"),
-    ("SYXX_SMTP_HOST", lambda: mailer.enabled(),
-     "a minted key CANNOT be emailed — the buyer pays and receives nothing until an operator "
-     "resends manually (the sale is recorded minted-undelivered, never silently 'fulfilled')",
-     "blocker"),
+    (
+        "SYXX_KEYGEN_ADMIN_TOKEN",
+        lambda: bool(config.KEYGEN_ADMIN_TOKEN),
+        "a paid webhook cannot mint a license — sales record as pending-mint and no key is issued",
+        "blocker",
+    ),
+    (
+        "STRIPE_SECRET_KEY",
+        lambda: bool(config.STRIPE_SECRET_KEY),
+        "checkout cannot create a session — the buy button fails on the first click",
+        "blocker",
+    ),
+    (
+        "STRIPE_WEBHOOK_SECRET",
+        lambda: bool(config.STRIPE_WEBHOOK_SECRET),
+        "webhook signatures cannot be verified — paid events cannot be trusted or fulfilled",
+        "blocker",
+    ),
+    (
+        "SYXX_SMTP_HOST",
+        lambda: mailer.enabled(),
+        "a minted key CANNOT be emailed — the buyer pays and receives nothing until an operator "
+        "resends manually (the sale is recorded minted-undelivered, never silently 'fulfilled')",
+        "blocker",
+    ),
     # Added 2026-07-16 after PRODUCTION LOGS proved this is a live failure mode that the first
     # version of this preflight missed:
     #   {"event": "handler_exception", "route": "/api/pubkey",
@@ -110,14 +127,17 @@ def _collector_finding():
     is a diagnostic that has stopped diagnosing while still being trusted.
     """
     if os.environ.get("SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY") == "1":
-        return None                       # documented dev/test escape; A022 warns at use.
+        return None  # documented dev/test escape; A022 warns at use.
     why = leak.collector_key_error(os.environ.get("SYXX_COLLECTOR_PRIVATE_KEY"))
     if why is None:
         return None
-    return ("blocker", "SYXX_COLLECTOR_PRIVATE_KEY",
-            "the leak collector CANNOT SIGN (%s) — /api/pubkey 500s and every leak attestation "
-            "is unverifiable. SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY=1 is dev/test ONLY (an "
-            "ephemeral key is forgeable and dies at restart)" % why)
+    return (
+        "blocker",
+        "SYXX_COLLECTOR_PRIVATE_KEY",
+        f"the leak collector CANNOT SIGN ({why}) — /api/pubkey 500s and every leak attestation "
+        "is unverifiable. SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY=1 is dev/test ONLY (an "
+        "ephemeral key is forgeable and dies at restart)",
+    )
 
 
 def commerce_findings():
@@ -139,20 +159,28 @@ def commerce_findings():
 
     # A policy id per SKU. Blank is NOT a blocker: that SKU's sale is recorded pending rather
     # than dropped, so a missing id delays a key — it never loses a payment.
-    for env in sorted({e["policy_env"] for sku, e in config.STRIPE_SKUS.items()
-                       if not config.keygen_policy_for(sku)}):
-        findings.append(("degraded", env,
-                         "that SKU's sale is recorded PENDING (never dropped) — no key is minted "
-                         "until the policy id is set"))
+    for env in sorted({e["policy_env"] for sku, e in config.STRIPE_SKUS.items() if not config.keygen_policy_for(sku)}):
+        findings.append(
+            (
+                "degraded",
+                env,
+                "that SKU's sale is recorded PENDING (never dropped) — no key is minted until the policy id is set",
+            )
+        )
 
     # A SKU with no price id cannot be sold at all: checkout refuses it rather than falling back to
     # the product's default price (which would charge the wrong tier). Unlike a missing policy this
     # is not a delay — the buy button 503s — but it is not a blocker for the DEPLOY either, since a
     # catalog can legitimately be provisioned ahead of Stripe. Say it once, at boot.
     for sku in sorted(s for s in config.STRIPE_SKUS if not config.stripe_price_for(s)):
-        findings.append(("degraded", "price:" + sku,
-                         "SKU %s has no Stripe price id — it is NOT sellable and its buy button "
-                         "returns 503 (checkout refuses rather than charging a default price)" % sku))
+        findings.append(
+            (
+                "degraded",
+                "price:" + sku,
+                f"SKU {sku} has no Stripe price id — it is NOT sellable and its buy button "
+                "returns 503 (checkout refuses rather than charging a default price)",
+            )
+        )
     return findings
 
 
@@ -164,7 +192,7 @@ def log_commerce_readiness(log):
     """
     try:
         findings = commerce_findings()
-    except Exception as exc:                                  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         log.warn("preflight_failed", detail=str(exc))
         return []
 
@@ -175,10 +203,13 @@ def log_commerce_readiness(log):
     blockers = [f for f in findings if f[0] == "blocker"]
     for severity, var, consequence in findings:
         (log.warn if severity == "blocker" else log.info)(
-            "commerce_unconfigured", severity=severity, var=var, consequence=consequence)
+            "commerce_unconfigured", severity=severity, var=var, consequence=consequence
+        )
     if blockers:
-        log.warn("commerce_not_sellable",
-                 blockers=",".join(v for _, v, _ in blockers),
-                 detail="Selling is NOT functional until these are set in /etc/syxx/syxx.env. "
-                        "DNS/analysis is unaffected and is serving normally.")
+        log.warn(
+            "commerce_not_sellable",
+            blockers=",".join(v for _, v, _ in blockers),
+            detail="Selling is NOT functional until these are set in /etc/syxx/syxx.env. "
+            "DNS/analysis is unaffected and is serving normally.",
+        )
     return findings

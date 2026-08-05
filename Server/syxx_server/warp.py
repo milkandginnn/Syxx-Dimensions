@@ -11,6 +11,7 @@ Regex `[^>]*>` terminates at the first `>` even inside quoted attributes, causin
 tags like `<script data-x=">">` to be truncated and assets missed/evaded. The
 HTMLParser handles quoted `>`, nested quotes, and comment boundaries correctly.
 """
+
 import hashlib
 import html.parser
 import json
@@ -153,7 +154,7 @@ def build_baseline(target_url):
     # against a real SHA-256, recording a mismatch instead of making the component
     # inconclusive.
     script_fetch_status = {}
-    for script_url in scripts[:config.FETCH_MAX_SCRIPTS]:
+    for script_url in scripts[: config.FETCH_MAX_SCRIPTS]:
         try:
             data, _c, _f = fetcher.fetch(script_url, timeout=config.FETCH_SCRIPT_TIMEOUT)
             script_hashes[script_url] = hashlib.sha256(data).hexdigest()
@@ -263,7 +264,7 @@ def _brotli_decompress(body, max_bytes):
             ) from e
     try:
         out = _brotli.decompress(body)
-    except Exception as e:                                            # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
         raise fetcher.FetchError(f"brotli decode failed: {e}") from e
     if len(out) > max_bytes:
         raise fetcher.TruncatedError("decompressed body exceeds cap; asset is inconclusive")
@@ -433,13 +434,15 @@ def build_manifest(target_url, nonce=None):
             # to INCONCLUSIVE for this asset rather than a clean pass.
             assets.append({"url": url, "class": cls, "fetch_status": FETCH_STATUS_FAILED})
             continue
-        assets.append({
-            "url": url,
-            "final_url": final,
-            "class": cls,
-            "sha256": hashlib.sha256(raw).hexdigest(),
-            "bytes": len(raw),
-        })
+        assets.append(
+            {
+                "url": url,
+                "final_url": final,
+                "class": cls,
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "bytes": len(raw),
+            }
+        )
         # CSS closure: follow @import from stylesheets and imported stylesheets, depth-bounded.
         if cls in (CLASS_CSS, CLASS_CSS_IMPORT) and depth < import_max_depth:
             for imp in _scan_css_imports(raw, final):

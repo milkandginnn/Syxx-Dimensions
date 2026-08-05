@@ -4,6 +4,7 @@ Keeps a single misbehaving client (or an abusive scan of the open-ended /warp
 proxy) from starving the shared daemon. Buckets are keyed by entitlement subject
 when authenticated, else by client IP for public routes.
 """
+
 import threading
 import time
 
@@ -34,7 +35,7 @@ def _prune(now_ms):
     # high-cardinality burst within the stale window.
     if len(_buckets) > _MAX_BUCKETS:
         by_last = sorted(_buckets.items(), key=lambda kv: kv[1][1])
-        for key, _ in by_last[:len(_buckets) - _MAX_BUCKETS]:
+        for key, _ in by_last[: len(_buckets) - _MAX_BUCKETS]:
             _buckets.pop(key, None)
 
 

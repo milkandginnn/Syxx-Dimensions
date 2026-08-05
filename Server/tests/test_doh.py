@@ -7,6 +7,7 @@ Two things must hold above all:
      off-question reply is REJECTED, never handed to the client as an answer. Re-encoding or
      accepting a mismatched reply is the "fabricated clean answer" the contract forbids.
 """
+
 import os
 import struct
 import unittest
@@ -29,7 +30,7 @@ def _reply_for(query_wire, *, override_txid=None, override_question=None, tc=Fal
     _t, question = resolver._question_bytes(query_wire)
     if override_question is not None:
         question = override_question
-    flags = 0x8180 | (0x0200 if tc else 0)   # QR+RD+RA, optional TC
+    flags = 0x8180 | (0x0200 if tc else 0)  # QR+RD+RA, optional TC
     header = txid + struct.pack(">HHHHH", flags, 1, 1, 0, 0)
     # Answer: compressed name pointer to the question (0xC00C), A/IN, ttl 60, 4-byte rdata.
     answer = b"\xc0\x0c" + struct.pack(">HHIH", 1, 1, 60, 4) + bytes([93, 184, 216, 34])
@@ -54,12 +55,24 @@ class ForwardWirePassthroughTests(unittest.TestCase):
 
     def _run_with_reply(self, query_wire, reply):
         class _FakeSock:
-            def __init__(self, *a, **k): pass
-            def settimeout(self, t): pass
-            def connect(self, addr): pass
-            def send(self, data): return len(data)
-            def recv(self, n): return reply
-            def close(self): pass
+            def __init__(self, *a, **k):
+                pass
+
+            def settimeout(self, t):
+                pass
+
+            def connect(self, addr):
+                pass
+
+            def send(self, data):
+                return len(data)
+
+            def recv(self, n):
+                return reply
+
+            def close(self):
+                pass
+
         with patch("syxx_server.resolver.socket.socket", _FakeSock):
             return resolver.forward_wire(query_wire, "1.1.1.1", timeout=1)
 
@@ -92,30 +105,32 @@ class JsonHonestyTests(unittest.TestCase):
 
     def _run(self, query, *, upstream=None, error=None):
         from syxx_server import app
+
         sent = {}
 
         class _Double:
             _DOH_JSON_TYPES = app.Handler._DOH_JSON_TYPES
-            def _send(self, status, body, *a, **k): sent["status"], sent["body"] = status, body
-            def _json_error(self, status, msg, *a, **k): sent["status"], sent["body"] = status, msg
 
-        with patch("syxx_server.resolver.query",
-                   side_effect=error, return_value=upstream) as q:
+            def _send(self, status, body, *a, **k):
+                sent["status"], sent["body"] = status, body
+
+            def _json_error(self, status, msg, *a, **k):
+                sent["status"], sent["body"] = status, msg
+
+        with patch("syxx_server.resolver.query", side_effect=error, return_value=upstream) as q:
             if error is not None:
                 q.side_effect = error
             app.Handler._doh_respond_json(_Double(), query)
         return sent
 
     def test_upstream_failure_is_status_2_not_a_fake_clean(self):
-        sent = self._run({"name": ["example.com"], "type": ["A"]},
-                         error=resolver.DNSError("unreachable"))
+        sent = self._run({"name": ["example.com"], "type": ["A"]}, error=resolver.DNSError("unreachable"))
         self.assertEqual(sent["status"], 200)
         self.assertEqual(sent["body"]["Status"], 2, "an upstream failure must be Status:2, never 0")
-        self.assertNotIn("Answer", sent["body"])   # no fabricated empty answer set
+        self.assertNotIn("Answer", sent["body"])  # no fabricated empty answer set
 
     def test_real_records_pass_through_with_status_0(self):
-        parsed = {"rcode": 0, "truncated": False, "ad": False,
-                  "records": [{"type": "A", "value": "93.184.216.34"}]}
+        parsed = {"rcode": 0, "truncated": False, "ad": False, "records": [{"type": "A", "value": "93.184.216.34"}]}
         sent = self._run({"name": ["example.com"], "type": ["A"]}, upstream=parsed)
         self.assertEqual(sent["body"]["Status"], 0)
         self.assertEqual(sent["body"]["Answer"][0]["data"], "93.184.216.34")

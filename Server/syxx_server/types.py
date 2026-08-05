@@ -9,10 +9,11 @@ The enum subclasses `str` so it serialises as a bare string under
 `json.dumps` without a custom encoder, and so equality comparisons against
 literal strings keep working in the rest of the codebase.
 """
-from enum import Enum
+
+from enum import StrEnum
 
 
-class TriState(str, Enum):
+class TriState(StrEnum):
     """Canonical result tri-state.
 
     - success:      the check ran and its positive condition held.
@@ -21,6 +22,7 @@ class TriState(str, Enum):
                     error, missing data, ...). Distinct from failure: an
                     inconclusive result must NEVER be read as a negative.
     """
+
     SUCCESS = "success"
     FAILURE = "failure"
     INCONCLUSIVE = "inconclusive"

@@ -16,7 +16,7 @@ import ssl
 import time
 import urllib.parse
 
-from . import resolver, config
+from . import config, resolver
 
 _CRTSH_HOST = "crt.sh"
 _CRTSH_PATH_TPL = "/?q=%.{domain}&output=json"
@@ -64,7 +64,7 @@ def enumerate(domain, timeout=15, do_resolve=True):
     if do_resolve:
         resolved, resolve_budget_exhausted = _resolve_subdomains(subdomains, deadline)
     else:
-        resolved = {name: None for name in subdomains}
+        resolved = dict.fromkeys(subdomains)
 
     results = []
     for name in subdomains:
@@ -87,8 +87,11 @@ def enumerate(domain, timeout=15, do_resolve=True):
         truncated = True
 
     return {
-        "domain": domain, "subdomains": results, "total": len(results),
-        "source": "crt.sh", "truncated": truncated,
+        "domain": domain,
+        "subdomains": results,
+        "total": len(results),
+        "source": "crt.sh",
+        "truncated": truncated,
         "resolveTime_ms": int((time.monotonic() - t0) * 1000),
     }
 
@@ -125,14 +128,14 @@ def _query_crtsh(domain, timeout):
     except _CrtshError:
         raise
     except Exception as exc:
-        raise _CrtshError("connection failed: %s" % exc)
+        raise _CrtshError(f"connection failed: {exc}")
     finally:
         conn.close()
 
     try:
         entries = json.loads(body.decode("utf-8"))
     except Exception as exc:
-        raise _CrtshError("invalid response: %s" % exc)
+        raise _CrtshError(f"invalid response: {exc}")
     if not isinstance(entries, list):
         raise _CrtshError("response is not a JSON array")
     return entries
@@ -218,6 +221,5 @@ def _resolve_one_sequential(name, resolvers):
             except Exception:
                 continue
             if resp.get("rcode") == 0 and resp.get("records"):
-                return [a["value"] for a in resp["records"]
-                        if a.get("type") in ("A", "AAAA")]
+                return [a["value"] for a in resp["records"] if a.get("type") in ("A", "AAAA")]
     return []

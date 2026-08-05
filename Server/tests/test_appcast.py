@@ -18,7 +18,6 @@ import hashlib
 import json
 import os
 import sys
-import tempfile
 
 import pytest
 
@@ -63,7 +62,9 @@ class TestPublishAndBuild:
         path, sha, size = _write_pkg(tmp_path, "Syxx.dmg")
         url = "https://syxx.app/dist/Syxx-2.2.0.dmg"
         rec = appcast.publish_package(
-            "mac", "2.2.0", path,
+            "mac",
+            "2.2.0",
+            path,
             release_notes="Phase 3.2 test",
             build="2026.8.1",
             download_url=url,
@@ -86,23 +87,32 @@ class TestPublishAndBuild:
         unsigned = {k: v for k, v in manifest.items() if k != "signature"}
         payload = appcast._canon(unsigned)
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        pub_b64 = open(
-            os.path.join(_SERVER_ROOT, "dev-keys", "update-signing.pub.b64"),
-            encoding="utf-8",
-        ).read().strip()
+
+        pub_b64 = (
+            open(
+                os.path.join(_SERVER_ROOT, "dev-keys", "update-signing.pub.b64"),
+                encoding="utf-8",
+            )
+            .read()
+            .strip()
+        )
         pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(pub_b64))
         pub.verify(sig, payload)  # raises if wrong
 
     def test_publish_win_zip_and_deb_types(self, package_dir, tmp_path):
         path, _, _ = _write_pkg(tmp_path, "Syxx.zip")
         rec = appcast.publish_package(
-            "win", "2.2.0", path,
+            "win",
+            "2.2.0",
+            path,
             download_url="https://syxx.app/dist/Syxx-2.2.0.zip",
         )
         assert rec["packages"][0]["type"] == "zip"
         path2, _, _ = _write_pkg(tmp_path, "Syxx.deb")
         rec2 = appcast.publish_package(
-            "deb", "2.2.0", path2,
+            "deb",
+            "2.2.0",
+            path2,
             download_url="https://syxx.app/dist/Syxx-2.2.0.deb",
         )
         assert rec2["packages"][0]["type"] == "deb"
@@ -122,12 +132,14 @@ class TestPublishAndBuild:
             "minVersion": "1.0.0",
             "critical": False,
             "releaseNotes": "x",
-            "packages": [{
-                "url": "https://syxx.app/dist/Syxx.dmg",
-                "sha256": "",  # empty — historical A264
-                "size": size,
-                "type": "dmg",
-            }],
+            "packages": [
+                {
+                    "url": "https://syxx.app/dist/Syxx.dmg",
+                    "sha256": "",  # empty — historical A264
+                    "size": size,
+                    "type": "dmg",
+                }
+            ],
             "publishedAt": 1753747200,
         }
         (package_dir / "mac.json").write_text(json.dumps(bad), encoding="utf-8")
@@ -141,12 +153,14 @@ class TestPublishAndBuild:
             "minVersion": "1.0.0",
             "critical": False,
             "releaseNotes": "x",
-            "packages": [{
-                "url": "https://syxx.app/dist/Syxx.zip",
-                "sha256": "ab" * 32,
-                "size": 0,
-                "type": "zip",
-            }],
+            "packages": [
+                {
+                    "url": "https://syxx.app/dist/Syxx.zip",
+                    "sha256": "ab" * 32,
+                    "size": 0,
+                    "type": "zip",
+                }
+            ],
             "publishedAt": 1753747200,
         }
         (package_dir / "win.json").write_text(json.dumps(bad), encoding="utf-8")
@@ -160,12 +174,14 @@ class TestPublishAndBuild:
             "minVersion": "1.0.0",
             "critical": False,
             "releaseNotes": "x",
-            "packages": [{
-                "url": "https://evil.example/Syxx.dmg",
-                "sha256": "ab" * 32,
-                "size": 10,
-                "type": "dmg",
-            }],
+            "packages": [
+                {
+                    "url": "https://evil.example/Syxx.dmg",
+                    "sha256": "ab" * 32,
+                    "size": 10,
+                    "type": "dmg",
+                }
+            ],
             "publishedAt": 1753747200,
         }
         (package_dir / "mac.json").write_text(json.dumps(bad), encoding="utf-8")
@@ -179,12 +195,14 @@ class TestPublishAndBuild:
             "minVersion": "1.0.0",
             "critical": False,
             "releaseNotes": "x",
-            "packages": [{
-                "url": "https://syxx.app/dist/Syxx.deb",  # .deb but type zip
-                "sha256": "ab" * 32,
-                "size": 10,
-                "type": "zip",
-            }],
+            "packages": [
+                {
+                    "url": "https://syxx.app/dist/Syxx.deb",  # .deb but type zip
+                    "sha256": "ab" * 32,
+                    "size": 10,
+                    "type": "zip",
+                }
+            ],
             "publishedAt": 1753747200,
         }
         (package_dir / "win.json").write_text(json.dumps(bad), encoding="utf-8")
@@ -193,35 +211,54 @@ class TestPublishAndBuild:
     def test_publish_refuses_zero_size_file(self, package_dir, tmp_path):
         empty = tmp_path / "empty.dmg"
         empty.write_bytes(b"")
-        assert appcast.publish_package(
-            "mac", "2.2.0", str(empty),
-            download_url="https://syxx.app/dist/Syxx.dmg",
-        ) is None
+        assert (
+            appcast.publish_package(
+                "mac",
+                "2.2.0",
+                str(empty),
+                download_url="https://syxx.app/dist/Syxx.dmg",
+            )
+            is None
+        )
 
     def test_publish_refuses_disallowed_url(self, package_dir, tmp_path):
         path, _, _ = _write_pkg(tmp_path, "Syxx.dmg")
-        assert appcast.publish_package(
-            "mac", "2.2.0", path,
-            download_url="https://evil.example/Syxx.dmg",
-        ) is None
+        assert (
+            appcast.publish_package(
+                "mac",
+                "2.2.0",
+                path,
+                download_url="https://evil.example/Syxx.dmg",
+            )
+            is None
+        )
 
     def test_publish_refuses_type_extension_mismatch(self, package_dir, tmp_path):
         path, _, _ = _write_pkg(tmp_path, "Syxx.dmg")
         # mac requires .dmg URL; giving .zip must refuse.
-        assert appcast.publish_package(
-            "mac", "2.2.0", path,
-            download_url="https://syxx.app/dist/Syxx.zip",
-        ) is None
+        assert (
+            appcast.publish_package(
+                "mac",
+                "2.2.0",
+                path,
+                download_url="https://syxx.app/dist/Syxx.zip",
+            )
+            is None
+        )
 
     def test_publish_is_atomic_per_platform(self, package_dir, tmp_path):
         path, _, _ = _write_pkg(tmp_path, "a.dmg")
         appcast.publish_package(
-            "mac", "1.0.0", path,
+            "mac",
+            "1.0.0",
+            path,
             download_url="https://syxx.app/dist/Syxx-1.0.0.dmg",
         )
         path2, sha2, _ = _write_pkg(tmp_path, "b.dmg", content=b"second-package")
         appcast.publish_package(
-            "mac", "2.0.0", path2,
+            "mac",
+            "2.0.0",
+            path2,
             download_url="https://syxx.app/dist/Syxx-2.0.0.dmg",
         )
         # Win untouched.
@@ -233,7 +270,9 @@ class TestPublishAndBuild:
     def test_altered_metadata_breaks_signature(self, package_dir, tmp_path):
         path, _, _ = _write_pkg(tmp_path, "Syxx.dmg")
         appcast.publish_package(
-            "mac", "2.2.0", path,
+            "mac",
+            "2.2.0",
+            path,
             download_url="https://syxx.app/dist/Syxx-2.2.0.dmg",
         )
         manifest = appcast.build_appcast("mac")
@@ -243,12 +282,17 @@ class TestPublishAndBuild:
         sig = base64.b64decode(manifest["signature"])
         unsigned = {k: v for k, v in manifest.items() if k != "signature"}
         payload = appcast._canon(unsigned)
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
         from cryptography.exceptions import InvalidSignature
-        pub_b64 = open(
-            os.path.join(_SERVER_ROOT, "dev-keys", "update-signing.pub.b64"),
-            encoding="utf-8",
-        ).read().strip()
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        pub_b64 = (
+            open(
+                os.path.join(_SERVER_ROOT, "dev-keys", "update-signing.pub.b64"),
+                encoding="utf-8",
+            )
+            .read()
+            .strip()
+        )
         pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(pub_b64))
         with pytest.raises(InvalidSignature):
             pub.verify(sig, payload)
@@ -265,7 +309,9 @@ class TestPublishAndBuild:
         appcast._UPDATE_PRIV_KEY = None
         appcast._UPDATE_PUB_KEY_RAW = None
         rec = appcast.publish_package(
-            "mac", "2.2.0", path,
+            "mac",
+            "2.2.0",
+            path,
             download_url="https://syxx.app/dist/Syxx.dmg",
         )
         assert rec is not None
@@ -276,7 +322,9 @@ class TestPublishAndBuild:
     def test_no_key_refuses_build(self, package_dir, tmp_path, monkeypatch):
         path, _, _ = _write_pkg(tmp_path, "Syxx.dmg")
         appcast.publish_package(
-            "mac", "2.2.0", path,
+            "mac",
+            "2.2.0",
+            path,
             download_url="https://syxx.app/dist/Syxx.dmg",
         )
         appcast._UPDATE_PRIV_KEY = None

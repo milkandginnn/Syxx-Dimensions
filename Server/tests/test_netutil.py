@@ -8,6 +8,7 @@ that normalization is ever removed.
 
 Run from Server/:  python3 -m unittest tests.test_netutil -v
 """
+
 import ipaddress
 import unittest
 
@@ -39,10 +40,15 @@ class BlockedRangesTests(unittest.TestCase):
         self.assertFalse(netutil.ip_is_public("fe80::1"))
 
     def test_cgnat_multicast_reserved_unspecified_fail(self):
-        for ip in ("100.64.0.1", "100.127.255.254",   # CGNAT RFC 6598
-                   "224.0.0.251", "ff02::fb",          # multicast
-                   "240.0.0.1",                        # reserved
-                   "0.0.0.0", "::"):                   # unspecified
+        for ip in (
+            "100.64.0.1",
+            "100.127.255.254",  # CGNAT RFC 6598
+            "224.0.0.251",
+            "ff02::fb",  # multicast
+            "240.0.0.1",  # reserved
+            "0.0.0.0",
+            "::",
+        ):  # unspecified
             self.assertFalse(netutil.ip_is_public(ip), ip)
 
     def test_unparseable_input_fails_closed(self):
@@ -54,9 +60,13 @@ class Sd07MappedIPv6Tests(unittest.TestCase):
     """SD-07: ::ffff:a.b.c.d must be classified as the EMBEDDED IPv4."""
 
     def test_ipv4_mapped_private_fails(self):
-        for ip in ("::ffff:127.0.0.1", "::ffff:10.0.0.1",
-                   "::ffff:192.168.1.1", "::ffff:169.254.169.254",
-                   "::ffff:100.64.0.1"):
+        for ip in (
+            "::ffff:127.0.0.1",
+            "::ffff:10.0.0.1",
+            "::ffff:192.168.1.1",
+            "::ffff:169.254.169.254",
+            "::ffff:100.64.0.1",
+        ):
             self.assertFalse(netutil.ip_is_public(ip), ip)
 
     def test_ipv4_mapped_public_still_passes(self):
@@ -64,8 +74,8 @@ class Sd07MappedIPv6Tests(unittest.TestCase):
         self.assertTrue(netutil.ip_is_public("::ffff:8.8.8.8"))
 
     def test_nat64_prefix_fails(self):
-        self.assertFalse(netutil.ip_is_public("64:ff9b::7f00:1"))    # embeds 127.0.0.1
-        self.assertFalse(netutil.ip_is_public("64:ff9b::808:808"))   # even public embeds blocked
+        self.assertFalse(netutil.ip_is_public("64:ff9b::7f00:1"))  # embeds 127.0.0.1
+        self.assertFalse(netutil.ip_is_public("64:ff9b::808:808"))  # even public embeds blocked
 
     def test_failure_case_normalization_skipping_variant_is_caught(self):
         """Failure case (house rule): a version of the gate that SKIPS the
@@ -75,24 +85,31 @@ class Sd07MappedIPv6Tests(unittest.TestCase):
         loopback, but mapped CGNAT (::ffff:100.64.0.1) STILL passes it (the
         version==4 CGNAT check never fires for a v6 object), which is exactly
         what test_ipv4_mapped_private_fails would go RED on."""
+
         def broken_ip_is_public(ip):
             try:
                 addr = ipaddress.ip_address(ip)
             except ValueError:
                 return False
-            if (addr.is_private or addr.is_loopback or addr.is_link_local
-                    or addr.is_multicast or addr.is_reserved or addr.is_unspecified):
+            if (
+                addr.is_private
+                or addr.is_loopback
+                or addr.is_link_local
+                or addr.is_multicast
+                or addr.is_reserved
+                or addr.is_unspecified
+            ):
                 return False
             if addr.version == 4 and addr in ipaddress.ip_network("100.64.0.0/10"):
                 return False
             return True
 
         # The broken variant wrongly admits the mapped CGNAT address...
-        self.assertTrue(broken_ip_is_public("::ffff:100.64.0.1"),
-                        "mutation baseline changed; failure-case proof is void")
+        self.assertTrue(
+            broken_ip_is_public("::ffff:100.64.0.1"), "mutation baseline changed; failure-case proof is void"
+        )
         # ...so the canonical assertion would fail against it (test catches the bug).
-        self.assertNotEqual(broken_ip_is_public("::ffff:100.64.0.1"),
-                            netutil.ip_is_public("::ffff:100.64.0.1"))
+        self.assertNotEqual(broken_ip_is_public("::ffff:100.64.0.1"), netutil.ip_is_public("::ffff:100.64.0.1"))
 
 
 class CallerDelegationTests(unittest.TestCase):

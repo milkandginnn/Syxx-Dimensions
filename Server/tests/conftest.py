@@ -7,6 +7,7 @@ Import this module to access the shared path:
     import conftest
     _DB_PATH = conftest.SYXX_TEST_DB_PATH
 """
+
 import os
 import tempfile
 

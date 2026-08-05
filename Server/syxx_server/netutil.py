@@ -7,6 +7,7 @@ firewall copies did not, so ::ffff:127.0.0.1 / ::ffff:10.0.0.1 classified
 as public IPv6 there (SD-07 bypass). This module keeps the strictest
 behavior for every caller and adds the NAT64 well-known prefix.
 """
+
 import ipaddress
 
 # NAT64 well-known prefix (RFC 6052): 64:ff9b::/96 embeds an IPv4 address a
@@ -47,8 +48,14 @@ def ip_is_public(ip):
     # the interpreter's ipaddress module version.
     if addr.version == 6 and (addr in _NAT64_LOCAL_NET or addr in _6TO4_NET):
         return False
-    if (addr.is_private or addr.is_loopback or addr.is_link_local
-            or addr.is_multicast or addr.is_reserved or addr.is_unspecified):
+    if (
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_multicast
+        or addr.is_reserved
+        or addr.is_unspecified
+    ):
         return False
     # CGNAT (RFC 6598)
     if addr.version == 4 and addr in _CGNAT_NET:

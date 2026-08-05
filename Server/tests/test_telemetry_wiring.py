@@ -18,11 +18,10 @@ dead, and every "is telemetry up?" check still green.
 
 Each test names the mutation that must turn it red.
 """
+
 import json
 import os
 import unittest
-
-import conftest
 
 os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_fake")
 os.environ.setdefault("SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY", "1")
@@ -38,8 +37,8 @@ class TelemetryWiringTests(unittest.TestCase):
         'failed: ImportError: ...' -> red. Before the fix this was permanently failed and
         nothing anywhere said so."""
         self.assertEqual(
-            app._OTEL_STATE, "live",
-            "OTel init did not reach a live state. _OTEL_STATE=%r" % (app._OTEL_STATE,))
+            app._OTEL_STATE, "live", f"OTel init did not reach a live state. _OTEL_STATE={app._OTEL_STATE!r}"
+        )
 
     def test_init_outcome_is_recorded_at_all(self):
         """Whatever happens, the module must record an outcome so 'no data arriving' can be
@@ -51,8 +50,7 @@ class TelemetryWiringTests(unittest.TestCase):
         matter what the except handler does. Mutation-checked: restoring `except Exception:
         pass` leaves all five tests GREEN. The bare-except regression is caught by
         `test_no_bare_except_swallows_otel_init` below, which reads the source instead."""
-        self.assertTrue(hasattr(app, "_OTEL_STATE"),
-                        "app must record an OTel init outcome, never swallow it")
+        self.assertTrue(hasattr(app, "_OTEL_STATE"), "app must record an OTel init outcome, never swallow it")
         self.assertNotEqual(app._OTEL_STATE, "not attempted")
 
     def test_no_bare_except_swallows_otel_init(self):
@@ -72,19 +70,23 @@ class TelemetryWiringTests(unittest.TestCase):
 
         swallowing = re.findall(r"except[^\n:]*:\s*\n\s*pass\b", otel_block)
         self.assertEqual(
-            swallowing, [],
+            swallowing,
+            [],
             "the OTel init block swallows its failure with a bare `except: pass`. That is the "
             "defect that hid three fatal ImportErrors: telemetry never exported a record and "
-            "nothing anywhere said so. Record the outcome in _OTEL_STATE instead.")
+            "nothing anywhere said so. Record the outcome in _OTEL_STATE instead.",
+        )
 
     def test_logging_util_export_branch_is_wired(self):
         """The seam that defect 3 left dead. Both handles are required: the branch at
         logging_util.py reads `_otel_logger`, and constructs `_otel_log_record`.
         Failure case: set either to None -> red."""
-        self.assertIsNotNone(logging_util._otel_logger,
-                             "logging_util._otel_logger is None; error export branch is dead")
-        self.assertIsNotNone(logging_util._otel_log_record,
-                             "logging_util._otel_log_record is None; records cannot be built")
+        self.assertIsNotNone(
+            logging_util._otel_logger, "logging_util._otel_logger is None; error export branch is dead"
+        )
+        self.assertIsNotNone(
+            logging_util._otel_log_record, "logging_util._otel_log_record is None; records cannot be built"
+        )
 
     def test_an_error_actually_reaches_the_otlp_logger(self):
         """The only assertion that proves the whole chain. Wiring can be present while the
@@ -100,8 +102,7 @@ class TelemetryWiringTests(unittest.TestCase):
         finally:
             logging_util._otel_logger.emit = original_emit
 
-        self.assertEqual(len(captured), 1,
-                         "an error() call produced no OTLP record; the export branch is dead")
+        self.assertEqual(len(captured), 1, "an error() call produced no OTLP record; the export branch is dead")
 
         record = captured[0]
         body = getattr(record, "body", None)
@@ -126,8 +127,7 @@ class TelemetryWiringTests(unittest.TestCase):
         finally:
             logging_util._otel_logger.emit = original_emit
 
-        self.assertEqual(captured, [],
-                         "a non-error log was exported to the collector; scope has widened")
+        self.assertEqual(captured, [], "a non-error log was exported to the collector; scope has widened")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ Replaces the original 'answer everything with A 127.0.0.1' handler. It:
 Runs on its own thread; a socket error on one datagram is logged, not swallowed
 silently, and never takes the loop down.
 """
-import ipaddress
+
 import socket
 import struct
 import time
@@ -25,6 +25,7 @@ TYPE_AAAA = 28
 # counter prevents a single resolver from flooding the collector with queries.
 # Uses a dict of {ip: [count, window_start]} with periodic pruning.
 import threading as _threading
+
 _dns_rate_lock = _threading.Lock()
 _dns_rate_buckets = {}  # ip -> [count, window_start]
 # Allow 50 queries per source IP per 60-second window. Legitimate recursive
@@ -100,7 +101,7 @@ def _build_response(data):
         qname, offset = resolver._read_name(data, 12)
         if offset + 4 > len(data):
             return None, None
-        qtype, qclass = struct.unpack(">HH", data[offset:offset + 4])
+        qtype, qclass = struct.unpack(">HH", data[offset : offset + 4])
     except resolver.DNSError:
         return None, None
     # D063: reject queries for class != IN (Internet). CHAOS/HESIOD etc. are not
@@ -109,7 +110,7 @@ def _build_response(data):
         return None, None
 
     qname_start = 12  # offset of the question name in the query
-    question = data[12:offset + 4]
+    question = data[12 : offset + 4]
     zone = _zone_for(qname)
 
     # Header flags: QR=1, opcode=0, RD copied from query, RA=0.
@@ -129,8 +130,7 @@ def _build_response(data):
     # hyphens, so the token is the part before the first hyphen.
     # macOS client uses id-<uuid>.leak.syxx.app — splitting on
     # hyphen yields "id", which observe() safely ignores (not in DB).
-    token_candidate = (labels[0].split("-", 1)[0] if "-" in labels[0]
-                       else labels[0]) if has_token else None
+    token_candidate = (labels[0].split("-", 1)[0] if "-" in labels[0] else labels[0]) if has_token else None
     # Record leak observations for ALL query types (A, AAAA, HTTPS
     # type 65, etc.) — browsers send HTTPS/SVCB probes that were
     # previously silently dropped, causing "no queries observed".
@@ -162,14 +162,12 @@ def _build_response(data):
 
 def _rr_a(ip, name_offs=12):
     ptr = bytes([0xC0 | (name_offs >> 8), name_offs & 0xFF])
-    return (ptr + struct.pack(">HHIH", TYPE_A, 1, 60, 4)
-            + socket.inet_pton(socket.AF_INET, ip))
+    return ptr + struct.pack(">HHIH", TYPE_A, 1, 60, 4) + socket.inet_pton(socket.AF_INET, ip)
 
 
 def _rr_aaaa(ip, name_offs=12):
     ptr = bytes([0xC0 | (name_offs >> 8), name_offs & 0xFF])
-    return (ptr + struct.pack(">HHIH", TYPE_AAAA, 1, 60, 16)
-            + socket.inet_pton(socket.AF_INET6, ip))
+    return ptr + struct.pack(">HHIH", TYPE_AAAA, 1, 60, 16) + socket.inet_pton(socket.AF_INET6, ip)
 
 
 def _rr_ns(nsname, name_offs=12):
@@ -179,8 +177,11 @@ def _rr_ns(nsname, name_offs=12):
 
 
 def _rr_soa(name_offs=12):
-    rdata = (_encode_name(config.DNS_SOA_MNAME) + _encode_name(config.DNS_SOA_RNAME)
-             + struct.pack(">IIIII", int(time.time()), 3600, 600, 604800, 60))
+    rdata = (
+        _encode_name(config.DNS_SOA_MNAME)
+        + _encode_name(config.DNS_SOA_RNAME)
+        + struct.pack(">IIIII", int(time.time()), 3600, 600, 604800, 60)
+    )
     ptr = bytes([0xC0 | (name_offs >> 8), name_offs & 0xFF])
     return ptr + struct.pack(">HHIH", TYPE_SOA, 1, 3600, len(rdata)) + rdata
 
@@ -228,12 +229,13 @@ def _bind():
             listeners.set_state("dns", "listening", detail="port %d (%d socket(s))" % (port, len(socks)))
         else:
             logging_util.warn("dns_fallback_port", port=port)
-            listeners.set_state("dns", "degraded-fallback",
-                                detail="serving on :%d; delegation points at :%d — unreachable by clients"
-                                       % (port, config.DNS_PORT))
+            listeners.set_state(
+                "dns",
+                "degraded-fallback",
+                detail="serving on :%d; delegation points at :%d — unreachable by clients" % (port, config.DNS_PORT),
+            )
         return socks
-    logging_util.error("dns_disabled",
-                       reason="no available UDP port; leak collector inactive")
+    logging_util.error("dns_disabled", reason="no available UDP port; leak collector inactive")
     listeners.set_state("dns", "down", detail="no available UDP port; leak collector inactive")
     return []
 
@@ -247,15 +249,13 @@ def run():
                 time.sleep(60)
                 candidate = _bind()
                 if candidate:
-                    logging_util.info("dns_rebind_success",
-                                      port=candidate[0].getsockname()[1],
-                                      sockets=len(candidate))
+                    logging_util.info("dns_rebind_success", port=candidate[0].getsockname()[1], sockets=len(candidate))
                     _serve_dns(candidate)
                     return
 
         import threading
-        logging_util.info("dns_rebind_schedule",
-                          detail="will retry bind every 60s")
+
+        logging_util.info("dns_rebind_schedule", detail="will retry bind every 60s")
         threading.Thread(target=_rebind_loop, daemon=True, name="dns-rebind").start()
         return
     _serve_dns(socks)
@@ -267,12 +267,14 @@ def run():
 # the socket is in an invalid state. These errors will NEVER recover on the
 # same descriptor — continuing to loop produces a tight CPU-burning spin while
 # the health registry still reports "listening".
-_FATAL_RECV_ERRNOS = frozenset({
-    9,   # EBADF
-    22,  # EINVAL
-    38,  # ENOTSOCK (Linux)
-    57,  # ENOTSOCK (macOS/Darwin)
-})
+_FATAL_RECV_ERRNOS = frozenset(
+    {
+        9,  # EBADF
+        22,  # EINVAL
+        38,  # ENOTSOCK (Linux)
+        57,  # ENOTSOCK (macOS/Darwin)
+    }
+)
 
 
 def _serve_dns(socks):
@@ -285,6 +287,7 @@ def _serve_dns(socks):
     health reports "listening".
     """
     import select
+
     # A122: per-socket consecutive error counters (keyed by fileno).
     sock_errors = {s.fileno(): 0 for s in socks}
     _MAX_CONSECUTIVE_ERRORS = 8  # after this many, the socket is considered dead
@@ -297,8 +300,7 @@ def _serve_dns(socks):
             sock_errors = {s.fileno(): 0 for s in socks}
             if not socks:
                 # A122: all sockets dead — set health to "down" and rebind.
-                listeners.set_state("dns", "down",
-                                    detail="all sockets dead in select; rebinding")
+                listeners.set_state("dns", "down", detail="all sockets dead in select; rebinding")
                 _rebind_with_backoff()
                 return
             continue
@@ -312,11 +314,14 @@ def _serve_dns(socks):
                 sock_errors[fno] = sock_errors.get(fno, 0) + 1
                 if errno_val in _FATAL_RECV_ERRNOS or sock_errors[fno] >= _MAX_CONSECUTIVE_ERRORS:
                     # A122: this socket is dead — remove it from the active set.
-                    logging_util.error("dns_fatal_socket_error",
-                                       err=str(e), errno=errno_val,
-                                       fileno=fno,
-                                       consecutive=sock_errors[fno],
-                                       detail="removing dead socket from active set")
+                    logging_util.error(
+                        "dns_fatal_socket_error",
+                        err=str(e),
+                        errno=errno_val,
+                        fileno=fno,
+                        consecutive=sock_errors[fno],
+                        detail="removing dead socket from active set",
+                    )
                     socks = [s for s in socks if s is not sock]
                     sock_errors.pop(fno, None)
                     try:
@@ -325,13 +330,11 @@ def _serve_dns(socks):
                         pass
                     if not socks:
                         # A122: all sockets dead — set health to "down" and rebind.
-                        listeners.set_state("dns", "down",
-                                            detail="all sockets dead; rebinding")
+                        listeners.set_state("dns", "down", detail="all sockets dead; rebinding")
                         _rebind_with_backoff()
                         return
                 else:
-                    logging_util.error("dns_recv_error", err=str(e),
-                                       consecutive=sock_errors[fno])
+                    logging_util.error("dns_recv_error", err=str(e), consecutive=sock_errors[fno])
                 continue
             try:
                 response, leak_hit = _build_response(data)
@@ -358,19 +361,17 @@ def _rebind_with_backoff():
     _MAX_REBIND_ATTEMPTS = 10
     backoff = 1.0  # start at 1 second
     for attempt in range(1, _MAX_REBIND_ATTEMPTS + 1):
-        logging_util.info("dns_rebind_attempt", attempt=attempt,
-                          backoff_s=backoff)
+        logging_util.info("dns_rebind_attempt", attempt=attempt, backoff_s=backoff)
         time.sleep(backoff)
         new_socks = _bind()
         if new_socks:
-            logging_util.info("dns_rebind_success",
-                              port=new_socks[0].getsockname()[1],
-                              sockets=len(new_socks))
+            logging_util.info("dns_rebind_success", port=new_socks[0].getsockname()[1], sockets=len(new_socks))
             _serve_dns(new_socks)
             return
         backoff = min(backoff * 2, 60.0)  # cap at 60 seconds
-    logging_util.error("dns_rebind_exhausted",
-                       attempts=_MAX_REBIND_ATTEMPTS,
-                       detail="could not rebind after %d attempts; collector stays down"
-                              % _MAX_REBIND_ATTEMPTS)
+    logging_util.error(
+        "dns_rebind_exhausted",
+        attempts=_MAX_REBIND_ATTEMPTS,
+        detail="could not rebind after %d attempts; collector stays down" % _MAX_REBIND_ATTEMPTS,
+    )
     # State remains "down" as set by the caller.

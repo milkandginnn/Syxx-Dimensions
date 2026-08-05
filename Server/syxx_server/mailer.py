@@ -9,6 +9,7 @@ Two consumers:
   * confirmation emails to a beta subscriber (fire-and-forget from the handler);
   * the operator's weekly CSV digest (from the background scheduler).
 """
+
 import os
 import smtplib
 import ssl
@@ -46,18 +47,16 @@ def send(to, subject, body, html=None, attachments=None):
         msg["From"] = config.MAIL_FROM
         msg["To"] = to
         msg["Subject"] = subject
-        msg.set_content(body)                     # text/plain fallback (always present)
+        msg.set_content(body)  # text/plain fallback (always present)
         if html:
-            msg.add_alternative(html, subtype="html")   # → multipart/alternative
-        for filename, mime_type, data in (attachments or []):
+            msg.add_alternative(html, subtype="html")  # → multipart/alternative
+        for filename, mime_type, data in attachments or []:
             maintype, _, subtype = mime_type.partition("/")
-            msg.add_attachment(data, maintype=maintype,
-                               subtype=subtype or "octet-stream", filename=filename)
-    except ValueError as e:
+            msg.add_attachment(data, maintype=maintype, subtype=subtype or "octet-stream", filename=filename)
+    except ValueError:
         # A188: log the exception type, not the raw ValueError message which may
         # contain the malformed address (PII).
-        logging_util.error("mail_failed", subject=subject,
-                           err_type="ValueError", smtp_detail="invalid header")
+        logging_util.error("mail_failed", subject=subject, err_type="ValueError", smtp_detail="invalid header")
         return False
 
     try:
@@ -72,22 +71,20 @@ def send(to, subject, body, html=None, attachments=None):
                     "mail_blocked_insecure_certs",
                     subject=subject,
                     msg="SMTP_INSECURE_CERTS is set but SYXX_DEV_MODE!=1; "
-                        "refusing to send mail without certificate validation. "
-                        "Remove SMTP_INSECURE_CERTS or fix the relay's TLS.",
+                    "refusing to send mail without certificate validation. "
+                    "Remove SMTP_INSECURE_CERTS or fix the relay's TLS.",
                 )
                 return False
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
         if config.SMTP_STARTTLS:
-            with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT,
-                              timeout=config.SMTP_TIMEOUT) as s:
+            with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=config.SMTP_TIMEOUT) as s:
                 s.starttls(context=ctx)
                 if config.SMTP_USER:
                     s.login(config.SMTP_USER, config.SMTP_PASSWORD)
                 s.send_message(msg)
         else:
-            with smtplib.SMTP_SSL(config.SMTP_HOST, config.SMTP_PORT,
-                                  timeout=config.SMTP_TIMEOUT, context=ctx) as s:
+            with smtplib.SMTP_SSL(config.SMTP_HOST, config.SMTP_PORT, timeout=config.SMTP_TIMEOUT, context=ctx) as s:
                 if config.SMTP_USER:
                     s.login(config.SMTP_USER, config.SMTP_PASSWORD)
                 s.send_message(msg)
@@ -104,12 +101,11 @@ def send(to, subject, body, html=None, attachments=None):
         # Redact any address-like content from smtp_error before logging.
         if smtp_err:
             import re
-            smtp_err_str = re.sub(
-                r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",
-                "<redacted>", str(smtp_err))
+
+            smtp_err_str = re.sub(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}", "<redacted>", str(smtp_err))
         else:
             smtp_err_str = None
-        logging_util.error("mail_failed", subject=subject,
-                           err_type=err_type, smtp_code=smtp_code,
-                           smtp_detail=smtp_err_str)
+        logging_util.error(
+            "mail_failed", subject=subject, err_type=err_type, smtp_code=smtp_code, smtp_detail=smtp_err_str
+        )
         return False

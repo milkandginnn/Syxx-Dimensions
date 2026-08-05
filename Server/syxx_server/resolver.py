@@ -4,6 +4,7 @@ This is an independent implementation (it does NOT import Syxx client code). It
 uses random transaction IDs, a hard timeout, TCP fallback on truncation, and
 bounds-checked name parsing so hostile responses cannot hang or crash it.
 """
+
 import http.client
 import ipaddress
 import json
@@ -37,9 +38,20 @@ TYPE_CAA = 257
 # STRING "NOERROR" were comparing an int to a str: permanently False, and the
 # fall-through then called .lower() on the int. Compare the NUMBER, render the NAME.
 RCODE_NAMES = {
-    0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN", 4: "NOTIMP",
-    5: "REFUSED", 6: "YXDOMAIN", 7: "YXRRSET", 8: "NXRRSET", 9: "NOTAUTH",
-    10: "NOTZONE", 11: "DSOTYPENI", 16: "BADVERS", 23: "BADCOOKIE",
+    0: "NOERROR",
+    1: "FORMERR",
+    2: "SERVFAIL",
+    3: "NXDOMAIN",
+    4: "NOTIMP",
+    5: "REFUSED",
+    6: "YXDOMAIN",
+    7: "YXRRSET",
+    8: "NXRRSET",
+    9: "NOTAUTH",
+    10: "NOTZONE",
+    11: "DSOTYPENI",
+    16: "BADVERS",
+    23: "BADCOOKIE",
 }
 
 
@@ -55,13 +67,14 @@ def rcode_name(rcode):
 
 # ---------- IP-to-arpa conversion (RFC 1035 for IPv4, RFC 3596 for IPv6) ----------
 
+
 def ip_to_arpa(ip_str):
     """Convert an IP address string to its reverse-DNS (in-addr.arpa / ip6.arpa) name.
     Raises DNSError on invalid input."""
     try:
         addr = ipaddress.ip_address(ip_str)
     except ValueError:
-        raise DNSError("invalid IP address: %s" % ip_str)
+        raise DNSError(f"invalid IP address: {ip_str}")
     if isinstance(addr, ipaddress.IPv4Address):
         octets = ip_str.split(".")
         return ".".join(reversed(octets)) + ".in-addr.arpa"
@@ -78,6 +91,7 @@ def _addr_family(server):
     except ValueError:
         return socket.AF_INET
 
+
 # Maximum plausible RRSIG validity span, in seconds (2 years). Real signers use windows of days to a
 # few months; a span approaching the 2**31 serial half-space is implausible and is what a spoofed
 # clock would need to wrap a long-expired signature back into "valid" under serial arithmetic (B047).
@@ -89,8 +103,20 @@ MAX_RRSIG_VALIDITY_SPAN = 63_072_000
 # DNS response (65535 bytes with EDNS) and well below an OOM / loop risk.
 _MAX_TCP_LENGTH = 16_384
 
-_TYPE_NAMES = {1: "A", 2: "NS", 5: "CNAME", 6: "SOA", 12: "PTR", 15: "MX", 16: "TXT",
-               28: "AAAA", 33: "SRV", 46: "RRSIG", 48: "DNSKEY", 257: "CAA"}
+_TYPE_NAMES = {
+    1: "A",
+    2: "NS",
+    5: "CNAME",
+    6: "SOA",
+    12: "PTR",
+    15: "MX",
+    16: "TXT",
+    28: "AAAA",
+    33: "SRV",
+    46: "RRSIG",
+    48: "DNSKEY",
+    257: "CAA",
+}
 
 
 class DNSError(Exception):
@@ -192,7 +218,7 @@ def _read_name(data, offset):
             raise DNSError("name exceeds 255 octets")
         if len(labels) >= 127:
             raise DNSError("name exceeds 128 labels")
-        labels.append(data[offset:offset + length].decode("utf-8", "ignore"))
+        labels.append(data[offset : offset + length].decode("utf-8", "ignore"))
         offset += length
     if not jumped:
         next_offset = offset
@@ -225,14 +251,16 @@ def _parse_response(data, expected_txid, qtype, expected_qname=None, expected_qc
             # DNSError (-> inconclusive), never an uncaught struct.error that the
             # request handler turns into a 500 masking the real outcome.
             raise DNSError("truncated question section")
-        qtype_parsed, qclass_parsed = struct.unpack(">HH", data[offset:offset + 4])
+        qtype_parsed, qclass_parsed = struct.unpack(">HH", data[offset : offset + 4])
         offset += 4
         if expected_qname is not None:
             # A020: validate the response answers the question we asked.
             # RFC 4343: qname comparison is case-insensitive.
             if qname.lower() != expected_qname.lower() or qtype_parsed != qtype or qclass_parsed != expected_qclass:
-                raise DNSError("question mismatch: asked %s/%d/%d, got %s/%d/%d" %
-                               (expected_qname, qtype, expected_qclass, qname, qtype_parsed, qclass_parsed))
+                raise DNSError(
+                    "question mismatch: asked %s/%d/%d, got %s/%d/%d"
+                    % (expected_qname, qtype, expected_qclass, qname, qtype_parsed, qclass_parsed)
+                )
         break  # only validate the first question
     records = []
     for _ in range(an):
@@ -242,16 +270,17 @@ def _parse_response(data, expected_txid, qtype, expected_qname=None, expected_qc
             # than silently returning a partial record set that would be treated
             # as the complete answer.
             raise DNSError("truncated RR header at offset %d" % offset)
-        rtype, rclass, ttl, rdlength = struct.unpack(">HHIH", data[offset:offset + 10])
+        rtype, rclass, ttl, rdlength = struct.unpack(">HHIH", data[offset : offset + 10])
         offset += 10
         rdata_offset = offset
         # A077: verify the full RDATA fits within the packet before slicing.
         # Without this check a truncated rdlength produces a silently short
         # rdata slice and the parser returns a partial answer set as complete.
         if offset + rdlength > len(data):
-            raise DNSError("truncated rdlength at offset %d (need %d bytes, have %d)"
-                           % (offset, rdlength, len(data) - offset))
-        rdata = data[offset:offset + rdlength]
+            raise DNSError(
+                "truncated rdlength at offset %d (need %d bytes, have %d)" % (offset, rdlength, len(data) - offset)
+            )
+        rdata = data[offset : offset + rdlength]
         offset += rdlength
         value = _format_rdata(rtype, rdata, data, rdata_offset)
         # A115: drop records whose rdata failed to format (e.g. short-rdlength A record
@@ -296,7 +325,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
         try:
             preference = struct.unpack(">H", rdata[:2])[0]
             exchange, _ = _read_name(full, rdata_offset + 2)
-            return "%d %s" % (preference, exchange)
+            return "{} {}".format(preference, exchange)
         except Exception:
             return rdata.hex()
     # --- TXT (one or more character-strings: length-prefixed) ---
@@ -309,7 +338,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
                 off += 1
                 if off + slen > len(rdata):
                     break
-                strings.append(rdata[off:off + slen].decode("utf-8", "replace"))
+                strings.append(rdata[off : off + slen].decode("utf-8", "replace"))
                 off += slen
             return " ".join(strings) if strings else rdata.hex()
         except Exception:
@@ -319,9 +348,8 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
         try:
             mname, off = _read_name(full, rdata_offset)
             rname, off = _read_name(full, off)
-            serial, refresh, retry, expire, minimum = struct.unpack(
-                ">IIIII", full[off:off + 20])
-            return "%s %s %d %d %d %d %d" % (mname, rname, serial, refresh, retry, expire, minimum)
+            serial, refresh, retry, expire, minimum = struct.unpack(">IIIII", full[off : off + 20])
+            return "{} {} {} {} {} {} {}".format(mname, rname, serial, refresh, retry, expire, minimum)
         except Exception:
             return rdata.hex()
     # --- SRV (priority, weight, port, target name) ---
@@ -329,7 +357,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
         try:
             priority, weight, port = struct.unpack(">HHH", rdata[:6])
             target, _ = _read_name(full, rdata_offset + 6)
-            return "%d %d %d %s" % (priority, weight, port, target)
+            return "{} {} {} {}".format(priority, weight, port, target)
         except Exception:
             return rdata.hex()
     # --- CAA (flags byte, tag length, tag string, value bytes) ---
@@ -339,9 +367,9 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
             tag_len = rdata[1]
             if 2 + tag_len > len(rdata):
                 return rdata.hex()
-            tag = rdata[2:2 + tag_len].decode("ascii", "replace")
-            value = rdata[2 + tag_len:].decode("utf-8", "replace")
-            return '%d %s "%s"' % (flags, tag, value)
+            tag = rdata[2 : 2 + tag_len].decode("ascii", "replace")
+            value = rdata[2 + tag_len :].decode("utf-8", "replace")
+            return '{} {} "{}"'.format(flags, tag, value)
         except Exception:
             return rdata.hex()
     return rdata.hex()
@@ -413,7 +441,7 @@ def _question_bytes(wire):
     _labels, off = _read_name(wire, 12)
     if off + 4 > len(wire):
         raise DNSError("query truncated in question")
-    return wire[0:2], wire[12:off + 4]
+    return wire[0:2], wire[12 : off + 4]
 
 
 def forward_wire(query_wire, server, timeout=5):
@@ -492,7 +520,7 @@ def query_system(name, qtype):
     try:
         infos = socket.getaddrinfo(name, None, family=family, type=socket.SOCK_STREAM)
     except socket.gaierror as e:
-        raise DNSError("system: %s" % e)
+        raise DNSError(f"system: {e}")
     values = set()
     for info in infos:
         ip = info[4][0].split("%")[0]  # strip any scope id
@@ -503,8 +531,12 @@ def query_system(name, qtype):
             if addr.ipv4_mapped is not None:
                 continue
         values.add(ip)
-    return {"rcode": 0, "ad": False, "truncated": False,
-            "records": [{"type": tname, "value": v} for v in sorted(values)]}
+    return {
+        "rcode": 0,
+        "ad": False,
+        "truncated": False,
+        "records": [{"type": tname, "value": v} for v in sorted(values)],
+    }
 
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
@@ -525,8 +557,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
     def connect(self):
         # pin_ip is numeric -> create_connection does not query DNS (no rebind).
-        sock = socket.create_connection((self._pin_ip, self.port), self.timeout,
-                                        self.source_address)
+        sock = socket.create_connection((self._pin_ip, self.port), self.timeout, self.source_address)
         self.sock = self._context.wrap_socket(sock, server_hostname=self._server_hostname)
 
 
@@ -574,7 +605,7 @@ def query_doh(name, qtype, ip, sni, path, timeout=5):
     # public-IP check as the authoritative walker so a misconfigured/hostile vantage
     # entry cannot point the server at an internal address.
     if not _ip_is_public(ip):
-        raise DNSError("doh: non-public resolver IP %s" % ip)
+        raise DNSError(f"doh: non-public resolver IP {ip}")
     q = urllib.parse.urlencode({"name": name, "type": qtype})
     ctx = ssl.create_default_context()
     conn = _PinnedHTTPSConnection(ip, 443, sni, timeout, ctx)
@@ -590,7 +621,7 @@ def query_doh(name, qtype, ip, sni, path, timeout=5):
         data = json.loads(resp.read(1 << 20).decode("utf-8", "ignore"))
     except (OSError, ssl.SSLError, ValueError) as e:
         # ValueError covers json.JSONDecodeError for a non-JSON / error body.
-        raise DNSError("doh: %s" % e)
+        raise DNSError(f"doh: {e}")
     finally:
         conn.close()
     return _parse_doh_json(data)
@@ -607,9 +638,19 @@ def query_doh(name, qtype, ip, sni, path, timeout=5):
 
 # Root hints (IANA a–m root servers, IPv4). Enough redundancy that a few being unreachable is fine.
 ROOT_SERVERS = [
-    "198.41.0.4", "199.9.14.201", "192.33.4.12", "199.7.91.13", "192.203.230.10",
-    "192.5.5.241", "192.112.36.4", "198.97.190.53", "192.36.148.17", "192.58.128.30",
-    "193.0.14.129", "199.7.83.42", "202.12.27.33",
+    "198.41.0.4",
+    "199.9.14.201",
+    "192.33.4.12",
+    "199.7.91.13",
+    "192.203.230.10",
+    "192.5.5.241",
+    "192.112.36.4",
+    "198.97.190.53",
+    "192.36.148.17",
+    "192.58.128.30",
+    "193.0.14.129",
+    "199.7.83.42",
+    "202.12.27.33",
 ]
 
 MAX_DELEGATION_DEPTH = 16
@@ -632,7 +673,7 @@ def _read_records(data, offset, count):
     complete = True
     for i in range(effective_count):
         if offset >= len(data):
-            complete = (i >= count)  # incomplete only if we expected more
+            complete = i >= count  # incomplete only if we expected more
             break
         try:
             owner, offset = _read_name(data, offset)
@@ -642,19 +683,20 @@ def _read_records(data, offset, count):
         if offset + 10 > len(data):
             complete = False
             break
-        rtype, rclass, ttl, rdlength = struct.unpack(">HHIH", data[offset:offset + 10])
+        rtype, rclass, ttl, rdlength = struct.unpack(">HHIH", data[offset : offset + 10])
         offset += 10
         rdata_offset = offset
         if offset + rdlength > len(data):
             complete = False
             break
-        value = _format_rdata(rtype, data[offset:offset + rdlength], data, rdata_offset)
+        value = _format_rdata(rtype, data[offset : offset + rdlength], data, rdata_offset)
         # A115: drop length-invalid A/AAAA records (None = malformed, not hex garbage).
         if value is None:
             offset += rdlength
             continue
-        recs.append({"owner": owner, "type": _TYPE_NAMES.get(rtype, str(rtype)), "rtype": rtype,
-                     "ttl": ttl, "value": value})
+        recs.append(
+            {"owner": owner, "type": _TYPE_NAMES.get(rtype, str(rtype)), "rtype": rtype, "ttl": ttl, "value": value}
+        )
         offset += rdlength
     if effective_count < count:
         complete = False  # A160: capped below declared count
@@ -682,21 +724,33 @@ def _parse_sections(data, expected_txid, expected_qname=None, expected_qtype=Non
             # uncaught struct.error that the diff/trace/authoritative routes would
             # surface as a 500 hiding an inconclusive result.
             raise DNSError("truncated question section")
-        qtype_parsed, qclass_parsed = struct.unpack(">HH", data[offset:offset + 4])
+        qtype_parsed, qclass_parsed = struct.unpack(">HH", data[offset : offset + 4])
         offset += 4
         if expected_qname is not None:
-            if qname.lower() != expected_qname.lower() or qtype_parsed != expected_qtype or qclass_parsed != expected_qclass:
-                raise DNSError("question mismatch: asked %s/%d/%d, got %s/%d/%d" %
-                               (expected_qname, expected_qtype, expected_qclass, qname, qtype_parsed, qclass_parsed))
+            if (
+                qname.lower() != expected_qname.lower()
+                or qtype_parsed != expected_qtype
+                or qclass_parsed != expected_qclass
+            ):
+                raise DNSError(
+                    "question mismatch: asked %s/%d/%d, got %s/%d/%d"
+                    % (expected_qname, expected_qtype, expected_qclass, qname, qtype_parsed, qclass_parsed)
+                )
         break  # only validate the first question
     answers, offset, ans_complete = _read_records(data, offset, an)
     authority, offset, auth_complete = _read_records(data, offset, ns)
     additional, offset, addl_complete = _read_records(data, offset, ar)
     # A168: surface parse completeness so the walker can treat an incomplete
     # section as inconclusive rather than authoritative.
-    return {"rcode": flags & 0x000F, "aa": bool(flags & 0x0400), "truncated": bool(flags & 0x0200),
-            "answers": answers, "authority": authority, "additional": additional,
-            "parseComplete": ans_complete and auth_complete and addl_complete}
+    return {
+        "rcode": flags & 0x000F,
+        "aa": bool(flags & 0x0400),
+        "truncated": bool(flags & 0x0200),
+        "answers": answers,
+        "authority": authority,
+        "additional": additional,
+        "parseComplete": ans_complete and auth_complete and addl_complete,
+    }
 
 
 def _query_sections(name, qtype, server, timeout=3, do=False, rd=False):
@@ -732,8 +786,9 @@ def _query_sections(name, qtype, server, timeout=3, do=False, rd=False):
             # SD-72: cap server-declared TCP response length to prevent OOM.
             if length > _MAX_TCP_LENGTH:
                 raise DNSError("server-declared TCP length exceeds %d" % _MAX_TCP_LENGTH)
-            parsed = _parse_sections(_recv_exact(tsock, length), txid,
-                                      expected_qname=qname, expected_qtype=qtype_, expected_qclass=qclass_)
+            parsed = _parse_sections(
+                _recv_exact(tsock, length), txid, expected_qname=qname, expected_qtype=qtype_, expected_qclass=qclass_
+            )
         finally:
             tsock.close()
     return parsed
@@ -797,13 +852,13 @@ def rrsig_window_status(rdata_hex, now, expected_type_covered=TYPE_DNSKEY):
     if _rrsig_window_valid(inception, expiration, now):
         return "valid"
     if not _serial_lte(inception, expiration):
-        return "unknown"                       # expiration precedes inception -> malformed
+        return "unknown"  # expiration precedes inception -> malformed
     now32 = int(now) & 0xFFFFFFFF
     if not _serial_lte(inception, now32):
         return "not-yet-valid"
     if not _serial_lte(now32, expiration):
         return "expired"
-    return "unknown"                           # B047 implausible span: cannot confirm
+    return "unknown"  # B047 implausible span: cannot confirm
 
 
 def zone_signing_status(zone, server, timeout, now=None, rd=False):
@@ -834,9 +889,11 @@ def zone_signing_status(zone, server, timeout, now=None, rd=False):
     # servers place RRSIGs in the additional or authority section; checking only answers returns
     # None instead of True for signed zones whose RRSIGs span sections.
     all_records = list(resp.get("answers", [])) + list(resp.get("authority", [])) + list(resp.get("additional", []))
-    statuses = [s for s in (rrsig_window_status(r["value"], now)
-                            for r in all_records if r.get("rtype") == TYPE_RRSIG)
-                if s != "wrong-type"]
+    statuses = [
+        s
+        for s in (rrsig_window_status(r["value"], now) for r in all_records if r.get("rtype") == TYPE_RRSIG)
+        if s != "wrong-type"
+    ]
     return (True if "valid" in statuses else None), statuses
 
 
@@ -862,8 +919,13 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
         # A066: abort if the shared deadline has passed.
         if deadline is not None and time.monotonic() >= deadline:
             delegation.append({"zone": zone, "server": None, "error": "walk deadline exceeded"})
-            return {"name": name, "qtype": qtype, "delegation": delegation,
-                    "authoritative": None, "conclusion": "inconclusive"}
+            return {
+                "name": name,
+                "qtype": qtype,
+                "delegation": delegation,
+                "authoritative": None,
+                "conclusion": "inconclusive",
+            }
         resp, used, used_ip = None, None, None
         for s in servers[:MAX_SERVERS_PER_LEVEL]:
             try:
@@ -875,16 +937,28 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
                 continue
         if resp is None:
             delegation.append({"zone": zone, "server": None, "error": "no reachable nameserver at this level"})
-            return {"name": name, "qtype": qtype, "delegation": delegation, "authoritative": None, "conclusion": "inconclusive"}
+            return {
+                "name": name,
+                "qtype": qtype,
+                "delegation": delegation,
+                "authoritative": None,
+                "conclusion": "inconclusive",
+            }
 
         # A168: an incomplete parse means records were silently dropped by the
         # parser. Treat this as inconclusive — a confident "authoritative" label
         # over a partially-parsed response is a claim ahead of the evidence.
         if not resp.get("parseComplete", True):
-            delegation.append({"zone": zone, "server": used,
-                               "error": "incomplete parse — records may have been dropped"})
-            return {"name": name, "qtype": qtype, "delegation": delegation,
-                    "authoritative": None, "conclusion": "inconclusive"}
+            delegation.append(
+                {"zone": zone, "server": used, "error": "incomplete parse — records may have been dropped"}
+            )
+            return {
+                "name": name,
+                "qtype": qtype,
+                "delegation": delegation,
+                "authoritative": None,
+                "conclusion": "inconclusive",
+            }
 
         has_soa = any(r["type"] == "SOA" for r in resp["authority"])
         if resp["answers"] or resp["rcode"] == 3 or has_soa or (not resp["authority"]):
@@ -894,13 +968,25 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
             # path and must not be treated as truth.
             answers = [r["value"] for r in resp["answers"] if r["rtype"] == qtype]
             if not resp["aa"]:
-                delegation.append({"zone": zone, "server": used, "authoritative": False,
-                                   "answer": [r["value"] for r in resp["answers"]],
-                                   "error": "terminal response without AA bit"})
-                return {"name": name, "qtype": qtype, "delegation": delegation,
-                        "authoritative": None, "conclusion": "inconclusive"}
-            delegation.append({"zone": zone, "server": used, "authoritative": True,
-                               "answer": [r["value"] for r in resp["answers"]]})
+                delegation.append(
+                    {
+                        "zone": zone,
+                        "server": used,
+                        "authoritative": False,
+                        "answer": [r["value"] for r in resp["answers"]],
+                        "error": "terminal response without AA bit",
+                    }
+                )
+                return {
+                    "name": name,
+                    "qtype": qtype,
+                    "delegation": delegation,
+                    "authoritative": None,
+                    "conclusion": "inconclusive",
+                }
+            delegation.append(
+                {"zone": zone, "server": used, "authoritative": True, "answer": [r["value"] for r in resp["answers"]]}
+            )
             # A168: require non-empty answers for rcode 0 "authoritative". An empty
             # answer set with rcode 0 and no SOA in authority is not a proven NODATA
             # — it may be a CNAME-only response or a silently-dropped parse. Use
@@ -913,10 +999,18 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
                 conclusion = "authoritative"  # SOA-backed NODATA
             else:
                 conclusion = "inconclusive"
-            return {"name": name, "qtype": qtype, "delegation": delegation,
-                    "authoritative": {"answers": answers, "aa": resp["aa"], "rcode": resp["rcode"],
-                                      "dnskeyObserved": _zone_is_signed(zone, used_ip, timeout)},
-                    "conclusion": conclusion}
+            return {
+                "name": name,
+                "qtype": qtype,
+                "delegation": delegation,
+                "authoritative": {
+                    "answers": answers,
+                    "aa": resp["aa"],
+                    "rcode": resp["rcode"],
+                    "dnskeyObserved": _zone_is_signed(zone, used_ip, timeout),
+                },
+                "conclusion": conclusion,
+            }
 
         # A referral: NS records in the authority section, glue A records in additional.
         ns_names = [r["value"] for r in resp["authority"] if r["type"] == "NS"]
@@ -927,10 +1021,14 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
         # redirect) to steer the walk to attacker infrastructure and forge ground truth. The
         # delegated zone must be at or below the zone we actually asked.
         if not _in_bailiwick(delegated_zone, zone):
-            delegation.append({"zone": zone, "server": used,
-                               "error": "out-of-bailiwick referral to %s" % delegated_zone})
-            return {"name": name, "qtype": qtype, "delegation": delegation,
-                    "authoritative": None, "conclusion": "inconclusive"}
+            delegation.append({"zone": zone, "server": used, "error": f"out-of-bailiwick referral to {delegated_zone}"})
+            return {
+                "name": name,
+                "qtype": qtype,
+                "delegation": delegation,
+                "authoritative": None,
+                "conclusion": "inconclusive",
+            }
 
         delegation.append({"zone": zone, "server": used, "referral": ns_names, "delegatedZone": delegated_zone})
 
@@ -941,11 +1039,16 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
         # A011: never query a glue/NS IP that isn't publicly routable. A malicious authoritative
         # can return glue like `169.254.169.254` / `10.0.0.53` / `127.0.0.1` to make us probe
         # internal hosts and reflect the answers (SSRF).
-        glue = {r["owner"].rstrip("."): r["value"] for r in resp["additional"]
-                if r["type"] == "A" and _in_bailiwick(r["owner"], delegated_zone)}
-        next_servers = [{"ip": glue[n.rstrip(".")], "label": n}
-                        for n in ns_names
-                        if n.rstrip(".") in glue and _ip_is_public(glue[n.rstrip(".")])]
+        glue = {
+            r["owner"].rstrip("."): r["value"]
+            for r in resp["additional"]
+            if r["type"] == "A" and _in_bailiwick(r["owner"], delegated_zone)
+        }
+        next_servers = [
+            {"ip": glue[n.rstrip(".")], "label": n}
+            for n in ns_names
+            if n.rstrip(".") in glue and _ip_is_public(glue[n.rstrip(".")])
+        ]
         if not next_servers:
             # No glue — resolve a couple of NS names from the root (bounded so it can't loop forever).
             for nsname in ns_names[:2]:
@@ -966,7 +1069,13 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
                     continue
         if not next_servers:
             delegation.append({"zone": delegated_zone, "server": None, "error": "could not resolve any nameserver"})
-            return {"name": name, "qtype": qtype, "delegation": delegation, "authoritative": None, "conclusion": "inconclusive"}
+            return {
+                "name": name,
+                "qtype": qtype,
+                "delegation": delegation,
+                "authoritative": None,
+                "conclusion": "inconclusive",
+            }
         servers, zone = next_servers, delegated_zone
 
     delegation.append({"zone": zone, "server": None, "error": "max delegation depth exceeded"})

@@ -18,6 +18,7 @@ evidence it never had, or crashed instead of degrading:
 
 Run from Server/:  python3 -m unittest tests.test_investigate_consensus -v
 """
+
 import os
 import struct
 import unittest
@@ -28,8 +29,7 @@ from syxx_server import config, investigate, passivedns, resolver  # noqa: E402
 
 
 def _resp(rcode, values=(), rtype="A", ad=False):
-    return {"rcode": rcode, "ad": ad, "truncated": False,
-            "records": [{"type": rtype, "value": v} for v in values]}
+    return {"rcode": rcode, "ad": ad, "truncated": False, "records": [{"type": rtype, "value": v} for v in values]}
 
 
 class _StubVantages:
@@ -83,21 +83,26 @@ class RcodeTypingTests(unittest.TestCase):
 
     def test_every_rcode_maps_to_its_own_typed_status(self):
         with _StubVantages() as v:
-            per = v.responses({
-                "a": _resp(0, ["1.2.3.4"]), "b": _resp(2), "c": _resp(5),
-                "d": _resp(3), "e": _resp(0),
-            })
+            per = v.responses(
+                {
+                    "a": _resp(0, ["1.2.3.4"]),
+                    "b": _resp(2),
+                    "c": _resp(5),
+                    "d": _resp(3),
+                    "e": _resp(0),
+                }
+            )
         self.assertEqual(per["a"]["status"], "ok")
         self.assertEqual(per["b"]["status"], "rcode_servfail")
         self.assertEqual(per["c"]["status"], "rcode_refused")
         self.assertEqual(per["d"]["status"], "nxdomain")
-        self.assertEqual(per["e"]["status"], "ok")           # NOERROR + no records = NODATA
+        self.assertEqual(per["e"]["status"], "ok")  # NOERROR + no records = NODATA
         self.assertEqual(per["b"]["rcodeName"], "SERVFAIL")
 
     def test_unexpected_exception_degrades_one_vantage_not_the_request(self):
         # A155 Fix 2. A bug in the mapping must cost one vantage, never the whole
         # investigation: honesty spine #2, a failure is not an absence of evidence.
-        with _StubVantages() as v:
+        with _StubVantages():
             config.PUBLIC_RESOLVERS = ["boom", "ok"]
 
             def q(name, qtype, server, timeout=None):
@@ -124,11 +129,9 @@ class A045TypedFailureTests(unittest.TestCase):
 
     def test_servfail_alongside_answers_degrades_confidence(self):
         with _StubVantages() as v:
-            per = v.responses({"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]),
-                               "c": _resp(5)})
+            per = v.responses({"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]), "c": _resp(5)})
         state, _ = investigate._consensus_one(per)
-        self.assertEqual(state, "consistent-degraded",
-                         "a REFUSED vantage must not be invisible to consensus")
+        self.assertEqual(state, "consistent-degraded", "a REFUSED vantage must not be invisible to consensus")
 
     def test_refused_vantage_is_not_counted_as_an_agreeing_vantage(self):
         with _StubVantages() as v:
@@ -143,18 +146,21 @@ class A044EmptyVantageTests(unittest.TestCase):
 
     def test_selective_nxdomain_is_divergent_not_consistent(self):
         with _StubVantages() as v:
-            per = v.responses({"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]),
-                               "c": _resp(3)})
+            per = v.responses({"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]), "c": _resp(3)})
         state, reason = investigate._consensus_one(per)
-        self.assertEqual(state, "divergent",
-                         "a vantage saying the name does not exist, while two others "
-                         "return an address, is selective censorship — not agreement")
+        self.assertEqual(
+            state,
+            "divergent",
+            "a vantage saying the name does not exist, while two others "
+            "return an address, is selective censorship — not agreement",
+        )
         self.assertIn("c", reason, "the reason must name the dissenting vantage (RCODE provenance)")
 
     def test_selective_nodata_is_divergent_not_consistent(self):
         with _StubVantages() as v:
-            per = v.responses({"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]),
-                               "c": _resp(0)})          # NOERROR, zero records
+            per = v.responses(
+                {"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]), "c": _resp(0)}
+            )  # NOERROR, zero records
         state, reason = investigate._consensus_one(per)
         self.assertEqual(state, "divergent")
         self.assertIn("c", reason)
@@ -177,8 +183,7 @@ class A044EmptyVantageTests(unittest.TestCase):
 
     def test_genuine_agreement_still_reads_consistent(self):
         with _StubVantages() as v:
-            per = v.responses({"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]),
-                               "c": _resp(0, ["1.2.3.4"])})
+            per = v.responses({"a": _resp(0, ["1.2.3.4"]), "b": _resp(0, ["1.2.3.4"]), "c": _resp(0, ["1.2.3.4"])})
         state, _ = investigate._consensus_one(per)
         self.assertEqual(state, "consistent")
 
@@ -254,10 +259,14 @@ class S13DnssecPostureTests(unittest.TestCase):
         finally:
             resolver._query_sections = orig
         self.assertTrue(asked, "the DNSSEC probe must issue a query")
-        self.assertNotIn(resolver.TYPE_RRSIG, [q for q, _, _ in asked],
-                         "QTYPE=RRSIG standalone is answered by nothing; it is not a probe")
-        self.assertEqual(asked[0], (resolver.TYPE_DNSKEY, True, True),
-                         "must ask DNSKEY with the DO bit set, recursively")
+        self.assertNotIn(
+            resolver.TYPE_RRSIG,
+            [q for q, _, _ in asked],
+            "QTYPE=RRSIG standalone is answered by nothing; it is not a probe",
+        )
+        self.assertEqual(
+            asked[0], (resolver.TYPE_DNSKEY, True, True), "must ask DNSKEY with the DO bit set, recursively"
+        )
 
 
 class RrsigWindowStatusTests(unittest.TestCase):
@@ -265,9 +274,9 @@ class RrsigWindowStatusTests(unittest.TestCase):
 
     @staticmethod
     def _rrsig(type_covered, inception, expiration):
-        return (struct.pack(">HBBI", type_covered, 8, 2, 3600)
-                + struct.pack(">II", expiration, inception)
-                + b"\x00" * 4).hex()
+        return (
+            struct.pack(">HBBI", type_covered, 8, 2, 3600) + struct.pack(">II", expiration, inception) + b"\x00" * 4
+        ).hex()
 
     def test_valid_window(self):
         now = 1_800_000_000
@@ -314,11 +323,10 @@ class A115LyingRdlengthTests(unittest.TestCase):
 
     def _records(self, rtype, rdata):
         txid, pkt = _answer_packet(rtype, rdata)
-        return resolver._parse_response(pkt, txid, rtype,
-                                        expected_qname="example.com")["records"]
+        return resolver._parse_response(pkt, txid, rtype, expected_qname="example.com")["records"]
 
     def test_short_a_record_is_dropped_not_hex(self):
-        recs = self._records(resolver.TYPE_A, b"\x01\x02\x03")     # 3 bytes, not 4
+        recs = self._records(resolver.TYPE_A, b"\x01\x02\x03")  # 3 bytes, not 4
         self.assertEqual(recs, [], "a 3-byte A record must not be surfaced at all")
 
     def test_long_a_record_is_dropped_not_hex(self):
@@ -326,15 +334,14 @@ class A115LyingRdlengthTests(unittest.TestCase):
         self.assertEqual(recs, [])
 
     def test_short_aaaa_record_is_dropped_not_hex(self):
-        recs = self._records(resolver.TYPE_AAAA, b"\x26\x06")      # 2 bytes, not 16
+        recs = self._records(resolver.TYPE_AAAA, b"\x26\x06")  # 2 bytes, not 16
         self.assertEqual(recs, [])
 
     def test_no_record_of_type_a_ever_carries_a_non_address_value(self):
         for bad in (b"", b"\x01", b"\x01\x02\x03", b"\x01\x02\x03\x04\x05\x06"):
             with self.subTest(rdlength=len(bad)):
                 for r in self._records(resolver.TYPE_A, bad):
-                    self.assertNotEqual(r["type"], "A",
-                                        "hex garbage surfaced under a parsed type name")
+                    self.assertNotEqual(r["type"], "A", "hex garbage surfaced under a parsed type name")
 
     def test_well_formed_a_record_still_parses(self):
         # The guard must not throw away good data.
@@ -349,8 +356,7 @@ class A115LyingRdlengthTests(unittest.TestCase):
         # resolve_authoritative/_read_records is the second entry point for the same
         # bug: the delegation walker feeds /api/trace and the diff reference.
         txid, pkt = _answer_packet(resolver.TYPE_A, b"\x01\x02\x03")
-        parsed = resolver._parse_sections(pkt, txid, expected_qname="example.com",
-                                          expected_qtype=resolver.TYPE_A)
+        parsed = resolver._parse_sections(pkt, txid, expected_qname="example.com", expected_qtype=resolver.TYPE_A)
         self.assertEqual([r for r in parsed["answers"] if r["type"] == "A"], [])
 
 

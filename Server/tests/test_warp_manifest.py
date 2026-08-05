@@ -12,6 +12,7 @@ hash path runs exactly as in production. The load-bearing honesty properties:
   * unfetchable HTML is WarpInconclusive, an SSRF-blocked target propagates BlockedError,
     and the per-run unique-host cap bounds the fan-out.
 """
+
 import gzip
 import hashlib
 import os
@@ -29,10 +30,12 @@ BASE = "https://example.test/"
 
 def _net(mapping):
     """Build a fetch_ex double from {url: (raw_bytes, ctype, content_encoding, final_url)}."""
+
     def fetch_ex(url, timeout=None, max_bytes=None, max_redirects=None):
         if url not in mapping:
             raise fetcher.FetchError(f"no route to {url}")
         return mapping[url]
+
     return fetch_ex
 
 
@@ -45,12 +48,14 @@ def _asset(manifest, url):
 
 class WarpManifestTests(unittest.TestCase):
     def test_transitive_closure_html_js_css_and_css_import(self):
-        html = (b"<html><head>"
-                b"<script src='/a.js'></script>"
-                b"<link rel=stylesheet href='/s.css'>"
-                b"<link rel=modulepreload href='/m.js'>"
-                b"<link rel=preload as=script href='/p.js'>"
-                b"</head></html>")
+        html = (
+            b"<html><head>"
+            b"<script src='/a.js'></script>"
+            b"<link rel=stylesheet href='/s.css'>"
+            b"<link rel=modulepreload href='/m.js'>"
+            b"<link rel=preload as=script href='/p.js'>"
+            b"</head></html>"
+        )
         css = b'@import "/nested.css"; body{color:red}'
         nested = b".n{color:blue}"
         net = {
@@ -79,16 +84,15 @@ class WarpManifestTests(unittest.TestCase):
         # Every declared asset is present, in the right class, plus the nested @import.
         classes = {a["url"]: a["class"] for a in m["assets"]}
         self.assertEqual(classes[BASE + "a.js"], "JS")
-        self.assertEqual(classes[BASE + "m.js"], "JS")   # modulepreload → JS
-        self.assertEqual(classes[BASE + "p.js"], "JS")   # preload as=script → JS
+        self.assertEqual(classes[BASE + "m.js"], "JS")  # modulepreload → JS
+        self.assertEqual(classes[BASE + "p.js"], "JS")  # preload as=script → JS
         self.assertEqual(classes[BASE + "s.css"], "CSS")
         self.assertEqual(classes[BASE + "nested.css"], "CSS_IMPORT")
 
     def test_per_asset_hash_is_over_raw_bytes(self):
         html = b"<html><script src='/a.js'></script></html>"
         body = b"const secret = 42;\n"
-        net = {BASE: (html, "text/html", "", BASE),
-               BASE + "a.js": (body, "application/javascript", "", BASE + "a.js")}
+        net = {BASE: (html, "text/html", "", BASE), BASE + "a.js": (body, "application/javascript", "", BASE + "a.js")}
         with patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)):
             m = warp.build_manifest(BASE)
         a = _asset(m, BASE + "a.js")
@@ -104,8 +108,10 @@ class WarpManifestTests(unittest.TestCase):
         expected = hashlib.sha256(body).hexdigest()
 
         def run(encoding, delivered):
-            net = {BASE: (html, "text/html", "", BASE),
-                   BASE + "a.js": (delivered, "application/javascript", encoding, BASE + "a.js")}
+            net = {
+                BASE: (html, "text/html", "", BASE),
+                BASE + "a.js": (delivered, "application/javascript", encoding, BASE + "a.js"),
+            }
             with patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)):
                 return warp.build_manifest(BASE)
 
@@ -120,8 +126,10 @@ class WarpManifestTests(unittest.TestCase):
         """A br body that will not decode must be recorded fetch_failed, never hashed while
         still compressed (spec §8 / honesty spine — a compressed-byte hash is false evidence)."""
         html = b"<html><script src='/a.js'></script></html>"
-        net = {BASE: (html, "text/html", "", BASE),
-               BASE + "a.js": (b"not-valid-brotli-bytes", "application/javascript", "br", BASE + "a.js")}
+        net = {
+            BASE: (html, "text/html", "", BASE),
+            BASE + "a.js": (b"not-valid-brotli-bytes", "application/javascript", "br", BASE + "a.js"),
+        }
         with patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)):
             m = warp.build_manifest(BASE)
         a = _asset(m, BASE + "a.js")
@@ -130,8 +138,10 @@ class WarpManifestTests(unittest.TestCase):
 
     def test_fetch_failed_asset_is_recorded_never_dropped(self):
         html = b"<html><script src='/gone.js'></script><script src='/ok.js'></script></html>"
-        net = {BASE: (html, "text/html", "", BASE),
-               BASE + "ok.js": (b"ok", "application/javascript", "", BASE + "ok.js")}
+        net = {
+            BASE: (html, "text/html", "", BASE),
+            BASE + "ok.js": (b"ok", "application/javascript", "", BASE + "ok.js"),
+        }
         # /gone.js is absent from the network → FetchError → recorded fetch_failed.
         with patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)):
             m = warp.build_manifest(BASE)
@@ -153,6 +163,7 @@ class WarpManifestTests(unittest.TestCase):
     def test_html_unfetchable_is_inconclusive_not_a_fabricated_manifest(self):
         def fx(url, **k):
             raise fetcher.FetchError("upstream status 503")
+
         with patch("syxx_server.fetcher.fetch_ex", side_effect=fx):
             with self.assertRaises(warp.WarpInconclusive):
                 warp.build_manifest(BASE)
@@ -160,6 +171,7 @@ class WarpManifestTests(unittest.TestCase):
     def test_blocked_target_propagates_as_blocked_not_inconclusive(self):
         def fx(url, **k):
             raise fetcher.BlockedError("blocked non-public address")
+
         with patch("syxx_server.fetcher.fetch_ex", side_effect=fx):
             with self.assertRaises(fetcher.BlockedError):
                 warp.build_manifest(BASE)
@@ -176,8 +188,7 @@ class WarpManifestTests(unittest.TestCase):
                 return html, "text/html", "", BASE
             return b"x", "application/javascript", "", url
 
-        with patch.object(config, "FETCH_MAX_UNIQUE_HOSTS", 1), \
-                patch("syxx_server.fetcher.fetch_ex", side_effect=fx):
+        with patch.object(config, "FETCH_MAX_UNIQUE_HOSTS", 1), patch("syxx_server.fetcher.fetch_ex", side_effect=fx):
             m = warp.build_manifest(BASE)
         self.assertNotIn("https://cdn.example.com/x.js", contacted)
         cross = _asset(m, "https://cdn.example.com/x.js")
@@ -190,9 +201,11 @@ class WarpManifestTests(unittest.TestCase):
         net = {BASE: (html, "text/html", "", BASE)}
         # 0.css → 1.css → 2.css → ... each imports the next.
         for i in range(10):
-            net[BASE + f"{i}.css"] = (f'@import "/{i+1}.css";'.encode(), "text/css", "", BASE + f"{i}.css")
-        with patch.object(config, "WARP_CSS_IMPORT_MAX_DEPTH", 3), \
-                patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)):
+            net[BASE + f"{i}.css"] = (f'@import "/{i + 1}.css";'.encode(), "text/css", "", BASE + f"{i}.css")
+        with (
+            patch.object(config, "WARP_CSS_IMPORT_MAX_DEPTH", 3),
+            patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)),
+        ):
             m = warp.build_manifest(BASE)
         css_urls = [a["url"] for a in m["assets"]]
         # depth 0 = 0.css, then imports at depth 1,2,3 → 1.css,2.css,3.css. 4.css is not followed.
@@ -205,8 +218,10 @@ class WarpManifestTests(unittest.TestCase):
         net = {BASE: (html, "text/html", "", BASE)}
         for i in range(10):
             net[BASE + f"s{i}.js"] = (b"x", "application/javascript", "", BASE + f"s{i}.js")
-        with patch.object(config, "WARP_MANIFEST_MAX_ASSETS", 4), \
-                patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)):
+        with (
+            patch.object(config, "WARP_MANIFEST_MAX_ASSETS", 4),
+            patch("syxx_server.fetcher.fetch_ex", side_effect=_net(net)),
+        ):
             m = warp.build_manifest(BASE)
         self.assertLessEqual(len(m["assets"]), 4)
 

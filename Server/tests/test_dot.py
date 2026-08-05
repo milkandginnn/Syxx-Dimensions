@@ -5,6 +5,7 @@ DoT wire protocol (2-byte length prefix + DNS message) over a client TLS socket.
 scope: authoritative-leak-only answers, REFUSED for out-of-zone, and that the connection cap holds
 (SD-51) rather than piling unbounded threads.
 """
+
 import os
 import socket
 import ssl
@@ -23,27 +24,36 @@ from syxx_server import config, dot_listener, resolver  # noqa: E402
 
 def _self_signed():
     """A throwaway cert/key for the test listener. Uses the cryptography lib already required."""
+    import datetime
+
     from cryptography import x509
-    from cryptography.x509.oid import NameOID
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
-    import datetime
+    from cryptography.x509.oid import NameOID
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "localhost")])
-    now = datetime.datetime.now(datetime.timezone.utc)
-    cert = (x509.CertificateBuilder()
-            .subject_name(name).issuer_name(name).public_key(key.public_key())
-            .serial_number(x509.random_serial_number())
-            .not_valid_before(now - datetime.timedelta(minutes=5))
-            .not_valid_after(now + datetime.timedelta(days=1))
-            .sign(key, hashes.SHA256()))
+    now = datetime.datetime.now(datetime.UTC)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(minutes=5))
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
     cf = tempfile.NamedTemporaryFile(suffix=".pem", delete=False)
     kf = tempfile.NamedTemporaryFile(suffix=".pem", delete=False)
-    cf.write(cert.public_bytes(serialization.Encoding.PEM)); cf.close()
-    kf.write(key.private_bytes(serialization.Encoding.PEM,
-                               serialization.PrivateFormat.TraditionalOpenSSL,
-                               serialization.NoEncryption())); kf.close()
+    cf.write(cert.public_bytes(serialization.Encoding.PEM))
+    cf.close()
+    kf.write(
+        key.private_bytes(
+            serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL, serialization.NoEncryption()
+        )
+    )
+    kf.close()
     return cf.name, kf.name
 
 
@@ -53,7 +63,7 @@ class DotListenerTests(unittest.TestCase):
         cls.cert, cls.key = _self_signed()
         config.DOT_TLS_CERT, config.DOT_TLS_KEY = cls.cert, cls.key
         config.DOT_HOST = "127.0.0.1"
-        config.DOT_PORT = 0                    # ephemeral; we read the bound port back
+        config.DOT_PORT = 0  # ephemeral; we read the bound port back
         config.DOT_MAX_CONN = 4
         config.DOT_READ_TIMEOUT = 1
         # Build + wrap the server exactly as run() does, but keep the handle so we can read the port.
@@ -70,8 +80,10 @@ class DotListenerTests(unittest.TestCase):
         cls.server.shutdown()
         cls.server.server_close()
         for p in (cls.cert, cls.key):
-            try: os.unlink(p)
-            except OSError: pass
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
     def _dot_query(self, name, qtype=1):
         """One DoT exchange: TLS connect, send length-prefixed query, read the answer."""
@@ -117,8 +129,10 @@ class DotListenerTests(unittest.TestCase):
             except OSError:
                 pass  # excess connections refused at the cap — expected
         for s in idle:
-            try: s.close()
-            except OSError: pass
+            try:
+                s.close()
+            except OSError:
+                pass
         time.sleep(1.4)  # > DOT_READ_TIMEOUT, so any slot held by an idle handler is released
         resp = self._dot_query("probe456.leak.syxx.app", 1)
         self.assertEqual(resp[3] & 0x0F, 0, "listener must survive a connection flood")
@@ -134,15 +148,14 @@ class DotListenerTests(unittest.TestCase):
         refused_count = 0
         try:
             # Open connections up to the cap — all should succeed
-            for i in range(max_conn):
+            for _i in range(max_conn):
                 try:
                     s = socket.create_connection(("127.0.0.1", self.port), timeout=2)
                     held.append(s)
                 except OSError:
                     pass  # platform may refuse even under cap — that's acceptable
             # At least some connections should have been accepted
-            self.assertGreater(len(held), 0,
-                               "at least one connection should be accepted up to the cap")
+            self.assertGreater(len(held), 0, "at least one connection should be accepted up to the cap")
             # Now try to open more — the cap must refuse at least some
             for _ in range(max_conn):
                 try:
@@ -153,9 +166,12 @@ class DotListenerTests(unittest.TestCase):
             # The cap must have refused at least one excess connection.
             # On some platforms, accept() may queue extras, but the BoundedSemaphore
             # in _BoundedThreadingTCPServer.get_request should reject them.
-            self.assertGreater(refused_count, 0,
-                               f"SD-51 cap ({max_conn}) must refuse excess connections; "
-                               f"all {max_conn * 2} attempts succeeded — cap is not enforced")
+            self.assertGreater(
+                refused_count,
+                0,
+                f"SD-51 cap ({max_conn}) must refuse excess connections; "
+                f"all {max_conn * 2} attempts succeeded — cap is not enforced",
+            )
         finally:
             for s in held:
                 try:

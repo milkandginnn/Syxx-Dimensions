@@ -5,6 +5,7 @@ values the client kits accept from the server; any other spelling silently
 breaks cross-platform JSON parity. These tests pin the exact strings AND the
 str-subclass behaviour that lets the enum serialise without a custom encoder.
 """
+
 import json
 import os
 import unittest

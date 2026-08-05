@@ -16,6 +16,7 @@ exercised the HTTP layer:
 
 Run from Server/:  python3 -m unittest tests.test_routes -v
 """
+
 import json
 import os
 import tempfile
@@ -29,6 +30,7 @@ import urllib.request
 # config.DB_PATH clobbering doesn't happen. We still re-init in each module
 # so the tables exist when the module's tests run.
 import conftest
+
 _DB_PATH = conftest.SYXX_TEST_DB_PATH
 
 os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_fake")
@@ -87,7 +89,9 @@ def _post(path, obj):
     req = urllib.request.Request(
         "http://127.0.0.1:%d%s" % (_port, path),
         data=json.dumps(obj).encode("utf-8"),
-        headers={"Content-Type": "application/json"}, method="POST")
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
     try:
         r = urllib.request.urlopen(req, timeout=5)
         return r.status, json.loads(r.read())
@@ -97,8 +101,7 @@ def _post(path, obj):
 
 
 def _post_raw(path, data, headers):
-    req = urllib.request.Request(
-        "http://127.0.0.1:%d%s" % (_port, path), data=data, headers=headers, method="POST")
+    req = urllib.request.Request("http://127.0.0.1:%d%s" % (_port, path), data=data, headers=headers, method="POST")
     try:
         r = urllib.request.urlopen(req, timeout=5)
         return r.status, json.loads(r.read())
@@ -108,8 +111,7 @@ def _post_raw(path, data, headers):
 
 
 def _delete(path):
-    req = urllib.request.Request(
-        "http://127.0.0.1:%d%s" % (_port, path), method="DELETE")
+    req = urllib.request.Request("http://127.0.0.1:%d%s" % (_port, path), method="DELETE")
     try:
         r = urllib.request.urlopen(req, timeout=5)
         return r.status, json.loads(r.read())
@@ -158,6 +160,7 @@ class StripeWebhookRouteTests(unittest.TestCase):
 
     def setUp(self):
         from syxx_server import config, fulfillment
+
         self._config, self._fulfillment = config, fulfillment
         self._orig_secret = config.STRIPE_WEBHOOK_SECRET
         config.STRIPE_WEBHOOK_SECRET = "whsec_route"
@@ -173,23 +176,26 @@ class StripeWebhookRouteTests(unittest.TestCase):
     def _sign(payload, ts, secret=b"whsec_route"):
         import hashlib
         import hmac
+
         return hmac.new(secret, ("%d." % ts).encode() + payload, hashlib.sha256).hexdigest()
 
     def test_forged_signature_is_rejected_and_never_fulfilled(self):
         payload = b'{"id":"evt_forged","type":"checkout.session.completed"}'
-        status, _ = _post_raw("/api/webhooks/stripe", payload,
-                              {"Stripe-Signature": "t=0,v1=deadbeef", "Content-Type": "application/json"})
+        status, _ = _post_raw(
+            "/api/webhooks/stripe", payload, {"Stripe-Signature": "t=0,v1=deadbeef", "Content-Type": "application/json"}
+        )
         self.assertEqual(status, 400)
-        self.assertEqual(self.handled, [],
-                         "a forged webhook reached fulfillment -> free license mint")
+        self.assertEqual(self.handled, [], "a forged webhook reached fulfillment -> free license mint")
 
     def test_valid_signature_reaches_fulfillment(self):
         import time as _t
+
         payload = b'{"id":"evt_ok","type":"checkout.session.completed"}'
         ts = int(_t.time())
         hdr = "t=%d,v1=%s" % (ts, self._sign(payload, ts))
-        status, _ = _post_raw("/api/webhooks/stripe", payload,
-                              {"Stripe-Signature": hdr, "Content-Type": "application/json"})
+        status, _ = _post_raw(
+            "/api/webhooks/stripe", payload, {"Stripe-Signature": hdr, "Content-Type": "application/json"}
+        )
         self.assertEqual(status, 200)
         self.assertEqual(self.handled, ["evt_ok"])
 
@@ -217,8 +223,7 @@ class LeakVerifyRouteTests(unittest.TestCase):
         deadline = time.time() + 2
         while db.leak_token_get(issued["token"]) is not None and time.time() < deadline:
             time.sleep(0.05)
-        self.assertIsNone(db.leak_token_get(issued["token"]),
-                          "token not consumed after successful verify response")
+        self.assertIsNone(db.leak_token_get(issued["token"]), "token not consumed after successful verify response")
         # And a second verify of the consumed token must now be a 404.
         status, body = _get("/api/leak/verify?token=" + issued["subdomain"])
         self.assertEqual(status, 404)
@@ -228,8 +233,7 @@ class LeakVerifyRouteTests(unittest.TestCase):
         leak.observe(issued["token"], "9.9.9.9", 1)
         status, body = _get("/leak?token=" + issued["subdomain"])
         self.assertEqual(status, 404)
-        self.assertEqual(body.get("error"),
-                         "legacy leak endpoint requires a valid issued token owned by the caller")
+        self.assertEqual(body.get("error"), "legacy leak endpoint requires a valid issued token owned by the caller")
 
     def test_legacy_leak_endpoint_returns_only_owned_observations(self):
         issued = leak.issue_token(SUBJECT)
@@ -260,16 +264,23 @@ class DiffRouteTests(unittest.TestCase):
         # Production passes deadline=...; accept **kw so the fixture stays compatible.
         def _auth(domain, qtype, **_kw):
             return {
-                "name": domain, "qtype": qtype, "delegation": [],
-                "authoritative": None, "conclusion": "inconclusive",
+                "name": domain,
+                "qtype": qtype,
+                "delegation": [],
+                "authoritative": None,
+                "conclusion": "inconclusive",
             }
+
         resolver.resolve_authoritative = _auth
         app._clean_vantage_answers = lambda domain, qtype, qtype_str: {"203.0.113.10"}
-        status, body = _post("/api/diff", {
-            "domain": "example.com",
-            "type": "A",
-            "localAnswers": ["198.51.100.20"],
-        })
+        status, body = _post(
+            "/api/diff",
+            {
+                "domain": "example.com",
+                "type": "A",
+                "localAnswers": ["198.51.100.20"],
+            },
+        )
         self.assertEqual(status, 200)
         self.assertEqual(body["assessment"], "partial")
         self.assertEqual(body["conclusion"], "inconclusive")
@@ -277,17 +288,23 @@ class DiffRouteTests(unittest.TestCase):
     def test_authoritative_disjoint_answers_remain_tampered(self):
         def _auth(domain, qtype, **_kw):
             return {
-                "name": domain, "qtype": qtype, "delegation": [],
+                "name": domain,
+                "qtype": qtype,
+                "delegation": [],
                 "authoritative": {"answers": ["203.0.113.10"], "aa": True, "rcode": 0},
                 "conclusion": "authoritative",
             }
+
         resolver.resolve_authoritative = _auth
         app._clean_vantage_answers = lambda domain, qtype, qtype_str: set()
-        status, body = _post("/api/diff", {
-            "domain": "example.com",
-            "type": "A",
-            "localAnswers": ["198.51.100.20"],
-        })
+        status, body = _post(
+            "/api/diff",
+            {
+                "domain": "example.com",
+                "type": "A",
+                "localAnswers": ["198.51.100.20"],
+            },
+        )
         self.assertEqual(status, 200)
         self.assertEqual(body["assessment"], "divergent")
         self.assertEqual(body["conclusion"], "tampered")
@@ -312,8 +329,12 @@ class PubkeyEndpointTests(unittest.TestCase):
         self.assertEqual(status, 200)
         # Ensure the collector_public_key() function (which issues tokens) matches.
         from syxx_server import leak as _leak
-        self.assertEqual(body["publicKey"], _leak.collector_public_key(),
-            "/api/pubkey must return the same key the collector uses for signing")
+
+        self.assertEqual(
+            body["publicKey"],
+            _leak.collector_public_key(),
+            "/api/pubkey must return the same key the collector uses for signing",
+        )
 
 
 def _get_html(path, host=None):
@@ -338,16 +359,16 @@ class WhatsNewPlatformRouteTests(unittest.TestCase):
     def setUp(self):
         # Point each platform's What's-New at a temp file with a unique marker, so a mis-route is
         # unambiguous (the wrong platform's marker appears).
-        import tempfile
         from syxx_server import config
+
         self._orig = (config.WHATSNEW_MAC, config.WHATSNEW_WIN, config.WHATSNEW_DEB)
         self._files = []
         markers = {}
         paths = {}
         for key in ("mac", "win", "deb"):
-            fd, p = tempfile.mkstemp(suffix="-%s.html" % key)
-            marker = "MARKER_%s_ONLY" % key.upper()
-            os.write(fd, ("<!doctype html><p>%s</p>" % marker).encode())
+            fd, p = tempfile.mkstemp(suffix=f"-{key}.html")
+            marker = f"MARKER_{key.upper()}_ONLY"
+            os.write(fd, (f"<!doctype html><p>{marker}</p>").encode())
             os.close(fd)
             self._files.append(p)
             markers[key] = marker
@@ -357,18 +378,21 @@ class WhatsNewPlatformRouteTests(unittest.TestCase):
 
     def tearDown(self):
         from syxx_server import config
+
         config.WHATSNEW_MAC, config.WHATSNEW_WIN, config.WHATSNEW_DEB = self._orig
         for p in self._files:
-            try: os.unlink(p)
-            except OSError: pass
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
     def test_query_platform_selects_own_content(self):
         # Every accepted Debian-family spelling must serve DEB content, never MAC.
         for plat in ("deb", "debian", "ubuntu", "mint", "linux"):
-            status, html = _get_html("/api/whats-new?platform=%s" % plat)
+            status, html = _get_html(f"/api/whats-new?platform={plat}")
             self.assertEqual(status, 200, plat)
-            self.assertIn(self.markers["deb"], html, "%s must serve the Debian page" % plat)
-            self.assertNotIn(self.markers["mac"], html, "%s must NOT serve the Mac page" % plat)
+            self.assertIn(self.markers["deb"], html, f"{plat} must serve the Debian page")
+            self.assertNotIn(self.markers["mac"], html, f"{plat} must NOT serve the Mac page")
 
     def test_win_and_mac_still_route_correctly(self):
         _, win = _get_html("/api/whats-new?platform=win")
@@ -384,6 +408,7 @@ class WhatsNewPlatformRouteTests(unittest.TestCase):
     def test_debmotd_host_serves_debian_page(self):
         # Host-header routing (the dedicated subdomain path) must resolve debmotd → Debian content.
         from syxx_server import config
+
         status, html = _get_html("/", host=config.MOTD_DEB_HOST)
         self.assertEqual(status, 200)
         self.assertIn(self.markers["deb"], html, "debmotd.syxx.app must serve the Debian page at /")
@@ -406,7 +431,10 @@ class PaidRoute402Tests(unittest.TestCase):
         cls._saved = licensing.entitlement_for
         licensing.entitlement_for = lambda headers, query: (None, None)
         # Set enforcement flags so paywalled routes require entitlement
-        import importlib, syxx_server.config as cfg
+        import importlib
+
+        import syxx_server.config as cfg
+
         cls._saved_environ = {}
         for k in ("SYXX_ENFORCE_NATIVE", "SYXX_ENFORCE_DOH", "SYXX_ENFORCE_WEB"):
             cls._saved_environ[k] = os.environ.get(k)
@@ -416,7 +444,10 @@ class PaidRoute402Tests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         licensing.entitlement_for = cls._saved
-        import importlib, syxx_server.config as cfg
+        import importlib
+
+        import syxx_server.config as cfg
+
         for k, v in cls._saved_environ.items():
             if v is None:
                 os.environ.pop(k, None)
@@ -520,8 +551,11 @@ class PaidRoute402Tests(unittest.TestCase):
         """A220: POST /dns-query was the one gated route with no 402 test. The DoH POST handler
         goes through _doh_gate which calls _require(query, config.ENFORCE_DOH). Without this test,
         replacing ENFORCE_DOH with False stays green while the POST endpoint stops charging."""
-        status, body = _post_raw("/dns-query", b"\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00",
-                                 {"Content-Type": "application/dns-message"})
+        status, body = _post_raw(
+            "/dns-query",
+            b"\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00",
+            {"Content-Type": "application/dns-message"},
+        )
         self.assertEqual(status, 402, "POST /dns-query must return 402 without entitlement")
 
     def test_billing_portal_post_returns_401(self):
@@ -617,10 +651,9 @@ class MonitorDeleteTenantScopeTests(unittest.TestCase):
 
     def test_foreign_subject_cannot_delete_results(self):
         self.assertTrue(self._their_results(), "fixture must start with a result row")
-        deleted = db.monitor_delete(self.mid_b, self.mine)   # tenant-a attacks tenant-b
+        deleted = db.monitor_delete(self.mid_b, self.mine)  # tenant-a attacks tenant-b
         self.assertEqual(deleted, 0, "must not delete another subject's monitor")
-        self.assertTrue(self._their_results(),
-                        "another subject's monitor_results were destroyed")
+        self.assertTrue(self._their_results(), "another subject's monitor_results were destroyed")
 
     def test_owner_can_delete_own_monitor_and_results(self):
         deleted = db.monitor_delete(self.mid_b, self.theirs)
@@ -635,12 +668,12 @@ class ZeroEvidenceNeverReadsAsGoodNewsTests(unittest.TestCase):
     def test_diff_result_still_reports_tampered_with_real_corroboration(self):
         # Guard must not over-fire: a reachable clean vantage that genuinely disagrees
         # still yields tampered.
-        v = app._diff_result("divergent", None,
-                              clean_answers={"9.9.9.9"}, local_set={"1.2.3.4"})
+        v = app._diff_result("divergent", None, clean_answers={"9.9.9.9"}, local_set={"1.2.3.4"})
         self.assertEqual(v, "tampered")
 
     def test_firewall_open_requires_at_least_one_clean_reference(self):
         from syxx_server import firewall_test
+
         # Every clean vantage blocked; the user resolver answers normally. _is_filtered can
         # never fire without a reference, so filtered_count is structurally 0 and the old
         # code reported "open" (= not filtering) on the very networks that filter.
@@ -660,10 +693,12 @@ class ZeroEvidenceNeverReadsAsGoodNewsTests(unittest.TestCase):
         finally:
             firewall_test._query_resolver = orig
         self.assertNotIn("error", out, "must reach the real assessment logic, not bail early")
-        self.assertEqual(out["summary"]["tested"], len(firewall_test._TEST_DOMAINS),
-                         "every test domain must have been probed")
-        self.assertEqual(out["assessment"], "inconclusive",
-                         "no reference read succeeded; 'open' would be measured-nothing")
+        self.assertEqual(
+            out["summary"]["tested"], len(firewall_test._TEST_DOMAINS), "every test domain must have been probed"
+        )
+        self.assertEqual(
+            out["assessment"], "inconclusive", "no reference read succeeded; 'open' would be measured-nothing"
+        )
 
 
 class StripeWebhookSignatureRouteTests(unittest.TestCase):
@@ -687,54 +722,49 @@ class StripeWebhookSignatureRouteTests(unittest.TestCase):
         config.STRIPE_WEBHOOK_SECRET = self._orig_secret
 
     def _send(self, payload, sig):
-        return _post_raw("/api/webhooks/stripe", payload,
-                         {"Content-Type": "application/json", "Stripe-Signature": sig})
+        return _post_raw("/api/webhooks/stripe", payload, {"Content-Type": "application/json", "Stripe-Signature": sig})
 
     def _valid_sig(self, payload, ts=None):
-        import hashlib, hmac as _h
+        import hashlib
+        import hmac as _h
+
         ts = ts or str(int(time.time()))
-        mac = _h.new(config.STRIPE_WEBHOOK_SECRET.encode(),
-                     ts.encode() + b"." + payload, hashlib.sha256).hexdigest()
-        return "t=%s,v1=%s" % (ts, mac)
+        mac = _h.new(config.STRIPE_WEBHOOK_SECRET.encode(), ts.encode() + b"." + payload, hashlib.sha256).hexdigest()
+        return f"t={ts},v1={mac}"
 
     def test_a_correctly_signed_event_is_processed(self):
         """The control: without this, every rejection test below could pass vacuously."""
-        payload = json.dumps({"id": "evt_ok", "type": "charge.refunded",
-                              "data": {"object": {}}}).encode()
+        payload = json.dumps({"id": "evt_ok", "type": "charge.refunded", "data": {"object": {}}}).encode()
         status, body = self._send(payload, self._valid_sig(payload))
         self.assertEqual(status, 200)
         self.assertEqual(len(self.handled), 1)
 
     def test_a_tampered_signature_is_rejected_and_never_reaches_fulfillment(self):
-        payload = json.dumps({"id": "evt_bad", "type": "charge.refunded",
-                              "data": {"object": {}}}).encode()
+        payload = json.dumps({"id": "evt_bad", "type": "charge.refunded", "data": {"object": {}}}).encode()
         status, body = self._send(payload, "t=%d,v1=%s" % (int(time.time()), "0" * 64))
         self.assertEqual(status, 400)
-        self.assertEqual(self.handled, [],
-                         "an unverified event was processed anyway")
+        self.assertEqual(self.handled, [], "an unverified event was processed anyway")
 
     def test_a_tampered_BODY_is_rejected(self):
         """Signature computed over one payload, a different payload delivered."""
-        signed = json.dumps({"id": "evt_1", "type": "charge.refunded",
-                             "data": {"object": {"amount": 395}}}).encode()
+        signed = json.dumps({"id": "evt_1", "type": "charge.refunded", "data": {"object": {"amount": 395}}}).encode()
         sig = self._valid_sig(signed)
-        forged = json.dumps({"id": "evt_1", "type": "checkout.session.completed",
-                             "data": {"object": {"payment_status": "paid"}}}).encode()
+        forged = json.dumps(
+            {"id": "evt_1", "type": "checkout.session.completed", "data": {"object": {"payment_status": "paid"}}}
+        ).encode()
         status, body = self._send(forged, sig)
         self.assertEqual(status, 400)
         self.assertEqual(self.handled, [])
 
     def test_a_missing_signature_header_is_rejected(self):
-        payload = json.dumps({"id": "evt_2", "type": "charge.refunded",
-                              "data": {"object": {}}}).encode()
+        payload = json.dumps({"id": "evt_2", "type": "charge.refunded", "data": {"object": {}}}).encode()
         status, body = self._send(payload, "")
         self.assertEqual(status, 400)
         self.assertEqual(self.handled, [])
 
     def test_a_replayed_old_timestamp_is_rejected(self):
         """A correctly-signed event captured long ago must not be replayable."""
-        payload = json.dumps({"id": "evt_3", "type": "charge.refunded",
-                              "data": {"object": {}}}).encode()
+        payload = json.dumps({"id": "evt_3", "type": "charge.refunded", "data": {"object": {}}}).encode()
         old = str(int(time.time()) - 4000)
         status, body = self._send(payload, self._valid_sig(payload, ts=old))
         self.assertEqual(status, 400)
@@ -743,8 +773,7 @@ class StripeWebhookSignatureRouteTests(unittest.TestCase):
     def test_an_unset_secret_refuses_rather_than_trusting(self):
         """Unconfigured means REFUSE, never 'trust it for now'."""
         config.STRIPE_WEBHOOK_SECRET = ""
-        payload = json.dumps({"id": "evt_4", "type": "charge.refunded",
-                              "data": {"object": {}}}).encode()
+        payload = json.dumps({"id": "evt_4", "type": "charge.refunded", "data": {"object": {}}}).encode()
         status, body = self._send(payload, "t=1,v1=" + "0" * 64)
         self.assertEqual(status, 400)
         self.assertEqual(self.handled, [])
@@ -764,9 +793,9 @@ class BillingPortalRouteTests(unittest.TestCase):
     def setUp(self):
         self.portal_calls = []
         self._orig_portal = app.stripe_checkout.create_billing_portal_session
-        app.stripe_checkout.create_billing_portal_session = (
-            lambda customer_id, return_url=None: self.portal_calls.append(customer_id)
-            or {"url": "https://billing.stripe.test/session/" + customer_id})
+        app.stripe_checkout.create_billing_portal_session = lambda customer_id, return_url=None: (
+            self.portal_calls.append(customer_id) or {"url": "https://billing.stripe.test/session/" + customer_id}
+        )
 
     def tearDown(self):
         app.stripe_checkout.create_billing_portal_session = self._orig_portal
@@ -779,8 +808,7 @@ class BillingPortalRouteTests(unittest.TestCase):
         headers = {"Content-Type": "application/json"}
         if token:
             headers["Authorization"] = "Bearer " + token
-        return _post_raw("/api/billing/portal",
-                         json.dumps(body).encode("utf-8"), headers)
+        return _post_raw("/api/billing/portal", json.dumps(body).encode("utf-8"), headers)
 
     # --- authentication ---
     def test_anonymous_caller_is_refused(self):
@@ -804,12 +832,11 @@ class BillingPortalRouteTests(unittest.TestCase):
         db.keygen_license_id_set(subject, "lic_owned")
         db.kv_set("stripe_cust:cus_OWNER", "lic_owned")
         db.kv_set("stripe_cust:cus_VICTIM", "lic_victim")
-        status, body = self._post_portal({"customer": "cus_VICTIM",
-                                          "customer_id": "cus_VICTIM"},
-                                         token=self._session_for(subject))
+        status, body = self._post_portal(
+            {"customer": "cus_VICTIM", "customer_id": "cus_VICTIM"}, token=self._session_for(subject)
+        )
         self.assertEqual(status, 200)
-        self.assertEqual(self.portal_calls, ["cus_OWNER"],
-                         "the portal opened for a customer named by the CALLER")
+        self.assertEqual(self.portal_calls, ["cus_OWNER"], "the portal opened for a customer named by the CALLER")
         self.assertNotIn("cus_VICTIM", self.portal_calls)
         self.assertNotIn("cus_VICTIM", body.get("url", ""))
 
@@ -818,11 +845,9 @@ class BillingPortalRouteTests(unittest.TestCase):
         manufacture one — the answer is 'we have no subscription for you', not someone else's."""
         subject = "lic_no_sub_at_all"
         db.kv_set("stripe_cust:cus_VICTIM2", "lic_victim2")
-        status, body = self._post_portal({"customer": "cus_VICTIM2"},
-                                         token=self._session_for(subject))
+        status, body = self._post_portal({"customer": "cus_VICTIM2"}, token=self._session_for(subject))
         self.assertEqual(status, 404)
-        self.assertEqual(self.portal_calls, [],
-                         "an unmapped session must never reach Stripe with a borrowed customer")
+        self.assertEqual(self.portal_calls, [], "an unmapped session must never reach Stripe with a borrowed customer")
 
     def test_a_license_with_no_stripe_customer_is_404_not_a_guess(self):
         subject = "lic_orphan"
@@ -854,8 +879,7 @@ class BillingPortalRouteTests(unittest.TestCase):
         # A DIFFERENT customer holds a license whose id merely CONTAINS "lic_ab".
         db.kv_set("stripe_cust:cus_OTHER", "lic_abcdef")
         status, body = self._post_portal({}, token=self._session_for(subject))
-        self.assertEqual(status, 404,
-                         "a substring match resolved another customer's subscription")
+        self.assertEqual(status, 404, "a substring match resolved another customer's subscription")
         self.assertEqual(self.portal_calls, [])
 
 

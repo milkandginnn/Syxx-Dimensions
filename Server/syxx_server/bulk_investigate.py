@@ -5,7 +5,6 @@ import time
 
 from . import investigate, resolver  # noqa: F401 — resolver available to sub-modules
 
-
 _MAX_WORKERS = 5
 
 

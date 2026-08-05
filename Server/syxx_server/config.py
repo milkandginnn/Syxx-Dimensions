@@ -4,7 +4,7 @@ Everything is overridable via environment variables so the daemon can be
 configured from the systemd unit without editing code. No secrets are hardcoded;
 the session-signing secret is generated and persisted on first run (see db.py).
 """
-import json
+
 import os
 
 
@@ -34,10 +34,13 @@ def _b(name, default=False):
     # A careful operator writing "enabled" or "TRUE!" must not get False on
     # a flag whose secure default is True (that would disable enforcement).
     import logging
+
     logging.getLogger("syxx-server").warning(
         "config_invalid_bool: %s=%r is not a recognised boolean value "
         "(accepted: 1/true/yes/on, 0/false/no/off); using default %r",
-        name, v, default,
+        name,
+        v,
+        default,
     )
     return default
 
@@ -54,9 +57,12 @@ def _i(name, default):
         return int(raw.strip())
     except (TypeError, ValueError):
         import logging
+
         logging.getLogger("syxx-server").warning(
             "config_invalid_int: %s=%r is not a valid integer; using default %r",
-            name, raw, default,
+            name,
+            raw,
+            default,
         )
         return default
 
@@ -151,7 +157,7 @@ STRIPE_WEBHOOK_SECRET = _s("STRIPE_WEBHOOK_SECRET", "")
 # skew; decrease for tighter replay protection. A clock-skewed server rejects
 # ALL valid webhooks silently — log the skew so the operator can diagnose it.
 STRIPE_WEBHOOK_TOLERANCE = _i("STRIPE_WEBHOOK_TOLERANCE", 300)
-STRIPE_API_VERSION = _s("STRIPE_API_VERSION", "2025-03-31.basil")   # Managed Payments minimum
+STRIPE_API_VERSION = _s("STRIPE_API_VERSION", "2025-03-31.basil")  # Managed Payments minimum
 CHECKOUT_SUCCESS_URL = _s("STRIPE_SUCCESS_URL", "https://syxx.app/purchase/success?session_id={CHECKOUT_SESSION_ID}")
 CHECKOUT_CANCEL_URL = _s("STRIPE_CANCEL_URL", "https://syxx.app/purchase/cancel")
 
@@ -181,7 +187,7 @@ STRIPE_TRIAL_DAYS = max(0, _i("SYXX_STRIPE_TRIAL_DAYS", 0))
 # Each product's Keygen policy id comes from env; a blank policy → the sale is recorded pending
 # (never dropped). Test mode uses different prod_ ids — override the whole table via
 # SYXX_STRIPE_PRODUCTS_JSON ({"prod_…": {"label": "...", "policy_env": "SYXX_KEYGEN_POLICY_…"}}).
-KEYGEN_ADMIN_TOKEN = _s("SYXX_KEYGEN_ADMIN_TOKEN", "")   # admin bearer token that mints licenses
+KEYGEN_ADMIN_TOKEN = _s("SYXX_KEYGEN_ADMIN_TOKEN", "")  # admin bearer token that mints licenses
 
 # G-5: Operator admin token for support tooling (license lookup, key resend, etc.).
 # If blank, admin endpoints are disabled. Set via SYXX_ADMIN_TOKEN env var.
@@ -212,6 +218,7 @@ API_KEY_SYNC_INTERVAL_HOURS = _i("SYXX_API_KEY_SYNC_INTERVAL_HOURS", 24)  # dail
 #     ceiling is DECLARED, not ENFORCED, and must not be described as enforcement.
 # 0 disables the attribute entirely (mint exactly as before).
 KEYGEN_MAX_MACHINES = max(0, _i("SYXX_KEYGEN_MAX_MACHINES", 5))
+
 
 # WHY THIS IS KEYED BY SKU AND CARRIES AN EXPLICIT PRICE ID (changed 2026-07-16)
 # ------------------------------------------------------------------------------
@@ -265,18 +272,12 @@ def _sku(suffix, product_default, price_default, label):
 # — that is the point, and it is why the product id cannot identify a purchase.
 _MAC, _WIN, _DEB = "prod_Uq652gww87MGYT", "prod_Uq6ODZbCgLWfIU", "prod_Utkr2kcmWzMNNq"
 STRIPE_SKUS = {
-    "syxx_mac_monthly_sub": _sku("MAC_MONTHLY", _MAC, "price_1TqPt10Owf1ALdZDpXWZqB2r",
-                                 "Syxx (macOS), Monthly"),
-    "syxx_mac_yearly_sub":  _sku("MAC_YEARLY",  _MAC, "price_1Ttwpw0Owf1ALdZDhfZ2LTlz",
-                                 "Syxx (macOS), Yearly"),
-    "syxx_win_monthly_sub": _sku("WIN_MONTHLY", _WIN, "price_1TqQBk0Owf1ALdZDKVoRroPD",
-                                 "Syxx (Windows), Monthly"),
-    "syxx_win_yearly_sub":  _sku("WIN_YEARLY",  _WIN, "price_1TtxCb0Owf1ALdZDwybXuuz9",
-                                 "Syxx (Windows), Yearly"),
-    "syxx_deb_monthly_sub": _sku("DEB_MONTHLY", _DEB, "price_1TtxLd0Owf1ALdZDD175vTFK",
-                                 "Syxx (Debian/Mint), Monthly"),
-    "syxx_deb_yearly_sub":  _sku("DEB_YEARLY",  _DEB, "price_1TtxNs0Owf1ALdZDOT0EMfce",
-                                 "Syxx (Debian/Mint), Yearly"),
+    "syxx_mac_monthly_sub": _sku("MAC_MONTHLY", _MAC, "price_1TqPt10Owf1ALdZDpXWZqB2r", "Syxx (macOS), Monthly"),
+    "syxx_mac_yearly_sub": _sku("MAC_YEARLY", _MAC, "price_1Ttwpw0Owf1ALdZDhfZ2LTlz", "Syxx (macOS), Yearly"),
+    "syxx_win_monthly_sub": _sku("WIN_MONTHLY", _WIN, "price_1TqQBk0Owf1ALdZDKVoRroPD", "Syxx (Windows), Monthly"),
+    "syxx_win_yearly_sub": _sku("WIN_YEARLY", _WIN, "price_1TtxCb0Owf1ALdZDwybXuuz9", "Syxx (Windows), Yearly"),
+    "syxx_deb_monthly_sub": _sku("DEB_MONTHLY", _DEB, "price_1TtxLd0Owf1ALdZDD175vTFK", "Syxx (Debian/Mint), Monthly"),
+    "syxx_deb_yearly_sub": _sku("DEB_YEARLY", _DEB, "price_1TtxNs0Owf1ALdZDOT0EMfce", "Syxx (Debian/Mint), Yearly"),
 }
 
 
@@ -300,6 +301,7 @@ def stripe_price_for(sku):
     if not entry:
         return ""
     return os.environ.get(entry["priceid_env"]) or entry["price_default"]
+
 
 # Checkout sessions created BEFORE the SKU refactor stamped `metadata[product]`, not
 # `metadata[sku]`. A session in flight across the deploy would otherwise resolve to no policy and
@@ -326,9 +328,9 @@ PLATFORMS = ("macos", "windows", "debian")
 # non-node-lockable fingerprint as a REFUSAL, not a warning — an unlimited free tier is the
 # commercial equivalent of the false-clean result this codebase refuses everywhere else.
 TRIAL_POLICY_ENVS = {
-    "macos":   "SYXX_KEYGEN_POLICY_MAC_TRIAL",
+    "macos": "SYXX_KEYGEN_POLICY_MAC_TRIAL",
     "windows": "SYXX_KEYGEN_POLICY_WIN_TRIAL",
-    "debian":  "SYXX_KEYGEN_POLICY_DEB_TRIAL",
+    "debian": "SYXX_KEYGEN_POLICY_DEB_TRIAL",
 }
 
 # Perpetual licenses are deliberately NOT listed on Stripe (2026-07-16): selling one is a promise to
@@ -336,9 +338,9 @@ TRIAL_POLICY_ENVS = {
 # proven itself. The policies still exist so a perpetual license can be minted BY HAND (support,
 # comps, early backers) without a code change if that decision is revisited.
 PERM_POLICY_ENVS = {
-    "macos":   "SYXX_KEYGEN_POLICY_MAC_PERM",
+    "macos": "SYXX_KEYGEN_POLICY_MAC_PERM",
     "windows": "SYXX_KEYGEN_POLICY_WIN_PERM",
-    "debian":  "SYXX_KEYGEN_POLICY_DEB_PERM",
+    "debian": "SYXX_KEYGEN_POLICY_DEB_PERM",
 }
 
 
@@ -366,6 +368,7 @@ def perm_policy_for(platform):
     env = PERM_POLICY_ENVS.get(platform)
     return os.environ.get(env, "") if env else ""
 
+
 # --- HTTP / DNS listeners --------------------------------------------------
 HTTP_HOST = _s("SYXX_HTTP_HOST", "0.0.0.0")
 HTTP_PORT = _i("SYXX_HTTP_PORT", 8080)
@@ -387,7 +390,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
 # on the offline allowlist below.
 KEYGEN_ACCOUNT_ID = _s("SYXX_KEYGEN_ACCOUNT_ID", "4b50cc83-1664-4626-99b1-fbd4e76e35c3")
 KEYGEN_TIMEOUT = _i("SYXX_KEYGEN_TIMEOUT", 8)
-KEYGEN_BASE_URL = _s("SYXX_KEYGEN_BASE_URL", "")   # SRV-023: mock server override
+KEYGEN_BASE_URL = _s("SYXX_KEYGEN_BASE_URL", "")  # SRV-023: mock server override
 KEYGEN_MAX_WORKERS = _i("SYXX_KEYGEN_MAX_WORKERS", 4)  # SRV-019: concurrent validation cap
 # Ed25519 public key (hex-encoded) from the Keygen account settings page. When set,
 # every validate-key response is cryptographically verified before trusting
@@ -499,11 +502,11 @@ PROPAGATION_RESOLVERS = [
 ENABLE_DOT = _b("SYXX_ENABLE_DOT")
 DOT_HOST = _s("SYXX_DOT_HOST", "0.0.0.0")
 DOT_PORT = _i("SYXX_DOT_PORT", 853)
-DOT_MAX_CONN = _i("SYXX_DOT_MAX_CONN", 128)            # SD-51 cap for the DoT path
+DOT_MAX_CONN = _i("SYXX_DOT_MAX_CONN", 128)  # SD-51 cap for the DoT path
 DOT_MAX_QUERIES_PER_CONN = _i("SYXX_DOT_MAX_QUERIES_PER_CONN", 100)
 DOT_READ_TIMEOUT = _i("SYXX_DOT_READ_TIMEOUT", 10)
 DOT_FORWARD_ALLOWLIST = _list("SYXX_DOT_FORWARD_ALLOWLIST", [])
-DOT_TLS_CERT = _s("SYXX_DOT_TLS_CERT", "")            # app-terminated TLS (honest attestation)
+DOT_TLS_CERT = _s("SYXX_DOT_TLS_CERT", "")  # app-terminated TLS (honest attestation)
 DOT_TLS_KEY = _s("SYXX_DOT_TLS_KEY", "")
 
 # --- DoH forwarder (encrypted-transports D-1) ------------------------------
@@ -539,8 +542,8 @@ SMTP_HOST = _s("SYXX_SMTP_HOST", "")
 SMTP_PORT = _i("SYXX_SMTP_PORT", 587)
 SMTP_USER = _s("SYXX_SMTP_USER", "")
 SMTP_PASSWORD = _s("SYXX_SMTP_PASSWORD", "")
-SMTP_STARTTLS = _b("SYXX_SMTP_STARTTLS")   # True: STARTTLS on 587; False: implicit TLS on 465
-SMTP_TIMEOUT = _i("SYXX_SMTP_TIMEOUT", 15)       # SRV-032: configurable SMTP timeout
+SMTP_STARTTLS = _b("SYXX_SMTP_STARTTLS")  # True: STARTTLS on 587; False: implicit TLS on 465
+SMTP_TIMEOUT = _i("SYXX_SMTP_TIMEOUT", 15)  # SRV-032: configurable SMTP timeout
 SMTP_INSECURE_CERTS = _b("SYXX_SMTP_INSECURE_CERTS")  # SRV-033: allow self-signed certs
 MAIL_FROM = _s("SYXX_MAIL_FROM", "Syxx <noreply@syxx.app>")
 
@@ -559,15 +562,18 @@ BETA_DIGEST_INTERVAL_DAYS = _i("SYXX_BETA_DIGEST_INTERVAL_DAYS", 7)
 # Comma-separated origins allowed to make cross-origin requests. The server echoes
 # the request Origin back ONLY when it matches this list; otherwise no ACAO header
 # is sent (the browser blocks the response). Never "*".
-CORS_ALLOWED_ORIGINS = _list("SYXX_CORS_ALLOWED_ORIGINS", [
-    "https://syxx.app",
-    "https://www.syxx.app",
-    "https://leak.syxx.app",
-    "https://leaktest.syxx.app",
-    "https://macmotd.syxx.app",
-    "https://winmotd.syxx.app",
-    "https://debmotd.syxx.app",
-])
+CORS_ALLOWED_ORIGINS = _list(
+    "SYXX_CORS_ALLOWED_ORIGINS",
+    [
+        "https://syxx.app",
+        "https://www.syxx.app",
+        "https://leak.syxx.app",
+        "https://leaktest.syxx.app",
+        "https://macmotd.syxx.app",
+        "https://winmotd.syxx.app",
+        "https://debmotd.syxx.app",
+    ],
+)
 
 # --- Metrics endpoint auth (S4) ---------------------------------------------
 # Bearer token required to access /metrics. Empty string disables auth (dev only).

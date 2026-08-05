@@ -9,7 +9,6 @@ Never follows redirects to private IPs.
 """
 
 import http.client
-import ipaddress
 import json
 import socket
 import ssl
@@ -17,7 +16,6 @@ import threading
 import time
 import urllib.parse
 
-from . import netutil
 from .fetcher import _PinnedHTTPSConnection, _resolve_public
 
 # ---------- IANA RDAP Bootstrap Cache ----------
@@ -71,9 +69,25 @@ def _rdap_base_for_tld(tld):
 
 # Common two-part TLDs where we need the last two labels
 _TWO_PART_TLDS = {
-    "co.uk", "org.uk", "ac.uk", "gov.uk", "co.jp", "or.jp", "ne.jp",
-    "com.au", "net.au", "org.au", "co.nz", "net.nz", "org.nz",
-    "com.br", "net.br", "org.br", "co.za", "com.mx", "com.ar",
+    "co.uk",
+    "org.uk",
+    "ac.uk",
+    "gov.uk",
+    "co.jp",
+    "or.jp",
+    "ne.jp",
+    "com.au",
+    "net.au",
+    "org.au",
+    "co.nz",
+    "net.nz",
+    "org.nz",
+    "com.br",
+    "net.br",
+    "org.br",
+    "co.za",
+    "com.mx",
+    "com.ar",
 }
 
 
@@ -330,7 +344,7 @@ def _parse_whois_text(raw, domain):
             line_stripped = line.strip()
             for pattern in patterns:
                 if line_stripped.startswith(pattern):
-                    value = line_stripped[len(pattern):].strip()
+                    value = line_stripped[len(pattern) :].strip()
                     if value and field not in result:
                         result[field] = value[:10] if field != "registrar" else value
                     break
@@ -362,6 +376,7 @@ def _parse_whois_text(raw, domain):
 
 # ---------- Public API ----------
 
+
 def lookup(domain, timeout=10):
     """Look up WHOIS/RDAP data for a domain.
 
@@ -374,7 +389,7 @@ def lookup(domain, timeout=10):
     """
     domain = domain.rstrip(".").lower()
     if not domain or "." not in domain:
-        raise ValueError("invalid domain: %s" % domain)
+        raise ValueError(f"invalid domain: {domain}")
     # A170 / SD-99: reject CR/LF in domain before it reaches the WHOIS command.
     # WHOIS sends `domain\r\n` over TCP/43; a domain containing CR or LF allows
     # injection of arbitrary WHOIS commands to the server.

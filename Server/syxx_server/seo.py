@@ -12,12 +12,12 @@ E-10: Pricing in structured data is read from environment variables
 (SYXX_SEO_PRICE_MONTHLY, SYXX_SEO_PRICE_YEARLY) to prevent drift between
 the SEO page and the actual Stripe prices. Defaults match the Stripe catalog.
 """
+
 from __future__ import annotations
 
 import json
 import os
 import re
-from typing import Dict, Optional
 
 from . import __version__
 
@@ -35,6 +35,7 @@ _SEO_PRICE_YEARLY = os.environ.get("SYXX_SEO_PRICE_YEARLY", "19.95")
 # ---------------------------------------------------------------------------
 # JSON-LD — SoftwareApplication (landing page only)
 # ---------------------------------------------------------------------------
+
 
 def _build_software_application_ld_json():
     """Build JSON-LD with current pricing. Called at module load; prices are
@@ -91,7 +92,7 @@ _SOFTWARE_APPLICATION_LD_JSON = _build_software_application_ld_json()
 #   twitter_card, twitter_site,
 #   json_ld  (raw JSON string for a <script type="application/ld+json"> block)
 
-PAGE_META: Dict[str, dict] = {
+PAGE_META: dict[str, dict] = {
     # ---- landing page ----
     "/": {
         "title": "Syxx Dimensions — DNS Investigation Suite",
@@ -117,7 +118,6 @@ PAGE_META: Dict[str, dict] = {
         "twitter_site": "@syxxdimensions",
         "json_ld": _SOFTWARE_APPLICATION_LD_JSON,
     },
-
     # ---- DNS leak test (main) ----
     "/leak-test": {
         "title": "Syxx DNS Leak Test — Free DNS Resolver Check",
@@ -129,10 +129,7 @@ PAGE_META: Dict[str, dict] = {
             "shows the resolver IPs that reached our authoritative server — "
             "compare them against your VPN or encrypted DNS provider."
         ),
-        "keywords": (
-            "DNS leak test, DNS privacy, VPN leak test, DNS leak check, "
-            "free DNS test, ISP DNS monitoring"
-        ),
+        "keywords": ("DNS leak test, DNS privacy, VPN leak test, DNS leak check, free DNS test, ISP DNS monitoring"),
         "canonical": "/leak-test",
         "og_title": "Syxx DNS Leak Test — Free DNS Resolver Check",
         "og_description": (
@@ -143,7 +140,6 @@ PAGE_META: Dict[str, dict] = {
         "twitter_card": "summary",
         "twitter_site": "@syxxdimensions",
     },
-
     # ---- DNS leak test (alt) ----
     "/leaktest": {
         "title": "Syxx DNS Leak Test — Free DNS Resolver Check",
@@ -152,20 +148,14 @@ PAGE_META: Dict[str, dict] = {
             "shows the resolver IPs that reached our authoritative server — "
             "compare them against your VPN or encrypted DNS provider."
         ),
-        "keywords": (
-            "DNS leak test, DNS privacy, VPN leak, DNS leak check, "
-            "free DNS test, resolver leak"
-        ),
+        "keywords": ("DNS leak test, DNS privacy, VPN leak, DNS leak check, free DNS test, resolver leak"),
         "canonical": "/leaktest",
         "og_title": "Syxx DNS Leak Test — Free DNS Resolver Check",
-        "og_description": (
-            "See which DNS resolvers handled your lookups. Free, no account required."
-        ),
+        "og_description": ("See which DNS resolvers handled your lookups. Free, no account required."),
         "og_type": "website",
         "twitter_card": "summary",
         "twitter_site": "@syxxdimensions",
     },
-
     # ---- Legal pages (DRAFT — held out of index until owner approval, A199) ----
     # Remove "robots" key and re-add to sitemap.xml + robots.txt Allow on approval.
     "/privacy": {
@@ -191,7 +181,6 @@ PAGE_META: Dict[str, dict] = {
         "og_type": "article",
         "twitter_card": "summary",
     },
-
     # ---- API docs ----
     "/docs/api.html": {
         "title": "Syxx API Documentation — DNS Investigation Endpoints",
@@ -200,10 +189,7 @@ PAGE_META: Dict[str, dict] = {
             "suite. Endpoints for DNS investigation, authoritative lookup, "
             "trace, baseline comparison, exposure analysis and passive DNS."
         ),
-        "keywords": (
-            "DNS API, DNS investigation API, REST API, DNS lookup API, "
-            "passive DNS API, network security API"
-        ),
+        "keywords": ("DNS API, DNS investigation API, REST API, DNS lookup API, passive DNS API, network security API"),
         "canonical": "/docs/api",
         "og_title": "Syxx API Documentation",
         "og_description": (
@@ -213,7 +199,6 @@ PAGE_META: Dict[str, dict] = {
         "og_type": "article",
         "twitter_card": "summary",
     },
-
     # ---- Help / FAQ ----
     "/docs/help.html": {
         "title": "Syxx Dimensions — Help & Documentation",
@@ -228,10 +213,7 @@ PAGE_META: Dict[str, dict] = {
         ),
         "canonical": "/docs/help",
         "og_title": "Syxx Dimensions — Help & Documentation",
-        "og_description": (
-            "Feature documentation and guides for the Syxx Dimensions DNS "
-            "investigation suite."
-        ),
+        "og_description": ("Feature documentation and guides for the Syxx Dimensions DNS investigation suite."),
         "og_type": "article",
         "twitter_card": "summary",
     },
@@ -240,6 +222,7 @@ PAGE_META: Dict[str, dict] = {
 # ---------------------------------------------------------------------------
 # Helpers — tag generation
 # ---------------------------------------------------------------------------
+
 
 def _meta_tag(name: str, content: str, *, attr: str = "name") -> str:
     """Build a <meta> element."""
@@ -322,8 +305,9 @@ _JSONLD_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+
 # Individual matchers for dedup.
-def _tag_identity(tag: str) -> Optional[str]:
+def _tag_identity(tag: str) -> str | None:
     """Return a dedup key for a <meta> tag, e.g. 'description' or 'og:title'."""
     m = re.search(r'(?:name|property)\s*=\s*"([^"]*)"', tag, re.IGNORECASE)
     return m.group(1).lower() if m else None
@@ -385,7 +369,7 @@ def inject_meta_tags(html_content: str, page_path: str) -> str:
     return html_content[:head_close] + new_block + "\n" + html_content[head_close:]
 
 
-def page_title(page_path: str) -> Optional[str]:
+def page_title(page_path: str) -> str | None:
     """Return the configured <title> for a page, or None."""
     meta = PAGE_META.get(page_path)
     return meta["title"] if meta and "title" in meta else None

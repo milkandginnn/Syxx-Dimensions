@@ -16,6 +16,7 @@ the old buggy shape (failure case).
 
 Run from Server/:  python3 -m unittest tests.test_db_fixes -v
 """
+
 import os
 import re
 import sqlite3
@@ -67,21 +68,28 @@ class S16PurgeExpiredTests(_TempDbMixin, unittest.TestCase):
     def _seed(self, now):
         conn = db.connect()
         try:
-            conn.execute("INSERT INTO leak_tokens VALUES(?,?,?,?,?,?)",
-                         ("tok-expired", "sub", "leak.syxx.app", now - 7200, now - 3600, "ip"))
-            conn.execute("INSERT INTO leak_tokens VALUES(?,?,?,?,?,?)",
-                         ("tok-live", "sub", "leak.syxx.app", now, now + 3600, "ip"))
             conn.execute(
-                "INSERT INTO leak_observations(token,resolver_ip,qtype,observed_at) "
-                "VALUES(?,?,?,?)", ("tok-expired", "8.8.8.8", 1, now - 3700))
+                "INSERT INTO leak_tokens VALUES(?,?,?,?,?,?)",
+                ("tok-expired", "sub", "leak.syxx.app", now - 7200, now - 3600, "ip"),
+            )
             conn.execute(
-                "INSERT INTO leak_observations(token,resolver_ip,qtype,observed_at) "
-                "VALUES(?,?,?,?)", ("tok-live", "8.8.4.4", 1, now))
+                "INSERT INTO leak_tokens VALUES(?,?,?,?,?,?)",
+                ("tok-live", "sub", "leak.syxx.app", now, now + 3600, "ip"),
+            )
+            conn.execute(
+                "INSERT INTO leak_observations(token,resolver_ip,qtype,observed_at) VALUES(?,?,?,?)",
+                ("tok-expired", "8.8.8.8", 1, now - 3700),
+            )
+            conn.execute(
+                "INSERT INTO leak_observations(token,resolver_ip,qtype,observed_at) VALUES(?,?,?,?)",
+                ("tok-live", "8.8.4.4", 1, now),
+            )
             # Orphan row: no leak_tokens parent at all — reclaimed ONLY by the
             # statement that carried the invalid alias.
             conn.execute(
-                "INSERT INTO leak_observations(token,resolver_ip,qtype,observed_at) "
-                "VALUES(?,?,?,?)", ("tok-orphan", "9.9.9.9", 1, now - 9999))
+                "INSERT INTO leak_observations(token,resolver_ip,qtype,observed_at) VALUES(?,?,?,?)",
+                ("tok-orphan", "9.9.9.9", 1, now - 9999),
+            )
             conn.commit()
         finally:
             conn.close()
@@ -89,7 +97,7 @@ class S16PurgeExpiredTests(_TempDbMixin, unittest.TestCase):
     def _rows(self, table, col):
         conn = db.connect()
         try:
-            return {r[col] for r in conn.execute("SELECT %s FROM %s" % (col, table))}
+            return {r[col] for r in conn.execute(f"SELECT {col} FROM {table}")}
         finally:
             conn.close()
 
@@ -98,9 +106,11 @@ class S16PurgeExpiredTests(_TempDbMixin, unittest.TestCase):
         self._seed(now)
         db.purge_expired(now)
         self.assertEqual(self._rows("leak_tokens", "token"), {"tok-live"})
-        self.assertEqual(self._rows("leak_observations", "token"), {"tok-live"},
-                         "expired and orphan observations must be reclaimed; "
-                         "the live token's row must survive")
+        self.assertEqual(
+            self._rows("leak_observations", "token"),
+            {"tok-live"},
+            "expired and orphan observations must be reclaimed; the live token's row must survive",
+        )
 
     def test_purge_issues_no_alias_delete_even_on_old_sqlite(self):
         """The whole point of S16: purge must complete on a parser that rejects
@@ -125,7 +135,8 @@ class S16PurgeExpiredTests(_TempDbMixin, unittest.TestCase):
             with self.assertRaises(sqlite3.OperationalError):
                 conn.execute(
                     "DELETE FROM leak_observations AS obs "
-                    "WHERE NOT EXISTS (SELECT 1 FROM leak_tokens t WHERE t.token = obs.token)")
+                    "WHERE NOT EXISTS (SELECT 1 FROM leak_tokens t WHERE t.token = obs.token)"
+                )
         finally:
             conn.close()
 
@@ -153,7 +164,9 @@ class S15MonitorAdvanceTests(_TempDbMixin, unittest.TestCase):
 
                     def __getattr__(inner, name):
                         return getattr(real, name)
+
                 return Wrapped()
+
             db.connect = counting_connect
 
         def uninstall(self):
@@ -170,9 +183,11 @@ class S15MonitorAdvanceTests(_TempDbMixin, unittest.TestCase):
         finally:
             counter.uninstall()
         self.assertGreater(counter.opened, 0)
-        self.assertEqual(counter.opened, counter.closed,
-                         "monitor_advance leaked %d connection(s)"
-                         % (counter.opened - counter.closed))
+        self.assertEqual(
+            counter.opened,
+            counter.closed,
+            "monitor_advance leaked %d connection(s)" % (counter.opened - counter.closed),
+        )
 
     def test_monitor_advance_still_advances_next_run(self):
         db.monitor_create("mon-2", "sub", "example.com", "dns", interval_hours=2)
@@ -180,8 +195,7 @@ class S15MonitorAdvanceTests(_TempDbMixin, unittest.TestCase):
         db.monitor_advance("mon-2", now=now)
         conn = db.connect()
         try:
-            row = conn.execute("SELECT last_run, next_run FROM monitors WHERE id=?",
-                               ("mon-2",)).fetchone()
+            row = conn.execute("SELECT last_run, next_run FROM monitors WHERE id=?", ("mon-2",)).fetchone()
         finally:
             conn.close()
         self.assertEqual(row["last_run"], now)
@@ -196,15 +210,14 @@ class S15MonitorAdvanceTests(_TempDbMixin, unittest.TestCase):
         def leaky_monitor_advance(monitor_id, now):
             conn = db.connect()
             try:
-                m = conn.execute("SELECT interval_hours FROM monitors WHERE id=?",
-                                 (monitor_id,)).fetchone()
+                m = conn.execute("SELECT interval_hours FROM monitors WHERE id=?", (monitor_id,)).fetchone()
                 if not m:
                     return
                 interval = m["interval_hours"]
                 conn = db._write_conn()  # rebinds; the read conn is now orphaned
                 conn.execute(
-                    "UPDATE monitors SET last_run=?, next_run=? WHERE id=?",
-                    (now, now + interval * 3600, monitor_id))
+                    "UPDATE monitors SET last_run=?, next_run=? WHERE id=?", (now, now + interval * 3600, monitor_id)
+                )
                 conn.commit()
             finally:
                 conn.close()
@@ -215,9 +228,11 @@ class S15MonitorAdvanceTests(_TempDbMixin, unittest.TestCase):
             leaky_monitor_advance("mon-3", now=1_700_000_000)
         finally:
             counter.uninstall()
-        self.assertNotEqual(counter.opened, counter.closed,
-                            "leak counter failed to catch the known-leaky shape; "
-                            "the S15 regression test is void")
+        self.assertNotEqual(
+            counter.opened,
+            counter.closed,
+            "leak counter failed to catch the known-leaky shape; the S15 regression test is void",
+        )
 
 
 if __name__ == "__main__":

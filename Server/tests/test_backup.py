@@ -1,6 +1,7 @@
 """Online DB backup (SD-56 / S7-1). The point is a RESTORABLE snapshot of a LIVE DB, and rotation
 that never deletes the wrong file. The restore path is tested explicitly: a backup you cannot open
 is not a backup."""
+
 import os
 import sqlite3
 import tempfile
@@ -21,7 +22,8 @@ class BackupTests(unittest.TestCase):
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("CREATE TABLE licenses(key TEXT)")
         con.execute("INSERT INTO licenses VALUES ('SYXX-REAL-KEY')")
-        con.commit(); con.close()
+        con.commit()
+        con.close()
         self.bdir = os.path.join(self.tmp, "backups")
 
     def tearDown(self):
@@ -46,9 +48,10 @@ class BackupTests(unittest.TestCase):
         kept = sorted(f for f in os.listdir(self.bdir) if f.endswith(".db"))
         self.assertEqual(len(kept), 3)
         # Newest three by timestamp — name-sort == time-sort by construction.
-        self.assertEqual(kept, ["syxx-server-20260717T120002Z.db",
-                                "syxx-server-20260717T120003Z.db",
-                                "syxx-server-20260717T120004Z.db"])
+        self.assertEqual(
+            kept,
+            ["syxx-server-20260717T120002Z.db", "syxx-server-20260717T120003Z.db", "syxx-server-20260717T120004Z.db"],
+        )
 
     def test_keep_zero_disables_pruning(self):
         for i in range(3):

@@ -4,6 +4,7 @@ WAL mode + a fresh short-lived connection per operation makes this safe to call
 from the threaded HTTP server and the DNS thread concurrently. Replaces the old
 volatile in-memory ``leak_db`` dict that was lost on every systemd restart.
 """
+
 import hashlib
 import hmac as _hmac
 import json as _json
@@ -217,10 +218,11 @@ def _migrate(conn):
     # rows first (keep the earliest) so the unique index can be built on an old DB.
     conn.execute(
         "DELETE FROM leak_observations WHERE id NOT IN "
-        "(SELECT MIN(id) FROM leak_observations GROUP BY token, resolver_ip, qtype)")
+        "(SELECT MIN(id) FROM leak_observations GROUP BY token, resolver_ip, qtype)"
+    )
     conn.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_leak_obs_unique "
-        "ON leak_observations(token, resolver_ip, qtype)")
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_leak_obs_unique ON leak_observations(token, resolver_ip, qtype)"
+    )
     # A052: kv rows had no timestamp, so purge_expired could never reclaim
     # stripe_evt/stripe_cust entries. Add created_at to older DBs; new rows set it.
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(kv)").fetchall()}
@@ -287,6 +289,7 @@ def init():
 
 # --- kv / secrets ----------------------------------------------------------
 
+
 def kv_get(key, default=None):
     conn = connect()
     try:
@@ -320,8 +323,7 @@ def kv_set(key, value):
         # A052: stamp created_at on first write; keep the original on update so the
         # purge window is measured from when the row first appeared, not last touch.
         conn.execute(
-            "INSERT INTO kv(key,value,created_at) VALUES(?,?,?) "
-            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            "INSERT INTO kv(key,value,created_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
             (key, value, int(time.time())),
         )
         conn.commit()
@@ -338,8 +340,9 @@ def kv_insert_once(key, value):
     """
     conn = _write_conn()
     try:
-        cur = conn.execute("INSERT OR IGNORE INTO kv(key,value,created_at) VALUES(?,?,?)",
-                           (key, value, int(time.time())))
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO kv(key,value,created_at) VALUES(?,?,?)", (key, value, int(time.time()))
+        )
         conn.commit()
         return cur.rowcount == 1
     finally:
@@ -377,7 +380,7 @@ def kv_find_by_value_prefix(key_prefix, value, limit=100):
         ).fetchall()
         for row in rows:
             if row["value"] == value:
-                return row["key"][len(key_prefix):]
+                return row["key"][len(key_prefix) :]
         return None
     finally:
         conn.close()
@@ -395,8 +398,8 @@ def _validate_env_secret(env):
             "SYXX_SESSION_SECRET is too short or low-entropy. Session tokens are "
             "HMAC-signed with it; a weak secret makes them forgeable. Provide at "
             "least %d bytes of high-entropy material (e.g. `openssl rand -hex 32`), "
-            "or unset it to let the server generate and persist a strong one."
-            % _MIN_SECRET_BYTES)
+            "or unset it to let the server generate and persist a strong one." % _MIN_SECRET_BYTES
+        )
     return raw
 
 
@@ -419,9 +422,11 @@ def get_or_create_secret():
 
 # --- licenses (offline allowlist) ------------------------------------------
 
+
 def _license_hmac_key_v1():
     """D053 legacy: raw session secret used as HMAC key (v1 rows)."""
     from . import licensing
+
     return licensing.secret()
 
 
@@ -433,12 +438,13 @@ def _license_hmac_key_v2():
     session-signing key, so a session-token forgery attack does not also
     forge license rows."""
     from . import licensing
+
     return _hmac.new(licensing.secret(), b"license-row-v1", hashlib.sha256).digest()
 
 
 def _license_row_hmac_v1(key, plan, status, expires_at):
     """D053 legacy HMAC: pipe-delimited, covers 4 fields only."""
-    msg = "%s|%s|%s|%s" % (key, plan, status, expires_at or "")
+    msg = "{}|{}|{}|{}".format(key, plan, status, expires_at or "")
     return _hmac.new(_license_hmac_key_v1(), msg.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
@@ -446,10 +452,18 @@ def _license_row_hmac_v2(key, plan, status, expires_at, note, created_at):
     """A184 Fix 4: JSON-canonical HMAC message covering all mutable row fields.
     Uses the purpose-bound v2 sub-key. JSON with sort_keys ensures field order
     is deterministic and pipe characters in values cannot cause ambiguity."""
-    payload = _json.dumps({
-        "key": key, "plan": plan, "status": status,
-        "expires_at": expires_at, "note": note, "created_at": created_at,
-    }, sort_keys=True, separators=(",", ":"))
+    payload = _json.dumps(
+        {
+            "key": key,
+            "plan": plan,
+            "status": status,
+            "expires_at": expires_at,
+            "note": note,
+            "created_at": created_at,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     return _hmac.new(_license_hmac_key_v2(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
@@ -473,15 +487,13 @@ def license_lookup(key):
         # A184: verify with the version-appropriate algorithm.
         if hmac_ver == 2:
             expected = _license_row_hmac_v2(
-                d["key"], d["plan"], d["status"], d.get("expires_at"),
-                d.get("note"), d.get("created_at"))
+                d["key"], d["plan"], d["status"], d.get("expires_at"), d.get("note"), d.get("created_at")
+            )
         else:
-            expected = _license_row_hmac_v1(
-                d["key"], d["plan"], d["status"], d.get("expires_at"))
+            expected = _license_row_hmac_v1(d["key"], d["plan"], d["status"], d.get("expires_at"))
         if not _hmac.compare_digest(stored_hmac, expected):
             # A184 Fix 2: distinct log event for HMAC mismatch vs unsigned row.
-            logging_util.warn("license_row_hmac_mismatch",
-                              key_prefix=(d.get("key") or "")[:8], hmac_version=hmac_ver)
+            logging_util.warn("license_row_hmac_mismatch", key_prefix=(d.get("key") or "")[:8], hmac_version=hmac_ver)
             return None
         return d
     finally:
@@ -510,6 +522,7 @@ def license_upsert(key, plan="pro", status="active", expires_at=None, note=None)
 
 # --- keygen license ids (S12) -----------------------------------------------
 
+
 def keygen_license_id_set(subject, license_id):
     """Remember the Keygen license resource id observed for *subject* at
     activation time. The scheduler's status sweep must query THIS id: the
@@ -533,8 +546,7 @@ def keygen_license_id_get(subject):
     subject never validated through Keygen (offline/admin keys never store one)."""
     conn = connect()
     try:
-        row = conn.execute("SELECT license_id FROM keygen_licenses WHERE subject=?",
-                           (subject,)).fetchone()
+        row = conn.execute("SELECT license_id FROM keygen_licenses WHERE subject=?", (subject,)).fetchone()
         return row["license_id"] if row else None
     finally:
         conn.close()
@@ -557,14 +569,14 @@ def keygen_subject_for_license_id(license_id):
         return None
     conn = connect()
     try:
-        row = conn.execute("SELECT subject FROM keygen_licenses WHERE license_id=?",
-                           (license_id,)).fetchone()
+        row = conn.execute("SELECT subject FROM keygen_licenses WHERE license_id=?", (license_id,)).fetchone()
         return row["subject"] if row else None
     finally:
         conn.close()
 
 
 # --- leak tokens / observations --------------------------------------------
+
 
 def leak_token_create(token, subject, zone, ttl, origin="ip"):
     """Create a leak token. `origin` is 'license' for paid-route tokens (minted by
@@ -575,8 +587,7 @@ def leak_token_create(token, subject, zone, ttl, origin="ip"):
     conn = _write_conn()
     try:
         conn.execute(
-            "INSERT OR REPLACE INTO leak_tokens(token,subject,zone,issued_at,expires_at,origin) "
-            "VALUES(?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO leak_tokens(token,subject,zone,issued_at,expires_at,origin) VALUES(?,?,?,?,?,?)",
             (token, subject, zone, now, now + ttl, origin),
         )
         conn.commit()
@@ -660,8 +671,7 @@ def leak_observations(token):
     conn = connect()
     try:
         rows = conn.execute(
-            "SELECT resolver_ip, qtype, observed_at FROM leak_observations "
-            "WHERE token=? ORDER BY observed_at ASC",
+            "SELECT resolver_ip, qtype, observed_at FROM leak_observations WHERE token=? ORDER BY observed_at ASC",
             (token,),
         ).fetchall()
         return [dict(r) for r in rows]
@@ -670,6 +680,7 @@ def leak_observations(token):
 
 
 # --- passive DNS -----------------------------------------------------------
+
 
 def passive_record(domain, rtype, value, source, resolver=None):
     now = int(time.time())
@@ -732,6 +743,7 @@ def passive_count():
 
 # --- warp cache ------------------------------------------------------------
 
+
 def warp_cache_get(url, ttl):
     conn = connect()
     try:
@@ -760,6 +772,7 @@ def warp_cache_put(url, payload):
 
 # --- audit -----------------------------------------------------------------
 
+
 def audit(subject, route, status, ip):
     conn = _write_conn()
     try:
@@ -773,6 +786,7 @@ def audit(subject, route, status, ip):
 
 
 # --- beta signups ----------------------------------------------------------
+
 
 def beta_reserve(email, interests, ip=None):
     """Record (or update) a beta-reservation for the Nnyx/Zzyn closed betas.
@@ -802,8 +816,7 @@ def beta_all():
     conn = connect()
     try:
         rows = conn.execute(
-            "SELECT email, interests, ip, created_at, updated_at FROM beta_signups "
-            "ORDER BY created_at ASC"
+            "SELECT email, interests, ip, created_at, updated_at FROM beta_signups ORDER BY created_at ASC"
         ).fetchall()
         return [dict(r) for r in rows]
     finally:
@@ -812,18 +825,19 @@ def beta_all():
 
 # --- retention / purge -----------------------------------------------------
 
+
 def _cap_rows(conn, table, order_col, max_rows):
     """Delete the oldest rows (by order_col ASC) so `table` holds at most max_rows.
     Table and column names here are internal constants, never caller input."""
     if max_rows <= 0:
         return
-    row = conn.execute("SELECT COUNT(*) c FROM %s" % table).fetchone()
+    row = conn.execute(f"SELECT COUNT(*) c FROM {table}").fetchone()
     excess = (row["c"] if row else 0) - max_rows
     if excess > 0:
         conn.execute(
-            "DELETE FROM %s WHERE rowid IN "
-            "(SELECT rowid FROM %s ORDER BY %s ASC LIMIT ?)" % (table, table, order_col),
-            (excess,))
+            f"DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} ORDER BY {order_col} ASC LIMIT ?)",
+            (excess,),
+        )
 
 
 def backup(dest_dir=None, keep=None, stamp=None):
@@ -847,8 +861,9 @@ def backup(dest_dir=None, keep=None, stamp=None):
 
     if stamp is None:
         import datetime
-        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out = os.path.join(dest_dir, "syxx-server-%s.db" % stamp)
+
+        stamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%SZ")
+    out = os.path.join(dest_dir, f"syxx-server-{stamp}.db")
     tmp = out + ".partial"
 
     # Snapshot to a temp file, fsync-durable via close, then atomic rename — a reader that lists the
@@ -860,7 +875,7 @@ def backup(dest_dir=None, keep=None, stamp=None):
     try:
         dst = sqlite3.connect(tmp)
         try:
-            src.backup(dst)          # online, consistent, non-blocking
+            src.backup(dst)  # online, consistent, non-blocking
         finally:
             dst.close()
     finally:
@@ -876,8 +891,7 @@ def backup(dest_dir=None, keep=None, stamp=None):
     # Prune: keep the newest `keep` backups (0 disables pruning). Sort by name — the timestamp format
     # is lexicographically ordered, so name-sort == time-sort.
     if keep and keep > 0:
-        backups = sorted(f for f in os.listdir(dest_dir)
-                         if f.startswith("syxx-server-") and f.endswith(".db"))
+        backups = sorted(f for f in os.listdir(dest_dir) if f.startswith("syxx-server-") and f.endswith(".db"))
         for stale in backups[:-keep]:
             try:
                 os.remove(os.path.join(dest_dir, stale))
@@ -888,6 +902,7 @@ def backup(dest_dir=None, keep=None, stamp=None):
 
 # ---------- API Key CRUD ----------
 
+
 def api_key_create(subject, label=None, scopes="*", ttl_days=90):
     """Create a new API key. Returns the raw key string (shown once, never stored).
 
@@ -896,7 +911,9 @@ def api_key_create(subject, label=None, scopes="*", ttl_days=90):
     Exposing a scope selector that does nothing is worse than not offering one.
     Until scope enforcement ships (Fix 1), all keys are full-authority.
     """
-    import hashlib, secrets
+    import hashlib
+    import secrets
+
     raw = "syxx_" + secrets.token_urlsafe(32)
     key_hash = hashlib.sha256(raw.encode()).hexdigest()
     now = int(time.time())
@@ -921,9 +938,7 @@ def api_key_lookup(key_hash):
     """Look up an API key by its SHA-256 hash. Returns dict or None."""
     conn = connect()
     try:
-        row = conn.execute(
-            "SELECT * FROM api_keys WHERE key_hash=? AND revoked=0", (key_hash,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM api_keys WHERE key_hash=? AND revoked=0", (key_hash,)).fetchone()
         if not row:
             return None
         if row["expires_at"] and row["expires_at"] < int(time.time()):
@@ -957,7 +972,8 @@ def api_key_list(subject):
     try:
         rows = conn.execute(
             "SELECT id,key_prefix,label,created_at,expires_at,last_used,use_count,revoked "
-            "FROM api_keys WHERE subject=? ORDER BY created_at DESC", (subject,)
+            "FROM api_keys WHERE subject=? ORDER BY created_at DESC",
+            (subject,),
         ).fetchall()
         return [dict(r) for r in rows]
     finally:
@@ -971,9 +987,7 @@ def api_key_revoke(key_id, subject):
         # Return the real row count. Discarding it let the route answer {"revoked": true}
         # for a key that does not exist, and identically for another tenant's key — an
         # unfalsifiable success claim and an id-existence oracle.
-        cur = conn.execute(
-            "UPDATE api_keys SET revoked=1 WHERE id=? AND subject=?", (key_id, subject)
-        )
+        cur = conn.execute("UPDATE api_keys SET revoked=1 WHERE id=? AND subject=?", (key_id, subject))
         revoked = cur.rowcount
         conn.commit()
         return revoked
@@ -991,9 +1005,7 @@ def api_key_revoke_all_for_subject(subject):
     """
     conn = _write_conn()
     try:
-        cur = conn.execute(
-            "UPDATE api_keys SET revoked=1 WHERE subject=? AND revoked=0", (subject,)
-        )
+        cur = conn.execute("UPDATE api_keys SET revoked=1 WHERE subject=? AND revoked=0", (subject,))
         conn.commit()
         return cur.rowcount
     finally:
@@ -1007,8 +1019,7 @@ def api_key_subjects_with_active_keys():
     conn = connect()
     try:
         rows = conn.execute(
-            "SELECT DISTINCT subject FROM api_keys "
-            "WHERE revoked=0 AND (expires_at IS NULL OR expires_at > ?)", (now,)
+            "SELECT DISTINCT subject FROM api_keys WHERE revoked=0 AND (expires_at IS NULL OR expires_at > ?)", (now,)
         ).fetchall()
         return [r["subject"] for r in rows]
     finally:
@@ -1016,6 +1027,7 @@ def api_key_subjects_with_active_keys():
 
 
 # ---------- Monitor CRUD ----------
+
 
 def monitor_create(monitor_id, subject, domain, checks, interval_hours=24, notify_email=None):
     """Create a new scheduled monitor."""
@@ -1036,9 +1048,7 @@ def monitor_list(subject):
     """List all monitors for a subject."""
     conn = connect()
     try:
-        rows = conn.execute(
-            "SELECT * FROM monitors WHERE subject=? ORDER BY created_at DESC", (subject,)
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM monitors WHERE subject=? ORDER BY created_at DESC", (subject,)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -1049,9 +1059,7 @@ def monitors_due(now=None):
     now = int(time.time()) if now is None else now
     conn = connect()
     try:
-        rows = conn.execute(
-            "SELECT * FROM monitors WHERE active=1 AND next_run<=?", (now,)
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM monitors WHERE active=1 AND next_run<=?", (now,)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -1083,8 +1091,7 @@ def monitor_result_save(monitor_id, check_type, result, changes=None, raw_json=N
     conn = _write_conn()
     try:
         conn.execute(
-            "INSERT INTO monitor_results(monitor_id,run_at,check_type,result,changes,raw_json) "
-            "VALUES(?,?,?,?,?,?)",
+            "INSERT INTO monitor_results(monitor_id,run_at,check_type,result,changes,raw_json) VALUES(?,?,?,?,?,?)",
             (monitor_id, int(time.time()), check_type, result, changes, raw_json),
         )
         conn.commit()
@@ -1098,13 +1105,12 @@ def monitor_results_for(monitor_id, check_type=None, limit=10):
     try:
         if check_type:
             rows = conn.execute(
-                "SELECT * FROM monitor_results WHERE monitor_id=? AND check_type=? "
-                "ORDER BY run_at DESC LIMIT ?", (monitor_id, check_type, limit)
+                "SELECT * FROM monitor_results WHERE monitor_id=? AND check_type=? ORDER BY run_at DESC LIMIT ?",
+                (monitor_id, check_type, limit),
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM monitor_results WHERE monitor_id=? "
-                "ORDER BY run_at DESC LIMIT ?", (monitor_id, limit)
+                "SELECT * FROM monitor_results WHERE monitor_id=? ORDER BY run_at DESC LIMIT ?", (monitor_id, limit)
             ).fetchall()
         return [dict(r) for r in rows]
     finally:
@@ -1120,8 +1126,9 @@ def monitor_delete(monitor_id, subject):
         # monitor history with one request while the (correctly scoped) monitors delete
         # silently matched nothing — the docstring's ownership promise was only half kept.
         conn.execute(
-            "DELETE FROM monitor_results WHERE monitor_id IN "
-            "(SELECT id FROM monitors WHERE id=? AND subject=?)", (monitor_id, subject))
+            "DELETE FROM monitor_results WHERE monitor_id IN (SELECT id FROM monitors WHERE id=? AND subject=?)",
+            (monitor_id, subject),
+        )
         cur = conn.execute("DELETE FROM monitors WHERE id=? AND subject=?", (monitor_id, subject))
         deleted = cur.rowcount
         conn.commit()
@@ -1138,8 +1145,8 @@ def purge_expired(now=None):
     conn = _write_conn()
     try:
         conn.execute(
-            "DELETE FROM leak_observations WHERE token IN "
-            "(SELECT token FROM leak_tokens WHERE expires_at < ?)", (now,))
+            "DELETE FROM leak_observations WHERE token IN (SELECT token FROM leak_tokens WHERE expires_at < ?)", (now,)
+        )
         conn.execute("DELETE FROM leak_tokens WHERE expires_at < ?", (now,))
         # S16: no table alias here. SQLite only accepts "DELETE FROM t AS x" from
         # 3.25.0 on; older deployment stdlibs raise "near AS: syntax error", which
@@ -1147,13 +1154,12 @@ def purge_expired(now=None):
         conn.execute(
             "DELETE FROM leak_observations "
             "WHERE NOT EXISTS (SELECT 1 FROM leak_tokens t "
-            "WHERE t.token = leak_observations.token)")
+            "WHERE t.token = leak_observations.token)"
+        )
         if config.AUDIT_RETENTION_DAYS > 0:
-            conn.execute("DELETE FROM audit WHERE ts < ?",
-                         (now - config.AUDIT_RETENTION_DAYS * 86400,))
+            conn.execute("DELETE FROM audit WHERE ts < ?", (now - config.AUDIT_RETENTION_DAYS * 86400,))
         if config.PASSIVE_RETENTION_DAYS > 0:
-            conn.execute("DELETE FROM passive_dns WHERE last_seen < ?",
-                         (now - config.PASSIVE_RETENTION_DAYS * 86400,))
+            conn.execute("DELETE FROM passive_dns WHERE last_seen < ?", (now - config.PASSIVE_RETENTION_DAYS * 86400,))
         # A023: scrub any leak-collector rows that mirrored a submitter's resolver IP
         # into the cross-readable passive index. The mirror is removed at the source
         # (leak.observe), but this reclaims rows written before that fix and keeps the
@@ -1169,31 +1175,30 @@ def purge_expired(now=None):
         # timestamped for purge (created_at NULL) so they survive.
         if _KV_RETENTION_DAYS > 0:
             conn.execute(
-                "DELETE FROM kv WHERE created_at IS NOT NULL AND created_at < ? "
-                "AND key LIKE 'stripe_evt:%'",
-                (now - _KV_RETENTION_DAYS * 86400,))
+                "DELETE FROM kv WHERE created_at IS NOT NULL AND created_at < ? AND key LIKE 'stripe_evt:%'",
+                (now - _KV_RETENTION_DAYS * 86400,),
+            )
         # A079/A091/A095: absolute row caps so high-cardinality ingestion within the
         # retention window cannot exhaust disk. Reclaim the oldest rows past the cap.
         _cap_rows(conn, "passive_dns", "last_seen", _PASSIVE_MAX_ROWS)
         _cap_rows(conn, "audit", "ts", _AUDIT_MAX_ROWS)
         _cap_rows(conn, "warp_cache", "created_at", _WARP_CACHE_MAX_ROWS)
         if config.TRIAL_ANCHOR_RETENTION_DAYS > 0:
-            conn.execute("DELETE FROM trial_anchors WHERE first_launch < ?",
-                         (now - config.TRIAL_ANCHOR_RETENTION_DAYS * 86400,))
+            conn.execute(
+                "DELETE FROM trial_anchors WHERE first_launch < ?", (now - config.TRIAL_ANCHOR_RETENTION_DAYS * 86400,)
+            )
         # A032: removed over-cap eviction of oldest first_launch rows. The old
         # code deleted the longest-standing trial anchors first, allowing an
         # attacker to flood new fingerprints and reset legitimate users' trial
         # timers (paywall bypass). Capacity is now enforced at insert time in
         # get_or_create_trial_anchor (reject at cap) instead of evicting here.
-        conn.execute("DELETE FROM warp_cache WHERE created_at < ?",
-                     (now - config.WARP_CACHE_TTL,))
+        conn.execute("DELETE FROM warp_cache WHERE created_at < ?", (now - config.WARP_CACHE_TTL,))
         # A031: purge beta_signups past the retention window. Every other PII
         # table has a retention purge; beta_signups grew without bound and the
         # weekly digest re-emailed the full historical list, making the PII
         # exposure window effectively permanent.
         if _BETA_RETENTION_DAYS > 0:
-            conn.execute("DELETE FROM beta_signups WHERE created_at < ?",
-                         (now - _BETA_RETENTION_DAYS * 86400,))
+            conn.execute("DELETE FROM beta_signups WHERE created_at < ?", (now - _BETA_RETENTION_DAYS * 86400,))
         conn.commit()
     finally:
         conn.close()

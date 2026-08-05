@@ -14,19 +14,20 @@ using Ed25519 response signatures (Keygen-Signature header) when
 config.KEYGEN_PUBLIC_KEY is set.  A MITM with a forged body is denied even over
 compromised TLS.
 """
-import os
+
 import base64
 import datetime
 import email.utils
-import hmac
 import hashlib
+import hmac
 import json
+import os
 import re
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
-import urllib.error
 
 from . import config, db, logging_util
 
@@ -52,8 +53,9 @@ _unprovisioned_warned_at = 0.0
 # meta.valid to detect forged responses from a compromised CA or substituted
 # trust anchor.
 try:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
     _HAS_ED25519 = True
 except ImportError:
     _HAS_ED25519 = False
@@ -76,7 +78,7 @@ class Entitlement:
     def __init__(self, subject, plan, source):
         self.subject = subject  # opaque id (license key hash or session subject)
         self.plan = plan
-        self.source = source    # 'keygen' | 'offline' | 'session'
+        self.source = source  # 'keygen' | 'offline' | 'session'
 
     def as_dict(self):
         return {"subject": self.subject, "plan": self.plan, "source": self.source}
@@ -87,6 +89,7 @@ def _subject_id(key):
 
 
 # --- Session tokens (stateless, HMAC) --------------------------------------
+
 
 def _sign(payload_bytes):
     return hmac.new(secret(), payload_bytes, hashlib.sha256).digest()
@@ -125,6 +128,7 @@ def verify_session(token):
 
 # --- Keygen response signature verification (A021 Fix 1) --------------------
 
+
 def _warn_unprovisioned():
     """S11: log the unprovisioned-and-denying state, at most once per interval.
 
@@ -137,14 +141,14 @@ def _warn_unprovisioned():
     logging_util.warn(
         "keygen_public_key_unset_denying",
         msg="SYXX_KEYGEN_PUBLIC_KEY is not set: the Keygen response signature cannot be "
-            "verified, so EVERY license validation is denied — including valid keys. "
-            "Set it in /etc/syxx/syxx.env and restart. This is fail-closed by design "
-            "(D040/A021); it is not a transient error and it will not self-heal.")
+        "verified, so EVERY license validation is denied — including valid keys. "
+        "Set it in /etc/syxx/syxx.env and restart. This is fail-closed by design "
+        "(D040/A021); it is not a transient error and it will not self-heal.",
+    )
     return True
 
 
-def _verify_validate_key_response(body_str, sig_header, digest_header,
-                                  date_header, method, url):
+def _verify_validate_key_response(body_str, sig_header, digest_header, date_header, method, url):
     """Verify the Ed25519 response signature from Keygen's validate-key endpoint.
 
     Uses the Ed25519 public key from config.KEYGEN_PUBLIC_KEY (hex-encoded).
@@ -186,12 +190,14 @@ def _verify_validate_key_response(body_str, sig_header, digest_header,
 
     if not _HAS_ED25519:
         if os.environ.get("SYXX_DEV_MODE") != "1":
-            logging_util.warn("keygen_ed25519_unavailable_missing_key",
-                              msg="cryptography library not available; licensing denied")
+            logging_util.warn(
+                "keygen_ed25519_unavailable_missing_key", msg="cryptography library not available; licensing denied"
+            )
             return None  # A130: cannot verify — infrastructure failure
-        logging_util.warn("keygen_ed25519_unavailable",
-                          msg="cryptography library not available; "
-                              "signature verification skipped (dev mode)")
+        logging_util.warn(
+            "keygen_ed25519_unavailable",
+            msg="cryptography library not available; signature verification skipped (dev mode)",
+        )
         return True
 
     if not sig_header or not digest_header or not date_header:
@@ -211,15 +217,16 @@ def _verify_validate_key_response(body_str, sig_header, digest_header,
         if parsed_dt is None:
             raise ValueError("unparseable Date header")
         if parsed_dt.tzinfo is None:
-            parsed_dt = parsed_dt.replace(tzinfo=datetime.timezone.utc)
+            parsed_dt = parsed_dt.replace(tzinfo=datetime.UTC)
         resp_epoch = parsed_dt.timestamp()
     except (TypeError, ValueError, OverflowError):
         logging_util.warn("keygen_signature_bad_date")
         return None  # A130: cannot verify — unparseable date
     if abs(time.time() - resp_epoch) > _KEYGEN_DATE_SKEW_SECONDS:
-        logging_util.warn("keygen_signature_stale_date",
-                          detail="Date header outside allowed clock skew "
-                                 "(possible replay of an old signed response)")
+        logging_util.warn(
+            "keygen_signature_stale_date",
+            detail="Date header outside allowed clock skew (possible replay of an old signed response)",
+        )
         return None  # A130: cannot verify — clock skew or replay
 
     # Parse signature header parameters.
@@ -250,10 +257,7 @@ def _verify_validate_key_response(body_str, sig_header, digest_header,
     parsed = urllib.parse.urlparse(url)
     host = parsed.hostname or "api.keygen.sh"
     signing_data = (
-        f"(request-target): {method} {parsed.path}\n"
-        f"host: {host}\n"
-        f"date: {date_header}\n"
-        f"digest: sha-256={enc_digest}"
+        f"(request-target): {method} {parsed.path}\nhost: {host}\ndate: {date_header}\ndigest: sha-256={enc_digest}"
     )
 
     # Verify the Ed25519 signature.
@@ -263,9 +267,9 @@ def _verify_validate_key_response(body_str, sig_header, digest_header,
         public_key.verify(signature_bytes, signing_data.encode("utf-8"))
         return True
     except InvalidSignature:
-        logging_util.warn("keygen_signature_invalid",
-                          detail="Ed25519 signature verification failed "
-                                 "– possible forged response")
+        logging_util.warn(
+            "keygen_signature_invalid", detail="Ed25519 signature verification failed – possible forged response"
+        )
         return False  # A130: forgery detected — signature present but invalid
     except Exception as e:
         logging_util.warn("keygen_signature_error", err=str(e))
@@ -273,6 +277,7 @@ def _verify_validate_key_response(body_str, sig_header, digest_header,
 
 
 # --- License validation ----------------------------------------------------
+
 
 def _validate_offline(key):
     """D053: validate offline license keys. The static OFFLINE_LICENSE_KEYS set is trusted
@@ -290,13 +295,16 @@ def _validate_offline(key):
             # DB insert cannot forge this HMAC without knowing the secret.
             stored_hmac = row.get("hmac")
             if not stored_hmac:
-                logging_util.warn("offline_license_missing_hmac",
-                    msg="DB license row has no HMAC signature — rejecting as untrusted")
+                logging_util.warn(
+                    "offline_license_missing_hmac", msg="DB license row has no HMAC signature — rejecting as untrusted"
+                )
                 return None
             expected_hmac = _offline_license_hmac(key, row.get("status"), exp, row.get("plan", "pro"))
             if not hmac.compare_digest(stored_hmac, expected_hmac):
-                logging_util.warn("offline_license_invalid_hmac",
-                    msg="DB license row HMAC mismatch — rejecting as tampered or unauthorized")
+                logging_util.warn(
+                    "offline_license_invalid_hmac",
+                    msg="DB license row HMAC mismatch — rejecting as tampered or unauthorized",
+                )
                 return None
             return row.get("plan", "pro")
     return None
@@ -306,7 +314,7 @@ def _offline_license_hmac(key, status, expires_at, plan):
     """Compute HMAC-SHA256 over the license row fields using the server secret.
     The HMAC covers key + status + expires_at + plan so an attacker cannot modify
     any field without invalidating the signature."""
-    payload = f"{key}|{status}|{expires_at}|{plan}".encode("utf-8")
+    payload = f"{key}|{status}|{expires_at}|{plan}".encode()
     return hmac.new(secret(), payload, hashlib.sha256).hexdigest()
 
 
@@ -322,8 +330,7 @@ def _validate_keygen(key):
         # Keygen's by-key validation route is validate-key; plain .../actions/validate is not a
         # real endpoint (returns 404 NOT_FOUND), which made every license read as invalid.
         # The base URL is configurable so test deployments can point at mock servers (SRV-023).
-        base = (config.KEYGEN_BASE_URL or
-                "https://api.keygen.sh/v1/accounts/%s" % config.KEYGEN_ACCOUNT_ID)
+        base = config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}"
         url = base.rstrip("/") + "/licenses/actions/validate-key"
         req_body = json.dumps({"meta": {"key": key}}).encode("utf-8")
         req = urllib.request.Request(url, data=req_body, method="POST")
@@ -340,7 +347,12 @@ def _validate_keygen(key):
         # A021 Fix 1 + A130: verify the response Ed25519 signature before trusting
         # meta.valid. Tri-state: True=verified, False=forgery, None=cannot verify.
         sig_result = _verify_validate_key_response(
-            body_str, sig_header, digest_header, date_header, "post", url,
+            body_str,
+            sig_header,
+            digest_header,
+            date_header,
+            "post",
+            url,
         )
         if sig_result is True:
             pass  # signature verified, proceed
@@ -364,8 +376,7 @@ def _validate_keygen(key):
     # because a non-empty list/string is truthy but has no .get(). Treat a non-dict
     # response as invalid rather than crashing into a 500.
     if not isinstance(data, dict):
-        logging_util.warn("keygen_non_dict_response",
-                          detail="expected dict, got %s" % type(data).__name__)
+        logging_util.warn("keygen_non_dict_response", detail=f"expected dict, got {type(data).__name__}")
         return None
     meta = data.get("meta", {})
     if not isinstance(meta, dict) or not meta.get("valid"):
@@ -406,6 +417,7 @@ def validate_license(key):
 
 # --- Keygen license status check (for API key sync) -----------------------
 
+
 def check_keygen_license_status(subject):
     """Check if a Keygen license is still valid by querying the Keygen admin API.
 
@@ -424,11 +436,10 @@ def check_keygen_license_status(subject):
     if not license_id:
         logging_util.warn("keygen_status_no_stored_license_id", subject=subject)
         return None
-    base = (config.KEYGEN_BASE_URL or
-            "https://api.keygen.sh/v1/accounts/%s" % config.KEYGEN_ACCOUNT_ID)
-    url = base.rstrip("/") + "/licenses/%s" % urllib.parse.quote(license_id, safe="")
+    base = config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}"
+    url = base.rstrip("/") + "/licenses/{}".format(urllib.parse.quote(license_id, safe=""))
     req = urllib.request.Request(url, method="GET")
-    req.add_header("Authorization", "Bearer %s" % config.KEYGEN_ADMIN_TOKEN)
+    req.add_header("Authorization", f"Bearer {config.KEYGEN_ADMIN_TOKEN}")
     req.add_header("Accept", "application/vnd.api+json")
     if not _keygen_sem.acquire(timeout=config.KEYGEN_TIMEOUT):
         return None
@@ -449,11 +460,14 @@ def check_keygen_license_status(subject):
             return True
         if status in _INVALID_STATUSES:
             return False
-        logging_util.warn("keygen_status_unrecognised",
-                          status=status, subject=subject,
-                          detail="Keygen returned a status not in the known "
-                                 "allowlist or denylist — treating as unknown "
-                                 "(no revocation) rather than collapsing to False.")
+        logging_util.warn(
+            "keygen_status_unrecognised",
+            status=status,
+            subject=subject,
+            detail="Keygen returned a status not in the known "
+            "allowlist or denylist — treating as unknown "
+            "(no revocation) rather than collapsing to False.",
+        )
         return None
     except urllib.error.HTTPError as e:
         if e.code == 404:
@@ -468,6 +482,7 @@ def check_keygen_license_status(subject):
 
 
 # --- Request-level entitlement resolution ----------------------------------
+
 
 def entitlement_for(headers, query):
     """Resolve an Entitlement from a request, or None.
@@ -486,7 +501,9 @@ def entitlement_for(headers, query):
             api_key = auth[7:].strip()
     if api_key:
         import hashlib
+
         from . import db
+
         key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         row = db.api_key_lookup(key_hash)
         if row:

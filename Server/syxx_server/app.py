@@ -12,6 +12,7 @@ Route classes:
 The website therefore cannot bypass the paywall: its live-query endpoints are in
 the paid class and demand the same license the app uses.
 """
+
 import base64
 import concurrent.futures
 import gzip
@@ -19,23 +20,45 @@ import hashlib
 import hmac
 import ipaddress
 import json
-import logging
 import os
 import posixpath
 import re
 import socket
-import struct
 import threading
 import time
-import uuid
 import urllib.parse
+import uuid
 from email.utils import parseaddr
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import (broadcast, bulk_investigate, config, db, email_auth, fetcher, firewall_test,
-               fulfillment, investigate, leak, licensing, listeners, logging_util, lookalike,
-               mailer, passivedns, ratelimit, resolver, scheduler, seo, stripe_checkout,
-               subdomain_enum, warp, whois_lookup, appcast)
+from . import (
+    appcast,
+    broadcast,
+    bulk_investigate,
+    config,
+    db,
+    email_auth,
+    fetcher,
+    firewall_test,
+    fulfillment,
+    investigate,
+    leak,
+    licensing,
+    listeners,
+    logging_util,
+    lookalike,
+    mailer,
+    passivedns,
+    ratelimit,
+    resolver,
+    scheduler,
+    seo,
+    stripe_checkout,
+    subdomain_enum,
+    warp,
+    whois_lookup,
+)
+
 try:
     from . import dnssec_validator
 except ImportError:
@@ -45,6 +68,7 @@ from . import __version__
 # --- Sentry crash/error reporting ---
 try:
     import sentry_sdk
+
     _sentry_dsn = os.environ.get("SENTRY_DSN", "")
     if _sentry_dsn:
         sentry_sdk.init(
@@ -69,13 +93,13 @@ try:
     # server. `opentelemetry.logs` does not exist (the module is `_logs`), and OTLPLogExporter
     # lives in the exporter package, not in sdk._logs.export.
     from opentelemetry import _logs as otel_logs
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
     _resource = Resource.create({"service.name": "syxx-server", "service.version": __version__})
     _endpoint = "https://bugsmasher.syxx.app"
@@ -95,7 +119,7 @@ try:
 except Exception as _otel_err:  # noqa: BLE001 - recorded, not swallowed
     # Best-effort, but NEVER silent. preflight/readyz surface this so "no data arriving" can be
     # told apart from "telemetry crashed at import".
-    _OTEL_STATE = "failed: %s: %s" % (type(_otel_err).__name__, _otel_err)
+    _OTEL_STATE = f"failed: {type(_otel_err).__name__}: {_otel_err}"
 
 # Nonce shape gate for /api/warp/manifest (WARP_MANIFEST_V1 §4.5 replay binding). ≤64 chars of
 # the URL/base64url-safe alphabet; the manifest echoes it verbatim so the client can assert it
@@ -109,6 +133,7 @@ _OTEL_TRACER = None
 if _OTEL_STATE.startswith("live"):
     try:
         import opentelemetry.trace as _otel_trace_mod
+
         _OTEL_TRACER = _otel_trace_mod.get_tracer("syxx-server")
     except Exception:
         _OTEL_STATE = "failed: tracer unavailable"
@@ -122,12 +147,12 @@ if _OTEL_LOGGER is not None:
         # export branch at logging_util.py:34 could never fire even once the imports above
         # succeeded. Failure is recorded, never swallowed.
         from opentelemetry.sdk._logs._internal import LogRecord as _OTelLogRecord
+
         logging_util._otel_logger = _OTEL_LOGGER
         logging_util._otel_log_record = _OTelLogRecord
         _OTEL_STATE = "live"
     except Exception as _otel_rec_err:  # noqa: BLE001 - recorded, not swallowed
-        _OTEL_STATE = "failed: log-record class unavailable: %s: %s" % (
-            type(_otel_rec_err).__name__, _otel_rec_err)
+        _OTEL_STATE = f"failed: log-record class unavailable: {type(_otel_rec_err).__name__}: {_otel_rec_err}"
 
 _STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
@@ -176,8 +201,16 @@ _BODY_INCOMPLETE = object()
 # A138: allowlist of known endpoint prefixes for metrics. Everything else buckets
 # to 'other' to prevent unbounded cardinality from attacker-controlled paths.
 _KNOWN_ENDPOINT_PREFIXES = {
-    "/api/", "/dns-query", "/assets/", "/fetch_script", "/warp/",
-    "/", "/index.html", "/robots.txt", "/sitemap.xml", "/.well-known/",
+    "/api/",
+    "/dns-query",
+    "/assets/",
+    "/fetch_script",
+    "/warp/",
+    "/",
+    "/index.html",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/.well-known/",
 }
 
 
@@ -215,8 +248,7 @@ _MAX_WORKERS = max(1, _env_int("SYXX_HTTP_MAX_WORKERS", 64))
 # is a PER-OPERATION timeout, so a slow-drip client that trickles one byte just
 # under the timeout keeps resetting it and pins a worker forever. This hard cap
 # force-closes the socket after a fixed total request lifetime regardless of drip.
-_REQUEST_DEADLINE = max(config.HTTP_REQUEST_TIMEOUT,
-                        _env_int("SYXX_HTTP_REQUEST_DEADLINE", 60))
+_REQUEST_DEADLINE = max(config.HTTP_REQUEST_TIMEOUT, _env_int("SYXX_HTTP_REQUEST_DEADLINE", 60))
 # A027/A096: aggregate wall-clock budget for the clean-vantage recursive fan-out so
 # /api/diff cannot be held open across many slow resolver queries.
 _CLEAN_VANTAGE_DEADLINE = max(1, _env_int("SYXX_CLEAN_VANTAGE_DEADLINE", 6))
@@ -225,12 +257,8 @@ _CLEAN_VANTAGE_DEADLINE = max(1, _env_int("SYXX_CLEAN_VANTAGE_DEADLINE", 6))
 # per-request ThreadPoolExecutor instances that escaped the _MAX_WORKERS semaphore
 # accounting (64 concurrent handlers × 12 threads = 768 untracked threads).
 # Bounded to a fixed size; shared across all concurrent requests.
-_CLEAN_VANTAGE_POOL = concurrent.futures.ThreadPoolExecutor(
-    max_workers=6, thread_name_prefix="clean-vantage"
-)
-_PROPAGATION_POOL = concurrent.futures.ThreadPoolExecutor(
-    max_workers=24, thread_name_prefix="propagation"
-)
+_CLEAN_VANTAGE_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=6, thread_name_prefix="clean-vantage")
+_PROPAGATION_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=24, thread_name_prefix="propagation")
 
 
 def _host(u):
@@ -264,8 +292,7 @@ def _diff_content(url, local_html, local_scripts, local_inline_hashes):
     if local_html:
         parsed_scripts, _ss, _if = warp.parse_assets(local_html, url)
         local_script_set = set(parsed_scripts)
-        local_inline = set(hashlib.sha256(b.encode("utf-8")).hexdigest()
-                           for b in warp.inline_scripts(local_html))
+        local_inline = {hashlib.sha256(b.encode("utf-8")).hexdigest() for b in warp.inline_scripts(local_html)}
         have_inline = True
     else:
         local_script_set = set(local_scripts or [])
@@ -277,7 +304,7 @@ def _diff_content(url, local_html, local_scripts, local_inline_hashes):
 
     injected = sorted(local_script_set - clean_scripts)
     missing = sorted(clean_scripts - local_script_set)
-    clean_hosts = set(_host(u) for u in clean_scripts)
+    clean_hosts = {_host(u) for u in clean_scripts}
     injected_hosts = sorted({_host(u) for u in injected} - clean_hosts - {""})
     injected_inline = len(local_inline - clean_inline)
 
@@ -325,7 +352,7 @@ def _paginate(query, items, default_limit=50, max_limit=200):
         limit = default_limit
     total = len(items)
     start = (page - 1) * limit
-    paged = items[start:start + limit]
+    paged = items[start : start + limit]
     has_more = (start + limit) < total
     return paged, {"page": page, "limit": limit, "total": total, "hasMore": has_more}
 
@@ -402,10 +429,10 @@ def _clean_vantage_answers(domain, qtype, qtype_str):
                 continue
             if answers:
                 counts[answers] = counts.get(answers, 0) + 1
-                if counts[answers] >= 2:   # corroborated by >=2 independent vantages
+                if counts[answers] >= 2:  # corroborated by >=2 independent vantages
                     return set(answers)
     except concurrent.futures.TimeoutError:
-        pass                               # budget exhausted; use whatever corroborated so far
+        pass  # budget exhausted; use whatever corroborated so far
     for answer_set, seen in counts.items():
         if seen >= 2:
             return set(answer_set)
@@ -437,7 +464,7 @@ def _version_key(v):
         return None
     release = tuple((nums + [0, 0, 0])[:3])
     if not sep:
-        return (release, 1, ())            # stable outranks any pre-release
+        return (release, 1, ())  # stable outranks any pre-release
     # SemVer pre-release precedence: numeric identifiers rank below alphanumeric ones.
     ids = tuple((0, int(x), "") if x.isdigit() else (1, 0, x) for x in pre.split("."))
     return (release, 0, ids)
@@ -460,6 +487,7 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
     the number of in-flight worker threads with a semaphore; when saturated it refuses
     new connections immediately (503) instead of piling on threads until the box falls
     over."""
+
     daemon_threads = True
 
     def __init__(self, *args, max_workers=None, **kwargs):
@@ -470,8 +498,7 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
         if not self._worker_sema.acquire(blocking=False):
             # At capacity: refuse fast rather than queue unbounded work.
             try:
-                request.sendall(b"HTTP/1.1 503 Service Unavailable\r\n"
-                                b"Connection: close\r\nContent-Length: 0\r\n\r\n")
+                request.sendall(b"HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")
             except OSError:
                 pass
             self.shutdown_request(request)
@@ -552,8 +579,10 @@ class Handler(BaseHTTPRequestHandler):
                 # Normalize path for metrics (remove query string, normalize)
                 norm = path.split("?")[0].rstrip("/") or "/"
                 # A138: bucket unknown paths under 'other' to prevent unbounded cardinality
-                endpoint_slug = norm.replace('/', '_').lstrip('_') or 'root'
-                if not any(norm.startswith(prefix) or norm == prefix.rstrip('/') for prefix in _KNOWN_ENDPOINT_PREFIXES):
+                endpoint_slug = norm.replace("/", "_").lstrip("_") or "root"
+                if not any(
+                    norm.startswith(prefix) or norm == prefix.rstrip("/") for prefix in _KNOWN_ENDPOINT_PREFIXES
+                ):
                     endpoint_slug = "other"
                 logging_util.incr(f"http_endpoint_{endpoint_slug}")
 
@@ -571,8 +600,7 @@ class Handler(BaseHTTPRequestHandler):
         # (/api/keys/<id> and /api/monitors/<id>) and are documented in openapi.yaml.
         # Without DELETE here, browser preflight blocks these requests.
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers",
-                         "Authorization, Content-Type, X-Syxx-License")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Syxx-License")
 
     def _security_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -580,20 +608,22 @@ class Handler(BaseHTTPRequestHandler):
         # S3/XFO: prevent clickjacking by denying all framing.
         self.send_header("X-Frame-Options", "DENY")
         # CSP: restrict script/style sources to self and approved origins.
-        self.send_header("Content-Security-Policy",
-                         "default-src 'self'; "
-                         "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
-                         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                         "font-src 'self' https://fonts.gstatic.com; "
-                         "img-src 'self' data: https:; "
-                         "connect-src 'self' https://api.stripe.com; "
-                         "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
-                         "form-action 'self' https://checkout.stripe.com; "
-                         "base-uri 'self'")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https://api.stripe.com; "
+            "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
+            "form-action 'self' https://checkout.stripe.com; "
+            "base-uri 'self'",
+        )
         # Permissions-Policy: restrict browser features.
-        self.send_header("Permissions-Policy",
-                         "camera=(), microphone=(), geolocation=(), "
-                         "interest-cohort=(), payment=(self)")
+        self.send_header(
+            "Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(self)"
+        )
         # A146: emit HSTS when either the Python process terminates TLS directly
         # (TLS_CERT/TLS_KEY configured) OR when behind a reverse proxy that signals
         # the original request was HTTPS via X-Forwarded-Proto. The shipped deploy.sh
@@ -643,10 +673,10 @@ class Handler(BaseHTTPRequestHandler):
             extra_keys = {k.lower() for k in extra_headers}
         # Save the current buffer position, emit CORS + security, then strip any
         # headers that extra_headers will override.
-        buf_start = len(self._headers_buffer) if hasattr(self, '_headers_buffer') else 0
+        buf_start = len(self._headers_buffer) if hasattr(self, "_headers_buffer") else 0
         self._cors()
         self._security_headers()
-        if extra_keys and hasattr(self, '_headers_buffer'):
+        if extra_keys and hasattr(self, "_headers_buffer"):
             # Remove headers that extra_headers will replace
             new_buf = self._headers_buffer[:buf_start]
             for line in self._headers_buffer[buf_start:]:
@@ -688,8 +718,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json_error(503, err)
             return None, False
         logging_util.incr("auth_payment_required")
-        self._json_error(402, "payment required: activate a Syxx Pro license",
-                         {"activate": "/api/auth/activate"})
+        self._json_error(402, "payment required: activate a Syxx Pro license", {"activate": "/api/auth/activate"})
         return None, False
 
     def _client_ip(self):
@@ -831,7 +860,7 @@ class Handler(BaseHTTPRequestHandler):
         # pin to v1 before the surface grows further, and we can introduce v2
         # without breaking existing clients.
         if path.startswith("/api/v1/"):
-            path = "/api/" + path[len("/api/v1/"):]
+            path = "/api/" + path[len("/api/v1/") :]
         try:
             self._dispatch_get(path, query)
         except Exception as e:  # last-resort guard; never leak a stack trace
@@ -849,7 +878,7 @@ class Handler(BaseHTTPRequestHandler):
         self._request_path = self.path  # track for metrics
         # API versioning: /api/v1/* is an alias for /api/*.
         if path.startswith("/api/v1/"):
-            path = "/api/" + path[len("/api/v1/"):]
+            path = "/api/" + path[len("/api/v1/") :]
         try:
             if path == "/api/auth/activate":
                 return self._route_activate()
@@ -896,7 +925,7 @@ class Handler(BaseHTTPRequestHandler):
         self._request_path = self.path  # track for metrics (parity with GET/POST)
         # API versioning: /api/v1/* is an alias for /api/*.
         if path.startswith("/api/v1/"):
-            path = "/api/" + path[len("/api/v1/"):]
+            path = "/api/" + path[len("/api/v1/") :]
         try:
             if path.startswith("/api/keys/"):
                 return self._route_revoke_api_key(path)
@@ -1041,9 +1070,16 @@ class Handler(BaseHTTPRequestHandler):
     # Accepted `?platform=` spellings → the canonical platform key. Anything unrecognized falls back
     # to mac (the historical default), never to an arbitrary file.
     _WHATSNEW_PLATFORMS = {
-        "win": "win", "windows": "win",
-        "deb": "deb", "debian": "deb", "ubuntu": "deb", "mint": "deb", "linux": "deb",
-        "mac": "mac", "macos": "mac", "osx": "mac",
+        "win": "win",
+        "windows": "win",
+        "deb": "deb",
+        "debian": "deb",
+        "ubuntu": "deb",
+        "mint": "deb",
+        "linux": "deb",
+        "mac": "mac",
+        "macos": "mac",
+        "osx": "mac",
     }
 
     def _route_whats_new(self, query):
@@ -1070,7 +1106,7 @@ class Handler(BaseHTTPRequestHandler):
         limit = 1 << 20
         try:
             with open(path, "rb") as f:
-                html = f.read(limit + 1)   # read limit+1 to detect oversize
+                html = f.read(limit + 1)  # read limit+1 to detect oversize
         except OSError:
             return self._json_error(404, "no what's-new content")
         if len(html) > limit:
@@ -1087,16 +1123,22 @@ class Handler(BaseHTTPRequestHandler):
         # The client verifies this signature before rendering (see RemoteContentView.swift /
         # RemoteContentPanel.xaml.cs).
         from . import leak as _leak
-        sig_b64 = _leak.sign_content(html) if hasattr(_leak, 'sign_content') else ""
-        key_id = _leak.collector_key_id() if hasattr(_leak, 'collector_key_id') else ""
 
-        self._send(200, html, "text/html; charset=utf-8", {
-            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'",
-            "Cache-Control": "public, max-age=300",
-            "X-Content-Type-Options": "nosniff",
-            "X-Syxx-Signature": sig_b64,
-            "X-Syxx-KeyId": key_id,
-        })
+        sig_b64 = _leak.sign_content(html) if hasattr(_leak, "sign_content") else ""
+        key_id = _leak.collector_key_id() if hasattr(_leak, "collector_key_id") else ""
+
+        self._send(
+            200,
+            html,
+            "text/html; charset=utf-8",
+            {
+                "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'",
+                "Cache-Control": "public, max-age=300",
+                "X-Content-Type-Options": "nosniff",
+                "X-Syxx-Signature": sig_b64,
+                "X-Syxx-KeyId": key_id,
+            },
+        )
 
     def _route_pubkey(self):
         """Public collector Ed25519 public key (D004). Returns the key a third party needs to
@@ -1106,15 +1148,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         # Lazy import to avoid circular deps; leak.ensure_collector_key() already idempotent.
         from . import leak as _leak
-        self._send(200, {
-            "publicKey": _leak.collector_public_key(),
-            "keyId": _leak.collector_key_id(),
-            # A114: the actual key activation time (when this key instance was loaded/generated),
-            # NOT the current fetch time. Previously returned int(time.time()) which was the
-            # request time, making it impossible to detect key rotation or pin a key epoch.
-            "activatedAt": _leak.collector_key_activated_at(),
-            "rotationTimestamp": _leak.collector_key_activated_at(),
-        })
+
+        self._send(
+            200,
+            {
+                "publicKey": _leak.collector_public_key(),
+                "keyId": _leak.collector_key_id(),
+                # A114: the actual key activation time (when this key instance was loaded/generated),
+                # NOT the current fetch time. Previously returned int(time.time()) which was the
+                # request time, making it impossible to detect key rotation or pin a key epoch.
+                "activatedAt": _leak.collector_key_activated_at(),
+                "rotationTimestamp": _leak.collector_key_activated_at(),
+            },
+        )
 
     def _route_startup(self, query):
         """Consolidated startup check (Workstream D2/D3 + update) — PUBLIC, ONE call so the app doesn't
@@ -1131,14 +1177,19 @@ class Handler(BaseHTTPRequestHandler):
         latest = {"win": config.LATEST_WIN, "deb": config.LATEST_DEB}.get(plat, config.LATEST_MAC)
         update = None
         if latest:
-            update = {"available": _update_available(client_ver, latest), "latest": latest,
-                      "url": {"win": config.UPDATE_URL_WIN,
-                              "deb": config.UPDATE_URL_DEB}.get(plat, config.UPDATE_URL_MAC)}
-        self._send(200, {
-            "broadcast": broadcast.current(),
-            "update": update,
-            "whatsNewUrl": "/api/whats-new?platform=%s" % plat,
-        })
+            update = {
+                "available": _update_available(client_ver, latest),
+                "latest": latest,
+                "url": {"win": config.UPDATE_URL_WIN, "deb": config.UPDATE_URL_DEB}.get(plat, config.UPDATE_URL_MAC),
+            }
+        self._send(
+            200,
+            {
+                "broadcast": broadcast.current(),
+                "update": update,
+                "whatsNewUrl": f"/api/whats-new?platform={plat}",
+            },
+        )
 
     def _route_appcast(self, query):
         """G-1: Custom auto-update appcast (Sparkle-inspired, Ed25519-signed).
@@ -1275,7 +1326,9 @@ class Handler(BaseHTTPRequestHandler):
         """Keygen webhook — PUBLIC but SIGNATURE-VERIFIED. When a license is revoked or
         suspended, immediately revokes all API keys for that subject. Verifies HMAC-SHA256
         signature from Keygen before processing. Always 200s verified events."""
-        import hashlib, hmac
+        import hashlib
+        import hmac
+
         if not config.KEYGEN_WEBHOOK_SECRET:
             return self._json_error(501, "webhook not configured")
         raw = self._body()
@@ -1285,10 +1338,7 @@ class Handler(BaseHTTPRequestHandler):
         sig_header = self.headers.get("Keygen-Signature", "")
         if not sig_header:
             return self._json_error(400, "missing signature")
-        expected = hmac.new(
-            config.KEYGEN_WEBHOOK_SECRET.encode("utf-8"),
-            raw or b"", hashlib.sha256
-        ).hexdigest()
+        expected = hmac.new(config.KEYGEN_WEBHOOK_SECRET.encode("utf-8"), raw or b"", hashlib.sha256).hexdigest()
         # A148: wrap compare_digest in try/except TypeError. When sig_header
         # contains non-ASCII characters, compare_digest raises TypeError instead
         # of returning False — an unauthenticated caller choosing the server's
@@ -1306,7 +1356,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "invalid JSON")
         event_type = event.get("event", "")
         data = event.get("data", {})
-        attrs = data.get("attributes", {}) if isinstance(data, dict) else {}
+        data.get("attributes", {}) if isinstance(data, dict) else {}
         # Extract the license ID (used as subject in our system)
         lic_id = data.get("id", "") if isinstance(data, dict) else ""
         if not lic_id:
@@ -1325,16 +1375,23 @@ class Handler(BaseHTTPRequestHandler):
                     result = "keys_revoked"
                 else:
                     result = "no_keys_for_subject"
-                logging_util.info("keygen_webhook_revoked_keys", event=event_type,
-                                  license_id=lic_id, subject=local_subject,
-                                  revoked_count=revoked_count)
+                logging_util.info(
+                    "keygen_webhook_revoked_keys",
+                    event=event_type,
+                    license_id=lic_id,
+                    subject=local_subject,
+                    revoked_count=revoked_count,
+                )
             else:
                 result = "subject_unresolved"
-                logging_util.warn("keygen_webhook_subject_unresolved",
-                                  event=event_type, license_id=lic_id,
-                                  detail="Keygen revocation received but no local "
-                                         "subject maps to this license id — API keys "
-                                         "were NOT revoked. Resolve manually.")
+                logging_util.warn(
+                    "keygen_webhook_subject_unresolved",
+                    event=event_type,
+                    license_id=lic_id,
+                    detail="Keygen revocation received but no local "
+                    "subject maps to this license id — API keys "
+                    "were NOT revoked. Resolve manually.",
+                )
         elif event_type in ("license.created", "license.activated", "license.renewed"):
             result = "noted"
         self._send(200, {"received": True, "conclusion": result, "event": event_type})
@@ -1479,7 +1536,7 @@ class Handler(BaseHTTPRequestHandler):
         fingerprint = (payload.get("fingerprint") or "").strip()
         if not fingerprint:
             return self._json_error(400, "missing fingerprint")
-        
+
         now = int(time.time())
         try:
             first_launch, is_new = db.get_or_create_trial_anchor(fingerprint, now)
@@ -1487,11 +1544,7 @@ class Handler(BaseHTTPRequestHandler):
             # fingerprint is new — reject rather than evicting legitimate anchors.
             if first_launch is None:
                 return self._json_error(507, "trial anchor capacity reached; try again later")
-            self._send(200, {
-                "fingerprint": fingerprint,
-                "firstLaunch": first_launch,
-                "serverTime": now
-            })
+            self._send(200, {"fingerprint": fingerprint, "firstLaunch": first_launch, "serverTime": now})
         except Exception as e:
             logging_util.error("trial_anchor_error", err=str(e))
             self._json_error(500, "internal database error")
@@ -1515,8 +1568,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "invalid JSON body")
         email = (payload.get("email") or "").strip().lower()
         interests = payload.get("interests")
-        interests = [x for x in interests if x in ("nnyx", "zzyn")] \
-            if isinstance(interests, list) else []
+        interests = [x for x in interests if x in ("nnyx", "zzyn")] if isinstance(interests, list) else []
         # A116: reject comma-bearing addresses that could expand to multiple recipients.
         if not _valid_email(email):
             return self._json_error(400, "a valid email address is required")
@@ -1545,12 +1597,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             span = _OTEL_TRACER.start_span("server.warp") if _OTEL_TRACER else None
             result = warp.build_baseline(target)
-            if span: span.set_attribute("warp.target", target)
-            if span: span.end()
+            if span:
+                span.set_attribute("warp.target", target)
+            if span:
+                span.end()
         except fetcher.BlockedError as e:
-            return self._json_error(400, "target blocked: %s" % e)
+            return self._json_error(400, f"target blocked: {e}")
         except fetcher.FetchError as e:
-            return self._json_error(502, "proxy fetch failed: %s" % e)
+            return self._json_error(502, f"proxy fetch failed: {e}")
         db.audit(ent.subject if ent else None, "/warp", 200, self._client_ip())
         self._send(200, result)
 
@@ -1573,54 +1627,73 @@ class Handler(BaseHTTPRequestHandler):
         raw_mode = (query.get("raw", [""])[0]).strip().lower() in ("1", "true", "yes", "on")
         if raw_mode:
             span = _OTEL_TRACER.start_span("server.warp_raw_bytes") if _OTEL_TRACER else None
-            if span: span.set_attribute("warp.target", target)
+            if span:
+                span.set_attribute("warp.target", target)
             try:
                 raw, final = warp.fetch_raw_decoded(target)
             except fetcher.BlockedError as e:
-                if span: span.end()
-                return self._json_error(400, "target blocked: %s" % e)
+                if span:
+                    span.end()
+                return self._json_error(400, f"target blocked: {e}")
             except fetcher.FetchError as e:
-                if span: span.end()
-                return self._json_error(502, "fetch failed: %s" % e)
+                if span:
+                    span.end()
+                return self._json_error(502, f"fetch failed: {e}")
             sha = hashlib.sha256(raw).hexdigest()
             if span:
-                span.set_attribute("warp.bytes", len(raw)); span.end()
+                span.set_attribute("warp.bytes", len(raw))
+                span.end()
             db.audit(ent.subject if ent else None, "/warp/raw", 200, self._client_ip())
-            return self._send(200, raw, "application/octet-stream",
-                              extra_headers={"X-Syxx-Warp-Sha256": sha,
-                                             "X-Syxx-Warp-Final-Url": final})
+            return self._send(
+                200,
+                raw,
+                "application/octet-stream",
+                extra_headers={"X-Syxx-Warp-Sha256": sha, "X-Syxx-Warp-Final-Url": final},
+            )
 
         span = _OTEL_TRACER.start_span("server.warp_raw") if _OTEL_TRACER else None
-        if span: span.set_attribute("warp.target", target)
+        if span:
+            span.set_attribute("warp.target", target)
         try:
             data, ctype, final = fetcher.fetch(target)
         except fetcher.BlockedError as e:
-            return self._json_error(400, "target blocked: %s" % e)
+            return self._json_error(400, f"target blocked: {e}")
         except fetcher.FetchError as e:
-            return self._json_error(502, "fetch failed: %s" % e)
+            return self._json_error(502, f"fetch failed: {e}")
 
         low = (ctype or "").lower()
-        is_text = (low.startswith("text/") or "html" in low or "json" in low
-                   or "javascript" in low or "xml" in low or "css" in low)
+        is_text = (
+            low.startswith("text/")
+            or "html" in low
+            or "json" in low
+            or "javascript" in low
+            or "xml" in low
+            or "css" in low
+        )
         if not is_text:
-            return self._json_error(415, "content is not text and cannot be diffed: %s"
-                                    % (ctype or "unknown"))
+            return self._json_error(415, "content is not text and cannot be diffed: %s" % (ctype or "unknown"))
         try:
             text = data.decode("utf-8", errors="replace")
         except Exception:
             return self._json_error(415, "content could not be decoded as text")
 
-        if span: span.set_attribute("warp.bytes", len(data)); span.set_attribute("warp.content_type", ctype); span.end()
+        if span:
+            span.set_attribute("warp.bytes", len(data))
+            span.set_attribute("warp.content_type", ctype)
+            span.end()
         db.audit(ent.subject if ent else None, "/warp/raw", 200, self._client_ip())
-        self._send(200, {
-            "vantage": "server-clean-path",
-            "requestedUrl": target,
-            "finalUrl": final,
-            "contentType": ctype,
-            "bytes": len(data),
-            "sha256": hashlib.sha256(data).hexdigest(),
-            "content": text,
-        })
+        self._send(
+            200,
+            {
+                "vantage": "server-clean-path",
+                "requestedUrl": target,
+                "finalUrl": final,
+                "contentType": ctype,
+                "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "content": text,
+            },
+        )
 
     def _route_warp_manifest(self, query):
         """WARP_MANIFEST_V1 signed content-integrity manifest (this server's CLEAN vantage).
@@ -1667,9 +1740,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(502, f"manifest fetch failed: {e}")
         # Serialize the inner manifest ONCE; sign the EXACT transmitted bytes (spec §2). NO JCS,
         # NO re-serialization: json.dumps → UTF-8 → base64 into manifest_b64, sign the decoded bytes.
-        manifest_bytes = json.dumps(
-            manifest, separators=(",", ":"), sort_keys=True, ensure_ascii=False
-        ).encode("utf-8")
+        manifest_bytes = json.dumps(manifest, separators=(",", ":"), sort_keys=True, ensure_ascii=False).encode("utf-8")
         manifest_b64 = base64.b64encode(manifest_bytes).decode("ascii")
         signature = leak.sign_content(manifest_bytes)
         # WARP_MANIFEST_V1 key_id contract: lowercase hex of the RAW 32-byte Ed25519 public key.
@@ -1682,11 +1753,14 @@ class Handler(BaseHTTPRequestHandler):
             span.set_attribute("warp.assets", len(manifest["assets"]))
             span.end()
         db.audit(ent.subject if ent else None, "/api/warp/manifest", 200, self._client_ip())
-        self._send(200, {
-            "manifest_b64": manifest_b64,
-            "signature_ed25519": signature,
-            "key_id": key_id,
-        })
+        self._send(
+            200,
+            {
+                "manifest_b64": manifest_b64,
+                "signature_ed25519": signature,
+                "key_id": key_id,
+            },
+        )
 
     def _route_warp_assembly(self, query):
         """DEPRECATED — WARP_ASSEMBLY_V1 raw-concatenation is retired (superseded by the signed
@@ -1714,14 +1788,18 @@ class Handler(BaseHTTPRequestHandler):
         if not target:
             return self._json_error(400, "missing url")
         span = _OTEL_TRACER.start_span("server.fetch_script") if _OTEL_TRACER else None
-        if span: span.set_attribute("fetch.url", target)
+        if span:
+            span.set_attribute("fetch.url", target)
         try:
             data, ctype, _final = fetcher.fetch(target, timeout=config.FETCH_SCRIPT_TIMEOUT)
         except fetcher.BlockedError as e:
-            return self._json_error(400, "target blocked: %s" % e)
+            return self._json_error(400, f"target blocked: {e}")
         except fetcher.FetchError as e:
-            return self._json_error(502, "fetch failed: %s" % e)
-        if span: span.set_attribute("fetch.bytes", len(data)); span.set_attribute("fetch.content_type", ctype); span.end()
+            return self._json_error(502, f"fetch failed: {e}")
+        if span:
+            span.set_attribute("fetch.bytes", len(data))
+            span.set_attribute("fetch.content_type", ctype)
+            span.end()
         # A139: serve as text/plain so it cannot be loaded as a <script> tag and execute
         # as same-origin JS. The native app is the only consumer and can parse text/plain.
         self._send(200, data, "text/plain; charset=utf-8")
@@ -1733,15 +1811,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         token = (query.get("token", [""])[0]).strip().split(".")[0].lower()
         span = _OTEL_TRACER.start_span("server.leak_legacy") if _OTEL_TRACER else None
-        if span: span.set_attribute("leak.token_prefix", token[:8] if len(token) > 8 else token)
+        if span:
+            span.set_attribute("leak.token_prefix", token[:8] if len(token) > 8 else token)
         rec = db.leak_token_get(token)
         if ent is None or rec is None or rec["subject"] != ent.subject:
             return self._json_error(404, "legacy leak endpoint requires a valid issued token owned by the caller")
         obs = db.leak_observations(token)
         resolver_ip = obs[-1]["resolver_ip"] if obs else None
-        if span: span.end()
-        self._send(200, {"token": token, "resolverIP": resolver_ip,
-                          "observations": obs})
+        if span:
+            span.end()
+        self._send(200, {"token": token, "resolverIP": resolver_ip, "observations": obs})
 
     # --- paid: website API -------------------------------------------------
     def _route_investigate(self, query):
@@ -1750,9 +1829,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         domain = (query.get("domain", [""])[0]).strip()
         span = _OTEL_TRACER.start_span("server.investigate") if _OTEL_TRACER else None
-        if span: span.set_attribute("investigate.domain", domain)
+        if span:
+            span.set_attribute("investigate.domain", domain)
         result, err = investigate.investigate(domain)
-        if span: span.end()
+        if span:
+            span.end()
         if err:
             return self._json_error(400, err)
         logging_util.incr("investigations")
@@ -1773,16 +1854,20 @@ class Handler(BaseHTTPRequestHandler):
         if qtype_str not in qtypes:
             return self._json_error(400, "unsupported type (A, AAAA, NS)")
         span = _OTEL_TRACER.start_span("server.authoritative") if _OTEL_TRACER else None
-        if span: span.set_attribute("dns.domain", domain); span.set_attribute("dns.type", qtype_str)
+        if span:
+            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.type", qtype_str)
         try:
             # A066: bound the walk with a shared wall-clock deadline.
             deadline = time.monotonic() + config.AUTH_WALK_DEADLINE_SECONDS
-            result = resolver.resolve_authoritative(domain, qtypes[qtype_str],
-                                                   deadline=deadline)
+            result = resolver.resolve_authoritative(domain, qtypes[qtype_str], deadline=deadline)
         except resolver.DNSError as e:
-            if span: span.set_attribute("error", str(e)); span.end()
-            return self._json_error(502, "resolution failed: %s" % e)
-        if span: span.end()
+            if span:
+                span.set_attribute("error", str(e))
+                span.end()
+            return self._json_error(502, f"resolution failed: {e}")
+        if span:
+            span.end()
         result["type"] = qtype_str
         logging_util.incr("authoritative_queries")
         self._send(200, result)
@@ -1813,19 +1898,20 @@ class Handler(BaseHTTPRequestHandler):
         local = payload.get("localAnswers")
         if not isinstance(local, list) or len(local) > 64 or not all(isinstance(x, str) for x in local):
             return self._json_error(400, "localAnswers must be a list of up to 64 strings")
-        local_set = set(a.strip().lower() for a in local if a.strip())
+        local_set = {a.strip().lower() for a in local if a.strip()}
 
         span = _OTEL_TRACER.start_span("server.diff") if _OTEL_TRACER else None
-        if span: span.set_attribute("dns.domain", domain); span.set_attribute("dns.type", qtype_str)
+        if span:
+            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.type", qtype_str)
         # A038: a resolution failure must surface as inconclusive, not propagate as a crash/500.
         try:
             # A066: bound the walk with a shared wall-clock deadline.
             deadline = time.monotonic() + config.AUTH_WALK_DEADLINE_SECONDS
-            auth = resolver.resolve_authoritative(domain, qtypes[qtype_str],
-                                                 deadline=deadline)
+            auth = resolver.resolve_authoritative(domain, qtypes[qtype_str], deadline=deadline)
         except resolver.DNSError:
             auth = {"conclusion": "unreachable"}
-        auth_answers = set(a.lower() for a in (auth.get("authoritative") or {}).get("answers", []))
+        auth_answers = {a.lower() for a in (auth.get("authoritative") or {}).get("answers", [])}
         auth_usable = auth.get("conclusion") == "authoritative" and bool(auth_answers)
         try:
             clean_answers = _clean_vantage_answers(domain, qtypes[qtype_str], qtype_str)
@@ -1854,15 +1940,22 @@ class Handler(BaseHTTPRequestHandler):
             if isinstance(local_html, str) and len(local_html) > 500_000:
                 return self._json_error(413, "localHTML too large")
             local_scripts = payload.get("localScripts") if isinstance(payload.get("localScripts"), list) else None
-            local_inline = (payload.get("localInlineScriptHashes")
-                            if isinstance(payload.get("localInlineScriptHashes"), list) else None)
+            local_inline = (
+                payload.get("localInlineScriptHashes")
+                if isinstance(payload.get("localInlineScriptHashes"), list)
+                else None
+            )
             content = _diff_content(url, local_html, local_scripts, local_inline)
 
         result = _diff_result(assessment, content, clean_answers, local_set)
-        if span: span.set_attribute("diff.assessment", assessment); span.set_attribute("diff.conclusion", result); span.end()
+        if span:
+            span.set_attribute("diff.assessment", assessment)
+            span.set_attribute("diff.conclusion", result)
+            span.end()
         logging_util.incr("diffs")
         response = {
-            "domain": domain, "type": qtype_str,
+            "domain": domain,
+            "type": qtype_str,
             "localAnswers": sorted(local_set),
             "authoritative": {"answers": sorted(auth_answers), "conclusion": auth.get("conclusion")},
             "cleanVantage": {"answers": sorted(clean_answers)},
@@ -1871,7 +1964,8 @@ class Handler(BaseHTTPRequestHandler):
             # did not reach an authoritative conclusion, the evidence used was cleanVantage
             # and the label must say so.
             "reference": "authoritative" if auth_usable else ("cleanVantage" if clean_answers else "none"),
-            "match": match, "assessment": assessment,
+            "match": match,
+            "assessment": assessment,
             "conclusion": result,
         }
         if content is not None:
@@ -1892,7 +1986,9 @@ class Handler(BaseHTTPRequestHandler):
         if qtype_str not in qtypes:
             return self._json_error(400, "unsupported type (A, AAAA, NS)")
         span = _OTEL_TRACER.start_span("server.trace") if _OTEL_TRACER else None
-        if span: span.set_attribute("dns.domain", domain); span.set_attribute("dns.type", qtype_str)
+        if span:
+            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.type", qtype_str)
         # A066: bound the walk with a shared wall-clock deadline.
         deadline = time.monotonic() + config.AUTH_WALK_DEADLINE_SECONDS
         # A152: wrap resolve_authoritative in try/except like _route_authoritative
@@ -1902,21 +1998,40 @@ class Handler(BaseHTTPRequestHandler):
         # itself — return 200 with result "unreachable" and brokenAt naming the
         # zone that failed, matching what the docstring promises ("where resolution breaks").
         try:
-            result = resolver.resolve_authoritative(domain, qtypes[qtype_str],
-                                                   deadline=deadline)
+            result = resolver.resolve_authoritative(domain, qtypes[qtype_str], deadline=deadline)
         except resolver.DNSError as e:
-            if span: span.set_attribute("error", str(e)); span.end()
+            if span:
+                span.set_attribute("error", str(e))
+                span.end()
             logging_util.incr("traces")
-            return self._send(200, {"domain": domain, "type": qtype_str,
-                                    "delegation": [], "conclusion": "unreachable",
-                                    "brokenAt": None, "error": str(e)})
+            return self._send(
+                200,
+                {
+                    "domain": domain,
+                    "type": qtype_str,
+                    "delegation": [],
+                    "conclusion": "unreachable",
+                    "brokenAt": None,
+                    "error": str(e),
+                },
+            )
         # A152: use .get for "delegation" to handle partial results gracefully.
         delegation = result.get("delegation", [])
         broken = next((d.get("zone") for d in delegation if d.get("error")), None)
-        if span: span.set_attribute("trace.conclusion", result.get("conclusion", "unknown")); span.end()
+        if span:
+            span.set_attribute("trace.conclusion", result.get("conclusion", "unknown"))
+            span.end()
         logging_util.incr("traces")
-        self._send(200, {"domain": domain, "type": qtype_str, "delegation": delegation,
-                         "conclusion": result.get("conclusion", "unknown"), "brokenAt": broken})
+        self._send(
+            200,
+            {
+                "domain": domain,
+                "type": qtype_str,
+                "delegation": delegation,
+                "conclusion": result.get("conclusion", "unknown"),
+                "brokenAt": broken,
+            },
+        )
 
     def _route_baseline(self, query):
         """Historical baseline / drift (Workstream S #4): the server's memory layer — what a domain
@@ -1932,9 +2047,12 @@ class Handler(BaseHTTPRequestHandler):
         if rtype and rtype not in ("A", "AAAA", "CNAME", "NS", "MX", "TXT"):
             return self._json_error(400, "unsupported type")
         span = _OTEL_TRACER.start_span("server.baseline") if _OTEL_TRACER else None
-        if span: span.set_attribute("dns.domain", domain); span.set_attribute("dns.type", rtype or "any")
+        if span:
+            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.type", rtype or "any")
         result = passivedns.baseline(domain, rtype)
-        if span: span.end()
+        if span:
+            span.end()
         logging_util.incr("baselines")
         self._send(200, result)
 
@@ -1949,9 +2067,11 @@ class Handler(BaseHTTPRequestHandler):
         # A145: apply the per-route rate limit defined in config.py (5/min by default),
         # not the generic 30/s bucket. The exposure route sends outbound probes from the
         # Syxx host, so the tighter limit prevents abuse as a reflector.
-        if not ratelimit.allow("exposure:" + self._rate_key(ent),
-                               capacity=config.EXPOSURE_RATE_CAPACITY,
-                               refill_millis=config.EXPOSURE_RATE_REFILL_MILLIS):
+        if not ratelimit.allow(
+            "exposure:" + self._rate_key(ent),
+            capacity=config.EXPOSURE_RATE_CAPACITY,
+            refill_millis=config.EXPOSURE_RATE_REFILL_MILLIS,
+        ):
             return self._json_error(429, "exposure check limit exceeded")
         ip = self._client_ip()
         try:
@@ -1959,11 +2079,19 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return self._json_error(400, "no usable source address")
         if addr.version != 4 or addr.is_private or addr.is_loopback or addr.is_reserved:
-            return self._send(200, {"ip": ip, "reachable": False, "openResolver": False,
-                                    "assessment": "not-applicable",
-                                    "detail": "source is not a public IPv4 address; nothing to test from outside"})
+            return self._send(
+                200,
+                {
+                    "ip": ip,
+                    "reachable": False,
+                    "openResolver": False,
+                    "assessment": "not-applicable",
+                    "detail": "source is not a public IPv4 address; nothing to test from outside",
+                },
+            )
         span = _OTEL_TRACER.start_span("server.exposure") if _OTEL_TRACER else None
-        if span: span.set_attribute("exposure.ip", ip)
+        if span:
+            span.set_attribute("exposure.ip", ip)
         logging_util.incr("exposure_checks")
         assessment = "inconclusive"
         recursive = False
@@ -1975,20 +2103,34 @@ class Handler(BaseHTTPRequestHandler):
                 assessment = "closed"
         except (resolver.DNSError, OSError):
             assessment = "inconclusive"
-        if span: span.set_attribute("exposure.assessment", assessment); span.end()
+        if span:
+            span.set_attribute("exposure.assessment", assessment)
+            span.end()
         detail = {
-            "open-resolver": ("your public IP answered a recursive query from the internet — it is an OPEN "
-                              "RESOLVER, reachable from the WAN and abusable as a DDoS reflector; disable "
-                              "recursion for external clients"),
-            "closed": ("your public IP is reachable on port 53 from the internet but refused to answer a "
-                       "recursive query, so it is not acting as an open resolver"),
-            "inconclusive": ("we could not get an answer from your public IP, so we cannot tell whether it "
-                             "is an open resolver; this is not proof that it is closed"),
+            "open-resolver": (
+                "your public IP answered a recursive query from the internet — it is an OPEN "
+                "RESOLVER, reachable from the WAN and abusable as a DDoS reflector; disable "
+                "recursion for external clients"
+            ),
+            "closed": (
+                "your public IP is reachable on port 53 from the internet but refused to answer a "
+                "recursive query, so it is not acting as an open resolver"
+            ),
+            "inconclusive": (
+                "we could not get an answer from your public IP, so we cannot tell whether it "
+                "is an open resolver; this is not proof that it is closed"
+            ),
         }[assessment]
-        self._send(200, {
-            "ip": ip, "reachable": recursive, "openResolver": recursive,
-            "assessment": assessment, "detail": detail,
-        })
+        self._send(
+            200,
+            {
+                "ip": ip,
+                "reachable": recursive,
+                "openResolver": recursive,
+                "assessment": assessment,
+                "detail": detail,
+            },
+        )
 
     def _route_passive(self, query):
         ent, ok = self._require(query, config.ENFORCE_WEB)
@@ -2009,13 +2151,15 @@ class Handler(BaseHTTPRequestHandler):
         ent, ok = self._require(query, config.ENFORCE_WEB)
         if not ok or not self._rate_ok(ent):
             return
-        zone = (query.get("zone", [None])[0])
+        zone = query.get("zone", [None])[0]
         span = _OTEL_TRACER.start_span("server.leak_token") if _OTEL_TRACER else None
-        if span: span.set_attribute("leak.zone", zone or "")
+        if span:
+            span.set_attribute("leak.zone", zone or "")
         # A133: mark paid tokens with origin='license' so the free route cannot
         # serve them. The free route checks origin and refuses non-'ip' tokens.
         result = leak.issue_token(ent.subject, zone, origin="license")
-        if span: span.end()
+        if span:
+            span.end()
         self._send(200, result)
 
     def _route_leak_verify(self, query):
@@ -2026,9 +2170,11 @@ class Handler(BaseHTTPRequestHandler):
         if not token:
             return self._json_error(400, "missing token")
         span = _OTEL_TRACER.start_span("server.leak_verify") if _OTEL_TRACER else None
-        if span: span.set_attribute("leak.token_prefix", token[:8] if len(token) > 8 else token)
+        if span:
+            span.set_attribute("leak.token_prefix", token[:8] if len(token) > 8 else token)
         result, label = leak.verify(token, ent.subject)
-        if span: span.end()
+        if span:
+            span.end()
         if result is None:
             return self._json_error(404, label)
         self._send(200, result)
@@ -2054,7 +2200,10 @@ class Handler(BaseHTTPRequestHandler):
         span = _OTEL_TRACER.start_span("server.leaktest_start") if _OTEL_TRACER else None
         client_ip = self._client_ip()
         zone = config.LEAK_ZONES[0] if config.LEAK_ZONES else "leak.syxx.app"
-        if span: span.set_attribute("leak.client_ip", client_ip); span.set_attribute("leak.zone", zone); span.end()
+        if span:
+            span.set_attribute("leak.client_ip", client_ip)
+            span.set_attribute("leak.zone", zone)
+            span.end()
         result = leak.issue_token(client_ip, zone)
         self._send(200, result)
 
@@ -2075,12 +2224,14 @@ class Handler(BaseHTTPRequestHandler):
         if rec and rec.get("origin", "ip") != "ip":
             return self._json_error(403, "token not issued by this endpoint")
         span = _OTEL_TRACER.start_span("server.leaktest_check") if _OTEL_TRACER else None
-        if span: span.set_attribute("leak.token_prefix", token[:8] if len(token) > 8 else token)
+        if span:
+            span.set_attribute("leak.token_prefix", token[:8] if len(token) > 8 else token)
         client_ip = self._client_ip()
         result, label = leak.verify(token, client_ip, allow_any_subject=True)
         if result is None:
             return self._json_error(404, label)
-        if span: span.end()
+        if span:
+            span.end()
         self._send(200, result)
         # A133: never consume() from an unauthenticated route. Destructive state
         # changes must be gated on authentication. The paid route (_route_leak_verify)
@@ -2100,10 +2251,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "invalid domain format")
 
         type_str = (query.get("type", ["A"])[0]).strip().upper()
-        type_map = {"A": resolver.TYPE_A, "AAAA": resolver.TYPE_AAAA, "NS": resolver.TYPE_NS,
-                    "CNAME": resolver.TYPE_CNAME, "SOA": resolver.TYPE_SOA, "MX": resolver.TYPE_MX,
-                    "TXT": resolver.TYPE_TXT, "CAA": resolver.TYPE_CAA, "PTR": resolver.TYPE_PTR,
-                    "SRV": resolver.TYPE_SRV}
+        type_map = {
+            "A": resolver.TYPE_A,
+            "AAAA": resolver.TYPE_AAAA,
+            "NS": resolver.TYPE_NS,
+            "CNAME": resolver.TYPE_CNAME,
+            "SOA": resolver.TYPE_SOA,
+            "MX": resolver.TYPE_MX,
+            "TXT": resolver.TYPE_TXT,
+            "CAA": resolver.TYPE_CAA,
+            "PTR": resolver.TYPE_PTR,
+            "SRV": resolver.TYPE_SRV,
+        }
         qtype = type_map.get(type_str)
         if qtype is None:
             return self._json_error(400, "unsupported record type")
@@ -2116,22 +2275,26 @@ class Handler(BaseHTTPRequestHandler):
         if server not in config.PUBLIC_RESOLVERS:
             return self._json_error(400, "server must be in the allowed resolver list")
 
-        rcode_names = {0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN",
-                       4: "NOTIMP", 5: "REFUSED"}
+        rcode_names = {0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN", 4: "NOTIMP", 5: "REFUSED"}
         try:
             result = resolver.query(domain, qtype, server, timeout=config.INVESTIGATE_TIMEOUT)
         except resolver.DNSError as e:
-            return self._json_error(502, "DNS query failed: %s" % e)
+            return self._json_error(502, f"DNS query failed: {e}")
 
         logging_util.incr("lookups")
-        self._send(200, {
-            "domain": domain, "type": type_str, "server": server,
-            "rcode": result.get("rcode", -1),
-            "rcodeName": rcode_names.get(result.get("rcode", -1), "UNKNOWN"),
-            "ad": result.get("ad", False),
-            "records": result.get("records", []),
-            "truncated": result.get("truncated", False),
-        })
+        self._send(
+            200,
+            {
+                "domain": domain,
+                "type": type_str,
+                "server": server,
+                "rcode": result.get("rcode", -1),
+                "rcodeName": rcode_names.get(result.get("rcode", -1), "UNKNOWN"),
+                "ad": result.get("ad", False),
+                "records": result.get("records", []),
+                "truncated": result.get("truncated", False),
+            },
+        )
 
     def _route_reverse_dns(self, query):
         """Free-tier reverse DNS lookup. Converts IP to arpa name and queries PTR."""
@@ -2147,19 +2310,22 @@ class Handler(BaseHTTPRequestHandler):
 
         server = config.PUBLIC_RESOLVERS[0] if config.PUBLIC_RESOLVERS else "1.1.1.1"
         try:
-            result = resolver.query(arpa, resolver.TYPE_PTR, server,
-                                    timeout=config.INVESTIGATE_TIMEOUT)
+            result = resolver.query(arpa, resolver.TYPE_PTR, server, timeout=config.INVESTIGATE_TIMEOUT)
         except resolver.DNSError as e:
-            return self._json_error(502, "reverse DNS query failed: %s" % e)
+            return self._json_error(502, f"reverse DNS query failed: {e}")
 
         ptr_records = [r["value"] for r in result.get("records", []) if r["type"] == "PTR"]
         logging_util.incr("reverse_dns_lookups")
-        self._send(200, {
-            "ip": ip_str, "arpa": arpa,
-            "ptr": ptr_records[0] if ptr_records else None,
-            "allPtr": ptr_records,
-            "rcode": result.get("rcode", -1),
-        })
+        self._send(
+            200,
+            {
+                "ip": ip_str,
+                "arpa": arpa,
+                "ptr": ptr_records[0] if ptr_records else None,
+                "allPtr": ptr_records,
+                "rcode": result.get("rcode", -1),
+            },
+        )
 
     def _route_benchmark(self, query):
         """Free-tier DNS benchmark: time resolution across public resolvers."""
@@ -2170,8 +2336,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "missing or invalid domain")
 
         type_str = (query.get("type", ["A"])[0]).strip().upper()
-        type_map = {"A": resolver.TYPE_A, "AAAA": resolver.TYPE_AAAA, "NS": resolver.TYPE_NS,
-                    "MX": resolver.TYPE_MX, "TXT": resolver.TYPE_TXT, "CNAME": resolver.TYPE_CNAME}
+        type_map = {
+            "A": resolver.TYPE_A,
+            "AAAA": resolver.TYPE_AAAA,
+            "NS": resolver.TYPE_NS,
+            "MX": resolver.TYPE_MX,
+            "TXT": resolver.TYPE_TXT,
+            "CNAME": resolver.TYPE_CNAME,
+        }
         qtype = type_map.get(type_str, resolver.TYPE_A)
 
         try:
@@ -2180,8 +2352,11 @@ class Handler(BaseHTTPRequestHandler):
             rounds = 3
 
         resolver_labels = {
-            "1.1.1.1": "Cloudflare", "8.8.8.8": "Google", "9.9.9.9": "Quad9",
-            "208.67.222.222": "OpenDNS", "64.6.64.6": "Verisign",
+            "1.1.1.1": "Cloudflare",
+            "8.8.8.8": "Google",
+            "9.9.9.9": "Quad9",
+            "208.67.222.222": "OpenDNS",
+            "64.6.64.6": "Verisign",
         }
         servers = config.PUBLIC_RESOLVERS[:6]
         results_by_server = {}
@@ -2207,17 +2382,23 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     result = resolver.query(domain, qtype, server, timeout=query_timeout)
                     elapsed = (time.monotonic() - t0) * 1000
-                    entries.append({
-                        "time_ms": round(elapsed, 2),
-                        "rcode": result.get("rcode", -1),
-                        "recordCount": len(result.get("records", [])),
-                    })
+                    entries.append(
+                        {
+                            "time_ms": round(elapsed, 2),
+                            "rcode": result.get("rcode", -1),
+                            "recordCount": len(result.get("records", [])),
+                        }
+                    )
                 except resolver.DNSError as e:
                     elapsed = (time.monotonic() - t0) * 1000
-                    entries.append({
-                        "time_ms": round(elapsed, 2),
-                        "rcode": -1, "error": str(e), "recordCount": 0,
-                    })
+                    entries.append(
+                        {
+                            "time_ms": round(elapsed, 2),
+                            "rcode": -1,
+                            "error": str(e),
+                            "recordCount": 0,
+                        }
+                    )
             # A135: if we broke out of the inner loop due to deadline, mark truncation
             if len(entries) < rounds:
                 truncated = True
@@ -2233,19 +2414,23 @@ class Handler(BaseHTTPRequestHandler):
             }
 
         resolver_list = list(results_by_server.values())
-        ranked = sorted([r for r in resolver_list if r["avg_ms"] is not None],
-                        key=lambda r: r["avg_ms"])
+        ranked = sorted([r for r in resolver_list if r["avg_ms"] is not None], key=lambda r: r["avg_ms"])
         logging_util.incr("benchmarks")
-        self._send(200, {
-            "domain": domain, "type": type_str, "rounds": rounds,
-            "resolvers": resolver_list,
-            "fastest": ranked[0]["server"] if ranked else None,
-            "slowest": ranked[-1]["server"] if ranked else None,
-            # A135: report truncation honestly so clients know results are partial
-            "truncated": truncated,
-            "serversTested": len(results_by_server),
-            "serversRequested": len(servers),
-        })
+        self._send(
+            200,
+            {
+                "domain": domain,
+                "type": type_str,
+                "rounds": rounds,
+                "resolvers": resolver_list,
+                "fastest": ranked[0]["server"] if ranked else None,
+                "slowest": ranked[-1]["server"] if ranked else None,
+                # A135: report truncation honestly so clients know results are partial
+                "truncated": truncated,
+                "serversTested": len(results_by_server),
+                "serversRequested": len(servers),
+            },
+        )
 
     def _route_whois(self, query):
         """Free-tier WHOIS/RDAP lookup. Rate-limited per IP, no entitlement required.
@@ -2260,7 +2445,7 @@ class Handler(BaseHTTPRequestHandler):
             result = whois_lookup.lookup(domain)
         except Exception as e:
             logging_util.error("whois_failed", domain=domain, err=str(e))
-            return self._json_error(502, "WHOIS lookup failed: %s" % e)
+            return self._json_error(502, f"WHOIS lookup failed: {e}")
         logging_util.incr("whois_lookups")
         self._send(200, result)
 
@@ -2275,8 +2460,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "invalid or missing domain")
 
         type_str = (query.get("type", ["A"])[0]).strip().upper()
-        type_map = {"A": resolver.TYPE_A, "AAAA": resolver.TYPE_AAAA, "NS": resolver.TYPE_NS,
-                    "MX": resolver.TYPE_MX, "TXT": resolver.TYPE_TXT, "CNAME": resolver.TYPE_CNAME}
+        type_map = {
+            "A": resolver.TYPE_A,
+            "AAAA": resolver.TYPE_AAAA,
+            "NS": resolver.TYPE_NS,
+            "MX": resolver.TYPE_MX,
+            "TXT": resolver.TYPE_TXT,
+            "CNAME": resolver.TYPE_CNAME,
+        }
         qtype = type_map.get(type_str)
         if qtype is None:
             return self._json_error(400, "unsupported record type")
@@ -2289,20 +2480,27 @@ class Handler(BaseHTTPRequestHandler):
                 result = resolver.query(domain, qtype, entry["ip"], timeout=4)
                 elapsed = (time.monotonic() - t0) * 1000
                 return {
-                    "server": entry["ip"], "label": entry["label"], "region": entry["region"],
-                    "status": "ok", "records": result.get("records", []),
+                    "server": entry["ip"],
+                    "label": entry["label"],
+                    "region": entry["region"],
+                    "status": "ok",
+                    "records": result.get("records", []),
                     "time_ms": round(elapsed, 1),
                 }
             except resolver.DNSError as e:
                 elapsed = (time.monotonic() - t0) * 1000
                 return {
-                    "server": entry["ip"], "label": entry["label"], "region": entry["region"],
-                    "status": "error", "error": str(e), "time_ms": round(elapsed, 1),
+                    "server": entry["ip"],
+                    "label": entry["label"],
+                    "region": entry["region"],
+                    "status": "error",
+                    "error": str(e),
+                    "time_ms": round(elapsed, 1),
                 }
 
         # A136: use the module-level shared pool instead of per-request creation.
         # Cap resolvers per request to stay within the shared pool budget.
-        resolvers_to_use = resolvers[:_PROPAGATION_POOL._max_workers]
+        resolvers_to_use = resolvers[: _PROPAGATION_POOL._max_workers]
         futures = [_PROPAGATION_POOL.submit(query_one, r) for r in resolvers_to_use]
         results = []
         try:
@@ -2339,15 +2537,19 @@ class Handler(BaseHTTPRequestHandler):
             consensus = "divergent"
 
         logging_util.incr("propagation_checks")
-        self._send(200, {
-            "domain": domain, "type": type_str,
-            "resolvers": sorted(results, key=lambda r: r["label"]),
-            "consensus": consensus,
-            "uniqueValues": sorted(all_values),
-            "totalResolvers": total,
-            "successCount": success_count,
-            "propagationPct": propagation_pct,
-        })
+        self._send(
+            200,
+            {
+                "domain": domain,
+                "type": type_str,
+                "resolvers": sorted(results, key=lambda r: r["label"]),
+                "consensus": consensus,
+                "uniqueValues": sorted(all_values),
+                "totalResolvers": total,
+                "successCount": success_count,
+                "propagationPct": propagation_pct,
+            },
+        )
 
     def _route_email_auth(self, query):
         """Free-tier SPF/DMARC/DKIM email authentication checker. Rate-limited per IP."""
@@ -2361,7 +2563,7 @@ class Handler(BaseHTTPRequestHandler):
             result = email_auth.check(domain, dkim_selector=dkim_selector)
         except Exception as e:
             logging_util.error("email_auth_failed", domain=domain, err=str(e))
-            return self._json_error(502, "email auth check failed: %s" % e)
+            return self._json_error(502, f"email auth check failed: {e}")
         logging_util.incr("email_auth_checks")
         self._send(200, result)
 
@@ -2376,7 +2578,7 @@ class Handler(BaseHTTPRequestHandler):
             result = subdomain_enum.enumerate(domain)
         except Exception as e:
             logging_util.error("subdomain_enum_failed", domain=domain, err=str(e))
-            return self._json_error(502, "subdomain enumeration failed: %s" % e)
+            return self._json_error(502, f"subdomain enumeration failed: {e}")
         logging_util.incr("subdomain_enumerations")
         self._send(200, result)
 
@@ -2399,7 +2601,7 @@ class Handler(BaseHTTPRequestHandler):
             result = firewall_test.test(resolver_ip)
         except Exception as e:
             logging_util.error("firewall_test_failed", resolver=resolver_ip, err=str(e))
-            return self._json_error(502, "firewall test failed: %s" % e)
+            return self._json_error(502, f"firewall test failed: {e}")
         logging_util.incr("firewall_tests")
         self._send(200, result)
 
@@ -2432,8 +2634,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "ttlDays must be an integer between 1 and 365")
         key = db.api_key_create(ent.subject, label=label, ttl_days=ttl)
         logging_util.incr("api_keys_created")
-        self._send(201, {"key": key, "label": label, "expiresInDays": ttl,
-                         "warning": "store this key now; it will not be shown again"})
+        self._send(
+            201,
+            {
+                "key": key,
+                "label": label,
+                "expiresInDays": ttl,
+                "warning": "store this key now; it will not be shown again",
+            },
+        )
 
     def _route_list_api_keys(self, query):
         """GET /api/keys — list all API keys for the authenticated user."""
@@ -2485,7 +2694,7 @@ class Handler(BaseHTTPRequestHandler):
             result = bulk_investigate.investigate_all(domains)
         except Exception as e:
             logging_util.error("bulk_investigate_failed", err=str(e))
-            return self._json_error(502, "bulk investigation failed: %s" % e)
+            return self._json_error(502, f"bulk investigation failed: {e}")
         logging_util.incr("bulk_investigations")
         self._send(200, result)
 
@@ -2520,7 +2729,7 @@ class Handler(BaseHTTPRequestHandler):
             result = lookalike.scan(domain, max_permutations=max_perm)
         except Exception as e:
             logging_util.error("lookalike_failed", domain=domain, err=str(e))
-            return self._json_error(502, "lookalike scan failed: %s" % e)
+            return self._json_error(502, f"lookalike scan failed: {e}")
         logging_util.incr("lookalike_scans")
         self._send(200, result)
 
@@ -2566,13 +2775,16 @@ class Handler(BaseHTTPRequestHandler):
         monitor_id = str(uuid.uuid4())
         db.monitor_create(monitor_id, ent.subject, domain, checks, interval_hours, notify_email)
         logging_util.incr("monitors_created")
-        self._send(201, {
-            "id": monitor_id,
-            "domain": domain,
-            "checks": checks,
-            "interval_hours": interval_hours,
-            "notify_email": notify_email,
-        })
+        self._send(
+            201,
+            {
+                "id": monitor_id,
+                "domain": domain,
+                "checks": checks,
+                "interval_hours": interval_hours,
+                "notify_email": notify_email,
+            },
+        )
 
     def _route_dnssec(self, query):
         """Free-tier DNSSEC chain validator. Walks root→TLD→domain verifying DS/DNSKEY/RRSIG."""
@@ -2587,7 +2799,7 @@ class Handler(BaseHTTPRequestHandler):
             result = dnssec_validator.validate_chain(domain)
         except Exception as e:
             logging_util.error("dnssec_validation_failed", domain=domain, err=str(e))
-            return self._json_error(502, "DNSSEC validation failed: %s" % e)
+            return self._json_error(502, f"DNSSEC validation failed: {e}")
         logging_util.incr("dnssec_validations")
         self._send(200, result)
 
@@ -2666,8 +2878,18 @@ class Handler(BaseHTTPRequestHandler):
 
     # Name→number for the JSON convenience format's ?type=. Small on purpose: the wireformat path
     # carries any type; JSON is a convenience for the common ones. A numeric ?type= is also accepted.
-    _DOH_JSON_TYPES = {"A": 1, "NS": 2, "CNAME": 5, "SOA": 6, "PTR": 12, "MX": 15,
-                       "TXT": 16, "AAAA": 28, "SRV": 33, "HTTPS": 65}
+    _DOH_JSON_TYPES = {
+        "A": 1,
+        "NS": 2,
+        "CNAME": 5,
+        "SOA": 6,
+        "PTR": 12,
+        "MX": 15,
+        "TXT": 16,
+        "AAAA": 28,
+        "SRV": 33,
+        "HTTPS": 65,
+    }
 
     def _doh_respond_json(self, query):
         name = (query.get("name", [""])[0]).strip()
@@ -2677,7 +2899,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 qtype = int(type_param)
             except ValueError:
-                return self._json_error(400, "unknown type %r" % type_param)
+                return self._json_error(400, f"unknown type {type_param!r}")
         # A124: iterate ALL configured resolvers (not just [0]) so a single poisoned
         # resolver cannot dictate the answer. Collect answers from each and apply
         # 2-of-3 corroboration before returning, matching the wireformat path's
@@ -2689,28 +2911,30 @@ class Handler(BaseHTTPRequestHandler):
         last_error = None
         for server in servers:
             try:
-                parsed = resolver.query(name, qtype, server,
-                                        timeout=config.DOH_UPSTREAM_TIMEOUT)
+                parsed = resolver.query(name, qtype, server, timeout=config.DOH_UPSTREAM_TIMEOUT)
                 parsed_results.append(parsed)
             except resolver.DNSError as e:
                 last_error = e
-                logging_util.warn("doh_json_upstream_failed", name=name,
-                                  server=server, err=str(e))
+                logging_util.warn("doh_json_upstream_failed", name=name, server=server, err=str(e))
                 continue
         if not parsed_results:
             # All upstreams failed. Emit Google-JSON Status:2 (SERVFAIL) under HTTP 200 —
             # never Status:0 with empty answers (a fake clean). Wireformat keeps HTTP 502
             # because an empty dns-message body would look like a truncated success.
-            logging_util.warn("doh_json_all_upstreams_failed", name=name,
-                              err=str(last_error) if last_error else "unknown")
-            return self._send(200, {
-                "Status": 2,
-                "TC": False,
-                "RD": True,
-                "AD": False,
-                "Question": [{"name": name, "type": qtype}],
-                "Comment": "upstream query failed",
-            })
+            logging_util.warn(
+                "doh_json_all_upstreams_failed", name=name, err=str(last_error) if last_error else "unknown"
+            )
+            return self._send(
+                200,
+                {
+                    "Status": 2,
+                    "TC": False,
+                    "RD": True,
+                    "AD": False,
+                    "Question": [{"name": name, "type": qtype}],
+                    "Comment": "upstream query failed",
+                },
+            )
         # Use the first successful result; with corroboration, if multiple resolvers
         # returned results, prefer the answer set confirmed by >=2 vantages.
         chosen = parsed_results[0]
@@ -2719,23 +2943,18 @@ class Handler(BaseHTTPRequestHandler):
             # to match the record's "type" field (which is the formatted string name).
             answer_sets = []
             for p in parsed_results:
-                aset = frozenset(
-                    str(r["value"]).lower()
-                    for r in p.get("records", [])
-                    if r.get("type") == type_param
-                )
+                aset = frozenset(str(r["value"]).lower() for r in p.get("records", []) if r.get("type") == type_param)
                 answer_sets.append(aset)
             # Pick the answer set that appears most often (>=2 agreement preferred).
             from collections import Counter
+
             counts = Counter(answer_sets)
             best_set, best_count = counts.most_common(1)[0]
             if best_count >= 2:
                 # Find the parsed result matching the corroborated set.
                 for p in parsed_results:
                     pset = frozenset(
-                        str(r["value"]).lower()
-                        for r in p.get("records", [])
-                        if r.get("type") == type_param
+                        str(r["value"]).lower() for r in p.get("records", []) if r.get("type") == type_param
                     )
                     if pset == best_set:
                         chosen = p
@@ -2743,16 +2962,18 @@ class Handler(BaseHTTPRequestHandler):
         # The parser returns {rcode, truncated, ad, records:[{type,value}]} — no TTL is captured, so
         # the JSON omits it rather than fabricate one. `ad` is the only DNSSEC signal we actually
         # observed; RA/CD are not measured, so they are not claimed.
-        answers = [{"name": name, "type": qtype, "data": r["value"]}
-                   for r in chosen.get("records", [])]
-        self._send(200, {
-            "Status": chosen.get("rcode", 0),
-            "TC": chosen.get("truncated", False),
-            "RD": True,
-            "AD": chosen.get("ad", False),
-            "Question": [{"name": name, "type": qtype}],
-            "Answer": answers,
-        })
+        answers = [{"name": name, "type": qtype, "data": r["value"]} for r in chosen.get("records", [])]
+        self._send(
+            200,
+            {
+                "Status": chosen.get("rcode", 0),
+                "TC": chosen.get("truncated", False),
+                "RD": True,
+                "AD": chosen.get("ad", False),
+                "Question": [{"name": name, "type": qtype}],
+                "Answer": answers,
+            },
+        )
 
 
 def _start_purge_thread():
@@ -2781,8 +3002,7 @@ _BETA_ACK_TEMPLATE = os.path.join(os.path.dirname(__file__), "emails", "beta_ack
 
 # Bounded thread pool for beta confirmation emails so a deluge of signups
 # doesn't exhaust OS thread resources (SRV-034).
-_beta_mail_pool = concurrent.futures.ThreadPoolExecutor(
-    max_workers=4, thread_name_prefix="beta-confirm")
+_beta_mail_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="beta-confirm")
 
 
 def _beta_ack_html():
@@ -2810,8 +3030,7 @@ def _send_beta_confirmation(email, interests):
         "— The MilkandGin team"
     )
     html = _beta_ack_html()
-    _beta_mail_pool.submit(mailer.send, email, "You're on the beta list — Nnyx & Zzyn",
-                           body=text, html=html)
+    _beta_mail_pool.submit(mailer.send, email, "You're on the beta list — Nnyx & Zzyn", body=text, html=html)
 
 
 def _csv_safe(cell):
@@ -2835,8 +3054,7 @@ def _beta_digest_csv(rows):
 
     def _iso(ts):
         try:
-            return datetime.datetime.fromtimestamp(
-                int(ts), datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            return datetime.datetime.fromtimestamp(int(ts), datetime.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
         except (TypeError, ValueError):
             return ""
 
@@ -2854,9 +3072,15 @@ def _beta_digest_csv(rows):
     w = csv.writer(buf)
     w.writerow(["email", "interests", "signed_up", "updated", "ip"])
     for r in rows:
-        w.writerow([_csv_safe(r["email"]), _csv_safe(r["interests"]),
-                    _csv_safe(_iso(r["created_at"])), _csv_safe(_iso(r["updated_at"])),
-                    _ip(r.get("ip"))])
+        w.writerow(
+            [
+                _csv_safe(r["email"]),
+                _csv_safe(r["interests"]),
+                _csv_safe(_iso(r["created_at"])),
+                _csv_safe(_iso(r["updated_at"])),
+                _ip(r.get("ip")),
+            ]
+        )
     return buf.getvalue().encode("utf-8")
 
 
@@ -2869,8 +3093,7 @@ def _start_beta_digest_thread():
     import time as _time
 
     if not (mailer.enabled() and config.BETA_DIGEST_TO):
-        logging_util.info("beta_digest_disabled",
-                          smtp=mailer.enabled(), recipient=bool(config.BETA_DIGEST_TO))
+        logging_util.info("beta_digest_disabled", smtp=mailer.enabled(), recipient=bool(config.BETA_DIGEST_TO))
         return
 
     interval = max(1, config.BETA_DIGEST_INTERVAL_DAYS) * 86400
@@ -2878,7 +3101,7 @@ def _start_beta_digest_thread():
     def _send_if_due(now):
         last = db.kv_get("beta_digest_last_sent")
         if last is None:
-            db.kv_set("beta_digest_last_sent", str(now))   # seed; first digest one interval later
+            db.kv_set("beta_digest_last_sent", str(now))  # seed; first digest one interval later
             return
         if (now - int(last)) < interval:
             return
@@ -2887,30 +3110,30 @@ def _start_beta_digest_thread():
             db.kv_set("beta_digest_last_sent", str(now))
             logging_util.info("beta_digest_skipped", reason="no_signups")
             return
-        stamp = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%d")
+        stamp = datetime.datetime.fromtimestamp(now, datetime.UTC).strftime("%Y-%m-%d")
         ok = mailer.send(
             config.BETA_DIGEST_TO,
-            "Syxx beta signups — weekly digest (%s)" % stamp,
+            f"Syxx beta signups — weekly digest ({stamp})",
             "Attached: %d beta signup(s) as of %s UTC.\n\n"
             "Automated weekly export from the Syxx server." % (len(rows), stamp),
-            attachments=[("syxx-beta-signups-%s.csv" % stamp, "text/csv", _beta_digest_csv(rows))],
+            attachments=[(f"syxx-beta-signups-{stamp}.csv", "text/csv", _beta_digest_csv(rows))],
         )
         if ok:
             db.kv_set("beta_digest_last_sent", str(now))
             logging_util.info("beta_digest_sent", count=len(rows))
         else:
-            logging_util.error("beta_digest_failed", count=len(rows))   # left un-stamped → retry next tick
+            logging_util.error("beta_digest_failed", count=len(rows))  # left un-stamped → retry next tick
 
     def _loop():
         while True:
-            _time.sleep(3600)   # check hourly; the interval gate is by timestamp, not sleep length
+            _time.sleep(3600)  # check hourly; the interval gate is by timestamp, not sleep length
             try:
                 _send_if_due(int(_time.time()))
             except Exception as e:
                 logging_util.error("beta_digest_loop_error", err=str(e))
 
     try:
-        _send_if_due(int(_time.time()))   # seed last_sent (or catch up) at startup
+        _send_if_due(int(_time.time()))  # seed last_sent (or catch up) at startup
     except Exception as e:
         logging_util.error("beta_digest_loop_error", err=str(e))
     threading.Thread(target=_loop, name="syxx-beta-digest", daemon=True).start()
@@ -2937,6 +3160,7 @@ def serve():
     httpd.timeout = config.HTTP_REQUEST_TIMEOUT
     if config.TLS_CERT and config.TLS_KEY:
         import ssl
+
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(config.TLS_CERT, config.TLS_KEY)
         httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)

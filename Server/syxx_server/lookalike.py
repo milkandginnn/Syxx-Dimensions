@@ -7,20 +7,30 @@ impersonation targets.
 
 import string
 
-from . import resolver, config
+from . import config, resolver
 
 # Common homoglyph substitutions (single char or short sequence → replacement).
 HOMOGLYPH_MAP = {
-    "o": "0", "0": "o",
-    "l": "1", "1": "l",
-    "i": "1", "1": "i",
-    "s": "5", "5": "s",
-    "e": "3", "3": "e",
-    "a": "4", "4": "a",
-    "b": "d", "d": "b",
-    "m": "rn", "rn": "m",
-    "u": "v", "v": "u",
-    "w": "vv", "vv": "w",
+    "o": "0",
+    "0": "o",
+    "l": "1",
+    "1": "l",
+    "i": "1",
+    "1": "i",
+    "s": "5",
+    "5": "s",
+    "e": "3",
+    "3": "e",
+    "a": "4",
+    "4": "a",
+    "b": "d",
+    "d": "b",
+    "m": "rn",
+    "rn": "m",
+    "u": "v",
+    "v": "u",
+    "w": "vv",
+    "vv": "w",
 }
 
 # Common TLD alternatives for .com substitutions.
@@ -38,7 +48,7 @@ def _split_domain(domain):
 def _omit(label):
     """Yield variants with one character removed at each position."""
     for i in range(len(label)):
-        v = label[:i] + label[i + 1:]
+        v = label[:i] + label[i + 1 :]
         if v:
             yield v, "omission"
 
@@ -49,7 +59,7 @@ def _substitute(label):
     for i, ch in enumerate(label):
         repl = HOMOGLYPH_MAP.get(ch)
         if repl and repl != ch:
-            v = label[:i] + repl + label[i + 1:]
+            v = label[:i] + repl + label[i + 1 :]
             if v not in seen:
                 seen.add(v)
                 yield v, "substitution"
@@ -59,7 +69,7 @@ def _insert(label):
     """Yield variants with one adjacent character duplicated."""
     for i, ch in enumerate(label):
         if ch in string.ascii_letters:
-            v = label[:i] + ch + ch + label[i + 1:]
+            v = label[:i] + ch + ch + label[i + 1 :]
             yield v, "insertion"
 
 
@@ -67,7 +77,7 @@ def _transpose(label):
     """Yield variants with adjacent characters swapped."""
     seen = set()
     for i in range(len(label) - 1):
-        v = label[:i] + label[i + 1] + label[i] + label[i + 2:]
+        v = label[:i] + label[i + 1] + label[i] + label[i + 2 :]
         if v != label and v not in seen:
             seen.add(v)
             yield v, "transposition"
@@ -143,12 +153,14 @@ def scan(domain, max_permutations=200, timeout=10):
         resolves, ips = _check_resolution(fqdn, server, timeout)
         if resolves:
             resolving_count += 1
-        results.append({
-            "variant": fqdn,
-            "type": vtype,
-            "resolves": resolves,
-            "ips": ips,
-        })
+        results.append(
+            {
+                "variant": fqdn,
+                "type": vtype,
+                "resolves": resolves,
+                "ips": ips,
+            }
+        )
 
     return {
         "domain": domain,

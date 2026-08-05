@@ -13,6 +13,7 @@ client actually receives is verifiable exactly as spec §4 mandates:
 The route is driven through a lightweight double (no HTTP server); fetcher.fetch_ex is mocked
 so warp.build_manifest runs for real end-to-end.
 """
+
 import base64
 import json
 import os
@@ -32,13 +33,24 @@ BASE = "https://example.test/"
 class _Double:
     """Captures the route's output without an HTTP server. Pro-gate is bypassed (anonymous-ok);
     rate/audit/client-ip are stubbed."""
+
     def __init__(self):
         self.sent = {}
-    def _require(self, query, enforce): return None, True
-    def _rate_ok(self, ent): return True
-    def _client_ip(self): return "203.0.113.9"
-    def _send(self, status, body, *a, **k): self.sent = {"status": status, "body": body}
-    def _json_error(self, status, msg, *a, **k): self.sent = {"status": status, "error": msg}
+
+    def _require(self, query, enforce):
+        return None, True
+
+    def _rate_ok(self, ent):
+        return True
+
+    def _client_ip(self):
+        return "203.0.113.9"
+
+    def _send(self, status, body, *a, **k):
+        self.sent = {"status": status, "body": body}
+
+    def _json_error(self, status, msg, *a, **k):
+        self.sent = {"status": status, "error": msg}
 
 
 def _run_manifest(query, network):
@@ -46,6 +58,7 @@ def _run_manifest(query, network):
         if url not in network:
             raise fetcher.FetchError(f"no route to {url}")
         return network[url]
+
     d = _Double()
     with patch("syxx_server.fetcher.fetch_ex", side_effect=fx):
         with patch("syxx_server.db.audit", lambda *a, **k: None):
@@ -61,8 +74,10 @@ def _pubkey():
 class WarpManifestSignatureTests(unittest.TestCase):
     def setUp(self):
         self.html = b"<html><script src='/a.js'></script></html>"
-        self.net = {BASE: (self.html, "text/html", "", BASE),
-                    BASE + "a.js": (b"console.log(1)", "application/javascript", "", BASE + "a.js")}
+        self.net = {
+            BASE: (self.html, "text/html", "", BASE),
+            BASE + "a.js": (b"console.log(1)", "application/javascript", "", BASE + "a.js"),
+        }
 
     def test_detached_signature_verifies_over_the_base64_decoded_manifest(self):
         sent = _run_manifest({"url": [BASE], "nonce": ["nonce-01"]}, self.net)
@@ -70,14 +85,14 @@ class WarpManifestSignatureTests(unittest.TestCase):
         env = sent["body"]
         self.assertEqual(set(env), {"manifest_b64", "signature_ed25519", "key_id"})
 
-        manifest_bytes = base64.b64decode(env["manifest_b64"])   # standard base64
+        manifest_bytes = base64.b64decode(env["manifest_b64"])  # standard base64
         signature = base64.b64decode(env["signature_ed25519"])
         # Verify BEFORE parsing the JSON — exactly the client's mandated order.
         _pubkey().verify(signature, manifest_bytes)
 
         manifest = json.loads(manifest_bytes)
         self.assertEqual(manifest["warp_manifest_version"], "WARP_MANIFEST_V1")
-        self.assertEqual(manifest["nonce"], "nonce-01")   # echoed inside the signed bytes
+        self.assertEqual(manifest["nonce"], "nonce-01")  # echoed inside the signed bytes
 
     def test_one_byte_tamper_of_the_manifest_fails_verification(self):
         sent = _run_manifest({"url": [BASE]}, self.net)
@@ -110,7 +125,7 @@ class WarpManifestSignatureTests(unittest.TestCase):
         /api/pubkey — the label the corpus, client pinning, and client verifier all share."""
         sent = _run_manifest({"url": [BASE]}, self.net)
         env = sent["body"]
-        raw_pub = base64.b64decode(leak.collector_public_key())   # == /api/pubkey publicKey
+        raw_pub = base64.b64decode(leak.collector_public_key())  # == /api/pubkey publicKey
         self.assertEqual(len(raw_pub), 32)
         self.assertEqual(env["key_id"], raw_pub.hex())
         self.assertEqual(env["key_id"], env["key_id"].lower())

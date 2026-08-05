@@ -864,7 +864,7 @@ struct IoProgressRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color(white: 1, opacity: 0.08), lineWidth: lineWidth)
+                .stroke(Color(red: 148/255, green: 120/255, blue: 246/255).opacity(0.15), lineWidth: lineWidth)
 
             Circle()
                 .trim(from: 0.0, to: progress)

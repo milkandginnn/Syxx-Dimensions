@@ -8,7 +8,7 @@ usually right is worse than useless in this domain, because a user acts on its r
 
 | Document | Why |
 |----------|-----|
-| [`AGENTS.md`](AGENTS.md) | **Binding.** The authoritative rules. **Never edit it.** A PreToolUse hook blocks edits, and only the owner may change it. |
+| [`AGENTS.md`](../AGENTS.md) | **Binding.** The authoritative rules. **Never edit it.** A PreToolUse hook blocks edits, and only the owner may change it. |
 | [`PROJECT-STATE.md`](PROJECT-STATE.md) | Canonical current state. If what you are about to do contradicts it, stop and reconcile rather than freelance. |
 | [`REASONING-SYSTEM-DESIGN.md`](REASONING-SYSTEM-DESIGN.md) | How evidence flows from probe to conclusion. |
 | [`DELTAS.md`](../DELTAS.md), [`ROADMAP.md`](../ROADMAP.md), [`DESIGN.md`](DESIGN.md) | Open defects, status, and the functional map. |

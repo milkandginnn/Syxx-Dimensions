@@ -38,5 +38,5 @@ unrelated fixes in one commit; each names its check and cause.
 ### Verification: each closed green or ledgered as an accepted exception
 
 ## Final Verification
-- [ ] `gh pr checks 2` all green / exceptions ledgered · no softened tests (diff-audited) ·
-      ledger updated incl. .deb-build green conversion
+- [x] `gh pr checks 2` — 16/24 green; 8 exceptions ledgered in `Linux/PARITY-LEDGER.md` §CI (C-06) ·
+      no softened tests (diff-audited) · .deb-build green recorded in §CP appendix

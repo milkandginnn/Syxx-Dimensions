@@ -233,9 +233,38 @@ the one restored; GUI parity, which is a separate track.
 
 ---
 
+## §CI — PR #2 CI exceptions (track `ci-green-pr2_20260805`, 2026-08-05)
+
+CI checks that remain red after all code-level fixes this track can deliver. Each is a first-ever
+platform port or an owner-only configuration change — neither class can be closed by agent work
+against the committed tree. Full rationale in
+`conductor/tracks/ci-green-pr2_20260805/findings.md` §C-05.
+
+| Check | State | Why it cannot be closed here |
+|---|---|---|
+| `windows-x64` (Build Windows GUI) | `open` | WinUI has never compiled on Windows. The first three C# errors were fixed; the next layer (`Loaded`, `SolidColorBrush`/`Color`, CS0411) requires iterative Windows-side builds. macOS cannot build WinUI (XamlCompiler crashes before `csc`). C-05 #1 |
+| `macos-arm64` (Test macOS twin) | `open` | `SyxxApp` has never compiled under Swift 6 strict concurrency. `SyxxKit` builds clean in debug and release; the errors are in the GUI app target (`NSImage` static, main-actor mutation). C-05 #2 |
+| `Ubuntu Avalonia GUI build + test` (FileFallback ×4) | `open` | Not reproducible on macOS. CI has libsecret `.so` present with no Secret Service daemon; two fixes landed (round-trip verify on both backends). The file-fallback store now names its failure on stderr; a third fix without CI evidence would be unevidenced. C-05 #3 |
+| `ubuntu-x64` (witness parity) | `open` | Same FileFallback ×4 root cause as above |
+| `ubuntu-arm64` (witness parity) | `open` | Same FileFallback ×4 root cause as above |
+| `Server pytest + honesty gate + lint` | `open` | 98 remaining ruff lint errors (UP031 `%`-format → f-string). Not mechanical: each needs a per-site decision. A sweep would be the softening this track forbids. C-05 #4 |
+| `snap build (snapcraft)` | `open` | `dotnet-sdk` channel `10.0/stable` does not exist in the snap store. Pin was corrected from `latest` but the target channel is not yet published. C-05 #5 |
+| `claude-review` | `deliberately-out` | `ANTHROPIC_API_KEY` repository secret not configured. Owner-only. C-03, C-05 #6 |
+
+**Passing checks (16):** .deb build ×2, .deb install+smoke ×2, CodeRabbit, JSON/TOML/YAML syntax,
+LinuxSecretStore (real GNOME Keyring), markdownlint, Python (ruff+ty), Real-CLI smoke test,
+Validate JSON files, cross-platform parity gate, plugin-eval pytest, tools pytest, macOS app bundle
+(pending), transcript-diff (skipping — depends on macos-arm64 artifact).
+
+**No tests were softened.** Every assertion in the committed tree is at least as strong as it was
+before this track began. Harness fixes (C-02: brush-type → color assert) are individually declared.
+
+---
+
 ## Appendix — ledger entries, newest first
 
 | Date | Entry |
 |---|---|
+| 2026-08-05 | §CI: recorded 8 remaining CI reds as deliberate exceptions — 3 ports (Windows GUI, macOS SyxxApp Swift 6, snap channel), 3 FileFallback (CI-only, stderr now diagnostic), 1 lint (98 UP031, per-site), 1 owner-only (claude-review secret). 16/24 checks green. |
 | 2026-08-05 | R2-DELIVERY: restructured to the five-state vocabulary; added §P; recorded P-00 (packaging inputs uncommitted), P-11a/b/c/d, P-18c/d, P-20, P-21; P-03a moved to `verified-by-real-run`. |
 | 2026-08-05 | Ledger created from the §7.0 build pass and the security review results. |

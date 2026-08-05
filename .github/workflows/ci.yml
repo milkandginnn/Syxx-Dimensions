@@ -87,6 +87,26 @@ jobs:
         if: matrix.kind == 'dotnet' && runner.os == 'Linux'
         run: dotnet build Windows/Syxx.Linux.slnf -c Release
 
+      # G-04: assert the step above actually compiled the Avalonia GUI. It did not, from the
+      # day the projects were added until 2026-08-04: Syxx.Linux.slnf:8-9 lists both, but
+      # Windows/Syxx.sln carried no ProjectConfigurationPlatforms mapping for their GUIDs, so
+      # msbuild dropped them from the build and the step still exited 0. Proven by rebuilding
+      # the filter with -t:Rebuild and watching the Avalonia DLL keep its old timestamp while
+      # Syxx.Kit's advanced. A green solution build is therefore not evidence the GUI compiled
+      # — the output has to be looked at.
+      - name: Assert the solution filter built the Avalonia GUI (G-04)
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux'
+        run: |
+          missing=0
+          for dll in Linux/Ubuntu/SyxxUI.Avalonia/bin/Release/net10.0/Syxx.dll \
+                     Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin/Release/net10.0/SyxxUI.Avalonia.Tests.dll; do
+            if [ ! -f "$dll" ]; then
+              echo "::error title=G-04 regression::Syxx.Linux.slnf built green but produced no '$dll'. The solution build is skipping the Avalonia project again — check that both Avalonia GUIDs still have ProjectConfigurationPlatforms entries in Windows/Syxx.sln."
+              missing=1
+            fi
+          done
+          exit $missing
+
       # F043: Ubuntu witness parity tests. The three-platform witness parity harness
       # (corpus/witness-testify-parity/) defines three loaders: macOS, Windows, and Ubuntu.
       # The Ubuntu leg (SyxxUI.Avalonia.Tests) is in Syxx.Linux.slnf but was never executed
@@ -310,10 +330,17 @@ jobs:
 
   # ----------------------------------------------------------- Linux GUI lane
   # Ubuntu ships FIRST, and until now NOTHING in CI compiled the Avalonia client.
-  # `Ubuntu/SyxxUI.Avalonia` appeared zero times in this workflow and is excluded by
-  # Windows/Syxx.Linux.slnf, yet it ProjectReferences the shared Syxx.Kit. A Kit change
-  # could therefore break the first-ship platform with every leg green. It has happened:
-  # the client stopped compiling on retired DST types and nothing noticed.
+  # `Linux/Ubuntu/SyxxUI.Avalonia` appeared zero times in this workflow, and the
+  # solution-filter build in build-test did not reach it either. NOT because the filter
+  # excludes it — Windows/Syxx.Linux.slnf:8-9 does list both Avalonia projects. The
+  # mechanism was Windows/Syxx.sln: it declared the two projects but had zero
+  # ProjectConfigurationPlatforms entries for their GUIDs, so solution-level builds
+  # skipped them and exited 0 (G-04, fixed 2026-08-04 — the mapping is now present and
+  # the build-test job asserts the output DLLs exist). Either way this job stays: it is
+  # the only lane that builds the GUI from its own csproj on a real Linux runner, and it
+  # ProjectReferences the shared Syxx.Kit, so a Kit change could break the first-ship
+  # platform with every other leg green. It has happened: the client stopped compiling on
+  # retired DST types and nothing noticed.
   linux-gui:
     name: Ubuntu Avalonia GUI build + test
     runs-on: ubuntu-latest
@@ -363,6 +390,16 @@ jobs:
         run: |
           cd Server
           ./venv/bin/python -m pytest tests/ -q
+
+      # --- Warp manifest corpus: regeneration drift gate. The builder is
+      # idempotent (compressed bodies are kept whenever they decode to the
+      # declared bytes — see warp-manifest-vectors/README.md §10), so ANY diff
+      # after a regeneration is real drift: a hand-edited generated file or a
+      # builder/spec change whose regenerated artifacts were not committed.
+      - name: Warp manifest corpus — regeneration drift gate
+        run: |
+          Server/venv/bin/python warp-manifest-vectors/_build_vectors.py
+          git diff --exit-code -- warp-manifest-vectors/
 
       # --- Honesty-coverage gate (Phase 0.4): prevents security guard deletion.
       # The gate runs the suite under coverage and asserts every registered guard

@@ -96,7 +96,12 @@ public enum FirstRunScan {
 
     /// Fold a ProbePlan result into the accumulator. Non-nil wins; a nil NEVER overwrites evidence
     /// another discipline already produced — that would silently delete a measurement.
-    private static func merge(_ into: inout SectionInputs, _ from: SectionInputs) {
+    ///
+    /// Internal rather than private on purpose (G-03): every caller is `runAsync`, which dials real
+    /// resolvers and so is untestable by construction — which is how this function came to omit
+    /// `warpManifest` with no test noticing. Anything that can silently drop a datapoint has to be
+    /// reachable from the suite. Parity twin: `FirstRunScan.MergeMirror` on Windows.
+    static func merge(_ into: inout SectionInputs, _ from: SectionInputs) {
         if let v = from.resolution         { into.resolution = v }
         if let v = from.dnssec             { into.dnssec = v }
         if let v = from.nxCanary           { into.nxCanary = v }
@@ -112,7 +117,14 @@ public enum FirstRunScan {
         if let v = from.comparison         { into.comparison = v }
         if let v = from.leak               { into.leak = v }
         if let v = from.ecs                { into.ecs = v }
+        // Retired WARP_ASSEMBLY shim; ProbePlan populates nothing into it (ContentWarp.swift:21).
+        // Folded only so removing the shim stays a separate, deliberate change.
         if let v = from.warp               { into.warp = v }
+        // G-03: WARP_MANIFEST_V1 is the LIVE content-integrity result and the only one ProbePlan
+        // actually fills (ProbePlan.swift:107,155). Synthesis has always read it
+        // (Synthesizer.swift:737); it was this fold that dropped it, so Mirror's content check was
+        // absent from every first-run scan — the first thing a new user ever sees.
+        if let v = from.warpManifest       { into.warpManifest = v }
         if let v = from.authoritative      { into.authoritative = v }
         if let v = from.svcb               { into.svcb = v }
         if let v = from.ttlAnomaly         { into.ttlAnomaly = v }

@@ -89,5 +89,70 @@ namespace Syxx.Tests
         {
             Assert.False(string.IsNullOrWhiteSpace(FirstRunScan.DefaultDomain));
         }
+
+        // ---- G-03: the Mirror fold must not drop the content-integrity result -------------------
+        //
+        // RunAsync copied only the RETIRED `Warp` shim out of ProbePlan's Mirror inputs. Nothing
+        // populates that shim (ContentWarp.cs:21-24); ProbePlan fills `WarpManifest` alone
+        // (ProbePlan.cs:106,144). Synthesis has always read `WarpManifest` (Synthesizer.cs:919), so
+        // the fold was the whole defect: Mirror's content check was absent from every first-run
+        // scan and nothing failed. Twin: SyxxKit FirstRunScanWarpManifestTests.swift.
+
+        /// Builds a manifest result the §5 lattice has already concluded on. Not a hand-waved
+        /// fixture: TAMPERING_DETECTED + an HTML byte mismatch is the case that MUST reach the user.
+        private static WarpManifestResult TamperingManifest() => new WarpManifestResult
+        {
+            OriginUrl = "https://github.com/",
+            KeyId = "warp-test-key",
+            SignatureState = WarpSignatureState.Verified,
+            ManifestState = WarpManifestState.Parsed,
+            FreshnessState = WarpFreshnessState.Fresh,
+            HtmlState = WarpContentState.Mismatch,
+            DeclaredHtmlSha256 = new string('a', 64),
+            FetchedHtmlSha256 = new string('b', 64),
+            Conclusion = WarpConclusion.TAMPERING_DETECTED,
+        };
+
+        [Fact]
+        public void MergeMirror_CarriesThePopulatedWarpManifest_NotJustTheRetiredShim()
+        {
+            var from = new SectionInputs { WarpManifest = TamperingManifest() };
+            var into = new SectionInputs();
+
+            FirstRunScan.MergeMirror(into, from);
+
+            Assert.NotNull(into.WarpManifest);
+            Assert.Equal(WarpConclusion.TAMPERING_DETECTED, into.WarpManifest!.Conclusion);
+            Assert.Equal(WarpContentState.Mismatch, into.WarpManifest.HtmlState);
+            Assert.Same(from.WarpManifest, into.WarpManifest);
+        }
+
+        [Fact]
+        public void MergeMirror_NullManifest_DoesNotErasePreviouslyGatheredEvidence()
+        {
+            // The fold's other honesty rule: absent evidence never overwrites present evidence.
+            var into = new SectionInputs { WarpManifest = TamperingManifest() };
+
+            FirstRunScan.MergeMirror(into, new SectionInputs());
+
+            Assert.NotNull(into.WarpManifest);
+        }
+
+        [Fact]
+        public void FirstRunScan_SurfacesContentTampering_OnceTheManifestSurvivesTheFold()
+        {
+            // The user-visible half of G-03. With the manifest folded in, the real engine raises
+            // Mirror positive with ScriptMismatch evidence; while the fold dropped it, a first-run
+            // scan against a tampered page reported nothing at all about content.
+            var inputs = new SectionInputs();
+            FirstRunScan.MergeMirror(inputs, new SectionInputs { WarpManifest = TamperingManifest() });
+
+            var r = FirstRunScan.Summarize(inputs);
+
+            Assert.Contains(r.Conclusion.Evidence,
+                e => e.Section == Section.Mirror && e.EvidenceId == EvidenceId.ScriptMismatch);
+            Assert.False(r.Conclusion.ReadsClean(),
+                "content tampering from a verified, fresh manifest must never read clean");
+        }
     }
 }

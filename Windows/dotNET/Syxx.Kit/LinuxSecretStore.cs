@@ -24,15 +24,27 @@ public sealed class LinuxSecretStore : ISecretStore
 {
     // ── Data directory ────────────────────────────────────────────────────────────
 
-    private static readonly string StoreDir;
+    private static readonly string DefaultStoreDir;
 
     static LinuxSecretStore()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
                    ?? Environment.GetEnvironmentVariable("HOME")
                    ?? "/tmp";
-        StoreDir = Path.Combine(home, ".syxx", "keystore");
+        DefaultStoreDir = Path.Combine(home, ".syxx", "keystore");
     }
+
+    /// <summary>Test-only seam for the file-fallback directory, same shape and same reason as
+    /// <c>WitnessKeyStore.SetKeyPathForTesting</c>: without it, the only way to prove the existence
+    /// probe genuinely enumerates the file store is to write a secret into the developer's real
+    /// <c>~/.syxx/keystore</c>, and a killed test process then leaves an orphan in a real user's
+    /// store. Pass <c>null</c> to restore. <c>internal</c>, so no product code can relocate a user's
+    /// secrets.</summary>
+    private static string? _storeDirOverride;
+
+    internal static void SetFallbackDirectoryForTesting(string? path) => _storeDirOverride = path;
+
+    private static string StoreDir => _storeDirOverride ?? DefaultStoreDir;
 
     /// <summary>The directory used by the file-fallback store.</summary>
     public static string FallbackDirectory => StoreDir;
@@ -90,6 +102,78 @@ public sealed class LinuxSecretStore : ISecretStore
             SecretTool.Delete(keyType, keyId);
 
         DeleteFromFile(keyType, keyId);
+    }
+
+    /// <summary>
+    /// G-02: is any secret of <paramref name="keyType"/> held, without knowing a keyId? Each backend
+    /// answers for itself and the answers are combined conservatively — Present beats Unknown beats
+    /// Absent — so <see cref="SecretExistence.Absent"/> is returned only when every backend that could
+    /// be holding a secret positively said it holds none.
+    ///
+    /// Per backend:
+    ///   • File store — definitive. One file per (keyType, keyId) in one directory, so the keyType
+    ///     prefix enumerates. This is where a secret lands whenever the keyring is locked or missing,
+    ///     which is the common Linux case and the one G-02 is about.
+    ///   • secret-tool — definitive for what secret-tool itself wrote, since it files secrets under the
+    ///     <c>syxx-key-type</c> attribute, which <c>search</c> can query alone. But only while
+    ///     secret-tool is still installed AND the Secret Service answers: a removed
+    ///     <c>libsecret-tools</c> package, or a locked/absent keyring, leaves the question unanswerable
+    ///     rather than answered "no". That is <see cref="SecretExistence.Unknown"/>, and it is the one
+    ///     reachable case where a live keyring secret can go unseen. See the caller's residual note.
+    ///   • libsecret P/Invoke — CANNOT answer, and separately cannot STORE. The bound entry point is
+    ///     <c>secret_password_lookup_sync</c>, which needs an exact attribute value pair, and the only
+    ///     value identifying a single secret is the keyId the lost token file was holding; no
+    ///     search/enumerate entry point is bound. Beyond that: <see cref="LibSecretNative.Store"/>
+    ///     passes the keyType VALUE ("witness") in the attribute-NAME varargs slot, while the schema
+    ///     at <c>TryLoad</c> declares only <c>syxx-key-type</c>/<c>syxx-key-id</c>. libsecret's
+    ///     <c>secret_attributes_buildv</c> answers an undeclared attribute name with
+    ///     <c>g_critical</c> + NULL, and <c>secret_password_store_sync</c> then does
+    ///     "<c>if (!attributes) return FALSE;</c>" WITHOUT setting a GError — so every write through
+    ///     this backend fails silently and <see cref="Store"/> falls through to secret-tool or the file
+    ///     store. Nothing has ever been persisted here. The Unknown downgrade below is therefore a
+    ///     guard against a REPAIRED backend, not against a live hazard; if that repair happens, the
+    ///     caller's fail-open arm becomes load-bearing and must be revisited in the same change.
+    /// </summary>
+    public SecretExistence Exists(string keyType)
+    {
+        var answer = ExistsInFileStore(keyType);
+        if (answer == SecretExistence.Present) return SecretExistence.Present;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && SecretTool.IsAvailable())
+        {
+            var toolAnswer = SecretTool.Exists(keyType);
+            if (toolAnswer == SecretExistence.Present) return SecretExistence.Present;
+            if (toolAnswer == SecretExistence.Unknown) answer = SecretExistence.Unknown;
+        }
+
+        // Deliberately last and deliberately not gated on the two above: a secret written through the
+        // P/Invoke backend is invisible to both of them, so its mere availability downgrades a
+        // file-store "Absent" to "Unknown". Overstating this as Absent is the whole G-02 defect.
+        if (LibSecretNative.IsAvailable && answer == SecretExistence.Absent)
+        {
+            return SecretExistence.Unknown;
+        }
+
+        return answer;
+    }
+
+    /// <summary>Enumerates the AES-GCM file store for any <c>{keyType}_*</c> entry. Read-only: unlike
+    /// <see cref="GetFilePath"/> it must not create the directory, since a presence probe that
+    /// materialises state is not a probe.</summary>
+    private static SecretExistence ExistsInFileStore(string keyType)
+    {
+        try
+        {
+            if (!Directory.Exists(StoreDir)) return SecretExistence.Absent;
+            return Directory.EnumerateFiles(StoreDir, Sanitize(keyType) + "_*").Any()
+                ? SecretExistence.Present
+                : SecretExistence.Absent;
+        }
+        catch
+        {
+            // Permission denied on $HOME, a failing mount: we could not look, so we do not claim.
+            return SecretExistence.Unknown;
+        }
     }
 
     // ── AES-256-GCM encrypted file store ──────────────────────────────────────────
@@ -570,6 +654,51 @@ public sealed class LinuxSecretStore : ISecretStore
             catch
             {
                 return null;
+            }
+        }
+
+        /// <summary>G-02: asks whether the keyring holds any secret filed under
+        /// <c>syxx-key-type = keyType</c>, which <c>secret-tool search</c> can answer without a keyId.
+        /// Only an unambiguous "found nothing" is reported as <see cref="SecretExistence.Absent"/>;
+        /// a non-zero exit we cannot attribute to an empty result, or a timeout, is
+        /// <see cref="SecretExistence.Unknown"/>, because the D-Bus service being unreachable is not
+        /// the same as the keyring being empty.</summary>
+        public static SecretExistence Exists(string keyType)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "secret-tool",
+                    ArgumentList = { "search", "--all", "syxx-key-type", keyType },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using var proc = Process.Start(psi);
+                if (proc == null) return SecretExistence.Unknown;
+
+                var stdout = proc.StandardOutput.ReadToEnd();
+                var stderr = proc.StandardError.ReadToEnd();
+                if (!proc.WaitForExit(5000)) return SecretExistence.Unknown;
+
+                if (proc.ExitCode == 0)
+                {
+                    return string.IsNullOrWhiteSpace(stdout)
+                        ? SecretExistence.Absent
+                        : SecretExistence.Present;
+                }
+
+                // secret-tool exits non-zero both for "no such secret" and for real failures
+                // (no session bus, service refused). Only the former is proof of absence.
+                return stderr.Contains("No such secret", StringComparison.OrdinalIgnoreCase)
+                    ? SecretExistence.Absent
+                    : SecretExistence.Unknown;
+            }
+            catch
+            {
+                return SecretExistence.Unknown;
             }
         }
 

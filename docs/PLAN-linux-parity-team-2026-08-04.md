@@ -806,11 +806,75 @@ and both `Store` and `Retrieve` pass `keyTypePtr, keyIdPtr` into **attrK1/attrV1
 **value** becomes the keyId. The schema names declared at `:390-391` (`syxx-key-type`, `syxx-key-id`) are
 never passed by that call, while `SecretTool` (`:527-529`) uses them correctly.
 
-Two consequences: the two keyring backends **cannot see each other's secrets** (P/Invoke round-trips with
-itself, so nothing looks broken in isolation), and libsecret may reject attributes absent from the
-declared schema. And critically — `SecretTool.Exists` searches `syxx-key-type`, so it can *never* see a
-P/Invoke-written secret, which forces `LinuxSecretStore.Exists` to answer `Unknown`, which drives the arm
-that licenses minting. **Fixing G-16 is upstream of closing G-02b.**
+**The consequence is worse than "the backends disagree", and it was established against libsecret's own
+source rather than inferred from the header.** An undeclared attribute name makes
+`secret_attributes_buildv` emit `g_critical` and return NULL; `secret_password_store_sync` then does
+`if (!attributes) return FALSE;` **without setting the GError**. `LinuxSecretStore.Store` (verified at
+`:57-61`) treats that FALSE as "backend declined" and falls through to secret-tool, then to the file
+store. Therefore:
+
+> **On Linux, no witness signing key has ever reached the OS keyring through the primary backend.**
+> Every write through libsecret P/Invoke fails, on every machine, silently. `_available = true` is set on
+> library load and schema construction alone and has never meant a call succeeded.
+
+**Security-posture consequence (this is the part that outranks the honesty gap).** Every Linux secret
+therefore lands either in secret-tool (only if `libsecret-tools` happens to be installed) or in
+`~/.syxx/keystore` under AES-256-GCM with a key derived by PBKDF2 from `/etc/machine-id` +
+`/sys/class/dmi/id/product_uuid` + `Environment.MachineName` — **verified: no user secret in the
+derivation.** `/etc/machine-id` is world-readable and `product_uuid` is root-only on many distros with
+its read wrapped in a silent `catch`, so the material often reduces to two values any local process can
+obtain. That is materially weaker than the login-protected keyring item the docs promise, and
+`ISecretStore.cs:11-13`, `LinuxSecretStore.cs:13-16` and `WitnessKeyStore.cs:42-43` all still describe
+libsecret as the primary backend — a doc-contradicts-behaviour case of exactly the class §0 flagged.
+`LicenseManager` shares the store, so licences are affected identically.
+
+**Corrected G-02b boundary — my own earlier reachable path was wrong.** "libsecret available,
+secret-tool absent → `Unknown` → mint" does **not** bite: on that machine the secret is in the file
+store, and `ExistsInFileStore` returns `Present` and short-circuits (`:139-140`) before the libsecret
+downgrade is reached. The path that **does** bite is lock/uninstall: a keyring secret exists only when
+secret-tool wrote it, and is answerable only while secret-tool remains installed **and** the Secret
+Service answers. Remove `libsecret-tools`, or probe while the keyring is locked or absent (headless,
+SSH — the state G-02 is actually about), and `SecretTool.Exists` returns `Unknown` → fail-open → mint
+over a live identity. Ledger wording to use verbatim:
+
+> *G-02 — mint-guard closed for the file-store backend (where every Linux secret actually lands today)
+> and for a keyring that secret-tool can still query. **OPEN** where a keyring secret cannot be queried
+> at probe time: `libsecret-tools` removed after the key was minted, or the Secret Service
+> locked/absent. The libsecret P/Invoke backend is not a route to this defect because it cannot store
+> at all.*
+
+**Why a search binding is still the right long-term fix, for a reason neither the plan nor the audit
+originally gave:** a Secret Service *search* answers existence **without unlocking** — matching is on
+attributes, and unlocking is required only to read values. So it closes the locked sub-case, which
+`secret-tool search` cannot, because that tries to print values.
+
+**Deliberately NOT written in the build pass, and the seat was right to refuse.** A correct binding needs,
+in one pass with zero execution available: `secret_password_search_sync` resolved (libsecret ≥ 0.19); a
+GList walk over `SecretRetrievable*`; `secret_retrievable_get_attributes` + GHashTable lookup to separate
+`witness` from `license` (an unscoped search conflates them and would refuse to mint on any machine
+holding a licence); a second schema carrying `SECRET_SCHEMA_DONT_MATCH_NAME`, because secret-tool's items
+carry `xdg:schema = org.freedesktop.Secret.Generic` rather than ours and a schema-scoped search would
+miss every secret actually stored; and `g_object_unref`/`g_list_free` on every exit path. **Any single
+mistake yields zero results, which the combinator reads as `Absent`, which mints over a live identity** —
+manufacturing by hand the exact false-Absent the audit went hunting for. Spine #5: the bar is a real run.
+Add the **migration hazard** — correcting the attribute names makes any already-stored P/Invoke secret
+unfindable by the corrected `Retrieve`, and with G-01/G-02 in place that user hits `Undetermined` and
+**cannot mint, i.e. is locked out of signing** — and repairing G-16 makes the fail-open arm load-bearing,
+so the two must land together.
+
+**Two routes, both needing an owner decision:**
+1. **Verify on real Linux.** A `ci.yml` leg with `libsecret-1-0`, `libsecret-tools`, `gnome-keyring`, run
+   under `dbus-run-session` with `gnome-keyring-daemon --unlock`, asserting Present/Absent/Unknown against
+   a real keyring both unlocked and locked. That is E3's file, so it needs routing, and it is the only
+   route that satisfies spine #5.
+2. **Interim, testable today** using the file-store seam already added: a keyType-level presence record
+   beside the file store, written when a keyring backend accepts a secret, so existence never depends on
+   the keyring's cooperation. Closes the lock/uninstall path completely. **Cost, stated plainly:** an
+   out-of-band keyring wipe leaves a stale record → permanent `Undetermined` with no in-app recovery.
+   A persistence-design decision with a bricking mode on a security product.
+
+*Minor, same file, noted not fixed:* the pinned `GCHandle` for the schema (`:417`) is never freed — a
+one-time per-process leak.
 
 **Deliberately NOT fixed in the build pass, for three reasons that should survive into whoever picks it
 up:** (1) unverifiable from a macOS host — there is no libsecret here, and a keyring fix landed blind is

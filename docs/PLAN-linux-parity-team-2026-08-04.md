@@ -831,17 +831,34 @@ source rather than inferred from the header.** An undeclared attribute name make
 `:57-61`) treats that FALSE as "backend declined" and falls through to secret-tool, then to the file
 store. Therefore:
 
-> **On Linux, no witness signing key has ever reached the OS keyring through the primary backend.**
-> Every write through libsecret P/Invoke fails, on every machine, silently. `_available = true` is set on
-> library load and schema construction alone and has never meant a call succeeded.
+> **On Linux, a witness signing key cannot reach the OS keyring through the primary backend on any
+> libsecret version that enforces the schema check — which is every version verifiable from here.**
+> Such writes fail silently: `Store` reads the FALSE as "backend declined" and falls through.
+> `_available = true` is set on library load and schema construction alone and has never meant a call
+> succeeded.
+>
+> *Evidence boundary, stated because an earlier draft asserted this flatly.* What is established is that
+> **master-branch** libsecret's `secret_attributes_buildv` returns NULL on an undeclared attribute name
+> and `secret_password_store_sync` then returns FALSE without setting the GError, and that our call site
+> passes the keyType value into the attribute-NAME slot. It was **not** verified against 0.18/0.20 or a
+> distro-patched build. "Never, on every machine" was stronger than the evidence; this is the honest form.
 
 **Security-posture consequence (this is the part that outranks the honesty gap).** Every Linux secret
 therefore lands either in secret-tool (only if `libsecret-tools` happens to be installed) or in
 `~/.syxx/keystore` under AES-256-GCM with a key derived by PBKDF2 from `/etc/machine-id` +
 `/sys/class/dmi/id/product_uuid` + `Environment.MachineName` — **verified: no user secret in the
-derivation.** `/etc/machine-id` is world-readable and `product_uuid` is root-only on many distros with
-its read wrapped in a silent `catch`, so the material often reduces to two values any local process can
-obtain. That is materially weaker than the login-protected keyring item the docs promise, and
+derivation.** `/etc/machine-id` is world-readable, and `product_uuid` is root-only on many distros with
+its read wrapped in a silent `catch` (`:104-107`), so the KDF **inputs** often reduce to two values any
+local process can obtain.
+
+**Be precise about what that does and does not mean**, because the framing determines the fix. Reading
+those inputs is **not sufficient to recover a key** — the ciphertext is a mode-0600 file in the user's
+home. The practical exposure is a process running as **that same user**, root, or any path where the file
+itself leaks: a backup, a synced or shared home, a stolen disk. So this is a **weak-KDF-plus-file-access**
+risk, **not** a world-readable-secret risk; an earlier draft read as "any local process can decrypt",
+which is not established. The weakness is real and worth owner attention — a keyring item is protected by
+the user's login, this is protected by file permissions over machine-derived material — but the remedy
+differs accordingly. And
 `ISecretStore.cs:11-13`, `LinuxSecretStore.cs:13-16` and `WitnessKeyStore.cs:42-43` all still describe
 libsecret as the primary backend — a doc-contradicts-behaviour case of exactly the class §0 flagged.
 `LicenseManager` shares the store, so licences are affected identically.
@@ -921,11 +938,12 @@ one-time per-process leak.
 
 **Deliberately NOT fixed in the build pass, for three reasons that should survive into whoever picks it
 up:** (1) unverifiable from a macOS host — there is no libsecret here, and a keyring fix landed blind is
-how a confident wrong answer ships; (2) **migration hazard** — correcting the names makes every
-already-stored P/Invoke secret unfindable by the corrected `Retrieve`, and with G-01/G-02 in place that
-user lands on `Undetermined` and **cannot mint, i.e. is locked out of signing entirely**, so a legacy
-read path must exist before the write path changes; (3) it changes how secrets are persisted, which is an
-owner call. Note also `secret_password_search_sync` was initially proposed as the G-02b fix and is
+how a confident wrong answer ships; (2) it changes how secrets are persisted, which is an owner call;
+(3) repairing G-16 makes the fail-open arm load-bearing, so G-16 and the G-02b mint-guard must land
+together. **A second draft of this list named a "migration hazard" here — that was the phantom
+requirement, removed:** the P/Invoke secrets it would strand do not exist, because those writes all
+returned FALSE. No legacy read path is required; keep one only as cheap insurance against an
+unverified older libsecret (see the evidence boundary above). Note also `secret_password_search_sync` was initially proposed as the G-02b fix and is
 aimed at the wrong layer — a search by `syxx-key-type` finds nothing while `Store` files under `"witness"`.
 
 *Provenance note worth keeping:* the auditor initially cleared these schemas as matching, having read the

@@ -685,6 +685,19 @@ public sealed class LinuxSecretStore : ISecretStore
 
                 if (proc.ExitCode == 0)
                 {
+                    // ASSUMPTION, and the ONE place this probe could manufacture a false Absent — the
+                    // worst outcome in this subsystem, since Absent is what licenses minting over an
+                    // identity. It reads "the process ran, the service answered, it printed no matches"
+                    // as proof of absence. That holds if a locked-but-populated keyring can never
+                    // produce the same signature (exit 0, empty stdout) — libsecret's search returns
+                    // locked items too, and secret-tool's search asks to unlock and load values, so a
+                    // locked collection should fail loudly rather than answer emptily. UNVERIFIED
+                    // against a live keyring: there is none on the authoring host. It costs nothing
+                    // today, because the caller's Unknown arm also mints (fail-open, breadcrumbed), so
+                    // Absent and Unknown are behaviourally identical here. It starts mattering the day
+                    // that arm fails closed. First thing to check on a real-keyring verification leg:
+                    // populate the keyring, lock it, and assert this returns Present or Unknown —
+                    // never Absent.
                     return string.IsNullOrWhiteSpace(stdout)
                         ? SecretExistence.Absent
                         : SecretExistence.Present;

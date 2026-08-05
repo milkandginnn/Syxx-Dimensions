@@ -32,6 +32,7 @@ sample of claims directly from `git show HEAD:<path>` rather than trusting the o
 **Accuracy — high.** ~12 sampled deltas across both platforms, all severities, "dramatic" and
 "boring" claims alike, all matched the actual `HEAD` source exactly, including the ones most
 likely to be overcalled:
+
 - **WIN-001 / MAC-012** ("resolveSecurely inverts security") — confirmed verbatim on both
   platforms: `if IsDNSEncrypted() → plain UDP; else → DoH`. This is the single most damning
   finding in the document and it holds up exactly as stated.
@@ -102,7 +103,7 @@ matters to the mission the way the original longer-form version did.
 
 Deltas listed here are top priority.
 
-### 1. Unified DNS Synthesis Engine: System Design & Research
+## 1. Unified DNS Synthesis Engine: System Design & Research
 
 This design introduces a client-side, offline, deterministic synthesis engine (`SyxxSynthesisEngine`) in `SyxxKit`/`Syxx.Kit`. It aggregates raw datapoints from the six canonical disciplines into a unified verdict with mathematically modeled confidence and probability scores, falling back to community review when findings are ambiguous.
 
@@ -159,6 +160,7 @@ Individual probes are informative, but their relationships provide conclusive pr
 ### Part C: Verdict Logic & Scoring Engine
 
 The synthesis engine evaluates 7 Candidate Conclusions:
+
 1. `SECURE_CLEAN` (No anomalies)
 2. `ACTIVE_TAMPERING_HIJACKING` (DNS poisoning or MITM)
 3. `VPN_DNS_LEAK` (VPN bypass)
@@ -168,6 +170,7 @@ The synthesis engine evaluates 7 Candidate Conclusions:
 7. `INCONCLUSIVE_DEGRADED` (Insufficient data, timeouts, or network down)
 
 #### 1. Credibility Score Calculation (Weight Rules)
+
 Each conclusion starts with a base score of $0$ and accumulates points based on conditions:
 
 ```swift
@@ -203,12 +206,15 @@ if !isRedirectionDetected && !contentHashMismatch && leakVerdict != .confirmed &
 ```
 
 #### 2. Normalization & Probability Calculation
+
 To derive the probability score for each conclusion:
 $$\text{Probability}(C_i) = \frac{\text{Score}(C_i)}{\sum_{j} \text{Score}(C_j)} \times 100\%$$
 *(If all scores are 0, probability is distributed 100% to `INCONCLUSIVE_DEGRADED`).*
 
 #### 3. Confidence Score calculation
+
 The Confidence Score (0-100%) represents the completeness and reliability of the evidence. It starts at $100\%$ and gets penalized for missing or degraded probes:
+
 - Any vantage point query timeout: **-15%**
 - Captive portal active: **-30%** (captive portals distort all internet probes)
 - No internet connection / DNS queries fail entirely: **-80%**
@@ -220,12 +226,14 @@ The Confidence Score (0-100%) represents the completeness and reliability of the
 ### Part D: Reddit Fallback & Report Generator
 
 When either condition is met:
+
 1. **Confidence Score is less than 75%**
 2. **The top probability score does not exceed the second-most likely by at least 30 points (30%)**
 
 The client automatically flags the result as **Ambiguous** and provides the Reddit fallback flow:
 
 #### 1. Clip-to-Clipboard Reddit Payload Format
+
 ```markdown
 *** SYXX OFF-LINE ANALYSIS EVIDENCE REPORT ***
 Generated: [12-Hour ISO Timestamp]
@@ -319,16 +327,18 @@ public final class SyxxSynthesisEngine {
 
 ---
 
-### Evaluation & Peer-Review Remarks (2026-07-06):
+### Evaluation & Peer-Review Remarks (2026-07-06)
 
 This system design details a deterministic, client-side offline synthesis engine. Below is the vetting evaluation of the proposal:
 
 #### 1. Core Strengths & Efficacy
+
 - **Explainability & Trust**: By using pure weighted logic instead of machine learning, the engine ensures that every conclusion is fully explainable, trace-backed, and signable by the `WitnessSigner` evidence layer. This conforms exactly to the project's core values.
 - **Ambiguity Containment**: The triggers for Reddit fallback (confidence $< 75\%$ or margin between top-two hypotheses $< 30$ points) are well-calibrated to contain false-secure conclusions, shifting the civil liability of edge cases to community experts.
 - **Relational Synthesis**: The cross-discipline rules (such as captive portal detection modifying/dampening tampering alerts) are highly logical and prevent false positives on commercial public networks.
 
 #### 2. Technical Gaps & Refinement Areas
+>
 - > [!WARNING]
   > **HTTP Status Classifications**: Part A marks HTTP statuses `[302, 307]` as High Risk tampering. Standard web redirects are common and benign. Treat standard redirects as inconclusive context modifiers; restrict High Risk verdicts only to explicit block pages (e.g., HTTP `451` or captive redirects on non-captive networks).
 - > [!TIP]
@@ -338,7 +348,9 @@ This system design details a deterministic, client-side offline synthesis engine
 - **Signer Blindspot**: The exfiltration detection rule (Part B, Rule 4) heavily weights `unsigned / AdHoc` processes. Attackers can execute DNS exfiltration via signed utilities (e.g., standard web browsers, system-signed command-line tools, or DLL sideloading). The engine should evaluate domain entropy and beacon cadence independently of signing status, using the signature as a secondary modifier.
 
 #### 3. Recommended Canary Probes
+
 To resolve the most common source of ambiguity (is this NXDOMAIN a block or a true non-existent domain?), the implementation should include two canaries:
+
 1. **NXDOMAIN canary**: Query a random nonexistent UUID hostname. A non-NXDOMAIN response indicates active DNS hijacking.
 2. **DNSSEC control canary**: Query a known-good DNSSEC-signed domain (e.g., `sigok.dane.verisignlabs.com`). A bogus verification indicates active DNSSEC signature stripping.
 
@@ -351,41 +363,52 @@ To resolve the most common source of ambiguity (is this NXDOMAIN a block or a tr
 Your synthesis engine is directionally strong: it is explainable, deterministic, and well-suited to offline client-side verdicting. The main refinements are to soften standard HTTP redirects, make confidence multiplicative, and treat process signing as a modifier rather than a gate for exfiltration detection.
 
 #### What to keep
+
 The cross-discipline approach is the right design choice because DNS hijacking, captive portals, DNSSEC downgrade/stripping, and tunneling often require correlating several weak signals rather than trusting one probe alone. High-entropy subdomains and regular beacon cadence are established indicators of DNS tunneling or C2-style activity, so those features belong in the core scoring model.
 
 #### What to change
+
 Standard `302` and `307` redirects are common and can be benign, especially in captive portal flows, so they should not automatically imply high-risk tampering without supporting evidence like a block page or portal context. A better confidence model is multiplicative, because it keeps the score bounded and reflects compounding uncertainty more naturally than repeated subtraction. Also, DNSSEC stripping and hijacking should be inferred from validation failures and control-canary behavior, not from an `unsigned` result alone, since unsigned or non-validating paths can occur for benign reasons too.
 
 #### Practical canaries
+
 A random NXDOMAIN canary is useful because an unexpected non-NXDOMAIN answer can expose resolver manipulation or interception. A known DNSSEC-signed control domain is also a solid validation probe, because it helps distinguish real DNSSEC failure from ordinary NXDOMAIN or local misconfiguration.
 
 #### Suggested rule updates
+
 - Treat `302` and `307` as portal-context signals, not high-risk tampering by themselves.
 - Keep `451` and explicit block-page evidence as stronger tampering indicators.
 - Evaluate entropy and beaconing independently of code signing, then use signing status as a confidence booster or reducer.
 - Prefer canary-based confirmation for DNS hijacking and DNSSEC stripping rather than relying on a single anomalous response.
 
 #### One implementation note
+
 Your fallback threshold is sensible, but it will be more robust if "ambiguous" is triggered by both low confidence and weak separation between the top hypotheses, because captive portals and transparent proxies can otherwise mimic hijacking patterns.
 
 Use a two-layer approach: first classify the network state from probe behavior, then dampen or boost confidence with a multiplicative model so one degraded signal cannot dominate the verdict. For DNSSEC stripping, the strongest pattern is a failure on a known-good signed control domain while the same resolver still answers ordinary queries, because DNSSEC is specifically designed to detect altered-in-transit answers through its RRSIG/DNSKEY/DS chain of trust.
 
 #### Captive portal vs proxy
+
 A captive portal usually shows redirect behavior tied to access control, often after the device checks for internet reachability; DNS redirection and HTTP 302-based login flows are common portal techniques. Transparent proxies are different because they sit inline and forward traffic silently, so you usually need endpoint, header, timing, or destination-behavior clues rather than a single redirect event to tell them apart. In practice, if DNS is redirected and an HTTP test page consistently lands on a login or terms page, that looks more like captive portal behavior; if ordinary browsing is altered without a portal login step, treat it as proxy/interception context and not automatically as tampering.
 
 #### Multiplicative confidence
+
 A clean implementation is to start at 100 and multiply by $$(1 - penalty)$$ for each degraded probe class, with each penalty capped in a reasonable range so confidence never goes negative. Example: if timeout penalty is 0.15, captive-portal penalty is 0.30, and process attribution penalty is 0.10, then confidence becomes $$100 \times 0.85 \times 0.70 \times 0.90 = 53.55$$, which is a much safer representation of partial evidence than subtracting fixed points. This works well because DNSSEC failure, leak checks, and portal interference are not independent in the real world, so compounding uncertainty is more realistic than linear deduction.
 
 #### DNSSEC canaries
+
 For a control canary, use a known DNSSEC-signed domain and verify that the validating path returns the expected result; if the domain resolves but validation fails, that is strong evidence of stripping or downgrade behavior. For a random NXDOMAIN canary, generate high-entropy, never-reused names and expect NXDOMAIN from the authoritative path; unexpected positive answers, rewrites, or consistent alternate IPs can indicate hijacking or search-domain pollution. Keep canaries short-lived, randomized per session, and segregated from user-visible domains so a cached or learned response cannot falsely train the resolver into a stable-but-wrong answer.
 
 #### NXDOMAIN canary hygiene
+
 Treat random NXDOMAIN canaries as disposable probes, not persistent indicators, because repeated use can create noise and may be confused with typo traffic, startup lookups, or local application behavior. Log the queried label, resolver used, and response code, but avoid reusing the same canary name across runs, since stable names can be cached or recognized by intermediate systems. If the NXDOMAIN canary returns anything other than a true negative from the expected path, escalate only when it co-occurs with other signals such as redirect detection, DNSSEC validation failure, or mismatch between configured and observed resolvers.
 
 #### Exfiltration scoring
+
 Do not require unsigned or AdHoc process status for exfiltration suspicion, because signed tools and browsers can still tunnel data over DNS. Instead, score high-entropy labels, long labels, and regular beacon cadence independently, then use process provenance as a secondary multiplier: unsigned processes increase confidence, but signed processes do not clear the alert if the network pattern is strong. That avoids over-triggering on legitimate signed software while still catching real DNS C2 behavior that manifests as repeated, structured lookups.
 
 #### Suggested rule shape
+
 - Captive portal: portal-specific redirect behavior plus login/terms page evidence, with DNS redirection treated as context rather than proof by itself.
 - Transparent proxy: altered browsing behavior without a portal-login flow, ideally confirmed by response-path or destination inconsistencies rather than a single 302.
 - DNSSEC stripping: signed control canary fails validation while ordinary DNS still works, especially if the resolver path is otherwise stable.
@@ -437,6 +460,7 @@ penalty. A section that never ran (Untested) or whose premise failed (Invalidate
 `8.8.8.8` substitution, CID-002's records-only status loss) contributes **no evidence** and must be
 surfaced as its own label, not diluted into "61% confident." So the accumulator needs a **status
 pre-pass**:
+
   1. Classify each of the six sections: `untested | invalidated | inconclusive | degraded | ran(finding)`.
   2. Only `ran`/`degraded` sections feed the softmax; `degraded` sections additionally contribute a
      confidence penalty (Perplexity's `1−penalty`).
@@ -620,6 +644,7 @@ correct) · **REVISE** (defect real but the fix is wrong/incomplete — better f
 **Tally — App:** 142 AGREE · 19 REVISE · 13 DISAGREE (of 174). **Server:** 4 real (fixed) · 2 stale · 1 false-positive.
 
 ### Server audit
+
 - SRV-015 | AGREE (fixed) | netloc→hostname Host header; real credential leak.
 - SRV-016 | AGREE (fixed) | CRLF hardening via hostname; stdlib also rejects CRLF (defense-in-depth).
 - SRV-026 | AGREE (fixed) | full.index(rdata) wrong compression offset; now decodes from true offset.
@@ -629,6 +654,7 @@ correct) · **REVISE** (defect real but the fix is wrong/incomplete — better f
 - SRV-044 | DISAGREE (false positive) | refill is stored incrementally; tokens accumulate under polling.
 
 ### GUIA — SyxxApp GUI views 1
+
 GUIA-01 | AGREE | Hardcoded green "RESOLVERS AGREE"; bind to model.sectionInputs.comparison.
 GUIA-02 | AGREE | Hardcoded green "HASHES MATCH"; MirrorView never reads any warp result.
 GUIA-03 | AGREE | Literal "140.82.112.3" for both resolvers; show real outcomes.
@@ -667,6 +693,7 @@ GUIA-35 | AGREE | Bare "⏳" emoji, no accessibility label, inconsistent with th
 GUIA-36 | AGREE | Pricing hardcoded with no shared constant.
 
 ### GUIB — SyxxApp GUI views 2 + AppModel
+
 GUIB-01 | AGREE | Validation Report renders "validated/valid/conclusive" unconditionally; drive from witnessValid + snapshot.comparison.
 GUIB-02 | AGREE | Frozen literal timestamp; WitnessSnapshot.timestamp exists to bind.
 GUIB-03 | AGREE | witnessVerify sets showValidation before verify and the view ignores witnessValid.
@@ -706,6 +733,7 @@ GUIB-36 | DISAGREE | bundle-app.sh:21 copies syxx-cages into Contents/Resources 
 GUIB-37 | AGREE | Pro badges are cosmetic; nothing blocks a Lite user from running Mirror/Glutton.
 
 ### KDNS — SyxxKit DNS core
+
 KDNS-01 | DISAGREE | Success/NODATA is already decided on exact-type answerRecords (CNAME excluded), so a CNAME-only response correctly returns .noData.
 KDNS-02 | AGREE | Same packet/txid re-sent across the retry loop; only txid validated. Fresh txid per attempt + question name/type validation.
 KDNS-03 | DISAGREE | NWConnection(to:.udp) is a connected datagram socket; the kernel filters delivery to the peer tuple.
@@ -746,6 +774,7 @@ KDNS-37 | AGREE | localEmptyButPublicNot drives redirection=true even for a legi
 KDNS-38 | REVISE | validateDomainName already enforces <=63 moments earlier, so no reachable defect; an assert is defense-in-depth only.
 
 ### KSYN — SyxxKit Synthesis engine (adjudicated by the author)
+
 KSYN-01 | DISAGREE | Target-domain .unsigned is legitimately ambiguous (most domains are unsigned) → .inconclusive is correct.
 KSYN-02 | DISAGREE | benignPrior is deliberately modest (1.5); with <=5 negatives a threat with net weight >~1.4 wins.
 KSYN-03 | AGREE | softmax iterates a randomized Dictionary and .sorted isn't stable → nondeterministic argmax on ties.
@@ -775,6 +804,7 @@ KSYN-26 | AGREE | threatHypotheses hand-maintained though Hypothesis is CaseIter
 KSYN-27 | AGREE | Int(margin) truncates (29.7→"29") while the gate is <30.
 
 ### KTRU — SyxxKit Trust / Forensics / LAN / Licensing / Content
+
 KTRU-01 | AGREE | isFeatureUnlocked(isPro:) trusts a caller Bool; passing true unlocks Pro.
 KTRU-02 | AGREE | comparePageContent fetches attacker-controlled targetURL + script URLs with no scheme/host filter — real SSRF.
 KTRU-03 | AGREE | Deleting the Keychain trial item restarts the 3-day trial (no server anchor).
@@ -812,7 +842,6 @@ KTRU-34 | AGREE | group.wait can time out while detached session threads still r
 KTRU-35 | AGREE | accountID hardcoded with no build-config override. Externalize.
 KTRU-36 | AGREE | TextDiff builds a full m×n matrix; multi-MB pages can OOM. Cap line count or use Hirschberg.
 
-
 ---
 
 ## Delta of the Week # 3 (Antigravity) — Conclusion Integrity & End-of-Test Meaning
@@ -847,6 +876,7 @@ Syxx needs a shared conclusion contract before the six checks can be trusted:
   no invalidator fired, and no positive finding was present.
 
 ### Conclusion-influence deltas (CID-001…CID-036) [partial]
+>
 > **[partial]** — the conclusion vocabulary + synthesis engine + GUI honesty landed (`b911bf9` + GUI
 > honesty pass). **Delay:** the per-CLI output-wording subset (Workstream G · LOW priority) is not
 > fully swept — the CLIs must never print a conclusion before its premises.
@@ -1135,8 +1165,6 @@ The rule is simple: no final conclusion may be stronger than its weakest require
 
 ---
 
-
-
 ---
 
 ## HTTP version issue [vetted]
@@ -1167,6 +1195,7 @@ Consensus: CONSISTENT-DEGRADED
 you@syxx ~ %
 
 **Interpretation** Clean read overall — here's the breakdown:
+
 - A record consensus. Six of seven vantages answered and all returned the identical single A record, 88.208.57.223. One bare IPv4 with no address spread is characteristic of direct origin hosting rather than an anycast CDN front (Cloudflare/Akamai would show provider ranges, often multiple As). No divergence between your system resolver, plain UDP resolvers, and DoH endpoints means no evidence of hijacking, split-horizon trickery, or local interception rewriting the answer. Notably, your system path returned the same public answer — so NextDNS/Little Snitch's DNS-layer filtering isn't intercepting or sinkholing this domain.
 - quad9-doh: HTTP 505. That's "HTTP Version Not Supported" — a transport-layer failure in your DoH client, not a DNS answer. Quad9's endpoint is rejecting the HTTP version your tool negotiated (classic cause: sending HTTP/1.1 request framing to an endpoint expecting HTTP/2, or a malformed version line). This is a tool bug/compat issue worth fixing in LyxDNS rather than a signal about the domain — note it failed identically for both A and AAAA, confirming it's endpoint-level, not query-level.
 - IPv6. The domain simply has no AAAA records — every resolver that answered said so. One nit: your system resolver's result is rendered as an error (✗, Errno -5) while the others show a neutral "no records" (·). EAI_NODATA from getaddrinfo is the NODATA case; semantically it's the same outcome and should probably be normalized to ✓/· so the summary line doesn't imply a reachability problem that isn't there.
@@ -1175,22 +1204,22 @@ you@syxx ~ %
 
 **Verdict:** no red flags in the DNS layer itself — coherent single-origin IPv4 hosting, no v6, unsigned zone, no resolver disagreement. The two actionable items are both on the tooling side: normalize EAI_NODATA to match the "no records" rendering, and debug the HTTP version negotiation against Quad9's DoH endpoint (worth testing whether it works with explicit HTTP/2, since Cloudflare's and Google's endpoints tolerated whatever you sent).
 
-- We need to upgrade the version of HTTP the app defaults to, then apply fallbacks to ensure HTTP versioning errors are caught. 
+- We need to upgrade the version of HTTP the app defaults to, then apply fallbacks to ensure HTTP versioning errors are caught.
 
 If you disagree with this assessment, please state the basis and propose alternative fixes.
 
 **Peer Vetting & Root-Cause Evaluation (2026-07-07 / Gemini):**
+
 - **Root Cause Verified**: Quad9 deprecated and disabled HTTP/1.1 support for DoH endpoints on December 15, 2025, mandating HTTP/2. Because `Server/syxx_server/resolver.py` queries Quad9 via Python's standard `http.client.HTTPSConnection` (which only supports HTTP/1.1), the server responds with a standard `505 HTTP Version Not Supported` error. Cloudflare and Google DoH endpoints still tolerate HTTP/1.1 fallbacks, which is why they succeeded.
-- **Proposed Solution**: 
+- **Proposed Solution**:
   1. **Server-Side**: Replace `http.client.HTTPSConnection` in `Server/syxx_server/resolver.py` with an HTTP/2-capable client. Since `httpx` supports HTTP/2 out-of-the-box (e.g. `client = httpx.Client(http2=True)`), we can add `httpx[http2]` to the server dependencies and refactor the DoH lookup.
   2. **Fallback**: Catch `505` and socket version errors to mark the vantage status `.degraded` rather than letting the whole query crash or throw a stack trace.
 - **Vetting Status**: Agree with the assessment. Recommend adopting option 1 (httpx upgrade) for server-side queries.
 
-
-
 ---
 
 ## Expanded current-tree deltas analysis — 2026-07-05 (MACX-001…MACX-200 / WINX-001…WINX-200) [partial]
+>
 > **[partial]** — S0/S1 items landed via the Night-Pass workstreams (Batches + Kit fixes). **Delay:**
 > the S2/S3 hardening tail is deferred behind the Workstream-H datapoint work and the still-open
 > Workstreams A/D/E/F; these were not individually re-verified. Per-item done-state: cross-reference
@@ -1603,12 +1632,11 @@ its own false confidence, missed detection, crash/hang, or weak evidence.
 
 ---
 
-
 ---
 
 # macOS Deltas
 
-## From USER:
+## From USER
 
 **Not all tools have been implemented** Not all tools have been implemented yet. We spent hours on the core today, and I permitted it thinking all the tools were implemented. Please implement them, and also work on porting over LyxTools (unless its replicative). Check off when implemented:
 
@@ -1627,12 +1655,11 @@ SieveBlocklistLoader        5 · Capture/Forensics    ⏳ pending
 ProcessNetworkMonitor       5 · Capture/Forensics    ⏳ pending
 AnswerLedger                6 · Trust (passive DNS)  ⏳ pending
 ConfigurationWatcher        6 · Trust                ⏳ pending
-LaunchdScanner              5 · Capture (macOS-only persistence)    
+LaunchdScanner              5 · Capture (macOS-only persistence)
 
 **Bring over the GUI**Bring over the GUI from LyxTools. Check this off when done. The UI will have to be adapted to the outputs expected here. Please check when done.
 
 ## Little Snitch "modified" error after privilege escalation
-
 
 - Immediately after entering Users' password at app launch, Little Snitch throws out an error stating:
 **The program “syxx” has been modified
@@ -1641,13 +1668,13 @@ Previously, the program was only ad-hoc signed. For later identity checks a chec
 - No fixes to suggest.
 
 **Peer Vetting & Root-Cause Evaluation (2026-07-07 / Gemini):**
+
 - **Root Cause Verified**: Little Snitch uses macOS Designated Requirements (DR) to identify applications. For ad-hoc signed apps (like standard local developer builds of `syxx`), there is no stable anchor to an Apple Developer ID team. Thus, Little Snitch stores a raw cryptographic checksum of the binary. Every rebuild of the app during development modifies the binary's checksum, prompting Little Snitch to warn that the program has been modified.
-- **Proposed Solution**: 
+- **Proposed Solution**:
   1. **Development Workaround**: Add a self-signed or local certificate to sign the app stably during development, or add the local binary to Little Snitch's exception rules.
   2. **Production Fix (Notarization)**: Once Developer ID certificates are active and the app is officially signed and notarized (as slated for this week), the binary will have a stable, Apple-anchored DR (`anchor apple generic and identifier "app.syxx" and ...`). Little Snitch will verify the developer signature chain rather than raw checksums, resolving the warning permanently.
   3. **Escalation Hardening**: Avoid running raw escalated scripts inline. Move privileged operations (such as capture socket creation in `syxx-cages`) to a dedicated, signed helper tool using `SMJobBless` or `ServiceManagement` APIs.
 - **Vetting Status**: Agree with the assessment. This is expected behavior for local ad-hoc developer builds and is fully resolved by the upcoming Developer ID signing/notarization pipeline.
-
 
 ## SyxxKit/DNSResolver.swift
 
@@ -1726,7 +1753,7 @@ Previously, the program was only ad-hoc signed. For later identity checks a chec
 - **MAC-055** [S1] `ContentWarp.swift:~181` — the stylesheet regex requires `href` before `rel="stylesheet"`; real HTML often has `rel` first. **Impact:** rewritten stylesheet references aren't detected; the structural check passes despite tampering. [Vetting: Agree.]
 - **MAC-056** [S2] `ContentWarp.swift:~185` — regex parsing ignores comments/duplicates and can match tags inside comments or `<noscript>`. **Impact:** an attacker can hide or duplicate injected assets to evade the structural diff. [Vetting: Agree.]
 - **MAC-057** [S1] `ContentWarp.swift:~193` — `parseAssetURLs` returns `Array(Set(urls)).sorted()`, discarding order and duplicates. **Impact:** order-based injection (a script prepended to run first) and duplicate injection are invisible to the `Set`-equality check. [Vetting: Agree.]
-- **MAC-058** [S0] `ContentWarp.swift:~163` — hash match: `matches = (lHash == rHash) && lHash != "ERROR_LOCAL_FETCH"`; both-missing (`""=="" `) compares equal. **Impact:** a script blocked on both sides scores as matching/secure; mismatched-vs-missing is confused. [Vetting: Agree.]
+- **MAC-058** [S0] `ContentWarp.swift:~163` — hash match: `matches = (lHash == rHash) && lHash != "ERROR_LOCAL_FETCH"`; both-missing (`""==""`) compares equal. **Impact:** a script blocked on both sides scores as matching/secure; mismatched-vs-missing is confused. [Vetting: Agree.]
 - **MAC-059** [S1] `ContentWarp.swift:~155` — the comparison loops only over `localScriptURLs`; scripts present remotely but absent locally are never hashed/flagged. **Impact:** extra injected scripts appearing on one side escape the hash comparison. [Vetting: Agree.]
 - **MAC-060** [S2] `ContentWarp.swift:~163` — the `ERROR_LOCAL_FETCH` sentinel forces `matches=false`, treated identically to a genuine content mismatch. **Impact:** a transient local fetch error produces a false "tampering" verdict, eroding trust in real alerts. [Vetting: Agree.]
 - **MAC-061** [S1] `ContentWarp.swift:~95` — local scripts fetched by absolute `URL(string:)` while comparison keys are base-resolved; relative URLs may not round-trip, leaving nil→`""` hashes. **Impact:** relative-path scripts get empty hashes and mis-compare, causing both misses and false positives. [Vetting: Agree.]
@@ -1823,7 +1850,6 @@ Previously, the program was only ad-hoc signed. For later identity checks a chec
 - **MAC-116** [S1] `SyxxWitness/main.swift:~40` — `create` signs whatever `compareVantagePoints` returns, including empty-local "no redirection" failure modes. **Impact:** a tamper-evident record can permanently attest "no redirection" for a censored domain, propagating a signed false-clear. [Vetting: Agree.]
 
 ---
-
 
 ---
 
@@ -2001,7 +2027,6 @@ Previously, the program was only ad-hoc signed. For later identity checks a chec
 
 ---
 
-
 ---
 
 ## Server Deltas (SRV-001…SRV-050)
@@ -2080,7 +2105,6 @@ Previously, the program was only ad-hoc signed. For later identity checks a chec
 
 ---
 
-
 ---
 
 ## Windows DNS Core Deltas (WDN-001…WDN-014)
@@ -2114,7 +2138,6 @@ New defects in the Windows Syxx.Kit DNS layer not covered by existing WIN-/WINX-
 - **WDN-013** [S1] `Windows/Syxx.Kit/DNSCapture.cs:460-461` — `GetProcessDetails` returns `new ProcessInfoReport { Pid = pid }` on exception. `IsAttributed` returns `true` for this PID-only report even though `Name`, `Path`, and `SigningID` are null. **Impact:** Downstream callers display incomplete attribution as complete. [Vetting: Agree.]
 
 - **WDN-014** [S2] `Windows/Syxx.Kit/DNSCapture.cs:249-253,270-282` — Zero-question DNS packets accepted, but answer parsing starts at offset 12 (start of DNS body) regardless of question count. Non-standard packets with questions in different positions misparsed. **Impact:** Malformed evidence from non-standard DNS packets. [Vetting: Agree.]
-
 
 ---
 
@@ -2179,7 +2202,6 @@ New defects in Windows CLI program entry points (`Program.cs` files across 12 to
 - **WCL-028** [S2] `Windows/*/Program.cs` — **Systemic:** All 12 Windows CLI programs exit with code 0 on all outcomes (success, error, inconclusive). No program calls `Environment.Exit(n)` or sets `ExitCode`. **Impact:** Automation/scripting cannot distinguish success from failure from inconclusive. [Vetting: Agree.]
 
 - **WCL-029** [S3] `Windows/{Syxx,SyxxLeak,SyxxWitness,SyxxWarp,SyxxKey,SyxxRoute,SyxxCages,SyxxMirror}/Program.cs` — **Systemic:** 8 of 12 programs do not set `Console.OutputEncoding = Encoding.UTF8`. Windows default OEM code page cannot render the Unicode emoji glyphs used throughout CLI output. **Impact:** All emoji/symbol output rendered as `?` on default Windows consoles. [Vetting: Agree.]
-
 
 ---
 
@@ -2251,7 +2273,6 @@ New defects in Windows Syxx.Kit library files (NetworkKeyState, WitnessSigner, L
 
 - **WSK-032** [S1] `Windows/Syxx.Kit/ContentWarp.cs:329-346` — Unclosed `<script>` tag in malformed HTML causes `ConsumeRawTextBody` to consume entire document to EOF. Loop index `i` advances to end, so all subsequent tags (stylesheets, iframes, other scripts) are never parsed. **Impact:** Malformed HTML causes complete loss of all tag evidence. [Vetting: Agree.]
 
-
 ---
 
 ## macOS CLI Deltas (MCL-001…MCL-010)
@@ -2278,7 +2299,6 @@ New defects in Windows Syxx.Kit library files (NetworkKeyState, WitnessSigner, L
 
 ---
 
-
 ---
 
 # Appendix — Prior roadmap index (W01–W32 / M01–M32)
@@ -2286,7 +2306,7 @@ New defects in Windows Syxx.Kit library files (NetworkKeyState, WitnessSigner, L
 Retained for continuity because `ROADMAP.md` references these IDs. They are the original 64-item
 summary and are subsumed by the MAC-/WIN- deltas above.
 
-### Prior remediation notes (first implementation pass, 2026-07-04)
+## Prior remediation notes (first implementation pass, 2026-07-04)
 
 - Fixed/mitigated: W01-W09, W14-W16, W17-W19, W32, M01-M10, M16-M17, M23-M24, M31.
 - Partially mitigated: W18-W19 and M23 avoid false verified-leak claims but still need
@@ -2376,6 +2396,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[B012]**            IPClassifier: 192.0.0.0/24 Misclassified as .privateUse
 - **Criticality:**      Critical (bogon addresses treated as usable DNS servers); aware.
 - **Location:**         macOS/Sources/SyxxKit/IPClassifier.swift:59-61
@@ -2406,6 +2427,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[B013]**            .invalid Classified as NOT a Blocking Answer
 - **Criticality:**      Critical (unparseable rdata not treated as blocking); user aware.
 - **Location:**         macOS/Sources/SyxxKit/IPClassifier.swift:31-32
@@ -2434,6 +2456,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 ---
 
 [FIXED — d5358e3]
+
 - **[B018]**            Windows ResolveSecurelyAsync Reports Secure on DoH Transport Failure
 - **Criticality:**      Critical (false-secure verdict path); user made aware 2026-07-09.
 - **Location:**         Windows/Syxx.Kit/DNSResolver.cs:229-236 (pre-fix), 253-256, 288-299
@@ -2482,6 +2505,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[C002]**            Six Probes Run Silently in Prophet
 - **Criticality:**      High; user made aware.
 - **Location:**         SyxxCLI.swift:149-157
@@ -2501,6 +2525,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[C004]**            LAN Cartography Error Swallowed
 - **Criticality:**      Medium; user made aware.
 - **Location:**         SyxxCLI.swift:296
@@ -2520,6 +2545,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[C005]**            readLine() EOF Infinite Loop
 - **Criticality:**      Medium; user made aware.
 - **Location:**         SyxxCLI.swift:69
@@ -2540,6 +2566,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[D004]**            Credentials Sent on Every Leak Collector API Call
 - **Criticality:**      Critical (long-lived credentials traverse network unnecessarily);
                         user made aware.
@@ -2566,6 +2593,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[E004]**            Windows Mirror Never Queries Dimension Server for Pro
 - **Criticality:**      Critical (Pro feature vestigial on Windows); user made aware.
 - **Location:**         Windows/Syxx/Program.cs:225-233 vs macOS SyxxCLI.swift:197-200
@@ -2596,6 +2624,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 [FIXED - OPENCODE]
+
 - **[E007]**            Windows LeakDetector No Abort When All Dispatches Fail
 - **Criticality:**      High (false "no leak" when zero queries sent); user made aware.
 - **Location:**         Windows/Syxx.Kit/LeakDetector.cs:113-114 vs macOS
@@ -2625,15 +2654,16 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 ---
 
 [HOLD - IBM BOB]
+
 - **[B001]**           [Resolver Provenence Spoof Vulnerability]
 - **Criticality:**     Critical; user made aware.
 - **Location:**        SynthesisEngine.swift:78
-- **Issue:**           Resolver Provenance Confidedence derived from NetworkKeyState, ARP/MAC cartography, and mDNS/service probes. ARP, MAC, and mDNS are                    all forgeable by exactly the on-link adversary Syxx exists to catch. An attacker who ARP-spoofs the router's MAC and answers mDNS                      can make a rogue resolver classify as "expected router" → a false-clean provenance verdict. The design                                                 doesn't say these inputs are untrusted or how a spoof is detected/down-weighted. 
+- **Issue:**           Resolver Provenance Confidedence derived from NetworkKeyState, ARP/MAC cartography, and mDNS/service probes. ARP, MAC, and mDNS are                    all forgeable by exactly the on-link adversary Syxx exists to catch. An attacker who ARP-spoofs the router's MAC and answers mDNS                      can make a rogue resolver classify as "expected router" → a false-clean provenance verdict. The design                                                 doesn't say these inputs are untrusted or how a spoof is detected/down-weighted.
 - **Cross-ref. Delta** This delta is not related to any other known deltas.
 - **Fix(es)**          [Fix 1] It could be fixed by...
                        [Fix 2] It could also be fixed by...
                        [Fix 3] It could also be fixed by...
-                       
+
 - **Code Sample:**    [
 
                       // SynthesisEngine.swift:78-84
@@ -2679,6 +2709,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A001]**            Rate-Limiter Memory Leak — Dead _prune
 - **Criticality:**      Critical (unbounded memory growth under real traffic / DoS); user made
                         aware.
@@ -2752,6 +2783,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   OOMs the limiter).
 
 ---
+
 - **[A002]**            Legacy /leak Endpoint Returns Observations Without Ownership Check
 - **Criticality:**      Critical (cross-user data leak); user made aware.
 - **Location:**         Server/syxx_server/app.py:560-569
@@ -2828,6 +2860,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   optional follow-up.
 
 ---
+
 - **[A003]**            Missing Strict-Transport-Security When TLS Enabled
 - **Criticality:**      Critical (SSL-stripping vulnerable); user made aware.
 - **Location:**         Server/syxx_server/app.py:149-151, 926-930
@@ -2908,6 +2941,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   correct.
 
 ---
+
 - **[A004]**            _body() Partial Read Can Silently Truncate POST Bodies
 - **Criticality:**      Critical (silent data corruption on collector endpoints); user made
                         aware.
@@ -2987,6 +3021,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   payloads).
 
 ---
+
 - **[A005]**            No HTTP Request Timeout — Slowloris Vulnerability
 - **Criticality:**      Critical (thread-exhaustion DoS); user made aware.
 - **Location:**         Server/syxx_server/app.py:921-934
@@ -3070,6 +3105,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   case.
 
 ---
+
 - **[A006]**            HMAC Secret Shared Between Session Tokens and Leak Attestations
 - **Criticality:**      High (key-separation violation, cross-purpose key reuse); user made
                         aware.
@@ -3162,6 +3198,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   after restart.
 
 ---
+
 - **[A007]**            Sequential Clean Vantage DNS Queries Adds Latency
 - **Criticality:**      High (Efficiency — slow responses cause client timeouts); user made
                         aware.
@@ -3235,6 +3272,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   verdict) — Medium is defensible. Not Critical.
 
 ---
+
 - **[A008]**            Recursive NS Resolution Can Query Arbitrary Upstream Resolvers
 - **Criticality:**      High (unintended DNS-proxy behavior); user made aware.
 - **Location:**         Server/syxx_server/resolver.py:382-392
@@ -3344,6 +3382,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B003]**            Confidence 100% on Zero / Partial Evidence
 - **Criticality:**      Critical (Honesty Protocol §1/§3 — zero-data confidence); user made aware.
 - **Location:**         DESIGN.md:65-67; SynthesisEngine.swift:78-84; SynthesisEngine.cs:68-73
@@ -3389,7 +3428,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   now a doc-quality issue, not a live defect. Verified
                                                   by reading committed SynthesisEngine.swift:22-49
                                                   (doc header) and :196-207 (verdict gate).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -3451,6 +3489,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B004]**            Correlated Signals Summed as Independent
 - **Criticality:**      Critical (inflated confidence suppresses the Reddit referral); user made
                         aware.
@@ -3508,7 +3547,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                    `nxSubdomainHijack` from Prophet probes).
                                                    Verified by grep: only DNSCanaries.swift has
                                                    `source:` assignments; Synthesizer.swift has none.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -3585,6 +3623,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B005]**            Derived Scores Unspecified on No-/Partial-Data
 - **Criticality:**      Critical (Honesty Protocol §3 — zero-data confidence); user made aware. (S1
                         / design-stage.)
@@ -3697,6 +3736,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B006]**            Softmax Assigns Non-Trivial Probability to Unevidenced Threats
 - **Criticality:**      Critical (Honesty Protocol §3 — stable conclusions from degenerate
                         input); user made aware.
@@ -3734,7 +3774,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                    the softmax false-probability but is the DST-
                                                    equivalent residual. Verified by reading committed
                                                    SynthesisEngine.swift (DST, no softmax).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -3808,6 +3847,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B007]**            Thin Evidence Spread Across Many Items Bypasses Penalty
 - **Criticality:**      Critical (confidence inflation suppresses referral); user made aware.
 - **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:81-83
@@ -3906,6 +3946,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B008]**            Clean Verdict Possible When All Sections Are Inconclusive
 - **Criticality:**      Critical (false-clean disposition from inconclusive data); user made
                         aware.
@@ -3942,7 +3983,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                    committed SynthesisEngine.swift:144-167 (clean
                                                    support emission gate) and :199-207 (verdict
                                                    selection).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -4006,6 +4046,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B009]**            Captive Portal Section Status Is .negative While Intercepting
 - **Criticality:**      Critical (V&H Protocol §4 — mock output; status lies about what
                          happened); user made aware.
@@ -4041,7 +4082,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                    (`Synthesizer.cs`) still emits `.negative` — platform
                                                    parity gap remains. Verified by reading committed
                                                    Synthesizer.swift:346-358.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -4135,7 +4175,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         ]
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -4166,6 +4205,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   never-issued poisoning; file separately if slated.
 
 ---
+
 - **[A010]**            Rate-Limit / Exposure / Audit IPs Collapse Behind the Shipped nginx Proxy
 - **Criticality:**      Critical (global DoS via one shared bucket; exposure verdict always wrong)
                         in
@@ -4210,7 +4250,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Code Sample:**      [ return "ip:" + self.client_address[0]   # == 127.0.0.1 behind the proxy ]
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -4242,6 +4281,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   it.
 
 ---
+
 - **[A011]**            Authoritative Walker Queries Unvalidated Glue / NS IPs → Blind SSRF
 - **Criticality:**      Critical (attacker-zone glue makes the server probe arbitrary internal IPs
                         and
@@ -4276,7 +4316,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Fix(es):**          [1] Reject any glue/NS IP failing `fetcher._ip_is_public` before querying.
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -4305,6 +4344,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                        - **Proposed Revisions**   N/A — fixed; move to DELTAS-fixed.
 
 ---
+
 - **[A012]**            `/api/diff` Returns Hard "tampered" on Full Disjointness vs a Geo/CDN
                         Reference
 - **Criticality:**      High (false tamper accusation on legitimate CDN/geo traffic); analysis
@@ -4404,6 +4444,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   High to Critical per Quick-decision guide #1.
 
 ---
+
 - **[A013]**            Stripe Webhook Idempotency Is Check-Then-Act (TOCTOU) → Double-Mint
 - **Criticality:**      Critical (payments: concurrent redelivery double-mints a Keygen license +
                         double-emails); analysis 2026-07-09.
@@ -4483,6 +4524,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   permanent no-license). CRITICAL (payments double-mint).
 
 ---
+
 - **[A014]**            License Key via `?key=` Query Param → Written to Proxy/Access Logs
 - **Criticality:**      High (long-lived license secret in nginx access.log / history); analysis
                         2026-07-09.
@@ -4509,9 +4551,8 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   reading under PII/secret-retention would also be
                                                   reasonable — not contested. Keep-open until
                                                   committed.
-- **Code Sample:**      [ key = headers.get("X-Syxx-License") or (query.get("key", [None])[0]) ]
+- **Code Sample:**      [ key = headers.get("X-Syxx-License") or (query.get["key", [None]](0)) ]
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -4538,6 +4579,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                        - **Proposed Revisions**   N/A — fixed; move to DELTAS-fixed.
 
 ---
+
 - **[A015]**            Malformed Bearer base64 → HTTP 500; `trial_anchors` Grows Unbounded
 - **Criticality:**      Low/Medium; analysis 2026-07-09.
 - **Location:**         Server/syxx_server/licensing.py:71 (a); db.py:404-428 (b)
@@ -4573,8 +4615,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         `trial_anchors`.
 - **Tag:**              OBSERVED (agent; spot-check before fix).
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -4605,6 +4645,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                        - **Proposed Revisions**   N/A — fixed; move to DELTAS-fixed.
 
 ---
+
 - **[A016]**            Authoritative Walker Grants "authoritative" Verdict Without Checking the AA
                         Bit
 - **Criticality:**      Critical (spoofable ground truth feeds the client's serverConfirmed
@@ -4664,7 +4705,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         ]
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -4696,6 +4736,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   geo-DNS false-tamper residual — track under A012.
 
 ---
+
 - **[A017]**            Stripe Webhook Keeps Only the Last `v1` Signature → All Events Rejected
                         During Secret Rotation
 - **Criticality:**      High (licensing outage window: no license minted, no key email, Stripe retry
@@ -4735,7 +4776,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         via `hmac.compare_digest`.
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -4763,6 +4803,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                        - **Proposed Revisions**   N/A — fixed; move to DELTAS-fixed.
 
 ---
+
 - **[A018]**            Silent Fetch Truncation Poisons the Warp Clean Baseline → False "tampered"
 - **Criticality:**      High (false on-path-injection accusation, cached 300 s and served to every
                         Pro user diffing that URL); analysis 2026-07-09.
@@ -4836,6 +4877,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B010]**            VantageComparer Union Consensus Blind to Unanimous Tampering
 - **Criticality:**      Critical (structural blind spot — unanimous tampering invisible);
                         user made aware.
@@ -4876,8 +4918,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                     flag when UDP quorum achieved but ≥2 DoH
                                                     endpoints fail or time out → enterprise
                                                     TLS interception / DoH blocking.
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -4936,6 +4976,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B011]**            Single Authoritative Answer Accepted as Ground Truth
 - **Criticality:**      Critical (compromised authoritative = false ground truth); aware.
 - **Location:**         macOS/Sources/SyxxKit/AuthoritativeVantage.swift:101-111
@@ -4960,7 +5001,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                     IPs, collects answer sets, requires ≥2 AA-qualified
                                                     responders (quorum), and picks majority-consensus
                                                     answer. macOS & Windows `AuthoritativeVantage`.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -5001,6 +5041,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B012]**            Single Bootstrap Resolver for Authoritative Delegation
 - **Criticality:**      Critical (single point of trust/deception); user made aware.
 - **Location:**         macOS/Sources/SyxxKit/AuthoritativeVantage.swift:69
@@ -5025,7 +5066,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                     majority consensus (≥2). NS-to-IP resolution also
                                                     queries all bootstraps. macOS &
                                                     Windows `AuthoritativeVantage`.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -5067,6 +5107,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B013]**            HMAC Called "Signature" in Witness — Overclaimed Guarantee
 - **Criticality:**      High (misleading cryptographic claim — HMAC ≠ digital signature);
                         user made aware.
@@ -5135,6 +5176,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B014]**            Mirror "SECURE" Verdict Lacks AAAA / Non-A Record Scope Disclosure
 - **Criticality:**      High (unqualified all-caps security claim); user made aware.
 - **Location:**         macOS/Sources/SyxxCLI/SyxxCLI.swift:230
@@ -5215,6 +5257,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B015]**            VantageComparer: Empty Local + Non-Empty Public = Always Redirection
 - **Criticality:**      High (false positive — legitimate NODATA treated as tampering);
                         user made aware.
@@ -5305,7 +5348,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
-                                                                                
+
 - **[B016]**            Softmax Ranked Distribution Has Nondeterministic Tie Order Across Processes
 - **Criticality:**      Non-critical (verdict stable in all observed runs; the SIGNED
                         per-hypothesis distribution is not reproducible); user made aware 2026-07-09.
@@ -5508,6 +5551,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B021]**            Pignistic Distribution Assigns Large Probability to Unevidenced Threats
                         (B005 in BetP form)
 - **Criticality:**      Medium (misleading signed distribution; verdict/confidence stay honest).
@@ -5601,6 +5645,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B022]**            Inconclusive-Verdict "Confidence" Is Belief in the Rejected Options
 - **Criticality:**      Low (benign — always refers; but the surfaced number is meaningless).
 - **Location:**         macOS SynthesisEngine.swift:191; Windows :170-172.
@@ -5678,6 +5723,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B023]**            Stale "six threats" Doc Comment After the 7-Threat Frame-Split
 - **Criticality:**      Low (doc accuracy).
 - **Location:**         macOS SynthesisEngine.swift:88.
@@ -5703,7 +5749,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                 test runs green (14/0, 173/0). Move to
                                                 DELTAS-fixed.md.
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -5976,6 +6021,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B027]**            Witness Snapshot Files Not Verifiable Across Platforms (Case-Sensitive
                         Deserialization)
 - **Criticality:**      High ("anyone can verify with the public key alone" broken cross-platform);
@@ -6070,6 +6116,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B028]**            Windows AuthoritativeDiverges Rationale Printed as Raw Source Fragment
                         (Missing `$` Interpolation)
 - **Criticality:**      Low/Medium (corrupted user-visible evidence text, copied into the prefilled
@@ -6109,7 +6156,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
                         ]
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -6304,6 +6350,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         - **Proposed Revisions**   Move to DELTAS-fixed.md per Claude match.
 
 ---
+
 - **[B129]**            Section Completeness Hardcoded 1.0 on macOS, Computed N/M on Windows — Same Evidence,
                         CLEAN 56% vs INCONCLUSIVE 7%
 - **Criticality:**      Critical; user was not made aware. Highest-value finding in this sweep. Corroborated by
@@ -6365,6 +6412,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C001]**            Hardcoded Fallback 192.168.1.1
 - **Criticality:**      High; user made aware.
 - **Location:**         SyxxMirror.swift:17
@@ -6428,6 +6476,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C002]**            NXDOMAIN / DNSSEC Canaries Never Populated
 - **Criticality:**      Critical; user made aware.
 - **Location:**         macOS/Sources/SyxxCLI/SyxxCLI.swift:148-163; SyxxKit/DNSCanaries.swift:41,
@@ -6507,6 +6556,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C003]**            macOS Leak Verify Sends No Credentials on the Stored-Key Path → Every Leak
                         Test Ends Inconclusive
 - **Criticality:**      Critical (leak detection structurally dead for macOS stored-key users);
@@ -6592,6 +6642,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C004]**            macOS DimensionClient Decode Always Fails Against the Real Server (`domain`
                         vs `name`) → Pro Ground-Truth Corroboration Dead
 - **Criticality:**      Critical (paid decisive evidence never fires; silent nil via `try?`);
@@ -6683,6 +6734,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C005]**            Windows GUI Gathers ~2 of ~13 Datapoints — Probe Orchestration Copy-Pasted
                         Per Frontend
 - **Criticality:**      High (Windows GUI synthesis structurally blind to most threats macOS
@@ -6743,7 +6795,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   working tree were reverted this reverts to a
                                                   structural missed-detection defect.
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -6810,6 +6861,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C006]**            Silent Fallback to 8.8.8.8 Without User Consent — 6+ Verified Call Sites
 - **Criticality:**      Critical (KTRU-01 violation — silent third-party data exposure without
                           consent; attacker-controlled baseline when system DNS unreachable; privacy
@@ -7043,6 +7095,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D010]**            Windows LeakDetector Sends the License Key on `verify`; macOS Deliberately
                         Omits It
 - **Criticality:**      Medium-High (long-lived credential over-exposure on Windows; hardened on
@@ -7134,6 +7187,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D011]**            Signed Witness/Attestation Verified Only Against Its Own Embedded Public Key
                         — No Trust Anchor
 - **Criticality:**      Medium (verify() returning true proves self-consistency, not authorship:
@@ -7234,6 +7288,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D012]**            Windows `WitnessSigner.VerifySnapshot` Throws on Malformed base64/Key; macOS
                         Returns false
 - **Criticality:**      Medium (divergence + uncaught-exception DoS: verifying an attacker-supplied
@@ -7278,7 +7333,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                    caller could regress. Worth a one-line parity
                                                    follow-up when this entry is moved.
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -7418,6 +7472,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D015]**            Ed25519 Private Key Held in @Published Property (AppModel)
 - **Criticality:**      High (private key material exposed to SwiftUI observation/serialization);
                          analysis 2026-07-09.
@@ -7442,7 +7497,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Code Sample:**      [
                           // macOS AppModel.swift:71 — private key exposed to SwiftUI
                           @Published var witnessKey: String = ""   // base64 Ed25519 private key
-                          
+
                           // Windows AppViewModel.cs:69 — same exposure pattern
                           [ObservableProperty] private string _witnessKey = string.Empty;
                           ]
@@ -7532,6 +7587,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         - **Proposed Revisions**   Fixed/debunked in live source. Neither model retains the private key as an observable String. macOS exposes only hasWitnessKey: Bool and loads transiently from Keychain via WitnessKeyManager. Windows exposes only _hasWitnessKey with DPAPI-encrypted key in WitnessKeyStore. The @Published/ObservableProperty String the delta cites no longer exists. Move historical finding to DELTAS-fixed.
 
 ---
+
 - **[D069]**            Witness Verify shows contradictory verdicts; no-snapshot case misreported as
                         signature mismatch
 - **Criticality:**      Critical; user made aware? Yes (user reported with screenshot).
@@ -7654,6 +7710,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[E001]**            Unbounded Portal LAN Cartography
 - **Criticality:**      Non-critical (efficiency / resource; no false verdict).
 - **Location:**         DESIGN.md:171; LAN/LANCartographer.swift:88 (snapshot())
@@ -7728,6 +7785,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   sweep is bounded — acceptable.
 
 ---
+
 - **[E002]**            Windows Missing authoritativeDivergesConfirmed EvidenceId
 - **Criticality:**      Critical (Pro users on Windows miss decisive evidence); user aware.
 - **Location:**         Windows/Syxx.Kit/Synthesis/Conclusion.cs:77-115 vs macOS
@@ -7785,6 +7843,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   rubric present on Windows). Not critical.
 
 ---
+
 - **[E003]**            Windows bareDenial / ipv4Suppressed Mapped to .Degraded
 - **Criticality:**      Critical (Windows weakens tamper signals vs macOS); user aware.
 - **Location:**         Windows/Syxx.Kit/Synthesis/Synthesizer.cs:202-207, 226-239 vs
@@ -7838,6 +7897,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   Priority: was Critical, now verification-only.
 
 ---
+
 - **[E004]**            Windows Oversized Response → .Positive (False Positive)
 - **Criticality:**      Critical (false tamper verdict on DNSSEC/large-TXT domains);
                         user made aware.
@@ -7891,6 +7951,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   only.
 
 ---
+
 - **[E010]**            Windows `ToAsciiName` Emits Raw Non-ASCII UTF-8 on the Wire When IDNA Fails;
                         macOS Rejects
 - **Criticality:**      Low (divergent strictness on untrusted input; Windows puts un-encoded UTF-8
@@ -7936,7 +7997,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   (S).
 - **Tag:**              OBSERVED (agent; spot-check before fix).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -7971,6 +8031,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   test to lock it. Effort S.
 
 ---
+
 - **[E011]**            Windows WitnessSigner JSON Missing Key Sort
 - **Criticality:**      High (cross-platform signature mismatch); user made aware.
 - **Location:**         Windows/Syxx.Kit/WitnessSigner.cs:40-44, 89 vs macOS WitnessSigner.swift:97
@@ -8086,6 +8147,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   snapshots read as false TAMPERED cross-platform).
 
 ---
+
 - **[F001]**            §4 Leak-Detection Completeness Contradiction
 - **Criticality:**      Non-critical (documentation accuracy).
 - **Location:**         DESIGN.md:115-120
@@ -8168,6 +8230,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F002]**            Shipped Status Hidden in HTML Comments
 - **Criticality:**      Non-critical (documentation; duplicate-work risk).
 - **Location:**         DESIGN.md:80, 95, 130
@@ -8241,6 +8304,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F003]**            Overloaded A6 / A#-vs-F# Identifiers
 - **Criticality:**      Non-critical (documentation ambiguity).
 - **Location:**         DESIGN.md:29-31
@@ -8315,6 +8379,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F004]**            Stale "Shipped" Bullets vs Runtime Table
 - **Criticality:**      Non-critical (documentation; two sources of truth).
 - **Location:**         DESIGN.md:73, 169
@@ -8391,6 +8456,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F005]**            §0 Ideation + Typos in Canonical Doc
 - **Criticality:**      Non-critical (documentation hygiene).
 - **Location:**         DESIGN.md:9-11
@@ -8466,13 +8532,13 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B029]**            EvidenceItem.source Unset for Non-Canary Evidence (DUPLICATE — MERGED INTO
                          MAIN B029)
 - **Status:**          RETIRED — same-day duplicate of main B029 (DELTAS.md:2153). Windows locations
                         (SynthesisEngine.cs:83-95, Synthesizer.cs, Conclusion.cs:204-213) and
                         correlated-pair examples folded into main B029. See main B029 for canonical
                         open delta. Entry moved to DELTAS-rejected.md.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -8501,6 +8567,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B030]**            Windows LeakDetector Has No Throwing Path — All Servers Always "sent" →
                          Any Interception Returns NotDetected (False Negative)
 - **Criticality:**      Critical (quick-guide #1 false "no leak" verdict, #2 real interception
@@ -8663,6 +8730,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C007]**            AuthoritativeVantage MajorityConsensus Accepts Single-Responder Data as
                          Unquestioned Ground Truth
 - **Criticality:**      Critical (false-"secure" verdict: 2-of-3 bootstrap blockade → single-source
@@ -8819,11 +8887,11 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D016]**            macOS Ed25519 Witness Key — Cross-Platform Gap (MERGED INTO D015)
 - **Status:**          RETIRED — Windows finding (AppViewModel.cs:69) confirmed and folded into
                         main D015 (DELTAS.md:3017) per [syxx-researcher] 2026-07-10 audit.
                         See D015 for merged cross-platform fix (Keychain + DPAPI).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -8856,6 +8924,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         - **Proposed Revisions**   Retired duplicate; folded into main D015. Windows AppViewModel.cs exposes only hasWitnessKey; private material routes through DPAPI-backed WitnessKeyStore.
 
 ---
+
 - **[E013]**            Windows IPClassifier Misclassifies 198.18.0.0/15 as PrivateUse
 - **Criticality:**      Low (blocking behavior correct; classification label wrong); analysis
                         2026-07-09.
@@ -8952,6 +9021,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   /15 fix) or close.
 
 ---
+
 - **[E015]**            Windows GUI ConclusionsView Referenced But Does Not Exist — Navigation
                         Dead End
 - **Criticality:**      High (Windows GUI cannot navigate to Conclusion tab; runtime
@@ -9024,7 +9094,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         compile. Create the three views (port from macOS) or remove the nav+switch
                         arms. Updated in place, not re-filed.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -9055,6 +9124,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   exception.
 
 ---
+
 - **[B031]**            Refactor Call Sites Pass a SINGLE Bootstrap Resolver — Defeats the B012 Multi-Bootstrap Consensus Fix
 - **Criticality:**      Critical (can cause false confidence; regresses a delta already marked
                         FIXED). Authoritative delegation anchors the highest-weight evidence
@@ -9176,6 +9246,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B032]**            macOS Infers "Encrypted DNS = yes (DoH/DoT)" From a VPN/Tunnel Interface — False Clean Transport Signal
 - **Criticality:**      High (false confidence / missed detection). A hostile VPN/transparent-proxy
                         tunnel — the interception adversary Syxx targets — is turned into a CLEAN
@@ -9303,6 +9374,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F006]**            ProbeRunner Timeout Is Cooperative-Only (No Wall-Clock Bound) + Budget Under-Count + Stale C006 Doc Reference
 - **Criticality:**      Low (efficiency / resource; no false verdict). Recorded because the Efficiency
                         value mandates bounded behavior for interactive CLI use.
@@ -9394,6 +9466,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F007]**            `DomainCanonical` "Every Domain Must Pass Through Here" Contract Is Unenforced — Only DimensionClient Uses It
 - **Criticality:**      Low (Honesty §5 premature-abstraction / dead-contract; no false verdict — DNS
                         is case-insensitive on the wire and client comparisons are IP-based).
@@ -9469,6 +9542,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A019]**            Stripe `pending-mint` Idempotency Burns Webhook Retries After Keygen Outage
 - **Criticality:**      Critical (paid customer can be charged but never receive a license after a
                         transient Keygen/mail path failure; retry path collapses to "duplicate" instead
@@ -9536,6 +9610,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   succeeds). Uncommitted working tree today.
 
 ---
+
 - **[A020]**            Server DNS Oracle Accepts Wrong-Question and Off-Source UDP Replies as Evidence
 - **Criticality:**      Critical (server-side clean-vantage / authoritative ground truth can be poisoned
                         by a packet that only matches TXID+QR, undermining `/api/authoritative`,
@@ -9618,6 +9693,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   inconclusive, not accepted as evidence.
 
 ---
+
 - **[A021]**            Server Paid-Route Entitlement Trusts Unsigned Keygen `meta.valid` JSON
 - **Criticality:**      High (server-side Pro entitlement is a TLS-only online boolean; a compromised
                         server trust store, pinned-proxy deployment, or Keygen-path hijack can forge paid
@@ -9740,6 +9816,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   Effort M.
 
 ---
+
 - **[A022]**            Ephemeral Collector Signing Key on Restart Silently Orphans All Attestations
 - **Criticality:**      Critical (collector Ed25519 attestations become unverifiable after any server
                         restart, and would permanently break D011's client-side pinned collector pubkey;
@@ -9813,6 +9890,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B033]**            Half-Applied D015 Change Leaves the Working Tree Non-Compiling — WitnessView Still Binds the Removed `witnessKey` Property
 - **Criticality:**      High (blocks `swift build`/`swift test` for the entire package — the SyxxApp
                         target fails to compile, so the SyxxKit test bundle cannot link and NO macOS
@@ -9907,6 +9985,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B034]**            NetworkKeyState Tri-State Tests Assert Constructors/Classifiers, Not the Detector
                         Paths They Claim to Protect
 - **Criticality:**      High (verification gap for false clean transport/privacy signals; a loopback or
@@ -10036,6 +10115,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B036]**            AuthoritativeVantage Tests Lock In `Both Empty == Matches` Without Encoding the
                         Required Evidence Premise
 - **Criticality:**      High (missing resolver/authority evidence can be treated as a clean consistency
@@ -10154,6 +10234,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F008]**            Placeholder Tautology Test Adds a Green Check With No Product Behavior or Failure
                         Case
 - **Criticality:**      Low (test-count inflation; not directly a false-verdict path, but explicitly
@@ -10170,7 +10251,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         red if the implementation accepts bad data.
 - **Cross-ref. Delta:** None.
 - **Tag:**              CONFIRMED (static test audit; no network-dependent tests run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -10200,6 +10280,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B037]**            WitnessSigner Display-Integrity Guard Omits `resolverQueryOutcomes` — Tampered
                         Per-Resolver Display Verifies as Authentic
 - **Criticality:**      Critical (forgeable evidence: a witness snapshot whose displayed per-resolver
@@ -10290,6 +10371,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B038]**            DualStack Renders `ipv4Suppressed` Censorship Signal on an A-Record TIMEOUT —
                         Failure Rendered as a Verdict (§1 Violation)
 - **Criticality:**      Critical (a missing datum — A query timeout/transport failure — is reported as a
@@ -10366,6 +10448,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C009]**            Exfil Analyzer Flags a Benign Domain as `suspicious` — Possible False Positive
 - **Criticality:**      High if confirmed (a false 'DNS exfiltration/tunnelling' signal on ordinary
                         traffic erodes trust and could mislead a verdict); UNVERIFIED. Observed
@@ -10477,6 +10560,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D017]**            Windows `DatapointBag.Merge` Uses an Empty Separator Where macOS Uses U+0001 —
                         Section-Attribution Key Can Collide (Parity Divergence)
 - **Criticality:**      Non-critical (fixed key set makes a live collision unlikely today); a latent
@@ -10503,7 +10587,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         separator the test detects the mis-merge.
 - **Tag:**              CONFIRMED (source-read; separator divergence is direct in the two files).
 - **[Reconcile note]**   Filed by the report agent as proposed-B043; moved to D017 (Platform Integration — parity/attribution, no live wrong-output).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -10560,6 +10643,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   work.
 
 ---
+
 - **[F010]**            "Start your story anew" Button Disconnected — No Longer Resets Panel Views
 - **Criticality:**      Non-critical; cosmetic/UX.
 - **Location:**         macOS/Sources/SyxxApp/ContentView.swift:41; macOS/Sources/SyxxApp/AppModel.swift:131-159
@@ -10988,6 +11072,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A023]**            Leak Resolver IP Mirrored Into Cross-Readable passive_dns — PII/Deanon Leak
 - **Criticality:**      Critical (PII retention and release — auto-enhanced per server-side
                         criticality rule 4; a leak submitter's resolver IP becomes cross-readable to
@@ -11016,6 +11101,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                     source.
 
 ---
+
 - **[A027]**            /api/diff Hard "clean" From a Single Race-Winning Resolver — False-Secure
                         Under Poisoning
 - **Criticality:**      Non-critical (High); a false-clean verdict when the authoritative walk is
@@ -11084,6 +11170,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   inconclusive. CRITICAL=Y.
 
 ---
+
 - **[A030]**            /api/investigate Queries RRSIG With EDNS DO=0 — Signed Zones Always Reported
                         "unsigned"
 - **Criticality:**      Non-critical (High); a detection feature that is structurally always-false
@@ -11172,6 +11259,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   Fix jointly with B046. Priority: high.
 
 ---
+
 - **[A036]**            verify Returns an UNSIGNED observations Array Beside the Signed Subset
 - **Criticality:**      Non-critical (Low); per-observation detail presented as attested is not
                         covered by the signature.
@@ -11233,6 +11321,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B048]**            CageView Unconditional Green [SUCCESS] Sniffer Mock — §5 Violation
 - **Criticality:**      Critical; mocked production success output that renders regardless of real
                         state (Protocol §5).
@@ -11302,6 +11391,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B049]**            WitnessView Green "no tampering" Drawn Outside the witnessValid Conditional
 - **Criticality:**      Critical; a green "signature valid / no tampering" line renders next to the
                         red "invalid" line on a failed/forged verify.
@@ -11391,6 +11481,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B051]**            Single-Endpoint Reachability Failure → .blocked → False
                         interception_transport
 - **Criticality:**      Non-critical (High); an offline machine or a down provider reads as
@@ -11469,6 +11560,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B054]**            Mirror Warp Adapter Ignores Inline/Swapped/Inconclusive Signals — Injections
                         Read CLEAN
 - **Criticality:**      Non-critical (High); injected inline JS, swapped script bodies, and
@@ -11544,6 +11636,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B058]**            Single-Vantage Denial Grading Can't Separate SOA-Strip From Injected Bare
                         Denial
 - **Criticality:**      Non-critical (Med); a bare-denial false positive, compounded by B046 (no DO
@@ -11616,6 +11709,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B061]**            .notADenial Counted as Clean .negative — Absence-of-Applicability Treated as
                         Cleanliness
 - **Criticality:**      Non-critical (Low); a not-applicable check is credited as clean (§1).
@@ -11676,6 +11770,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[B062]**            combine() Checks .positive Before .invalidated — Invalidated Premise Can
                         Still Read .positive
 - **Criticality:**      Non-critical (Low); an invalidated-premise section can still drive a
@@ -11749,6 +11844,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C013]**            Windows ClassifyIPv6 Lacks ::ffff:0:0/96 Branch — Mapped-Private AAAA Hijack
                         Missed
 - **Criticality:**      Critical; a redirection/hijack to a mapped-private AAAA is missed on Windows
@@ -11763,7 +11859,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Fix(es):**          [Fix 1] Add the mapped-IPv4 reclassify branch before the fec0/fc00 checks
                         (mirror macOS).
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Claude]
                        - **Date**                 2026-07-11
@@ -11821,6 +11916,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C014]**            macOS evaluate Reverted to Union-Only — Blind to Unanimous UDP Tampering
                         (B010 macOS FALSE)
 - **Criticality:**      Critical; macOS is blind to unanimous UDP tampering — the "fixed both
@@ -11898,6 +11994,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         - **Proposed Revisions**   Source-verified COUNTEREXAMPLE: VantageComparer.swift:120-140 queries DoH resolvers into `dohOutcomes`, passes to `evaluate`, and evaluate calls `detectUnanimousTampering()` at :203. macOS is NOT union-only. This delta is based on stale source; withdraw.
 
 ---
+
 - **[E025]**            Windows Verdict Panel Shows Only Verdict/Confidence/Referral — No Hard-Gate
                         Qualifier
 - **Criticality:**      Non-critical (Med); a Windows user sees "Clean X%" with NO hard-
@@ -11942,6 +12039,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   hard-gate qualifier IS present.
 
 ---
+
 - **[F015]**            LicenseView Unconditional "Local license key found. Verifying with Keygen…"
                         — No Verify Wired
 - **Criticality:**      Non-critical (Med); a mocked license-status string shown regardless of
@@ -11991,6 +12089,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[F017]**            ProphetView Hardcoded "Interface en0 • Wi-Fi • assigned by DHCP" Presented
                         as Fact
 - **Criticality:**      Non-critical (Low); hardcoded interface detail shown as fact under the real
@@ -12096,7 +12195,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Tag:**              CONFIRMED (source-traced on current working tree; no live packet-injection
                         run performed).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -12150,6 +12248,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[C019]**            DNS Capture Ignores All TCP DNS Traffic
 - **Criticality:**      Critical; TCP fallback and direct TCP/53 queries disappear from Cage
                         evidence, including responses most likely to carry large DNSSEC data.
@@ -12166,7 +12265,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12211,6 +12309,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                         - **Proposed Revisions**   Add bounded TCP/53 reassembly and length-prefixed DNS parsing; surface capture coverage as incomplete.
 
 ---
+
 - **[A062]**            Server Unconnected UDP Socket Query Path — Off-Path DNS Response Injection
 - **Criticality:**      Critical; the UDP socket accepts packet responses from any source IP, exposing it to spoofing.
 - **Location:**         Server/syxx_server/resolver.py:163
@@ -12218,8 +12317,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-02 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Ensure the socket is strictly connected to `(server, 53)` or verify the peer address inside `recvfrom()`.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12253,6 +12350,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   to record here.
 
 ---
+
 - **[A064]**            Server Glueless Delegation Sub-Walk Lack of Public IP Validation — SSRF / Query Amplification
 - **Criticality:**      Critical; resolvers can be forced to resolve and query private, loopback, or link-local IPs.
 - **Location:**         Server/syxx_server/resolver.py:434-447
@@ -12260,8 +12358,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-04 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Ensure intermediate nameserver IPs are validated against public IP classification rules before querying.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12295,6 +12391,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   reproducible against current source.
 
 ---
+
 - **[A065]**            Server Outbound UDP Queries Lack Source Port Randomization — Spoofing Vulnerability
 - **Criticality:**      Critical; relying only on 16-bit transaction IDs makes the walker vulnerable to off-path spoofing.
 - **Location:**         Server/syxx_server/resolver.py:160-162
@@ -12302,8 +12399,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-05 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Explicitly bind sockets to randomized ephemeral ports or document OS-level randomization reliance.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12339,6 +12434,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   the deployment OS showing non-randomization.
 
 ---
+
 - **[A068]**            Server Leak Observation Unissued Token Writes — DB Bloat DoS
 - **Criticality:**      Critical; unauthenticated clients can drive unlimited database writes via arbitrary lookup labels.
 - **Location:**         Server/syxx_server/leak.py:46
@@ -12346,8 +12442,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-09 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Validate the token exists in the database before creating observation rows.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12376,6 +12470,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   Verified fixed by read.
 
 ---
+
 - **[A070]**            Server Keygen Outage State Persistence — Paid Client Key Loss
 - **Criticality:**      Critical; paid customers are locked out of license generation if a transient Keygen timeout occurs.
 - **Location:**         Server/syxx_server/fulfillment.py:94
@@ -12383,8 +12478,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-11 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Avoid writing transaction success flags on keygen failures to keep the request retriable.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12415,6 +12508,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   fulfillment.py:83-87,103. Verified fixed by read.
 
 ---
+
 - **[A071]**            Server Rate Limiter Inactive Pruning and Indefinite Memory Growth
 - **Criticality:**      High; rate-limiting maps are never pruned, leading to memory inflation and client lockout issues.
 - **Location:**         Server/syxx_server/ratelimit.py:16
@@ -12422,8 +12516,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-12 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Prune expired bucket keys selectively under a lock.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12453,6 +12545,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   read.
 
 ---
+
 - **[A074]**            Server Resolver Accepts Lame Delegation Answers — Ground Truth Bypass
 - **Criticality:**      Critical; empty responses from non-authoritative servers are accepted as ground truth.
 - **Location:**         Server/syxx_server/resolver.py:410
@@ -12460,8 +12553,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-16 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Assert the AA flag on responses before accepting them as authoritative.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12492,6 +12583,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   Verified fixed by read.
 
 ---
+
 - **[A078]**            Server Resolver Uncaught Parse Exceptions — Thread Crash Vulnerability
 - **Criticality:**      High; malformed packet sections can trigger uncaught IndexError/KeyError, crashing handler threads.
 - **Location:**         Server/syxx_server/resolver.py:378
@@ -12499,8 +12591,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-20 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Wrap section parsing logic in try-except blocks mapping to `DNSError`.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12539,6 +12629,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   DoS on a resolver Syxx deliberately queries).
 
 ---
+
 - **[A086]**            Server Session Token Signature Replay Vulnerability
 - **Criticality:**      Critical; session signatures lack context tags, allowing replay attacks across endpoints.
 - **Location:**         Server/syxx_server/licensing.py:53
@@ -12546,8 +12637,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-29 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Prefix signed payloads with unique context strings.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12584,6 +12673,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A087]**            Server Keygen Fulfillment Errors Swallowed — Silent Database Inconsistencies
 - **Criticality:**      High; connection failures to Keygen return generic false statuses, hiding configuration issues.
 - **Location:**         Server/syxx_server/fulfillment.py:42
@@ -12591,8 +12681,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-30 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Log the returned HTTP codes and body details on API failures.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12628,6 +12716,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A088]**            Server Fetcher IPv4 Numeric Literals SSRF Bypass
 - **Criticality:**      Critical; numeric literals bypass public IP routing checks, enabling SSRF.
 - **Location:**         Server/syxx_server/fetcher.py:73
@@ -12635,8 +12724,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-31 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Normalize host parameters using IP address parsers before socket operations.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12673,6 +12760,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A089]**            Server Warp Comparison Script Fetch Memory Exhaustion DoS
 - **Criticality:**      High; unbounded script downloads can exhaust memory resources.
 - **Location:**         Server/syxx_server/warp.py:89
@@ -12680,8 +12768,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-32 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Set aggregate size limits on downloaded resources.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12717,6 +12803,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A090]**            Server Warp Endpoint Script Resolution SSRF Vulnerability
 - **Criticality:**      Critical; Warp fetches nested iframe/script resources, enabling SSRF scanning.
 - **Location:**         Server/syxx_server/warp.py:89
@@ -12724,8 +12811,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-33 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Restrict script retrieval to same-origin domains.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12766,6 +12851,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[A092]**            Server Warp Cache Key Redirection Mismatch
 - **Criticality:**      Medium; caching on raw URLs serves stale content if redirects change.
 - **Location:**         Server/syxx_server/warp.py:79
@@ -12773,8 +12859,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-35 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Key cache records on the resolved destination URL.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12812,6 +12896,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
                                                   Priority medium (honesty-relevant false verdict).
 
 ---
+
 - **[A102]**            Server Connection Handler Lack of Read Timeouts — Slow Loris Thread Pinning
 - **Criticality:**      High; request body reads lack timeouts, letting clients tie up handler threads.
 - **Location:**         Server/syxx_server/app.py:207
@@ -12819,7 +12904,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** SD-45 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Set read timeouts on request body socket reads.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12851,6 +12935,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D059]**            Offline-First Trial Launch Reset Vulnerability
 - **Criticality:**      Medium
 - **Location:**         macOS/Sources/SyxxKit/LicenseManager.swift:127-154, Windows/Syxx.Kit/LicenseManager.cs:232-252
@@ -12858,7 +12943,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Cross-ref. Delta:** None.
 - **Fix(es):**          [Fix 1] If a local trial timestamp already exists, verify if the server firstLaunch is earlier, but never overwrite a valid local timestamp with a later server timestamp that extends the trial.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12910,6 +12994,7 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 
 ---
 ---
+
 - **[D060]**            Privileged Capture Command Construction is Vulnerable to Path Breakout/Syntax Error via Unescaped Single Quotes
 - **Criticality:**      Critical
 - **Location:**         macOS/Sources/SyxxApp/AppModel.swift:614
@@ -12924,8 +13009,6 @@ summary and are subsumed by the MAC-/WIN- deltas above.
 - **Fix(es):**          [Fix 1] Sanitize or escape single quotes in paths before executing shell commands, or pass arguments via safe arrays instead of raw shell strings.
 - **Tag:**              CONFIRMED
 
-
-
 ## Delta analysis — 2026-07-13 (syxx-neural exhaustive server/client follow-up)
 
 This pass used focused syxx-neural research/surfacing agents plus an independent parity and
@@ -12933,7 +13016,6 @@ honesty review. Findings below were re-read against the live working tree and de
 the open ledger. A source-reachable defect is marked CONFIRMED; behavior requiring a Windows host
 or live network remains explicitly LIKELY. Historical entries in `DELTAS-fixed.md` are not treated
 as closed when the cited defect is still present in current source.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -12974,6 +13056,7 @@ as closed when the cited defect is still present in current source.
                                                   privileged-launch analogue for parity.
 
 ---
+
 - **[A112]**            What’s-New Endpoint Silently Serves a Truncated HTML Document
 - **Criticality:**      Medium; oversized operator content is returned as HTTP 200 malformed or
                         incomplete trusted application content.
@@ -12985,7 +13068,6 @@ as closed when the cited defect is still present in current source.
 - **Fix(es):**          [Fix 1] Stat the file or read limit+1; reject and log oversize content,
                         never return a partial document with 200.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -13023,6 +13105,7 @@ as closed when the cited defect is still present in current source.
                                                     source.
 
 ---
+
 - **[D062]**            TextDiff Allocates Quadratic Memory on Attacker-Controlled Web Content
 - **Criticality:**      High; a large changed page can freeze or OOM both Warp clients before the
                         output `maxLines` cap is applied.
@@ -13037,7 +13120,6 @@ as closed when the cited defect is still present in current source.
 - **Fix(es):**          [Fix 1] Bound input bytes/lines before diff. [Fix 2] Use a memory-bounded
                         algorithm (Hirschberg/Myers) with cancellation and an operation budget.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -13081,6 +13163,7 @@ as closed when the cited defect is still present in current source.
                                                   and confirm bounded memory + honest truncation.
 
 ---
+
 - **[B098]**            Witness Signature Covers a Lossy Projection, Not the Displayed DNS Evidence
 - **Criticality:**      Critical; material DNS evidence can be altered while snapshot verification
                         remains valid.
@@ -13099,7 +13182,6 @@ as closed when the cited defect is still present in current source.
                         including every field that can affect display or interpretation. [Fix 2]
                         Render from signed evidence, not mutable parallel DTOs; add mutation tests.
 - **Tag:**              CONFIRMED — INCOMPLETE FIX
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -13158,6 +13240,7 @@ as closed when the cited defect is still present in current source.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
 ---
+
 - **[D066]**            Native Clients Trust Unsigned Keygen meta.valid Responses
 - **Criticality:**      High; a TLS interceptor or compromised trust root can grant/deny Pro and alter
                         which security probes/corroboration paths execute.
@@ -13171,7 +13254,6 @@ as closed when the cited defect is still present in current source.
                         a canonical Syxx-signed entitlement. [Fix 2] Network/authenticity failure is
                         unknown and must not silently grant or revoke probe capability.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -13265,10 +13347,6 @@ as closed when the cited defect is still present in current source.
 - **Fix(es):**         Replaced `responseCode` with `combinedResponseCode` at `DNSResolver.swift:718` on 2026-07-13.
                        Windows twin was already correct.
 
-
-
-
-
                         - **Tool Name**            [opencode]
                         - **Date**                 2026-07-19
                         - **Agree / Disagree**     Agree
@@ -13276,6 +13354,7 @@ as closed when the cited defect is still present in current source.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
 ---
+
 - **[C047]**            Mechanism Fingerprint Counts Unrelated Anomaly Classes as Corroboration
 - **Criticality:**      Critical verdict-integrity defect. A mechanism label can be emitted without
                         two signals converging on that mechanism.
@@ -13316,6 +13395,7 @@ as closed when the cited defect is still present in current source.
                         - **Proposed Revisions**   Require >=2 independent sources supporting the selected mechanism class. Unresolved tie = no fingerprint.
 
 ---
+
 - **[D077]**            macOS ContentWarp URL Encoding Nil Fallback Can Inject Proxy Query Parameters
 - **Criticality:**      Medium; a malformed target URL can break the proxy query boundary and fetch the
                         wrong resource for warp comparison.
@@ -13355,13 +13435,12 @@ as closed when the cited defect is still present in current source.
                         - **Proposed Revisions**   Confirmed: ContentWarp.swift:129-130 uses addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) → nil falls back to raw absoluteString. If raw string contains URL-significant characters (&, #, ?, =), proxy URL query boundary breaks — target URL bleeds into additional proxy params. Windows was fixed with Uri.EscapeDataString; macOS remains broken. Fix: use explicit escaping returning inconclusive on nil.
 
 ---
+
 - **Tool Name**            [opencode]
                         - **Date**                 2026-07-19
                         - **Agree / Disagree**     Agree
-                        - **Disagree Basis**       
+                        - **Disagree Basis**
                         - **Proposed Revisions**   STILL PRESENT. MonitorScheduler.cs:28: IsRunning set to true at Start() entry before first RunOnce() completes. Unhandled exceptions leave IsRunning=true permanently. Fix: replace with enum: Idle, Starting, Running, Stopping, Crashed.
-
-
 
 - **[F036]**            macOS `detectCaptivePortal()` Unused Dead Bool Wrapper (Trap for Future Callers)
 - **Criticality:**      Non-critical; unused function silently erases `.unknown` if called by future code.
@@ -13388,8 +13467,6 @@ as closed when the cited defect is still present in current source.
 
                         ]
 
-
-
 ## Verified-fixed relocation — 2026-07-20 (Claude, source-verified against the live tree)
 
 165 deltas moved from DELTAS.md after per-delta verification against the
@@ -13399,12 +13476,12 @@ were NOT trusted, since they were proven wrong in both directions during this pa
 - **[B001]**           [Resolver Provenence Spoof Vulnerability]
 - **Criticality:**     Critical; user made aware.
 - **Location:**        SynthesisEngine.swift:78
-- **Issue:**           Resolver Provenance Confidedence derived from NetworkKeyState, ARP/MAC cartography, and mDNS/service probes. ARP, MAC, and mDNS are                    all forgeable by exactly the on-link adversary Syxx exists to catch. An attacker who ARP-spoofs the router's MAC and answers mDNS                      can make a rogue resolver classify as "expected router" → a false-clean provenance verdict. The design                                                 doesn't say these inputs are untrusted or how a spoof is detected/down-weighted. 
+- **Issue:**           Resolver Provenance Confidedence derived from NetworkKeyState, ARP/MAC cartography, and mDNS/service probes. ARP, MAC, and mDNS are                    all forgeable by exactly the on-link adversary Syxx exists to catch. An attacker who ARP-spoofs the router's MAC and answers mDNS                      can make a rogue resolver classify as "expected router" → a false-clean provenance verdict. The design                                                 doesn't say these inputs are untrusted or how a spoof is detected/down-weighted.
 - **Cross-ref. Delta** This delta is not related to any other known deltas.
 - **Fix(es)**          [Fix 1] It could be fixed by...
                        [Fix 2] It could also be fixed by...
                        [Fix 3] It could also be fixed by...
-                       
+
 - **Code Sample:**    [
 
                       // SynthesisEngine.swift:78-84
@@ -14256,7 +14333,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                   by reading committed SynthesisEngine.swift:22-49
                                                   (doc header) and :196-207 (verdict gate).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -14365,7 +14441,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                    `nxSubdomainHijack` from Prophet probes).
                                                    Verified by grep: only DNSCanaries.swift has
                                                    `source:` assignments; Synthesizer.swift has none.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -14573,7 +14648,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                    support emission gate) and :199-207 (verdict
                                                    selection).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -14663,7 +14737,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                    parity gap remains. Verified by reading committed
                                                    Synthesizer.swift:346-358.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -14731,7 +14804,7 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         The unit review that blocked the commit completed and surfaced two
                         pre-existing server bugs, fixed first as separate commits: `0f9f28c`
                         (/api/leak/verify checked `isinstance(result, str)` — dead since c84cbfc;
-                        bad token → TypeError in _send, observed as HTTP 200 + "internal error";
+                        bad token → TypeError in_send, observed as HTTP 200 + "internal error";
                         now `result is None` → 404, with first route-level tests in
                         tests/test_routes.py) and `0a474e2` (missing module-level `import time` —
                         every /api/trial/anchor POST 500'd with NameError). All three verified by
@@ -14814,7 +14887,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -14888,7 +14960,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Code Sample:**      [ return "ip:" + self.client_address[0]   # == 127.0.0.1 behind the proxy ]
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -14952,7 +15023,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                   A008 as stated.
 - **Fix(es):**          [1] Reject any glue/NS IP failing `fetcher._ip_is_public` before querying.
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -15085,9 +15155,8 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                   reading under PII/secret-retention would also be
                                                   reasonable — not contested. Keep-open until
                                                   committed.
-- **Code Sample:**      [ key = headers.get("X-Syxx-License") or (query.get("key", [None])[0]) ]
+- **Code Sample:**      [ key = headers.get("X-Syxx-License") or (query.get["key", [None]](0)) ]
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -15147,8 +15216,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         for
                         `trial_anchors`.
 - **Tag:**              OBSERVED (agent; spot-check before fix).
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -15238,7 +15305,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -15307,7 +15373,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Collect all `v1` values from the header and accept if any matches
                         via `hmac.compare_digest`.
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -15431,7 +15496,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                     responders (quorum), and picks majority-consensus
                                                     answer. macOS & Windows `AuthoritativeVantage`.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -15493,7 +15557,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                     majority consensus (≥2). NS-to-IP resolution also
                                                     queries all bootstraps. macOS &
                                                     Windows `AuthoritativeVantage`.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -15923,7 +15986,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                 DELTAS-fixed.md.
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -16211,7 +16273,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -16694,7 +16755,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                   structural missed-detection defect.
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -16981,7 +17041,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                    caller could regress. Worth a one-line parity
                                                    follow-up when this entry is moved.
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -17556,7 +17615,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                   (S).
 - **Tag:**              OBSERVED (agent; spot-check before fix).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -17985,7 +18043,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         correlated-pair examples folded into main B029. See main B029 for canonical
                         open delta. Entry moved to DELTAS-rejected.md.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -18324,7 +18381,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         main D015 (DELTAS.md:3017) per [syxx-researcher] 2026-07-10 audit.
                         See D015 for merged cross-platform fix (Keychain + DPAPI).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -18419,7 +18475,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         types with no class/x:Class under Views/ → CS0246, the WinUI GUI still won't
                         compile. Create the three views (port from macOS) or remove the nav+switch
                         arms. Updated in place, not re-filed.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -19257,7 +19312,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         red if the implementation accepts bad data.
 - **Cross-ref. Delta:** None.
 - **Tag:**              CONFIRMED (static test audit; no network-dependent tests run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -20113,7 +20167,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Tag:**              CONFIRMED
 
 ---
-
 
                        - **Tool Name**            [Claude]
                        - **Date**                 2026-07-11
@@ -21269,7 +21322,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         (mirror macOS).
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Claude]
                        - **Date**                 2026-07-11
                        - **Agree / Disagree**     Agree
@@ -21673,8 +21725,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Bind the column to `Sent` with green/red.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -21795,7 +21845,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -21843,7 +21892,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -21890,7 +21938,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -21951,7 +21998,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -22009,7 +22055,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -22073,7 +22118,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -22133,7 +22177,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -22196,7 +22239,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -22254,7 +22296,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -22305,7 +22346,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -22352,7 +22392,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -22470,7 +22509,7 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                          conn.execute("DELETE FROM passive_dns WHERE last_seen < ?", ...)
                          conn.execute("DELETE FROM trial_anchors WHERE first_launch < ?", ...)
                          conn.execute("DELETE FROM warp_cache WHERE created_at < ?", ...)
-                         # ^^^ no kv cleanup — stripe_evt:* and stripe_cust:* grow forever
+                         # ^^^ no kv cleanup — stripe_evt:*and stripe_cust:* grow forever
                          ]
 
                          # Server/syxx_server/fulfillment.py:88 — every webhook event writes a permanent kv entry
@@ -22590,7 +22629,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -22645,7 +22683,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -22704,8 +22741,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -22758,8 +22793,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -22799,7 +22832,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -22848,8 +22880,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
                         ]
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -22918,8 +22948,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -22984,8 +23012,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         ]
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23023,8 +23049,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-02 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Ensure the socket is strictly connected to `(server, 53)` or verify the peer address inside `recvfrom()`.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23064,8 +23088,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-03 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Enforce bailiwick checks: only accept NS/glue records that are subdomains of the queried zone.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23115,8 +23137,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Ensure intermediate nameserver IPs are validated against public IP classification rules before querying.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23155,8 +23175,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-08 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Force the socket connection to bind directly to the pre-validated IP address instead of using the hostname.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23207,8 +23225,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Validate the token exists in the database before creating observation rows.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23242,8 +23258,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-10 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Perform atomic writes using `INSERT ... ON CONFLICT DO NOTHING` constraints.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23285,8 +23299,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Avoid writing transaction success flags on keygen failures to keep the request retriable.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23323,8 +23335,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Prune expired bucket keys selectively under a lock.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23359,8 +23369,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-16 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Assert the AA flag on responses before accepting them as authoritative.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23398,8 +23406,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Rename the status key to `dnskeyPresent` and document the validation limits.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23435,7 +23441,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                                                   This is user-visible wording — propose for approval
                                                   before finalizing.
 
-
 - **[A078]**            Server Resolver Uncaught Parse Exceptions — Thread Crash Vulnerability
 - **Criticality:**      High; malformed packet sections can trigger uncaught IndexError/KeyError, crashing handler threads.
 - **Location:**         Server/syxx_server/resolver.py:378
@@ -23443,8 +23448,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-20 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Wrap section parsing logic in try-except blocks mapping to `DNSError`.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23490,8 +23493,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Configure database indexes and run periodic prunes on old passive entries.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23529,8 +23530,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-25 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Verify the response payload signature against Keygen's public key.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23574,8 +23573,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Prefix signed payloads with unique context strings.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23616,8 +23613,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-31 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Normalize host parameters using IP address parsers before socket operations.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23660,8 +23655,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Set aggregate size limits on downloaded resources.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23701,8 +23694,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-33 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Restrict script retrieval to same-origin domains.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23749,8 +23740,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Set cache size limits and implement eviction policies.
 - **Tag:**              CONFIRMED
 
-
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23789,8 +23778,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-35 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Key cache records on the resolved destination URL.
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23835,7 +23822,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Configure aggregate request deadlines for validation loops.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23869,7 +23855,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-41 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Catch resolution errors and return 502 status codes.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23914,7 +23899,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Restrict target port options to standard HTTP/HTTPS configurations.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -23949,7 +23933,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-45 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Set read timeouts on request body socket reads.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -23987,7 +23970,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Add null guards before accessing entitlement fields.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Debunked
@@ -24021,7 +24003,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-47 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Restrict broadcast links to verified `https://` schemes.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -24058,7 +24039,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Log connection errors internally and return generic messages.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -24088,7 +24068,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-51 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Gate connection pools using bounded thread executors.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -24125,7 +24104,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** SD-52 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Load sensitive configuration from restricted root-only files.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -24166,7 +24144,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Configure services to run using unprivileged service users and systemd protection features.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -24205,7 +24182,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Cross-ref. Delta:** None.
 - **Fix(es):**          [Fix 1] Refactor license checking paths to run completely asynchronously using async/await without blocking UI thread synchronization contexts.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -24253,7 +24229,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         never return a partial document with 200.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -24291,7 +24266,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**          [Fix 1] Render all three states; Unknown must say unknown/inconclusive and
                         carry the reason/evidence gap.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -24347,7 +24321,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         “saved” only after a verified write/close.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -24397,7 +24370,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         [Fix 2] On failure, print the exact retained path and permissions risk.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -24445,7 +24417,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
                         base64, and validate Ed25519 type/length. [Fix 2] Initialize and self-test signing
                         before listening. [Fix 3] Exercise configured-key startup in integration tests.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -24496,18 +24467,14 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 - **Fix(es):**         Replaced `responseCode` with `combinedResponseCode` at `DNSResolver.swift:718` on 2026-07-13.
                        Windows twin was already correct.
 
-
-
-
-
                         - **Tool Name**            [opencode]
                         - **Date**                 2026-07-19
                         - **Agree / Disagree**     Agree
                         - **Disagree Basis**       N/A. answerCount==0 branch uses raw responseCode, not combinedResponseCode. FIXED 2026-07-13 per delta header.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
-
 ---
+
 - **[B151]**            Section Completeness Hardcoded 1.0 on macOS, Computed N/M on Windows — Same Evidence, CLEAN 56% vs INCONCLUSIVE 7%
 - **Criticality:**      Critical; user was not made aware. Highest-value finding in this sweep. Corroborated by 3 independent agents.
 - **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:12 (old default), construction sites at :243, :369, :460-462, :493-494, :498, :535-536, :540, :556-557; consumed SynthesisEngine.swift:262; Windows/Syxx.Kit/Synthesis/Synthesizer.cs:66-89 (DatapointCompleteness), :349, :502, :634, :692, :750, :778; consumed Windows/Syxx.Kit/Synthesis/SynthesisEngine.cs:228
@@ -24539,6 +24506,7 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
 ---
 ---
+
 - **[B154]**            Captive-Portal Dampener Can Erase a Confirmed Cross-Vantage Discrepancy — Anti-Cancellation Guard Keys on Section Status, Not Evidence
 - **Criticality:**      Critical; user was not made aware. Corroborated by 2 agents.
 - **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:213-214, :243-249, :280; Windows/Syxx.Kit/Synthesis/SynthesisEngine.cs:204-215
@@ -24571,6 +24539,7 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
 ---
 ---
+
 - **[B155]**            Dampeners Apply at Reliability 1.0 While the Evidence They Suppress Is Discounted to 0.5
 - **Criticality:**      Critical; user was not made aware.
 - **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:247, compare :197-199; Windows/Syxx.Kit/Synthesis/SynthesisEngine.cs:213
@@ -24599,6 +24568,7 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
 ---
 ---
+
 - **[B136]**            Windows Mirror Adapter Renders a Clean Section From an Empty Comparison — macOS Fix (2026-07-16) Never Ported
 - **Criticality:**      Critical; user was not made aware. Windows and Ubuntu only.
 - **Location:**         Windows/Syxx.Kit/Synthesis/Synthesizer.cs:362-375 (fixed); compare macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:262-273
@@ -24633,7 +24603,6 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 
 ---
 
-
 ---
 
 ## Moved from DELTAS.md — 2026-07-21
@@ -24641,6 +24610,7 @@ Here's the **fully rewritten, production-ready version** with all fixes applied:
 Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconciliation.
 
 ---
+
 - **[B016]**            Softmax Ranked Distribution Has Nondeterministic Tie Order Across Processes
 - **Criticality:**      Non-critical (verdict stable in all observed runs; the SIGNED
                         per-hypothesis distribution is not reproducible); user made aware 2026-07-09.
@@ -24754,6 +24724,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[B020]**            DST Names the argmax-BetP Threat, Not the Believed One — Spoofing Reads as
                         Censorship
 - **Criticality:**      High (wrong threat-type verdict → wrong user remediation; mitigated only
@@ -24886,6 +24857,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[B024]**            Warp ✅/🚨 Per-Check Labels Contradict ⚠️ INCONCLUSIVE Overall Verdict
 - **Criticality:**      High (conflicting visual signals — green check next to yellow); user made
                         aware.
@@ -25015,6 +24987,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[C006]**            Silent Fallback to 8.8.8.8 Without User Consent — 6+ Verified Call Sites
 - **Criticality:**      Critical (KTRU-01 violation — silent third-party data exposure without
                           consent; attacker-controlled baseline when system DNS unreachable; privacy
@@ -25184,6 +25157,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[C053]**            Ubuntu Endpoint Forensics Carries Windows-Only Persistence Markers — Linux Persistence Reported as "None Observed"
 - **Criticality:**      Critical; user was not made aware. Ubuntu.
 - **Location:**         Windows/Syxx.Kit/Forensics/EndpointLogAnalyzer.cs:15-38, matched at :153, rendered :113; linked into Linux via Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj:36
@@ -25221,11 +25195,13 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
                         `RuntimeInformation.IsOSPlatform` selects active set.
                         "nothing stands out" gated on `ActivePersistenceMarkers.Length > 0`.
                         4 tests added. Syxx.Kit compiles (0 errors, 45 pre-existing warnings).
----
 
 ---
 
 ---
+
+---
+
 - **[C054]**            Nine Suspicious-Argument Markers Are Unreachable — The Entire PowerShell-Abuse Set Is Dead Code
 - **Criticality:**      Critical; user was not made aware. Windows/Ubuntu.
 - **Location:**         Windows/Syxx.Kit/Forensics/EndpointLogAnalyzer.cs:33-38 (markers), :223-224 (match)
@@ -25252,15 +25228,17 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 
 - **Status / Eval 2026-07-21:** FIXED. All 28 SuspiciousArgMarkers lowercased at
                         declaration. The 9 formerly unreachable needles (` -command `,
-                        `invoke-`, `iex(`, `iex `, `downloadstring`, `downloadfile`,
-                        `start-process`, ` -windowstyle hidden`, ` -executionpolicy bypass`)
+                        `invoke-`, `iex(`, `iex`, `downloadstring`, `downloadfile`,
+                        `start-process`, `-windowstyle hidden`, `-executionpolicy bypass`)
                         now match the lowercased haystack. 2 tests added (per-marker
                         synthetic-positive sweep + PowerShell abuse process log).
----
 
 ---
 
 ---
+
+---
+
 - **[D010]**            Windows LeakDetector Sends the License Key on `verify`; macOS Deliberately
                         Omits It
 - **Criticality:**      Medium-High (long-lived credential over-exposure on Windows; hardened on
@@ -25379,6 +25357,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[D015]**            Ed25519 Private Key Held in @Published Property (AppModel)
 - **Criticality:**      High (private key material exposed to SwiftUI observation/serialization);
                          analysis 2026-07-09.
@@ -25403,7 +25382,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 - **Code Sample:**      [
                           // macOS AppModel.swift:71 — private key exposed to SwiftUI
                           @Published var witnessKey: String = ""   // base64 Ed25519 private key
-                          
+
                           // Windows AppViewModel.cs:69 — same exposure pattern
                           [ObservableProperty] private string _witnessKey = string.Empty;
                           ]
@@ -25511,6 +25490,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[E013]**            Windows IPClassifier Misclassifies 198.18.0.0/15 as PrivateUse
 - **Criticality:**      Low (blocking behavior correct; classification label wrong); analysis
                         2026-07-09.
@@ -25625,6 +25605,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[E053]**            Culture-Sensitive String and Number Handling Throughout `Syxx.Kit` — Live on Linux, Not Latent
 - **Criticality:**      Critical; two Ubuntu hosts with different locales can reach different verdicts. Windows/Ubuntu.
 - **Location:**         Ordering: Windows/Syxx.Kit/AuthoritativeVantage.cs:100-101, :160; AnswerStabilityProbe.cs:56, :67; WildcardSynthesisProbe.cs:69; SVCBProbe.cs:61-62; Synthesis/SignedIncidentReport.cs:597, :603, :611. Prefix/suffix: AuthoritativeVantage.cs:138, :182; CNAMEChainProbe.cs:98; DenialOfExistenceProbe.cs:96; LAN/DomainCanonical.cs:25; Forensics/DNSLogAnalyzer.cs:35, :63-84. Numeric: OpenResolverProbe.cs:72, :76; ResolverLatencyProbe.cs:81-82; DNSCaptureReportGenerator.cs:132-138. Casing: Synthesizer.cs:401
@@ -25655,11 +25636,13 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 
                         ]
 - **Resolved:**           2026-07-21. [Fix 1] landed across 20+ files (~80 individual sites): `StringComparison.Ordinal` on all `StartsWith`/`EndsWith`/`Contains`/`IndexOf`/`Replace` calls, `StringComparer.Ordinal` on all `OrderBy`/`OrderByDescending`/`ThenBy` comparers, `CultureInfo.InvariantCulture` on all `ToString`/`string.Format`/`Convert.ToInt64` numeric renderings, `.ToLowerInvariant()` replacing `.ToLower()`. [Fix 2] landed: CA1305/CA1307/CA1310 enabled as ERRORS in `Syxx.Kit.csproj`. Build verified: 0 culture-related errors, 0 CA1305/CA1307/CA1310 violations. [Fix 3] not yet landed (non-invariant locale CI leg).
----
 
 ---
 
 ---
+
+---
+
 - **[F003]**            Overloaded A6 / A#-vs-F# Identifiers
 - **Criticality:**      Non-critical (documentation ambiguity).
 - **Location:**         DESIGN.md:29-31
@@ -25744,6 +25727,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[F006]**            ProbeRunner Timeout Is Cooperative-Only (No Wall-Clock Bound) + Budget Under-Count + Stale C006 Doc Reference
 - **Criticality:**      Low (efficiency / resource; no false verdict). Recorded because the Efficiency
                         value mandates bounded behavior for interactive CLI use.
@@ -25848,6 +25832,7 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 ---
 
 ---
+
 - **[F007]**            `DomainCanonical` "Every Domain Must Pass Through Here" Contract Is Unenforced — Only DimensionClient Uses It
 - **Criticality:**      Low (Honesty §5 premature-abstraction / dead-contract; no false verdict — DNS
                         is case-insensitive on the wire and client comparisons are IP-based).
@@ -25943,10 +25928,10 @@ Fixed/done/superseded deltas transported from DELTAS.md by delta-file reconcilia
 
 ---
 
-
 ### Status Table Fixed Entries (from sweep table)
 
 These deltas were marked FIXED in the status-update sweep table in DELTAS.md:
+
 - **B008** — FIXED
 - **B022** — FIXED
 - **E003** — FIXED
@@ -25958,6 +25943,7 @@ These deltas were marked FIXED in the status-update sweep table in DELTAS.md:
 ### Working-Tree Refactor Fixed Entries (unverified)
 
 These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet individually verified:
+
 - **A001** — listed as FIXED in refactor sweep, pending verification
 - **A005** — listed as FIXED in refactor sweep, pending verification
 - **A008** — listed as FIXED in refactor sweep, pending verification
@@ -25975,16 +25961,15 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 - **D009** — listed as FIXED in refactor sweep, pending verification
 - **E007** — listed as FIXED in refactor sweep, pending verification
 
-
 ---
 
 ## Retired/Merged Stubs — 2026-07-21
 
 ---
+
 - **[D014]**            Windows GluttonView Uses Trusting IsFeatureUnlocked(bool) (MERGED INTO D013)
 - **Status:**          RETIRED — verbatim subset of D013's REMAINING scope (DELTAS.md:2911).
                         `[Obsolete]` attribute (Fix 2) folded into D013. ID collision resolved.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26030,15 +26015,14 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 
 ---
 
-
 ---
 
 ---
+
 - **[D015]**            macOS AppModel Exposes Ed25519 Private Key to SwiftUI (MERGED INTO D015)
 - **Status:**          RETIRED — near-verbatim duplicate of main D015 (DELTAS.md:3017). Accurate
                         code sample (`@Published var witnessKey: String = ""`) folded into main D015.
                         See main D015 for merged cross-platform fix (Keychain + DPAPI).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26087,14 +26071,12 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 
 ---
 
-
 ---
-
-
 
 ---
 
 ---
+
 - **[C008]**            Warp Prints ✅ MATCH / 🚨 MISMATCH Before ⚠️ INCONCLUSIVE Verdict
                          (MERGED INTO B024)
 - **Status:**          RETIRED — duplicate of B024 (DELTAS.md:1911). C008's added value (per-script
@@ -26109,7 +26091,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
    `NetworkKeyState.GetSystemDNSServers().FirstOrDefault() ?? "1.1.1.1"`) and AppViewModel.cs:161
    (`RunMirrorAsync`, same pattern). When the system resolver is undetectable and the Server box is
    blank, the GUI silently audits 1.1.1.1 as if it were the system resolver — automatic Critical
-   under Criticality rule 1 (silent fallback to a public resolver). macOS GUI diverges: 
+   under Criticality rule 1 (silent fallback to a public resolver). macOS GUI diverges:
    AppModel.swift:231 falls back to the user-visible `server` field (default "8.8.8.8",
    AppModel.swift:67) — already partially covered by C006's "AppModel.swift:67,70 display defaults"
    note, but the Windows sites are hardcoded and invisible. Recommend folding AppViewModel.cs:132,161
@@ -26119,7 +26101,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
    working-tree state, including three untracked files (ProbePlan.cs, ProbePlan.swift,
    DimensionClient.cs). Until committed, every "FIXED" Status/Eval line in the ledger cites
    evidence that a `git checkout`/`clean` would erase.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26152,10 +26133,10 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 
 ---
 
-
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A115]**            Lying `rdlength` Surfaces Hex Garbage as a Typed A Record Into Passive DNS and `/api/diff`
 - **Criticality:**      Critical; user was not made aware. A malformed record is emitted as a well-typed
                         answer.
@@ -26201,6 +26182,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A117]**            `driftSuspected` Is a Bare Bool — "Never Observed" and "Observed, No Drift" Are the Same Value
 - **Criticality:**      Critical; user was not made aware. Zero evidence renders as the negative/clean state.
 - **Location:**         Server/syxx_server/passivedns.py:59
@@ -26237,6 +26219,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B131]**            `scriptMismatch` Is Decisive on a Heuristic HTML Diff While Its Catalog Comment Describes
                         an SRI Check That Does Not Exist
 - **Criticality:**      Critical; user was not made aware. False *accusation* class. Corroborated by 2 agents.
@@ -26288,6 +26271,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[D013]**            Windows LicenseManager Trusts Caller-Supplied Bool
 - **Criticality:**      Critical (KTRU-01 violation — no server re-validation); user made aware.
 - **Location:**         Windows/Syxx.Kit/LicenseManager.cs:334-385;
@@ -26384,6 +26368,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[D043]**            `validateLicense` Boolean Wrapper Discards Network-Error Diagnosis
 - **Criticality:**      Low-Medium (diagnostic loss — a network failure is indistinguishable from an invalid key, so the user gets "invalid, expired, or locked" when the real problem is connectivity).
 - **Location:**         macOS/Sources/SyxxKit/LicenseManager.swift:356-357
@@ -26455,10 +26440,10 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                        - **Disagree Basis**       N/A
                        - **Proposed Revisions**   Fix implemented in live codebase. Moved from DELTAS.md to DELTAS-fixed.md on 2026-07-27.
 
-
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A011]**            Authoritative Walker Queries Unvalidated Glue / NS IPs → Blind SSRF
 - **Criticality:**      Critical (attacker-zone glue makes the server probe arbitrary internal IPs
                         and
@@ -26492,7 +26477,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                   A008 as stated.
 - **Fix(es):**          [1] Reject any glue/NS IP failing `fetcher._ip_is_public` before querying.
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26530,6 +26514,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A014]**            License Key via `?key=` Query Param → Written to Proxy/Access Logs
 - **Criticality:**      High (long-lived license secret in nginx access.log / history); analysis
                         2026-07-09.
@@ -26556,9 +26541,8 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                   reading under PII/secret-retention would also be
                                                   reasonable — not contested. Keep-open until
                                                   committed.
-- **Code Sample:**      [ key = headers.get("X-Syxx-License") or (query.get("key", [None])[0]) ]
+- **Code Sample:**      [ key = headers.get("X-Syxx-License") or (query.get["key", [None]](0)) ]
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26593,6 +26577,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A015]**            Malformed Bearer base64 → HTTP 500; `trial_anchors` Grows Unbounded
 - **Criticality:**      Low/Medium; analysis 2026-07-09.
 - **Location:**         Server/syxx_server/licensing.py:71 (a); db.py:404-428 (b)
@@ -26627,8 +26612,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         for
                         `trial_anchors`.
 - **Tag:**              OBSERVED (agent; spot-check before fix).
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26668,6 +26651,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A017]**            Stripe Webhook Keeps Only the Last `v1` Signature → All Events Rejected
                         During Secret Rotation
 - **Criticality:**      High (licensing outage window: no license minted, no key email, Stripe retry
@@ -26707,7 +26691,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         via `hmac.compare_digest`.
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -26743,6 +26726,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B011]**            Single Authoritative Answer Accepted as Ground Truth
 - **Criticality:**      Critical (compromised authoritative = false ground truth); aware.
 - **Location:**         macOS/Sources/SyxxKit/AuthoritativeVantage.swift:101-111
@@ -26767,7 +26751,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                     IPs, collects answer sets, requires ≥2 AA-qualified
                                                     responders (quorum), and picks majority-consensus
                                                     answer. macOS & Windows `AuthoritativeVantage`.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26815,6 +26798,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B012]**            Single Bootstrap Resolver for Authoritative Delegation
 - **Criticality:**      Critical (single point of trust/deception); user made aware.
 - **Location:**         macOS/Sources/SyxxKit/AuthoritativeVantage.swift:69
@@ -26839,7 +26823,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                     majority consensus (≥2). NS-to-IP resolution also
                                                     queries all bootstraps. macOS &
                                                     Windows `AuthoritativeVantage`.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -26888,6 +26871,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B013]**            HMAC Called "Signature" in Witness — Overclaimed Guarantee
 - **Criticality:**      High (misleading cryptographic claim — HMAC ≠ digital signature);
                         user made aware.
@@ -26963,6 +26947,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B029]**            EvidenceItem.source Only Set for Canaries — Source-Group Discount Dead
                          for All Other Correlated Signals
 - **Criticality:**      Critical (correlated signals can inflate confidence, suppressing
@@ -27125,6 +27110,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A001]**            Rate-Limiter Memory Leak — Dead _prune
 - **Criticality:**      Critical (unbounded memory growth under real traffic / DoS); user made
                         aware.
@@ -27208,6 +27194,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A002]**            Legacy /leak Endpoint Returns Observations Without Ownership Check
 - **Criticality:**      Critical (cross-user data leak); user made aware.
 - **Location:**         Server/syxx_server/app.py:560-569
@@ -27294,6 +27281,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A003]**            Missing Strict-Transport-Security When TLS Enabled
 - **Criticality:**      Critical (SSL-stripping vulnerable); user made aware.
 - **Location:**         Server/syxx_server/app.py:149-151, 926-930
@@ -27384,6 +27372,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A004]**            _body() Partial Read Can Silently Truncate POST Bodies
 - **Criticality:**      Critical (silent data corruption on collector endpoints); user made
                         aware.
@@ -27473,6 +27462,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A007]**            Sequential Clean Vantage DNS Queries Adds Latency
 - **Criticality:**      High (Efficiency — slow responses cause client timeouts); user made
                         aware.
@@ -27556,6 +27546,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B009]**            Captive Portal Section Status Is .negative While Intercepting
 - **Criticality:**      Critical (V&H Protocol §4 — mock output; status lies about what
                          happened); user made aware.
@@ -27591,7 +27582,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                    (`Synthesizer.cs`) still emits `.negative` — platform
                                                    parity gap remains. Verified by reading committed
                                                    Synthesizer.swift:346-358.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -27647,6 +27637,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A009]**            Leak Collector Writes Observations + Passive-DNS Rows for Never-Issued
                         Tokens
 - **Criticality:**      Critical (unauthenticated DB write-amplification + durable passive-DNS
@@ -27693,7 +27684,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         ]
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -27734,6 +27724,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A010]**            Rate-Limit / Exposure / Audit IPs Collapse Behind the Shipped nginx Proxy
 - **Criticality:**      Critical (global DoS via one shared bucket; exposure verdict always wrong)
                         in
@@ -27778,7 +27769,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 - **Code Sample:**      [ return "ip:" + self.client_address[0]   # == 127.0.0.1 behind the proxy ]
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -27820,6 +27810,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A016]**            Authoritative Walker Grants "authoritative" Verdict Without Checking the AA
                         Bit
 - **Criticality:**      Critical (spoofable ground truth feeds the client's serverConfirmed
@@ -27879,7 +27870,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         ]
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -27921,6 +27911,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[A018]**            Silent Fetch Truncation Poisons the Warp Clean Baseline → False "tampered"
 - **Criticality:**      High (false on-path-injection accusation, cached 300 s and served to every
                         Pro user diffing that URL); analysis 2026-07-09.
@@ -28003,6 +27994,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B015]**            VantageComparer: Empty Local + Non-Empty Public = Always Redirection
 - **Criticality:**      High (false positive — legitimate NODATA treated as tampering);
                         user made aware.
@@ -28102,6 +28094,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B023]**            Stale "six threats" Doc Comment After the 7-Threat Frame-Split
 - **Criticality:**      Low (doc accuracy).
 - **Location:**         macOS SynthesisEngine.swift:88.
@@ -28127,7 +28120,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                 test runs green (14/0, 173/0). Move to
                                                 DELTAS-fixed.md.
 - **Tag:**              OBSERVED (Claude-verified).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -28172,6 +28164,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B024]**            Warp ✅/🚨 Per-Check Labels Contradict ⚠️ INCONCLUSIVE Overall Verdict
 - **Criticality:**      High (conflicting visual signals — green check next to yellow); user made
                         aware.
@@ -28290,6 +28283,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B025]**            Windows IPClassifier Diverges From macOS: `Invalid` Non-Blocking + Missing
                         Special-Use Ranges → False-Clean Redirection Verdict
 - **Criticality:**      Critical (same answers → opposite verdicts across the 1:1 port; false "no
@@ -28425,6 +28419,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B028]**            Windows AuthoritativeDiverges Rationale Printed as Raw Source Fragment
                         (Missing `$` Interpolation)
 - **Criticality:**      Low/Medium (corrupted user-visible evidence text, copied into the prefilled
@@ -28464,7 +28459,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 
                         ]
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -28513,6 +28507,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[C002]**            NXDOMAIN / DNSSEC Canaries Never Populated
 - **Criticality:**      Critical; user made aware.
 - **Location:**         macOS/Sources/SyxxCLI/SyxxCLI.swift:148-163; SyxxKit/DNSCanaries.swift:41,
@@ -28595,6 +28590,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[C003]**            macOS Leak Verify Sends No Credentials on the Stored-Key Path → Every Leak
                         Test Ends Inconclusive
 - **Criticality:**      Critical (leak detection structurally dead for macOS stored-key users);
@@ -28683,6 +28679,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[C004]**            macOS DimensionClient Decode Always Fails Against the Real Server (`domain`
                         vs `name`) → Pro Ground-Truth Corroboration Dead
 - **Criticality:**      Critical (paid decisive evidence never fires; silent nil via `try?`);
@@ -28777,6 +28774,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[C005]**            Windows GUI Gathers ~2 of ~13 Datapoints — Probe Orchestration Copy-Pasted
                         Per Frontend
 - **Criticality:**      High (Windows GUI synthesis structurally blind to most threats macOS
@@ -28837,7 +28835,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                   working tree were reverted this reverts to a
                                                   structural missed-detection defect.
 - **Tag:**              OBSERVED (workflow agent; Claude spot-checked the quoted code, not run).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -28907,6 +28904,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[D012]**            Windows `WitnessSigner.VerifySnapshot` Throws on Malformed base64/Key; macOS
                         Returns false
 - **Criticality:**      Medium (divergence + uncaught-exception DoS: verifying an attacker-supplied
@@ -28952,7 +28950,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                    follow-up when this entry is moved.
 - **Tag:**              OBSERVED (Claude-verified).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -28996,6 +28993,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[E001]**            Unbounded Portal LAN Cartography
 - **Criticality:**      Non-critical (efficiency / resource; no false verdict).
 - **Location:**         DESIGN.md:171; LAN/LANCartographer.swift:88 (snapshot())
@@ -29080,6 +29078,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[E003]**            Windows bareDenial / ipv4Suppressed Mapped to .Degraded
 - **Criticality:**      Critical (Windows weakens tamper signals vs macOS); user aware.
 - **Location:**         Windows/Syxx.Kit/Synthesis/Synthesizer.cs:202-207, 226-239 vs
@@ -29143,6 +29142,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[E004]**            Windows Oversized Response → .Positive (False Positive)
 - **Criticality:**      Critical (false tamper verdict on DNSSEC/large-TXT domains);
                         user made aware.
@@ -29206,6 +29206,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[E010]**            Windows `ToAsciiName` Emits Raw Non-ASCII UTF-8 on the Wire When IDNA Fails;
                         macOS Rejects
 - **Criticality:**      Low (divergent strictness on untrusted input; Windows puts un-encoded UTF-8
@@ -29251,7 +29252,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                   (S).
 - **Tag:**              OBSERVED (agent; spot-check before fix).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -29296,6 +29296,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[E011]**            Windows WitnessSigner JSON Missing Key Sort
 - **Criticality:**      High (cross-platform signature mismatch); user made aware.
 - **Location:**         Windows/Syxx.Kit/WitnessSigner.cs:40-44, 89 vs macOS WitnessSigner.swift:97
@@ -29421,6 +29422,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B030]**            Windows LeakDetector Has No Throwing Path — All Servers Always "sent" →
                          Any Interception Returns NotDetected (False Negative)
 - **Criticality:**      Critical (quick-guide #1 false "no leak" verdict, #2 real interception
@@ -29592,6 +29594,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[C007]**            AuthoritativeVantage MajorityConsensus Accepts Single-Responder Data as
                          Unquestioned Ground Truth
 - **Criticality:**      Critical (false-"secure" verdict: 2-of-3 bootstrap blockade → single-source
@@ -29751,6 +29754,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B031]**            Refactor Call Sites Pass a SINGLE Bootstrap Resolver — Defeats the B012 Multi-Bootstrap Consensus Fix
 - **Criticality:**      Critical (can cause false confidence; regresses a delta already marked
                         FIXED). Authoritative delegation anchors the highest-weight evidence
@@ -29881,6 +29885,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[F006]**            ProbeRunner Timeout Is Cooperative-Only (No Wall-Clock Bound) + Budget Under-Count + Stale C006 Doc Reference
 - **Criticality:**      Low (efficiency / resource; no false verdict). Recorded because the Efficiency
                         value mandates bounded behavior for interactive CLI use.
@@ -29975,6 +29980,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[F007]**            `DomainCanonical` "Every Domain Must Pass Through Here" Contract Is Unenforced — Only DimensionClient Uses It
 - **Criticality:**      Low (Honesty §5 premature-abstraction / dead-contract; no false verdict — DNS
                         is case-insensitive on the wire and client comparisons are IP-based).
@@ -30059,6 +30065,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B033]**            Half-Applied D015 Change Leaves the Working Tree Non-Compiling — WitnessView Still Binds the Removed `witnessKey` Property
 - **Criticality:**      High (blocks `swift build`/`swift test` for the entire package — the SyxxApp
                         target fails to compile, so the SyxxKit test bundle cannot link and NO macOS
@@ -30162,6 +30169,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B037]**            WitnessSigner Display-Integrity Guard Omits `resolverQueryOutcomes` — Tampered
                         Per-Resolver Display Verifies as Authentic
 - **Criticality:**      Critical (forgeable evidence: a witness snapshot whose displayed per-resolver
@@ -30261,6 +30269,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B038]**            DualStack Renders `ipv4Suppressed` Censorship Signal on an A-Record TIMEOUT —
                         Failure Rendered as a Verdict (§1 Violation)
 - **Criticality:**      Critical (a missing datum — A query timeout/transport failure — is reported as a
@@ -30346,6 +30355,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[B048]**            CageView Unconditional Green [SUCCESS] Sniffer Mock — §5 Violation
 - **Criticality:**      Critical; mocked production success output that renders regardless of real
                         state (Protocol §5).
@@ -30424,6 +30434,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 ---
 
 [FIXED - ANTIGRAVITY]
+
 - **[C014]**            macOS evaluate Reverted to Union-Only — Blind to Unanimous UDP Tampering
                         (B010 macOS FALSE)
 - **Criticality:**      Critical; macOS is blind to unanimous UDP tampering — the "fixed both
@@ -30510,7 +30521,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 - **Fix(es):**          [Fix 1] Reject snapshots whose timestamps are in the future (exceeding a small clock skew tolerance).
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -30571,7 +30581,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -30625,7 +30634,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -30675,7 +30683,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -30751,8 +30758,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 
                          ]
 - **Tag:**              CONFIRMED
-
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -30866,7 +30871,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 
                        ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -30982,7 +30986,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                        ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -31048,7 +31051,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 - **Fix(es):**          [Fix 1] Cache the cryptographic license validation response/signature returned from the server and verify it offline, allowing a grace period for offline operation.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -31089,6 +31091,7 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                                                   honesty-spine) but High product severity.
                                                   Require a real offline run by a licensed user
                                                   before closure.
+
 ---
 ---
 
@@ -31254,7 +31257,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -31352,7 +31354,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -31412,7 +31413,6 @@ These deltas were listed as "appears FIXED by working-tree refactor" but NOT yet
 - **Fix(es):**          [Fix 1] Remove the links or bundle the font locally/data-encoded under the
                         declared content contract.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -31554,10 +31554,10 @@ descendant-termination failure cases pass in both lifecycle suites.
 `LANCartographer.Snapshot`'s documented `timeoutMs` deadline cannot interrupt it.** The runner:
 
 ```
-332	            using var process = Process.Start(psi) ?? throw new InvalidOperationException($"Unable to launch {executable}.");
-333	            string output = process.StandardOutput.ReadToEnd();
-334	            process.WaitForExit();
-335	            return output;
+332             using var process = Process.Start(psi) ?? throw new InvalidOperationException($"Unable to launch {executable}.");
+333             string output = process.StandardOutput.ReadToEnd();
+334             process.WaitForExit();
+335             return output;
 ```
 
 `ReadToEnd()` blocks until the child closes stdout and `WaitForExit()` blocks unbounded. If `arp`
@@ -31567,12 +31567,12 @@ thread whenever LAN cartography is invoked from a scheduled path, and the CLI's 
 `syxx lan`. `Snapshot`'s own doc comment promises otherwise:
 
 ```
-349	        /// <param name="timeoutMs">Wall-clock deadline in milliseconds. On timeout a partial result is returned.</param>
+349         /// <param name="timeoutMs">Wall-clock deadline in milliseconds. On timeout a partial result is returned.</param>
 ...
-356	                output = _runner.Run("arp", new[] { "-a" });
+356                 output = _runner.Run("arp", new[] { "-a" });
 ...
-363	            if (DateTime.UtcNow >= deadline)
-364	                return new LANSnapshot(new List<LANDevice>(), isPartial: true);
+363             if (DateTime.UtcNow >= deadline)
+364                 return new LANSnapshot(new List<LANDevice>(), isPartial: true);
 ```
 
 The deadline is evaluated only **after** `Run` returns, so it can never bound the command; it is a
@@ -31597,6 +31597,7 @@ removed from `DELTAS-fixed.md` on 2026-07-30 and reopened here as **C139**.
 line 326 now sets `RedirectStandardError = false`. **WSK-022**, `DELTAS-fixed.md:2231`, the missing
 try/catch, is also genuinely fixed at lines 354-362.)
 **Fix(es):**
+
 1. Replace lines 332-335 with the `NetworkKeyState.RunProcess` pattern: async stdout read,
    `WaitForExit(timeout)`, `Kill(entireProcessTree: true)` on expiry.
 2. Widen `ICommandRunner.Run` (line 315) to accept a timeout and return a result type carrying
@@ -31630,12 +31631,13 @@ and the device cap was hit (line 372) — but a run where `arp` succeeded and th
 *complete* observation.
 
 This is reachable without any exception, on a perfectly normal machine:
-* localized Windows — the parser keys on the literal English strings `"Interface:"` (line 115) and
+
+- localized Windows — the parser keys on the literal English strings `"Interface:"` (line 115) and
   `"Internet Address"` (line 124); on a German/French/Japanese host neither matches, every row's
   interface label stays the placeholder `"unknown"` (line 108), and the header row is only rejected
   incidentally because its first token is not a dotted quad (line 139);
-* `arp` exits non-zero with a message on stdout (nothing checks the exit code — [W7-05]);
-* the ARP cache is genuinely empty because the adapter just came up.
+- `arp` exits non-zero with a message on stdout (nothing checks the exit code — [W7-05]);
+- the ARP cache is genuinely empty because the adapter just came up.
 
 All three render identically to the user: "0 devices". LAN cartography exists to surface a rogue
 DNS/DHCP server on-link (file header, line 2); "we found no devices" and "we could not read the
@@ -31649,6 +31651,7 @@ literals still present at lines 115 and 124. The legacy row was removed from
 `DELTAS-fixed.md` on 2026-07-30 and reopened through **C140** and **C141**. This entry records the
 distinct empty-parse collapse.
 **Fix(es):**
+
 1. `if (devices.Count == 0) return new LANSnapshot(devices, isPartial: true);` is the minimum, but
    `isPartial` is a boolean and this needs the third state: add
    `LANSnapshotStatus { Complete, Partial, Unreadable }` so "capped at maxDevices" (a real,
@@ -31679,13 +31682,13 @@ fixtures prove unknown or rejected input cannot become reachable.
 (`Unknown`, `Incomplete`) are unreachable dead code on Windows.**
 
 ```
-144	            string type = tokens.Length >= 3 ? tokens[2].ToLowerInvariant() : "";
-145	            ARPEntryState state = type switch
-146	            {
-147	                "dynamic" => ARPEntryState.Reachable,
-148	                "static" => ARPEntryState.Permanent,
-149	                _ => mac.Contains(':', StringComparison.Ordinal) ? ARPEntryState.Reachable : ARPEntryState.Unknown
-150	            };
+144             string type = tokens.Length >= 3 ? tokens[2].ToLowerInvariant() : "";
+145             ARPEntryState state = type switch
+146             {
+147                 "dynamic" => ARPEntryState.Reachable,
+148                 "static" => ARPEntryState.Permanent,
+149                 _ => mac.Contains(':', StringComparison.Ordinal) ? ARPEntryState.Reachable : ARPEntryState.Unknown
+150             };
 ```
 
 The `Unknown` arm at line 149 **can never execute.** `mac` is the output of `NormalizeMac`
@@ -31694,13 +31697,13 @@ The `Unknown` arm at line 149 **can never execute.** `mac` is the output of `Nor
 a colon. So the ternary is constant-`true`, and the `_` arm unconditionally yields `Reachable`.
 Consequences:
 
-* Windows `arp -a` marks unresolved / stale neighbour entries with type `invalid`. Those rows are
+- Windows `arp -a` marks unresolved / stale neighbour entries with type `invalid`. Those rows are
   reported to the user as **`Reachable`** and counted in `LANSnapshotSummary.ReachableCount`
   (line 287). A cache entry proving the opposite of reachability is rendered as reachability.
-* On a localized Windows host the type column is localized (`dynamisch`, `statique`, `静的`), so
+- On a localized Windows host the type column is localized (`dynamisch`, `statique`, `静的`), so
   **every** device — including static/permanent ones — is reported `Reachable`. `Permanent` becomes
   unreachable too, and the classification carries no information at all.
-* `ARPEntryState.Incomplete` is **never produced anywhere in the Windows codebase** (verified: the
+- `ARPEntryState.Incomplete` is **never produced anywhere in the Windows codebase** (verified: the
   only three occurrences, lines 211, 248, 288, are all *consumers*). So
   `ServiceProbePlan.ProbesFor`'s incomplete-entry guard (line 211) is dead, the
   `"Incomplete ARP entry"` note (line 248) can never be attached, and
@@ -31716,6 +31719,7 @@ text but understated this state-classification defect and was incorrectly classi
 The legacy row was removed from `DELTAS-fixed.md` on 2026-07-30 and reopened through **C140** and
 **C141**. This entry records the constant-true ternary and the dead `Incomplete` state.
 **Fix(es):**
+
 1. Delete the constant-true ternary. The `_` arm must be `ARPEntryState.Unknown` — an ARP type
    string Syxx does not recognize is not evidence of reachability.
 2. Map Windows' `invalid` type to `ARPEntryState.Incomplete` so the state, the note, and
@@ -31746,8 +31750,8 @@ duplicate-key source at `macOS/Sources/SyxxKit/LAN/ARPTableParser.swift:52, 76-7
 one MAC claiming several IPs — is the one pattern it silently discards.**
 
 ```
-384	            var previousByMac = new Dictionary<string, LANDevice>();
-385	            foreach (var d in previous.Devices) previousByMac[d.MacAddress.ToLowerInvariant()] = d;
+384             var previousByMac = new Dictionary<string, LANDevice>();
+385             foreach (var d in previous.Devices) previousByMac[d.MacAddress.ToLowerInvariant()] = d;
 ```
 
 Last-write-wins. When the previous snapshot contains the same MAC on two IPs — the exact state a
@@ -31776,6 +31780,7 @@ MAC-keyed, with the additional macOS runtime trap documented here. Both legacy r
 from `DELTAS-fixed.md` on 2026-07-30 and reopened here as **C151**. **C099** is consolidated here
 and superseded rather than remaining as a duplicate open record.
 **Fix(es):**
+
 1. Key `previousByMac` on `LANDevice.Id` (interface|mac|ip) and compute new/missing on that key.
    Keep a *separate* MAC→IP-set index and emit an explicit
    `LANDiff.DuplicateMacBindings` list — one MAC bound to multiple IPs is not noise to be
@@ -31809,9 +31814,9 @@ user-facing `Reason` strings ("Resolver, router, or filtering service", "Printer
 concedes the state plainly:
 
 ```
-225	        // F037: PlannedProbes is populated per-device but no probe runner is wired in production.
-226	        // Excluding it from JSON serialization stops 14 unused ServiceProbe structs from bloating
-227	        // every persisted LANSnapshot. The field is retained in-memory for when the runner ships.
+225         // F037: PlannedProbes is populated per-device but no probe runner is wired in production.
+226         // Excluding it from JSON serialization stops 14 unused ServiceProbe structs from bloating
+227         // every persisted LANSnapshot. The field is retained in-memory for when the runner ships.
 ```
 
 Repo-wide there is no consumer of `PlannedProbes` and no TCP/UDP connect anywhere in the LAN module.
@@ -31832,6 +31837,7 @@ ledger record at audit time. That identifier is now assigned to an unrelated tes
 were incorrectly classified as fixed. Their rows were removed from `DELTAS-fixed.md` on
 2026-07-30 and reopened here as **C156**.
 **Fix(es):**
+
 1. Either ship the probe runner or delete `PlannedProbes` from `LANDevice` (keeping
    `ServiceProbePlan` as the plan type used by the future runner). A per-device field that is always
    an unverified plan is a rendering accident waiting to happen.
@@ -31922,11 +31928,12 @@ truncation on the value it is about to emit and nudges by single ULPs (< 60 ns) 
 `JsonSerializerOptions` — so the CLI, the GUI and the tests are all fixed at once and no future
 caller can forget to opt in. That "each caller builds its own options" pattern IS the defect.
 **Verification (real runs, watched to completion, 2026-07-29):**
-  - macOS `syxx witness create example.com` -> Windows `syxx witness verify --detailed`
+
+- macOS `syxx witness create example.com` -> Windows `syxx witness verify --detailed`
     -> `Verification: VALID / Tamper-evident — Ed25519 signed content matches.`
-  - Windows `syxx witness create example.com` -> macOS `syxx witness verify --detailed`
+- Windows `syxx witness create example.com` -> macOS `syxx witness verify --detailed`
     -> `Verification: VALID / Tamper-evident — Ed25519 signed content matches.`
-  - Negative controls run on BOTH verifiers: rewritten answer rdata, altered display timestamp,
+- Negative controls run on BOTH verifiers: rewritten answer rdata, altered display timestamp,
     a failed resolver promoted to success, and altered `errorDescription` all report
     `DISPLAY MISMATCH`; an unknown status string is refused as malformed input rather than read
     as success.
@@ -31943,6 +31950,7 @@ from both sides by `macOS/Tests/SyxxKitTests/DNSResponseStatusWireParityTests.sw
 NOT have caught this: the defect lived in the seam between two independently-green suites, and
 only a shared artifact both suites read covers a seam.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/WitnessCommand.cs:170-173 — the read path, before B251.
 // No enum converter, no date converter: every macOS-produced snapshot failed here.
@@ -31951,6 +31959,7 @@ var snapshot = JsonSerializer.Deserialize<WitnessSnapshot>(json, new JsonSeriali
     PropertyNameCaseInsensitive = true
 });
 ```
+
 ```swift
 // macOS/Sources/SyxxKit/DNSResolver.swift:96-107 — the authoritative spellings, unchanged.
 public enum DNSResponseStatus: String, Codable, Sendable {
@@ -32007,6 +32016,7 @@ disagreement observed in that run, where Quad9 answered over Do53 but its DoH en
 and `.DuplicateWithinOneTransportIsRefused_NotSilentlyDropped`; reverting the partition
 reproduces the original `An item with the same key has already been added. Key: Cloudflare`.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/VantageComparer.cs:88-96 — before. Both legs of one resolver land
 // in the same name-keyed dictionary; PublicResolvers and DoHEndpoints share their key set.
@@ -32044,6 +32054,7 @@ unverifiable snapshot can never exit 0.
 [Fix 3] At minimum, refuse to render a snapshot that fails verification unless an explicit
 `--unverified` flag is passed.
 **Code Sample:**
+
 ```swift
 // SyxxWitness.swift — report decodes and renders; no verification anywhere in this branch
 let snapshot = try JSONDecoder().decode(WitnessSnapshot.self, from: data)
@@ -32579,6 +32590,7 @@ tests were left in place as the historical record of the wrong answer.
 ---
 
 ---
+
 ## **B. Verdict & Evidence Integrity**
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** PaidRoute402Tests in test_routes.py asserts 402 on all paid routes with enforcement enabled.
@@ -33078,8 +33090,8 @@ tests were left in place as the historical record of the wrong answer.
 ---
 
 ---
-## **C. Detection Efficacy**
 
+## **C. Detection Efficacy**
 
                         - **Tool Name**            [opencode]
                         - **Date**                 2026-07-19
@@ -33146,9 +33158,9 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** SyxxMirror now refuses to run with a fabricated 192.168.1.1 resolver when no system resolver is detected; prints a user-visible warning and exits instead of querying a guessed IP.
----
----
 
+---
+---
 
 ---
                        **FIXED 2026-07-30 (qwen-code).** SyxxMirror now refuses to run with a fabricated 192.168.1.1 resolver when no system resolver is detected; prints a user-visible warning and exits instead of querying a guessed IP.
@@ -33303,6 +33315,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** All CLI call sites now print a warning before falling back to 8.8.8.8; ContentWarp guards empty resolvers without fallback; SyxxMirror exits entirely on empty resolvers.
+
 ---
 ---
 
@@ -33507,7 +33520,6 @@ tests were left in place as the historical record of the wrong answer.
                         `transportPinning == .notConfigured` lets a MITM collector forge a false
                         `.notDetected`. Confirms the 2026-07-10 reframing (signature verified but
                         not enforced); updated in place, not re-filed.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -34210,10 +34222,12 @@ tests were left in place as the historical record of the wrong answer.
 
 ---
 ---
+
 ## **F. Miscellaneous**
 
 ---
 ---
+
 ## Delta Analysis — 2026-07-09 Comprehensive Sweep
 
 ### Status Updates for Existing Deltas (verified against working tree)
@@ -34247,10 +34261,12 @@ tests were left in place as the historical record of the wrong answer.
 
 ---
 ---
+
 ### D. Security & Hardening — New Deltas
 
 ---
 ---
+
 ### E. Platform Integration — New Deltas / Updates
 
 ---
@@ -34862,7 +34878,6 @@ tests were left in place as the historical record of the wrong answer.
                         live multi-record run performed, but the branch is unconditional on record
                         count).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -34961,7 +34976,6 @@ tests were left in place as the historical record of the wrong answer.
 - **Tag:**              CONFIRMED (source-read both platforms; advisory producer + renderText omission
                         verified; no run needed — the field is simply not referenced in renderText).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -35050,7 +35064,6 @@ tests were left in place as the historical record of the wrong answer.
                         contradiction line; failure case: conflict ≈ 0 → line absent.
 - **Tag:**              CONFIRMED (source-read both platforms; fields present in Conclusion, unrendered
                         in renderText). Fix wording is subject to §"OUTPUT REQUIRES USER APPROVAL".
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -35174,7 +35187,6 @@ tests were left in place as the historical record of the wrong answer.
                         `ecs` block is dead whenever `leak != null` — always the case per
                         ProbePlan.cs:205-213 — and F10 ECS leak never emits on Windows; macOS
                         (Synthesizer.swift:412-442) is correct. Updated in place, not re-filed.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -35312,7 +35324,6 @@ tests were left in place as the historical record of the wrong answer.
                         (Synthesizer.swift:207-212) is tilt-only. Emit the EvidenceItem only; zero
                         section status for any version.bind state. Updated in place, not re-filed.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -35419,7 +35430,6 @@ tests were left in place as the historical record of the wrong answer.
                         Invalidated`; macOS maps all to `.degraded` (Synthesizer.cs:127-140 vs
                         .swift:109-115) — platforms disagree and Windows grants clean support for a
                         slow path. Updated in place, not re-filed.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -35530,7 +35540,6 @@ tests were left in place as the historical record of the wrong answer.
                         EvidenceItem macOS omits (Synthesizer.cs:155-163 vs .swift:118-131). Windows
                         should map `Inconclusive -> Inconclusive` and the TTL-anomaly evidence
                         wording needs approval. Updated in place, not re-filed.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -35713,6 +35722,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** Protocol line parsing in scutil --dns was requiring 3 colon-separated components but the actual output only produces 2; DoH/DoT is now correctly detected and the Prophet reports encrypted DNS accurately.
+
 ---
 ---
 
@@ -37247,7 +37257,6 @@ tests were left in place as the historical record of the wrong answer.
 ---
 ---
 
-
 ---
 **FIXED 2026-07-30 (qwen-code).** Same-CDN-provider observation now annotates the divergence detail instead of erasing .diverges to .inconclusive; attacker sharing the CDN ASN can no longer suppress a true positive.
 
@@ -37344,7 +37353,6 @@ tests were left in place as the historical record of the wrong answer.
                         none remain, inconclusive.
                         [Fix 2] Mirror the fix on Windows.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Claude]
                        - **Date**                 2026-07-11
@@ -38654,7 +38662,6 @@ tests were left in place as the historical record of the wrong answer.
 - **Tag:**              CONFIRMED (source-traced on current working tree; no live packet-injection
                         run performed).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -38824,7 +38831,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -38873,7 +38879,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -38925,7 +38930,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -38979,7 +38983,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -39027,7 +39030,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39080,7 +39082,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39141,7 +39142,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -39194,7 +39194,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -39245,7 +39244,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39307,7 +39305,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39373,7 +39370,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -39435,7 +39431,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39499,7 +39494,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -39560,7 +39554,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -39619,7 +39612,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39680,7 +39672,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39745,7 +39736,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39818,7 +39808,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -39862,6 +39851,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** DNSCapture.formatRData now decodes domain-name RDATA types (CNAME, NS, PTR) using the full packet for compression pointer resolution, producing real DNS names instead of hex blobs.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** DNSCapture.formatRData now decodes domain-name RDATA types (CNAME, NS, PTR) using the full packet for compression pointer resolution, producing real DNS names instead of hex blobs.
 
@@ -39883,7 +39873,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39923,6 +39912,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** parseIPUDPHeader now accepts TCP (protocol 6) on port 53; BPF filter changed from "udp port 53" to "port 53"; TCP DNS length-prefixed framing handled inline.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** parseIPUDPHeader now accepts TCP (protocol 6) on port 53; BPF filter changed from "udp port 53" to "port 53"; TCP DNS length-prefixed framing handled inline.
 
@@ -39944,7 +39934,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -39981,6 +39970,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** IPv6 extension headers are now walked (bounded to 8 hops) in parseIPUDPHeader; Hop-by-Hop, Routing, AH, and Destination Options headers are traversed; Fragment headers are explicitly rejected.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** IPv6 extension headers are now walked (bounded to 8 hops) in parseIPUDPHeader; Hop-by-Hop, Routing, AH, and Destination Options headers are traversed; Fragment headers are explicitly rejected.
 
@@ -40003,7 +39993,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -40040,6 +40029,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** IPv4 fragmented packets (MF=1 or fragment offset>0) are now explicitly rejected in parseIPUDPHeader; non-initial fragments can no longer be misread as complete UDP datagrams.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** IPv4 fragmented packets (MF=1 or fragment offset>0) are now explicitly rejected in parseIPUDPHeader; non-initial fragments can no longer be misread as complete UDP datagrams.
 
@@ -40060,7 +40050,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -40095,6 +40084,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** IPv6 path now reads and validates the UDP length field from the UDP header (matching the IPv4 path); truncated/malformed IPv6 datagrams are rejected before DNS parsing.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** IPv6 path now reads and validates the UDP length field from the UDP header (matching the IPv4 path); truncated/malformed IPv6 datagrams are rejected before DNS parsing.
 
@@ -40117,7 +40107,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -40157,6 +40146,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** DNSPacketReport now carries an isPartial flag; parseDNSPacket tracks whether question/answer loops completed fully, so downstream can distinguish truncation from genuine empty sections.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** DNSPacketReport now carries an isPartial flag; parseDNSPacket tracks whether question/answer loops completed fully, so downstream can distinguish truncation from genuine empty sections.
 
@@ -40181,7 +40171,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -40227,6 +40216,7 @@ tests were left in place as the historical record of the wrong answer.
 
 
                        **FIXED 2026-07-30 (qwen-code).** parseIPUDPHeader now returns dnsPayloadLength derived from the UDP length field; SyxxCage slices exactly the validated DNS payload instead of the buffer tail.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** parseIPUDPHeader now returns dnsPayloadLength derived from the UDP length field; SyxxCage slices exactly the validated DNS payload instead of the buffer tail.
 
@@ -40251,7 +40241,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -40302,7 +40291,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -40352,7 +40340,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -40415,7 +40402,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -40471,7 +40457,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -40526,7 +40511,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -40578,7 +40562,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -40627,7 +40610,6 @@ tests were left in place as the historical record of the wrong answer.
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -40668,7 +40650,6 @@ tests were left in place as the historical record of the wrong answer.
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -40909,6 +40890,7 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
 
 
                        **FIXED 2026-07-30 (qwen-code).** VantageComparer.evaluate now prefers DoH baselines (attacker-independent HTTPS transport) over UDP when available, preventing an on-path port-53 hijacker from controlling both local and baseline answers.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** VantageComparer.evaluate now prefers DoH baselines (attacker-independent HTTPS transport) over UDP when available, preventing an on-path port-53 hijacker from controlling both local and baseline answers.
 
@@ -41002,6 +40984,7 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
 
 
                        **FIXED 2026-07-30 (qwen-code).** reconcileResult now accepts probesDispatched flag; when probes were dispatched but the collector observed zero, the verdict is forced to inconclusive instead of a false-clean "no leak detected."
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** reconcileResult now accepts probesDispatched flag; when probes were dispatched but the collector observed zero, the verdict is forced to inconclusive instead of a false-clean "no leak detected."
 
@@ -41070,7 +41053,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -41233,7 +41215,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
                          }
                          ]
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -41337,7 +41318,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
                          }
                          ]
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -41422,7 +41402,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
                          ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -41498,7 +41477,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
                          ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -41568,7 +41546,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
 
                          ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -41678,7 +41655,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
                        ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -41738,7 +41714,7 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
 
 ---
 
-- **[D053]**            **FIXED 2026-07-30 (qwen-code).** Added HMAC-SHA256 verification to _validate_offline DB fallback. DB rows now require a valid HMAC signature (computed over key+status+expires_at+plan using server secret) before granting entitlement. Missing or invalid HMAC is rejected as untrusted/tampered. New _offline_license_hmac helper added.
+- **[D053]**            **FIXED 2026-07-30 (qwen-code).** Added HMAC-SHA256 verification to _validate_offline DB fallback. DB rows now require a valid HMAC signature (computed over key+status+expires_at+plan using server secret) before granting entitlement. Missing or invalid HMAC is rejected as untrusted/tampered. New_offline_license_hmac helper added.
                         Server Offline License Validation Trusts DB Records Without
                        Cryptographic Integrity — Arbitrary License Injection via DB Write
 - **Criticality:**      Medium (server-side trust gap: any entity with database write access
@@ -41799,7 +41775,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
 
                        ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -41922,7 +41897,6 @@ findings below (D040, D041) are *security* defects and are filed under D per dom
                        ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -41991,7 +41965,6 @@ Source-grounded audit of the server, macOS, and Windows clients, focusing on Cag
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -42048,7 +42021,6 @@ Source-grounded audit of the server, macOS, and Windows clients, focusing on Cag
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -42175,7 +42147,6 @@ Deeper source-grounded audit of the server and client components, focusing on th
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -42232,7 +42203,6 @@ Deeper source-grounded audit of the server and client components, focusing on th
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -42277,7 +42247,6 @@ Deeper source-grounded audit of the server and client components, focusing on th
 
 ### C. Security & Hardening
 
-
                         - **Tool Name**            [opencode]
                         - **Date**                 2026-07-19
                         - **Agree / Disagree**     Agree
@@ -42308,7 +42277,6 @@ Deeper source-grounded audit of the server and client components, focusing on th
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -42369,7 +42337,6 @@ Deeper source-grounded audit of the server and client components, focusing on th
                         ]
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Debunked
@@ -42426,7 +42393,6 @@ Deeper source-grounded audit of the server and client components, focusing on th
 
                         ]
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -42490,7 +42456,6 @@ Deep security and networking stack audit of the client and server components, pr
 
 **FIXED 2026-07-30 (qwen-code).** Reject QDCOUNT != 1 in both _parse_response and _parse_sections so a spoof with QDCOUNT==0 or >1 cannot bypass question validation.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -42532,7 +42497,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Tag:**              CONFIRMED
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** OS allocates ephemeral source ports; no fixed-port bind exists in the code.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -42578,7 +42542,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Tag:**              CONFIRMED
 
 **FIXED 2026-07-30 (qwen-code).** Added shared wall-clock deadline parameter to resolve_authoritative; all callers in app.py pass AUTH_WALK_DEADLINE_SECONDS.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -42708,7 +42671,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Include an EDNS0 OPT header in query packets.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -42754,7 +42716,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Only apply IDNA mapping to non-ASCII labels.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Debunked
@@ -42795,7 +42756,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Cross-ref. Delta:** SD-19 tracks the candidate; promoted here.
 - **Fix(es):**          [Fix 1] Signal a malformed parsing error and discard the incomplete packet.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -42880,7 +42840,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Tag:**              CONFIRMED
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** Keygen signature verification now fails closed when public key is unset (D040/A021).
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -43057,7 +43016,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Tag:**              CONFIRMED
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** Only session tokens use _sign/verify_session; leak attestations use a separate Ed25519 key — no cross-context replay surface.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -43263,7 +43221,6 @@ Deep security and networking stack audit of the client and server components, pr
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** CORS now echoes origin only when on allowlist (no wildcard); no Access-Control-Allow-Credentials header.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Debunked
@@ -43303,7 +43260,6 @@ Deep security and networking stack audit of the client and server components, pr
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** BoundedThreadingHTTPServer caps handler threads with semaphore; walks now have shared deadlines (A066).
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -43342,7 +43298,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Tag:**              CONFIRMED
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** Handler.setup sets per-connection read timeout + absolute deadline timer force-closes the socket.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -43384,7 +43339,6 @@ Deep security and networking stack audit of the client and server components, pr
 
 **FIXED 2026-07-30 (qwen-code).** Moved EmailMessage header construction inside try/except ValueError so malformed addresses do not violate the 'never raises' contract.
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Debunked
@@ -43425,7 +43379,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Block insecure mail options in production environments.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -43462,7 +43415,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Tag:**              CONFIRMED
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** BoundedThreadingHTTPServer caps concurrent connections with BoundedSemaphore; over-capacity returns 503.
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -43502,7 +43454,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Cross-ref. Delta:** None.
 - **Fix(es):**          [Fix 1] If a local trial timestamp already exists, verify if the server firstLaunch is earlier, but never overwrite a valid local timestamp with a later server timestamp that extends the trial.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -43556,7 +43507,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Extract the UDP length field from the UDP header and subtract 8 (UDP header size) to calculate the true DNS payload wire size.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -43599,6 +43549,7 @@ Deep security and networking stack audit of the client and server components, pr
                                                   synthesis, not false-secure.
 
                        **FIXED 2026-07-30 (qwen-code).** DNS payload wire size (F9 telemetry) now uses the validated UDP payload length from parseIPUDPHeader instead of the captured buffer count, excluding Ethernet padding and trailing bytes.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** DNS payload wire size (F9 telemetry) now uses the validated UDP payload length from parseIPUDPHeader instead of the captured buffer count, excluding Ethernet padding and trailing bytes.
 
@@ -43612,7 +43563,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Cross-ref. Delta:** None.
 - **Fix(es):**          [Fix 1] Add a "Generate Keypair" button to the Witness view on both platforms to automatically generate and save a new secure key in the Keychain/DPAPI store.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -43665,7 +43615,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Configure the captive portal URLSession delegate to reject redirects and evaluate the redirect response code (302) directly as captive portal presence.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -43702,6 +43651,7 @@ Deep security and networking stack audit of the client and server components, pr
                                                   portals that do not 302. Low.
 
                        **FIXED 2026-07-30 (qwen-code).** Captive portal probe now uses a URLSession delegate that refuses redirects; 3xx responses are evaluated directly as portal-present instead of following the redirect chain.
+
 ---
                        **FIXED 2026-07-30 (qwen-code).** Captive portal probe now uses a URLSession delegate that refuses redirects; 3xx responses are evaluated directly as portal-present instead of following the redirect chain.
 
@@ -43715,7 +43665,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Cross-ref. Delta:** None.
 - **Fix(es):**          [Fix 1] Update the findstr regex pattern to correctly match the netstat layout or query the IP helper tables directly using `GetExtendedUdpTable` instead of spawning shell processes.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -43823,7 +43772,6 @@ Deep security and networking stack audit of the client and server components, pr
                         [Fix 3] Add all-inconclusive and mixed-status failure tests on both platforms.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -43902,7 +43850,6 @@ Deep security and networking stack audit of the client and server components, pr
                         was loaded and fully compared.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -43979,7 +43926,6 @@ Deep security and networking stack audit of the client and server components, pr
                         [Fix 2] Do not derive a trust score without a specified, tested model.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44047,7 +43993,6 @@ Deep security and networking stack audit of the client and server components, pr
                         as “last known as of …”.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44114,7 +44059,6 @@ Deep security and networking stack audit of the client and server components, pr
                         [Fix 2] Missing/invalid Stage-5 suppresses legacy verdict/confidence entirely.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44180,7 +44124,6 @@ Deep security and networking stack audit of the client and server components, pr
                         validation. [Fix 2] Derive every verdict-bearing field exclusively from that
                         DTO and reject any duplicate outer-field mismatch.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -44256,7 +44199,6 @@ Deep security and networking stack audit of the client and server components, pr
                         unverifiable responses as inconclusive, never decisive evidence.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44323,7 +44265,6 @@ Deep security and networking stack audit of the client and server components, pr
                         validated no-drift comparison may produce negative Witness evidence.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44384,7 +44325,6 @@ Deep security and networking stack audit of the client and server components, pr
                         and test an explicit corruption threshold.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44443,7 +44383,6 @@ Deep security and networking stack audit of the client and server components, pr
                         Add casing-variant failure tests for every indicator family.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44489,7 +44428,6 @@ Deep security and networking stack audit of the client and server components, pr
                         - **Disagree Basis**       N/A. Windows endpoint indicators bypassed by case variation. Verified: string comparison not case-normalized.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
-
 **FIXED 2026-07-30 (qwen-code).** Persistence and unusual-exec path markers now use StringComparison.OrdinalIgnoreCase; SuspiciousArgMarkers were already lowercased.
 
 ---
@@ -44508,7 +44446,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Bind and pass the selected qtype through a typed display-result path.
                         [Fix 2] Visibly distinguish the canonical A audit from an auxiliary lookup.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -44554,7 +44491,6 @@ Deep security and networking stack audit of the client and server components, pr
                         - **Disagree Basis**       N/A. Windows Prophet record-type picker is decorative and always audits A. Verified: picker selection ignored in query path.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
-
 **FIXED 2026-07-30 (qwen-code).** ProphetView now reads RecordTypePicker and passes the selected qtype through ViewModel → ProbePlan.RunProphetAsync.
 
 ---
@@ -44576,7 +44512,6 @@ Deep security and networking stack audit of the client and server components, pr
                         against a trustworthy expected/allowed resolver or egress set. [Fix 3]
                         Without that policy, return observations plus inconclusive—not a leak verdict.
 - **Tag:**              CONFIRMED — FOUNDATIONAL DEFECT
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -44648,7 +44583,6 @@ Deep security and networking stack audit of the client and server components, pr
                         partially composed endpoint URL.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44707,7 +44641,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Use a bounded GUI ring buffer plus aggregate counters. [Fix 2]
                         Stream JSONL/JSON-array export with a strict memory budget and cancellation.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -44768,7 +44701,6 @@ Deep security and networking stack audit of the client and server components, pr
                         evidence partial/inconclusive.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44824,7 +44756,6 @@ Deep security and networking stack audit of the client and server components, pr
                         [Fix 2] Report invalid-prefix saturation as inconclusive, with adversarial tests.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44876,7 +44807,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Use one shared, versioned Public Suffix List implementation and test
                         multi-label suffix, private suffix, IDN, and unknown-TLD failure cases.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -44931,7 +44861,6 @@ Deep security and networking stack audit of the client and server components, pr
                         or inconclusive, with the counts visible.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -44981,7 +44910,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Count encoding failures and propagate a typed incomplete-capture
                         state into report/synthesis. [Fix 2] Add an intentionally unencodable failure test.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45035,7 +44963,6 @@ Deep security and networking stack audit of the client and server components, pr
                         explicit aborted marker.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -45085,7 +45012,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Bound input bytes/lines before diff. [Fix 2] Use a memory-bounded
                         algorithm (Hirschberg/Myers) with cancellation and an operation budget.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45140,7 +45066,6 @@ Deep security and networking stack audit of the client and server components, pr
                         multi-question, malformed, and spoof-attribution tests.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -45194,7 +45119,6 @@ Deep security and networking stack audit of the client and server components, pr
                         compiled fallback. Reject every custom/file scheme.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -45240,7 +45164,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Await and serialize one dialog queue. [Fix 2] Persist dismissal only
                         after a completed explicit dismiss action; retain retry state on failure.
 - **Tag:**              CONFIRMED source reachability; GUI reproduction still required
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45288,7 +45211,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Hand a validated release URL into the shared model/updater and expose
                         a download/install action only after authenticity checks.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45340,7 +45262,6 @@ Deep security and networking stack audit of the client and server components, pr
                         zero, overflow, and over-max cases.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree with revisions
@@ -45391,7 +45312,6 @@ Deep security and networking stack audit of the client and server components, pr
                         packet-capture backend. [Fix 2] Treat missing IPv6 coverage as explicit
                         degraded/inconclusive evidence.
 - **Tag:**              LIKELY — WINDOWS REAL RUN REQUIRED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45450,7 +45370,6 @@ Deep security and networking stack audit of the client and server components, pr
                         before listening. [Fix 3] Exercise configured-key startup in integration tests.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -45505,7 +45424,6 @@ Deep security and networking stack audit of the client and server components, pr
                         signed rotation chain. [Fix 2] Reopen the ROADMAP workstream until a real client
                         fetch/pin/rotation verification run succeeds.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45563,7 +45481,6 @@ Deep security and networking stack audit of the client and server components, pr
                         including every field that can affect display or interpretation. [Fix 2]
                         Render from signed evidence, not mutable parallel DTOs; add mutation tests.
 - **Tag:**              CONFIRMED — INCOMPLETE FIX
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45635,7 +45552,6 @@ Deep security and networking stack audit of the client and server components, pr
                         mismatch; bind rotation metadata into the signed contract.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -45696,7 +45612,6 @@ Deep security and networking stack audit of the client and server components, pr
                         unmistakable even when the signature is valid.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -45735,9 +45650,8 @@ Deep security and networking stack audit of the client and server components, pr
                                                   understates), rendering signature/trust/freshness/
                                                   network-verdict as separate typed lines.
 
+## **FIXED 2026-07-30 (qwen-code).** Witness verify output now displays Inconclusive and Degraded fields alongside the cryptographic verdict
 
-**FIXED 2026-07-30 (qwen-code).** Witness verify output now displays Inconclusive and Degraded fields alongside the cryptographic verdict.
----
 **FIXED 2026-07-30 (qwen-code), already resolved.** Direction is determined from port (port-53 side is the resolver), not the QR header bit; QR/port conflict yields Unknown Direction; report generator also uses port-based resolver attribution.
 
 ---
@@ -45757,7 +45671,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Determine direction from captured local/remote endpoints and interface
                         addresses. [Fix 2] A QR/endpoint conflict is malformed/unknown, never attribution.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45820,7 +45733,6 @@ Deep security and networking stack audit of the client and server components, pr
                         observation where platform APIs permit it.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -45877,7 +45789,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] Propagate an aborted/degraded capture state into report, GUI, and
                         synthesis. [Fix 2] Preserve partial artifacts but forbid a normal clean report.
 - **Tag:**              CONFIRMED — REOPENED REGRESSION
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -45938,7 +45849,6 @@ Deep security and networking stack audit of the client and server components, pr
 - **Fix(es):**          [Fix 1] One signal is inconclusive/degraded with the actual signal retained,
                         never benign. [Fix 2] Align zero/degenerate timestamp math and add failure tests.
 - **Tag:**              CONFIRMED — INCOMPLETE FIX
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -46078,7 +45988,6 @@ Deep security and networking stack audit of the client and server components, pr
                         never reopen/chown by pathname.
 - **Tag:**              CONFIRMED
 
-
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
                        - **Agree / Disagree**     Agree
@@ -46135,7 +46044,6 @@ Deep security and networking stack audit of the client and server components, pr
                         a canonical Syxx-signed entitlement. [Fix 2] Network/authenticity failure is
                         unknown and must not silently grant or revoke probe capability.
 - **Tag:**              CONFIRMED
-
 
                        - **Tool Name**            [Codex]
                        - **Date**                 2026-07-13
@@ -46768,7 +46676,7 @@ restored `origin/main` baseline `e625f2ad67ed6979a923d5333d8cf093edf2d04a`.
 
 ---
 
-- **[B140]**            **FIXED 2026-07-30 (qwen-code).** `editDistance` now implements the full Damerau-Levenshtein recurrence with the adjacent-transposition term (d[i-2][j-2] + 1), so adjacent swaps like "payapl.com" correctly return distance 1.
+- **[B140]**            **FIXED 2026-07-30 (qwen-code).** `editDistance` now implements the full Damerau-Levenshtein recurrence with the adjacent-transposition term (d`[i-2][j-2]` + 1), so adjacent swaps like "payapl.com" correctly return distance 1.
 - **Criticality:**      High missed-detection defect for a documented typosquatting shape.
 - **Location:**         macOS/Sources/SyxxKit/LookalikeDetector.swift:3-7, 79-101, 149-158;
                         Windows/Syxx.Kit/LookalikeDetector.cs:57-76;
@@ -46835,7 +46743,6 @@ restored `origin/main` baseline `e625f2ad67ed6979a923d5333d8cf093edf2d04a`.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
 ---
-
 
 **FIXED 2026-07-30 (qwen-code).** RunMirrorAsync now skips content warp (and its DPAPI license check) when isPro is false.
 
@@ -46916,7 +46823,6 @@ restored `origin/main` baseline `e625f2ad67ed6979a923d5333d8cf093edf2d04a`.
                         - **Disagree Basis**       N/A. Windows IsDNSEncrypted() => false stub kills Sentinel change detection and EncryptedDNSConfigurator. Verified: hardcoded false.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
-
 **FIXED 2026-07-30 (qwen-code), already resolved.** IsDNSEncrypted() now delegates to EncryptedDNSStatus() which reads real system DoH/DoT state; stale comment cleaned up.
 
 ---
@@ -46957,7 +46863,6 @@ restored `origin/main` baseline `e625f2ad67ed6979a923d5333d8cf093edf2d04a`.
                         - **Disagree Basis**       N/A. Windows empty-field AnswerDrift fabricates spurious Witness evidence from config changes. Verified: empty Domain/PreviousAnswer/NewAnswer.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
 
-
 **FIXED 2026-07-30 (qwen-code).** Config-change AnswerDrift now uses Domain='network-config' and the change Kind as QueryType instead of empty strings.
 
 ---
@@ -46992,7 +46897,6 @@ restored `origin/main` baseline `e625f2ad67ed6979a923d5333d8cf093edf2d04a`.
                         - **Agree / Disagree**     Agree
                         - **Disagree Basis**       N/A. Windows ContentWarp.IsInlineScriptIdentical defaults to true — false secure on unmeasured data. Verified: explicit = true initializer.
                         - **Proposed Revisions**   Keep in B-domain; required disposition per Fix(es) above.
-
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** IsInlineScriptIdentical now defaults to false.
 **FIXED 2026-07-30 (qwen-code), already resolved.** GluttonViewModel now reads EncryptedDNS.State directly instead of deriving from VPN state.
@@ -47052,6 +46956,7 @@ restored `origin/main` baseline `e625f2ad67ed6979a923d5333d8cf093edf2d04a`.
                         sectionInputs.resolution = planResult.resolution
 
                         ]
+
 ---
 **FIXED 2026-07-30 (qwen-code).** ComparisonVerdict enum added; three independent bools replaced with mutually-exclusive enum on ComparisonResult.
 
@@ -47517,7 +47422,6 @@ restored `origin/main` baseline `e625f2ad67ed6979a923d5333d8cf093edf2d04a`.
 
 ---
 
-
 ## Deep audit intake — 2026-07-29
 
 Findings from a 22-agent deep audit. Each was verified against current source by the
@@ -47540,7 +47444,7 @@ reporting agent; several were reproduced by execution. IDs assigned at merge.
                         `("1","true","yes","on")` — so every value outside that set silently
                         resolves to **False**, including values a careful operator would write to
                         mean the opposite: `enabled`, `TRUE!`, `y`, `always`, `2`, `enforce`,
-                        ` true` (interior space survives `.strip()` only at the ends — that case is
+                        `true` (interior space survives `.strip()` only at the ends — that case is
                         fine, but `"true "` vs `"tr ue"` is not), and any value with a stray
                         trailing comment. There is no third state: the function cannot express
                         "the operator set something I do not understand", so an unparseable value
@@ -47585,6 +47489,7 @@ reporting agent; several were reproduced by execution. IDs assigned at merge.
                         [4] Add a honesty test that asserts `_b("X", True)` with `X="enabled"` does
                         NOT return False.
 - **Code Sample:**
+
 ```python
 # config.py:11-15
 def _b(name, default):
@@ -47629,7 +47534,7 @@ ENFORCE_DOH = _b("SYXX_ENFORCE_DOH", True)
                         The consequence is the inverse of what the comment at app.py:1071-1076
                         claims to have achieved. Because `or` short-circuits, a request with a
                         missing or non-`bearer` Authorization header returns a clean 401; ONLY a
-                        request carrying the correct (or any `bearer `-prefixed) token reaches the
+                        request carrying the correct (or any `bearer`-prefixed) token reaches the
                         NameError. So: configure the token → the operator can never read metrics.
                         The only way to actually get metrics out of this server is to leave
                         `SYXX_METRICS_BEARER_TOKEN` unset and set `SYXX_DEV_MODE=1` (app.py:1077-
@@ -47654,12 +47559,13 @@ ENFORCE_DOH = _b("SYXX_ENFORCE_DOH", True)
                         root cause.
                         [3] Run `python -m pyflakes syxx_server/` (or ruff `F821 undefined-name`) in
                         CI; both flag this statically. SD-13 proves inspection alone does not.
-                        [4] Return 401 (not 500) for a `bearer `-prefixed token of the wrong length
+                        [4] Return 401 (not 500) for a `bearer`-prefixed token of the wrong length
                         so the response class does not disclose whether a token is configured.
                         [5] Reconsider `SYXX_DEV_MODE=1` serving metrics unauthenticated at all —
                         with [1] applied it is no longer the only working path, so it can be
                         narrowed to a loopback-peer check.
 - **Code Sample:**
+
 ```python
 # app.py:15-30 — module imports; note the absence of hmac
 import base64
@@ -47753,6 +47659,7 @@ import urllib.parse
                         cannot be reached for a license-issued row — the current parameter name
                         describes a capability far broader than its stated purpose.
 - **Code Sample:**
+
 ```python
 # app.py:1479-1484 — PAID issuer, subject = license subject
     def _route_leak_token(self, query):
@@ -47840,6 +47747,7 @@ import urllib.parse
                         [4] Add a test that raises from a route after `_send` and asserts exactly
                         one HTTP response is written to the socket.
 - **Code Sample:**
+
 ```python
 # app.py:645-649
         try:
@@ -47914,6 +47822,7 @@ import urllib.parse
                         deadline (as `_route_propagation` does) rather than serially — but see
                         S1-06 before copying that pattern.
 - **Code Sample:**
+
 ```python
 # app.py:1616-1619
         try:
@@ -47998,6 +47907,7 @@ import urllib.parse
                         [4] Account nested work against the same semaphore, or expose live thread
                         count in `/readyz` so saturation is observable.
 - **Code Sample:**
+
 ```python
 # app.py:387-397 — bounds ONLY connection handlers
     def process_request(self, request, client_address):
@@ -48078,6 +47988,7 @@ import urllib.parse
                         [4] Have `_abort_on_deadline` also set a flag the route can poll, and record
                         `logging_util.incr("http_deadline_aborted")` so the control is observable.
 - **Code Sample:**
+
 ```python
 # app.py:419-434
     def setup(self):
@@ -48151,6 +48062,7 @@ import urllib.parse
                         cost the client something.
                         [4] Bound key length regardless.
 - **Code Sample:**
+
 ```python
 # app.py:446-465
     def handle_one_request(self):
@@ -48233,6 +48145,7 @@ def incr(name, n=1):
                         proxied content can never be `'self'`.
                         [4] Tighten `img-src` from `https:` to the specific hosts actually used.
 - **Code Sample:**
+
 ```python
 # app.py:485-494
         self.send_header("Content-Security-Policy",
@@ -48304,6 +48217,7 @@ def incr(name, n=1):
                         bodies fall under the 1024-byte threshold, which is an accident rather than
                         a control.
 - **Code Sample:**
+
 ```python
 # app.py:468-474 — the file's only Vary, and only on the allowed branch
     def _cors(self):
@@ -48380,6 +48294,7 @@ def incr(name, n=1):
                         [4] Correct the `/api/exposure` docstring or the routes: as written, the
                         codebase asserts a property it does not hold.
 - **Code Sample:**
+
 ```python
 # app.py:1418-1419 — the stated invariant
         """... Self-scoped BY CONSTRUCTION: only the connection's source IP is probed, never an
@@ -48468,6 +48383,7 @@ def incr(name, n=1):
                         `answers` — the case is currently untested, which is why the divergence
                         survives.
 - **Code Sample:**
+
 ```python
 # app.py:1330-1337 — selection keyed on auth_usable
         auth_answers = set(a.lower() for a in (auth.get("authoritative") or {}).get("answers", []))
@@ -48543,6 +48459,7 @@ def incr(name, n=1):
                         [4] Have deploy.sh also set `proxy_set_header X-Forwarded-For $remote_addr`
                         so the second channel is overwritten too — belt and braces with [1].
 - **Code Sample:**
+
 ```python
 # app.py:555-576
     def _client_ip(self):
@@ -48623,6 +48540,7 @@ def incr(name, n=1):
                         [5] Pin the mitigation in deploy.sh: keep nginx as the only ingress and
                         firewall `:8080`, or bind `SYXX_HTTP_HOST=127.0.0.1`.
 - **Code Sample:**
+
 ```python
 # app.py:586-606
     def _body(self):
@@ -48688,6 +48606,7 @@ def incr(name, n=1):
                         same thing has now happened again, four lines below that warning.
                         [3] Add a test asserting the 6th `/api/exposure` call in a minute is 429.
 - **Code Sample:**
+
 ```python
 # config.py:445-447 — declared, never read
 # Per-subject rate limit for /api/exposure (S5): 5 requests per minute.
@@ -48749,6 +48668,7 @@ EXPOSURE_RATE_REFILL_MILLIS = _i("SYXX_EXPOSURE_RATE_REFILL_MILLIS", 12000)  # 1
                         on the deployed origin — the current unit-level view cannot catch a header
                         the proxy drops or never adds.
 - **Code Sample:**
+
 ```python
 # app.py:496-500
         self.send_header("Permissions-Policy",
@@ -48761,6 +48681,7 @@ EXPOSURE_RATE_REFILL_MILLIS = _i("SYXX_EXPOSURE_RATE_REFILL_MILLIS", 12000)  # 1
 TLS_CERT = _s("SYXX_TLS_CERT", "")
 TLS_KEY = _s("SYXX_TLS_KEY", "")
 ```
+
 ```nginx
 # scripts/deploy.sh:398-403 — no HSTS, no X-Forwarded-Proto
     location / {
@@ -48817,6 +48738,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         app builds that cannot be recalled, as :909-913 already documents for the
                         legacy `?product=` parameter).
 - **Code Sample:**
+
 ```python
 # app.py:632-633
     def do_HEAD(self):
@@ -48886,6 +48808,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         [5] Wrap the `compare_digest` at :972 in try/except `TypeError` → 400, or
                         pre-validate `sig_header` as `[0-9a-f]{64}` before comparing.
 - **Code Sample:**
+
 ```python
 # app.py:723-730 — three public routes, no _rate_ok
         if path == "/healthz":
@@ -48952,6 +48875,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         [4] Return 404 from `do_OPTIONS` for unrouted paths, and apply the
                         dispatcher-level rate limit from S1-18 fix [1].
 - **Code Sample:**
+
 ```python
 # app.py:468-477
     def _cors(self):
@@ -49011,6 +48935,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         [3] Validate the `Host` header against a configured allowlist at the top of
                         the dispatcher and 421 (Misdirected Request) otherwise.
 - **Code Sample:**
+
 ```python
 # app.py:706-718
     def _dispatch_get(self, path, query):
@@ -49064,6 +48989,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         for that content and should be visible at the call site, just not duplicated
                         on the wire.
 - **Code Sample:**
+
 ```python
 # app.py:519-524 — appends; never replaces
         self._cors()
@@ -49124,6 +49050,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         [4] Grep for every other unwrapped `resolve_authoritative` call site when
                         fixing, so SD-41 closes for the whole file rather than one route at a time.
 - **Code Sample:**
+
 ```python
 # app.py:1289-1292 — the sibling does it correctly
         try:
@@ -49180,6 +49107,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         [4] Do not consume the 5/day creation quota (:1836) on a request that fails
                         validation: move the quota check after field validation.
 - **Code Sample:**
+
 ```python
 # app.py:1848-1852
         ttl = min(int(payload.get("ttlDays", 90)), 365)          # no floor, no guard
@@ -49206,7 +49134,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
 - **Issue:**            `_i` returns the default whenever `int()` raises. There is no third state
                         and no diagnostic, so `SYXX_LEAK_TOKEN_TTL=15m` silently becomes 900,
                         `SYXX_SESSION_TTL=1h` silently becomes 3600, `SYXX_RATE_CAPACITY=thirty`
-                        silently becomes 30, and `SYXX_HTTP_MAX_WORKERS=64 ` (with a trailing
+                        silently becomes 30, and `SYXX_HTTP_MAX_WORKERS=64` (with a trailing
                         comment) silently becomes 64. In each case the operator believes they
                         changed a limit and did not. Nothing is logged; `/readyz` does not report
                         effective configuration; `/metrics` is unreadable (S1-02).
@@ -49239,6 +49167,7 @@ TLS_KEY = _s("SYXX_TLS_KEY", "")
                         [4] Consider failing startup on an unparseable value for anything
                         security-relevant, consistent with S1-01 fix [1].
 - **Code Sample:**
+
 ```python
 # config.py:18-22
 def _i(name, default):
@@ -49486,7 +49415,7 @@ No repository files were modified.
                         `ds-match` step, not from `zones[-1]`.
 - **Code Sample:**      [
                         dnssec_validator.py:249-255
-                            keys = [(r, _pdk(r["rd"])) for r in dkrs if _pdk(r["rd"]) and _pdk(r["rd"])[1] == 3]
+                            keys = [(r,_pdk(r["rd"])) for r in dkrs if _pdk(r["rd"]) and_pdk[r["rd"]](1) == 3]
                             if not keys: return None
                             unsup = False
                             for dr, dp in keys:
@@ -49642,7 +49571,7 @@ No repository files were modified.
                         [Fix 3] Refuse any non-`https` RDAP base URL outright (SD-80).
 - **Code Sample:**      [
                         whois_lookup.py:160-165
-                            if not _redirect_target_is_safe(location):   # resolves + approves...
+                            if not_redirect_target_is_safe(location):   # resolves + approves...
                                 return None
                             url = location
                             continue
@@ -49700,7 +49629,7 @@ No repository files were modified.
                             deadline = now + min(timeout * 4, 30.0)  # SD-71: aggregate wall-clock cap
                             ...
                             if time.time() > deadline: ... break     # only between zones
-                            zv, _ = _find(zone.rstrip("."), timeout) # up to 320s inside, unbounded
+                            zv,_ = _find(zone.rstrip("."), timeout) # up to 320s inside, unbounded
                         ]
 
 ---
@@ -49833,7 +49762,7 @@ No repository files were modified.
                                 conn.request("GET", path, headers={...})
                                 resp = conn.getresponse()
                             except Exception as exc:
-                                raise _CrtshError("connection failed: %s" % exc)
+                                raise_CrtshError("connection failed: %s" % exc)
                             finally:
                                 conn.close()          # closes resp too
                             ...
@@ -50098,7 +50027,7 @@ No repository files were modified.
                         warp.py:112-118
                             for script_url in scripts[:config.FETCH_MAX_SCRIPTS]:
                                 try:
-                                    data, _c, _f = fetcher.fetch(script_url, timeout=config.FETCH_SCRIPT_TIMEOUT)
+                                    data,_c, _f = fetcher.fetch(script_url, timeout=config.FETCH_SCRIPT_TIMEOUT)
                                     script_hashes[script_url] = hashlib.sha256(data).hexdigest()
                                 except fetcher.FetchError:
                                     script_hashes[script_url] = "ERROR_PROXY_FETCH"
@@ -50217,6 +50146,7 @@ SD-07 IPv4-mapped normalisation in `netutil.py:33-34`.
                         [Fix 4] Surface last-successful-backup age on `/metrics` or `/healthz`; "no
                         backup in N days" must be visible, not inferable from an absent log line.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/db.py:631
 def backup(dest_dir=None, keep=None, stamp=None):
@@ -50272,6 +50202,7 @@ def _backup_db():
                         `subscription_lapse_unresolvable` — a cancellation the server could not act on
                         is an operator action item, not a handled event.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/db.py:939-943  (inside purge_expired)
         if _KV_RETENTION_DAYS > 0:
@@ -50330,6 +50261,7 @@ def _backup_db():
                         one reassuring label. `subject_unresolved` must log at warn: it means a real
                         revocation was received and not enforced.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/app.py:983-991
         lic_id = data.get("id", "") if isinstance(data, dict) else ""   # Keygen resource id
@@ -50401,6 +50333,7 @@ def api_key_revoke_all_for_subject(subject):
                         only when the server actually said so (`inconclusive == true`), never as the
                         fallthrough for an undecodable verdict field — that is a fabricated cause.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/leak.py:218-236
     result = {
@@ -50411,6 +50344,7 @@ def api_key_revoke_all_for_subject(subject):
               ("token", "zone", "issuedAt", "queriesObserved",
                "resolverCount", "observedResolvers", "verifiedAt")}
 ```
+
 ```swift
 // macOS/Sources/SyxxKit/LeakDetector.swift:363-365, 214
     private struct VerifyResponse: Decodable {
@@ -50418,6 +50352,7 @@ def api_key_revoke_all_for_subject(subject):
         let observedResolvers: [String]
             if result.inconclusive == true || result.leaked == nil {   // always true
 ```
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/LeakDetector.cs:351-352, 368, 491-492
             [JsonPropertyName("leaked")] public bool? Leaked { get; set; }          // signed DTO
@@ -50474,6 +50409,7 @@ def api_key_revoke_all_for_subject(subject):
                         sidecars and reports the real mode. A chmod whose failure is `pass`-ed must be
                         verified elsewhere or it proves nothing.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/db.py:236-250
         os.makedirs(os.path.dirname(config.DB_PATH) or ".", exist_ok=True)
@@ -50546,6 +50482,7 @@ def api_key_revoke_all_for_subject(subject):
                         [Fix 4] Make the caller's intent explicit rather than relying on `NULL`:
                         `if label: leak.consume(label)` at app.py:1497 and :1523.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/leak.py:191-194, 234-236
     rec = db.leak_token_get(label)
@@ -50610,6 +50547,7 @@ def api_key_revoke_all_for_subject(subject):
                         [Fix 4] Add tests for `SUSPENDED` (→ False), an unknown string (→ None,
                         no revocation) and a missing `status` key (→ None).
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/licensing.py:356-360
         lic = data.get("data", {})
@@ -50666,6 +50604,7 @@ def api_key_revoke_all_for_subject(subject):
                         An event the server chose not to act on must be visible; "ignored" returned to
                         Stripe and written nowhere is a silent drop.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/fulfillment.py:152-153, 170
     if etype in ("customer.subscription.deleted", "invoice.payment_failed",
@@ -50715,6 +50654,7 @@ def api_key_revoke_all_for_subject(subject):
                         `minted-undelivered` at `/metrics`. A charged-and-unfulfilled order must be
                         countable, not archaeological.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/fulfillment.py:84-92
         if event_id:
@@ -50769,6 +50709,7 @@ def api_key_revoke_all_for_subject(subject):
                         [Fix 3] Validate `to` against the same `_EMAIL_RE` the beta route uses
                         (app.py:1161) before building, and reject at the boundary.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/mailer.py:40-52
     msg = EmailMessage()
@@ -50814,6 +50755,7 @@ def api_key_revoke_all_for_subject(subject):
                         asserts `backup()` re-raises `OSError` (not `NameError`) and that the log line
                         contains the original message.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/db.py:7-15
 import hashlib
@@ -50887,6 +50829,7 @@ from . import config            # <-- logging_util is never imported
                         [Fix 4] Use a length-prefixed or JSON-canonical HMAC message and include
                         `note` and `created_at`.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/db.py:339-345  — keyed off the SESSION secret
 def _license_row_hmac(key, plan, status, expires_at):
@@ -50905,6 +50848,7 @@ def _license_row_hmac(key, plan, status, expires_at):
 # Server/syxx_server/db.py:369 — the only writer; zero callers in the repo
 def license_upsert(key, plan="pro", status="active", expires_at=None, note=None):
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Fix 2: license_lookup logs distinct rejection events (license_row_unsigned vs license_row_hmac_mismatch). Fix 3: purpose-bound HMAC sub-key derived via HMAC(secret, b"license-row-v1"). Fix 4: JSON-canonical HMAC message covering note+created_at, with hmac_version column for migration.
 
 ---
@@ -50942,6 +50886,7 @@ def license_upsert(key, plan="pro", status="active", expires_at=None, note=None)
                         than the full table, so the weekly off-host re-transmission of the entire
                         history stops.
 - **Code Sample:**
+
 ```sql
 -- Server/syxx_server/db.py:118-124
 CREATE TABLE IF NOT EXISTS beta_signups (
@@ -50952,12 +50897,14 @@ CREATE TABLE IF NOT EXISTS beta_signups (
     updated_at INTEGER NOT NULL
 );
 ```
+
 ```python
 # Server/syxx_server/db.py:949-951 — trial_anchors HAS a window; beta_signups has no equivalent
         if config.TRIAL_ANCHOR_RETENTION_DAYS > 0:
             conn.execute("DELETE FROM trial_anchors WHERE first_launch < ?",
                          (now - config.TRIAL_ANCHOR_RETENTION_DAYS * 86400,))
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** _BETA_RETENTION_DAYS (default 365) defined at db.py:42 and purge_expired includes beta_signups DELETE branch at db.py:1119-1121.
 
 ---
@@ -50989,6 +50936,7 @@ CREATE TABLE IF NOT EXISTS beta_signups (
                         [Fix 3] Resolve `plan` from the subject at lookup time rather than hardcoding
                         `"pro"`.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/licensing.py:393-397
         key_hash = hashlib.sha256(api_key.encode()).hexdigest()
@@ -50997,6 +50945,7 @@ CREATE TABLE IF NOT EXISTS beta_signups (
             db.api_key_touch(row["id"])
             return Entitlement(row["subject"], "pro", "api-key"), None   # row["scopes"] discarded
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Fix 2: api_key_create ignores caller-supplied scopes (always stores "*"), api_key_list excludes scopes from SELECT — stops exposing a control the server does not enforce.
 
 ---
@@ -51033,6 +50982,7 @@ CREATE TABLE IF NOT EXISTS beta_signups (
                         reason field (`"truncated"` vs `"short-observation"`). A verdict computed on a
                         partial window must say so.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/passivedns.py:46-49, 71-77
     records = db.passive_query(domain, 500)      # ORDER BY last_seen DESC LIMIT 500
@@ -51045,6 +50995,7 @@ CREATE TABLE IF NOT EXISTS beta_signups (
         "observationDays": round(max(v["ageDays"] for v in values) if values else 0, 1),
     }                                            # no truncation flag anywhere
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Fix 1: rtype filter pushed into SQL via db.passive_query(domain, limit, rtype=). Fix 2: baseline() requests limit+1 rows to detect truncation, returns "truncated", "totalRecords", "truncationReason" fields. Fix 3: truncated baseline forces drift="insufficient-data".
 
 ---
@@ -51079,6 +51030,7 @@ CREATE TABLE IF NOT EXISTS beta_signups (
                         that have not passed the redactor. Telemetry egress of user data must be a
                         decision, not a default.
 - **Code Sample:**
+
 ```python
 # Server/syxx_server/mailer.py:72-73
     except Exception as e:  # any SMTP/DNS/TLS error — log and swallow
@@ -51090,7 +51042,8 @@ CREATE TABLE IF NOT EXISTS beta_signups (
         ...
             _otel_logger.emit(rec_obj)          # leaves the host
 ```
-**FIXED 2026-07-30 (qwen-code).** Fix 1: mailer.py logs err_type + smtp_code + redacted smtp_detail instead of raw str(e). Fix 2: logging_util._emit applies _redact_emails() to all fields before serialisation — single choke point prevents any future call site from leaking email addresses to stdout/OTLP.
+
+**FIXED 2026-07-30 (qwen-code).** Fix 1: mailer.py logs err_type + smtp_code + redacted smtp_detail instead of raw str(e). Fix 2: logging_util._emit applies_redact_emails() to all fields before serialisation — single choke point prevents any future call site from leaking email addresses to stdout/OTLP.
 
 ---
 
@@ -51131,31 +51084,35 @@ CREATE TABLE IF NOT EXISTS beta_signups (
 4. `security.txt` `Policy: https://syxx.app/#privacy` points at an in-page anchor (`index.html:368`) rather than the dedicated policy at `/privacy` (`privacy.html`, canonical `https://syxx.app/privacy`) — a third inconsistent address for the same document.
 **Cross-ref. Delta:** No delta ID matches; grep of all four delta files returns no `robots`, `sitemap`, `canonical`, or `leaktest` entries. **NEW — file a delta.**
 **Fix(es):**
-1. Replace `Disallow: /leak` with the exact paid paths it was meant to cover (`Disallow: /leak$` is not portable — use `Disallow: /api/leak/` and drop the bare `/leak` prefix, or add explicit longer `Allow: /leaktest` and `Allow: /leak-test` rules that win by length).
-2. Correct the `Allow:` lines to the URLs actually served (`/leaktest`, `/leak-test`) — the current `.html` forms are 404s.
-3. Add `<link rel="canonical" href="https://syxx.app/leaktest">` to `leaktest.html` so the `leaktest.syxx.app` host consolidates, and remove `https://leaktest.syxx.app/` from the sitemap (or 301 it).
-4. Resolve `/leak-test` per [S4-03] — retire it and 301 to `/leaktest`; do not leave a crawlable page whose verdict wording contradicts the canonical one.
-5. Point `security.txt` `Policy:` at `https://syxx.app/privacy`.
+5. Replace `Disallow: /leak` with the exact paid paths it was meant to cover (`Disallow: /leak$` is not portable — use `Disallow: /api/leak/` and drop the bare `/leak` prefix, or add explicit longer `Allow: /leaktest` and `Allow: /leak-test` rules that win by length).
+6. Correct the `Allow:` lines to the URLs actually served (`/leaktest`, `/leak-test`) — the current `.html` forms are 404s.
+7. Add `<link rel="canonical" href="https://syxx.app/leaktest">` to `leaktest.html` so the `leaktest.syxx.app` host consolidates, and remove `https://leaktest.syxx.app/` from the sitemap (or 301 it).
+8. Resolve `/leak-test` per [S4-03] — retire it and 301 to `/leaktest`; do not leave a crawlable page whose verdict wording contradicts the canonical one.
+9. Point `security.txt` `Policy:` at `https://syxx.app/privacy`.
 **Code Sample:**
+
 ```
-robots.txt:10	Allow: /leak-test.html      <- 404; real path is /leak-test
-robots.txt:11	Allow: /leaktest.html       <- 404; real path is /leaktest
-robots.txt:38	Disallow: /leak             <- prefix-matches /leaktest and /leak-test
+robots.txt:10 Allow: /leak-test.html      <- 404; real path is /leak-test
+robots.txt:11 Allow: /leaktest.html       <- 404; real path is /leaktest
+robots.txt:38 Disallow: /leak             <- prefix-matches /leaktest and /leak-test
 ```
+
 ```
-sitemap.xml:8	  <url>
-sitemap.xml:9	    <loc>https://syxx.app/leaktest</loc>     <- Disallowed by the line above
-sitemap.xml:10	    <changefreq>monthly</changefreq>
-sitemap.xml:11	    <priority>0.9</priority>
+sitemap.xml:8   <url>
+sitemap.xml:9     <loc>https://syxx.app/leaktest</loc>     <- Disallowed by the line above
+sitemap.xml:10     <changefreq>monthly</changefreq>
+sitemap.xml:11     <priority>0.9</priority>
 ```
+
 ```
-app.py:100	    "/leak-test": ("leak-test.html", "text/html; charset=utf-8"),
-app.py:104	    "/leaktest": ("leaktest.html", "text/html; charset=utf-8"),
-app.py:105	    "/leaktest/": ("leaktest.html", "text/html; charset=utf-8"),
+app.py:100     "/leak-test": ("leak-test.html", "text/html; charset=utf-8"),
+app.py:104     "/leaktest": ("leaktest.html", "text/html; charset=utf-8"),
+app.py:105     "/leaktest/": ("leaktest.html", "text/html; charset=utf-8"),
 ```
+
 ```
-app.py:717	        if host and host.startswith("leaktest.") and path in ("/", "/index.html", ""):
-app.py:718	            return self._serve_static("/leaktest")
+app.py:717         if host and host.startswith("leaktest.") and path in ("/", "/index.html", ""):
+app.py:718             return self._serve_static("/leaktest")
 ```
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** robots.txt now uses `Disallow: /leak$` (anchored), Allow rules use correct paths without .html suffix, sitemap no longer lists leaktest.syxx.app.
@@ -51182,29 +51139,32 @@ This is the exact defect class the doctrine names: an operator watching an empty
 A secondary swallow compounds it: `logging_util.py:43-44` wraps each individual `_otel_logger.emit()` in `except Exception: pass`, so even after the import bug is fixed, an exporter that is failing to deliver (bad endpoint, TLS failure, 4xx from the collector) will also be invisible.
 **Cross-ref. Delta:** No delta ID matches; no delta file mentions `opentelemetry`, `otel`, or `bugsmasher`. **NEW — file a delta.** Directly relevant precedent exists in-repo: `preflight.py:45-53` was written specifically because "the daemon had been up for TWO DAYS in that state … and nothing said so at boot." This is the identical failure, and `preflight.py` does not check telemetry.
 **Fix(es):**
+
 1. Fix the imports: `from opentelemetry import _logs as otel_logs` (`app.py:62`) and `from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter` (`app.py:69`).
 2. Replace `except Exception: pass` at `app.py:85-86` and `app.py:55-56` with `except Exception as e:` that records the failure — at minimum `logging_util.warn("telemetry_init_failed", err=str(e))` to stdout/journald, which is not dependent on the pipeline that just failed. Best-effort must still be *reported* effort.
 3. Add a telemetry check to `preflight.py::_CHECKS` (or a `_telemetry_finding()` alongside `_collector_finding()`) so a dead exporter is a `degraded` boot finding, exactly as `_collector_finding` does for the collector key. `preflight.py:67-73` already argues this case: "a preflight that reports clean on a broken key is worse than no preflight."
 4. Expose an `otel_initialized` boolean in `/readyz`'s body and a `telemetry_export_failures` counter via `logging_util.incr` in the `logging_util.py:43` handler, so delivery failure is countable rather than silent.
 5. Add a startup smoke test that asserts `logging_util._otel_logger is not None` when the OTel packages are importable — a test that would have failed on day one.
 **Code Sample:**
+
 ```
- 61	try:
- 62	    from opentelemetry import logs as otel_logs          <- ImportError, always
+ 61 try:
+ 62     from opentelemetry import logs as otel_logs          <- ImportError, always
 ...
- 69	    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, OTLPLogExporter   <- also wrong
+ 69     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, OTLPLogExporter   <- also wrong
 ...
- 84	    _OTEL_LOGGER = otel_logs.get_logger("syxx-server")
- 85	except Exception:
- 86	    pass  # telemetry is best-effort; never crash the server for it
- 87	
- 88	# Wire OTel logger into logging_util so all logging_util.error() calls also export via OTLP.
- 89	if _OTEL_LOGGER is not None:                              <- never true
+ 84     _OTEL_LOGGER = otel_logs.get_logger("syxx-server")
+ 85 except Exception:
+ 86     pass  # telemetry is best-effort; never crash the server for it
+ 87 
+ 88 # Wire OTel logger into logging_util so all logging_util.error() calls also export via OTLP.
+ 89 if _OTEL_LOGGER is not None:                              <- never true
 ```
+
 ```
-logging_util.py:34	    if level == "error" and _otel_logger is not None:   <- dead branch
-logging_util.py:43	        except Exception:
-logging_util.py:44	            pass  # telemetry is best-effort
+logging_util.py:34     if level == "error" and _otel_logger is not None:   <- dead branch
+logging_util.py:43         except Exception:
+logging_util.py:44             pass  # telemetry is best-effort
 ```
 
 **FIXED 2026-07-30 (qwen-code), already resolved.** OTel imports corrected (`_logs` not `logs`, correct exporter path); init failure captured in `_OTEL_STATE` and reported, not silently swallowed.
@@ -51223,30 +51183,36 @@ logging_util.py:44	            pass  # telemetry is best-effort
 Note the design is deliberate and defensible for `degraded-fallback` (documented at `app.py:1047-1050`) — a listener serving on the wrong port is genuinely up. `unknown` is different in kind: it is absence of evidence, and it is currently indistinguishable from evidence of health in the only field a caller reads (`ready`).
 **Cross-ref. Delta:** `listeners.py:7` cites **SD-62** for the silent-rebind case; SD-62 does not appear in `DELTAS.md`, `DELTAS-fixed.md`, `DELTAS-rejected.md`, or `Server/SERVER_DELTAS.md` under that ID. The `/healthz` constant and the `unknown`-is-ready collapse are untracked. **NEW — file a delta.**
 **Fix(es):**
+
 1. Make `/healthz` either (i) genuinely liveness-only and *documented as such in the response body* (`{"ok": true, "scope": "process-liveness-only", "readiness": "/readyz"}`), or (ii) an alias for `/readyz`. An unqualified `ok: true` is a claim the endpoint has not earned.
 2. Add `listeners.unknown_listeners()` and surface it in `/readyz` as a distinct top-level field, e.g. `{"ready": false, "unknown": ["dns"], "listeners": snap}` with a 503 — or, if a startup grace period is wanted, `{"ready": null}` / HTTP 503 until every `_KNOWN` listener that the running configuration is supposed to start has reported. Never emit `ready: true` while any expected listener is `unknown`.
 3. Have the startup path explicitly `set_state(name, "down", detail=...)` for any listener whose spawn raised, so `unknown` genuinely means "not yet reported" rather than "crashed on the way up".
 **Code Sample:**
+
 ```
-723	        if path == "/healthz":
-724	            return self._send(200, {"ok": True})
+723         if path == "/healthz":
+724             return self._send(200, {"ok": True})
 ```
+
 ```
-1059	        snap = listeners.snapshot()
-1060	        down = listeners.down_listeners()
-1061	        if down:
-1062	            return self._send(503, {"ready": False, "down": down, "listeners": snap})
-1063	        self._send(200, {"ready": True, "listeners": snap})
+1059         snap = listeners.snapshot()
+1060         down = listeners.down_listeners()
+1061         if down:
+1062             return self._send(503, {"ready": False, "down": down, "listeners": snap})
+1063         self._send(200, {"ready": True, "listeners": snap})
 ```
+
 The registry's own contract, contradicted by the line above:
+
 ```
-listeners.py:12	A never-started listener defaults to "unknown", never "listening": absence of a report is not evidence of health.
+listeners.py:12 A never-started listener defaults to "unknown", never "listening": absence of a report is not evidence of health.
 ```
+
 ```
-listeners.py:50	def down_listeners():
-listeners.py:51	    """Names of listeners currently `down`. `/readyz` is 503 iff this is non-empty."""
-listeners.py:52	    with _lock:
-listeners.py:53	        return sorted(n for n, e in _state.items() if e["state"] == "down")
+listeners.py:50 def down_listeners():
+listeners.py:51     """Names of listeners currently `down`. `/readyz` is 503 iff this is non-empty."""
+listeners.py:52     with _lock:
+listeners.py:53         return sorted(n for n, e in _state.items() if e["state"] == "down")
 ```
 
 **FIXED 2026-07-30 (qwen-code).** /healthz now explicitly documents scope as 'process-liveness-only'; /readyz now treats 'unknown' listeners as not-ready (503), matching the listeners.py contract.
@@ -51265,41 +51231,48 @@ verdict = result.get("consensus", "ok") if isinstance(result, dict) else "ok"
 For `check_type == "investigate"` this is fine — `investigate.investigate()` always returns a dict containing `"consensus"` (`investigate.py:273`). But the `baseline` and `warp` runners (`scheduler.py:53-54`) call `warp.build_baseline()`, which returns a **plain baseline dict with no `consensus` key** (`warp.py:90-106` — it returns either `json.loads(cached)` or the constructed baseline). The `.get("consensus", "ok")` default therefore fires on **every** warp/baseline run, and line 78 writes `db.monitor_result_save(mid, "warp", "ok", …)` regardless of what the check actually found. A stored field literally named `verdict` carries a clean value that was never computed from evidence — honesty spine #4 ("no fabricated value shown as measured") and #1. Warp is the *content-tamper* signal (`warp.py:97`: "Warp's diff is the content-tamper signal, so a stale baseline is false evidence"), so a permanent `"ok"` on that check is the worst possible column to fabricate. Change detection still works via the separate `_diff_previous()` path, so alerts do fire — which makes this harder to notice, not less wrong: the alert says "changed" while the persisted verdict says "ok".
 
 Two supporting defects in the same file feed clean answers from unreadable input:
+
 - `scheduler.py:20-24` — if the previously stored `raw_json` is corrupt or non-JSON, `except (json.JSONDecodeError, TypeError): return None` returns the same value as "compared successfully, nothing changed." A monitor whose history is unreadable silently reports **no change**, and no alert is sent. Missing data rendered as clean data (honesty spine #2). Note the correct pattern already exists two functions away: `_run_one` (`scheduler.py:63-68`) logs and persists an explicit `"error"` verdict.
 - `scheduler.py:96,106` — `mailer.send()` is documented to return `True`/`False` and to never raise (`mailer.py:31-32`), but `_send_alert` discards the return value, and `_tick` then increments `logging_util.incr("monitor_alerts")` at line 106 on the strength of `changes` being non-empty. With SMTP unconfigured, `mailer.send` logs `mail_skipped` and returns `False` (`mailer.py:34-36`) — yet the `monitor_alerts` metric still counts the alert as sent. The operator's dashboard reports delivered alerts that were never delivered.
 **Cross-ref. Delta:** No delta ID matches; no delta file references `scheduler`, `monitor_result_save`, or `monitor_alerts`. **NEW — file a delta.**
 **Fix(es):**
+
 1. Make the verdict explicit per check type. Never default: `verdict = result.get("consensus")` and, when it is `None`, persist `"unknown"` (or a check-appropriate computed verdict for warp — e.g. `"changed"` / `"unchanged"` derived from `_diff_previous`), never `"ok"`.
 2. Add `"unknown"` to the monitor verdict vocabulary and make sure any consumer renders it distinctly from `"ok"`.
 3. In `_diff_previous`, return a sentinel (e.g. `"unreadable"`) rather than `None` on a JSON decode failure, log it via `logging_util.warn("monitor_history_unreadable", monitor_id=…)`, and persist the run as `error`/`unknown` rather than silently comparing against nothing.
 4. Have `_send_alert` return `mailer.send(...)`'s boolean and gate `logging_util.incr("monitor_alerts")` on it; add a separate `monitor_alerts_undelivered` counter for the false case so a broken SMTP path is countable.
 **Code Sample:**
+
 ```
- 51	    runners = {
- 52	        "investigate": ("investigate", lambda: investigate.investigate(domain)),
- 53	        "baseline":    ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
- 54	        "warp":        ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
- 55	    }
+ 51     runners = {
+ 52         "investigate": ("investigate", lambda: investigate.investigate(domain)),
+ 53         "baseline":    ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
+ 54         "warp":        ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
+ 55     }
 ```
+
 ```
- 75	        raw = json.dumps(result, default=str)
- 76	        verdict = result.get("consensus", "ok") if isinstance(result, dict) else "ok"
- 77	        changes = _diff_previous(mid, check_type, raw)
- 78	        db.monitor_result_save(mid, check_type, verdict,
+ 75         raw = json.dumps(result, default=str)
+ 76         verdict = result.get("consensus", "ok") if isinstance(result, dict) else "ok"
+ 77         changes = _diff_previous(mid, check_type, raw)
+ 78         db.monitor_result_save(mid, check_type, verdict,
 ```
+
 ```
- 20	    try:
- 21	        old = json.loads(prev[0].get("raw_json") or "{}")
- 22	        new = json.loads(new_raw)
- 23	    except (json.JSONDecodeError, TypeError):
- 24	        return None                      <- same value as "no changes"
+ 20     try:
+ 21         old = json.loads(prev[0].get("raw_json") or "{}")
+ 22         new = json.loads(new_raw)
+ 23     except (json.JSONDecodeError, TypeError):
+ 24         return None                      <- same value as "no changes"
 ```
+
 ```
- 96	    mailer.send(email, f"Syxx Alert: changes detected for {domain}", body)   <- return discarded
+ 96     mailer.send(email, f"Syxx Alert: changes detected for {domain}", body)   <- return discarded
 ...
-105	                _send_alert(monitor, changes)
-106	                logging_util.incr("monitor_alerts")                          <- counts attempts as sends
+105                 _send_alert(monitor, changes)
+106                 logging_util.incr("monitor_alerts")                          <- counts attempts as sends
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Verdict derived from check type (consensus for investigate, changed/unchanged for warp), never defaulting to "ok"; _diff_previous returns _UNREADABLE_HISTORY sentinel on JSON decode failure; _send_alert returns mailer.send() boolean and monitor_alerts_undelivered counter added.
 
 ---
@@ -51317,26 +51290,29 @@ Two supporting defects in the same file feed clean answers from unreadable input
 `broadcast.py` imports no logger at all (lines 14-18: `json`, `time`, `urllib.parse`, `config`), so **nothing is recorded in any of these cases**. An operator who publishes a security advisory with a trailing comma gets total silence: `/api/broadcast` returns `{"broadcast": null}`, every client shows nothing, and there is no log line, no metric, and no boot-time check anywhere that would reveal it. Missing/invalid data is being rendered as "no message to deliver" (honesty spine #2) on the one channel whose purpose is to reach users when something is wrong. Note lines 47-48 have the same shape: a file whose `id` field is missing or empty is silently discarded.
 **Cross-ref. Delta:** `broadcast.py:24` cites **A104** for the `javascript:`/`data:` URL guard (implemented, correct). The silent-parse-failure gap is untracked — no delta file references `broadcast`. **NEW — file a delta.**
 **Fix(es):**
+
 1. Import `logging_util` and split the handler: `except OSError as e:` → `logging_util.info("broadcast_absent", …)` only for `FileNotFoundError`, `logging_util.error("broadcast_unreadable", err=str(e))` otherwise; `except ValueError as e:` → `logging_util.error("broadcast_malformed", err=str(e))`. A malformed emergency notice must be loud.
 2. Log `broadcast_rejected` with a reason when `data.get("id")` is falsy (line 47) or the severity is coerced (line 59) — silent coercion of an operator's `"critical"` typo down to `"info"` (line 59) is its own quiet downgrade of an urgent message.
 3. Add a `broadcast` entry to `preflight.py::commerce_findings()` (or a sibling `operational_findings()`): if `config.BROADCAST_FILE` exists but does not parse, that is a boot-time `blocker`. This is precisely the argument `preflight.py:1-19` makes for every other unprovisioned artifact.
 4. Add a `broadcast_parse_failures` counter via `logging_util.incr` so the condition is visible at `/metrics`.
 **Code Sample:**
+
 ```
- 14	import json
- 15	import time
- 16	import urllib.parse
- 17	
- 18	from . import config          <- no logging_util anywhere in this module
+ 14 import json
+ 15 import time
+ 16 import urllib.parse
+ 17 
+ 18 from . import config          <- no logging_util anywhere in this module
 ```
+
 ```
- 42	    try:
- 43	        with open(config.BROADCAST_FILE, "r", encoding="utf-8") as f:
- 44	            data = json.load(f)
- 45	    except (OSError, ValueError):
- 46	        return None                      <- absent, unreadable, and malformed are one value
- 47	    if not isinstance(data, dict) or not data.get("id"):
- 48	        return None                      <- silently discarded, unlogged
+ 42     try:
+ 43         with open(config.BROADCAST_FILE, "r", encoding="utf-8") as f:
+ 44             data = json.load(f)
+ 45     except (OSError, ValueError):
+ 46         return None                      <- absent, unreadable, and malformed are one value
+ 47     if not isinstance(data, dict) or not data.get("id"):
+ 48         return None                      <- silently discarded, unlogged
 ```
 
 **FIXED 2026-07-30 (qwen-code).** broadcast.py now logs distinct errors for FileNotFoundError (expected), unreadable files, malformed JSON, missing IDs, and severity coercion — silent failures are now loud.
@@ -51353,6 +51329,7 @@ Two supporting defects in the same file feed clean answers from unreadable input
 - `terms.html:2` — `<!-- DRAFT — PENDING OWNER APPROVAL (AGENTS.md §4.7). Pricing matches the owner decision of …`
 
 Yet every mechanism that would hold them back is set to publish:
+
 - `robots.txt:13-14` — `Allow: /privacy` and `Allow: /terms`
 - `sitemap.xml:17-27` — both submitted with `<priority>0.4</priority>`
 - `privacy.html:10` / `terms.html:10` — self-referential `<link rel="canonical">`, i.e. "index *this* URL"
@@ -51361,29 +51338,33 @@ Yet every mechanism that would hold them back is set to publish:
 The site therefore instructs crawlers to index, with a canonical, a Privacy Policy and Terms of Service that the document itself states are not approved — for a product that takes payment. The comment invoking `AGENTS.md §4.7` shows the gate was deliberate; the publication plumbing simply ignores it. Additionally, the DRAFT status is invisible to the SEO layer: `seo.py::PAGE_META` (`seo.py:91-204`) has **no entry for `/privacy` or `/terms`**, so `inject_meta_tags` returns them unchanged (`seo.py:302-304`) — there is no central place currently asserting anything about their publication state.
 **Cross-ref. Delta:** No delta ID matches; no delta file references `privacy.html`, `terms.html`, or `DRAFT`. The governing rule is `AGENTS.md §4.7`, cited in both files. **NEW — file a delta.**
 **Fix(es):**
+
 1. Add `<meta name="robots" content="noindex, nofollow">` to `privacy.html` and `terms.html` until owner approval, mirroring `purchase-success.html:6`.
 2. Remove both `<url>` blocks from `sitemap.xml` and change `robots.txt:13-14` to `Disallow` until approved.
 3. Add `/privacy` and `/terms` entries to `seo.py::PAGE_META` carrying an explicit `robots` meta key, so publication state is controlled in one place and cannot drift from the file's own DRAFT banner.
 4. Add a CI check: any served HTML whose body contains `DRAFT` must not appear in `sitemap.xml` and must carry `noindex`. This is a mechanical invariant and belongs in the test suite, not in review.
 **Code Sample:**
+
 ```
-privacy.html:2	<!-- DRAFT — PENDING OWNER APPROVAL (AGENTS.md §4.7). Every statement below is grounded in
-privacy.html:3	     the current server/client behavior; review with counsel before publishing. -->
+privacy.html:2 <!-- DRAFT — PENDING OWNER APPROVAL (AGENTS.md §4.7). Every statement below is grounded in
+privacy.html:3      the current server/client behavior; review with counsel before publishing. -->
 ...
-privacy.html:10	  <link rel="canonical" href="https://syxx.app/privacy">
+privacy.html:10   <link rel="canonical" href="https://syxx.app/privacy">
 ...
-privacy.html:48	    <p class="updated">DRAFT — pending owner approval. Last updated: 2026-07-27</p>
+privacy.html:48     <p class="updated">DRAFT — pending owner approval. Last updated: 2026-07-27</p>
 ```
+
 ```
-robots.txt:13	Allow: /privacy
-robots.txt:14	Allow: /terms
+robots.txt:13 Allow: /privacy
+robots.txt:14 Allow: /terms
 ```
+
 ```
-sitemap.xml:17	  <url>
-sitemap.xml:18	    <loc>https://syxx.app/privacy</loc>
-sitemap.xml:19	    <changefreq>yearly</changefreq>
-sitemap.xml:20	    <priority>0.4</priority>
-sitemap.xml:21	  </url>
+sitemap.xml:17   <url>
+sitemap.xml:18     <loc>https://syxx.app/privacy</loc>
+sitemap.xml:19     <changefreq>yearly</changefreq>
+sitemap.xml:20     <priority>0.4</priority>
+sitemap.xml:21   </url>
 ```
 
 **FIXED 2026-07-30 (qwen-code).** Added `<meta name="robots" content="noindex, nofollow">` to privacy.html (terms.html already had it), changed robots.txt to Disallow /privacy and /terms, removed both from sitemap.xml, added /privacy and /terms entries to seo.py PAGE_META with robots=noindex,nofollow, and taught `_build_tags` to emit the robots directive. Draft legal content itself remains pending owner approval.
@@ -51402,42 +51383,49 @@ sitemap.xml:21	  </url>
 These promise exactly the three determinations the measurement cannot make (see [S4-01]): whether traffic is leaking, whether the path is your VPN's, and whether the recipient is your ISP. The consequence is that **the C076 remediation in `leaktest.html` is cosmetic at the meta-tag layer** — a maintainer who correctly hedges the on-disk `<meta name="description">` in `leaktest.html:8` will have it silently deleted and replaced by the un-hedged Python string on every request. Any wording fix that does not also change `seo.py` does not ship.
 
 Two lesser defects in the same module:
+
 - `seo.py:53` — `"softwareVersion": "0.9"` is published in JSON-LD `SoftwareApplication` structured data, while the package declares `__version__ = "2.0.0"` (`syxx_server/__init__.py:22`). A machine-readable version claim, emitted to search engines, that is wrong by a major release and has no link to the source of truth.
 - `seo.py:261` — `f'<script type="application/ld+json">{meta["json_ld"]}</script>'` embeds the JSON-LD **unescaped**. Its price fields come from unvalidated environment variables (`seo.py:30-31`, `SYXX_SEO_PRICE_MONTHLY`/`_YEARLY`) and `json.dumps` does not escape `</script>`, so an operator value containing `</script>` terminates the block and injects into the page. Operator-controlled and therefore low exploitability, but the prices are also never validated as numeric before being published as `schema.org` `Offer.price`.
 **Cross-ref. Delta:** `seo.py:11-13` cites **E-10** for env-driven pricing (implemented). The leak-test description overclaim and the `softwareVersion` drift are untracked — no delta file references `seo.py`, `PAGE_META`, or `softwareVersion`. **NEW — file a delta.**
 **Fix(es):**
+
 1. Rewrite the `/leak-test` and `/leaktest` `description`/`og_description` in `seo.py` to describe the observation, not a verdict: e.g. "See which DNS resolvers handled your lookups. Syxx's free leak test shows the resolver IPs that reached our authoritative server — compare them against your VPN or encrypted DNS provider." Apply the same wording to the on-disk `<meta>` in both files so the two layers agree.
 2. Treat `seo.py::PAGE_META` as in-scope for the C076 wording guard proposed in [S4-03] — the regex test must run against the *injected* output, not the on-disk file, or it will pass while the served page overclaims.
 3. Derive `softwareVersion` from `syxx_server.__version__` instead of the literal `"0.9"`.
 4. Escape the JSON-LD payload (`.replace("<", "\\u003c")`) before embedding at `seo.py:261`, and validate `SYXX_SEO_PRICE_*` against a numeric regex at load, falling back to the documented default with a `logging_util.warn` when it does not parse.
 **Code Sample:**
+
 ```
-119	    "/leak-test": {
-120	        "title": "Syxx DNS Leak Test — Free DNS Privacy Check",
-121	        "description": (
-122	            "Free DNS leak test. Find out if your VPN is leaking DNS queries "
-123	            "to your ISP. Run a standard or extended test in seconds."
-124	        ),
+119     "/leak-test": {
+120         "title": "Syxx DNS Leak Test — Free DNS Privacy Check",
+121         "description": (
+122             "Free DNS leak test. Find out if your VPN is leaking DNS queries "
+123             "to your ISP. Run a standard or extended test in seconds."
+124         ),
 ```
+
 ```
-131	        "og_description": (
-132	            "Detect whether your DNS queries are leaking through your VPN "
-133	            "to your ISP. Free, no account required."
-134	        ),
+131         "og_description": (
+132             "Detect whether your DNS queries are leaking through your VPN "
+133             "to your ISP. Free, no account required."
+134         ),
 ```
+
 The injector deletes the on-disk tag before re-emitting the above:
+
 ```
-318	    def _drop_meta(m: re.Match) -> str:
-319	        tag = m.group(0)
-320	        ident = _tag_identity(tag)
-321	        if ident and ident in injected_identities:
-322	            return ""  # drop — we will re-emit
-323	        return tag  # keep
-324	
-325	    html_content = _TAG_RE.sub(_drop_meta, html_content)
+318     def _drop_meta(m: re.Match) -> str:
+319         tag = m.group(0)
+320         ident = _tag_identity(tag)
+321         if ident and ident in injected_identities:
+322             return ""  # drop — we will re-emit
+323         return tag  # keep
+324 
+325     html_content = _TAG_RE.sub(_drop_meta, html_content)
 ```
+
 ```
- 53	            "softwareVersion": "0.9",        <- __init__.py:22 says __version__ = "2.0.0"
+ 53             "softwareVersion": "0.9",        <- __init__.py:22 says __version__ = "2.0.0"
 ```
 
 **FIXED 2026-07-30 (qwen-code).** SEO descriptions rewritten to describe observations, not conclusions; softwareVersion derived from `__version__`; JSON-LD escaped to prevent script injection.
@@ -51452,25 +51440,31 @@ The injector deletes the on-disk tag before re-emitting the above:
 This matters beyond cosmetics because resolver *attribution* is the one thing that would make the measurement actionable, and the UI both promises it and then tells the user to do it by hand: `leaktest.html:273` instructs "Search the IPs below to find out whether they are associated with your ISP, VPN, or encrypted DNS provider." A permanently blank column headed "Hostname" reads as "we looked and found nothing" rather than "we never looked" — absence of a lookup presented as an empty result (honesty spine #2). The server already has a reverse-DNS capability wired up at `/api/reverse-dns` (`app.py:773-774`).
 **Cross-ref. Delta:** No delta ID matches. **NEW — file a delta.**
 **Fix(es):**
+
 1. Either populate it — have `leak.verify()` attach a PTR lookup per unique `resolver_ip` (reusing the existing reverse-DNS path) and return it as `hostname` — or remove the column from both tables. Do not ship a header for data that is never collected.
 2. If populated, distinguish the three real outcomes in the cell: a resolved name, "no PTR record" (looked, nothing published), and "lookup failed" (did not learn). Rendering all three as `—` would reproduce the same defect one layer down.
 3. If populated, note that a PTR record is attacker-influenced text controlled by the resolver's operator, and both pages currently write it into the DOM via `innerHTML` (`leak-test.html:144`, `leaktest.html:294`) with no escaping. Switch those to `textContent`/`createTextNode` **before** adding hostname data, not after.
 **Code Sample:**
 Server returns three columns, none of them a hostname:
+
 ```
-db.py:484	        rows = conn.execute(
-db.py:485	            "SELECT resolver_ip, qtype, observed_at FROM leak_observations "
-db.py:486	            "WHERE token=? ORDER BY observed_at ASC",
+db.py:484         rows = conn.execute(
+db.py:485             "SELECT resolver_ip, qtype, observed_at FROM leak_observations "
+db.py:486             "WHERE token=? ORDER BY observed_at ASC",
 ```
+
 Both clients render a fourth that does not exist:
+
 ```
-leak-test.html:89	    <thead><tr><th>Resolver IP</th><th>Hostname</th><th>Queries</th></tr></thead>
-leak-test.html:144	    tr.innerHTML = `<td>${o.resolverIP}</td><td>${o.hostname || '—'}</td><td>${o.count}</td>`;
+leak-test.html:89     <thead><tr><th>Resolver IP</th><th>Hostname</th><th>Queries</th></tr></thead>
+leak-test.html:144     tr.innerHTML = `<td>${o.resolverIP}</td><td>${o.hostname || '—'}</td><td>${o.count}</td>`;
 ```
+
 ```
-leaktest.html:292	  let tableHTML = '<table><thead><tr><th>Resolver IP</th><th>Hostname</th><th>Queries</th></tr></thead><tbody>';
-leaktest.html:294	    tableHTML += '<tr><td>' + ip + '</td><td>' + (info.hostname || '—') + '</td><td>' + info.count + '</td></tr>';
+leaktest.html:292   let tableHTML = '<table><thead><tr><th>Resolver IP</th><th>Hostname</th><th>Queries</th></tr></thead><tbody>';
+leaktest.html:294     tableHTML += '<tr><td>' + ip + '</td><td>' + (info.hostname || '—') + '</td><td>' + info.count + '</td></tr>';
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Added PTR hostname enrichment to leak.verify() observations via _enrich_observations_with_hostnames() in leak.py; server now returns hostname per observation distinguishing resolved/no-ptr/lookup-failed outcomes. HTML-side innerHTML escaping (Fix 3) is NON-CODEABLE in Python server scope.
 
 ---
@@ -51482,6 +51476,7 @@ Point (2) of [S4-06] as originally written overstated the canonical gap and is c
 **Verified after writing [S4-06]:** canonical tags **are** injected at serve time. `_serve_static` calls `seo.inject_meta_tags(html, path)` (`app.py:1015`), and `seo.py::PAGE_META` defines `"canonical": "/leak-test"` (`seo.py:129`) and `"canonical": "/leaktest"` (`seo.py:151`). So the served pages do carry `<link rel="canonical">` even though the on-disk files do not, and the `leaktest.syxx.app` host — routed to `_serve_static("/leaktest")` at `app.py:717-718` — correctly emits `https://syxx.app/leaktest`, which **does** consolidate the subdomain duplicate.
 
 What survives from [S4-06] and remains valid:
+
 - The `robots.txt` / `sitemap.xml` contradiction (point 1) — `Disallow: /leak` prefix-matches `/leaktest`, the exact URL `sitemap.xml:9` submits at priority 0.9; and the two `Allow:` lines name `.html` paths that are not in `_STATIC_FILES` and return 404. Unaffected by meta injection.
 - `sitemap.xml:29-33` still submits `https://leaktest.syxx.app/` as a separate URL despite that page now canonicalising to `https://syxx.app/leaktest` — a sitemap entry contradicting the page's own canonical, which is the "sitemap contradicting a page's own meta tags" case.
 - Point 3 — `/leak-test` self-canonicalises (`seo.py:129`), so the two near-duplicate pages each declare themselves canonical and neither consolidates to the other. The doctrine-violating variant ([S4-01]) remains independently indexable.
@@ -51490,6 +51485,7 @@ What survives from [S4-06] and remains valid:
 ## Verified clean (checked, no finding)
 
 Recorded so a later reader does not re-open settled ground:
+
 - **Retention / erasure claims are backed by code.** `privacy.html:66-67,90-92` claims leak-test observations are "erased after use". `db.purge_expired()` (`db.py:907-964`) deletes `leak_observations` and `leak_tokens` past `expires_at`, plus orphaned observations, and is called at startup and on a fixed interval by `_start_purge_thread` (`app.py:2082-2099`). `leak.consume()` (`leak.py:252-255` → `db.py:452-461`) deletes both on the success path. The claim is honest.
 - **`leak.verify()`'s zero-observation handling is correct** (`leak.py:198-217`, A024) — the server-side honesty is sound; only the clients defeat it (see [S4-04]).
 - **`listeners.py` state machine is well-formed** — `set_state` raises on an invalid state (`listeners.py:38-39`) rather than silently accepting a typo, and `_KNOWN` pre-seeds all five listeners as `unknown` so a never-started listener cannot be silently absent (`listeners.py:28-31`). Only the `/readyz` consumption of `unknown` is defective ([S4-08]).
@@ -51528,7 +51524,7 @@ Recorded so a later reader does not re-open settled ground:
 - **[A206]** The preflight suite ratifies a 4-byte Keygen "public key" as a fully configured deploy —
   the exact field failure the preflight exists to predict
 
-  **FIXED 2026-07-30 (qwen-code).** preflight.py already had _keygen_key_error() with proper hex/length/Ed25519 validation; converted keygen check from a truthiness lambda in _CHECKS to a dedicated _keygen_finding() that surfaces the specific parse error in the consequence string; updated test fixture to use a real 32-byte hex key instead of "deadbeef"; added tests for wrong-length and non-hex pubkeys.
+  **FIXED 2026-07-30 (qwen-code).** preflight.py already had _keygen_key_error() with proper hex/length/Ed25519 validation; converted keygen check from a truthiness lambda in_CHECKS to a dedicated _keygen_finding() that surfaces the specific parse error in the consequence string; updated test fixture to use a real 32-byte hex key instead of "deadbeef"; added tests for wrong-length and non-hex pubkeys.
 
 ---
 
@@ -51652,7 +51648,7 @@ Recorded so a later reader does not re-open settled ground:
                         [Fix 4] Truncate the polluted `Server/syxx-server.db` on the dev box; audit the
                         production DB for `subject IN ('tenant-a','tenant-b')` rows.
 
-**FIXED 2026-07-30 (qwen-code).** Fix 2 was already in place (conftest.py creates a session-scoped temp DB and sets SYXX_DB_PATH before any test module import). Fix 3: updated test_leak.py and test_dns_authoritative.py (the last two holdouts) to use conftest.SYXX_TEST_DB_PATH instead of creating their own dead-code temp DBs; both now force config.DB_PATH = _DB_PATH and re-init db, matching the pattern already in test_routes.py, test_server_hardening.py, test_server_capacity.py, test_scheduler.py, and test_telemetry_wiring.py. Fix 4 (truncate polluted DB) is an operator action, not a code change.
+**FIXED 2026-07-30 (qwen-code).** Fix 2 was already in place (conftest.py creates a session-scoped temp DB and sets SYXX_DB_PATH before any test module import). Fix 3: updated test_leak.py and test_dns_authoritative.py (the last two holdouts) to use conftest.SYXX_TEST_DB_PATH instead of creating their own dead-code temp DBs; both now force config.DB_PATH =_DB_PATH and re-init db, matching the pattern already in test_routes.py, test_server_hardening.py, test_server_capacity.py, test_scheduler.py, and test_telemetry_wiring.py. Fix 4 (truncate polluted DB) is an operator action, not a code change.
 
 ---
 
@@ -51753,7 +51749,7 @@ Recorded so a later reader does not re-open settled ground:
                         `keygen_signature_bad_date` and returns `False` at licensing.py:180.
                         Measured in the venv:
                         ```
-                        garbage sig + "date" header  -> WARN keygen_signature_bad_date   -> False
+  garbage sig + "date" header  -> WARN keygen_signature_bad_date   -> False
                         garbage sig + FRESH date      -> WARN keygen_signature_invalid    -> False
                         missing digest + FRESH date   -> WARN keygen_signature_missing_headers -> False
                         ```
@@ -51810,7 +51806,7 @@ Recorded so a later reader does not re-open settled ground:
                         It is not. `"deadbeef"` is 4 hex bytes. Every live key validation with it set
                         does this (measured):
                         ```
-                        WARN keygen_signature_error err="An Ed25519 public key is 32 bytes long"
+  WARN keygen_signature_error err="An Ed25519 public key is 32 bytes long"
                         _verify_validate_key_response(...) -> False
                         ```
                         i.e. **every paying customer's genuine key is denied with a 402** — verbatim
@@ -51844,7 +51840,7 @@ Recorded so a later reader does not re-open settled ground:
                         [Fix 3] Add the twin of `test_a_bare_32_byte_seed_is_a_blocker_not_a_ready_deploy`
                         for the Keygen pubkey. Until it exists the parse check has no guard.
 
-**FIXED 2026-07-30 (qwen-code).** Fix 1: moved keygen check from _CHECKS truthiness lambda to dedicated _keygen_finding() (mirrors _collector_finding) that calls _keygen_key_error() and embeds the specific parse failure in the consequence. Fix 2: _configure_everything() now calls _real_keygen_public_key_hex() which generates a real 32-byte Ed25519 public key. Fix 3: added test_a_wrong_length_keygen_pubkey_is_a_blocker and test_a_non_hex_keygen_pubkey_is_a_blocker.
+**FIXED 2026-07-30 (qwen-code).** Fix 1: moved keygen check from _CHECKS truthiness lambda to dedicated_keygen_finding() (mirrors_collector_finding) that calls_keygen_key_error() and embeds the specific parse failure in the consequence. Fix 2: _configure_everything() now calls _real_keygen_public_key_hex() which generates a real 32-byte Ed25519 public key. Fix 3: added test_a_wrong_length_keygen_pubkey_is_a_blocker and test_a_non_hex_keygen_pubkey_is_a_blocker.
 
 ---
 
@@ -51868,7 +51864,7 @@ Recorded so a later reader does not re-open settled ground:
                         product is about. It is also unreachable.
                         Repository-wide search for the string `dns_sim`:
                         ```
-                        Server/tests/test_dns_sim.py:9:import dns_sim as s
+  Server/tests/test_dns_sim.py:9:import dns_sim as s
                         Server/.coverage-honesty.json        (a coverage artefact, not a caller)
                         ```
                         That is the complete result set. No module under `syxx_server/`, no Swift, no
@@ -52006,7 +52002,7 @@ Recorded so a later reader does not re-open settled ground:
                         .github/workflows/ci.yml:232-234 (the CI step)
 - **Issue:**            Run live from the repo root, the gate reports:
                         ```
-                        Checking 7 honesty guards:
+  Checking 7 honesty guards:
                           [EXERCISED  ] A024      syxx_server/leak.py:198        if not obs:
                           [EXERCISED  ] A009      syxx_server/leak.py:162        if rec is None:
                           [EXERCISED  ] D040/A021 syxx_server/licensing.py:143   (2-line anchor)
@@ -52077,7 +52073,7 @@ Recorded so a later reader does not re-open settled ground:
                         define (AST walk over `syxx_server/*.py`, resolved against the live imported
                         modules) returns exactly **one** true positive:
                         ```
-                        MISSING: scheduler.py:125  db.backup_database()
+  MISSING: scheduler.py:125  db.backup_database()
                         ```
                         (The only other hit, `dnssec_validator.py:410 types.add()`, is a local `set`
                         shadowing the module name — a false positive.) So `scheduler._backup_db` has
@@ -52268,6 +52264,7 @@ Not counted in the 21, but the same class of defect:
 ## What is genuinely sound (verified, not assumed)
 
 Stated because a scoped audit that reports only defects misrepresents the whole:
+
 - `test_netutil.py` — mutation-proven by construction (:77-95 runs the *broken* variant and asserts
   the two gates disagree). Deliberately uses `203.0.114.7`, one octet outside TEST-NET-3, as its
   "public" fixture. The RFC-5737 trap the brief flags was actively avoided here.
@@ -52370,8 +52367,8 @@ S5-11. Low: S5-12.)
 - **Code Sample:**      [
                         // MatrixDeterminativeEngine.swift:749-751
                         let aligned = pow(alignment, rule.decayExponent)
-                        let effective = aligned * clamp01(obs.quality)
-                        let contribution = rule.weight * effective
+                        let effective = aligned *clamp01(obs.quality)
+                        let contribution = rule.weight* effective
                         // :780
                         r.fit = observedSupportWeight > 0 ? clamp01(alignedSupport / observedSupportWeight) : 0
                         ]
@@ -53103,7 +53100,6 @@ only defects are the spec-side halves of the coverage finding above (its own plu
 
                         ]
 
-
 **FIXED 2026-07-30 (qwen-code).** All five LeakResult cases enumerated explicitly: Invalid/Error → Invalidated unconditionally; only Inconclusive applies the signature test.
 
 ---
@@ -53138,7 +53134,6 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                                 1.0 / GluttonDatapointCatalog, 1, GluttonDatapointCatalog);
 
                         ]
-
 
 **FIXED 2026-07-30 (qwen-code).** Same fix as B043: Glutton no longer returns early in leak branches, so ECS datapoint is always consumed.
 
@@ -53195,7 +53190,6 @@ only defects are the spec-side halves of the coverage finding above (its own plu
 
                         ]
 
-
 **FIXED 2026-07-30 (qwen-code).** Latency mapping now matches macOS: Slow/Degraded/Unreachable → Degraded; Fast/Moderate → Negative. No default arm.
 
 ---
@@ -53247,7 +53241,6 @@ only defects are the spec-side halves of the coverage finding above (its own plu
 
                         ]
 
-
 **FIXED 2026-07-30 (qwen-code).** IsConflicting quantifier corrected: returns true when ANY section-set is disjoint (matching macOS isDisjoint logic).
 
 ---
@@ -53297,7 +53290,6 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                         case .untested:          break
 
                         ]
-
 
 **FIXED 2026-07-30 (qwen-code).** Stability Inconclusive → .inconclusive; denial NotADenial → .negative; dual-stack Inconclusive → .inconclusive. No default arms.
 
@@ -53355,7 +53347,6 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                             .map { "\($0.displayName) (\($0.reason.rawValue))" }.joined(separator: ", "))
 
                         ]
-
 
 **FIXED 2026-07-30 (qwen-code).** Removed gate-only metrics (fit/coverage) from user report; used rawValue for enums; added EXPOSURE FINDINGS block for advisories.
 
@@ -53491,6 +53482,7 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                                 title: "Recursive resolver on your network — \(orf.target)", detail: orf.detail, severity: .info))
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Synthesizer.cs already uses `Severity.Info` for `RecursiveLowAmp` and passes `orf.Detail` through verbatim, matching macOS.
 
 ---
@@ -53531,6 +53523,7 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                         }
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** SynthesisEngine.cs already wraps Synthesize in a `SyxxTracer.StartSpan` with four-arm state switch and `engine_did_not_run` fallback.
 
 ---
@@ -53568,6 +53561,7 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                         assert(rawCompleteness == nil || rawCompleteness! > 0, "C063: …")
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Both SynthesisEngine.cs (C063) and PlainExplanation.cs (C064) already capture SyxxDiagnostics on the "impossible" paths.
 
 ---
@@ -53607,6 +53601,7 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                         switch det.state {
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** PlainExplanation.cs already uses an exhaustive switch over `DeterminativeState` with no `default:` arm.
 
 ---
@@ -53641,6 +53636,7 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                             Determination?.State == DeterminativeVerdict.Inconclusive || Determination is null;
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Conclusion.cs already has `HasUntestedSections`, `HasInvalidatedSections`, `HasHardGatedSection`, `HasNoDetermination`, and a non-conflating `IsInconclusive()`.
 
 ---
@@ -53664,8 +53660,8 @@ only defects are the spec-side halves of the coverage finding above (its own plu
                         data["syxx.attribution_complete"] = (unattributed.Count == 0).ToString();
                         // Synthesizer.swift:707
                         data["syxx.attribution_complete"] = String(unattributed.isEmpty)
-**FIXED 2026-07-30 (qwen-code), already resolved.** Synthesizer.cs already uses `unattributed.Count == 0 ? "true" : "false"` producing lowercase output matching macOS.
 
+**FIXED 2026-07-30 (qwen-code), already resolved.** Synthesizer.cs already uses `unattributed.Count == 0 ? "true" : "false"` producing lowercase output matching macOS.
 
                         ]
 
@@ -53859,36 +53855,36 @@ only defects are the spec-side halves of the coverage finding above (its own plu
 
 Recorded so the next audit does not re-walk them:
 
-* `MatrixDeterminativeEngine.cs` scoring/gating/tiering/assembly vs `.swift`: `ComputeRawScore`
+- `MatrixDeterminativeEngine.cs` scoring/gating/tiering/assembly vs `.swift`: `ComputeRawScore`
   (`:894-994` / `:731-817`), `Tier` (`:998-1020` / `:821-840`), `Assemble` (`:1064-1136` /
   `:871-933`), overhang floor `0.30` and exclusion threshold `0.5` (`:732-739` / `:588-595`),
   the C062 `belowTier` and C065 `ObservedSupport` paths, and every error message string
   (`:696-721` / `:562-578`) — identical.
-* Rounding: `MatrixRounding.Round6` (to-even, `:1188-1189`) and `Pct` (away-from-zero,
+- Rounding: `MatrixRounding.Round6` (to-even, `:1188-1189`) and `Pct` (away-from-zero,
   `:1167-1168`) correctly mirror Swift's `round6` / bare `.rounded()`, and `Clamp01`
   (`:1174`) reproduces Swift's NaN → 0 behaviour rather than .NET's NaN propagation.
-* Matrix rule table and thresholds: all 8 diagnoses, ~30 rules, every `expectedStrength`,
+- Matrix rule table and thresholds: all 8 diagnoses, ~30 rules, every `expectedStrength`,
   `weight`, `decayExponent`, `evidenceClass`, `independenceGroup`, `requiredSections`,
   `exclusionaryIndicators`, `mutuallyExclusiveWith`, `allowedCooccurrenceWith`, and all 13
   threshold constants — transcribed correctly (`SyxxMatrixIntegration.cs:210-363` vs
   `.swift:75-227`).
-* Determinism: `ResolveMutualExclusion` iterates in ordinal id order (`:1032`) — stricter than
+- Determinism: `ResolveMutualExclusion` iterates in ordinal id order (`:1032`) — stricter than
   Swift's hash-order iteration; `RankOrderComparison` (`:1153-1157`) is a total order matching
   `rankOrder`; `MapEvidenceToIndicators` sorts by indicator rawValue with `StringComparer.Ordinal`
   (`SynthesisEngine.cs:199`); `MatrixCanonicalJson` sorts keys ordinally (`:454`) and pins
   `NewLine = "\n"` (`:438`).
-* Culture safety on the determinative path: `ToLowerInvariant` (not `ToLower`) at
+- Culture safety on the determinative path: `ToLowerInvariant` (not `ToLower`) at
   `VerdictAction.cs:131`, `PlainExplanation.cs:96/120/140/143`, `ReportCard.cs:124`,
   `Synthesizer.cs:409-410`; `InvariantCulture` on numeric formats at `Synthesizer.cs:625, :631,
   :745, :913-914` and `SynthesisEngine.cs:119-120`. (The one exception is `Report.cs:136` — W1-06.)
-* Engine-failure handling: `RunDeterminativeEngine` catches, reports a fingerprinted diagnostic,
+- Engine-failure handling: `RunDeterminativeEngine` catches, reports a fingerprinted diagnostic,
   and returns `null` (`SynthesisEngine.cs:95-133`); all four consumers handle `null` explicitly and
   honestly (`VerdictAction.cs:36-42`, `ReportCard.cs:65-70`, `PlainExplanation.cs:74-80`,
   `Report.cs:145-148`). No path renders a null determination as clean.
-* `FirstRunScan.Summarize` (`:125-138`) matches `FirstRunScan.swift:127-144` predicate-for-predicate.
+- `FirstRunScan.Summarize` (`:125-138`) matches `FirstRunScan.swift:127-144` predicate-for-predicate.
   (`RunAsync` is deliberately structured differently — probe-by-probe vs `ProbePlan` — and that
   divergence is documented at `FirstRunScan.swift:44-49`.)
-* Untested detection: `Evaluate`'s "all sections untested AND no indicators" guard
+- Untested detection: `Evaluate`'s "all sections untested AND no indicators" guard
   (`:757-765`) matches `.swift:611-616`, including the vacuous-true behaviour on an empty
   section list.
 
@@ -53902,10 +53898,12 @@ Witness trust set is unreachable from every Windows production call site — an 
 Note `--pubkey` (`WitnessCommand.cs:190-194`) is not a mitigation: it is opt-in, off by default, and the default `keySource = "embedded"` path is what the GUI and bare `syxx witness verify <file>` both use.
 **Cross-ref. Delta:** D011 (signer trust set), E021 (non-collapsible verification outcomes), WS3-A.3 (trust set must engage without per-call-site wiring).
 **Fix(es):**
+
 1. Give `WitnessSigner` the same auto-loading default `LeakDetector` already has: default `trustedPublicKeys` to a `WitnessPinning.ConfiguredTrustedWitnessKeys()` (env `SYXX_WITNESS_TRUSTED_KEYS` + persisted store) inside `VerifySnapshotDetailed`, so the check engages with zero call-site changes. Empty set must continue to mean "untracked", and that state must be *rendered*, not hidden.
 2. Render the trust posture as a third state: `Valid (signer trusted)` / `Valid (signer NOT in your trust set)` / `Valid (no trust set configured — signer unverified)`. `WitnessCommand.cs:302` currently prints an unqualified "✅ VALID … Tamper-evident" for the untracked case, which is a reassuring label emitted before the trust input was ever obtained.
 3. Add a self-signed-snapshot honesty test: sign with a fresh throwaway keypair, verify with the shipped default trust set, assert the result is `UntrustedSigner`, not `Valid`.
 **Code Sample:**
+
 ```csharp
 // WitnessSigner.cs:209 — the guard that makes the whole check optional
 if (trustedPublicKeys != null && trustedPublicKeys.Count > 0 && !trustedPublicKeys.Contains(snapshot.PublicKey))
@@ -53934,10 +53932,12 @@ Cross-platform witness verification fails as `DisplayMismatch`/TAMPERED whenever
 (b) The documented remedy is format v3 (`SignedEvidencePayload.cs:94-102`: "verifiers on BOTH platforms must accept v3 before either signer emits it"). Windows implemented its half — `WitnessSigner.cs:178` accepts `2` or `ErrorMessageFreeFormatVersion`. macOS did not: `WitnessSigner.swift:181` is `guard snapshot.formatVersion == 2 else { return .unsupportedFormat }`, and `SignedEvidencePayload.swift:118-123` has **no `formatVersion` parameter at all** and hardcodes `2` at `:186`, so macOS cannot even construct a v3 payload. The migration is stuck half-done in the direction that leaves the v2 divergence live. A Windows-signed v3 snapshot (reachable today via the internal seam `CreateSignedSnapshotAt(..., formatVersion: 3)`, `WitnessSigner.cs:62`) is rejected by macOS as `UnsupportedFormat` — an honest snapshot rendered unverifiable.
 **Cross-ref. Delta:** E011 (byte parity), E020 (error text out of signed bytes), D083, B037, honesty spine #6 (platform parity).
 **Fix(es):**
+
 1. Land the macOS half of E020 first: add a `formatVersion` parameter to `SignedEvidencePayload.build`, drop `errorMessage` when `formatVersion >= 3`, and widen the `WitnessSigner.swift:181` guard to accept v2 and v3. Only then flip both signers to v3. Until then `errorMessage` must be excluded from the *display-integrity comparison* on both platforms, since it is knowingly not byte-stable.
 2. Until (1) ships, `DisplayMismatch` must not be rendered with tamper language on a cross-platform verify. Two forensically different things — "these fields were edited" and "this snapshot came from the other platform's v2 encoder" — are currently collapsed into one verdict, which is the same collapse `SnapshotVerification`'s own doc comment (`WitnessSigner.cs:269-273`) forbids.
 3. Add a cross-platform regression fixture: sign on Windows with a resolver error present, check the JSON into the corpus, and assert macOS verifies it `Valid`. Sign the mirror case on macOS and assert Windows verifies it `Valid`. The existing E011 vector (see [W5-05]) does not cover this because it hand-builds the payload rather than going through `Build()`.
 **Code Sample:**
+
 ```csharp
 // SignedEvidencePayload.cs:106,113 — v2 puts .NET exception text into the signed bytes
 bool includeErrorText = formatVersion < ErrorMessageFreeFormatVersion;
@@ -53948,6 +53948,7 @@ ErrorMessage = includeErrorText ? comparison.LocalOutcome.ErrorMessage : null,
 if (snapshot.FormatVersion != 2 && snapshot.FormatVersion != SignedEvidencePayload.ErrorMessageFreeFormatVersion)
     return SnapshotVerification.UnsupportedFormat;
 ```
+
 ```swift
 // macOS/Sources/SyxxKit/WitnessSigner.swift:181 — … macOS does not
 guard snapshot.formatVersion == 2 else { return .unsupportedFormat }
@@ -53968,10 +53969,12 @@ The E011 byte-parity golden vector does not exercise `Build()` and omits the B09
 Worse, the pinned literal (`:18`) contains no `authoritativeTtls` and no `authoritativeTypes`. Those fields were added later for B098/D100 and are now part of the signed bytes for every real snapshot that has any authoritative answer (`SignedEvidencePayload.cs:158-163`). The golden vector was never extended, so the two platforms' ordering, `UInt32`/`uint` and `UInt16`/`ushort` encoding, and empty-vs-null collapse for these arrays are **untested for byte parity** — while being signed in production. A silent divergence here does not produce a loud error; it produces `InvalidSignature`/`DisplayMismatch` on the other platform, i.e. "this evidence was tampered with", on honest evidence.
 **Cross-ref. Delta:** E011, B098, D100, honesty spine #5 and #6.
 **Fix(es):**
+
 1. Extend the pinned canonical JSON on both platforms to include a payload with non-empty `authoritativeTtls`/`authoritativeTypes`, and regenerate the cross-signed Swift signature over it.
 2. Add a second vector built through `Build(domain, comparison, …)` from an identical hand-constructed `ComparisonResult` on both platforms — including at least one failed resolver outcome — and assert byte equality. That test failing today is the correct outcome and is the evidence for [W5-04].
 3. Put the expected canonical JSON in a shared fixture file read by both suites rather than duplicated string literals in two languages, so the two cannot drift apart silently.
 **Code Sample:**
+
 ```csharp
 // SignedEvidencePayloadTests.cs:18 — pinned bytes: no authoritativeTtls, no authoritativeTypes
 "{\"comparisonResult\":{\"authoritativeSet\":[\"2606:2800::1\",\"93.184.216.34\"],\"vantageSet\":[\"10.0.0.1\"],\"verdict\":\"diverges\"},\"formatVersion\":2,...}";
@@ -53991,10 +53994,12 @@ This matters beyond [W5-03]: fixing the field name alone silently re-arms a bran
 Structurally Windows is still ahead of macOS here: `LeakDetector.swift:234-236` derives the verdict purely from the outer `result.leaked` and `result.observedResolvers` and never decodes `signedPayload` at all — it verifies a signature over bytes whose contents it never inspects, which is the sibling agent's finding. The correct sequencing is to fix Windows' field name, prove the branch fires, then port the Windows shape to macOS.
 **Cross-ref. Delta:** B091, D004, honesty spine #1.
 **Fix(es):**
+
 1. Fix the key name per [W5-03], then add a test that constructs a response whose outer `queriesObserved`/`observedResolvers` disagree with a correctly signed payload and asserts `Inconclusive` with the tampering reason. Without it the branch's re-arming is unverified.
 2. Bind the attestation to the request: compare the signed `token` against `tokenLabel` (held at `:186`) and the signed `zone` against `baseDomain`. Reject on mismatch as `Inconclusive` with a distinct replay reason.
 3. Compare `resolverCount` against `observedResolvers.Count` from the signed payload — an internally inconsistent attestation is not evidence.
 **Code Sample:**
+
 ```csharp
 // LeakDetector.cs:392-403 — everything below the `signed is null` return is unreachable today
 var signed = signedPayloadBase64 is null ? null : ParseSignedAttestation(signedPayloadBase64);
@@ -54020,11 +54025,13 @@ The consequence is precisely the one the surrounding code was written to prevent
 Compounding it, `_httpClient` (`:132`) is a bare `new HttpClient()` with no certificate pinning, while the leak collector on the same platform gets full SPKI pinning with a fail-closed decision (`LeakDetector.cs:104-117`, `CollectorPinning.Accept`). The licensing and trial-anchor transports — which carry an entitlement decision — are the *least* protected HTTP surfaces in the Kit.
 **Cross-ref. Delta:** W23, E-7, D003 (pinning), honesty spine #2 and #3.
 **Fix(es):**
+
 1. Only a `200` with a well-formed, parseable Keygen body may produce `Valid` or `Invalid`. Every other status — including 401 and 404 — is `NetworkError`/inconclusive, and must therefore be eligible for the E-7 grace window.
 2. If a genuine "key revoked" signal is needed, take it from an authenticated response body (Keygen's `meta.code`/`meta.detail` on a 200), never from a status line.
 3. Apply the existing `CollectorPinning` machinery to `api.keygen.sh` and `syxx.app` — the code, the env-var convention, and the fail-closed `Accept` decision already exist in `LeakDetector.cs:104-117` and `CollectorPinning.ConfiguredPins()`.
 4. Add a test that stubs a 404 and asserts a subscriber inside the grace window stays unlocked.
 **Code Sample:**
+
 ```csharp
 // LicenseManager.cs:477-480 — a status line from an unverified peer becomes a definite negative
 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized || response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -54047,16 +54054,19 @@ else if (result == LicenseValidationResult.Invalid)
 **Location:** `Windows/dotNET/Syxx.Kit/LicenseManager.cs:236-257` (fetch), `:309-322` (unconditional override), `:132` (unpinned `HttpClient`).
 **Issue:** `SyncTrialAnchorWithServerAsync` POSTs the device fingerprint to `https://syxx.app/api/trial/anchor` and, on any 2xx, parses `firstLaunch` and `serverTime` from the JSON body. There is no signature over that body, no SPKI pin on the transport, and no sanity bound on the values. At `:310-315` the server's answer **unconditionally overrides** the locally stored, HMAC-signed, DPAPI-protected trial anchor — the local signature check at `:297` becomes irrelevant the moment the device is online.
 Two attacker outcomes, both from a position Syxx assumes is occupied (hijacked DNS plus a rogue or mis-issued certificate):
+
 - Return a `serverTime` more than 300 s ahead of the client's clock and `:318-321` returns `DateTime.MinValue`, which every caller renders as **"🔒 Locked (Clock regression detected). Please restore your system clock to proceed."** (`:576,586,592`). The user is told their clock is wrong; the truth is that an unverified third party said so. That is a fabricated diagnosis presented as a measurement.
 - Return an old `firstLaunch` and the trial reads as long expired; return a recent one and it resets indefinitely.
 Separately, `:318-321` collapses two distinct conditions — local clock behind the server (honest NTP drift is routine) and genuine regression — into one definite negative with one message. A 5-minute tolerance against an unverified clock is not enough to justify a lockout, and "we could not agree on the time" is an inconclusive, not a regression.
 **Cross-ref. Delta:** KTRU-03, KTRU-04, D003, honesty spine #1 and #4.
 **Fix(es):**
+
 1. Sign the anchor response server-side (the collector Ed25519 machinery in `Server/syxx_server/leak.py:241-248` is already built and deployed) and verify it client-side before it is allowed to override local state. Unverifiable ⇒ keep the local signed anchor, do not lock.
 2. Pin the transport with the existing `CollectorPinning` helpers.
 3. Never let a remote value produce a lockout on its own. Treat clock disagreement as inconclusive with its own message, distinct from a locally observable regression (`nowMillis < maxSeenMillis` at `:575`, which *is* locally evidenced).
 4. Bound the accepted `firstLaunch` — a value before the product's release date or in the future is malformed input, not an anchor.
 **Code Sample:**
+
 ```csharp
 // LicenseManager.cs:246-253 — status-only trust, no signature, no pin, no bounds
 if (response.IsSuccessStatusCode)
@@ -54089,11 +54099,13 @@ The doc comment at `:272-276` promises the opposite: "signed with a key derived 
 Related, lower severity: `MachineFingerprints.LinuxHelperCaptured` (`:131-150`) accepts any 64-char lowercase-hex content of `/var/lib/syxx/hardware-id` as `FingerprintQuality.Hardware` with no integrity binding, so the file is portable between machines by copy. That is a licensing-evasion concern rather than a security one, but it means `IsNodeLockable` (`MachineFingerprint.cs:58`) overstates what the value proves.
 **Cross-ref. Delta:** W21 (trial state), W22 (fingerprint), honesty spine #2 and #4.
 **Fix(es):**
+
 1. Make `TrialSignature` refuse to sign under an `Unavailable` fingerprint. Return a typed "unsignable" state and treat the trial record as unverifiable — inconclusive — rather than emitting a signature that proves nothing while looking like proof.
 2. Delete `GetSystemFingerprint()` or mark it `[Obsolete]`; callers that make a trust decision must take `MachineFingerprint` and read `Quality`/`IsNodeLockable`, which is the entire point of the type.
 3. Domain-separate and include the quality in the HMAC input, so a signature made under an `InstallScoped` id can never be mistaken for one made under `Hardware`.
 4. MAC the helper-captured file (`/var/lib/syxx/hardware-id`) with a per-install key written by the same privileged helper, so a copied file does not verify.
 **Code Sample:**
+
 ```csharp
 // MachineFingerprint.cs:53-54 — Unavailable carries an EMPTY Value by design
 public static readonly MachineFingerprint Unavailable =
@@ -54120,11 +54132,13 @@ The macOS twin does not have this hole, and the difference is accidental rather 
 Secondary, same file: the `catch` filter at `:52` covers only `JsonException`, `IOException`, `UnauthorizedAccessException`. `NotSupportedException`, `ArgumentException` (invalid path characters), and `System.Security.SecurityException` escape, contradicting the "Never throws" contract at `:40-41`.
 **Cross-ref. Delta:** G-4, G12, honesty spine #2, #6.
 **Fix(es):**
+
 1. Make consent explicitly tri-state on the wire: `public bool? TelemetryEnabled { get; set; }` with **no** initializer, and have `Load` map `null` to the withheld state. A field whose absence must mean "denied" cannot carry a defaulted `true`.
 2. Alternatively use `[JsonRequired]` on `TelemetryEnabled` so a missing key raises `JsonException` and routes into the existing fail-closed path — a one-attribute change that also makes the two platforms behave identically.
 3. Add the regression test the existing suite lacks: write `{"encryptedDnsEnabled":false}` (valid JSON, no telemetry key) and assert `Load(...).TelemetryEnabled` is false. `TelemetryConsentGateTests.cs:66-67` covers only the corrupt-bytes case.
 4. Add the missing `experienceMode` field so the field sets match, as both files' doc comments require (`SyxxSettings.cs:11`, `SyxxSettings.swift:5`).
 **Code Sample:**
+
 ```csharp
 // SyxxSettings.cs:31 — defaults to consent
 public bool TelemetryEnabled { get; set; } = true;
@@ -54149,11 +54163,13 @@ The behavioural consequence is the "never asked" arm the enum explicitly names (
 macOS is identical (`SyxxDiagnostics.swift:244` is the same ternary), so this is a *shared* defect rather than a divergence — fixing one platform alone would create one.
 **Cross-ref. Delta:** G12, honesty spine #3 and #5.
 **Fix(es):**
+
 1. Make the setting nullable end to end (see [W5-11] fix 1) and return `Unknown` when it is null, so "never asked" and "explicitly enabled" stop being the same value — which is the stated purpose of the type.
 2. Have `SyxxSettingsStore.Load` return a load *outcome* (loaded / absent / corrupt) rather than pre-collapsing corruption into `TelemetryEnabled = false`, so the gate can map absent→`Unknown` and corrupt→`Unknown` itself.
 3. Replace the vacuous `TelemetryConsentGateTests.cs:51` assertion with tests that drive `CurrentConsent` to `Unknown` from (a) an absent file and (b) a corrupt file, and assert no sink is installed in either case (`SentryDiagnosticSink.Install` at `Syxx.Telemetry/SentryDiagnosticSink.cs` gates on `TelemetryGate.IsAllowed`).
 4. Apply the same change to the Swift twin in the same pass — parity.
 **Code Sample:**
+
 ```csharp
 // SyxxDiagnostics.cs:244-249 — three states declared…
 public enum TelemetryConsent
@@ -54180,16 +54196,19 @@ Settings are written non-atomically and without restrictive permissions on Linux
 The same omission applies to `WitnessKeyStore.SaveKey` (`WitnessKeyStore.cs:69-76`) and `LicenseManager.SaveConfig` (`LicenseManager.cs:162-178`): neither sets an ACL or mode, and neither writes atomically. `WitnessKeyStore` is Windows-only (`[SupportedOSPlatform("windows")]`, `:19`) so DPAPI carries it; `LicenseManager`'s config is reachable on Linux, where per [W5-07] its contents are unencrypted anyway once DPAPI is replaced.
 **Cross-ref. Delta:** G-4, honesty spine #6.
 **Fix(es):**
+
 1. Write to `path + ".tmp"` in the same directory, then `File.Move(tmp, path, overwrite: true)`. Only return `true` after the move succeeds — `Save`'s contract at `:64` is that `true` means a real write.
 2. On Unix, `File.SetUnixFileMode(path, UserRead | UserWrite)` after creation (or set the mode on the temp file before the move, so the file is never briefly world-readable). Apply the same to `LicenseManager.SaveConfig`.
 3. Add a Linux test asserting the resulting mode is `0600`, mirroring the macOS behaviour that currently has no C# counterpart.
 **Code Sample:**
+
 ```csharp
 // SyxxSettings.cs:70-72 — truncate-in-place, default permissions
 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 File.WriteAllText(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
 return true;
 ```
+
 ```swift
 // macOS/Sources/SyxxKit/SyxxSettings.swift:83-84 — atomic + 0600
 try data.write(to: url, options: .atomic)
@@ -54207,10 +54226,12 @@ Separately, `DiagnosticEvent.Underlying`'s contract (`SyxxDiagnostics.cs:47-49`)
 Also worth correcting while in this file: `TelemetryRedaction.ForResolver` (`SyxxDiagnostics.cs:206-209`) classifies RFC1918 by string prefix. `"172.16."` covers only `172.16.0.0/16`, so `172.17.x.x`–`172.31.x.x` — the rest of `172.16.0.0/12`, standard enterprise space — are tagged `"unknown"` rather than `"private"`; and the same prefix falsely matches the *public* range `172.160.0.0`–`172.169.255.255`. No address is emitted on the non-public path, so this mislabels rather than leaks, but it is a privacy classifier producing wrong class tokens in both directions.
 **Cross-ref. Delta:** G12, honesty spine #4.
 **Fix(es):**
+
 1. Redact tag values: `e.SetTag(kv.Key, Redact(kv.Value))`. There is no reason for `Tags` to be the one unstripped channel.
 2. Add a license-key pattern to `DiagnosticRedaction` (e.g. runs of 4+ hyphen-separated alphanumeric groups of length ≥ 4) and a test asserting a representative Keygen-format key is stripped. The over-matching stance the file already argues for (`DiagnosticRedaction.cs:20-24`) supports a loose pattern here.
 3. Parse resolver addresses with `IPAddress.TryParse` and compare against real CIDR ranges instead of string prefixes; port the same fix to the Swift twin.
 **Code Sample:**
+
 ```csharp
 // SentryDiagnosticSink.cs:85-89 — tags verbatim, extra redacted
 if (evt.Tags is not null)
@@ -54222,6 +54243,7 @@ if (evt.Extra is not null)
     foreach (var kv in evt.Extra) { e.SetExtra(kv.Key, Redact(kv.Value)); }
 }
 ```
+
 ```csharp
 // SyxxDiagnostics.cs:206-209 — /16 where RFC1918 says /12
 else if (address.StartsWith("10.", StringComparison.Ordinal)
@@ -54236,6 +54258,7 @@ else if (address.StartsWith("10.", StringComparison.Ordinal)
 **Criticality:** MEDIUM
 **Location:** `Windows/dotNET/Syxx.Kit/Trust/WitnessTestifyPlanner.cs:77-80,85`; macOS twin `macOS/Sources/SyxxKit/Trust/WitnessTestifyPlanner.swift:70,72`. Contrast the D100 remedy at `Windows/dotNET/Syxx.Kit/SignedEvidencePayload.cs:140-157`.
 **Issue:** `DriftIfRedirected` derives `AnswerDrift.PreviousAnswer` — the "what the rest of the world sees" side of a tampering report — from `comparison.PublicResolverOutcomes.Values.FirstOrDefault()`. .NET does not contractually guarantee `Dictionary<K,V>` enumeration order, and Swift *explicitly randomizes* `Dictionary.values` per process, so `WitnessTestifyPlanner.swift:70`'s `.values.first` is nondeterministic by design. Three consequences:
+
 - The same evidence yields different `PreviousAnswer` text across runs, so a user comparing two reports of one incident sees them disagree about the reference answer.
 - Windows and macOS will generally report *different* reference answers for the same comparison — a parity break in a forensic artefact.
 - Which resolver is shown as "the reference" is arbitrary. When public resolvers disagree with each other (split-horizon, geo-routing, an anycast difference), the drift record silently picks one and presents it as *the* baseline, with no indication that the choice was arbitrary or that the others differed.
@@ -54243,10 +54266,12 @@ This is precisely the hazard `SignedEvidencePayload.Build` already documents at 
 Note the file is explicitly a parity twin and both sides carry the same defect, so the fix must land on both in one pass.
 **Cross-ref. Delta:** D093, D100, honesty spine #4 and #6.
 **Fix(es):**
+
 1. Order the outcomes by a stable key before selecting: `comparison.PublicResolverOutcomes.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value).FirstOrDefault()`, with the byte-identical Swift equivalent (`sorted { $0.key.utf8.lexicographicallyPrecedes($1.key.utf8) }`) — the same ordinal convention `SignedEvidencePayload` already uses.
 2. Better, do not present a single arbitrary resolver as the baseline. Build `PreviousAnswer` from the ordinal-sorted union (or the consensus) of all public resolver answers, and record which resolvers contributed, so a reader can see whether they agreed.
 3. Add a determinism test on both platforms: build one `ComparisonResult` with three disagreeing public resolvers, call `DriftIfRedirected` repeatedly (in Swift, across processes, since the randomization is per-process), and assert `PreviousAnswer` is stable and identical across platforms.
 **Code Sample:**
+
 ```csharp
 // WitnessTestifyPlanner.cs:77-80 — arbitrary dictionary entry becomes the forensic baseline
 var firstPublic = comparison.PublicResolverOutcomes.Values.FirstOrDefault();
@@ -54254,6 +54279,7 @@ var publicIPs = firstPublic is null
     ? string.Empty
     : string.Join(", ", firstPublic.Records.Select(r => r.Rdata));
 ```
+
 ```swift
 // macOS/Sources/SyxxKit/Trust/WitnessTestifyPlanner.swift:70 — Swift randomizes this order per process
 let publicIPs = comparison.publicResolverOutcomes.values.first?.records
@@ -54271,17 +54297,20 @@ The macOS side is not merely different, it is a deliberate, three-for-three coun
 Non-atomicity compounds it: `Trust.cs:114-121` has no `try`/`catch` at all, so a disk-full or permission error throws out of `Save`, and a crash mid-write truncates a file that `Load` (`:137-149`) will then correctly classify `Corrupted` — losing the entire 30-day window rather than the last write.
 **Cross-ref. Delta:** F3/X10 (Sentinel), honesty spine #6.
 **Fix(es):**
+
 1. Add a single shared helper in the Kit — `WriteOwnerOnly(path, contents)` — that creates the directory with `UnixFileMode.UserRead|UserWrite|UserExecute`, writes to a sibling temp file, sets `0600` on it, then `File.Move(tmp, path, overwrite: true)`. Route all three `Trust.cs` sites, `SyxxSettings.Save` ([W5-13]) and `LicenseManager.SaveConfig` through it.
 2. Set the mode on the temp file *before* the move, so the data is never momentarily world-readable.
 3. Add a Linux test asserting `File.GetUnixFileMode` on each of the three artefacts is `UserRead | UserWrite`, mirroring the macOS behaviour that currently has no C# counterpart.
 4. Repair existing installs: on load, if the mode is wider than `0600`, tighten it and continue.
 **Code Sample:**
+
 ```csharp
 // Trust.cs:118-120 — 0644 file inside a 0755 directory, truncate-in-place, no try/catch
 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 var json = JsonSerializer.Serialize(new Persisted { Entries = _entries, Drifts = _drifts });
 File.WriteAllText(path, json);
 ```
+
 ```swift
 // macOS/Sources/SyxxKit/Trust/AnswerLedger.swift:132,134 — the twin, hardened
 try data.write(to: url, options: .atomic)
@@ -54299,10 +54328,12 @@ The type being signed makes it worse. `ValidatedDecisiveActs` (`Conclusion.cs:29
 Credit where due: `VerifyDecisiveActs` is the *better* of the two verifiers in this file. It fails closed on an unsigned catalog (`:129-132`, "absence of a signature is absence of provenance, not implicit trust") and honours a trust set (`:133-136`) — precisely the discipline `VerifySnapshotDetailed` has but no caller supplies (see [W5-01]). That the well-built verifier is the unreachable one and the reachable one is the unguarded one is the pattern worth acting on.
 **Cross-ref. Delta:** Ph6.1, B098, AMEND-O2.
 **Fix(es):**
+
 1. Decide and act, rather than leave a signing API pointed at a stub: either finish Phase 3.6 and wire `SignDecisiveActs` into evidence-bundle production with `VerifyDecisiveActs` on the consuming side, or mark both `[Obsolete]` and remove them from the public surface until the real type returns. A crypto API that nothing calls is a future footgun that reviewers will assume is load-bearing.
 2. If it is to be kept, refuse to sign an empty or version-0 catalog — a signature over `syxx.decisive-acts.v1:0:` proves nothing and looks like proof.
 3. When it is wired, land the Swift twin in the same pass; today the platform-parity obligation is unmet by absence.
 **Code Sample:**
+
 ```csharp
 // Conclusion.cs:296-301 — the type WitnessSigner's public API signs
 /// Stub retained for WitnessSigner.cs compatibility during the Phase 3 cutover. The DST-era
@@ -54379,7 +54410,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
 
                         ]
 
-**FIXED 2026-07-30 (qwen-code).** Replaced per-request ThreadPoolExecutor with module-level _CLEAN_VANTAGE_POOL and _PROPAGATION_POOL; capped resolvers per request; wrapped fut.result() in try/except.
+**FIXED 2026-07-30 (qwen-code).** Replaced per-request ThreadPoolExecutor with module-level _CLEAN_VANTAGE_POOL and_PROPAGATION_POOL; capped resolvers per request; wrapped fut.result() in try/except.
 
 **FIXED 2026-07-30 (qwen-code).** logging_util.incr now caps distinct metric keys at 512; overflow counted under metrics_keys_dropped for observability.
 
@@ -55164,6 +55195,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         }
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Detect conflicting CNAMEs (same owner, different targets) in reconstructChain and validOwners fixpoint; surface as dedicated `.conflictingCNAME` completion and `conflictingCNAMEOwnerCount` on DNSResponse.
 
 ---
@@ -55190,6 +55222,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                                                  timeout: TimeInterval = 4.0) async -> Result {
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Removed unused `timeout` parameter from `FilteringProbe.probe` — it was declared but never referenced.
 
 ---
@@ -55248,6 +55281,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         if queriesSaved { print("🗂  Your raw queries saved as JSON ...") }
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Raw capture deletion is now gated on `queriesSaved` — the raw file is retained when the queries export fails.
 
 ---
@@ -55321,6 +55355,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                             durationSeconds: duration, interface: devName)
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Capture-loss counters (packets seen, malformed, DNS parse failed, encode failures) are now passed to `generateReport` and rendered in PARSE SUMMARY; zero-record branch distinguishes untested from inconclusive-with-loss.
 
 ---
@@ -55385,6 +55420,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                             }
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Safe fd is kept open (never closed/reopened by path); fchmod/fchown used instead of path-based ops; `--output` validated against capturesDir; `--owner-uid` validated against SUDO_UID.
 
 ---
@@ -55433,6 +55469,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         let offSystem = baselineUnknown ? [] : resolvers.subtracting(systemResolvers).sorted()
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** IPv6 addresses now use `inet_ntop` for RFC 5952 canonical compressed form, matching system resolver list format.
 
 ---
@@ -55471,6 +55508,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         }                       // <- no else: label vanishes, name still returned
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** `parseName` preserves non-UTF-8 labels using RFC 1035 \DDD decimal escaping instead of silently dropping them.
 
 ---
@@ -55518,6 +55556,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         payloadBytes: data.count          // F9 — DNS payload wire size
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** `parseIPUDPHeader` returns validated `dnsPayloadLength` and caller slices to it (C024/C029/C020/C021/C022 fixes already landed).
 
 ---
@@ -55571,6 +55610,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         if persistenceHits.isEmpty && untrustedWriters.isEmpty { interp.append("No writes to persistence locations and no untrusted signers — nothing stands out at the heuristic level.") }
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Absent signing metadata ("Unknown", -1) is now a separate `signingUnknown` bucket with neutral wording, not counted as untrusted.
 
 ---
@@ -55610,6 +55650,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                             .joined(separator: "\n")
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Control characters (C0/C1/DEL) in DNS labels are escaped to \DDD at parse time, preventing ANSI/terminal injection.
 
 ---
@@ -55661,6 +55702,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         rationale.append(beaconConclusive ? "no encoded-label or beaconing signal" : "no encoded-label signal")
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Bundled lists renamed to honest names with entry counts; `listsEvaluated` tri-state added to ExfilAssessment; stub-only coverage disclosed in rationale.
 
 ---
@@ -55700,6 +55742,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         if s.contains(where: { !allowed.contains($0) }) { return nil }
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Underscore added to `normalizeDomain` allowed set (Windows parity); rejected names counted and disclosed in report.
 
 ---
@@ -55743,6 +55786,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         guard nextHeader == 17 else { return nil } // UDP directly after the base header only
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** IPv4 flags/fragment-offset checked (non-initial fragments rejected); IPv6 extension headers walked (bounded 8-hop loop); fragment header (44) rejected explicitly.
 
 ---
@@ -55782,6 +55826,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         pidCache[pid] = CacheEntry(report: report, cachedAt: Date())   // no eviction, ever
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Cache bounded to 1024 entries with LRU eviction; keyed by (pid, process start time) via proc_pid_rusage so recycled PIDs miss.
 
 ---
@@ -55823,6 +55868,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         guard let lastNL = buffer.lastIndex(of: newline) else { continue }   // unbounded growth
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** Buffer capped at 2 MB (D022); detect() now counts every non-empty line (not just JSON-looking ones) so the bounded peek terminates on non-JSON input.
 
 ---
@@ -55856,6 +55902,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         dict.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
 
                         ]
+
 **FIXED 2026-07-30 (qwen-code).** formatTopList and topProcess now tie-break by key (matching DNSLogAnalyzer.top), producing deterministic output across runs.
 
 ---
@@ -55902,7 +55949,8 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
                         }
 
                         ]
-**FIXED 2026-07-30 (qwen-code).** (a) parseDNSPacket guard changed to >= 12 (accepts bare DNS header); (b) doubled newlines fixed (writer.write no longer appends extra 
+
+**FIXED 2026-07-30 (qwen-code).** (a) parseDNSPacket guard changed to >= 12 (accepts bare DNS header); (b) doubled newlines fixed (writer.write no longer appends extra
 ); (c) deinit comment corrected (actors cannot flush async in deinit; capture loop already calls explicit flush).
 
 ---
@@ -55936,6 +55984,7 @@ if (trustedPublicKeys is { Count: > 0 } && !trustedPublicKeys.Contains(acts.Publ
 203.0.113.9") to the tick, but deliberately **preserves the config-diff state**: `state: tick.state`. When the network's
 *configuration* is unchanged — the normal case for an in-place cache poisoning, where the resolver IP stays exactly the same and
 only the *answers* change — `tick.state` is `.noChange`. Every downstream consumer gates on `.changed`:
+
 - `MonitorScheduler.swift:65` — `if result.state == .changed { lastChange = result }`. The latch that exists so "something
   changed at HH:MM" survives until acknowledged **never latches an answer drift**.
 - `AppModel.swift:171` — `if tick.state == .changed { self?.lastMonitorChange = tick }`. The GUI's change surface stays dark.
@@ -55952,6 +56001,7 @@ same object says otherwise) in one object. Worse than a missing feature: the tic
 the contradicting evidence.
 **Cross-ref. Delta:** new — D-5 added the ledger sampling but never widened the state or the consumer gates.
 **Fix(es):**
+
 1. In `tickOnce`, when `driftAlerts` is non-empty, the returned tick must not claim `.noChange`. Either promote to `.changed`,
    or add a fourth `MonitorState` case (`.answersChanged`) and update every `== .changed` gate — the summary must be rewritten
    too, not just the enum.
@@ -55960,6 +56010,7 @@ the contradicting evidence.
 3. `AppModel.swift:177` should notify on `!tick.alerts.isEmpty`, not on the state enum, and should not collapse N alerts into
    `alerts.first`.
 **Code Sample:**
+
 ```swift
 // ContinuousMonitor.swift:178-185
 if !driftAlerts.isEmpty {
@@ -55971,6 +56022,7 @@ if !driftAlerts.isEmpty {
         recheckRecommended: true)
 }
 ```
+
 **FIXED 2026-07-30 (qwen-code).** tickOnce now promotes state to .changed and rewrites the summary when drift alerts are present but config is unchanged. AppModel delivers a notification per alert (not just alerts.first).
 
 ---
@@ -55983,10 +56035,12 @@ if !driftAlerts.isEmpty {
 "No resolvers discovered" (`:387-389`), "Local resolver proxy present (loopback); upstream transport not verifiable"
 (`:390-394`), and "DNS queries tunneled through VPN interface(s); DNS-level encryption unverifiable" (`:408-413`). All of that
 evidence is then thrown away by:
+
 ```swift
 public static func isDNSEncrypted() -> Bool { encryptedDNSStatus().state == .yes }   // :420-422
 public static func isVPNActive() -> Bool     { vpnStatus().state == .yes }           // :332-334
 ```
+
 `NetworkConfigSnapshot` stores plain `Bool`s (`Sentinel.swift:11-12`), so `.unknown` is persisted as **`false`**. `Sentinel.diff`
 then renders that false as a definite word (`Sentinel.swift:70`: `"encrypted" -> "plaintext"`), and `ContinuousMonitor.toAlert`
 escalates it to a `.warning` with this text (`ContinuousMonitor.swift:122-127`):
@@ -56005,6 +56059,7 @@ The same collapse runs the other way at `AppModel.swift:156`: `var isEncrypted: 
 **Cross-ref. Delta:** the sibling-confirmed Windows `ConditionState.Unknown`-available-and-unused defect **has an exact macOS
 twin**, at a different layer: macOS *produces* `.unknown` correctly and then discards it at the Sentinel boundary.
 **Fix(es):**
+
 1. Change `NetworkConfigSnapshot.vpnActive`/`.dnsEncrypted` from `Bool` to `ConditionState`, and make `Sentinel.diff` emit
    `.encryptedDNSChanged` only for `yes↔no` transitions; a transition **into or out of `.unknown`** must produce a distinct,
    non-alarming change kind whose copy says the state could not be determined and why (the `evidence` string is already carried
@@ -56022,14 +56077,18 @@ twin**, at a different layer: macOS *produces* `.unknown` correctly and then dis
 **Location:** `macOS/Sources/SyxxKit/NetworkKeyState.swift:306-329`, failure path at `:277-279`
 **Issue:** `vpnStatus()` returns `VPNStatus` whose `state` is a `ConditionState`, yet **the function has no path that can ever
 return `.unknown`** — every one of its three returns is `.yes` or `.no`. Its sole input is `interfaceAddresses()`, which begins:
+
 ```swift
 guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return [] }   // :278
 ```
+
 A `getifaddrs` failure (ENOMEM, or the sandbox denying it) is indistinguishable from "this machine has no interfaces", and both
 land on `:328`:
+
 ```swift
 return VPNStatus(state: .no, tunnelInterfaces: [], evidence: "No tunnel interfaces detected")
 ```
+
 The user is told, with an evidence string that sounds like a measurement, that no VPN is running — when nothing was measured.
 A second silent-drop sits at `:289-295`: if `getnameinfo` fails for an address, the tuple is never appended, so a live tunnel
 whose address cannot be formatted vanishes and the answer degrades to `.no` with no trace.
@@ -56040,6 +56099,7 @@ syscall.
 **Cross-ref. Delta:** new. The docstring at `NetworkKeyState.swift:8-10` states the point of the rework is exactly that "a probe
 error must not be silently reported as 'no VPN'" (M14) — `vpnStatus()` does not implement its own stated contract.
 **Fix(es):**
+
 1. Change `interfaceAddresses()` to return `[(name,address,family)]?` (nil on `getifaddrs != 0`) and have `vpnStatus()` return
    `VPNStatus(state: .unknown, tunnelInterfaces: [], evidence: "Could not enumerate network interfaces (getifaddrs failed: <errno>)")`.
 2. Count `getnameinfo` failures and, when any occurred and no active tunnel was found, return `.unknown` with an evidence string
@@ -56056,6 +56116,7 @@ error must not be silently reported as 'no VPN'" (M14) — `vpnStatus()` does no
 **Location:** `macOS/Sources/SyxxKit/NetworkKeyState.swift:197-204`
 **Issue:** The only branch that can ever set `currentProtocol` (and therefore the only branch that can make
 `encryptedDNSStatus()` return `.yes`, via `:396-403`) cannot fire for the format its own comment documents:
+
 ```swift
 } else if line.hasPrefix("Protocol") {
     // e.g. "Protocol : 1 (DNS over HTTPS)" or "Protocol : 2 (DNS over TLS)"
@@ -56067,6 +56128,7 @@ error must not be silently reported as 'no VPN'" (M14) — `vpnStatus()` does no
     }
 }
 ```
+
 `"Protocol : 1 (DNS over HTTPS)"` contains **one** colon → `components.count == 2` → the guard `>= 3` is false → nothing is
 assigned. And even if the count guard passed, `components[1]` would be `"1 (DNS over HTTPS)"`, which fails `code == "1"`. Both
 checks are wrong in the same direction, so the branch only fires for a hypothetical line with two colons whose middle field is
@@ -56080,6 +56142,7 @@ returns only `SyxxKitTests.swift:900-922`, which construct `ScopedResolver` valu
 set, so the parser is never exercised. The bug is invisible to the suite by construction.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Capture the real bytes first: run `scutil --dns` on a machine with a DoH profile (or a configuration profile installed in CI)
    and commit the output as a fixture; parse against the fixture. Do not fix by guessing the format.
 2. Parse as `split(separator: ":", maxSplits: 1)` and match the numeric prefix of the remainder
@@ -56096,12 +56159,14 @@ set, so the parser is never exercised. The bug is invisible to the suite by cons
 **Location:** `macOS/Sources/SyxxKit/Trust/Sentinel.swift:90-93`; consumed at `Trust/ContinuousMonitor.swift:88-93`, `:168`,
 `:176`; and `SyxxCLI/Commands/SyxxSentinel.swift:47-51`
 **Issue:** `loadSnapshot` collapses three distinct outcomes into one `nil`:
+
 ```swift
 public static func loadSnapshot(from url: URL = Sentinel.defaultURL) -> NetworkConfigSnapshot? {
     guard let data = try? Data(contentsOf: url) else { return nil }   // file absent OR unreadable OR I/O error
     return try? JSONDecoder().decode(NetworkConfigSnapshot.self, from: data)   // present but corrupt/truncated/tampered
 }
 ```
+
 `ContinuousMonitor.evaluate` then treats `nil` as "we have never looked before" (`:88-93`) and returns `.baselineEstablished`
 with *"Baseline recorded for this network. Nothing has been compared yet — monitoring starts from now."* — and `tickOnce:176`
 immediately **overwrites** the corrupt file with the current snapshot.
@@ -56113,6 +56178,7 @@ and print a reassuring first-run message. That is laundering the very change the
 The CLI has the identical hole at `SyxxSentinel.swift:47-51`.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Split the result: `enum BaselineLoad { case absent, corrupt(String), loaded(NetworkConfigSnapshot) }`. `.corrupt` must produce
    a distinct `MonitorState` (e.g. `.baselineUnreadable`) with a `.warning` alert naming the file, and must **not** overwrite the
    file — rename it to `sentinel-snapshot.corrupt-<timestamp>.json` and keep it as evidence.
@@ -56129,14 +56195,17 @@ The CLI has the identical hole at `SyxxSentinel.swift:47-51`.
 **Location:** `macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:176`; `SyxxCLI/Commands/SyxxSentinel.swift:24`, `:43`, `:48`,
 `:63`; `Trust/AnswerLedger.swift` write path via `ContinuousMonitor.swift:230`
 **Issue:** Every persistence call in the monitoring path discards its error:
+
 ```swift
 if persist { try? Sentinel.saveSnapshot(current, to: url) }      // ContinuousMonitor.swift:176
 try? activeLedger.save(to: AnswerLedger.defaultURL)              // ContinuousMonitor.swift:230
 try? HomeBaseline.save(current)                                  // SyxxSentinel.swift:24
 try? Sentinel.saveSnapshot(current)                              // SyxxSentinel.swift:43, :48, :63
 ```
+
 `saveSnapshot` can genuinely fail — `createDirectory` under a read-only or full `$HOME`, a `~/.syxx` owned by another user, a
 sandbox denial. When it does:
+
 - The user is nonetheless told *"Baseline recorded for this network"* (`ContinuousMonitor.swift:91`) and
   *"🏠 Saved this network as your home baseline."* (`SyxxSentinel.swift:25`). Both are **fabricated success claims** (§4).
 - The next tick's `loadSnapshot` returns `nil` again → `.baselineEstablished` again → forever. The monitoring loop runs on its
@@ -56144,6 +56213,7 @@ sandbox denial. When it does:
   no state anywhere that says "the baseline has never actually persisted".
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. `tickOnce` must propagate the write failure into the returned tick — a `.warning` alert ("Could not save the monitoring
    baseline to <path>: <error>. Changes cannot be detected until this is fixed.") and a state that is not a quiet success.
 2. `MonitorScheduler` should expose `lastPersistError` and the GUI should refuse to show the monitor as healthy while it is set.
@@ -56159,6 +56229,7 @@ sandbox denial. When it does:
 **Location:** `macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:196-232` (specifically `:201`, `:215-216`, `:226-228`, `:231`)
 **Issue:** `sampleDNSAndRecord` returns `[MonitorAlert]` and nothing else. Every failure mode returns the **same empty array**
 that a fully-successful, fully-stable sampling round returns:
+
 - `guard let firstResolver = resolvers.first else { return [] }` (`:201`) — **no resolvers discovered at all** (which is exactly
   what `getSystemDNSServers()` returns when `scutil` times out or is missing, M8-08) → zero queries are sent, and the tick
   reports normally.
@@ -56174,6 +56245,7 @@ produce a false verdict in either direction", but the implementation only satisf
 direction and walks straight into the false-clean one (§2).
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Return a struct, not an array: `(alerts: [MonitorAlert], attempted: Int, succeeded: Int, failures: [String: String])`.
 2. When `succeeded == 0 && attempted > 0`, or when `resolvers.isEmpty`, the tick must carry an explicit inconclusive marker and
    a user-visible line ("Could not sample any DNS answers this round — this check is inconclusive, not clean").
@@ -56189,6 +56261,7 @@ direction and walks straight into the false-clean one (§2).
 **Location:** `macOS/Sources/SyxxKit/NetworkKeyState.swift:101-120`; consumed un-budgeted at `SyxxKit/ProbePlan.swift:167-169`
 **Issue:** `runProcess` arms the timeout with `queue.asyncAfter(deadline: deadline)` and then **unconditionally waits on the
 semaphore that only that block signals**:
+
 ```swift
 queue.asyncAfter(deadline: deadline) {              // :105 — body runs at the deadline, never earlier
     guard process.isRunning else { timedOut.signal(); return }   // :106 — the "fast" path is INSIDE the delayed block
@@ -56199,26 +56272,32 @@ let data = pipe.fileHandleForReading.readDataToEndOfFile()       // :117 — ret
 process.waitUntilExit()                                          // :118 — returns immediately
 timedOut.wait()                                                  // :119 — BLOCKS UNTIL THE DEADLINE, ALWAYS
 ```
+
 There is no early-completion signal. A process that exits in 2 ms still costs the caller the whole `timeout`.
 **Measured, not inferred** — a verbatim replica compiled with `swiftc -O` and run on this machine:
+
 ```
 elapsed for /bin/echo (instant process, timeout 3.0): 3.15s, output=hi
 elapsed for scutil --dns: 3.15s
 ```
+
 `NetworkKeyState.generateReport()` (`:513-529`) makes **eight** `runProcess` calls: `getSystemDNSServers`→`getScopedResolvers`
 (1) and `getScopedResolvers` (1) inside `encryptedDNSStatus()`; `defaultGatewayIP` (1) + `getSystemDNSServers` (1) +
 `defaultRouteInterface` (1) + `ipconfig getoption` (1) inside `detectGateway()`; plus `dnsServers:` (1) and `scopedResolvers:`
 (1) in the constructor call. **≥ 8 × 3.15 s ≈ 25 s of pure blocking**, before the captive-portal and gateway HTTP probes. And
 `ProbePlan.swift:167-169` calls it deliberately outside the budget:
+
 ```swift
 // Network state report — local calls with internal timeouts; not ProbeRunner-wrapped
 inputs.network = await NetworkKeyState.generateReport()
 ```
+
 `ProbeBudget.defaultPortal` is `totalTimeout: 15` (`ProbeBudget.swift:36`) — the un-budgeted preamble is ~1.7× the entire
 section's declared budget. `generateReport` is also not `async`-safe in the blocking sense: it blocks a cooperative-pool thread
 for the duration.
 **Cross-ref. Delta:** new; adjacent to the sibling-reported "2.5 s per-probe cap under a 5.0 s CommandRunner timeout" (M8-09).
 **Fix(es):**
+
 1. Signal completion early: use `process.terminationHandler` (or a second semaphore signalled after `waitUntilExit`) and
    `DispatchWorkItem` + `cancel()` for the timer, so the fast path costs the child's real duration.
 2. Deduplicate `generateReport` — `getScopedResolvers()` is invoked four times per report for identical data. Capture once,
@@ -56240,6 +56319,7 @@ inner deadline set to twice its own cap: `ProbeRunner` cancels the enclosing tas
 5 s (or longer, see (b)) after its caller has already recorded a timeout. The probe's recorded elapsed time and its real
 resource cost diverge.
 (b) **Escalation stops at SIGINT and the final wait is unbounded.**
+
 ```swift
 process.terminate()                                    // :58  SIGTERM
 Thread.sleep(forTimeInterval: 0.5)                     // :59
@@ -56249,11 +56329,13 @@ done.wait()                                            // :62  no timeout
 ...
 process.waitUntilExit()                                // :65  no timeout — HANGS FOREVER on a child ignoring both signals
 ```
+
 A child that ignores SIGTERM will almost always ignore SIGINT too (SIGINT is the *weaker* signal — it is the terminal
 interrupt). `NetworkKeyState.runProcess:111` gets this right (`kill(pid, SIGKILL)`); the LAN path does not. `waitUntilExit()`
 at `:65` has no deadline, so the "timeout" path can block indefinitely — the opposite of what the KTRU-06 comment claims.
 **Cross-ref. Delta:** KTRU-05/KTRU-06 are cited at `:41-42`/`:54` as fixed; the drain fix landed, the kill escalation did not.
 **Fix(es):**
+
 1. `kill(process.processIdentifier, SIGKILL)` at `:60`, then `done.wait(timeout: .now() + 1.0)` and a bounded wait for exit.
 2. Make `timeout` an `init` parameter of `SystemCommandRunner` and thread the caller's remaining budget into it.
 3. Add a `case timedOut(TimeInterval)` to `CommandRunnerError` — see M8-16.
@@ -56266,6 +56348,7 @@ at `:65` has no deadline, so the "timeout" path can block indefinitely — the o
 **Criticality:** HIGH — E041 pipe-buffer deadlock is still present in `TracerouteRunner`; long traces truncate silently
 **Location:** `macOS/Sources/SyxxKit/TracerouteRunner.swift:25-33`
 **Issue:** The pipe is drained **only after the process has fully exited**:
+
 ```swift
 let waitTask = Task { process.waitUntilExit() }          // :25
 let timeoutTask = Task { ...sleep(timeout); if process.isRunning { process.terminate() } }   // :26-29
@@ -56273,6 +56356,7 @@ await waitTask.value                                     // :30 — waits for ex
 timeoutTask.cancel()                                     // :31
 let data = pipe.fileHandleForReading.readDataToEndOfFile()   // :32 — first read happens HERE
 ```
+
 Nothing reads the pipe while traceroute is running. Once traceroute's output exceeds the pipe buffer (64 KiB on Darwin), the
 child blocks in `write(2)`, so it never exits, so `waitUntilExit` never returns — the classic deadlock delta E041 names. The
 45 s `timeoutTask` masks it into a *silent truncation*: `terminate()` fires, `waitUntilExit` returns, and `:32` reads only the
@@ -56280,6 +56364,7 @@ child blocks in `write(2)`, so it never exits, so `waitUntilExit` never returns 
 as a complete one**, with no marker. `AppModel.performTraceroute` maps any non-empty result to `.completed`
 (`AppModel.swift:922-929`), so a truncated trace renders as a finished trace.
 Two further defects in the same block:
+
 - `Task { process.waitUntilExit() }` (`:25`) parks a **cooperative-pool thread in a blocking syscall for up to 45 s**. With
   the pool sized to the core count, a few concurrent traces can starve every other `async` operation in the process.
 - Escalation is `terminate()` only (`:28`) — no SIGKILL. A traceroute that ignores SIGTERM leaves `await waitTask.value`
@@ -56287,6 +56372,7 @@ Two further defects in the same block:
 **Cross-ref. Delta:** E041 (pipe-buffer deadlock) — **not fixed here**. `LAN/CommandRunner.swift:48-52` fixed the same class of
 bug (background drain) under KTRU-05; `TracerouteRunner` was not updated.
 **Fix(es):**
+
 1. Drain concurrently: start the `readDataToEndOfFile` on a detached thread (or use `pipe.fileHandleForReading.readabilityHandler`
    / `DispatchIO`) **before** awaiting exit, exactly as `CommandRunner.swift:49-52` does.
 2. Return a tri-state, not `[String]`: `(lines, completed: Bool, reason: String?)`, so a SIGTERM-truncated trace cannot be
@@ -56302,6 +56388,7 @@ bug (background drain) under KTRU-05; `TracerouteRunner` was not updated.
 **Criticality:** HIGH — the LAN "notice change over time" capability does not exist; nothing diffs, nothing persists
 **Location:** `macOS/Sources/SyxxKit/LAN/LANCartographer.swift:70-79`, `:115-140`; consumer `SyxxCLI/Commands/SyxxLan.swift:1-48`
 **Issue:** `LANSnapshot`/`LANDiff` are `Codable` and `LANCartographer.diff` exists, but:
+
 - **No LAN snapshot is ever persisted.** There is no `save`/`load` for `LANSnapshot` anywhere (contrast `Sentinel.saveSnapshot`
   and `AnswerLedger.save`). Each `syxx lan` run starts from nothing.
 - **`diff` is never called.** Verified by grep across `Sources/` and `Tests/`.
@@ -56312,6 +56399,7 @@ The user-visible consequence is a capability claim without an implementation: th
 rogue DNS/DHCP server", and the only surfacing is a one-shot listing with no memory.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Persist the LAN snapshot alongside the sentinel snapshot (`~/.syxx/lan-snapshot.json`, `0600`) and call
    `LANCartographer.diff` from `ContinuousMonitor.tickOnce`, folding new-device / MAC-moved events into `MonitorAlert`s —
    but only after M8-11 is fixed, or the first two-incomplete-entry table crashes the monitor loop.
@@ -56328,12 +56416,14 @@ rogue DNS/DHCP server", and the only surfacing is a one-shot listing with no mem
 **Issue:** `LANSnapshot` carries an `isPartial` flag (`:55`) set on two paths (`:99` deadline, `:110` `maxDevices` cap). **No
 consumer on either platform reads it** — `grep -rn "isPartial" Sources/ ../Windows` returns only the declaration sites and the
 two producers. The macOS CLI instead does:
+
 ```swift
 if snapshot.devices.isEmpty {
     print("No devices found in the ARP cache. (Try generating traffic first, e.g. ping your gateway.)")
     return
 }
 ```
+
 An empty result therefore always renders as *"nothing unusual, your cache is just cold"* — including when `snapshot()` returned
 `LANSnapshot(devices: [], isPartial: true)` because it blew the deadline (`:99`), and including when `arp` produced output the
 parser could not understand (every `parseLine` returning `nil` yields an empty, **not** partial, snapshot — the parser has no
@@ -56347,6 +56437,7 @@ exercised.
 exception and returns `isPartial: true`, whereas macOS `snapshot()` rethrows (`:97`). The two platforms have opposite
 error-collapse behaviour, and neither renders `isPartial`.
 **Fix(es):**
+
 1. Have `ARPTableParser.parse` return `(entries, linesSeen, linesUnparsed)` and mark the snapshot partial/inconclusive when
    `linesSeen > 0 && entries.isEmpty`.
 2. `SyxxLan` must branch on `isPartial` first: "The LAN map is incomplete — this listing is not a complete picture of your
@@ -56362,9 +56453,11 @@ error-collapse behaviour, and neither renders `isPartial`.
 **Location:** `macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:77`, `:216`, `:217-225`; `Trust/AnswerLedger.swift:89-100`
 **Issue:** The sampled domains are `["apple.com", "google.com", "cloudflare.com"]` (`:77`) — three of the most aggressively
 load-balanced names on the internet — and the recorded answer is:
+
 ```swift
 let answer = response.records.first        // :216  — ONE record, arbitrary position in a rotated RRset
 ```
+
 `AnswerLedger.detectDrift` then compares that single rdata against the previously recorded single rdata (`AnswerLedger.swift:90-93`)
 and any difference emits a **`.warning`** alert: *"DNS answer changed for apple.com — Was 17.253.144.10, now 17.253.144.11"*
 (`ContinuousMonitor.swift:221-224`). Resolvers rotate RRset order per query by design (RFC 1794 round-robin) and these names
@@ -56377,6 +56470,7 @@ Net effect on honesty: a warning that is almost always false trains the user to 
 asserts a specific factual change ("was X, now Y") that is an artefact of taking `.first` of an unordered set (§4).
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Record the **whole answer set**, sorted and joined (`records.map(\.rdata).sorted().joined(separator: ",")`), and treat a
    drift as *disjoint sets* — no member in common — matching `VantageComparer.evaluate`'s rule.
 2. Prefer stable sample domains (a Syxx-controlled A record with a pinned address, plus the resolver's own `version.bind`
@@ -56397,6 +56491,7 @@ sole caller treats `nil` as "no alert" (`ContinuousMonitor.swift:217`), so a **f
 stability** — the same conflation `ContinuousMonitor.evaluate` is careful to avoid at the config layer (`:19-22`,
 `.baselineEstablished` vs `.noChange`). The ledger layer has no `.baselineEstablished`.
 Three routine mechanisms silently convert a real drift into a `nil`:
+
 - **Eviction.** `if entries.count > 1000 { entries = Array(entries.prefix(1000)) }` (`:69`) is a *global* cap, not per-domain.
   Any other caller writing to the same ledger (it is a shared file, `:113-116`) can push a domain's only prior entry out; the
   next observation is then "first-seen" and cannot drift.
@@ -56408,6 +56503,7 @@ Three routine mechanisms silently convert a real drift into a `nil`:
   record and reports a clean round.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Return a tri-state: `enum LedgerObservation { case firstSeen, consistent(AnswerEntry), drifted(AnswerDrift) }`. The caller
    must render `firstSeen` as "recording began for this domain", never as silence.
 2. Make the cap per (domain, queryType) — keep at least the most recent entry for every key regardless of the global cap, and
@@ -56424,9 +56520,11 @@ Three routine mechanisms silently convert a real drift into a `nil`:
 **Criticality:** MEDIUM — a command timeout is indistinguishable from a command failure, and stderr contaminates the parse stream
 **Location:** `macOS/Sources/SyxxKit/LAN/CommandRunner.swift:9-21`, `:32-33`, `:68-70`
 **Issue:** (a) `CommandRunnerError` has only `.launchFailed` and `.nonZeroExit`; the timeout path fabricates a fake exit code:
+
 ```swift
 if didTimeout { throw CommandRunnerError.nonZeroExit(-1, output) }   // :68-70
 ```
+
 A caller cannot distinguish "arp is missing" (a definite negative about tooling), "arp exited 1" (a definite failure), and
 "arp took longer than 5 s" (**inconclusive** — the ARP table may be enormous, which is itself a signal). All three surface to
 the user as one string, and `SyxxLan.swift:12` prints them identically: *"Could not read the ARP table: Command exited with -1: "*.
@@ -56436,6 +56534,7 @@ line is a candidate ARP entry rather than an error. It also means a successful c
 warning-contaminated data with exit status 0 and no flag.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Add `case timedOut(TimeInterval)` and `case notFound(String)`; map `launch` failures with `ENOENT` to `.notFound`.
 2. Separate the pipes: capture stderr on its own `Pipe` (drained on its own thread) and return it as a distinct field so parsers
    never see it and diagnostics are not lost.
@@ -56448,11 +56547,13 @@ warning-contaminated data with exit status 0 and no flag.
 **Criticality:** MEDIUM — "your resolvers are off-LAN" is a definite claim derived from a cache of recently-contacted hosts
 **Location:** `macOS/Sources/SyxxCLI/Commands/SyxxLan.swift:38-46`
 **Issue:**
+
 ```swift
 } else if !resolverIPs.isEmpty {
     print("\n🔎 Derived: none of your configured resolvers appear as on-link devices — they are reached through the gateway (off-LAN).")
 }
 ```
+
 The premise is `arp -an`, which is a **cache**: it holds only neighbours this host has exchanged frames with recently, and
 entries expire (~20 min on Darwin). A resolver at `10.0.0.53` that the machine has not talked to since the last cache flush —
 or one that deliberately does not answer ARP for its own address — is absent from the table, and Syxx prints a categorical
@@ -56462,6 +56563,7 @@ user to do that manually *after* the conclusion has already been printed in the 
 This is a derived datapoint (labelled "🔎 Derived") presented at full confidence from an admittedly incomplete input (§1).
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Before reading the cache, force population: attempt a UDP/53 or ICMP touch of each configured resolver, then re-read `arp -an`.
 2. Failing that, the copy must be conditional: "none of your configured resolvers are currently in this host's ARP cache. That
    usually means they are off-LAN, but a resolver this Mac has not contacted recently will also be absent — this is not
@@ -56475,11 +56577,13 @@ This is a derived datapoint (labelled "🔎 Derived") presented at full confiden
 **Criticality:** MEDIUM — ARP/MAC evidence is presented with no note that it is unauthenticated and trivially forged
 **Location:** `macOS/Sources/SyxxCLI/Commands/SyxxLan.swift:26-46`; `LAN/LANCartographer.swift:25-41` (`LANDevice.notes`)
 **Issue:** The CLI prints a MAC-to-IP table and then makes identity claims from it:
+
 ```swift
 let flag = isResolver ? "  ⟵ THIS DEVICE IS ONE OF YOUR DNS RESOLVERS" : ""      // :28
 ...
 print("   \(d.ipAddress) is at MAC \(d.macAddress) (\(d.addressKind.rawValue)). Confirm this is your intended router/resolver.")  // :42
 ```
+
 ARP has no authentication: any host on the segment can claim any IP, and an ARP-spoofing attacker's whole objective is to make
 `10.0.0.1 is at <attacker MAC>` appear in exactly this table. Syxx renders that binding as an observed fact. `LANDevice.notes`
 (`LANCartographer.swift:25-41`) annotates only four conditions — incomplete entry, broadcast MAC, non-probeable address kind,
@@ -56490,6 +56594,7 @@ The `"Confirm this is your intended router/resolver."` line is the right instinc
 been told the data can lie.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Add a standing caveat to the LAN listing: "ARP bindings are unauthenticated — a device on this network can claim any address.
    Treat this map as a lead, not as proof."
 2. Cross-check the gateway row against `defaultGatewayIP()` and `dhcpPushedDNS()` and flag disagreement explicitly.
@@ -56505,11 +56610,13 @@ applied to the twin call site
 **Location:** `macOS/Sources/SyxxKit/Trust/WitnessTestifyPlanner.swift:69-73`; the acknowledged hazard at
 `SyxxKit/SignedEvidencePayload.swift:150-165`; type at `SyxxKit/VantageComparer.swift:46`
 **Issue:**
+
 ```swift
 let publicIPs = comparison.publicResolverOutcomes.values.first?.records
     .map { $0.rdata }.joined(separator: ", ") ?? ""            // :70-71
 return AnswerDrift(domain: domain, queryType: "A", previousAnswer: publicIPs, ...)
 ```
+
 `publicResolverOutcomes` is `[String: ResolverQueryOutcome]` (`VantageComparer.swift:46`). Swift **randomises Dictionary
 enumeration order per process** — a fact this codebase already documents and defends against 20 lines of code away:
 > *"D100 fix: `comparison.publicResolverOutcomes.values` is a Dictionary's value sequence, whose enumeration order Swift
@@ -56519,6 +56626,7 @@ enumeration order per process** — a fact this codebase already documents and d
 `WitnessTestifyPlanner` is the type created specifically to be the **single source of truth** for the drift step (its header,
 `:1-24`, explains that duplicating it is what caused D093), and it reproduces the exact defect D100 fixed elsewhere. Two
 consequences:
+
 1. **Non-reproducible evidence.** `AnswerDrift.previousAnswer` is whichever of Cloudflare / Google / Quad9 the runtime happens to
    enumerate first. Re-running against an identical, honest network yields a different `previousAnswer` — in a **testimony**
    artefact whose whole purpose is reproducibility.
@@ -56532,13 +56640,13 @@ consequences:
 **Cross-ref. Delta:** D100 (fixed in `SignedEvidencePayload`, **not** in `WitnessTestifyPlanner`); D093 (the drift step this type
 exists to single-source).
 **Fix(es):**
-1. Sort deterministically before selecting — e.g. `publicResolverOutcomes.sorted { $0.key < $1.key }` — and prefer the first
+3. Sort deterministically before selecting — e.g. `publicResolverOutcomes.sorted { $0.key < $1.key }` — and prefer the first
    outcome that actually **has records**.
-2. Make `previousAnswer` optional / explicitly "not obtained" rather than `""`, and refuse to build the drift when no public
+4. Make `previousAnswer` optional / explicitly "not obtained" rather than `""`, and refuse to build the drift when no public
    resolver returned records.
-3. Gate on `!comparison.isDegraded` or carry the degraded flag into the `AnswerDrift` so a report cannot present a degraded
+5. Gate on `!comparison.isDegraded` or carry the degraded flag into the `AnswerDrift` so a report cannot present a degraded
    comparison's drift as a clean measurement.
-4. Add the missing determinism test (run the same comparison N times, assert identical `previousAnswer`) — the existing
+6. Add the missing determinism test (run the same comparison N times, assert identical `previousAnswer`) — the existing
    `WitnessTestifyPlannerTests.swift` does not cover ordering.
 
 ---
@@ -56550,16 +56658,19 @@ definite `isDNS: false` when the gateway is unknown
 **Location:** `macOS/Sources/SyxxKit/NetworkKeyState.swift:495-496`, `:474-476`, `:490-491`
 **Issue:** `detectGateway()` uses the correct `ConditionState` type for `adminReachable` and then throws the third state away on
 the one path where it is most needed:
+
 ```swift
 } catch {
     adminReachable = .no          // :495-496 — a timeout, a TLS/HTTP error, or being offline
 }
 ```
+
 Compare `captivePortalStatus()` in the same file, which gets it right (`:359-362`): *"Offline or blocked — cannot conclude either
 way"* → `.unknown`. Here an unreachable network, a firewall drop, or a 3 s timeout is rendered as the definite claim "the admin
 panel is not reachable", which a user reasonably reads as "my router's web UI is not exposed" — a security-relevant statement
 made from a failed measurement (§2).
 Two adjacent collapses:
+
 - `:490-491` — `adminReachable = httpResp.statusCode < 500 ? .yes : .no`. A 502/503 from an intermediate proxy becomes a definite
   "not reachable" rather than `.unknown`.
 - `:474-476` — when the gateway cannot be determined at all, the returned `GatewayInfo` carries `ip: ""` **and `isDNS: false`**.
@@ -56567,6 +56678,7 @@ Two adjacent collapses:
   not your DNS server". The `detail` string says "Could not determine default gateway", but structured consumers read the field.
 **Cross-ref. Delta:** new; same family as M8-02/M8-03.
 **Fix(es):**
+
 1. `catch { adminReachable = .unknown }` with the error text in `detail`; reserve `.no` for a definite connection refusal
    (`ECONNREFUSED`), which is genuinely evidence of a closed port.
 2. Make `GatewayInfo.isDNS` a `ConditionState` and return `.unknown` on the no-gateway path.
@@ -56582,10 +56694,12 @@ forward with no record of what it just found
 **Location:** `macOS/Sources/SyxxCLI/Commands/SyxxSentinel.swift:17-20`, `:52-54`, `:62-63`, `:24`, `:43`, `:48`
 **Issue:** Four defects in one 64-line command.
 (a) **Tri-state printed as a definite negative** (`:19-20`):
+
 ```swift
 print("  VPN active         : \(current.vpnActive ? "yes" : "no")")
 print("  DNS encrypted      : \(current.dnsEncrypted ? "yes" : "no")")
 ```
+
 Both fields are the collapsed booleans from M8-02/M8-03, and both `VPNStatus.evidence` and `EncryptedDNSStatus.evidence` — which
 would say *"Local resolver proxy present (loopback); upstream transport not verifiable from the client"* — are available one call
 away and are not printed. The user is told "DNS encrypted: no" when the truth is "cannot be determined".
@@ -56600,6 +56714,7 @@ to whoever happened to be watching stdout, and is then absorbed into the new "kn
 (d) **Unchecked writes** at `:24`, `:43`, `:48`, `:63` — see M8-06.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Print the tri-state and its evidence: `VPN: unknown — could not enumerate network interfaces`.
 2. Refuse the "stable" wording when `current.resolvers.isEmpty` or when any capture input was undeterminable; print
    "inconclusive — the DNS configuration could not be read this run".
@@ -56633,17 +56748,20 @@ readable from any thread with no lock, while `record`/`load` mutate them under `
 type that asserts it is safe.
 (d) **The injection seam does not work.** `ContinuousMonitor.sampleDNSAndRecord` takes an injected `ledger` and then immediately
 overwrites its state from the real user file, and saves back to it:
+
 ```swift
 let activeLedger = ledger ?? AnswerLedger()
 _ = activeLedger.load(from: AnswerLedger.defaultURL)     // :203 — clobbers the injected state
 ...
 try? activeLedger.save(to: AnswerLedger.defaultURL)      // :230 — writes the USER's ~/.syxx/answer-ledger.json
 ```
+
 The `url` seam exists for the sentinel snapshot (`tickOnce(at:)`, `:163`) but not for the ledger. A test that injects a ledger
 still reads and **overwrites the developer's real answer history**. Consistent with that, `grep -rn "sampleDNSAndRecord" Tests/`
 returns nothing — the function has no test at all.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Add a `networkKey` (gateway MAC + SSID, or the sorted resolver set hashed) to `AnswerEntry` and key `detectDrift` on
    `(networkKey, domain, queryType)`; a first observation on a new network is `firstSeen`, not drift (see M8-15).
 2. Add a `ledgerURL` parameter to `tickOnce`/`sampleDNSAndRecord` and thread it through; never touch `defaultURL` when a ledger
@@ -56677,6 +56795,7 @@ sleep/wake observation and no catch-up tick on wake — the moment a laptop is m
 exactly the moment monitoring is least likely to sample.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Add `capturedAt: Date` to `MonitorTick` (propagate `current.capturedAt`), and add `lastTickAttemptedAt` /
    `lastTickCompletedAt` / `skippedTickCount` to the scheduler. A surface must be able to say "last successful check: 14:32".
 2. Persist the latched change (and unacknowledged alerts) to disk so a restart cannot erase it — this is the other half of
@@ -56700,6 +56819,7 @@ they claim to guarantee they unblock.
 **Cross-ref. Delta:** KDNS-11 (`NetworkKeyState.swift:85-86`) introduced the close-to-unblock step; KTRU-05/06
 (`CommandRunner.swift:41-42`) introduced the second copy.
 **Fix(es):**
+
 1. Do not close the reader to unblock it. Escalate to `SIGKILL` (which closes the child's write end, so the reader sees EOF
    naturally) and let the read return on its own.
 2. If a forced unblock is still required, use `DispatchIO`/`readabilityHandler` with an explicit cancel, or `dup2` `/dev/null`
@@ -56714,6 +56834,7 @@ they claim to guarantee they unblock.
 **Criticality:** LOW — `scutil --dns` parsing flattens two distinct sections, drops mDNS blocks, and never models `Supplemental`
 **Location:** `macOS/Sources/SyxxKit/NetworkKeyState.swift:176-217`, `:131-140`
 **Issue:** Verified against live `scutil --dns` output on this machine (81 lines, VPN active):
+
 - The tool emits **two headed sections** — `DNS configuration` and `DNS configuration (for scoped queries)` — each restarting at
   `resolver #1`. The parser only flushes on `line.hasPrefix("resolver #")` (`:178-181`) and has no concept of the section header,
   so both sections are merged into one flat `[ScopedResolver]` and the same address appears multiple times with different
@@ -56730,6 +56851,7 @@ they claim to guarantee they unblock.
   resolver and is then used as the query target by `ContinuousMonitor.sampleDNSAndRecord` (`:201`, `resolvers.first`).
 **Cross-ref. Delta:** new. There is **no test** for this parser (see M8-04).
 **Fix(es):**
+
 1. Extract `parseScutilDNS(_ output: String) -> [ScopedResolver]` as a pure function, commit the live 81-line output as a
    fixture, and test against it — including the DoH/DoT variant.
 2. Track the section header and add `section: .primary | .scopedQueries` to `ScopedResolver`.
@@ -56758,6 +56880,7 @@ stream (M8-16), any diagnostic line containing `(`, `)`, `at` and `on` becomes a
 `tokens.first` (`:54`), so a host literally named `at` or `on` would mis-index the whole line.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Validate with the existing `IPClassifier` (already used by `NetworkKeyState.isUsableDNSServer`, `:238-246`) instead of
    hand-rolled octet checks, and reject entries whose "IP" does not parse.
 2. Validate the MAC with a regex (`^[0-9a-f]{1,2}(:[0-9a-f]{1,2}){5}$`) — note macOS prints MACs **without leading zeros**
@@ -58089,7 +58212,7 @@ stream (M8-16), any diagnostic line containing `(`, `)`, `at` and `on` becomes a
 
 ---
 
-## Summary
+## Summary (L58215)
 
 | ID | Title (short) | Sev | Platforms |
 |---|---|---|---|
@@ -58117,6 +58240,7 @@ stream (M8-16), any diagnostic line containing `(`, `)`, `at` and `on` becomes a
 **Count: 20** (9 High, 8 Medium, 3 Low).
 
 **Cross-cutting root causes** (each produces several of the above):
+
 1. **RDATA is interpreted without branching on `record.type`** — N1-03, N1-19, and the false
    negative in the union comparison.
 2. **Validation is applied to a normalized copy while the encoder uses the original** — N1-02
@@ -58163,6 +58287,7 @@ Two live callers are affected: `Syxx/Program.cs:664` (guided Portal flow) and
 The closest precedent, **B193** (`DELTAS-fixed.md:8`), is the macOS twin of this failure and is
 marked FIXED. **NEW — file a delta.**
 **Fix(es):**
+
 1. Implement the missing helper in `TracerouteRunner` — it is trivially recoverable from the
    documented contract at `TracerouteRunner.cs:11-12` ("`tracert` on Windows, `traceroute` on
    Linux/macOS") and from the CLI's own historical invocation recorded at
@@ -58173,13 +58298,14 @@ marked FIXED. **NEW — file a delta.**
 3. Investigate how an assembly-breaking edit reached HEAD on a branch (`matrix-cutover-phase3`)
    whose CI builds this exact csproj — either CI is not gating merges or its result was not read.
 **Code Sample:**
+
 ```
-27	        public static async Task<List<string>> TraceAsync(string target, int maxHops = 30, int waitMs = 1000)
-28	        {
-29	            var lines = new List<string>();
-30	            try
-31	            {
-32	                var (fileName, args) = GetTracerouteCommand(target, maxHops, waitMs);
+27         public static async Task<List<string>> TraceAsync(string target, int maxHops = 30, int waitMs = 1000)
+28         {
+29             var lines = new List<string>();
+30             try
+31             {
+32                 var (fileName, args) = GetTracerouteCommand(target, maxHops, waitMs);
 ```
 
 **FIXED 2026-07-30 (qwen-code).** TickOnceAsync added with DNS sampling and AnswerLedger recording, matching macOS tickOnce.
@@ -58201,19 +58327,20 @@ TickOnce(...)`, line 128) — it cannot query DNS at all — and the string `Ans
 `ContinuousMonitor.cs` exactly once, at line 134, and only to name the `TrustLoadResult` enum.
 
 Consequences, all user-visible:
-* On Windows the `AnswerLedger` is **never written by any production code path**. Repo-wide the only
+
+- On Windows the `AnswerLedger` is **never written by any production code path**. Repo-wide the only
   non-test uses are `Forget()` calls (`SyxxUI/Views/SettingsView.xaml.cs:83`,
   `Syxx/Commands/SentinelCommand.cs:30`) — the app ships a "forget my history" button for a history
   that is always empty. `~/.syxx/answer-ledger.json` (`Trust.cs:104-105`) is never created.
-* "Per-network DNS history" does not exist on Windows. The `AnswerLedger.History(domain)` and
+- "Per-network DNS history" does not exist on Windows. The `AnswerLedger.History(domain)` and
   `DriftsFor(domain)` APIs (`Trust.cs:63-73`) return empty for every domain, forever.
-* Windows can never raise the drift alert `"DNS answer changed for <domain>"` that macOS raises. The
+- Windows can never raise the drift alert `"DNS answer changed for <domain>"` that macOS raises. The
   two platforms report the **same `MonitorState` and the same `Summary` string** from strictly
   different amounts of evidence, and the summary at `ContinuousMonitor.cs:73` —
   `"No change to this network's DNS configuration since the last check."` — is emitted on Windows
   while zero DNS answers were ever looked at. A resolver that quietly changes what it answers for
   `apple.com`, with its IP unchanged, is invisible on Windows and alerted on macOS.
-* The Windows file header at `ContinuousMonitor.cs:28` still claims "Windows-parity twin owed on
+- The Windows file header at `ContinuousMonitor.cs:28` still claims "Windows-parity twin owed on
   macOS" — the direction of the debt is inverted; macOS shipped D-5 and Windows did not follow.
 
 Neither platform tests `TickOnce`/`tickOnce`: `Syxx.Tests/ContinuousMonitorTests.cs` has 8 tests, all
@@ -58226,6 +58353,7 @@ network + disk) is untestable by construction". So the divergence is invisible t
 `VantageComparer`) and `DELTAS-fixed.md:1582` (WINX-181) — are marked vetted/remediated and concern
 a different consumer. **NEW — file a delta (platform-parity, honesty spine #6).**
 **Fix(es):**
+
 1. Make `TickOnce` async (`Task<MonitorTick> TickOnceAsync`) and port `sampleDNSAndRecord` verbatim,
    including the injected `resolve` seam and injected `AnswerLedger` so the sampling logic is
    unit-testable without a network — the macOS design already provides both seams
@@ -58239,21 +58367,24 @@ a different consumer. **NEW — file a delta (platform-parity, honesty spine #6)
    equals the macOS one and that a fake resolver returning a changed answer produces exactly one
    drift alert.
 **Code Sample:**
+
 ```
-128	    public static MonitorTick TickOnce(string? snapshotPath = null, bool persist = true)
-129	    {
-132	        var (loadResult, previous) = Sentinel.LoadSnapshot(snapshotPath);
-133	        var current = NetworkConfigSnapshot.Capture();
+128     public static MonitorTick TickOnce(string? snapshotPath = null, bool persist = true)
+129     {
+132         var (loadResult, previous) = Sentinel.LoadSnapshot(snapshotPath);
+133         var current = NetworkConfigSnapshot.Capture();
 ...
-146	        var tick = Evaluate(previous, current);
-147	        if (persist) Sentinel.SaveSnapshot(current, snapshotPath);
-148	        return tick;
-149	    }
+146         var tick = Evaluate(previous, current);
+147         if (persist) Sentinel.SaveSnapshot(current, snapshotPath);
+148         return tick;
+149     }
 ```
+
 vs macOS:
+
 ```
-173	        let driftAlerts = await sampleDNSAndRecord(
-174	            resolvers: current.resolvers, resolve: resolve, ledger: ledger)
+173         let driftAlerts = await sampleDNSAndRecord(
+174             resolvers: current.resolvers, resolve: resolve, ledger: ledger)
 ```
 
 **FIXED 2026-07-30 (qwen-code).** SafeGetInterfaces now returns tri-state; VpnStatus returns Unknown on enumeration failure instead of No.
@@ -58274,7 +58405,7 @@ monitor.
 `Resolvers` (from `GetSystemDNSServers()`), `VpnActive` (`IsVPNActive()`), `DnsEncrypted`
 (`IsDNSEncrypted()`). Every one of them collapses "could not determine" into the negative:
 
-* `SafeGetInterfaces()` (`NetworkKeyState.cs:330-340`) swallows **any** exception from
+- `SafeGetInterfaces()` (`NetworkKeyState.cs:330-340`) swallows **any** exception from
   `NetworkInterface.GetAllNetworkInterfaces()` and returns `Array.Empty<NetworkInterface>()`.
   A WMI/IP-Helper failure, a denied token, or a transient adapter-reconfiguration therefore yields
   an empty resolver list, an empty interface list, and — via `VpnStatus()` — the terminal
@@ -58284,21 +58415,22 @@ monitor.
   type's own doc comment (`NetworkKeyState.cs:14-16`) says a probe error "must not be silently
   reported as 'no VPN'". The evidence string "No tunnel interfaces detected" is asserted from an
   enumeration that never happened.
-* `IsVPNActive()` (line 425) then narrows to `State == Yes`, and `IsDNSEncrypted()` (line 577)
+- `IsVPNActive()` (line 425) then narrows to `State == Yes`, and `IsDNSEncrypted()` (line 577)
   narrows `EncryptedDNSStatus()` to `State == Yes` — so `Unknown` and `No` become the same `false`
   in the snapshot. The `EncryptedDNSStatus` type deliberately carries an `Unknown` state and an
   `Evidence` string; both are discarded at the boundary into `Trust.cs`.
 
 `ContinuousMonitor` then reads those booleans as fact and escalates:
-* `ContinuousMonitor.cs:105-112` — `previous.VpnActive && !current.VpnActive` fires a
+
+- `ContinuousMonitor.cs:105-112` — `previous.VpnActive && !current.VpnActive` fires a
   `Severity.Warning` headlined **"Your VPN is no longer active."** with the detail "Traffic that you
   may expect to be tunnelled is not." Your VPN may be running perfectly; the adapter enumeration
   failed.
-* `ContinuousMonitor.cs:94-103` — `previous.DnsEncrypted && !current.DnsEncrypted` fires
+- `ContinuousMonitor.cs:94-103` — `previous.DnsEncrypted && !current.DnsEncrypted` fires
   **"Encrypted DNS stopped being used on this network."** / "Your lookups are now visible to the
   network." The transport may be unchanged and merely unverifiable this tick (a loopback forwarder
   appearing, `NetworkKeyState.cs:499-507`, produces exactly this).
-* `ContinuousMonitor.cs:114-118` — an empty resolver list versus a populated baseline fires
+- `ContinuousMonitor.cs:114-118` — an empty resolver list versus a populated baseline fires
   `Severity.Warning` "The DNS resolvers on this network changed." with the detail rendering as
   `"1.1.1.1, 8.8.8.8 -> "` (`Trust.cs:226-227`, `string.Join` over an empty list) — a trailing arrow
   into nothing, presented as an observed change.
@@ -58320,6 +58452,7 @@ specific case — the collapse now happens one layer up, at `IsDNSEncrypted()`'s
 exists — B146 is stale. No delta covers `VpnStatus()`'s missing `Unknown` path or the boolean
 snapshot fields. **NEW — file a delta.**
 **Fix(es):**
+
 1. Give `SafeGetInterfaces()` a tri-state return (`(bool enumerated, IEnumerable<NetworkInterface>)`
    or an `InterfaceEnumeration` record carrying the exception message) and thread it into
    `VpnStatus()`, `GetActiveInterfaces()`, and `GetScopedResolversFromNetworkInterfaces()`. An
@@ -58337,25 +58470,28 @@ snapshot fields. **NEW — file a delta.**
 5. Mirror all four on macOS (`Sentinel.swift:7-31`, `ContinuousMonitor.swift:117-147`) — the Swift
    snapshot has the identical `vpnActive: Bool` / `dnsEncrypted: Bool` collapse.
 **Code Sample:**
+
 ```
-330	        private static IEnumerable<NetworkInterface> SafeGetInterfaces()
-331	        {
-332	            try
-333	            {
-334	                return NetworkInterface.GetAllNetworkInterfaces();
-335	            }
-336	            catch
-337	            {
-338	                return Array.Empty<NetworkInterface>();
-339	            }
-340	        }
+330         private static IEnumerable<NetworkInterface> SafeGetInterfaces()
+331         {
+332             try
+333             {
+334                 return NetworkInterface.GetAllNetworkInterfaces();
+335             }
+336             catch
+337             {
+338                 return Array.Empty<NetworkInterface>();
+339             }
+340         }
 ```
+
 ```
-421	            return new VPNStatus { State = ConditionState.No, Evidence = "No tunnel interfaces detected" };
+421             return new VPNStatus { State = ConditionState.No, Evidence = "No tunnel interfaces detected" };
 ```
+
 ```
-183	                VpnActive = NetworkKeyState.IsVPNActive(),
-184	                DnsEncrypted = NetworkKeyState.IsDNSEncrypted()
+183                 VpnActive = NetworkKeyState.IsVPNActive(),
+184                 DnsEncrypted = NetworkKeyState.IsDNSEncrypted()
 ```
 
 **FIXED 2026-07-30 (qwen-code).** Unknown guard generalized to all platforms; Windows no longer falls through to plain-UDP verdict when transport undetermined.
@@ -58372,20 +58508,20 @@ Linux, so on Windows — the platform this file ships for — an unreadable regi
 definite verdict "plain UDP/53."** `EncryptedDNSStatusCore` ends with two branches:
 
 ```
-535	            if (OperatingSystem.IsLinux() && scoped.All(r => !r.Protocol.HasValue))
-536	            {
-537	                return new EncryptedDNSStatus
-538	                {
-539	                    State = ConditionState.Unknown,
-540	                    Evidence = "Encrypted-DNS status is unknown on this system; Syxx could not read the Linux resolver transport configuration"
-541	                };
-542	            }
-543	
-544	            return new EncryptedDNSStatus
-545	            {
-546	                State = ConditionState.No,
-547	                Evidence = $"Resolvers are plain IPs over UDP/53: {string.Join(", ", servers)}"
-548	            };
+535             if (OperatingSystem.IsLinux() && scoped.All(r => !r.Protocol.HasValue))
+536             {
+537                 return new EncryptedDNSStatus
+538                 {
+539                     State = ConditionState.Unknown,
+540                     Evidence = "Encrypted-DNS status is unknown on this system; Syxx could not read the Linux resolver transport configuration"
+541                 };
+542             }
+543 
+544             return new EncryptedDNSStatus
+545             {
+546                 State = ConditionState.No,
+547                 Evidence = $"Resolvers are plain IPs over UDP/53: {string.Join(", ", servers)}"
+548             };
 ```
 
 `Protocol` is populated on Windows only by `HasConfiguredDoHTemplate` (`NetworkKeyState.cs:164`),
@@ -58411,6 +58547,7 @@ delta records the Linux-only gating of the `Unknown` branch, nor the exception-t
 in `HasConfiguredDoHTemplate`. Sibling W-agent has independently confirmed the
 `HasConfiguredDoHTemplate` half. **NEW — file a delta (or fold into the sibling's).**
 **Fix(es):**
+
 1. Change `HasConfiguredDoHTemplate` to return `ConditionState` (or `bool?`): `No` for
    key-absent/flags-zero, **`Unknown`** for the `catch` at line 570 and for
    `!OperatingSystem.IsWindows()` at line 561, carrying the reason string.
@@ -58437,25 +58574,25 @@ delivered — the exact bug macOS already fixed, never ported.** The Swift twin 
 remediation with a five-line comment explaining it:
 
 ```
-57	        // `tick()` is an await point: `stop()` can land while it is in flight, having already
-58	        // passed the loop's `Task.isCancelled` check. Committing here anyway meant one further
-59	        // tick was counted, latched, and delivered to `onTick` AFTER the user stopped monitoring
-60	        // — the app kept reporting from a round the user had ended. Discard a result that
-61	        // finished after cancellation; the query is already spent, but it must not be surfaced.
-62	        if Task.isCancelled { return nil }
+57         // `tick()` is an await point: `stop()` can land while it is in flight, having already
+58         // passed the loop's `Task.isCancelled` check. Committing here anyway meant one further
+59         // tick was counted, latched, and delivered to `onTick` AFTER the user stopped monitoring
+60         // — the app kept reporting from a round the user had ended. Discard a result that
+61         // finished after cancellation; the query is already spent, but it must not be surfaced.
+62         if Task.isCancelled { return nil }
 ```
 
 Windows has no equivalent. `RunOnce` (lines 64-95) runs `_tick()` inside the lock and then commits
 unconditionally:
 
 ```
-86	            TickCount++;
-87	            LastTick = result;
-88	            if (result.State == MonitorState.Changed)
-89	            {
-92	                LastChange = result;
-93	            }
-94	            _onTick?.Invoke(result);
+86             TickCount++;
+87             LastTick = result;
+88             if (result.State == MonitorState.Changed)
+89             {
+92                 LastChange = result;
+93             }
+94             _onTick?.Invoke(result);
 ```
 
 `Stop()` (lines 132-138) sets `IsRunning = false` and cancels the CTS, but a `RunOnce` already past
@@ -58477,6 +58614,7 @@ open, adjacent, and about the *reported* state rather than the committed result.
 functional half F035 does not cover, and it is a **platform-parity regression**: the macOS fix
 exists and was not twinned (honesty spine #6). **NEW — file a delta; consider merging with F035.**
 **Fix(es):**
+
 1. Capture the token in `RunOnce` and re-check it after `_tick()` returns, before line 86:
    `if (token.IsCancellationRequested) return null;` — a direct port of `MonitorScheduler.swift:62`,
    including the comment, so the reason survives the next refactor.
@@ -58512,9 +58650,9 @@ from it.
 The in-code justification for the guard is itself wrong:
 
 ```
-70	                // We use a separate bool rather than relying on Monitor.TryEnter because the lock
-71	                // IS the guard: RunOnce is called from the loop on the same thread, so a plain bool
-72	                // is sufficient here (no concurrent callers can enter the locked region).
+70                 // We use a separate bool rather than relying on Monitor.TryEnter because the lock
+71                 // IS the guard: RunOnce is called from the loop on the same thread, so a plain bool
+72                 // is sufficient here (no concurrent callers can enter the locked region).
 ```
 
 `RunOnce` is public (line 64) and documented as the "Check now" button path (line 60). The GUI
@@ -58526,11 +58664,12 @@ and the unsynchronized lines 86-94 are the part the lock does not cover.)
 The consumer is worse. `AppViewModel.cs:78-79` states "marshalling to the UI thread is the
 subscriber's job — the scheduler ticks on a background thread" and then, in the very next
 statement, the `onTick` lambda it passes to the scheduler (lines 85-108) does none:
-* line 87-88 assign `LastMonitorTick` / `LastMonitorChange`, `[ObservableProperty]`-generated setters
+
+- line 87-88 assign `LastMonitorTick` / `LastMonitorChange`, `[ObservableProperty]`-generated setters
   that raise `PropertyChanged` synchronously on the calling thread — a WinUI 3 `x:Bind` target
   updated off the UI thread, which throws `COMException (RPC_E_WRONG_THREAD)` or corrupts binding
   state;
-* lines 98-104 construct and `Show()` a `Windows.UI.Notifications.ToastNotification` from the
+- lines 98-104 construct and `Show()` a `Windows.UI.Notifications.ToastNotification` from the
   thread-pool thread; the `catch { }` at line 106 then swallows the failure, so on the tick that
   *does* detect a change the user may silently receive no notification at all — the one path the
   feature exists for.
@@ -58544,6 +58683,7 @@ the Windows comment merely asserts.
 only **F035** (`DELTAS.md:23446`), which is about the `IsRunning` boolean's missing states, not about
 synchronization or thread affinity. **NEW — file a delta.**
 **Fix(es):**
+
 1. Move lines 86-94 inside `_runLock`, or make the four properties `volatile`/`Interlocked`-backed;
    `TickCount++` becomes `Interlocked.Increment`.
 2. Give `MonitorScheduler` an optional `SynchronizationContext`/`Action<Action> post` seam captured
@@ -58567,14 +58707,14 @@ synchronization or thread affinity. **NEW — file a delta.**
 platforms disagree about whether a corrupt baseline is even noticed.**
 
 ```
-130	        // D081: Distinguish "corrupt file" from "no file" — a corrupt baseline must not be
-131	        // silently treated as "first run" (which would overwrite the damaged file).
+130         // D081: Distinguish "corrupt file" from "no file" — a corrupt baseline must not be
+131         // silently treated as "first run" (which would overwrite the damaged file).
 ...
-134	        if (loadResult == AnswerLedger.TrustLoadResult.Corrupted)
-135	        {
-136	            if (persist) Sentinel.SaveSnapshot(current, snapshotPath);
-137	            return new MonitorTick(
-138	                MonitorState.BaselineEstablished,
+134         if (loadResult == AnswerLedger.TrustLoadResult.Corrupted)
+135         {
+136             if (persist) Sentinel.SaveSnapshot(current, snapshotPath);
+137             return new MonitorTick(
+138                 MonitorState.BaselineEstablished,
 ```
 
 Line 136 overwrites the damaged file — the exact action lines 130-131 exist to prevent — and line
@@ -58607,6 +58747,7 @@ macOS.
 inverts the intent, and the macOS `Sentinel`/`HomeBaseline` loaders were never converted to the
 tri-state at all. **RE-OPEN D081 for (a) `ContinuousMonitor.cs:136` and (b) the macOS twin.**
 **Fix(es):**
+
 1. Delete line 136. Do not persist over a corrupt baseline. If a fresh baseline is wanted, write it
    only after moving the damaged file aside (`sentinel-snapshot.json.corrupt-<utc>`), and say so in
    the alert.
@@ -58639,12 +58780,13 @@ server identity, no network profile GUID.** `Sentinel.DefaultPath` (line 240-241
 network.
 
 Every user-visible string then over-claims:
-* `ContinuousMonitor.cs:62` — "Baseline recorded for **this network**."
-* `ContinuousMonitor.cs:73` — "No change to **this network's** DNS configuration since the last
+
+- `ContinuousMonitor.cs:62` — "Baseline recorded for **this network**."
+- `ContinuousMonitor.cs:73` — "No change to **this network's** DNS configuration since the last
   check."
-* `ContinuousMonitor.cs:83` — "**This network's** DNS configuration changed …"
-* `ContinuousMonitor.cs:99-101` — "Encrypted DNS stopped being used **on this network**."
-* `ContinuousMonitor.cs:117` — "The DNS resolvers **on this network** changed."
+- `ContinuousMonitor.cs:83` — "**This network's** DNS configuration changed …"
+- `ContinuousMonitor.cs:99-101` — "Encrypted DNS stopped being used **on this network**."
+- `ContinuousMonitor.cs:117` — "The DNS resolvers **on this network** changed."
 
 Walking from home Wi-Fi to a café produces a `ResolversChanged` + `InterfacesChanged` diff and a
 `Severity.Warning` alert asserting that the resolvers *on this network* changed. They did not; the
@@ -58670,6 +58812,7 @@ identity. `DELTAS-fixed.md:1549` (WINX-148, "no historical LAN baseline is saved
 device churn cannot be distinguished from a first-time scan") is the LAN-side cousin and is closed.
 **NEW — file a delta (affects both platforms).**
 **Fix(es):**
+
 1. Add a `NetworkIdentity` to `NetworkConfigSnapshot`: interface GUID + gateway IP + gateway MAC
    (from the ARP table Syxx already reads) + Wi-Fi SSID/BSSID where available. Gateway MAC is the
    strongest cheap discriminator and is exactly what an evil-twin AP cannot trivially forge in
@@ -58704,8 +58847,8 @@ dump" (`NetworkKeyState.cs:110-112`, the W10 remediation, implemented at line 11
 `.OrderBy(r => r.IsScoped ? 1 : 0)`). `NetworkConfigSnapshot.Capture` then does:
 
 ```
-174	            var resolvers = NetworkKeyState.GetSystemDNSServers();
-175	            resolvers.Sort(StringComparer.Ordinal);
+174             var resolvers = NetworkKeyState.GetSystemDNSServers();
+175             resolvers.Sort(StringComparer.Ordinal);
 ```
 
 The ordinal sort destroys that ordering (and sorts IPv4 addresses lexicographically, so `10.0.0.1`
@@ -58727,6 +58870,7 @@ nothing. `DELTAS-fixed.md:1372` (MACX-172, "answer sets are not normalized or so
 checks … harmless CDN ordering can look like tampering") is the *opposite* concern, about
 `AnswerLedger` rdata, not about resolver precedence. **NEW — file a delta (both platforms).**
 **Fix(es):**
+
 1. Delete the sort at `Trust.cs:175` and preserve `GetSystemDNSServers()`'s deliberate order; the
    same for `Sentinel.swift:26`.
 2. Report an order-only change as its own `ConfigChangeKind.ResolverPriorityChanged` with
@@ -58771,6 +58915,7 @@ unlocked mutable arrays; concurrent record races. | AGREE". The macOS half was i
 permissions/atomicity half has no delta on either platform. **RE-OPEN KTRU-12 for Windows; file a
 new delta for atomic + ACL-restricted writes.**
 **Fix(es):**
+
 1. Add a `private readonly object _lock` to `AnswerLedger` and guard `Record`, `DetectDrift`,
    `History`, `DriftsFor`, `Load`, `Save`, `PruneAged`, `Forget`; return defensive copies from
    `Entries`/`Drifts` (lines 39-40) rather than live list references.
@@ -58793,8 +58938,8 @@ new delta for atomic + ACL-restricted writes.**
 channel with a different meaning — and shipped into the synthesis inputs with every field blank.**
 
 ```
-950	                var changes = Sentinel.Diff(previous, current);
-951	                inputs.Drifts = changes.Select(c => new AnswerDrift { Domain = "", QueryType = "A", PreviousAnswer = "", NewAnswer = "", Resolver = c.Detail, DetectedAt = DateTime.UtcNow }).ToList();
+950                 var changes = Sentinel.Diff(previous, current);
+951                 inputs.Drifts = changes.Select(c => new AnswerDrift { Domain = "", QueryType = "A", PreviousAnswer = "", NewAnswer = "", Resolver = c.Detail, DetectedAt = DateTime.UtcNow }).ToList();
 ```
 
 `AnswerDrift` is defined (`Trust.cs:24-32`) and produced (`Trust.cs:75-91`) to mean exactly one
@@ -58820,6 +58965,7 @@ wrong on Windows — but it concerns the *omission* of a drift, not the fabricat
 remediation (extraction into `WitnessTestifyPlanner`) did not cover this call site.
 **NEW — file a delta.**
 **Fix(es):**
+
 1. Delete line 951. Config changes already flow to the user through the `ConfigChange` list printed
    at lines 956-957; they must not be re-expressed as answer drifts.
 2. If synthesis genuinely needs config drift as an input, give `SectionInputs` a typed
@@ -58840,9 +58986,9 @@ remediation (extraction into `WitnessTestifyPlanner`) did not cover this call si
 all three tri-state facts as binary certainties:
 
 ```
-38	            Console.WriteLine($"  resolvers          : {(current.Resolvers.Count == 0 ? "(none detected)" : string.Join(", ", current.Resolvers))}");
-40	            Console.WriteLine($"  VPN active         : {(current.VpnActive ? "yes" : "no")}");
-41	            Console.WriteLine($"  DNS encrypted      : {(current.DnsEncrypted ? "yes" : "no")}");
+38             Console.WriteLine($"  resolvers          : {(current.Resolvers.Count == 0 ? "(none detected)" : string.Join(", ", current.Resolvers))}");
+40             Console.WriteLine($"  VPN active         : {(current.VpnActive ? "yes" : "no")}");
+41             Console.WriteLine($"  DNS encrypted      : {(current.DnsEncrypted ? "yes" : "no")}");
 ```
 
 Per [W7-03] and [W7-04], `false` here also means "adapter enumeration failed" and "DoH registry
@@ -58851,12 +58997,12 @@ unreadable"; `"(none detected)"` also means "we could not enumerate". The user i
 renderer** — `Program.cs:971-976`:
 
 ```
-971	        static string TriLabel(ConditionState s) => s switch
-972	        {
-973	            ConditionState.Yes => "🔴 active/yes",
-974	            ConditionState.No => "🟢 inactive/no",
-975	            _ => "❓ unknown"
-976	        };
+971         static string TriLabel(ConditionState s) => s switch
+972         {
+973             ConditionState.Yes => "🔴 active/yes",
+974             ConditionState.No => "🟢 inactive/no",
+975             _ => "❓ unknown"
+976         };
 ```
 
 `TriLabel` is used elsewhere in the guided flow but not here, because `NetworkConfigSnapshot` has
@@ -58871,6 +59017,7 @@ trustworthiness, which no part of this command measured.
 `ConditionState`/`TriLabel` machinery exists and is bypassed. **NEW — file a delta (or fold into
 [W7-03]).**
 **Fix(es):**
+
 1. After [W7-03] makes the snapshot fields `ConditionState`, render them through `TriLabel` (or a
    Kit-level shared formatter so CLI and GUI cannot disagree).
 2. Distinguish `"(none detected)"` from `"(could not read)"` on line 38.
@@ -58891,14 +59038,14 @@ trustworthiness, which no part of this command measured.
 `true` and `LastTick` keeps showing the last good result forever.**
 
 ```
-76	                try
-77	                {
-78	                    result = _tick();
-79	                }
-80	                finally
-81	                {
-82	                    _inFlight = false;
-83	                }
+76                 try
+77                 {
+78                     result = _tick();
+79                 }
+80                 finally
+81                 {
+82                     _inFlight = false;
+83                 }
 ```
 
 The `try` has **no `catch`** — the `finally` only clears the guard. An exception from `_tick()`
@@ -58930,6 +59077,7 @@ Bool Hides Starting/Stopping/Crashed States", Location `Windows/Syxx.Kit/Monitor
 that produces it and is not covered by any delta.** F035 is OPEN. **Extend F035 or file a new
 delta.**
 **Fix(es):**
+
 1. Wrap `_tick()` in `catch (Exception ex)`, record the failure into a new
    `MonitorState`/`SchedulerState.Failed` with the exception message as evidence, surface it through
    `_onTick`, and let the loop continue (a transient disk error must not end monitoring).
@@ -58956,11 +59104,11 @@ trace that completed, and the CLI then invites the user to read the truncation a
 loop, keeping the hops collected so far:
 
 ```
-52	                    if (await Task.WhenAny(readLine, deadline) == deadline)
-53	                    {
-54	                        try { process.Kill(entireProcessTree: true); } catch { }
-55	                        break; // partial hops already collected in `lines`
-56	                    }
+52                     if (await Task.WhenAny(readLine, deadline) == deadline)
+53                     {
+54                         try { process.Kill(entireProcessTree: true); } catch { }
+55                         break; // partial hops already collected in `lines`
+56                     }
 ```
 
 The doc comment at lines 15-17 states the intent correctly — "Partial output (some hops before a
@@ -58983,6 +59131,7 @@ an empty trace are the same to the caller.
 **Cross-ref. Delta:** No delta ID matches. Grep for `TracerouteRunner` across the three delta files
 returns zero hits (see also [W7-01]). **NEW — file a delta.**
 **Fix(es):**
+
 1. Return a result type, not a list: `TraceResult { IReadOnlyList<string> Hops, TraceStatus Status
    (Completed | TruncatedByDeadline | LaunchFailed | NoOutput), string? Diagnostic }`.
 2. Callers must label a truncated trace explicitly ("Syxx stopped the trace after N seconds — the
@@ -59008,9 +59157,9 @@ app is not being watched is normalized permanently and reported to nobody.**
 `TickOnce` persists unconditionally after every evaluation:
 
 ```
-146	        var tick = Evaluate(previous, current);
-147	        if (persist) Sentinel.SaveSnapshot(current, snapshotPath);
-148	        return tick;
+146         var tick = Evaluate(previous, current);
+147         if (persist) Sentinel.SaveSnapshot(current, snapshotPath);
+148         return tick;
 ```
 
 So tick *N* reports `Changed` and simultaneously writes the changed configuration as the new
@@ -59022,11 +59171,12 @@ one tick, 900 seconds by default (`MonitorScheduler.cs:50`).
 The only thing that survives that window is `MonitorScheduler.LastChange` (lines 30-34, 88-92), an
 in-memory field. It is **never persisted** — nothing in `MonitorScheduler` or `ContinuousMonitor`
 writes it to disk, and `AcknowledgeChange()` (line 141) simply nulls it. Therefore:
-* App restart, crash, sign-out, or reboot → the latched change is gone, while
+
+- App restart, crash, sign-out, or reboot → the latched change is gone, while
   `~/.syxx/sentinel-snapshot.json` already contains the attacker's resolver as the trusted baseline.
-* The alert exists only if the user was running the app at the moment of the tick and either saw the
+- The alert exists only if the user was running the app at the moment of the tick and either saw the
   toast (`AppViewModel.cs:94-107` — itself unreliable, [W7-09]) or opened the window before restart.
-* From then on Syxx affirmatively reports the compromised configuration as unchanged and stable,
+- From then on Syxx affirmatively reports the compromised configuration as unchanged and stable,
   forever, on every surface (`ContinuousMonitor.cs:73`, `SentinelCommand.cs:101`).
 
 `HomeBaseline` is the mechanism that would survive this — it is explicitly documented as the
@@ -59046,6 +59196,7 @@ macOS is identical (`ContinuousMonitor.swift:176`, `lastChange` in-memory at
 (WINX-148, "no historical LAN baseline is saved by the CLI … device churn cannot be distinguished
 from a first-time scan") is the LAN analogue and is closed. **NEW — file a delta (both platforms).**
 **Fix(es):**
+
 1. Persist the alert history, not just the baseline: an append-only
    `~/.syxx/monitor-events.json` recording every `Changed` tick (timestamp, changes, alerts,
    acknowledged flag). `MonitorScheduler.LastChange` should be rehydrated from it at construction so
@@ -59073,7 +59224,7 @@ from a first-time scan") is the LAN analogue and is closed. **NEW — file a del
 **(a) Nondeterministic choice of the "previous" answer.**
 
 ```
-77	            var firstPublic = comparison.PublicResolverOutcomes.Values.FirstOrDefault();
+77             var firstPublic = comparison.PublicResolverOutcomes.Values.FirstOrDefault();
 ```
 
 `PublicResolverOutcomes` is a `Dictionary<string, ResolverQueryOutcome>`
@@ -59107,6 +59258,7 @@ field derivation "verbatim from the former inlined block" (lines 69-70) — incl
 Grep finds no delta covering the `AnswerDrift` semantic misuse. **RE-OPEN D100 for
 `WitnessTestifyPlanner`; file a new delta for the semantics.**
 **Fix(es):**
+
 1. Replace `Values.FirstOrDefault()` with a deterministic selection — order by resolver key
    (`OrderBy(kv => kv.Key, StringComparer.Ordinal)`) or, better, reuse the stable
    representative-record logic already written at `SignedEvidencePayload.cs:149`. Mirror in
@@ -59135,7 +59287,8 @@ Verified by grep: `IsPartial`/`isPartial` occurs only inside `LanCartography.cs`
 278, ctor 280/284, three sets at 361/364/372). No file outside the class reads it.
 
 The two callers:
-* `LanCommand.cs:52-56` —
+
+- `LanCommand.cs:52-56` —
   `if (snapshot.Devices.Count == 0) { Console.WriteLine("No devices found in the ARP cache. (Try
   generating traffic first, e.g. ping your gateway.)"); return; }`
   This is the message printed when `arp` **failed to launch** (line 361, the very line annotated
@@ -59144,7 +59297,7 @@ The two callers:
   generate some traffic — for a scan that never happened. The `try/catch` at `LanCommand.cs:34-38`
   that was meant to report the failure is unreachable for this case, because `Snapshot` already
   swallowed the exception and returned the flagged-but-ignored empty snapshot.
-* `Program.cs:645` — prints `"• On-link devices  : {snapshot.Summary.DeviceCount}"`, i.e. `0`, with
+- `Program.cs:645` — prints `"• On-link devices  : {snapshot.Summary.DeviceCount}"`, i.e. `0`, with
   no indication the scan failed, inside the guided Portal output. Its `catch` at line 652 is
   likewise unreachable for the same reason.
 
@@ -59160,6 +59313,7 @@ introduced this flag. The producer half landed; the consumer half never did, so 
 purpose ("error collapse fix") is not achieved in any user-visible output. **RE-OPEN D081 for the
 LAN consumers** (this is the third D081 gap in this audit — see also [W7-10]).
 **Fix(es):**
+
 1. `LanCommand` must branch on the snapshot status **before** `Devices.Count`: an unreadable or
    timed-out scan prints "Syxx could not read the ARP table (<reason>) — this is not evidence that
    your LAN is empty." Same in `Program.cs:645`.
@@ -59178,20 +59332,20 @@ LAN consumers** (this is the third D081 gap in this audit — see also [W7-10]).
 **Location:** `Windows/dotNET/Syxx.Kit/Trust/MonitorScheduler.cs:104-138`
 **Issue:** Lifecycle defects in `Start`/`Stop`, beyond the cancellation-commit bug in [W7-08]:
 
-* **`CancellationTokenSource` disposed under a live consumer.** `Stop()` calls `_cts.Cancel()` then
+- **`CancellationTokenSource` disposed under a live consumer.** `Stop()` calls `_cts.Cancel()` then
   `_cts.Dispose()` (lines 135-136) without waiting for the loop task. If the loop is between the
   `catch (OperationCanceledException)` at line 121 and the `token.IsCancellationRequested` read at
   line 125 — or is entering `Task.Delay(_interval, token)` at line 119 — it touches a disposed CTS's
   token and throws `ObjectDisposedException`, which is unobserved (the task is discarded at line
   113) and kills the loop silently. Combined with [W7-16], `IsRunning` then reports `true` forever.
-* **`Start()` after `Stop()` can run two loops.** `Start` guards only on `IsRunning` (line 106),
+- **`Start()` after `Stop()` can run two loops.** `Start` guards only on `IsRunning` (line 106),
   which `Stop` clears immediately (line 134) while the previous loop may still be in `RunOnce`. A
   quick off/on toggle therefore creates a second `Task.Run` loop while the first is alive; both call
   `RunOnce`, both write `TickCount`/`LastTick` unsynchronized ([W7-09]), and both persist the
   Sentinel snapshot. The class comment claims ticks are "Guarded so two ticks never overlap and stomp
   the snapshot file" (lines 60-61) — the `_runLock` is an instance field so it does serialize them,
   but the tick *rate* silently doubles and every subsequent toggle adds another loop.
-* **Not `IDisposable`.** The class owns a `CancellationTokenSource` and a background task but
+- **Not `IDisposable`.** The class owns a `CancellationTokenSource` and a background task but
   implements no disposal, so a `MonitorScheduler` that is dropped without `Stop()` (e.g. the
   lazily-created `AppViewModel._monitor`, `SyxxUI/ViewModels/AppViewModel.cs:82-83`) leaks the CTS
   and leaves the loop running for the process lifetime — still ticking, still writing
@@ -59204,6 +59358,7 @@ cancellation is cooperative with no disposable resource (`MonitorScheduler.swift
 The disposal race, the double-loop, and the missing `IDisposable` are not recorded.
 **Extend F035 or file a new delta.**
 **Fix(es):**
+
 1. Store the loop `Task`; make `Stop()` (or a new `StopAsync()`) cancel, await, and only then
    dispose the CTS. Do not dispose a CTS whose token may still be read.
 2. Guard `Start()` on the loop task's completion, not on `IsRunning`, so a restart cannot overlap
@@ -59214,13 +59369,14 @@ The disposal race, the double-loop, and the missing `IDisposable` are not record
 
 ---
 
-## Summary
+## Summary (L59366)
 
 23 findings. By criticality: **CRITICAL 3** ([W7-01], [W7-02], [W7-03]),
 **HIGH 11** ([W7-04]–[W7-09], [W7-10], [W7-11], [W7-16], [W7-19], [W7-21]),
 **MEDIUM 9** ([W7-12]–[W7-15], [W7-17], [W7-18], [W7-20], [W7-22], [W7-23]).
 
 Recurring shapes:
+
 1. **Undeterminable rendered as a definite negative** — the shape the sibling W-agent flagged, found
    five more times in this scope: `SafeGetInterfaces` → "No tunnel interfaces detected" [W7-03];
    the Linux-only `Unknown` gate in `EncryptedDNSStatusCore` [W7-04]; empty `arp` parse → complete
@@ -59256,12 +59412,14 @@ is evaluated by `smd` **when the helper is blessed**, not when a Mach connection
 `/Library/PrivilegedHelperTools/com.milkandgin.deepsyxx` is registered, *any* local process running as *any* user can
 `NSXPCConnection(machServiceName: "com.milkandgin.deepsyxx", options: .privileged)` and call the whole protocol as root.
 The protocol surface (`SyxxKit/PrivilegedHelperProtocol.swift:5-26`) is a complete attack kit:
+
 - `setDNSServers(servers:)` — repoint the machine's resolver to an attacker's server. In a **DNS-integrity product** this is
   the exact primitive the app exists to detect, handed out for free.
 - `installPfRules(anchor:rules:)` — arbitrary attacker-supplied pf ruleset loaded as root, with an attacker-supplied anchor name.
 - `startCageCapture(outputPath:ownerUID:ownerGID:)` — root-chosen output path and root-chosen chown target.
 **Cross-ref. Delta:** new — no existing delta covers helper connection authentication.
 **Fix(es):**
+
 1. In `listener(_:shouldAcceptNewConnection:)`, obtain `newConnection.auditToken`, build a `SecCode` via
    `SecCodeCopyGuestWithAttributes(nil, [kSecGuestAttributeAudit: tokenData], [], &code)`, and `SecCodeCheckValidity` it against a
    `SecRequirement` compiled from the same string as `SMAuthorizedClients` (`identifier "com.milkandgin.syxx" and anchor apple
@@ -59271,6 +59429,7 @@ The protocol surface (`SyxxKit/PrivilegedHelperProtocol.swift:5-26`) is a comple
 3. Narrow the protocol: `setDNSServers` should accept only loopback/`Empty`, `installPfRules` should take a fixed anchor name and
    a **port number**, not a free-form ruleset. The helper must construct the rule text itself.
 **Code Sample:**
+
 ```swift
 // DeepSyxx/main.swift:183-201
 class DeepSyxxDelegate: NSObject, NSXPCListenerDelegate {
@@ -59301,12 +59460,14 @@ class DeepSyxxDelegate: NSObject, NSXPCListenerDelegate {
 
 (a) **No `__TEXT,__launchd_plist` section.** `SMJobBless` requires the helper executable to *embed* its launchd plist in
 `__TEXT,__launchd_plist`. `Package.swift:81-88` embeds only `__info_plist`. Verified on the shipped binary:
+
 ```
 $ otool -l macOS/Syxx.app/Contents/Library/LaunchServices/com.milkandgin.deepsyxx | grep -c __launchd_plist
 0
 $ otool -l ... | grep -c __info_plist
 1
 ```
+
 `bundle-app.sh:27` instead copies `com.milkandgin.deepsyxx.plist` *next to* the executable in
 `Contents/Library/LaunchServices/`, which `SMJobBless` does not read. `SMJobBless` will fail with
 `kSMErrorJobPlistNotFound` (`SMJobBless(...)` at `PrivilegeManager.swift:73-78` returns false), so
@@ -59324,6 +59485,7 @@ Combined effect: **every privileged operation in the app is dead.** Cage capture
 (`PrivilegeManager.swift:138`) can never succeed on a real machine.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Add the launchd-plist section to the `DeepSyxx` target's linker settings alongside the existing `__info_plist`:
    `"-Xlinker","-sectcreate","-Xlinker","__TEXT","-Xlinker","__launchd_plist","-Xlinker","Sources/DeepSyxx/com.milkandgin.deepsyxx.plist"`.
 2. Replace `NSXPCListener.service()` with `NSXPCListener(machServiceName: "com.milkandgin.deepsyxx")`, `listener.resume()`,
@@ -59332,6 +59494,7 @@ Combined effect: **every privileged operation in the app is dead.** Cage capture
    `otool -l "$HELPER" | grep -q __launchd_plist` is false — this class of defect is silent otherwise.
 4. Strongly consider migrating to `SMAppService.daemon(plistName:)` (SMJobBless is deprecated since macOS 13 — see M7-04 sample).
 **Code Sample:**
+
 ```swift
 // DeepSyxx/main.swift:206-212
 let delegate = DeepSyxxDelegate()
@@ -59342,6 +59505,7 @@ listener.resume()
 // Keep the service running
 RunLoop.main.run()                          // <- unreachable
 ```
+
 ```swift
 // Package.swift:79-90 — only __info_plist is embedded
 .unsafeFlags([
@@ -59361,6 +59525,7 @@ RunLoop.main.run()                          // <- unreachable
 **Issue:** `bundle-app.sh` never invokes `codesign`, `productsign`, `notarytool`, `stapler`, or `spctl`. It emits a DMG and prints a
 notarization *suggestion* at `:72`. The resulting artifact is ad-hoc, linker-signed only. Verified against the checked-in
 `macOS/Syxx.app` produced by this script:
+
 ```
 $ codesign -dv --entitlements - macOS/Syxx.app
 Identifier=syxx-gui                          # NOT com.milkandgin.syxx
@@ -59376,7 +59541,9 @@ Signature=adhoc ; TeamIdentifier=not set
 $ spctl --assess --type exec -vv macOS/Syxx.app
 macOS/Syxx.app: code has no resources but signature indicates they must be present
 ```
+
 Consequences, all confirmed:
+
 - **Gatekeeper refuses it.** Unnotarized, unstapled, ad-hoc-signed, and structurally invalid (`Sealed Resources=none`).
 - **`SMPrivilegedExecutables` can never be satisfied.** `bundle-app.sh:55-59` writes the requirement
   `identifier "com.milkandgin.deepsyxx" and anchor apple generic and certificate leaf[subject.OU] = "994XAF8MYH"`, but the
@@ -59393,6 +59560,7 @@ Consequences, all confirmed:
 - `bundle-app.sh:70` pipes `hdiutil` stderr to `/dev/null`, discarding the diagnosis of any DMG failure.
 **Cross-ref. Delta:** new (packaging lane).
 **Fix(es):**
+
 1. Add a signing stage: sign inside-out (helper → CLI → resource bundles → `.app`) with
    `codesign --force --options runtime --timestamp --entitlements <file> --sign "Developer ID Application: … (994XAF8MYH)"`.
    Sign the helper with `-i com.milkandgin.deepsyxx` and the app with `-i com.milkandgin.syxx` so the identifiers match the
@@ -59403,6 +59571,7 @@ Consequences, all confirmed:
    owner task), or have `EncryptedDNSConfigurator` fail closed with a clearly-labelled build-capability state.
 4. Remove `2>/dev/null` from `hdiutil` and `|| true` from the font copies; make a missing font a hard failure.
 **Code Sample:**
+
 ```bash
 # bundle-app.sh:64-73 — the entire "release" tail. No codesign. No notarize. No verify.
 touch "$APP"   # nudge Finder/LaunchServices to pick up the new icon
@@ -59428,16 +59597,19 @@ directly triggers an implicit `String` → `UnsafePointer<CChar>` conversion who
 freed memory to decide which authorization right to request. The behaviour is undefined: it may request a garbage right, request
 nothing, or read attacker-influenceable heap contents. This is the security-critical path — the right name is what tells
 `authd` (and the user's prompt) what is being authorized. The Swift 6 compiler flags it explicitly:
+
 ```
 PrivilegeManager.swift:53:52: warning: cannot pass 'String' to parameter; argument 'name' must be a pointer
   that outlives the call to 'init(name:valueLength:value:flags:)' [#TemporaryPointers]
   note: use the 'withCString' method on String in order to explicitly convert argument to pointer valid for a defined scope
 PrivilegeManager.swift:73:27: warning: 'SMJobBless' was deprecated in macOS 13.0: Please use SMAppService instead
 ```
+
 The package pins `.macOS(.v14)`, so the `SMJobBless` deprecation is unconditional.
 **Cross-ref. Delta:** new. Related: SwiftLint runs `--strict` in CI (`ci.yml:137-141`) but does not gate on compiler warnings, so
 this shipped green.
 **Fix(es):**
+
 1. Wrap the whole `AuthorizationCreate` in `kSMRightModifySystemDaemons.withCString { name in ... }` so the pointer outlives the
    call, or use a `strdup`'d buffer freed after `AuthorizationCreate`.
 2. Migrate to `SMAppService.daemon(plistName:).register()`, which needs no `AuthorizationRef` at all and is the supported API on
@@ -59445,6 +59617,7 @@ this shipped green.
 3. Add `-warnings-as-errors` (or at minimum a CI grep for `#TemporaryPointers`) to the Swift release leg so pointer-lifetime
    warnings in privileged code cannot be merged.
 **Code Sample:**
+
 ```swift
 // PrivilegeManager.swift:51-63
 var authRef: AuthorizationRef?
@@ -59474,15 +59647,18 @@ i.e. **`$PATH` as inherited from the environment**. The result is handed straigh
 (`UnboundManager.swift:415`), `chownRecursively` (`:680`) and `MacOSPfRedirect.install` (`:450`) all `guard isRoot`. So when this
 flow runs with `getuid() == 0`, whoever controls `PATH` — or an earlier directory in it — chooses which binary runs as root.
 The candidate list is not safe either. On this very host:
+
 ```
 $ ls -ld /opt/homebrew/sbin
 drwxrwxr-x  10 masterrabbit  admin  320 /opt/homebrew/sbin
 ```
+
 `/opt/homebrew/sbin` is **user- and admin-group-writable**, and `/usr/local/sbin` is the same on Intel Homebrew installs. Any code
 running as the console user can drop an `unbound` there and have it executed as root the next time the feature is enabled.
 `locateHelper("unbound-anchor")` (`:244`, called at `UnboundManager.swift:659-660`) has the identical exposure and also runs first.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Never resolve a to-be-root-executed binary through `PATH`. Delete the `/usr/bin/which` fallback entirely.
 2. Before `Process.run()`, `lstat` the resolved path and every parent component and refuse if any is not `uid 0` and not
    mode `≤ 0755` (the standard "safe path" check). Surface refusal as `.failed(reason:)` naming the unsafe component — not as
@@ -59491,6 +59667,7 @@ running as the console user can drop an `unbound` there and have it executed as 
    Homebrew-managed binary as root at all. Bundling a signed, notarized `unbound` is the durable answer
    (`UnboundResolver.swift:236-242` documents the decision to not bundle — that decision should be revisited given this hazard).
 **Code Sample:**
+
 ```swift
 // UnboundResolver.swift:246-264
 private static func locate(_ name: String) -> String? {
@@ -59537,6 +59714,7 @@ Also `:190` renders `.inconclusive` with the prefix "Saved, but not yet confirme
 routine refresh can print "Saved, but…" about a state it never wrote.
 **Cross-ref. Delta:** new; same family as the CLAUDE.md §4 "no fabricated value shown as measured" rule.
 **Fix(es):**
+
 1. In `describe`, split the disable path: `.failed` while turning off must render
    `"Could not turn encryption off: \(reason). Your system DNS settings may still be Syxx's — verify in System Settings ▸ Network ▸ DNS."`
    Never emit "Encryption is off." from an error branch.
@@ -59546,6 +59724,7 @@ routine refresh can print "Saved, but…" about a state it never wrote.
    than reusing `.failed`, and add a unit test asserting no `describe` branch containing "off"/"Encrypted" is reachable from an
    error input.
 **Code Sample:**
+
 ```swift
 // SettingsView.swift:179-192
 private func describe(_ r: EncryptedDNSApplyResult, turningOn: Bool) -> String {
@@ -59563,6 +59742,7 @@ private func describe(_ r: EncryptedDNSApplyResult, turningOn: Bool) -> String {
     }
 }
 ```
+
 ```swift
 // EncryptedDNSConfigurator.swift:88-98 — .failed here means "removal did not happen"
 public static func disable() async -> EncryptedDNSApplyResult {
@@ -59614,6 +59794,7 @@ the *search* at `:119`, while `hasKey`'s query (`:23-29`) omits it — two diffe
 **Cross-ref. Delta:** cross-ref D052 (which fixed the non-atomic write in `writeKeychainData`) — that delta did not touch the read
 or delete paths.
 **Fix(es):**
+
 1. Change `hasKey` to return a tri-state (`present` / `absent` / `undetermined(OSStatus)`), and `loadKey` to
    `Result<String?, KeychainReadError>`. Map `errSecItemNotFound` to a genuine absence; map every other status to `undetermined`.
 2. Only cache `errSecItemNotFound` and successful reads. Never cache an `undetermined` result.
@@ -59624,6 +59805,7 @@ or delete paths.
 6. Make the invalid-key test compare the actual stored key bytes before and after rejection. Do not delete or replace a developer's
    real key to manufacture test isolation.
 **Code Sample:**
+
 ```swift
 // WitnessKeyManager.swift:30-31 — any error becomes "absent"
 let status = SecItemCopyMatching(query as CFDictionary, nil)
@@ -59652,20 +59834,24 @@ _keyLock.lock(); _keyCache = .some(nil); _keyLock.unlock()   // cleared, now kno
 **Issue:** There are two DMG producers with different names, different contents, and different layouts, and `build_dmg.sh` invokes
 `bundle-app.sh` (`:23`) which unconditionally builds its own DMG as a side effect — so **every `build_dmg.sh` run emits two
 non-identical DMGs**. Confirmed on disk:
+
 ```
 macOS/Syxx-2.0.0.dmg          24,572,102 bytes   (bundle-app.sh: -srcfolder Syxx.app, no /Applications symlink)
 macOS/dist/Syxx-2.0.0-54.dmg  19,420,233 bytes   (build_dmg.sh: staging dir + /Applications symlink, zlib-level=9)
 ```
+
 Naming differs (`Syxx-<version>.dmg` vs `Syxx-<version>-<build>.dmg`), the drag-to-install symlink exists in only one, and the two
 on-disk copies were produced ~90 minutes apart from different app bundles. Nothing in the repo declares which is the release
 artifact. Neither is signed or notarized (M7-03).
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Make `bundle-app.sh` build the `.app` only. Delete the DMG block at `:67-72`. `build_dmg.sh` becomes the single packager.
 2. Have `build_dmg.sh` emit exactly one canonical name and record its SHA-256 into `dist/Syxx-<version>-<build>.sha256`.
 3. Add `rm -f macOS/Syxx-*.dmg` guidance / a `.gitignore` entry so a stale root-level DMG cannot be mistaken for the release, and
    remove the two committed DMG artifacts from the working tree.
 **Code Sample:**
+
 ```bash
 # scripts/build_dmg.sh:21-23 — delegates to bundle-app.sh, which builds its own DMG too
 echo "--- Building app bundle ---"
@@ -59688,6 +59874,7 @@ user already runs"; the pf *enable state* is exactly such a pre-existing setting
 Secondary: `install` does not record whether pf was already enabled, so even a corrected `remove()` has no state to restore to.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. In `install`, capture the prior state with `pfctl -s info` (or `pfctl -si | head -1`) before `pfctl -e`, and persist the
    "we enabled it" flag alongside the anchor file.
 2. In `remove`, run `pfctl -d` **only** if Syxx was the one that enabled it. Report a failure to restore honestly as part of the
@@ -59695,6 +59882,7 @@ Secondary: `install` does not record whether pf was already enabled, so even a c
 3. Broaden `MacOSPfRedirect.isDenied` — `t.contains("root")` at `:80` will match any pfctl message merely containing the word
    "root", mislabelling unrelated failures as elevation problems.
 **Code Sample:**
+
 ```swift
 // UnboundManager.swift:62-65 (install)
 let (out, code) = runWithStdin("/sbin/pfctl", ["-f", "-"], stdin: combined)
@@ -59733,6 +59921,7 @@ lines earlier (`:56`, `allowsContentJavaScript = false`), so the `WKUserScript` 
 loads — which is what "external resource loads" actually means, and is the leak the comment claims to close.
 **Cross-ref. Delta:** cross-ref D033 (referenced at `:110`), which added redirect coverage but kept the host-only predicate.
 **Fix(es):**
+
 1. Replace the host check with a full origin check: require `targetURL.scheme?.lowercased() == "https"` **and**
    `host` in `allowedHosts` **and** `targetURL.port == nil || targetURL.port == 443` **and** `targetURL.user == nil`. Anything else
    → `.cancel` (and route through `RemoteUrlPolicy` for the external-open decision).
@@ -59741,6 +59930,7 @@ loads — which is what "external resource loads" actually means, and is the lea
 3. Delete the dead `blockScript` (`:60-65`) — it is a false assurance in a security comment. If external subresource blocking is
    wanted, implement it with a `WKContentRuleList` (`WKContentRuleListStore.compileContentRuleList`), which works with JS off.
 **Code Sample:**
+
 ```swift
 // RemoteContentView.swift:110-121 — host only; http:// to the same host is allowed
 // D033: apply origin checks to EVERY navigation, including redirects.
@@ -59754,6 +59944,7 @@ if navigationAction.navigationType == .other {
     return
 }
 ```
+
 ```swift
 // RemoteContentView.swift:55-65 — JS is off at :56, so the script at :60 never runs
 let preferences = WKWebpagePreferences()
@@ -59787,6 +59978,7 @@ two operations needed — and `DeepSyxx` implements both (`main.swift:92-178`). 
 The privileged plumbing and the feature that needs it were built in parallel and never connected.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Introduce a `PrivilegedOperations` protocol with an in-process (root CLI) implementation and an XPC-helper implementation, and
    inject it into `UnboundManager` the way `SystemResolverSwitching` already is (`UnboundManager.swift:377-378`).
 2. Route `MacOSPfRedirect.install/remove`, `MacOSServiceAccount.ensure/chownRecursively` and the resolver switch through that
@@ -59802,6 +59994,7 @@ The privileged plumbing and the feature that needs it were built in parallel and
 **Location:** `macOS/Sources/SyxxKit/UnboundManager.swift:400-407`, `:745-764`
 **Issue:** `enable()` calls `installUnboundViaHomebrew()` automatically when the binary is missing (`:402-406`) — no prompt, no
 consent, no disclosure. That function runs `brew install unbound` with a 120-second timeout (`:758`). Problems:
+
 - **Unrequested software installation.** A user toggling "Enable local resolver" gets an arbitrary Homebrew formula (plus its
   dependency closure) downloaded and installed from the network.
 - **Escalation surface.** If this path is ever reached as root (the CLI `enable` path is a root path), `/opt/homebrew/bin/brew` is
@@ -59814,12 +60007,14 @@ consent, no disclosure. That function runs `brew install unbound` with a 120-sec
   still be mutating the prefix.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Remove the automatic call from `enable()`. Return `.notInstalled(hint:)` and let the UI **offer** the install as an explicit,
    labelled action ("Install Unbound via Homebrew — this downloads software from brew.sh").
 2. Refuse to run `brew` when `getuid() == 0`; return a specific reason.
 3. Base the return value on brew's own exit status, not on a subsequent `locateBinary()`; include `res` in both branches.
 4. Raise the timeout and stream progress, or run it detached with real progress reporting.
 **Code Sample:**
+
 ```swift
 // UnboundManager.swift:400-407 — automatic, unprompted
 var unboundPath = UnboundResolver.locateBinary()
@@ -59850,18 +60045,21 @@ and `verifyDNSCryptChain()` at `:573` as "Reproducible without administrator rig
 funnel through `startProcess`, whose first action is `FileManager.createDirectory(atPath: stateDir)` (`:648`) with `stateDir`
 defaulting to `/Library/Application Support/Syxx/unbound` (`:386`). `DNSCryptProxyManager` defaults to
 `/Library/Application Support/Syxx/dnscrypt` (`:24`) and does the same at `:44`. Verified on a stock macOS 26 host:
+
 ```
 $ ls -ld "/Library/Application Support"
 drwxr-xr-x  14 root  admin  448 /Library/Application Support
 $ ls -ld "/Library/Application Support/Syxx"
 drwxr-xr-x@  3 root  admin   96 /Library/Application Support/Syxx
 ```
+
 Mode `755`, owner `root` — **not** group-writable. No non-root user, admin or otherwise, can create the subdirectory or write
 `unbound.conf`/`root.key`/`dnscrypt-proxy.toml` into the existing one. Both "admin-free" verifications fail at the first step with
 `"could not create state directory: …"` (or a write error at `:670-675`), and the failure is reported as a plain `.failed` /
 `(false, false, …)` rather than `elevationRequired`, so the message misdirects the user about the cause.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Give the verify paths their own user-scoped state dir (`~/Library/Application Support/Syxx/unbound-verify`), keeping the
    machine-wide dir only for the root `enable()` path. The comment at `:379-385` justifies the machine-wide dir specifically for
    the `setuid`-to-`_unbound` case, which verify explicitly does not do (`:523-525`).
@@ -59887,6 +60085,7 @@ Note that this is independently masked by M7-02 (the helper never runs at all), 
 which is precisely why it should be fixed now.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Do not have the root helper locate an executable relative to itself. Have the **client** pass the absolute path of the
    bundled CLI, and have the helper validate it before exec: `SecStaticCodeCreateWithPath` + `SecStaticCodeCheckValidity` against
    the same Developer-ID requirement, and reject anything not under `/Applications/Syxx.app/Contents/Resources/`.
@@ -59894,6 +60093,7 @@ which is precisely why it should be fixed now.
    absolute path.
 3. Add an integration test that asserts the resolved path exists after a real `bundle-app.sh` + bless.
 **Code Sample:**
+
 ```swift
 // DeepSyxx/main.swift:16-26
 // Find the syxx binary in the app bundle
@@ -59925,12 +60125,14 @@ which `describe` then maps to a message implying the *setting is saved* — the 
 This is a "could not determine why" being rendered as a definite cause.
 **Cross-ref. Delta:** related to M7-06.
 **Fix(es):**
+
 1. Match on the concrete code, not the domain string: treat only `NEVPNError.configurationInvalid` /
    `configurationReadWriteFailed` **combined with** a `kCFErrorDomainOSStatus`-style permission underlying error as
    entitlement-related. Everything else → `.failed(reason:)` carrying `error.domain`, `error.code`, and `localizedDescription`.
 2. Add a `.unclassified(domain:code:description:)` state so an unrecognised NE error is surfaced verbatim rather than guessed at.
 3. Replace `ns.domain.contains(...)` with exact comparisons; substring matching on error domains is fragile across OS releases.
 **Code Sample:**
+
 ```swift
 // EncryptedDNSConfigurator.swift:116-123
 private static func isEntitlementError(_ error: Error) -> Bool {
@@ -59957,6 +60159,7 @@ correct state is `.inconclusive`, which `DNSCryptResult` already has (`UnboundMa
 `:123` also short-circuits when `knownRelays` is empty, which is correct, but it means the two nil sources are further conflated.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Change the return type to an enum: `.relay(String)` / `.direct` / `.undetermined(reason: String)`; distinguish the
    file-read failure at `:124` from a successfully-read log with no relay column.
 2. Have `start()` pass `.undetermined` into `classifyStart` as an inconclusive relay state so the result is
@@ -59964,6 +60167,7 @@ correct state is `.inconclusive`, which `DNSCryptResult` already has (`UnboundMa
 3. Assert the log file exists and is non-empty after a successful query before parsing; a zero-byte log after a `PASS` is itself a
    signal worth reporting.
 **Code Sample:**
+
 ```swift
 // DNSCryptProxyManager.swift:122-131 — nil means "direct" and "unreadable" alike
 private func relayFromQueryLog(_ path: String, knownRelays: [String]) -> String? {
@@ -60006,6 +60210,7 @@ resumed** — the `await` hangs forever, and `AppModel.startRealCapture`'s tail 
 cancelled. A leaked continuation is also a Swift concurrency violation.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Replace the file-existence check with: read the installed helper's `CFBundleVersion` via `SMJobCopyDictionary`/`codesign -d`,
    compare to the bundled helper's version, and re-bless on mismatch. Validate the installed helper's signature before trusting it.
 2. After `conn.resume()`, perform a cheap round-trip (add a `ping(withReply:)` to the protocol) and only cache `connection` if it
@@ -60014,6 +60219,7 @@ cancelled. A leaked continuation is also a Swift concurrency violation.
 4. `:25-33` busy-waits on `isInstalling` in 100 ms slices and, if the wait ends with `connection == nil`, falls through to
    `isInstalling = true` and installs concurrently anyway — use an actor or a single shared `Task` instead.
 **Code Sample:**
+
 ```swift
 // PrivilegeManager.swift:38-47
 // Check if helper is already installed
@@ -60026,6 +60232,7 @@ if !FileManager.default.fileExists(atPath: helperPath) {
 // Connect to the helper via XPC
 try await connectToHelper()
 ```
+
 ```swift
 // PrivilegeManager.swift:105-106 — resumed == connected
 conn.resume()
@@ -60057,12 +60264,14 @@ any Settings change made through such a panel is written to an object nothing el
 disconnected UI rather than refusing.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Delete `panel.isReleasedWhenClosed = true` at `:24` and hold the broadcast panel in a `private var broadcastPanels: [NSPanel]`,
    removing it in the dismiss closure.
 2. Change `showSettings`/`showLicense` to take a non-optional `AppModel`, removing the `?? AppModel()` fallback.
 3. The `panel.isVisible` guards at `:31`, `:44`, `:57`, `:69`, `:81` mean a panel closed by the user is silently rebuilt and the old
    one leaked (`isReleasedWhenClosed = false`) — reuse the stored panel unconditionally instead.
 **Code Sample:**
+
 ```swift
 // NSPanelManager.swift:20-26 — no strong reference is kept
 func showBroadcast(_ broadcast: Broadcast, onDismiss: @escaping () -> Void) {
@@ -60084,6 +60293,7 @@ func showBroadcast(_ broadcast: Broadcast, onDismiss: @escaping () -> Void) {
 (`:137-141`). It never invokes `macOS/bundle-app.sh` or `macOS/scripts/build_dmg.sh`, never runs `codesign`, `notarytool`,
 `stapler`, or `spctl`, and never uploads an app or DMG artifact. `ci.yml` is the only workflow in `.github/workflows/`
 (291 lines total; no release workflow exists). Consequently:
+
 - The `Syxx.app` bundle layout, `Info.plist` generation, `SMPrivilegedExecutables` string, and helper embedding are **never
   exercised by any automation** — which is how M7-02's missing `__launchd_plist` and M7-03's identifier mismatches went unnoticed.
 - The published DMGs are produced by hand on a developer machine (both committed copies are dated the same evening).
@@ -60091,6 +60301,7 @@ func showBroadcast(_ broadcast: Broadcast, onDismiss: @escaping () -> Void) {
   nothing checks the *linked sections*, the *signature*, or the *bundle*.
 **Cross-ref. Delta:** new.
 **Fix(es):**
+
 1. Add a `package-macos` job that runs `bundle-app.sh`, then asserts:
    `otool -l "$HELPER" | grep -q __launchd_plist`, `codesign -dv` identifiers match the `SMPrivilegedExecutables` /
    `SMAuthorizedClients` requirement strings, `codesign --verify --deep --strict` passes, and `spctl --assess --type exec` passes.
@@ -60116,6 +60327,7 @@ configured. The toggle is the primary, glanceable state surface; the honest expl
 Across a relaunch the toggle renders "on" from persisted state before `refreshEncryptionState()` has run.
 **Cross-ref. Delta:** related to M7-06.
 **Fix(es):**
+
 1. Bind the `Toggle` to a computed `Binding` whose setter kicks off the operation but whose getter reflects the **confirmed**
    state (`.enabled` / `.disabled`), not the stored preference.
 2. Persist only after a `.enabled` / `.disabled` result; on `.failed` / `.entitlementRequired` / `.inconclusive`, revert
@@ -60123,6 +60335,7 @@ Across a relaunch the toggle renders "on" from persisted state before `refreshEn
 3. Show a distinct visual state (e.g. a mixed/indeterminate marker) for `.inconclusive`, so "requested but unconfirmed" is never
    drawn identically to "confirmed on".
 **Code Sample:**
+
 ```swift
 // SettingsView.swift:44-47 — persists the request, not the result
 Toggle("Encrypt all DNS queries", isOn: $settings.encryptedDNSEnabled)
@@ -60209,6 +60422,7 @@ return a tri-state (`Protected` / `Plaintext` / `Unavailable`) instead of throwi
 real `syxx mirror <domain>` run on linux-x64 in CI — the current CI never executes the CLI, it only
 publishes it (`ci.yml:106-111`).
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/LicenseManager.cs:576-582  — no guard, no try
 if (nowMillis < maxSeenMillis)
@@ -60220,6 +60434,7 @@ if (nowMillis > maxSeenMillis)
     SaveConfig(dict);
 }
 ```
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/LicenseManager.cs:182-188
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
@@ -60230,6 +60445,7 @@ private static string Protect(string plaintext)
     return Convert.ToBase64String(encrypted);
 }
 ```
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/ProbePlan.cs:144-147 — unconditional, on every Mirror run
 private static async Task<WarpResult?> RunContentWarpAsync(string domain, string? targetURL, ProbeBudget budget)
@@ -60267,6 +60483,7 @@ safe restore point, so do not take the risk), and make `Disable()` with a `null`
 readable", never a silent `-ResetServerAddresses`. Prove with a real run on a Windows host with
 static DNS configured.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/UnboundManager.cs:39-47
 public IReadOnlyList<string> Snapshot()
@@ -60278,6 +60495,7 @@ public IReadOnlyList<string> Snapshot()
     return outp.Trim().Split(',', ...);
 }
 ```
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/UnboundManager.cs:53-55  — ... become "reset to DHCP"
 string cmd = servers.Count == 0
@@ -60323,6 +60541,7 @@ return `Unknown` with "could not read the Windows DoH configuration for {ip}", n
 Windows golden-vector test that injects a throwing registry reader and asserts the verdict is
 `Unknown`, not `No`.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/NetworkKeyState.cs:558-574
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
@@ -60343,6 +60562,7 @@ private static bool HasConfiguredDoHTemplate(string serverIP)
     }
 }
 ```
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/NetworkKeyState.cs:544-548  — the definite negative it produces
 return new EncryptedDNSStatus
@@ -60386,6 +60606,7 @@ Then either add a repo-root `.editorconfig` with
 round-trip test that sets `CultureInfo.CurrentCulture = new CultureInfo("th-TH")`, writes a record
 and asserts `ParseTimestamp` succeeds.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:126-131  (writer — current culture)
 var record = new DNSCaptureRecord
@@ -60393,6 +60614,7 @@ var record = new DNSCaptureRecord
     Process = proc,
     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
 ```
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/MonitorReportAnalyzer.cs:81-86  (reader — invariant)
 private static DateTime? ParseTimestamp(string s)
@@ -60429,6 +60651,7 @@ binary's Authenticode signature chains to the Syxx publisher before elevating it
 tools, use absolute paths built from `Environment.SystemDirectory`
 (`…\System32\WindowsPowerShell\v1.0\powershell.exe`, `…\System32\netsh.exe`).
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/SyxxUI/Views/CageView.xaml.cs:98-107
 foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
@@ -60442,6 +60665,7 @@ foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'
     catch (ArgumentException) { /* malformed PATH entry — skip */ }
 }
 ```
+
 ```csharp
 // Windows/dotNET/SyxxUI/Views/CageView.xaml.cs:136-143
 _captureProc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -60487,6 +60711,7 @@ surfacing the refusal reason rather than loading anything. Replace
 `Uri.TryCreate`. Keep `OnNavigationStarting` comparing against a policy-approved origin, not
 against an unvalidated `SourceUrl`.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/SyxxUI/Views/RemoteContentPanel.xaml.cs:78-82
 // Navigate only after the lock-down settings are in place.
@@ -60495,6 +60720,7 @@ if (Uri.TryCreate(SourceUrl, UriKind.Absolute, out var uri))
 else
     ShowOffline();
 ```
+
 ```csharp
 // Windows/dotNET/SyxxUI/Services/DimensionService.cs:136-140
 var cached = LoadCachedResponse();
@@ -60528,6 +60754,7 @@ an explicit `Unknown`/timeout outcome. For the long-lived unbound child, either 
 stderr (unbound already writes `logPath`, UnboundManager.cs:209) or attach
 `BeginErrorReadLine` + `ErrorDataReceived` so the pipe is continuously drained.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/EncryptedDNSConfigurator.cs:112-123
 private static async Task<(int code, string? stderr)> RunAsync(string file, string args)
@@ -60587,6 +60814,7 @@ populate `SyxxPackage/Assets/` from `Design/logos/` (all five sizes), and add a 
 that builds the package and asserts the `.msix` exists and its manifest validates. Correct the
 README once the assets are actually there.
 **Code Sample:**
+
 ```xml
 <!-- Windows/dotNET/SyxxUI.Package/SyxxUI.Package.wapproj:3-11 -->
 <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>   <!-- == SyxxUI.Tests in Syxx.sln:14 -->
@@ -60595,6 +60823,7 @@ README once the assets are actually there.
 <PackageCertificateKeyFile>Syxx_TemporaryKey.pfx</PackageCertificateKeyFile>  <!-- file absent -->
 <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
 ```
+
 ```xml
 <!-- Windows/dotNET/SyxxPackage/Package.appxmanifest:33-38 — none of these files exist -->
 Square150x150Logo="Assets\Square150x150Logo.png"
@@ -60635,6 +60864,7 @@ to that adapter's unicast address. Never call `Dns.*` inside the capture path. R
 captured on {adapter}" explicitly at the end of a capture rather than letting an empty file read as
 a quiet network.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:258-269
 IPAddress bindAddress = family == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any;
@@ -60677,11 +60907,13 @@ as observed-not-originated. Better: also key the owner snapshot on `(localAddr, 
 rows already carry `dwLocalAddr`/`ucLocalAddr` (DNSCapture.cs:570-574) and the code currently
 discards it.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:122-123
 ushort localPort = context.SourcePort == 53 ? context.DestPort : context.SourcePort;
 var proc = DNSCapture.GetProcessInfo(localPort);   // no check that the packet is even ours
 ```
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/DNSCapture.cs:570-574 — the address is parsed past, never kept
 // MIB_UDPROW_OWNER_PID: dwLocalAddr@0, dwLocalPort@4, dwOwningPid@8 (12 bytes).
@@ -60716,11 +60948,13 @@ first). If the elevated child cannot write there, it must say so on stdout and t
 report "capture ran under a different account; the file is at {path}" — never let a cross-profile
 write read as an empty network. Add the "0 files after a completed capture ⇒ report why" branch.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/SyxxUI/Views/CageView.xaml.cs:87-88 — resolved in the UNELEVATED process
 private static string CapturesDir => Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Syxx", "captures");
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:52-53 — resolved in the ELEVATED process
 string capturesDir = Path.Combine(
@@ -60756,6 +60990,7 @@ CLI-shaped) and call it from `WitnessKeyStore.SaveKey` and from `LicenseManager.
 `KeyPath` and `ConfigPath` to `LocalApplicationData` with a one-time migration. Write to
 `witness.key.tmp` and `File.Move(…, overwrite: true)` so a torn write cannot destroy a good key.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/WitnessKeyStore.cs:69-76 — no ACL restriction, no atomic replace
 public static void SaveKey(string base64Key)
@@ -60767,6 +61002,7 @@ public static void SaveKey(string base64Key)
     File.WriteAllBytes(KeyPath, ciphertext);
 }
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/WitnessCommand.cs:407-417 — the hardening the GUI store lacks
 if (OperatingSystem.IsWindows())
@@ -60805,6 +61041,7 @@ command inside `try { … } catch { exit 5 }` and key off the exit code, or pre-
 `Windows/dotNET/Syxx/Program.cs:897-906`) and refuse with `ElevationRequired` before spawning
 anything. Where the classification genuinely cannot be made, return `Unknown`, not `Failed`.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/EncryptedDNSConfigurator.cs:105-110
 private static bool IsElevationError(int code, string? err) =>
@@ -60834,6 +61071,7 @@ whole operation on any element that fails. Prefer `ProcessStartInfo.ArgumentList
 `Set-DnsClientServerAddress` WMI/CIM equivalent (`MSFT_DNSClientServerAddress`) directly instead of
 shelling out.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/UnboundManager.cs:53-56
 string cmd = servers.Count == 0
@@ -60865,6 +61103,7 @@ Unsigned, Unverifiable }` from `WinVerifyTrust` (or `X509Chain.Build` on the ext
 file-hash check) — and render the subject only together with its trust state. Map the non-Windows
 and exception cases to `Unverifiable`, never to `Unsigned`.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/DNSCapture.cs:679-690
 private static string? SigningIdentifier(string executablePath)
@@ -60900,6 +61139,7 @@ read the registry" produce byte-identical output. Same class as W4-03, lower bla
 "DHCP-pushed DNS: could not be determined" in that case. Broaden the catch to
 `catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)`.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/NetworkKeyState.cs:664-678
 public static List<string> DhcpPushedDNS(string interfaceId)
@@ -60941,6 +61181,7 @@ Two further defects in the same script: line 74 tells the operator to `signtool 
 so the omission cannot recur silently. Sign `SyxxUI.exe` and `Syxx.exe` (the PE files) rather than
 the archive. Either commit `installer.wxs` or drop the WiX branch.
 **Code Sample:**
+
 ```powershell
 # build-installer.ps1:46-52 — GUI only; the capture binary is never packaged
 dotnet publish Windows\dotNET\SyxxUI\SyxxUI.csproj `
@@ -60950,6 +61191,7 @@ dotnet publish Windows\dotNET\SyxxUI\SyxxUI.csproj `
     --self-contained true `
     -o $PublishDir
 ```
+
 ```csharp
 // Windows/dotNET/SyxxUI/Views/CageView.xaml.cs:93-97 — what it looks for, and never finds
 foreach (var name in new[] { "syxx.exe", "Syxx.exe" })
@@ -60979,6 +61221,7 @@ used by `ci.yml:178` (`bin/` under `SyxxUI`) and `build.ps1:48`.
 and having two divergent copies is how the stale one gets run. If it must stay, make it a
 one-line delegation to `build.ps1`.
 **Code Sample:**
+
 ```powershell
 # scripts/win-build.ps1:16-19 — paths that no longer exist
 $gui  = "Windows\SyxxUI\SyxxUI.csproj"
@@ -60986,6 +61229,7 @@ $kit  = "Windows\Syxx.Kit\Syxx.Kit.csproj"
 $cli  = "Windows\Syxx\Syxx.csproj"
 $test = "Windows\Syxx.Tests\Syxx.Tests.csproj"
 ```
+
 ```powershell
 # scripts/win-build.ps1:27-29 — $args shadows the automatic variable
 function Invoke-Build($label, $args) {
@@ -61010,12 +61254,14 @@ until a human installs it.
 **Fix(es):** `command: Syxx`. Then add a snap-build CI leg that runs `snap run syxx --version`
 and asserts the output matches `SyxxConfig.Version` — presence of the file is not function.
 **Code Sample:**
+
 ```yaml
 # Linux/snap/snapcraft.yaml:13-15
 apps:
   syxx:
     command: Syxx.CLI          # <-- no such binary; AssemblyName is "Syxx"
 ```
+
 ```xml
 <!-- Windows/dotNET/Syxx/Syxx.csproj:7 -->
 <AssemblyName>Syxx</AssemblyName>
@@ -61041,6 +61287,7 @@ nothing declares the **arm64** build the target Ubuntu Desktop arm64 ISO needs.
 `source-subdir:` at `Windows/dotNET/Syxx`; add a `platforms:` block with `amd64` and `arm64`;
 prove it with a real `snapcraft` run in CI, not by reading.
 **Code Sample:**
+
 ```yaml
 # Linux/snap/snapcraft.yaml:21-31
 parts:
@@ -61065,6 +61312,7 @@ parts:
 and `Windows/dotNET/Syxx.Kit/Trust/Trust.cs:105,241,312`
 **Issue:** Two confinement gaps that both fail as *silent degradation*, not as an error the
 user can read:
+
 1. **Raw sockets.** `CageCommand` opens `SocketType.Raw` sockets for capture. Under
    `confinement: strict` the only interface that can permit that is `network-observe`, which is
    listed — but `network-observe` is **not auto-connected**. On a fresh `snap install syxx` it
@@ -61084,6 +61332,7 @@ detect `EPERM`/`EACCES` on socket creation and emit an explicit *inconclusive �
 permitted by confinement* rather than an empty-but-successful capture. Add a `snap connect`
 line to the install docs regardless.
 **Code Sample:**
+
 ```yaml
 # Linux/snap/snapcraft.yaml:16-19
     plugs:
@@ -61091,6 +61340,7 @@ line to the install docs regardless.
       - network-bind
       - network-observe   # not auto-connect; no `home` plug at all
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:251-256
 private static Socket? OpenRawSocket(AddressFamily family, ProtocolType protocol)
@@ -61106,6 +61356,7 @@ private static Socket? OpenRawSocket(AddressFamily family, ProtocolType protocol
 **Criticality:** CRITICAL
 **Location:** `Ubuntu/build_deb.sh:6,9,13,29-31,67-69,78`
 **Issue:** The .deb builder cannot produce a package. Four independent defects:
+
 1. `cd "$(dirname "$0")"` puts `ROOT` at `Ubuntu/`, then line 29 does `cd Ubuntu/SyxxUI.Avalonia`
    → `Ubuntu/Ubuntu/SyxxUI.Avalonia`, which does not exist. Under `set -e` the script dies here.
 2. Line 13 greps for `public static string Version`; the actual declaration in
@@ -61123,6 +61374,7 @@ private static Socket? OpenRawSocket(AddressFamily family, ProtocolType protocol
 and `exit 1` if the capture is empty (never build an unversioned package); resolve the icon
 from repo root and **fail** rather than skip when it is missing; depend on `libicu74`.
 **Code Sample:**
+
 ```bash
 # Ubuntu/build_deb.sh:13
 SYXX_VERSION=$(grep 'public static string Version' ../Windows/dotNET/Syxx.Kit/SyxxConfig.cs | sed 's/.*"\(.*\)".*/\1/')
@@ -61153,6 +61405,7 @@ fixes for the *Windows* GUI, left open for the platform that ships first.
 relative to `Windows/Syxx.sln`, so `..\Ubuntu\...`), or add explicit `dotnet build` +
 `dotnet test` steps guarded by `runner.os == 'Linux'`.
 **Code Sample:**
+
 ```json
 // Windows/Syxx.Linux.slnf:4-8 — the GUI that ships first is absent
     "projects": [
@@ -61181,6 +61434,7 @@ analogue of a fabricated verdict.
 the useradd stderr shown. If a root fallback must exist, gate it behind an explicit
 `SYXX_ALLOW_ROOT_SERVICE=1` opt-in and print it again in the final banner.
 **Code Sample:**
+
 ```bash
 # scripts/deploy.sh:193-204
     useradd --system --no-create-home --shell /usr/sbin/nologin syxx || true
@@ -61211,6 +61465,7 @@ continues through systemd install, nginx, backups and Sentry, and terminates wit
 capture the status and re-print a hard `❌ DEPLOY INCOMPLETE` line in the final banner and
 `exit 1`.
 **Code Sample:**
+
 ```bash
 # scripts/deploy.sh:137
 remote "bash -s" <<'PIPEOF' || echo "⚠️  dependency install reported a problem — see above."
@@ -61254,6 +61509,7 @@ unsymbolicated forever, and CI shows green skips that read as "not configured".
 **Fix(es):** hoist to a workflow-level `env: SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}`,
 or change the guard to `if: secrets.SENTRY_AUTH_TOKEN != ''` at job level via an output.
 **Code Sample:**
+
 ```yaml
 # .github/workflows/ci.yml:180-181
       - name: Create Sentry release (server)
@@ -61279,6 +61535,7 @@ probe of `:8080` anywhere in the script.
 `sleep 3; systemctl is-active --quiet syxx-server || { journalctl -u syxx-server -n 50 --no-pager; exit 1; }`
 plus `curl -fsS http://127.0.0.1:8080/api/pubkey` as the real bar.
 **Code Sample:**
+
 ```bash
 # scripts/deploy.sh:365-368
 systemctl daemon-reload
@@ -61294,6 +61551,7 @@ echo "✅ Daemon running."
 **Criticality:** HIGH
 **Location:** `scripts/deploy.sh:493-520`
 **Issue:** Two problems in the backup provisioning block.
+
 1. **False claim of a taken backup.** Line 517 runs the initial backup with
    `|| echo "⚠️  initial backup run failed"`, and line 518 then *unconditionally* prints
    `✅ DB backup timer installed (daily). First backup taken now.` When the run fails, the
@@ -61316,6 +61574,7 @@ verification, hardening and StartLimit legs are not.
 the `syxx`-writable tree (e.g. `/usr/local/libexec/syxx-backup.sh`, root-owned 0755); add and
 CI-test a restore path.
 **Code Sample:**
+
 ```bash
 # scripts/deploy.sh:495-503 — no User=, no hardening at all
 cat > /etc/systemd/system/syxx-backup.service <<UNIT
@@ -61355,6 +61614,7 @@ firewall|StartLimit'` → no matches), the other three SD-56 legs.
 **Fix(es):** add the directives above; validate with `systemd-analyze security syxx-server`
 and record the score in the deploy output so a regression is visible.
 **Code Sample:**
+
 ```ini
 # scripts/deploy.sh:348-359 — the entire hardening block as shipped
 AmbientCapabilities=CAP_NET_BIND_SERVICE
@@ -61386,6 +61646,7 @@ unconditionally on success — so the operator cannot tell which path was taken.
 0600 to `/root/.syxx-sentry-admin`), drop `2>/dev/null`, and make the two branches print
 mutually exclusive messages.
 **Code Sample:**
+
 ```bash
 # scripts/deploy-sentry.sh:177-181
 docker compose exec web sentry createuser \
@@ -61414,6 +61675,7 @@ honest output in the block, but by then the "API token created. Creating project
 HTTP 40x from 409 by capturing `-w '%{http_code}'` instead of `-sf ... || echo`; fail the step
 when any DSN comes back `NOT FOUND`.
 **Code Sample:**
+
 ```python
 # scripts/deploy-sentry.sh:196-199
     token = ApiToken.objects.create(
@@ -61421,6 +61683,7 @@ when any DSN comes back `NOT FOUND`.
         scopes=0,  # will be updated below      <-- never updated
     )
 ```
+
 ```bash
 # scripts/deploy-sentry.sh:236
             -d "{\"name\": \"${PROJECT}\"}" >/dev/null 2>&1 || echo "  (may already exist)"
@@ -61442,6 +61705,7 @@ reporting and a success banner.
 **Fix(es):** drop `2>/dev/null`; treat the failure the same way the cryptography block does and
 propagate a non-zero exit into the final banner.
 **Code Sample:**
+
 ```bash
 # scripts/deploy.sh:743-745
   python3 -m pip install -r "$REQ" 2>/dev/null \
@@ -61469,6 +61733,7 @@ implemented (lines 428-459, good), the issuance-failure leg was not.
 `curl -fsS https://${DOMAIN}/` from the deploy host before printing ✅; add
 `proxy_set_header X-Forwarded-Proto $scheme;`.
 **Code Sample:**
+
 ```bash
 # scripts/deploy.sh:415-416
     --non-interactive --agree-tos -m "\${EMAIL}" --redirect \
@@ -61499,6 +61764,7 @@ correct, the second shell-sourcing consumer is the gap.
 systemd semantics, or run the backup via `systemd-run --property=EnvironmentFile=...` so only
 one parser exists.
 **Code Sample:**
+
 ```sh
 # Server/scripts/syxx-backup.sh:17-21
 if [ -r /etc/syxx/syxx.env ]; then
@@ -61516,6 +61782,7 @@ fi
 **Location:** `Linux/snap/snapcraft.yaml:2,9`; `scripts/deploy.sh:158-161`;
 `scripts/deploy-sentry.sh:118-128`; `.github/workflows/ci.yml:66`
 **Issue:** Four labels that assert something untrue:
+
 1. `snapcraft.yaml:2` pins `version: '1.0.0'` while `SyxxConfig.cs:13` is `2.0.0`. The snap
    store, `snap list`, and `syxx --version` would disagree by a major version. `grade: stable`
    on line 9 is asserted for a snap that has never been built.
@@ -61534,11 +61801,13 @@ fi
 writes it; either apply `SENTRY_DOMAIN` to `sentry.conf.py` or delete lines 126-128 and say
 "not configured"; rename the CI step.
 **Code Sample:**
+
 ```yaml
 # Linux/snap/snapcraft.yaml:2,9
 version: '1.0.0'        # SyxxConfig.cs:13 => "2.0.0"
 grade: stable           # never built by CI
 ```
+
 ```bash
 # scripts/deploy-sentry.sh:126-128
 if grep -q "SENTRY_BIND = " "$SENTRY_DIR/sentry/sentry.conf.example.py" 2>/dev/null; then
@@ -61548,7 +61817,7 @@ fi                       # writes nothing; SENTRY_DOMAIN never applied
 
 ---
 
-## Verification notes
+## Verification notes — scripts/deploy-sentry.sh:126-128
 
 - `grep -rn "Syxx.CLI"` across the tree → only `Linux/snap/snapcraft.yaml:15` and a prose
   comment at `ci.yml:72`.
@@ -61615,6 +61884,7 @@ milliseconds, so a straight port of the Windows argument string produces a 1000-
 wait. Then add a `dotnet build -r linux-x64` leg to CI so a missing method can never again be
 discovered by a user instead of a compiler.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/TracerouteRunner.cs:30-33
 try
@@ -61661,6 +61931,7 @@ the C# twin and it is worse (macOS at least defaults to 2).
 concept (`--help`, `--version`) return 0 explicitly. Add a CI leg that asserts the code for a
 known-forged witness file is 1 and for an unrunnable cage is 2.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Program.cs:15  — no int, no default
 static async Task Main(string[] args)
@@ -61672,6 +61943,7 @@ if (socketV4 == null && socketV6 == null)
     return;              // <-- Environment.ExitCode untouched => 0 => "clean"
 }
 ```
+
 ```swift
 // macOS/Sources/SyxxCLI/SyxxCLI.swift:7-8  — the contract Linux does not honour
 // 9.4: standardized exit codes — 0=clean, 1=threat, 2=inconclusive, 3=error
@@ -61686,6 +61958,7 @@ nonisolated(unsafe) static var exitCode: Int32 = 2  // default inconclusive
 **Location:** `Windows/dotNET/Syxx/Commands/LeakCommand.cs:116-128` and `:163-172`
 **Issue:** `syxx leak` is the *only* subcommand that sets exit codes, and it sets them wrong in
 both directions:
+
 1. **A confirmed DNS leak exits 0.** `case LeakVerdict.Confirmed:` (`:118-120`) prints the
    observed resolvers and falls out of the switch without touching `Environment.ExitCode` — so a
    collector-attested, signed *positive detection of a DNS leak* returns the same status as a
@@ -61703,6 +61976,7 @@ both directions:
 error `=> 3`. Then delete the divergent local convention and drive it from one shared mapping the
 Kit owns, so macOS and Linux cannot drift again.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/LeakCommand.cs:116-128
 switch (result.Verdict)
@@ -61719,6 +61993,7 @@ switch (result.Verdict)
         break;
 }
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/LeakCommand.cs:168-171 — "nothing measured" => 1 => "THREAT"
 Console.WriteLine("\nINCONCLUSIVE — all probe dispatches FAILED, so the leak test did not run ...");
@@ -61769,6 +62044,7 @@ snap, and make the privilege check `geteuid()==0 || CAP_NET_RAW` rather than a W
 ([L4-05]); (c) a CI leg that runs `syxx cage --duration 1` on ubuntu-latest and asserts the output
 does not contain "Command Prompt" and the exit code is not 0.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:270-275
 socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HeaderIncluded, family == AddressFamily.InterNetwork);
@@ -61777,6 +62053,7 @@ byte[] byOut = new byte[] { 1, 0, 0, 0 };
 socket.IOControl(IOControlCode.ReceiveAll, byIn, byOut);   // PlatformNotSupportedException on Linux, always
 return socket;
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:73-76 — the Linux user's only guidance
 Console.WriteLine("\n🚨 ERROR: Could not open raw socket for DNS packet capture.");
@@ -61820,6 +62097,7 @@ CAP_NET_RAW). Replace the `runas` re-exec on Linux with `pkexec`/`sudo -n` (or, 
 user to run `sudo syxx cage` and do not attempt to self-elevate). Never surface a raw
 `Win32Exception` number as the user-facing reason.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Program.cs:896-906 — always false on Linux, even as root
 static bool IsElevated()
@@ -61833,6 +62111,7 @@ static bool IsElevated()
     catch { return false; }
 }
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Program.cs:806-810
 Console.WriteLine("• Live packet capture needs Administrator rights — accept the elevation prompt to continue (the capture opens in an elevated window).");
@@ -61872,6 +62151,7 @@ which fixed *claims about* the files but not their permissions.
 after creation — before the first byte is written, not after. On Windows keep/add the explicit ACL
 the comment already claims. Add a test that creates a capture dir on Linux and asserts the mode.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/CageCommand.cs:49-54
 // Write captures under the per-user LocalApplicationData profile (ACL'd to this user),   <-- not on Linux
@@ -61888,6 +62168,7 @@ Directory.CreateDirectory(capturesDir);      // 0755 on Linux; no SetUnixFileMod
 **Criticality:** HIGH — private key briefly world-readable; a *successful* write reported as failure
 **Location:** `Windows/dotNET/Syxx/Commands/WitnessCommand.cs:39-56`, `:405-422`
 **Issue:** Two defects in the same eight lines of `syxx witness --gen-keypair`, both Linux-only.
+
 1. **Write-then-chmod race.** `File.WriteAllTextAsync(keyFile, priv + "\n")` (`:47`) creates the
    Ed25519 **private key** at the umask-derived default — measured **0644, world-readable** — and
    only then does `RestrictKeyFileToCurrentUser` (`:48`) call `File.SetUnixFileMode(..., 0600)`
@@ -61913,6 +62194,7 @@ the false-failure branch.
 "key WAS written to {path} but its permissions could not be restricted — treat it as compromised
 and regenerate", never "could not write".
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/WitnessCommand.cs:43-56
 try
@@ -61975,6 +62257,7 @@ under snap strict confinement `resolvectl` is not staged at all
 UNTESTED, exit 2. `witness create` must **refuse to sign** when the vantage is a substitute — a
 signature over an unrepresentative measurement is worse than no signature.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/WitnessCommand.cs:106-117 — signs a snapshot of 8.8.8.8
 string systemResolver = NetworkKeyState.GetSystemDNSServers().Count > 0 ? NetworkKeyState.GetSystemDNSServers()[0] : null;
@@ -61987,6 +62270,7 @@ if (systemResolver == null)
 var comparison = await VantageComparer.CompareVantagePointsAsync(domain, localServer: systemResolver);
 var snapshot = WitnessSigner.CreateSignedSnapshot(domain, comparison, key);   // signed, attributed to the user
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/LeakCommand.cs:77-82 — the correct behaviour, already shipped
 if (servers.Count == 0)
@@ -62021,9 +62305,10 @@ no attached tty, or any CI/cron invocation therefore **loops forever at full CPU
 available; nothing consults it.
 **Cross-ref. Delta:** none — new.
 **Fix(es):** capture the raw `Console.ReadLine()` and treat `null` as an immediate, honest exit:
-`if (raw is null) { Console.Error.WriteLine("syxx: no terminal attached — run a subcommand, e.g. `syxx firstrun`."); Environment.ExitCode = 3; return; }`. Additionally, when
+`if (raw is null) { Console.Error.WriteLine("syxx: no terminal attached — run a subcommand, e.g.`syxx firstrun`."); Environment.ExitCode = 3; return; }`. Additionally, when
 `Console.IsInputRedirected` is true, skip the guided menu entirely and print the usage block.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Program.cs:189 — EOF becomes "" becomes "invalid choice" becomes an infinite loop
 string choice = Console.ReadLine()?.Trim().ToUpper() ?? "";
@@ -62080,6 +62365,7 @@ make `Protect`/`Unprotect` platform-switched and non-throwing, and have the CLI 
 `Pro entitlement is not available in this Linux build` rather than crash. Promote `CA1416` to an
 error for the `linux-*` RIDs so a Windows-only P/Invoke cannot reach a Linux ship again.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/LicenseManager.cs:31-34
 [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -62087,6 +62373,7 @@ private static extern bool CryptProtectData(
     ref DATA_BLOB pDataIn, string? szDataDescr, ref DATA_BLOB pOptionalEntropy,
     IntPtr pvReserved, IntPtr pPromptStruct, int dwFlags, out DATA_BLOB pDataOut);
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Program.cs:684 — Glutton, no try/catch around the throwing call
 var check = await LicenseManager.IsFeatureUnlockedAsync(); // tuple — not ProbeRunner-wrappable
@@ -62125,6 +62412,7 @@ to `UnboundResultKind.Inconclusive` and the CLI prints
 real Linux switcher (`resolvectl dns <iface> 127.0.0.1` / `systemd-resolved` drop-in, with the
 snapshot/auto-revert failsafe the doc promises) before advertising `enable`/`disable` on Linux.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/UnboundManager.cs:288-295
 public sealed class NullResolverSwitcher : ISystemResolverSwitching
@@ -62164,6 +62452,7 @@ the deletion did not happen.
 platform token, and replace "Administrator" with a platform-switched word ("administrator" /
 "root (sudo)"). These are user-facing strings — copy-gate per `AGENTS.md`.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/SentinelCommand.cs:31
 Console.WriteLine("🧹 Forgotten: Sentinel baseline, home baseline, and the passive-DNS answer ledger erased (%USERPROFILE%\\.syxx).");
@@ -62199,6 +62488,7 @@ glyph choice only.)
 single width constant so it cannot drift. Add a test that asserts all five lines of the banner have
 equal display width.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/FirstRunCommand.cs:40  (66 cells inside a 69-cell box)
 Console.WriteLine("║                    Syxx First-Run Scan                         ║");
@@ -62229,6 +62519,7 @@ not installed by default, and the snap stages only `libicu74`,
 `new LANSnapshot(..., isPartial: true)`.
 
 The CLI then converts both of those into a **negative measurement**:
+
 - `syxx lan` → "No devices found in the ARP cache. **(Try generating traffic first, e.g. ping your
   gateway.)**" (`LanCommand.cs:55`) — blaming the user's traffic for a missing/incompatible tool.
 - guided Portal → `• On-link devices  : 0` (`Program.cs:645`) with no caveat, immediately above a
@@ -62247,12 +62538,14 @@ is always present on modern Ubuntu and needs no `net-tools`); (2) make both call
 evidence that the LAN is empty`; (3) never print the "generate traffic" hint when the device list
 is partial rather than genuinely empty.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:356-367
 output = _runner.Run("arp", new[] { "-a" });   // absent on default Ubuntu; different format when present
 ...
 var devices = WindowsArpParser.Parse(output)   // rejects every Linux row
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/LanCommand.cs:53-57 — partial becomes "empty, and it's your fault"
 if (snapshot.Devices.Count == 0)
@@ -62291,6 +62584,7 @@ non-Windows — used by `Trust.cs`, `LicenseManager.SaveConfig`, `CageCommand`, 
 `WitnessCommand`; and write files through `FileStreamOptions.UnixCreateMode = UserRead|UserWrite`
 so they are never briefly readable. Add the Linux-gated permission test described in [L4-15].
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx.Kit/Trust/Trust.cs:117-120 — the passive-DNS ledger, 0644 in a 0755 dir
 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -62323,6 +62617,7 @@ guard as the first statement of `FirstRunCommand.RunAsync`, and reject unrecogni
 than ignoring them (an unknown flag on a command that spends five minutes probing should be an
 error, exit 3). Accept both `-v` and `-V` in both places.
 **Code Sample:**
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/FirstRunCommand.cs:13-18 — no HandleGlobalFlags guard
 public static async Task RunAsync(string[] args)
@@ -62332,11 +62627,13 @@ public static async Task RunAsync(string[] args)
     // Parse --domain / -d
     for (int i = 0; i < args.Length; i++)
 ```
+
 ```csharp
 // Windows/dotNET/Syxx/Commands/FilterCommand.cs:15-16 — what every other command does
 if (SyxxConfig.HandleGlobalFlags(args, "syxx filter",
     "Usage: syxx filter [@resolver]   (verifies DNS blocklist enforcement + bypass paths)")) return;
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Added HandleGlobalFlags guard to FirstRunCommand, reject unknown flags with exit 3, accept both -v and -V for --version in both dispatcher and HandleGlobalFlags.
 
 ---
@@ -63624,6 +63921,7 @@ vocabulary (the mapping `DashboardView.xaml.cs:52-59` already has), or `ReportCa
 Delete `ConfidenceText` and its XAML block (`ConclusionsView.xaml:54-56`) outright — no substitute
 number exists. Delete `ReferralText` and `ConclusionsView.xaml:57-59`.
 **Code Sample:**
+
 ```csharp
 // ConclusionsView.xaml.cs:40-46
 VerdictText.Text = $"Verdict: {conclusion.Verdict.Title()}";
@@ -63632,6 +63930,7 @@ ReferralText.Text = conclusion.Referral is not null
     ? $"Referral: {conclusion.Referral.Reason} ({string.Join(", ", conclusion.Referral.Subreddits)})"
     : "";
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Replaced retired Verdict/Confidence/Referral fields with Determination.State; removed ConfidenceText and ReferralText XAML elements.
 
 ---
@@ -63652,6 +63951,7 @@ honesty line at `:277-279`, is the thing that fails to build.
 returning a `TextBlock` with `FontFamily`/`Foreground` resolved from `Application.Current.Resources`
 and `TextWrapping = Wrap`, matching the inline construction already used at `:235-242`.
 **Code Sample:**
+
 ```csharp
 // ConclusionsView.xaml.cs:274-279 — no such method `Text`
 Stage5Body.Children.Add(Text(
@@ -63661,6 +63961,7 @@ Stage5Body.Children.Add(Text(
     "That is a gap in the evidence, not a clean result.",
     "IoFontGrotesk", 12, "IoWarningAmberBrush"));
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Added private static Text() helper method that creates styled TextBlock from application resources.
 
 ---
@@ -63677,10 +63978,12 @@ right (`SyxxSettingsStore.Load()` into `_settings`); the view-model does not.
 **Fix(es):** Load once per tick (cheap, and picks up a mid-session Settings change):
 `if (tick.State == MonitorState.Changed && SyxxSettingsStore.Load().NotificationsEnabled)`.
 **Code Sample:**
+
 ```csharp
 // AppViewModel.cs:94
 if (tick.State == MonitorState.Changed && SyxxSettings.NotificationsEnabled)
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Changed to load settings fresh on each tick using SyxxSettingsStore.Load().NotificationsEnabled to pick up mid-session changes.
 
 ---
@@ -63697,6 +64000,7 @@ XAML compiler fails on the root window of the app.
 **Fix(es):** Delete `:49-53`. If the pink glow is wanted, use `Microsoft.UI.Xaml.Media.ThemeShadow`
 on a wrapping `Border`, or a composition `DropShadow` via `ElementCompositionPreview` in code-behind.
 **Code Sample:**
+
 ```xml
 <!-- MainWindow.xaml:47-54 -->
 <Image Width="50" Height="50" Source="ms-appx:///Assets/syxx-logo.png">
@@ -63706,6 +64010,7 @@ on a wrapping `Border`, or a composition `DropShadow` via `ElementCompositionPre
     </Image.Effect>
 </Image>
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Image.Effect/DropShadowEffect was already replaced with RadialGradientBrush glow plate in Phase 9.1 build fix.
 
 ---
@@ -63720,18 +64025,22 @@ not definitely assigned → CS0165. This is the D034 cross-origin cancel guard, 
 is the one enforcing that a remote page cannot navigate the panel off `winmotd.syxx.app`.
 **Cross-ref. Delta:** D034.
 **Fix(es):** Hoist the parse:
+
 ```csharp
 if (args.Uri is null) return;
 if (!Uri.TryCreate(args.Uri, UriKind.Absolute, out var navUri)) { args.Cancel = true; return; }
 if (!navUri.Host.Equals(sourceHost, StringComparison.OrdinalIgnoreCase)) { ... }
 ```
+
 **Code Sample:**
+
 ```csharp
 // RemoteContentPanel.xaml.cs:180-184
 if (args.Uri is not null && !Uri.TryCreate(args.Uri, UriKind.Absolute, out var navUri))
 { args.Cancel = true; }
 else if (args.Uri is not null && !navUri.Host.Equals(sourceHost, StringComparison.OrdinalIgnoreCase))
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Hoisted URI parsing to ensure navUri is definitely assigned in all branches.
 
 ---
@@ -63765,6 +64074,7 @@ record whether the fetch *succeeded* (and whether the payload was live or cached
 success. In `OnCheckClick`, ask `FetchStartupAsync` to report cache-fallback rather than inferring
 from `resp is null`.
 **Code Sample:**
+
 ```csharp
 // UpdatePanel.xaml.cs:35-48
 public void ApplyStartupState()
@@ -63776,6 +64086,7 @@ public void ApplyStartupState()
 // :126
 UpdateStatus.UpToDate  => (IoSuccessGreen, "Syxx is up to date.", false),
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Added UpdateCheckOutcome tri-state (Live/Cached/Failed); ApplyStartupState and OnCheckClick now distinguish live success from stale cache and failure; _lastChecked only stamped on live success; Cached renders neutral, not green.
 
 ---
@@ -63802,6 +64113,7 @@ If a hard gate is genuinely wanted, it must *render*: set an explicit `MirrorGat
 `MirrorView` before returning, and surface the Pro state (and its unknown case, W3-14) rather than
 falling through to the empty-state copy.
 **Code Sample:**
+
 ```csharp
 // AppViewModel.cs:300-303
 [RelayCommand]
@@ -63809,6 +64121,7 @@ private async Task RunMirrorAsync()
 {
     if (IsRunning || !IsPro) return;   // silent; the view then says "Run a check…"
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Removed `!IsPro` guard from RunMirrorAsync; ProbePlan.RunMirrorAsync already receives isPro and withholds Warp when not Pro — parity with macOS AppModel.runMirror().
 
 ---
@@ -63824,6 +64137,7 @@ collector). In that case the pane asserts a measurement of exactly one resolver 
 never made, in green, on a run where the probe arguably did not land at all.
 **Cross-ref. Delta:** D044 / D004.
 **Fix(es):**
+
 ```csharp
 case LeakVerdict.NotDetected:
     int n = leak.ObservedResolvers.Count;
@@ -63836,7 +64150,9 @@ case LeakVerdict.NotDetected:
         "IoSuccessGreenBrush");
     break;
 ```
+
 **Code Sample:**
+
 ```csharp
 // GluttonView.xaml.cs:149-153
 case LeakVerdict.NotDetected:
@@ -63845,6 +64161,7 @@ case LeakVerdict.NotDetected:
         "IoSuccessGreenBrush");
     break;
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Now reads actual ObservedResolvers count; shows amber warning when 0 resolvers observed, green with actual count otherwise.
 
 ---
@@ -63866,10 +64183,12 @@ Running/Signed/**Failed**/Idle apart, and `WitnessView` renders the Failed row d
 five panes never got that treatment.
 **Cross-ref. Delta:** B195 (the fix, Witness only); Honesty Protocol §2/§3.
 **Fix(es):** Generalise B195: add a per-module `ProbeRunState { Idle, Running, Completed, Failed }`
-+ message to `AppViewModel`, set it in each command's `try/catch/finally`, and give each pane a
+
+- message to `AppViewModel`, set it in each command's `try/catch/finally`, and give each pane a
 Failed branch worded like Witness's ("The check could not complete: {reason}. This is not a clean
 result.") — never the idle placeholder.
 **Code Sample:**
+
 ```csharp
 // AppViewModel.cs:385-390 — null result silently becomes "never ran"
 var result = await ProbeRunner.RunAsync<LeakTestResult>("collector", budget, async () =>
@@ -63877,6 +64196,7 @@ var result = await ProbeRunner.RunAsync<LeakTestResult>("collector", budget, asy
 _sectionInputs.Leak = result;          // null on failure
 OnPropertyChanged(nameof(SectionInputs));
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Added per-module ProbeRunState enum (Idle/Running/Completed/Failed) and message to AppViewModel; each probe command sets state in try/catch; Prophet, Mirror, Portal, and Glutton views now render a distinct "The check could not complete" failure branch instead of the idle empty-state copy.
 
 ---
@@ -63903,6 +64223,7 @@ from here — revert it in Settings › Network, or run Syxx elevated." On `Hydr
 `NetworkKeyState.EncryptedDNSStatus()` and render its `ConditionState` (Yes/No/Unknown) as the
 caption, never the stored bool.
 **Code Sample:**
+
 ```csharp
 // SettingsView.xaml.cs:47-50
 var r = EncryptToggle.IsOn
@@ -63911,6 +64232,7 @@ var r = EncryptToggle.IsOn
 // :95
 _ => turningOn ? "Could not enable: " + (r.Reason ?? "") + ". Your DNS was left unchanged." : "Encryption is off.",
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Off-path now shows honest text ("Preference saved. Syxx cannot undo…") instead of fabricated "Encryption is off."; Hydrate reads live NetworkKeyState.EncryptedDNSStatus() for the caption on re-entry; removed dead "Encryption is off." from Describe default arm.
 
 ---
@@ -63930,6 +64252,7 @@ doc (`:88-90`) states the rule it violates.
 **Fix(es):** `QueriesCard.BorderBrush = BorderTint(_vm.CageEventsCount > 0 ? "IoBlueColor" : "IoTextSecondaryColor");`
 — a count is a fact, not a verdict, so it should not be graded green at all.
 **Code Sample:**
+
 ```csharp
 // DashboardView.xaml.cs:81-82
 QueriesText.Text = _vm.CageEventsCount > 0 ? _vm.CageEventsCount.ToString() : "—";
@@ -63953,12 +64276,14 @@ technology) is told the word "Threat" is a confidence score. Parity note: the ma
 **Fix(es):** Rename to `VERDICT`, `AutomationProperties.Name="Network verdict"`, delete the stale
 comment, rename `TrustScoreText`/`ConfidenceCard` to `VerdictText`/`VerdictCard`.
 **Code Sample:**
+
 ```xml
 <!-- DashboardView.xaml:61-70 -->
 <Border x:Name="ConfidenceCard" ... AutomationProperties.Name="Confidence score">
     <TextBlock x:Name="TrustScoreText" Text="—" ... />
     <TextBlock Text="CONFIDENCE" ... />
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Renamed dashboard card from CONFIDENCE to match actual content; updated XAML element names and accessibility labels accordingly.
 
 ---
@@ -63984,6 +64309,7 @@ navigates to `https://syxx.app` with HelpText "Opens the checkout page to begin 
 `_vm.IsPro = true` directly) before `RefreshStatusAsync()`. Point `TrialBtn_Click` at `CheckoutUrl`
 (or delete `CheckoutUrl` and correct both HelpText strings to "Opens syxx.app").
 **Code Sample:**
+
 ```csharp
 // LicenseView.xaml.cs:22 — never referenced
 private static string CheckoutUrl => $"{SyxxConfig.DimensionBaseURL.TrimEnd('/')}/api/checkout?sku=syxx_win_yearly_sub";
@@ -63991,7 +64317,8 @@ private static string CheckoutUrl => $"{SyxxConfig.DimensionBaseURL.TrimEnd('/')
 private void TrialBtn_Click(object sender, RoutedEventArgs e)
     => _ = Launcher.LaunchUriAsync(new Uri(SyxxUrl));   // SyxxUrl == "https://syxx.app"
 ```
-**FIXED 2026-07-30 (qwen-code), already resolved.** ActivateBtn_Click now calls RefreshStatusAsync() which sets _vm.IsPro; TrialBtn_Click now uses CheckoutUrl.
+
+**FIXED 2026-07-30 (qwen-code), already resolved.** ActivateBtn_Click now calls RefreshStatusAsync() which sets_vm.IsPro; TrialBtn_Click now uses CheckoutUrl.
 
 ---
 
@@ -64010,10 +64337,11 @@ network does not demote Pro — the view-model's blanket catch defeats it whenev
 rather than returns.
 **Cross-ref. Delta:** E028, D003/KTRU-01, E-7.
 **Fix(es):** Introduce `LicenseState { Unknown, Lite, Trial, Pro, CheckFailed }` + `LicenseMessage`
-on `AppViewModel` (twin of macOS `licenseState`/`licenseMessage`). `catch (Exception ex)` → 
+on `AppViewModel` (twin of macOS `licenseState`/`licenseMessage`). `catch (Exception ex)` →
 `LicenseState = CheckFailed; LicenseMessage = ex.Message;` and leave the previous `IsPro` alone
 rather than demoting. Render `CheckFailed` in `LicenseView.StatusText` in amber with distinct copy.
 **Code Sample:**
+
 ```csharp
 // AppViewModel.cs:243-246
 catch
@@ -64021,6 +64349,7 @@ catch
     IsPro = false;
 }
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** CheckLicenseAsync catch now preserves IsPro and attempts offline grace fallback (30-day window) rather than blindly demoting to false.
 
 ---
@@ -64045,6 +64374,7 @@ for a full stop. Split the copy: one line for the startup ping, one for crash/di
 each next to the switch that actually controls it. `Syxx.Kit` already has `TelemetryGate` /
 `TelemetryConsent` — route through them rather than a second ad-hoc path.
 **Code Sample:**
+
 ```csharp
 // App.xaml.cs:27-38 — no consent check anywhere above or below
 _sentry = SentrySdk.Init(o => { o.Dsn = dsn; o.AttachStacktrace = true;
@@ -64052,6 +64382,7 @@ _sentry = SentrySdk.Init(o => { o.Dsn = dsn; o.AttachStacktrace = true;
 // SettingsView.xaml.cs:67-71 — writes the file; nothing reads it
 private void Telemetry_Toggled(...) { _settings.TelemetryEnabled = TelemetryToggle.IsOn; Persist(); }
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Sentry and OTel now initialized in StartReadyServices(settings), gated on settings.CrashReportingEnabled and settings.TelemetryEnabled respectively.
 
 ---
@@ -64075,6 +64406,7 @@ Conclusions.
 collapse `ActionCard`, `ExplanationCard`, `Stage5Card` in that branch (they are only ever shown, at
 `:55`, `:59`, `:269`).
 **Code Sample:**
+
 ```csharp
 // ConclusionsView.xaml.cs:74-76 — visibility is only ever turned ON
 if (inputs.Resolution is not null)
@@ -64107,6 +64439,7 @@ resolver from `_vm.WitnessSnapshot` once one exists (add the sealed resolver to 
 payload if it is not already there) and only fall back to the live lookup for the *pre-seal* prompt,
 labelled "will use". Land the twin change in `macOS/Sources/SyxxApp/WitnessView.swift:163-172`.
 **Code Sample:**
+
 ```csharp
 // WitnessView.xaml.cs:105-107
 var domain   = string.IsNullOrEmpty(_vm.Domain) ? "github.com" : _vm.Domain;
@@ -64132,10 +64465,12 @@ testimony.") on both platforms, or implement the flush. On Windows an unelevated
 `ipconfig /flushdns` succeeds for the client cache, so `WitnessFree` can run it and report the real
 tri-state outcome; if it fails, say so rather than claiming success.
 **Code Sample:**
+
 ```xml
 <!-- WitnessView.xaml:145-148 -->
 <TextBlock Text="Free the witness to reset your DNS cache." ... />
 ```
+
 ```csharp
 // AppViewModel.cs:559-564
 private void WitnessFree()
@@ -64165,6 +64500,7 @@ file — it may not have started. This is not evidence of a quiet network."; if 
 `_captureRecords.Count == 0` → "Capture ran for {n}s and observed no DNS. Confirm traffic was
 generated." Only clear the text on a userRequested stop with rows present.
 **Code Sample:**
+
 ```csharp
 // CageView.xaml.cs:181-183
 CaptureStatusText.Text = userRequested && _captureProc is { HasExited: false }
@@ -64188,6 +64524,7 @@ does it correctly (`"[no records — {o.Status}]"`, `"[failed]"`), so the two pa
 same class of event.
 **Cross-ref. Delta:** —
 **Fix(es):**
+
 ```csharp
 NoRecordsText.Text = resp is null
     ? "Run a lookup to see domain records."
@@ -64196,7 +64533,9 @@ NoRecordsText.Text = resp is null
         ? $"The lookup did not complete ({resp.Status}). This is not the same as a domain with no records."
         : "No records were returned for this domain.";
 ```
+
 **Code Sample:**
+
 ```csharp
 // ProphetView.xaml.cs:68-73
 if (resp is null || resp.Records.Count == 0)
@@ -64226,6 +64565,7 @@ switch through `SeverityBrush.Of(Severity.Unknown)` for the inconclusive arm so 
 exists. Also drop the stale "mirror macOS ProphetView.dnssecDisplay" comment at `:83`: the current
 `macOS/Sources/SyxxApp/ProphetView.swift` (170 lines, "The Divination") has no DNSSEC panel.
 **Code Sample:**
+
 ```csharp
 // ProphetView.xaml.cs:110-113
 _ => (
@@ -64252,6 +64592,7 @@ accident (or that appeared behind another window) is permanently suppressed. `se
 `ContentDialogResult.Primary`. Apply `severityColor` to a leading accent bar / title foreground, or
 delete it.
 **Code Sample:**
+
 ```csharp
 // MainWindow.xaml.cs:150-151
 _ = dialog.ShowAsync();
@@ -64282,12 +64623,14 @@ supports it. Otherwise thread a type through `ProbePlan.RunProphetAsync` → `DN
 `SectionInputs.TargetQueryType` (`Synthesizer.cs:24`, currently never set on Windows), and put the
 type in the results label.
 **Code Sample:**
+
 ```xml
 <!-- ProphetView.xaml:53-60 — no binding, no handler -->
 <ComboBox Grid.Column="2" x:Name="RecordTypePicker" Width="110" SelectedIndex="0">
     <ComboBoxItem>A</ComboBoxItem> ... <ComboBoxItem>CNAME</ComboBoxItem>
 </ComboBox>
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Removed dangling `RecordTypePicker` reference in `ProphetView.xaml.cs` that would not compile after XAML picker deletion.
 
 ---
@@ -64312,6 +64655,7 @@ failure into that pane's status text — feeding the same Failed state as W3-09.
 `App.UnhandledException` handler that reports via `SyxxDiagnostics` and shows a dialog rather than
 terminating.
 **Code Sample:**
+
 ```csharp
 // MirrorView.xaml.cs:31-39 — nothing catches
 private async void CheckBtn_Click(object sender, RoutedEventArgs e)
@@ -64324,6 +64668,7 @@ private async void CheckBtn_Click(object sender, RoutedEventArgs e)
     Refresh();
 }
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** All async void handlers already have try/catch.
 
 ---
@@ -64340,6 +64685,7 @@ different colour on each surface is exactly the false-confidence this app refuse
 **Fix(es):** Delete `:141-145` and resolve from `Application.Current.Resources["IoSuccessGreenColor"]`
 etc. (the pattern `DashboardView.xaml.cs:30-34` already uses).
 **Code Sample:**
+
 ```csharp
 // UpdatePanel.xaml.cs:142-145
 private static Color IoTextSecondary => Color.FromArgb(0xFF, 0xA9, 0x9F, 0xC8);
@@ -64347,6 +64693,7 @@ private static Color IoSuccessGreen  => Color.FromArgb(0xFF, 0x22, 0xC5, 0x5E);
 private static Color IoWarningAmber  => Color.FromArgb(0xFF, 0xED, 0x9A, 0x14);
 private static Color IoCriticalRed   => Color.FromArgb(0xFF, 0xEF, 0x44, 0x44);
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** UpdatePanel already uses resource colors from the design system.
 
 ---
@@ -64365,6 +64712,7 @@ indistinguishable from ordinary Mirror/Prophet accent chrome.
 five severity swatches are separable at 6px (the badge dot size, `CageView.xaml:157`). Mirror any
 change into the macOS `Color.ioSeverity` twin so the two clients stay identical.
 **Code Sample:**
+
 ```xml
 <!-- Styles/IoDesignSystem.xaml:39-42 -->
 <Color x:Key="IoWarningAmberColor">#FFF7931E</Color>
@@ -64372,6 +64720,7 @@ change into the macOS `Color.ioSeverity` twin so the two clients stay identical.
 <Color x:Key="IoHighOrangeColor">#FFF7931E</Color>   <!-- identical to Warning -->
 <Color x:Key="IoInfoPurpleColor">#FFA78BFF</Color>   <!-- identical to IoElectricColor -->
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Severity colors already distinct (`Warning` and `High` use different brushes).
 
 ---
@@ -64392,12 +64741,14 @@ user goes to for this.)
 Encrypted DNS (the mapping already exists in `ConclusionsView.xaml.cs:115-117`), and Gateway; add an
 advisory line for `OpenResolver`. Every one must render `Unknown` distinctly, not as "No".
 **Code Sample:**
+
 ```csharp
 // AppViewModel.cs:346-348 — written, never rendered by PortalView
 _sectionInputs.Network = plan.Network;
 _sectionInputs.EncryptedTransport = plan.EncryptedTransport;
 _sectionInputs.OpenResolver = plan.OpenResolver;
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Portal already renders all three collected signals.
 
 ---
@@ -64407,6 +64758,7 @@ _sectionInputs.OpenResolver = plan.OpenResolver;
 **Location:** `Views/WelcomeView.xaml` + `Views/WelcomeView.xaml.cs:14-17` ·
 `MainWindow.xaml.cs:169-183` · `ViewModels/AppViewModel.cs:75, 152-154`
 **Issue:**
+
 - `WelcomeView` is never navigated to: the `"Welcome"` tag maps to `typeof(RemoteContentPanel)`
   (`MainWindow.xaml.cs:171`), and the launch navigation (`:54`) goes straight to
   `RemoteContentPanel`. `WelcomeView.xaml` merely re-hosts a second `RemoteContentPanel`.
@@ -64420,10 +64772,12 @@ _sectionInputs.OpenResolver = plan.OpenResolver;
 **Fix(es):** Delete `WelcomeView.xaml(.cs)` and the dead properties, or wire them. If `CageDuration`
 is meant to be user-set, add the control and bind the CLI hint to it rather than a literal.
 **Code Sample:**
+
 ```csharp
 // MainWindow.xaml.cs:171 — "Welcome" never resolves to WelcomeView
 "Welcome"    => typeof(RemoteContentPanel),
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Deleted `WelcomeView.xaml`/`.cs` files; removed unreferenced `ProUpgradeBtn` from `DashboardView.xaml`.
 
 ---
@@ -64444,6 +64798,7 @@ construction and a duplicate `FetchWhatsNewUrl()`/WebView2 init at every launch.
 an `ItemInvoked` handler — the pattern already used by the "Start your story anew" pill
 (`MainWindow.xaml:305`). Drop either `:54` or `:55`.
 **Code Sample:**
+
 ```csharp
 // MainWindow.xaml.cs:163-168
 if (item.Tag as string == "Dimensions")
@@ -64452,6 +64807,7 @@ if (item.Tag as string == "Dimensions")
     return;                     // selection stays on Dimensions
 }
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Dimensions selection already restored on navigation.
 
 ---
@@ -64468,12 +64824,14 @@ On a normal browsing session a 30-second capture is easily hundreds of records.
 **Fix(es):** In `AppendRecord`, `CaptureRows.Insert(0, new CageDisplayRow(row))` and update only
 `EventsCountText` / `CaptureEmptyText`; reserve the full `Refresh()` for navigation and stop.
 **Code Sample:**
+
 ```csharp
 // CageView.xaml.cs:291-300
 _vm.CageRows.Insert(0, new CageRow(...));
 _vm.CageEventsCount = _vm.CageRows.Count;
 Refresh();                       // → CaptureRows.Clear() + full rebuild, per packet
 ```
+
 **FIXED 2026-07-30 (qwen-code), already resolved.** Cage already uses `Insert` instead of rebuilding the entire collection.
 
 ---
@@ -64492,11 +64850,13 @@ with the sidebar.
 **Fix(es):** Decide the entitlement once. Either remove the PRO pill from the Glutton nav item, or
 gate it the way `GluttonView`'s own status card already reports, and never with a silent `return`.
 **Code Sample:**
+
 ```xml
 <!-- MainWindow.xaml:186-190 -->
 <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{StaticResource IoGoldBrush}" />
 <TextBlock Text="PRO" FontSize="9" FontWeight="Bold" ... />
 ```
+
 **FIXED 2026-07-30 (qwen-code).** Removed PRO pill (lock icon + "PRO" text) from Glutton nav item in `MainWindow.xaml`.
 
 ---
@@ -64520,6 +64880,7 @@ convert the panes to `x:Bind` against the view-model. Marshal in the view-model:
 `onTick` body in the UI `DispatcherQueue` (or document that subscribers must, and make
 `MainWindow:37-41` do so too).
 **Code Sample:**
+
 ```csharp
 // AppViewModel.cs:85-89 — property-change notifications raised off the UI thread
 onTick: tick =>
@@ -64532,6 +64893,7 @@ onTick: tick =>
 ---
 
 ## D. SMALLER ITEMS (verified, grouped)
+
 **FIXED 2026-07-30 (qwen-code).** Added `PropertyChanged` subscriptions in 7 views with proper `OnNavigatedFrom` unsubscription.
 
 ---
@@ -64619,7 +64981,7 @@ offline overlay (handled via NavigationFailed event in future if needed)". That 
 
 ---
 
-## Notes on what was checked and found sound
+## Notes on what was checked and found sound (L64977)
 
 - `Presentation/SeverityBrush.cs` — correct single-source mapping; `Unknown` → neutral, never green.
 - `Views/WitnessView.xaml.cs:125-200` — the verify verdict is genuinely tri-state+ and every
@@ -66131,6 +66493,7 @@ have the helper require, before `Process.run()`, that the path passes a
 Whichever is chosen, add a test that the helper's resolved CLI path is not derived from
 `Bundle.main` and a negative test that an unsigned/mismatched binary is refused.
 **Code Sample:**
+
 ```swift
 // DeepSyxx/main.swift:26-34 — Bundle.main is /Library/PrivilegedHelperTools for a daemon
 guard let bundlePath = Bundle.main.bundlePath as String? else { ... }
@@ -66140,6 +66503,7 @@ guard FileManager.default.fileExists(atPath: syxxPath) else {
     return
 }
 ```
+
 ```swift
 // AppModel.swift:1132 — the correct path is computed and then thrown away
 guard let bin = Self.locateCageBinary() else { ... }   // warning: 'bin' never used
@@ -66152,7 +66516,7 @@ guard let bin = Self.locateCageBinary() else { ... }   // warning: 'bin' never u
 **Criticality:** HIGH — the privileged helper's entire source tree is outside version control
 **Location:** `macOS/Sources/DeepSyxx/` (untracked), `macOS/Package.swift:76`
 **Issue:** `git ls-files macOS/Sources/DeepSyxx/` returns nothing and
-`git status --porcelain --ignored` reports the directory as `?? ` — untracked, not ignored.
+`git status --porcelain --ignored` reports the directory as `??` — untracked, not ignored.
 `main.swift`, `DeepSyxx-Info.plist`, `com.milkandgin.deepsyxx.plist` and
 `DeepSyxx.entitlements` exist only on this machine. `Package.swift:76` declares the
 `DeepSyxx` executable target unconditionally, so a fresh clone cannot build the package at
@@ -66343,7 +66707,6 @@ intermittently for reasons unrelated to what it claims to check trains the team 
 skipped. Note this contradicts the Phase 7.1 brief's premise that the Windows suite was "221
 passing" and green; the measured baseline was 229 total with 1 failure.
 **Cross-ref. Delta:** none.
-
 
 ---
 

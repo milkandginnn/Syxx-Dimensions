@@ -88,44 +88,43 @@ The Syxx detection engine is architecturally sound. The macOS `MatrixDeterminati
 **Achievable by August 15:** Items 3, 5, plus update mechanism, basic crash reporting, billing portal, privacy policy, and consent UI.
 
 ---
+
 ## Subagent Install and Deployment
 
 Read SUBAGENT_DEPLOYMENT_PLAN.md for detailed deployment’s instructions. These are not suggestions. If you intend to deviate, get clearance from the User prior to beginning build.
 
 Subagents are available at /Users/masterrabbit/Software/awesome-opencode-subagents/categories/01-core-development /Users/masterrabbit/Software/awesome-opencode-subagents/categories/03-infrastructure /Users/masterrabbit/Software/awesome-opencode-subagents/categories/10-research-analysis /Users/masterrabbit/Software/awesome-opencode-subagents/categories/09-meta-orchestration /Users/masterrabbit/Software/awesome-opencode-subagents/categories/08-business-product /Users/masterrabbit/Software/awesome-opencode-subagents/categories/07-specialized-domains /Users/masterrabbit/Software/awesome-opencode-subagents/categories/06-developer-experience /Users/masterrabbit/Software/awesome-opencode-subagents/categories/05-data-ai /Users/masterrabbit/Software/awesome-opencode-subagents/categories/04-quality-security /Users/masterrabbit/Software/awesome-opencode-subagents/categories/02-language-specialists. Install them if they are not already installed. You may personalize them by making them Syxx specific but cannot soften them, rename them, or change their primary domain of focus.
 
-
-## Skills 
+## Skills
 
 Skill Equipping Summary
 Existing skills (already available)
-Skill	Location	Equip For
-syxx-honesty-audit	.agents/skills/	All agents touching verdicts, tests, or security
-syxx-delta-file	.agents/skills/	All agents finding or fixing defects
-syxx-parity-check	.agents/skills/	All agents doing cross-platform work
-syxx-reference-lookup	.agents/skills/	Research agents, design decisions
-syxx-agent-development	.claude/skills/	Coordinators, agent management
-syxx-cross-platform-parity	.claude/skills/	Platform teams, build/deploy agents
-syxx-dns-detection-logic	.claude/skills/	Detection/probe agents
-syxx-evidence-cryptography	.claude/skills/	Evidence/signing agents
-syxx-gui-architecture	.claude/skills/	GUI agents
-syxx-ui-design-system	.claude/skills/	GUI agents
-syxx-synthesis-engine	.claude/skills/	Engine/verdict agents
-syxx-scoring-mathematics	.claude/skills/	Scoring/confidence agents
-syxx-server-architecture	.claude/skills/	Server/backend agents
-syxx-data-persistence	.claude/skills/	Storage/ledger agents
-syxx-skill-development	.claude/skills/	Knowledge-synthesizer, skill creation
-macos-tahoe-ui-implementation	.claude/skills/	macOS GUI agents
-windows-ui-implementation	.claude/skills/	Windows GUI agents
+Skill Location Equip For
+syxx-honesty-audit .agents/skills/ All agents touching verdicts, tests, or security
+syxx-delta-file .agents/skills/ All agents finding or fixing defects
+syxx-parity-check .agents/skills/ All agents doing cross-platform work
+syxx-reference-lookup .agents/skills/ Research agents, design decisions
+syxx-agent-development .claude/skills/ Coordinators, agent management
+syxx-cross-platform-parity .claude/skills/ Platform teams, build/deploy agents
+syxx-dns-detection-logic .claude/skills/ Detection/probe agents
+syxx-evidence-cryptography .claude/skills/ Evidence/signing agents
+syxx-gui-architecture .claude/skills/ GUI agents
+syxx-ui-design-system .claude/skills/ GUI agents
+syxx-synthesis-engine .claude/skills/ Engine/verdict agents
+syxx-scoring-mathematics .claude/skills/ Scoring/confidence agents
+syxx-server-architecture .claude/skills/ Server/backend agents
+syxx-data-persistence .claude/skills/ Storage/ledger agents
+syxx-skill-development .claude/skills/ Knowledge-synthesizer, skill creation
+macos-tahoe-ui-implementation .claude/skills/ macOS GUI agents
+windows-ui-implementation .claude/skills/ Windows GUI agents
 New skills to create (4 skills)
-Skill	Phase	Created By	Purpose
-syxx-ci-pipeline	Phase 0	Calling agent	CI workflow structure, job naming, platform matrix, gate wiring
-syxx-security-fix-patterns	Phase 2	knowledge-synthesizer	Catalog of proven security fix patterns from DELTAS.md
-syxx-ci-release	Phase 4	build-engineer	Release artifact creation, notarization, code signing
-syxx-commerce-flow	Phase 4	backend-developer	Stripe/Keygen flow, subscription lifecycle, offline validation.
+Skill Phase Created By Purpose
+syxx-ci-pipeline Phase 0 Calling agent CI workflow structure, job naming, platform matrix, gate wiring
+syxx-security-fix-patterns Phase 2 knowledge-synthesizer Catalog of proven security fix patterns from DELTAS.md
+syxx-ci-release Phase 4 build-engineer Release artifact creation, notarization, code signing
+syxx-commerce-flow Phase 4 backend-developer Stripe/Keygen flow, subscription lifecycle, offline validation.
 
-Gather skills from these folders and install them in your local configuration. Do NOT edit them in the other agents' configuration folder. 
-
+Gather skills from these folders and install them in your local configuration. Do NOT edit them in the other agents' configuration folder.
 
 ## Phase 0 — Foundation & Shared Infrastructure
 
@@ -321,6 +320,7 @@ Gather skills from these folders and install them in your local configuration. D
 This is the single largest work item. The macOS `MatrixDeterminativeEngine` is the replacement for the retired DST engine. Windows has a fully-ported twin (`MatrixDeterminativeEngine.cs`, 1162 lines) but nothing in production consumes it yet.
 
 **Steps (per MATRIX-MIGRATION-PLAN.md):**
+
 1. Replace `Synthesizer.Conclude()` calls with matrix engine path
 2. Map `SectionInputs` to `EvidenceBundle`
 3. Update `Conclusion` consumers to read `DeterminativeResult`
@@ -348,6 +348,7 @@ This is the single largest work item. The macOS `MatrixDeterminativeEngine` is t
 ### 4.3 Platform-Specific Fixes
 
 **macOS:**
+
 - SynthesisEngine.swift:89 — log engine errors instead of silently returning nil
 - SynthesisEngine.swift:325-329 — wire clean-support indicators (make Grade A reachable)
 - AppModel.flushDNSCache() — requires sudo; either escalate or document limitation
@@ -355,6 +356,7 @@ This is the single largest work item. The macOS `MatrixDeterminativeEngine` is t
 - ProphetView — display DNSSEC, canary, and other datapoints from full Prophet suite
 
 **Windows:**
+
 - DNSCapture PidCache unbounded growth (D067 variant) — add eviction
 - Static HttpClient timeout inconsistency — standardize across DNSResolver, ContentWarp, NetworkKeyState
 - MonitorScheduler cross-thread UI access fragility — enforce marshalling at property-setter level
@@ -362,6 +364,7 @@ This is the single largest work item. The macOS `MatrixDeterminativeEngine` is t
 - No cancellation path during synthesis — add CancellationToken propagation
 
 **Linux:**
+
 - B141 Ubuntu Mirror Lite invokes Windows DPAPI — CRITICAL, needs platform guard
 - C048 Ubuntu Glutton fabricates DNS encryption from VPN state — CRITICAL
 - Packaging: .deb for Mint/Debian, snap for Ubuntu (blocked on Tier 2+3 completion)
@@ -533,6 +536,7 @@ This is the single largest work item. The macOS `MatrixDeterminativeEngine` is t
 The defect is **NOT** IP-to-domain association — that logic does not exist anywhere in the codebase. The actual defect is **conflation**: both the web app (leaktest.syxx.app) and the desktop Glutton module treat "count of unique resolver IPs observed" as evidence of encryption status or leak status, when that signal is structurally incapable of determining either.
 
 **The authoritative server sees only the last-mile recursive resolver IP.** It has zero visibility into:
+
 - Whether the client-to-resolver path was encrypted (DoH/DoT vs. plain Do53)
 - Whether the resolver IP belongs to the user's intended VPN, DNS provider, or ISP
 - Whether queries are "leaking" outside a tunnel
@@ -692,6 +696,7 @@ The two platforms run **entirely different synthesis engines**. macOS uses `Matr
 | Evidence items | No Weight, no Supports list | Has `Weight: double`, `Supports: [Hypothesis]` | Different evidence model |
 
 **Critical path (from MATRIX-MIGRATION-PLAN.md Phase 3):**
+
 1. Add `determination` to Windows `Conclusion.cs`
 2. Port evidence-to-indicator bridge (`SyxxMatrixIntegration.cs`)
 3. Wire matrix engine into `Synthesize()`
@@ -747,6 +752,7 @@ These disparities produce different user-visible text for the same underlying ev
 ### P-4: Capture + Forensics (Windows 10 items, Linux 17 build steps)
 
 **Windows critical defects:**
+
 - `ParseDNSPacket` never sets `PayloadBytes` (F9 datapoint silently zeroed)
 - `EndpointLogAnalyzer.Analyze()` returns `string?` instead of tri-state (D081 regression)
 - CageCommand doesn't count/report unparseable packets (D107 Fix 3 not replicated)
@@ -775,12 +781,14 @@ These disparities produce different user-visible text for the same underlying ev
 ### P-6: Witness + Licensing (7 gaps)
 
 **Witness (4 gaps):**
+
 - macOS verifier rejects v3 format while Windows accepts both (MEDIUM)
 - macOS missing `SignDecisiveActs`/`VerifyDecisiveActs` (HIGH)
 - Boolean `verifySnapshot` overload has divergent error semantics (LOW)
 - Windows lacks injectable `now` for deterministic testing (LOW)
 
 **Licensing (3 gaps):**
+
 - macOS `getFirstLaunchDate` synchronous (1.5s block); Windows async (MEDIUM)
 - macOS lacks `FingerprintQuality` indicator (LOW)
 - macOS `networkError` carries message; Windows bare enum (LOW)
@@ -906,10 +914,12 @@ These disparities produce different user-visible text for the same underlying ev
 ### UX-1: Windows GUI — 84 Disparities (macOS Reference)
 
 **CRITICAL (blocks rendering):**
+
 - D-001: `IoFontGrotesk` undefined — 226 references crash or silently fallback
 - D-021: Dashboard completely different layout (macOS: trust ring + warden grid + activity terminal; Windows: generic stat cards + pricing cards)
 
 **HIGH (major visual difference):**
+
 - D-010–D-013: Dual icon system (Segoe MDL2 + rune) in sidebar — should be rune only
 - D-014–D-015: Sidebar active item and background are flat colors instead of gradients
 - D-017: Sidebar subtitle text differs ("DNS Investigation" vs "THE SIX WARDENS")
@@ -920,6 +930,7 @@ These disparities produce different user-visible text for the same underlying ev
 - D-074–D-078: Global padding (32px vs 24px), background (flat vs radial glow), card styling (12pt vs 14pt radius, opaque vs semi-transparent)
 
 **Implementation order:**
+
 1. Fix D-001 (define `IoFontGrotesk`)
 2. Rebuild Dashboard (D-021–D-030)
 3. Add rune tile headers to all views
@@ -932,10 +943,12 @@ These disparities produce different user-visible text for the same underlying ev
 **Color tokens:** 15 of 16 match. Missing: `SyxSurfaceElevatedColor` (#1d1640).
 
 **Font gaps (CRITICAL):** 5 font files not shipped:
+
 - Cinzel-Bold, Cinzel-Regular
 - EB Garamond-Regular, EB Garamond-SemiBold, EB Garamond-SemiBoldItalic
 
 **Universal pattern (all 6 warden views):**
+
 - No warden header (rune tile + Cinzel eyebrow + lore quote) — D1
 - Eyebrow text uses technical labels vs macOS thematic names — D2
 - Lore quotes missing or plain text — D3
@@ -943,6 +956,7 @@ These disparities produce different user-visible text for the same underlying ev
 - Card treatment uses violet-tinted border vs macOS white-overlay — D5
 
 **Stale elements:**
+
 - Linux Dashboard retains "THE COUNCIL'S VERDICT" and "THE CHRONICLE" cards (removed from macOS 2026-07-23)
 - Linux CageView is CLI-only stub (no capture controls, no terminal, no data grid)
 
@@ -951,6 +965,7 @@ These disparities produce different user-visible text for the same underlying ev
 ### UX-3: macOS Visual Defects — Root Causes Identified
 
 **Button jiggling (5 locations):**
+
 1. `IoDesignSystem.swift:302-304` — Spring `scaleEffect` overshoots on `IoButton` (dampingFraction 0.65)
 2. `IoDesignSystem.swift:472-473` — Same on `IoStatCard` (3% scale causes grid reflow)
 3. `ContentView.swift:336-338` — Dual `.animation()` modifiers on header button
@@ -962,23 +977,27 @@ These disparities produce different user-visible text for the same underlying ev
 **Fix:** Replace spring animations with `.easeOut(duration: 0.15)`. Remove hover `scaleEffect` from stat cards. Remove `withAnimation` wrapper on `scrollTo`. Add `.compositingGroup()` to pulse animation.
 
 **WebView "letter" pane overflow:**
+
 - **Server root cause:** `whats-new-mac.html` hardcodes `width: 860px` with no viewport meta tag
 - **Client contributing:** `RemoteContentView.swift` gives WebView `maxWidth: .infinity` but no viewport CSS injection
 - **Fix (both layers):** Server: responsive CSS (`max-width: 100%`) + viewport meta. Client: inject constraining CSS via `WKUserScript`.
 - **Windows affected too:** `whats-new-win.html` has identical 860px hardcoded width.
 
 **Content clipping (5 views missing ScrollView):**
+
 - DashboardView, GluttonView, ProphetView, MirrorView, PortalView all use `VStack` without `ScrollView` wrapper
 - Combined with 48pt top padding for transparent title bar, content clips on laptop screens
 - Fix: Wrap each in `ScrollView`
 
 **Grid reflow:**
+
 - CageView tile has extra line (capture count) making it taller than sibling tiles
 - Fix: Add `minHeight: 90` to warden tiles
 
 ### UX-4: Information Architecture (40 issues)
 
 **Top priority:**
+
 | # | Issue | Severity |
 |---|-------|----------|
 | IA-30/31/32 | Experience Mode toggle does nothing on any platform | HIGH |
@@ -990,6 +1009,7 @@ These disparities produce different user-visible text for the same underlying ev
 | IA-37 | Pricing inconsistency ($2/moon vs $4.99/month) | MEDIUM |
 
 **Recommended fixes:**
+
 - Global persistent domain field in toolbar (all views read/write same property)
 - Client-side domain validation (regex + empty guard + inline error)
 - Record type picker on macOS/Linux ProphetView (Windows already has it)
@@ -1003,6 +1023,7 @@ These disparities produce different user-visible text for the same underlying ev
 **Current state:** The GUI layer has effectively zero test coverage across all three platforms. The engine core has ~500+ test methods per platform, but the surface 95% of users interact with is untested.
 
 **4-phase plan (~60-75 hours):**
+
 1. **CI wiring** (2h): Ubuntu tests into CI, verify Windows SyxxUI.Tests compiles
 2. **ViewModel coverage** (20h): Conclusions, Dashboard, Mirror, Prophet, Glutton ViewModels
 3. **Headless rendering** (20h): Avalonia.Headless (Linux), ViewInspector (macOS), WinUI Testing (Windows)
@@ -1034,12 +1055,14 @@ These disparities produce different user-visible text for the same underlying ev
 ### CLI-1: macOS CLI — 19 Problems, 18 Recommendations
 
 **Interactive mode (highest impact):**
+
 - P1: Archaic medieval prompts bury actionable instructions → Replace with clear two-line format
 - P2: No re-prompting on invalid input → Add loop with 3-attempt escape hatch
 - P3: Menu is a tool rack, not guided experience → Add [Q] Quick Scan option
 - P4: No completion state tracking → Show checkmarks next to completed sections
 
 **Output standardization:**
+
 - P5: Three different visual separator styles → Standardize on Unicode box-drawing
 - P6: Colors defined but barely used → Extend discipline colors to output headers
 - P7: No `--no-color` flag → Add global flag
@@ -1047,18 +1070,21 @@ These disparities produce different user-visible text for the same underlying ev
 - P9: Emoji meaning inconsistent → Document mapping (✅=verified, ⚠️=inconclusive, 🚨=threat)
 
 **Error experience:**
+
 - P10: No `--verbose` flag → Add global flag with probe timings, resolver addresses
 - P11: Error messages not consistently actionable → Standardize to Glutton pattern (what/means/try)
 - P12: No retry mechanism → Add [R]etry/[S]kip/[M]enu prompt after failure
 - P13: Version mismatch (`printVersion()` hardcodes "1.0.0" vs `SyxxConfig.version = "2.0.0"`) → Fix
 
 **First-run experience:**
+
 - P14: No first-run detection → Show brief welcome when `~/.syxx/` doesn't exist
 - P15: `--help` is terse → Group by discipline, mark sudo/license requirements
 - P16: Advanced commands invisible in interactive mode → Add [T]ools menu
 - P17: ASCII banner takes ~25 lines → Compact to ~8 lines or `--no-banner`
 
 **Priority order:**
+
 1. R11: Fix version mismatch (trivial)
 2. R1-R2: Replace archaic prompts + add re-prompting (low effort, major UX)
 3. R5: Standardize visual separators (medium)
@@ -1069,11 +1095,13 @@ These disparities produce different user-visible text for the same underlying ev
 ### CLI-2: Platform Parity (61 disparities across all 15 commands)
 
 **3 CRITICAL:**
+
 - D-01: macOS `printVersion()` hardcodes "Syxx 1.0.0" (vs SyxxConfig.version "2.0.0")
 - D-18: Leak receipt signature description mismatch — macOS says "Ed25519-signed attestation", Windows says "HMAC-SHA256; verifiable server-side". One platform is lying about the evidence type.
 - D-54: Conclusions synthesis uses different engines — macOS uses matrix determinative engine, Windows uses legacy DST path
 
 **14 MEDIUM:**
+
 - D-02: macOS interactive menu lacks [S] Scan option (Windows has it)
 - D-08: macOS interactive license validation uses bare Bool; Windows uses tri-state (Valid/Invalid/Timeout)
 - D-09: macOS prints "SUCCESS" even when license save fails; Windows distinguishes
@@ -1094,6 +1122,7 @@ These disparities produce different user-visible text for the same underlying ev
 **Excellent parity (no disparities):** nslook, key, lan, speed, filter.
 
 **Implementation phases:**
+
 1. **Phase 1 (Critical):** Fix version, align signature description, align Conclusions engine
 2. **Phase 2 (Medium):** Tri-state license validation, resolver fallback, domain canonicalization, Warp inconclusive guards, Cage disclosure, FirstRun parity
 3. **Phase 3 (Low/Cosmetic):** Exit codes, help text, ANSI color, emoji consistency
@@ -1141,6 +1170,7 @@ These items are correctly prioritized below v1 ship. The v1 scope is everything 
 **Can this ship by July 30?** Not as a complete commercial product on any platform.
 
 **What CAN ship first — Linux (Snapcraft):**
+
 - Linux Avalonia GUI with working free tier (Prophet, Portal, Witness)
 - Snap package publication (Snapcraft approved)
 - Server: fix purge_expired SQL, monitor_advance leak, Keygen status query
@@ -1150,6 +1180,7 @@ These items are correctly prioritized below v1 ship. The v1 scope is everything 
 - Privacy policy + ToS + consent UI
 
 **What ships second — Windows (Microsoft Store):**
+
 - Windows IsPro fix (~20 lines)
 - `IoFontGrotesk` definition (226 references — CRITICAL crash fix)
 - Dashboard rebuild to match macOS layout
@@ -1159,12 +1190,14 @@ These items are correctly prioritized below v1 ship. The v1 scope is everything 
 - MSIX packaging for Microsoft Store
 
 **What ships third — macOS (Apple Developer ID required):**
+
 - DMG packaging + codesign + notarize (blocked on Developer ID)
 - macOS-specific visual fixes (button jiggle spring animations, ScrollView wrappers, WebView overflow)
 - Sparkle/appcast update mechanism
 - Mac App Store submission (if pursued)
 
 **What ships across all platforms (server-side, any time):**
+
 - Stripe checkout (env var config — ready now)
 - Billing portal (Stripe Customer Portal integration)
 - DNS leak test messaging replacement (C076+ delta)
@@ -1225,6 +1258,7 @@ The following new or changed strings will need owner approval before implementat
 | Windows | Zero `AutomationProperties` across 16 XAML files. No names, no help text, no label associations. |
 
 **Required work:**
+
 - Add `.accessibilityLabel` to all interactive elements on macOS
 - Add `AutomationProperties.Name` to all controls on Windows
 - Provide text alternatives for all color-only indicators

@@ -16,6 +16,7 @@ This log tracks potential errors, bugs, and implementation gaps found during cod
 **Commit:** `0b3fad5` - chore(S0): commit uncommitted working-tree cluster
 
 **Verified:**
+
 - ProbePlan/ProbeRunner/ProbeBudget refactor committed (B031, B032, F006)
 - DomainCanonical contract enforcement committed (F007)
 - Server licensing & test committed (A019, A020 residual)
@@ -24,6 +25,7 @@ This log tracks potential errors, bugs, and implementation gaps found during cod
 - F023 id-collision renumbered: emoji variant → F031
 
 **Notes:**
+
 - CHANGELOG.md documents the F023 renumber correctly
 - No engine behavior change (pure snapshot + confirmation) - correct per plan
 
@@ -36,6 +38,7 @@ This log tracks potential errors, bugs, and implementation gaps found during cod
 **Status:** ✅ PASS
 
 **macOS (DNSResolver.swift:183-184):**
+
 ```swift
 case .timeout, .transportError, .malformedResponse, .responseIdMismatch,
      .truncated, .servFail, .refused:
@@ -43,6 +46,7 @@ case .timeout, .transportError, .malformedResponse, .responseIdMismatch,
 ```
 
 **Windows (DNSResolver.cs:107-117):**
+
 ```csharp
 public bool DidFail => Status is DNSResponseStatus.Timeout
     or DNSResponseStatus.TransportError
@@ -63,11 +67,13 @@ public bool DidFail => Status is DNSResponseStatus.Timeout
 **Status:** ⚠️ PARTIAL PASS (one bug found)
 
 **macOS (DNSResolver.swift:741-792):**
+
 - `parsedCount` tracking added ✅
 - Off-class RR rejection (cls != 1) increments parsedCount ✅
 - Final check: `if parsedCount < answerCount` returns `.malformedResponse` ✅
 
 **Windows (DNSResolver.cs:563-619):**
+
 - `parsedCount` tracking added ✅
 - Off-class RR rejection (cls != 1) increments parsedCount ✅
 - Final check: `if (parsedCount < answerCount)` returns `MalformedResponse` ✅
@@ -75,6 +81,7 @@ public bool DidFail => Status is DNSResponseStatus.Timeout
 **Parity:** ✅ Both platforms match
 
 **BUG FOUND - macOS DNSResolver.swift:718:**
+
 ```swift
 if answerCount == 0 {
     return DNSResponse(
@@ -90,6 +97,7 @@ if answerCount == 0 {
 ```
 
 **Issue:** The `answerCount == 0` branch uses raw `responseCode` instead of `combinedResponseCode`. This means:
+
 - A BADVERS response (extended RCODE 16) with answerCount == 0 would be reported as RCODE 0 (success) in the NoData response
 - This contradicts the B072 fix intent (BADVERS != success)
 - The Windows implementation correctly uses `combinedResponseCode` at line 540
@@ -105,11 +113,13 @@ if answerCount == 0 {
 **Status:** ⚠️ PARTIAL PASS (missing owner-name check)
 
 **Implemented:**
+
 - CLASS field read: `let cls = (UInt16(bytes[offset + 2]) << 8) | UInt16(bytes[offset + 3])` ✅
 - Off-class rejection: `if cls != 1 { offset += rdLength; parsedCount += 1; continue }` ✅
 - Both platforms parity ✅
 
 **Missing:**
+
 - Owner-name validation against question/CNAME chain not implemented
 - REMEDIATION-MASTERPLAN WS2-A.3 says: "match answer CLASS + owner-name to question/CNAME; reject off-class/off-name"
 - Current implementation only does CLASS check, not owner-name check
@@ -125,6 +135,7 @@ if answerCount == 0 {
 **Status:** ✅ PASS
 
 **macOS (DNSResolver.swift:695-711):**
+
 ```swift
 let ednsInfo = additionalCount > 0 ? parseEDNS() : nil
 let combinedResponseCode = ednsInfo.map { responseCode | (UInt16($0.extendedRCode) << 4) } ?? responseCode
@@ -136,6 +147,7 @@ case 2: return DNSResponse(status: .servFail, responseCode: combinedResponseCode
 ```
 
 **Windows (DNSResolver.cs:496-532):**
+
 ```csharp
 EDNSResponseInfo? ednsInfo = additionalCount > 0 ? ParseEDNS() : null;
 ushort combinedResponseCode = (ushort)(responseCode | ((ednsInfo?.ExtendedRCode ?? 0) << 4));
@@ -153,6 +165,7 @@ ushort combinedResponseCode = (ushort)(responseCode | ((ednsInfo?.ExtendedRCode 
 **Status:** ✅ PASS
 
 **Windows (DNSResolver.cs:873-877):**
+
 ```csharp
 // E018: unterminated or truncated name (no 0x00 terminator before end of buffer)
 if (!terminated)
@@ -162,6 +175,7 @@ if (!terminated)
 ```
 
 **macOS (DNSResolver.swift:1013):**
+
 ```swift
 throw DNSParseError(description: "DNS name exceeds packet bounds — unterminated name")
 ```
@@ -176,15 +190,18 @@ throw DNSParseError(description: "DNS name exceeds packet bounds — unterminate
 **Status:** ✅ PASS
 
 **Server (leak.py):**
+
 - Standard base64 encoding implemented
 
 **macOS (LeakDetector.swift):**
+
 - URL-safe/unpadded signature normalization added
 - `CollectorTransportPinning` enum added for D003
 - `signatureKeyTrusted` field added for D011
 - SPKI pinning delegate implemented
 
 **Windows (LeakDetector.cs):**
+
 - URL-safe/unpadded signature normalization added
 - `CollectorTransportPinning` enum added for D003
 - `SignatureKeyTrusted` field added for D011
@@ -224,7 +241,9 @@ throw DNSParseError(description: "DNS name exceeds packet bounds — unterminate
 | WS3-A.1 | Leak signature | ✅ PASS | None |
 
 ### Critical Errors: 0
+
 ### Medium Errors: 1 (macOS responseCode bug)
+
 ### Low/Medium Gaps: 1 (missing owner-name validation)
 
 ---
@@ -236,6 +255,7 @@ throw DNSParseError(description: "DNS name exceeds packet bounds — unterminate
 **Commit:** Latest (WS1-Ph3.1)
 
 **Verified:**
+
 1. **Rule flip:** `.dempster` → `.cautious` on both platforms ✅
    - macOS `SynthesisEngine.swift:75`: `public var combinationRule: CombinationRule = .cautious`
    - Windows `SynthesisEngine.cs:24`: `public CombinationRule CombinationRule = CombinationRule.Cautious;`
@@ -259,13 +279,13 @@ throw DNSParseError(description: "DNS name exceeds packet bounds — unterminate
 1. **ε (epsilon) pinning:** The plan says "pin ε" but no named constant was added. The epsilon values (1e-9 for delta comparison, 1e-12 for Dempster denominator) are already present in the code at:
    - macOS: `SynthesisEngine.swift:206` (delta > 1e-9), `:487` (denom > 1e-12)
    - Windows: `SynthesisEngine.cs:176` (delta > 1e-9), `:461` (denom < 1e-12)
-   
+
    These values are consistent across platforms. The "pin" may have been interpreted as "ensure consistent values" rather than "extract to named constant." This is acceptable.
 
 2. **CombinationRule enum not used in main path:** The `CombinationRule` enum is defined (`.dempster`, `.cautious`) but the main combination logic still calls `dempster()` directly. The "cautious" behavior is achieved through:
    - Correlation grouping (lines 184-194): merged to max-weight per hypothesis
    - The cap path removal (no more `maxWeightPerSource` scaling)
-   
+
    This is correct: the cautious rule (Denoeux idempotent = max-of-weights per focus) is implemented through the correlation grouping logic, not through a separate combination function.
 
 3. **Test comment stale:** `SourceCorrelationTests.swift:97-98` says "capped at 2.0" but the cap was removed. The test still passes because grouped items (max 3.0) produce less confidence than independent items (stacked 3.0+3.0). The comment should be updated to reflect "merged to max" rather than "capped."
@@ -324,6 +344,7 @@ Adds `resolverDidFail` parameter to both `compare()` and `classify()`. When reso
 **Files:** `ExfilAnalyzer.swift:75-88` (macOS), `Forensics.cs:364-378` (Windows)
 
 The detection thresholds were tightened:
+
 - **Old:** `highEntropy && regular` → likelyExfil; `highEntropy || regular` → suspicious
 - **New:** `signalCount >= 3` (all of highEntropy + regular + flaggedBy) → likelyExfil; `signalCount >= 2` → suspicious
 
@@ -364,6 +385,7 @@ Changed `header->len` (wire length) to `header->caplen` (captured length). This 
 **Files:** `DNSCaptureReportGenerator.swift` (macOS), `DNSCaptureReportGenerator.cs` (Windows)
 
 Both platforms received the same report redesign:
+
 - Added `interface` parameter
 - Added `Header` property (branded ASCII header)
 - Added `RelativeCapturePath` helper (strips home dir prefix)
@@ -384,6 +406,7 @@ Both platforms match structurally and semantically. The `Header` property conten
 **File:** `Server/syxx_server/resolver.py`
 
 Three changes:
+
 1. `_build_query()` now returns `(txid, packet, name, qtype)` — caller passes expected qname/qtype forward.
 2. `_parse_response()` and `_parse_sections()` validate the question section matches what was asked (case-insensitive qname, matching qtype and qclass=1).
 3. Connected UDP (`sock.connect()`) replaces unconnected (`sendto`) so the kernel filters off-source spoofed replies.
@@ -409,6 +432,7 @@ Replaced the simple `kv_insert_once` (which treated any second delivery as dupli
 **Files:** `SyxxCLI.swift` (macOS), `Program.cs` (Windows)
 
 Key changes:
+
 1. **Conclusions moved to explicit `[C]` option:** No auto-verdict between menu loops. Only when user explicitly requests. Both platforms match.
 2. **Domain canonicalization at CLI boundary (F007):** `DomainCanonical.canonicalizeOrNil()` called at every `promptDomain()`. Both platforms match.
 3. **Resolver fallback warning:** When system resolver undetectable, prints warning instead of silently falling back to 8.8.8.8. Both platforms match.
@@ -416,6 +440,7 @@ Key changes:
 5. **Flavor text expanded:** Longer explanatory prompts for each section. Both platforms match.
 
 **Notes:**
+
 - macOS `SyxxCLI.swift:106-109` DomainCanonical returns `nil` for invalid → prints error, returns `""`. Windows `Program.cs:126-128` prints warning but still returns raw input as fallback. The macOS behavior is stricter (rejects invalid domains), while Windows is lenient (warns but proceeds). This is a **minor behavioral discrepancy** that could be intentional (Windows CLI doesn't want to hard-reject) but should be verified.
 
 ---
@@ -497,10 +522,12 @@ Key changes:
 ### CLI (SyxxCLI / Program.cs) — ⚠️ PARITY GAP (minor)
 
 **F007 DomainCanonical behavior:**
+
 - macOS `SyxxCLI.swift:106-109`: Returns empty string on invalid domain (hard reject)
 - Windows `Program.cs:126-128`: Warns but returns raw input (soft reject)
 
 **Resolver fallback warning:**
+
 - macOS `SyxxCLI.swift:150-151`: Prints "⚠️ System resolver undetectable — falling back to 8.8.8.8"
 - Windows `Program.cs:177`: Silently falls back to 8.8.8.8 with no warning
 
@@ -530,6 +557,7 @@ Both platforms now use class-set belief instead of pignistic probability. Tests 
 ### Test Adequacy Note
 
 The `SynthesisEngineTests.swift` (83 lines, 7 tests) has basic failure cases but is missing several important scenarios per the Verification & Honesty Protocol (§3):
+
 - No threat-corroboration gate test (positiveSupportGroups < 2)
 - No conflict-referral test
 - No margin-referral test
@@ -548,6 +576,7 @@ These gaps should be addressed in a follow-up.
 **Current state:** Ph4.1 and Ph4.2 are implemented on both platforms. Tests pass. The peer agent should proceed to the next plan step (likely Ph4.3 or another workstream).
 
 **Uncommitted changeset:** 71+ files, ~28K insertions, covering:
+
 - WS1-Ph3.2 (completeness scaling) ✅
 - WS1-Ph4.1 (class-set belief confidence) ✅
 - WS1-Ph4.2 (mechanism class partition) ✅
@@ -576,6 +605,7 @@ Both platforms aggregate BetP per mechanism class (rewrite, block, transport, co
 **Parity:** ✅ Both platforms match semantically. macOS uses `[MechanismClass: Double]` dictionary; Windows uses `Dictionary<MechanismClass, double>`. Sorting, fallback to 0, and `RoundPercent`/`roundPercent` are consistent.
 
 **Tests:** ✅ Two new tests in `SynthesisEngineTests.swift` (lines 86-127):
+
 - `testClassMargin_sameClass_closeHypotheses_doesNotCiteMargin` — verifies two sibling hypotheses in the same class don't trigger margin referral
 - `testClassMargin_singleClassDominates_noMarginReferral` — verifies a dominating class doesn't trigger margin referral
 
@@ -598,6 +628,7 @@ Both platforms aggregate BetP per mechanism class (rewrite, block, transport, co
 **Files:** `Ccage.c:17-21`, `Ccage.h:7-10`, `SyxxCage.swift:24-160+`, `DNSCapture.swift:418-463`, `PktapHeader.swift` (new, 131 lines)
 
 Major macOS-only architectural change:
+
 1. **Ccage.c:** `header->len` → `header->caplen` (line 21) — prevents OOB reads when pktap metadata eats into snaplen budget. Correct fix.
 2. **Ccage.h:** Added `CAGE_DLT_PKTAP = 149` constant. Correct.
 3. **SyxxCage.swift:** Replaced single-NIC `pcap_open_live` with `pktap,all` (captures every interface including loopback and VPN). Added `--output` flag for GUI live-tail. Added DLT_PKTAP guard (abort if pktap unavailable). Added `chownToSudoUser` for file ownership handoff. Added `--owner-uid`/`--owner-gid` argument consumption.
@@ -680,6 +711,7 @@ Both platforms match structurally and semantically.
 ### Test Adequacy (updated)
 
 **`SynthesisEngineTests.swift`:** Now 9 tests (up from 7). Two new Ph4.3 class-margin tests added. Previous gaps remain:
+
 - No threat-corroboration gate test (positiveSupportGroups < 2)
 - No conflict-referral test
 - No multi-platform golden-vector test
@@ -700,6 +732,7 @@ When the answer matrix shows a `.discrepancy` classification (local answer diver
 **Parity:** ✅ Both platforms match semantically. macOS uses `row.comparison.referenceVantageIds.count`; Windows uses `row.Comparison.ReferenceVantageIds.Count`. Formula and focus mask are identical.
 
 **Tests:** ✅ Two new tests in `SynthesisEngineTests.swift`:
+
 - `testPh51_discrepancyMatrix_contributesMassAgainstClean` — discrepancy must reduce clean belief vs baseline
 - `testPh51_benignSetVariation_noMassContribution` — benign variation must not shift belief (verified to 1e-9 accuracy)
 
@@ -720,8 +753,11 @@ Both tests have proper failure cases per §3.
 | 5 | `SynthesisEngineTests.swift` | Low | Missing failure-case tests for corroboration gate, conflict referral, multi-platform golden vector | ⚠️ OPEN |
 
 ### Critical Errors: 0
+
 ### Medium Errors: 0 (1 fixed: responseCode bug)
+
 ### Medium Parity Gaps: 1 (B032 Windows)
+
 ### Low Gaps: 3
 
 ---

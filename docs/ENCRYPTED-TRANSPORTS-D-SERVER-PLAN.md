@@ -132,6 +132,7 @@ D-4 (RAM measurement harness + VPS run) ────┴─> D-3 (DoQ listener)  
 `/readyz`; never let a listener degrade silently.
 
 **Files / targets.**
+
 - **New:** `Server/syxx_server/listeners.py` — a module holding
   `_state: dict[str, str]` under a `threading.Lock`, states drawn from a fixed set
   `{"listening", "degraded-fallback", "down", "unknown"}` (tri-state+unknown, per the §3
@@ -175,6 +176,7 @@ forwarding to `config.PUBLIC_RESOLVERS`. Near-zero new RAM (reuses the running H
 nginx TLS, rate limiter, `_body`).
 
 **Files / targets.**
+
 - **Edit `app.py:322-341` (`do_POST`):** add, before the `_json_error(404)` at `app.py:338`,
   `if path == "/dns-query": return self._route_doh_post(urllib.parse.parse_qs(parsed.query))`.
 - **Edit `app.py:344-394` (`_dispatch_get`):** add, before the final
@@ -229,6 +231,7 @@ is encrypted/secure (SD-59: plaintext on :8080). The response carries the DNS an
 nothing about transport security.
 
 **Failure mapping (honest, never a clean lie).**
+
 - Malformed/empty client query, wrong content-type, oversized body → `400`/`415`/`413`.
 - Not entitled → `402` (from `_require`). Not allowlisted → `403`. Rate limited → `429`.
 - Upstream unreachable / all `PUBLIC_RESOLVERS` fail → **HTTP 502** (never HTTP 200 + empty).
@@ -238,6 +241,7 @@ nothing about transport security.
 **Effort.** S-M.
 
 **Real-data acceptance bar (run on the VPS, real network).**
+
 - **Honest refusal, unauthenticated:** `kdig +https=/dns-query @syxx.app example.com`
   (kdig sends no `Authorization` header) → the client sees the paywall: **HTTP 402**
   surfaced as a failed DoH exchange, **not** an answer. Confirm with
@@ -268,6 +272,7 @@ default, forward only for allowlisted source IPs), with a **hard connection cap*
 SD-51 for this path), terminating TLS with the Let's Encrypt cert.
 
 **Files / targets.**
+
 - **New:** `Server/syxx_server/dot_listener.py`.
   - `class _BoundedThreadingTCPServer(socketserver.ThreadingTCPServer)` with
     `daemon_threads = True`, `allow_reuse_address = True`, and a
@@ -304,6 +309,7 @@ SD-51 for this path), terminating TLS with the Let's Encrypt cert.
   `DOT_TLS_CERT = _s("SYXX_DOT_TLS_CERT", "")`, `DOT_TLS_KEY = _s("SYXX_DOT_TLS_KEY", "")`.
 
 **Cert provisioning (decision 4).**
+
 - The LE cert lives at `/etc/letsencrypt/live/<domain>/{fullchain.pem,privkey.pem}` (issued by
   the certbot block, `deploy.sh:253-255`). Set `SYXX_DOT_TLS_CERT`/`SYXX_DOT_TLS_KEY` to those
   paths in the systemd unit env (`deploy.sh:187-206`).
@@ -324,6 +330,7 @@ SD-51 for this path), terminating TLS with the Let's Encrypt cert.
 **Effort.** M.
 
 **Real-data acceptance bar (VPS).**
+
 - **Honest success:** `kdig +tls @syxx.app leak-canary.leak.syxx.app A` (an in-zone leak name)
   → a real authoritative answer over TLS 1.3, and the query is recorded by the collector
   (`leak.observe`). Pre-flight the handshake:
@@ -353,6 +360,7 @@ numbers here, before a single line of the DoQ *listener* is written. This is the
 number defers D-3.
 
 **Files / targets.**
+
 - **New:** `Server/scripts/doq_ram_probe.py` — a self-contained harness that runs on the VPS
   (`deploy.sh:19`, `74.208.237.162`). It stands up a **minimal** aioquic echo/DoQ-stub server
   (ALPN "doq", the LE cert) in one process, and a companion client driver that opens N
@@ -397,6 +405,7 @@ dedicated thread (the process has no event loop today). **Do not start this step
 numbers say ship.**
 
 **Files / targets.**
+
 - **New:** `Server/syxx_server/doq_listener.py`.
   - `run(stop_event=None)`: create a fresh `asyncio` event loop, `loop.run_until_complete`ing
     `aioquic.asyncio.serve(...)` bound to `config.DOQ_HOST:config.DOQ_PORT` (udp) with a
@@ -429,6 +438,7 @@ numbers say ship.**
 **Effort.** L (new dependency + new concurrency model + measurement gate).
 
 **Real-data acceptance bar (VPS, only after D-4 says ship).**
+
 - **Honest success:** `kdig +quic @syxx.app leak-canary.leak.syxx.app A` → real authoritative
   answer over QUIC, ALPN negotiated "doq", collector records the hit. Cross-check the handshake
   with `kdig +tls +quic` semantics per the client A3 bar.
@@ -452,6 +462,7 @@ proposed UFW allowlist, and validate any SD-53 `SystemCallFilter` tightening aga
 QUIC/UDP syscalls.
 
 **Files / targets.**
+
 - **Edit `scripts/deploy.sh`:** the unit already grants `CAP_NET_BIND_SERVICE`
   (`deploy.sh:209`) — **no capability change needed**. If SD-56's UFW block lands (it proposes
   UFW for 80/443/53), it **must** also `ufw allow 853/tcp` and `ufw allow 853/udp`, or DoT/DoQ
@@ -485,6 +496,7 @@ opened it, not a coincidence). `journalctl -u syxx-server` shows the listener bo
 ## 4. Pre-queued commands
 
 **Local dev (before real runs).**
+
 ```
 # from Server/ — run the full server test suite (baseline, must pass before adding listeners)
 cd /Users/masterrabbit/Software/Syxx/Server && python3 -m unittest discover -s tests -v
@@ -495,23 +507,27 @@ cd /Users/masterrabbit/Software/Syxx/Server && python3 -m unittest tests.test_do
 ```
 
 **Install kdig (knot-dnsutils) for the real-run bar.**
+
 ```
 # macOS: brew install knot     |     Ubuntu/VPS: apt-get install -y knot-dnsutils
 ```
 
 **aioquic (ONLY after user approval AND D-4 ship verdict — do not run preemptively).**
+
 ```
 # on the VPS, in a venv to avoid touching the stdlib-only system python
 ssh root@74.208.237.162 'python3 -m venv /opt/SyxxServer/.venv && /opt/SyxxServer/.venv/bin/pip install "aioquic>=1.0.0"'
 ```
 
 **D-4 measurement (on the VPS).**
+
 ```
 ssh root@74.208.237.162 'free -m'
 ssh root@74.208.237.162 'cd /opt/SyxxServer && .venv/bin/python3 scripts/doq_ram_probe.py --n 100 500 1000'
 ```
 
 **Real-run bar (from an off-VPS host after deploy).**
+
 ```
 openssl s_client -connect syxx.app:853 -servername syxx.app </dev/null | head
 kdig +https=/dns-query @syxx.app example.com        # expect 402-driven failure (unauth)
@@ -532,8 +548,8 @@ curl -s -o /dev/null -w '%{http_code}\n' 'https://syxx.app/dns-query?name=exampl
 | RSS active peak (MB) | | | | |
 | CPU% active | | | | |
 
-`free -m` MemAvailable at measurement: __ MB. Reserved for co-residents (HTTP+DoT+collector+nginx+WAL): __ MB.
-`max_safe_conns` (50% margin): __. Realistic peak concurrent DoQ conns: __.
+`free -m` MemAvailable at measurement: **MB. Reserved for co-residents (HTTP+DoT+collector+nginx+WAL):** MB.
+`max_safe_conns` (50% margin): **. Realistic peak concurrent DoQ conns:**.
 **Ship / Defer verdict:** ____ (with one sentence of justification).
 
 ---
@@ -542,6 +558,7 @@ curl -s -o /dev/null -w '%{http_code}\n' 'https://syxx.app/dns-query?name=exampl
 
 **`tests/test_doh.py`** (unit, `object.__new__(app.Handler)` pattern per
 `test_server_hardening.py:20-29`; live-socket for the route per `test_routes.py:50-67`).
+
 - Happy: monkeypatch `resolver.forward_wire` to return a known A-record wire; authenticated +
   allowlisted GET `?dns=` → 200 + that exact wire. **Failure case:** flip the monkeypatch to
   return a txid-mismatched response → `forward_wire` raises `DNSError` → route returns **502**,
@@ -559,6 +576,7 @@ curl -s -o /dev/null -w '%{http_code}\n' 'https://syxx.app/dns-query?name=exampl
 **`tests/test_dot.py`** (net-new live-socket harness: start `dot_listener.run` on an ephemeral
 port with `/tmp/syxx-test-cert.pem`, connect with `ssl.create_default_context(...)` +
 `check_hostname=False` for the self-signed test cert).
+
 - Happy: TLS connect, send a framed in-zone leak query → authoritative answer; `leak.observe`
   recorded. **Failure case:** send an out-of-zone name (`example.com`) → **REFUSED** (rcode 5);
   the test fails if any answer record is returned.
@@ -573,6 +591,7 @@ port with `/tmp/syxx-test-cert.pem`, connect with `ssl.create_default_context(..
 **`tests/test_doq.py`** (net-new live-socket harness using an aioquic client;
 `@unittest.skipUnless(_HAS_AIOQUIC, "aioquic not installed")` so it is honestly **skipped**,
 never silently passing, where the dep is absent).
+
 - Happy: QUIC connect ALPN "doq", open a bidi stream, send an ID-0 framed in-zone query →
   authoritative answer. **Failure case:** send message ID != 0 or a non-"doq" ALPN → the
   handshake/stream is rejected per RFC 9250; the test fails if a compliant ID-0 query is *also*
@@ -622,6 +641,7 @@ never silently passing, where the dep is absent).
    AGENTS.md: do not install until the user approves the exact version.
 
 **References I could not fully verify against the live tree (flagged, not propagated):**
+
 - The program plan cites SD-51 at `app.py:925`; the live `ThreadingHTTPServer` construction is
   at `app.py:1028` and `serve()` at `app.py:1024-1038`. **[corrected]** in §1.
 - SD-53/56/62 line numbers in the delta ledger (`deploy.sh:174`, `:209`,

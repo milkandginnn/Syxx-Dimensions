@@ -63,6 +63,7 @@ DNSCrypt (protocol v2) is the most mature single-server encrypted DNS protocol. 
 **Post-quantum variant (PQDNSCrypt):** Uses ES Version `0x00 0x03` with the X-Wing hybrid KEM (ML-KEM-768 + X25519) and HKDF-SHA256, while retaining XChaCha20_DJB-Poly1305 for symmetric encryption.
 
 **Padding scheme:**
+
 - ISO/IEC 7816-4 format (`0x80` followed by NUL bytes)
 - UDP queries: padded to minimum 256 bytes, multiples of 64
 - TCP queries: random padding 1-256 bytes, multiples of 64
@@ -81,6 +82,7 @@ sdns:// <base64url( props || LP(addr[:port]) || LP(pk) || LP(providerName) )>
 ```
 
 Where:
+
 - `props`: 64-bit little-endian flags (1=DNSSEC, 2=No-logs, 4=No-filtering)
 - `addr`: IP address string with optional port
 - `pk`: 32 raw bytes of the provider's Ed25519 public key
@@ -116,6 +118,7 @@ Where `hashes` are SHA256 digests of TBS certificates, enabling certificate pinn
 ### 1.5 Hybrid Models
 
 **PSK bootstrap + session keys (recommended for Syxx):**
+
 1. Initial setup: server generates Ed25519 keypair, distributes via stamp (QR code, config file, or out-of-band)
 2. First connection: client fetches ephemeral X25519 key signed by Ed25519 provider key
 3. Session establishment: X25519 key exchange derives shared secret
@@ -124,6 +127,7 @@ Where `hashes` are SHA256 digests of TBS certificates, enabling certificate pinn
 This is essentially the DNSCrypt model, which has proven robust. The key insight is separating the long-term identity key (Ed25519, for signing certificates) from the short-term encryption key (X25519, for query encryption).
 
 **WireGuard-inspired model:**
+
 - Static keypair known to both parties (like WireGuard's Noise_IK)
 - No certificate fetch required on first query
 - 0-RTT encrypted queries using pre-shared static keys
@@ -132,6 +136,7 @@ This is essentially the DNSCrypt model, which has proven robust. The key insight
 ### 1.6 Viable Single-Server Architectures
 
 **Architecture A: DNSCrypt-Compatible (proven)**
+
 - Server runs DNSCrypt v2 (e.g., encrypted-dns server)
 - Clients use dnscrypt-proxy or native client
 - Stamps for key distribution
@@ -139,6 +144,7 @@ This is essentially the DNSCrypt model, which has proven robust. The key insight
 - Cons: UDP-only relay, no built-in per-user identity, limited multiplexing
 
 **Architecture B: Noise Protocol + Custom DNS Framing (novel)**
+
 - Noise_IK handshake with pre-shared server static key
 - Server key distributed via stamp/QR code
 - 1-RTT first query (encrypted in first message)
@@ -147,6 +153,7 @@ This is essentially the DNSCrypt model, which has proven robust. The key insight
 - Cons: not battle-tested for DNS, requires custom framing
 
 **Architecture C: HPKE-Based (emerging)**
+
 - Server publishes X25519 public key in stamp
 - Client encrypts queries using HPKE Base mode
 - Server responds with HPKE-encrypted responses
@@ -155,6 +162,7 @@ This is essentially the DNSCrypt model, which has proven robust. The key insight
 - Cons: not designed for datagrams, stateless operation unclear
 
 **Architecture D: Hybrid DNSCrypt + Modern Extensions (recommended starting point)**
+
 - DNSCrypt v2 as the transport security layer
 - Add Noise-style 0-RTT optimization
 - Extend with protocol-level metadata (blocking reasons, DNSSEC proof)
@@ -171,23 +179,29 @@ This is essentially the DNSCrypt model, which has proven robust. The key insight
 NextDNS provides per-user filtering through multiple identity encoding mechanisms:
 
 **DoH path-based identity:**
+
 ```
 https://dns.nextdns.io/<profile_id>
 ```
+
 The profile ID (e.g., `abc123`) is embedded in the URL path. The server extracts this to apply the user's configuration.
 
 **DNS hostname-based identity:**
+
 ```
 <profile_id>.dns.nextdns.io
 ```
+
 The profile ID is encoded as a subdomain. Standard DNS queries to this hostname are associated with the user's profile.
 
 **DoT/DoQ hostname-based identity:**
+
 ```
 <profile_id>.dns.nextdns.io (port 853 for DoT, 853 for DoQ)
 ```
 
 **Key characteristics:**
+
 - Each configuration is independent: custom denylists, allowlists, rewrites, parental controls, security settings
 - Unlimited configurations per account
 - Conditional profile selection: different profile IDs based on CIDR, MAC address, or interface name
@@ -297,6 +311,7 @@ Each user receives a client certificate for mTLS.
 6. User identity is never visible in network traffic
 
 This model:
+
 - Avoids all certificate infrastructure
 - Provides strong per-user privacy
 - Scales to hundreds of users on a single server
@@ -328,17 +343,20 @@ Even with encryption (DoH, DoT, DNSCrypt), the following metadata is observable:
 Recent research demonstrates that encrypted DNS remains vulnerable to fingerprinting:
 
 **Website Fingerprinting (WF) over DoH/DoT:**
+
 - Machine learning models can fingerprint websites by analyzing DoH traffic patterns
 - Particularly effective in IoT environments where obfuscation is limited
 - "DoHFuse" architecture (DMAGLSTM) achieves significant classification accuracy
 - Recent studies demonstrate "padding-resilient" WF attacks that succeed despite EDNS padding
 
 **TLS Fingerprinting:**
+
 - JA3 hashes, SNI analysis, and handshake parameters can identify DoT/DoH traffic
 - Distinguishable from regular HTTPS traffic by endpoint patterns and protocol behavior
 - Enterprise telemetry (NetFlow, IPFIX) can extract timing patterns to classify DNS traffic
 
 **Traffic Pattern Analysis:**
+
 - Flow-level metadata (source/destination IPs, ports, timing) enables DNS protocol identification
 - Real-time profiling systems detect malicious DoH tunnels by establishing normal traffic baselines
 - ML models successfully fingerprint search queries and VR traffic over encrypted channels
@@ -364,6 +382,7 @@ Recent research demonstrates that encrypted DNS remains vulnerable to fingerprin
 - DNSSEC adoption may alter size patterns, requiring block size updates
 
 **DNSCrypt Padding:**
+
 - ISO/IEC 7816-4 format (`0x80` + NUL bytes)
 - UDP: minimum 256 bytes, multiples of 64
 - TCP: random 1-256 bytes, multiples of 64
@@ -386,16 +405,19 @@ ODoH uses a two-server architecture to separate client identity from query conte
 6. Client decrypts response
 
 **Privacy guarantees (if Proxy and Target don't collude):**
+
 - Target sees query but only Proxy's IP (never Client's IP)
 - Proxy sees Client's IP but cannot read encrypted query content
 - No single entity possesses both user identity and browsing intent
 
 **Performance overhead:**
+
 - Encryption cost: <1ms at 99th percentile
 - Latency: 50% of ODoH queries resolve in <228ms vs 146ms for standard DoH
 - Significantly faster than DoH over Tor
 
 **Can ODoH work in a single-server model?**
+
 - By definition, NO. ODoH requires two non-colluding servers.
 - However, the end-to-end encryption layer can be adapted: a single server can provide the Target functionality, and the client can optionally route through an external proxy (like DNSCrypt's Anonymized DNS).
 
@@ -412,6 +434,7 @@ An alternative to ODoH that works with DNSCrypt:
 - UDP only, amplification attack prevention via strict format matching
 
 **Comparison to ODoH:**
+
 - Lower overhead (no additional encryption at relay layer)
 - DNSCrypt-only (cannot anonymize DoH traffic)
 - Simpler architecture (no separate proxy/target protocol)
@@ -424,11 +447,13 @@ An alternative to ODoH that works with DNSCrypt:
 **Cache timing:** Fast response indicates cached result, which correlates with popular domain. An attacker observing response latency can build a probability map of which domain was queried.
 
 **Query-response timing correlation:** The time between query and response varies based on:
+
 - Cache hit (fast, ~1-5ms)
 - Recursive resolution (slower, ~50-300ms depending on TTL and authority server)
 - NXDOMAIN (often faster due to negative caching)
 
 **Countermeasures:**
+
 - **Constant-time responses:** Server always takes the same time to respond (adds artificial delay to cached responses). Defeats cache timing but increases latency.
 - **Response jitter:** Add random delay to responses. Partially defeats timing analysis but increases latency variance.
 - **Batch processing:** Process multiple queries in a batch and return all at once. Defeats per-query timing but adds latency.
@@ -447,6 +472,7 @@ A new protocol could employ a layered approach:
 5. **Relay support:** Optional relay layer (like DNSCrypt Anonymized DNS) for users who need IP address separation.
 
 **Gaps in state of the art:**
+
 - No existing DNS protocol implements constant-time responses
 - Cover traffic is theoretically sound but unproven at scale for DNS
 - Traffic analysis attacks continue to improve; defenses must be proactive, not reactive
@@ -459,6 +485,7 @@ A new protocol could employ a layered approach:
 ### 4.1 The Problem
 
 DNSSEC provides answer integrity through a chain of trust from the root zone. However:
+
 - Only ~30% of domains are DNSSEC-signed
 - DNSSEC validation is complex and error-prone
 - DNSSEC increases response sizes significantly
@@ -470,6 +497,7 @@ The question: how can a protocol guarantee the server didn't lie about the answe
 ### 4.2 Server-Signed Responses
 
 **DNSCrypt's approach (MAC-based):**
+
 - Queries authenticated via AEAD tag (implicit)
 - Responses authenticated via AEAD tag (Poly1305)
 - Client nonce binds response to specific query
@@ -479,6 +507,7 @@ The question: how can a protocol guarantee the server didn't lie about the answe
 This proves the response came from the authenticated server and wasn't modified in transit. But it does NOT prove the server told the truth about the DNS answer.
 
 **Ed25519 response signatures (proposed):**
+
 - Server signs each response with Ed25519 private key
 - Client verifies with server's public key (from stamp)
 - Provides non-repudiation (server cannot deny sending the response)
@@ -490,11 +519,13 @@ This is stronger than MAC-based authentication (which only proves to the holder 
 ### 4.3 Carrying DNSSEC Validation Results in the Protocol
 
 **Authenticated Data (AD) bit:**
+
 - DNS responses include an AD bit indicating DNSSEC validation was performed
 - DoH carries this bit in the standard DNS response
 - Limitation: client must trust the resolver's claim of validation
 
 **Extended approach for Syxx protocol:**
+
 1. Protocol includes a `dnssec_status` field: `validated`, `insecure` (no DNSSEC), `bogus` (validation failed), `unchecked`
 2. For `validated` responses, include:
    - RRSIG records from the answer
@@ -504,15 +535,19 @@ This is stronger than MAC-based authentication (which only proves to the holder 
 4. If the server claims `validated` but the RRSIG doesn't verify, the server is lying
 
 **Proof of honest resolution (resolution receipts):**
+
 - Server includes the full resolution path in the protocol metadata:
+
   ```
   root. -> NS com. -> NS example.com. -> A 93.184.216.34
   ```
+
 - Each step includes the DNSSEC signature (if available)
 - Client can verify the delegation chain independently
 - Any gap or inconsistency reveals dishonest resolution
 
 **Authenticated denial of existence:**
+
 - NSEC/NSEC3 records prove a domain/record does not exist
 - Protocol includes these records for NXDOMAIN responses
 - Client can verify the authenticated denial independently
@@ -522,21 +557,25 @@ This is stronger than MAC-based authentication (which only proves to the holder 
 Querying the same domain through multiple paths and comparing results:
 
 **How it works:**
+
 - Client queries the primary server and one or more secondary resolvers
 - Compare results across paths
 - Discrepancies indicate potential tampering
 
 **Detection capabilities:**
+
 - MitM attacks on a single path (other paths return different results)
 - DNS spoofing/cache poisoning (forged answers cannot be consistently replicated)
 - Selective blocking (one path returns NXDOMAIN, others return real answers)
 
 **Implementation in Syxx:**
+
 - Protocol includes a `cross_reference` field listing other resolvers queried
 - Server can perform multi-path verification on behalf of client
 - Results include consensus status: `unanimous`, `majority`, `conflict`
 
 **Limitations:**
+
 - If all paths are compromised by the same attacker, no detection
 - Adds latency (multiple round trips)
 - Does not work if secondary resolvers are unavailable
@@ -546,6 +585,7 @@ Querying the same domain through multiple paths and comparing results:
 ### 4.5 Cryptographic Commitments
 
 **Commit-and-reveal for DNS:**
+
 1. Client sends query with a random nonce
 2. Server commits to response by sending `H(response || nonce)` first
 3. Server then reveals the actual response
@@ -553,11 +593,13 @@ Querying the same domain through multiple paths and comparing results:
 5. Server cannot change response after committing
 
 **Practical challenges:**
+
 - Adds a round trip (commit then reveal)
 - Server could pre-compute commitments for preferred answers
 - Does not prevent the server from committing to a lie
 
 **Better approach: Signed commitments with transparency:**
+
 - Server signs response with timestamp and query hash
 - Responses are logged to an append-only transparency log (Certificate Transparency model)
 - Third parties can audit the log for consistency
@@ -593,6 +635,7 @@ This gives the client the ability to independently verify answers to the extent 
 ### 5.1 Noise Protocol Framework for DNS
 
 **What Noise provides:**
+
 - Formally verified handshake patterns
 - Modular cryptographic primitives (swap DH, cipher, hash independently)
 - Explicit security properties for every message
@@ -601,6 +644,7 @@ This gives the client the ability to independently verify answers to the extent 
 - Channel binding via handshake hash
 
 **WireGuard's use of Noise:**
+
 - Pattern: Noise_IK (Initiator's key Immediately transmitted, Responder's key Known)
 - Primitives: Curve25519, ChaCha20-Poly1305, BLAKE2s
 - 1-RTT handshake with 0-RTT data capability
@@ -612,10 +656,12 @@ This gives the client the ability to independently verify answers to the extent 
 DNS is query-response (datagrams), not a stream. Noise is designed for streams. However, Noise can be adapted:
 
 **Option A: Noise_IK per-query (stateless)**
+
 ```
 Client -> Server: e, es, s, ss, encrypted_query    (Message 1)
 Server -> Client: e, ee, se, encrypted_response    (Message 2)
 ```
+
 - 1-RTT query, 1-RTT response
 - Server's static key known from stamp
 - Client's static key for per-user identity
@@ -623,6 +669,7 @@ Server -> Client: e, ee, se, encrypted_response    (Message 2)
 - Drawback: full handshake per query (expensive)
 
 **Option B: Noise_IK session establishment + lightweight queries**
+
 ```
 Session Setup:
   Client -> Server: e, es, s, ss    (Handshake Message 1)
@@ -632,16 +679,19 @@ Queries (within session):
   Client -> Server: nonce, AEAD(query)
   Server -> Client: nonce, AEAD(response)
 ```
+
 - 1-RTT session setup, then lightweight encrypted queries
 - Session keys derived from handshake
 - Queries encrypted with derived transport keys
 - Similar to DNSCrypt but with Noise's formal guarantees
 
 **Option C: Noise_KK 0-RTT (both keys known)**
+
 ```
 Client -> Server: e, es, ss, encrypted_query    (0-RTT Message)
 Server -> Client: e, ee, encrypted_response     (Response)
 ```
+
 - Both static keys pre-shared (from stamps)
 - First query encrypted in the first message (0-RTT)
 - Forward secrecy from ephemeral keys
@@ -654,12 +704,14 @@ Server -> Client: e, ee, encrypted_response     (Response)
 ### 5.2 Minimal Handshake Protocols
 
 **1-RTT handshake (TLS 1.3 model):**
+
 - Client sends key share + encrypted query in first flight
 - Server responds with key share + encrypted response
 - One round trip for the first query
 - Subsequent queries use derived session keys (no handshake needed)
 
 **0-RTT with forward secrecy (WireGuard model):**
+
 - Client's first message includes encrypted data
 - Forward secrecy achieved via ephemeral key contributions
 - Replay protection needed (DNS queries are idempotent, so replay is less dangerous)
@@ -667,6 +719,7 @@ Server -> Client: e, ee, encrypted_response     (Response)
 
 **Can DNS achieve 0-RTT encrypted queries?**
 Yes, with the Noise_KK or Noise_IK pattern:
+
 - Both parties have pre-shared static keys (from stamps)
 - Client generates ephemeral key, performs DH with server's static key
 - First message includes: ephemeral public key + encrypted query
@@ -674,6 +727,7 @@ Yes, with the Noise_KK or Noise_IK pattern:
 - Forward secrecy from ephemeral keys in both directions
 
 **Security tradeoffs of 0-RTT:**
+
 - Replay attacks: attacker can capture and re-send the first message. Mitigated by: DNS queries are read-only (idempotent), server can track recent nonces
 - Weaker forward secrecy: if server's static key is compromised, 0-RTT data from the past can be decrypted. Mitigated by regular key rotation.
 - Identity exposure: client identity may be visible in the first message
@@ -681,6 +735,7 @@ Yes, with the Noise_KK or Noise_IK pattern:
 ### 5.3 Multiplexed DNS
 
 **DoQ (DNS over QUIC) multiplexing model (RFC 9250):**
+
 - Each DNS query/response mapped to a separate bidirectional QUIC stream
 - No head-of-line blocking (independent streams)
 - Parallel queries over single connection
@@ -689,12 +744,14 @@ Yes, with the Noise_KK or Noise_IK pattern:
 - Client sends `STREAM FIN` after query, server sends `STREAM FIN` after response
 
 **0-RTT in DoQ:**
+
 - Supported via QUIC session resumption
 - Only "replayable" transactions (OPCODE QUERY or NOTIFY) allowed in 0-RTT
 - Non-replayable requests queued until handshake or refused with EDE "Too Early"
 - Privacy tradeoffs: resumption tickets create linkability
 
 **Connection migration in DoQ:**
+
 - Inherited from QUIC (sessions persist across network changes)
 - Privacy risk: server can track client across IP addresses
 - Recommendation: clients should prioritize privacy by starting new sessions on network change
@@ -715,6 +772,7 @@ Session:
 ```
 
 This provides QUIC-like multiplexing with:
+
 - No TLS dependency
 - Noise-based encryption
 - Lower overhead (no QUIC connection IDs, flow control, congestion control)
@@ -749,6 +807,7 @@ BlockResponse {
 ```
 
 Benefits:
+
 - Machine-readable block reasons (client can render appropriate UI)
 - Cryptographic proof of block decision (for audit/compliance)
 - Categories enable client-side UI customization
@@ -762,6 +821,7 @@ Benefits:
 **The problem:** DNS's 16-bit transaction ID provides weak binding. An attacker who can inject responses can guess the TXID (65536 possibilities). DNSCrypt's client nonce provides strong binding but is protocol-specific.
 
 **DNSCrypt's approach (proven):**
+
 - Client generates 12-byte nonce per query
 - Response includes the same client nonce (first 12 bytes)
 - Server adds 12-byte random nonce to response
@@ -785,6 +845,7 @@ Response: [stream_id: u16] [client_nonce: 12 bytes] [server_nonce: 12 bytes] [AE
 ### 5.6 Other Novel Patterns
 
 **HPKE (Hybrid Public Key Encryption, RFC 9180):**
+
 - Standardized public key encryption for arbitrary plaintexts
 - Four modes: Base, PSK, Auth, AuthPSK
 - Supports X25519, P-256, P-384, P-521 KEMs
@@ -794,6 +855,7 @@ Response: [stream_id: u16] [client_nonce: 12 bytes] [server_nonce: 12 bytes] [AE
 - Used in: TLS Encrypted Client Hello (ECH)
 
 **Age-based encryption:**
+
 - Simple, modern file encryption tool
 - Uses X25519 + ChaCha20-Poly1305 + HMAC-SHA-256
 - Could inspire a simpler DNS encryption scheme
@@ -811,6 +873,7 @@ Response: [stream_id: u16] [client_nonce: 12 bytes] [server_nonce: 12 bytes] [AE
 | Implementation complexity | High (TLS stack) | Moderate (crypto library only) |
 
 For Syxx, application-layer encryption is preferable because:
+
 - The goal is investigation/detection, not compatibility with web infrastructure
 - Metadata minimization is critical
 - Custom padding and traffic analysis resistance require application-layer control
@@ -824,13 +887,13 @@ For Syxx, application-layer encryption is preferable because:
 
 | Name | Pattern | Meaning |
 |------|---------|---------|
-| DNSCrypt | [Function][Brand] | DNS + encryption |
-| DNSCurve | [Function][Shape] | DNS + elliptic curves |
+| DNSCrypt | `[Function][Brand]` | DNS + encryption |
+| DNSCurve | `[Function][Shape]` | DNS + elliptic curves |
 | DoH | [Function] over [Transport] | DNS over HTTPS |
 | DoT | [Function] over [Transport] | DNS over TLS |
 | DoQ | [Function] over [Transport] | DNS over QUIC |
-| ODoH | [Modifier][Function] over [Transport] | Oblivious DoH |
-| DNSSEC | [Function][Security] | DNS Security Extensions |
+| ODoH | `[Modifier][Function]` over [Transport] | Oblivious DoH |
+| DNSSEC | `[Function][Security]` | DNS Security Extensions |
 
 ### 6.2 Naming Criteria
 
@@ -845,6 +908,7 @@ For Syxx, application-layer encryption is preferable because:
 ### 6.3 Proposed Names - Conflict Analysis
 
 **"Syxx Cipher"**
+
 - Conflicts: **NONE FOUND.** No existing "Cipher DNS" or "Cipher protocol" in the networking/security space.
 - Memorability: HIGH. "Cipher" is widely understood as encryption.
 - Descriptiveness: HIGH. Directly evokes encryption.
@@ -854,6 +918,7 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: Strong candidate. No conflicts. Clear meaning.**
 
 **"Syxx Prism"**
+
 - Conflicts: **SIGNIFICANT.** NSA PRISM surveillance program. Also PRISM (IETF SD-WAN protocol draft), DNS-Cache-Poisoning-Mitigation-PRISM (academic), Cybersecurity Prism (framework).
 - Memorability: HIGH.
 - Descriptiveness: MODERATE. Evokes spectrum/analysis but also surveillance.
@@ -862,6 +927,7 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: REJECTED. NSA PRISM association is disqualifying.**
 
 **"Syxx Aegis"**
+
 - Conflicts: **MODERATE.** "Aegis Protocol" exists as an AI security framework (VerisAegis, C++ framework on GitHub, academic papers on agentic threats). Not in DNS specifically, but in adjacent security space.
 - Memorability: HIGH. "Aegis" (shield/protection) is widely understood.
 - Descriptiveness: HIGH. Evokes protection/shielding.
@@ -871,6 +937,7 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: Moderate candidate. Adjacent conflict with AI security framework, but no DNS conflict.**
 
 **"Syxx Seal"**
+
 - Conflicts: **LOW.** SEAL (Security Alliance) is a DNS security framework/guidelines document, not a protocol. SEAL (Sui Network) is a blockchain data security platform. Neither is a DNS encryption protocol.
 - Memorability: HIGH. "Seal" evokes integrity/closure.
 - Descriptiveness: MODERATE. Evokes integrity but not specifically DNS.
@@ -880,6 +947,7 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: Weak candidate. Common word, acronym issue.**
 
 **"Syxx Meridian"**
+
 - Conflicts: **SEVERE.** Multiple direct conflicts: meridian-dns (Rust DNS resolver), Meridian Protocol (web preservation/DNS failover), Meridian (censorship-resistant proxy with DNS), OpenNMS Meridian (network monitoring with DNS components), Meridian Protocol (real-time communications).
 - Memorability: HIGH.
 - Descriptiveness: MODERATE. Evokes precision/alignment.
@@ -887,6 +955,7 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: REJECTED. Direct DNS project conflict (meridian-dns).**
 
 **"Syxx Parallax"**
+
 - Conflicts: **SEVERE.** Parallax Protocol (P2P networking using DNS for discovery), Parallax Inc. (embedded systems with DNS code), "The Parallax" (DNS publication/blog).
 - Memorability: HIGH.
 - Descriptiveness: MODERATE. Evokes perspective/depth (aligns with "Dimensions").
@@ -895,6 +964,7 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: REJECTED due to conflicts. Would be ideal if available.**
 
 **"Syxx Veil"**
+
 - Conflicts: **MODERATE-SEVERE.** Veil Protocol (quantum-resistant privacy protocol), Veil (MIT anonymous communication protocol), Veil-DNS-Seeder (DNS infrastructure project), Veil (MIT browser security).
 - Memorability: HIGH.
 - Descriptiveness: HIGH. Evokes privacy/concealment.
@@ -902,10 +972,12 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: REJECTED. DNS project conflict and multiple privacy protocol conflicts.**
 
 **"Syxx Sentinel"**
+
 - Conflicts: **SEVERE.** Microsoft Sentinel (major SIEM product with DNS monitoring), RFC 8509 (Root Key Trust Anchor Sentinel in DNSSEC). The name is already formally used within DNSSEC.
 - **Verdict: REJECTED. Formal DNSSEC protocol term.**
 
 **"Syxx Crucible"**
+
 - Conflicts: **LOW-MODERATE.** Crucible (Go project with DNS proxy package), Crucible (CMU-SEI infrastructure), various security frameworks. No direct DNS protocol conflict.
 - Memorability: MODERATE.
 - Descriptiveness: HIGH. Evokes testing/verification (core Syxx mission).
@@ -915,20 +987,24 @@ For Syxx, application-layer encryption is preferable because:
 - **Verdict: Moderate candidate. Minor Go project conflict, but no DNS protocol conflict.**
 
 **"Syxx Lens"**
+
 - Conflicts: **MODERATE.** Lens Protocol (Web3 social/identity, overlaps with DNS naming), lens-sandbox-core (Rust DNS/network enforcement), LENS Protocol (AI consensus), lens.google (reserved DNS namespace).
 - **Verdict: REJECTED. DNS enforcement project conflict and Google namespace reservation.**
 
 **"Syxx Vector"**
+
 - Conflicts: **MODERATE.** Vector DNS (actual DNS toolkit by Vector Cyber Security), Vector (observability pipeline with DNS config), Path Vector Protocol (BGP class).
 - **Verdict: REJECTED. Direct "Vector DNS" product conflict.**
 
 **"Syxx Compass"**
+
 - Conflicts: **MODERATE.** DNSAI Compass (DNS abuse measurement), compassdns (GitHub DNS project), Compass Security (DNS research), Security Compass.
 - **Verdict: REJECTED. DNSAI Compass is an industry standard; compassdns is a direct project.**
 
 ### 6.4 Additional Name Exploration
 
 **"Syxx Cipher"** (top candidate, re-evaluated):
+
 - Zero conflicts in DNS/security protocol space
 - Clear, memorable, descriptive
 - Complements "Dimensions" as a precision/measurement tool
@@ -936,6 +1012,7 @@ For Syxx, application-layer encryption is preferable because:
 - Acronym: SC or SyCipher
 
 **"Syxx Crucible"** (secondary candidate):
+
 - Minor conflict (Go DNS proxy package, not a protocol)
 - Evokes the testing/verification core to Syxx's mission
 - "Crucible" implies rigorous testing under pressure
@@ -946,6 +1023,7 @@ For Syxx, application-layer encryption is preferable because:
 **Primary recommendation: Syxx Cipher**
 
 Rationale:
+
 1. **Zero conflicts** in the DNS and security protocol space
 2. **Immediately descriptive:** "Cipher" universally means encryption/cryptography
 3. **Brand complement:** "Cipher" and "Dimensions" both evoke precision and depth
@@ -957,6 +1035,7 @@ Rationale:
 **Secondary recommendation: Syxx Crucible**
 
 Rationale:
+
 1. Minor conflict only (Go package, not a protocol)
 2. Evokes the verification/testing mission of Syxx
 3. Unique and memorable

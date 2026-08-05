@@ -71,7 +71,7 @@ several unsafe branches. What LANDED this pass (Kit + tests + ledgers only; Syxx
 wiring is handed off, see below):
 
 - **New shared Kit policy** `macOS/Sources/SyxxKit/Synthesis/CrossVantageConsensus.swift`
-  + Windows twin `Windows/dotNET/Syxx.Kit/Synthesis/CrossVantageConsensus.cs` (Linux
+  - Windows twin `Windows/dotNET/Syxx.Kit/Synthesis/CrossVantageConsensus.cs` (Linux
   links Syxx.Kit, so it inherits the twin). ONE decision function over FULL A/AAAA
   RRsets: identical → match; blocking-beside-routable → mismatch; any other difference
   judged ONLY against an attacker-independent DoH consensus (`dohCorroboratedPool`,
@@ -188,7 +188,7 @@ foundation the main agent pre-staged.
 - `Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ProphetViewModel.cs`: added
   `ProphetConsensusResult` + `DnssecStatus` observable properties, cleared at scan
   start; `CheckAsync` calls `ProphetConsensus.RunAsync` after ProbePlan; consensus
-  + DNSSEC presentation translated inline in the VM (tri-state, em-dashes replaced
+  - DNSSEC presentation translated inline in the VM (tri-state, em-dashes replaced
   with colons, Inconclusive never red). D278 gate preserved.
 - `Linux/Ubuntu/SyxxUI.Avalonia/Views/ProphetView.axaml`: complete rewrite to match
   the macOS structure (rune header, domain card, stacked consensus + DNSSEC cards,
@@ -487,6 +487,7 @@ Remote MOTD has a shared five-second deadline; packaged `fallback-motd.html` loa
 Cross-platform typography migration from the retired Archivo / Space Grotesk / Space Mono primary faces to the specimen-authoritative five-family system.
 
 ### Semantic roles (all platforms)
+
 | Role | Face | Notes |
 |------|------|-------|
 | `display` / `sectionHeading` | Cinzel Bold / SemiBold | caps, never body, never below 18pt |
@@ -497,6 +498,7 @@ Cross-platform typography migration from the retired Archivo / Space Grotesk / S
 | `technical` | JetBrains Mono | paths, IPs, hashes, logs |
 
 ### Platform work
+
 - **macOS** `IoDesignSystem.swift`: `SyxxTypeRole`, `SyxxBodyWeight`, semantic Font API; Archivo registration and call sites removed; Cinzel sizes clamped to ≥18; static Jost Light/Regular/Medium packaged under `Resources/` with OFL texts; Debug + Release bundles pack Jost (no Archivo).
 - **Windows** `IoDesignSystem.xaml`: `IoType*` resource keys; `IoFontUI` / `IoFontGrotesk` alias to Jost; Archivo assets retired from `Assets/Fonts/`.
 - **Linux** `App.axaml` + `AcceptanceAlertWindow.cs`: `SyxType*` keys; UI face is Jost Regular.
@@ -505,10 +507,10 @@ Cross-platform typography migration from the retired Archivo / Space Grotesk / S
 - **Tests**: `TypographyResourcesTests` (15 cases) cover packaging, role→PostScript maps, body weight restriction, Cinzel floor, emphasis sizing, eyebrow tracking, and retired-face absence. Mutation cases documented; shell-guard mutations (Archivo inject, missing Jost-Light) exit non-zero.
 
 ### Explicitly not in this workstream
+
 - PurpleScrollView (3.8)
 - MOTD load/timeout logic (other agents)
 - User-facing copy changes
-
 
 ## Phase 3.2: authenticated G-1 updater foundations (2026-08-01)
 
@@ -1108,12 +1110,14 @@ marked AWAITING USER APPROVAL). They replace raw System.Text.Json exception text
 Deployed Phase 0 meta-orchestration agents (it-ops-orchestrator, multi-agent-coordinator, git-workflow-manager, agent-organizer) plus implementation agents across all platforms.
 
 ### Critical infrastructure (all platforms)
+
 - **Linux DPAPI crash fixed** — Created `ISecretStore` interface, `DpapiSecretStore` (Windows), `PlatformSecretStore` (factory), rewrote `LinuxSecretStore` (AES-256-GCM with libsecret + file fallback). Refactored `LicenseManager` and `WitnessKeyStore` to use DI, removing all DPAPI calls from non-Windows paths. Fixes P-8 D-P1/D-P5 and B141.
 - **C048 Linux Glutton false encryption fixed** — `GluttonViewModel.EncryptionLine` now driven by `net.EncryptedDNS.State` (tri-state) instead of `net.VpnActive` (bool). No false "encrypted DNS" claims when only a tunnel is detected.
 - **Server critical bugs fixed** — S16 (purge_expired SQLite alias), S15 (monitor_advance connection leak), S12 (Keygen license status resource), CORS wildcard on paid routes, S2 (SQLite DB `chmod 0o600`), X-Frame-Options header. Plus `_route_create_monitor` in app.py, `deploy.sh`, index.html accessibility fixes.
 - **Server test isolation fixed** — `test_routes.py` hard-overrides `SYXX_DB_PATH` instead of `setdefault` to prevent cross-test DB contamination.
 
 ### Security (Phase 1) — 10 fixes
+
 - D060 shell injection (macOS): verified already safe (Process arguments array)
 - D065 symlink race: verified already fixed (O_NOFOLLOW)
 - D034 WebView origin check (Windows): null URI cancellation + normalized host comparison
@@ -1122,25 +1126,30 @@ Deployed Phase 0 meta-orchestration agents (it-ops-orchestrator, multi-agent-coo
 - D018 NS glue IP gate: `IPClassifier.publicRoutable` filter on both macOS/Windows AuthoritativeVantage
 
 ### Revenue & Commerce (Phase 2)
+
 - **E028 Windows IsPro fix (COMPLETE)** — `CheckLicenseAsync()` wired into `CheckStartupAsync()`, catch block preserves IsPro on network error + falls back to offline grace (30-day window). `FirstRunScan.RunAsync()` gained `isPro` parameter matching macOS. ConclusionsView and LicenseView propagate `_vm.IsPro`. 9 changes across 7 files.
 - **E-10 Pricing consistency** — All surfaces updated to $3.95/month, $19.95/year (Windows LicenseView, Ubuntu LicenseView, Windows DashboardView)
 - **Ubuntu EULA gate** — Created `EulaDialog.cs` with 16-section agreement, first-launch gate with Accept/Decline, acceptance persistence.
 - Existing infrastructure verified working: Stripe checkout, Stripe Billing Portal, offline entitlement cache (both platforms), security.txt, privacy/terms/refund policies.
 
 ### Detection & Verdict Integrity (Phase 3)
+
 - macOS: 5 items verified already fixed (B091, D050, C070, GluttonView stale license, ProphetView consensus). DashboardView "PASSED" fixed to check actual answer IP consensus.
 - Windows: B091 (leak verdict from signed payload), D050 (WitnessSigner returning SnapshotVerification enum), C070 (no empty-data verification) — all fixed matching macOS.
 - DashboardView and ProphetView consensus display: feature gap on Windows (not a regression — needs separate implementation).
 
 ### Platform Parity & Engine Migration (Phase 4)
+
 - Windows matrix engine now wired to production. `SyxxMatrixIntegration.cs`, `Conclusion.cs`, `SynthesisEngine.cs` all updated. `UseMatrixEngine` config flag (default true). Steps 1-5 of the 7-step migration complete. DST engine not yet deleted.
 
 ### Test Integrity (Phase 7)
+
 - Engine divergence structurally resolved: macOS corpus tests use `XCTExpectFailure` ratchet for DST-era "clean" seeds; Windows corpus tests need porting from archive/
 - CI parity gate verified alive (exit 1 on divergence) — not a no-op
 - Mutation resistance: WitnessSigner excellent (9 distinct states), LicenseManager good (mutation-documented boundaries), Windows DPAPI guard covered by CI matrix
 
 ### Build verification
+
 - macOS `swift build`: ✅ 0 errors, 24.99s
 - macOS `swift test`: ✅ 4/4 TriState tests
 - Windows `dotnet build`: ✅ Syxx.Kit.dll, 0 errors
@@ -1151,12 +1160,14 @@ Deployed Phase 0 meta-orchestration agents (it-ops-orchestrator, multi-agent-coo
 Built a custom Sparkle-inspired auto-update system from scratch to avoid licensing issues. The system uses Ed25519-signed appcast manifests and SHA-256 package verification.
 
 ### Server-side
+
 - Created `Server/syxx_server/appcast.py`: Signed appcast manifest generation with Ed25519 (reuses collector key from leak.py)
 - Added `/api/appcast` endpoint in `app.py`: Returns signed manifest for mac/win/deb platforms
 - Added config entries: `LATEST_MAC`, `LATEST_WIN`, `LATEST_DEB`, `UPDATE_URL_MAC`, `UPDATE_URL_WIN`, `UPDATE_URL_DEB`
 - API versioning preserved: `/api/v1/*` aliases `/api/*` in GET, POST, DELETE handlers
 
 ### macOS client
+
 - Created `macOS/Sources/SyxxKit/UpdateService.swift`: Full update lifecycle (check, download, verify, install)
 - Handles DMG and ZIP packages with backup/restore on failure
 - Ed25519 signature verification (currently defers to HTTPS transport, marked for follow-up)
@@ -1164,6 +1175,7 @@ Built a custom Sparkle-inspired auto-update system from scratch to avoid licensi
 - Fixed circular import (removed `import SyxxKit` from within SyxxKit)
 
 ### Windows/Linux client
+
 - Created `Windows/dotNET/Syxx.Kit/UpdateService.cs`: Platform-aware update service
 - Auto-detects Windows vs Linux, requests correct appcast platform (win vs deb)
 - Handles ZIP packages (Windows) and .deb packages (Linux via dpkg/pkexec)
@@ -1173,6 +1185,7 @@ Built a custom Sparkle-inspired auto-update system from scratch to avoid licensi
 - SHA-256 hash verification
 
 ### Notes
+
 - Signature verification currently relies on HTTPS transport security; full Ed25519 client-side verification is marked for follow-up (noted in code comments)
 - All server tests pass: 278 passed, 31 subtests passed
 - Platform parity maintained: macOS (SyxxKit), Windows (Syxx.Kit), Linux (Syxx.Kit via Avalonia)
@@ -1182,6 +1195,7 @@ Built a custom Sparkle-inspired auto-update system from scratch to avoid licensi
 Phases 0-4 of the agent deployment plan completed. Phase 5 in progress.
 
 ### Phase 0: Harness Repair
+
 - Fixed all 84 custom agent name fields in `.qoder/agents/*.md`
 - Fixed Windows solution and CI paths (`Windows/Syxx.sln`, `ci.yml`)
 - Added Server CI test job to `ci.yml`
@@ -1190,9 +1204,11 @@ Phases 0-4 of the agent deployment plan completed. Phase 5 in progress.
 - Created `syxx-ci-pipeline` skill
 
 ### Phase 1: Meta-Orchestration
+
 - Verified all 6 coordinator agents are invocable and configured
 
 ### Phase 2: Critical Security and Foundation
+
 - **D063**: Added QR/opcode/qdcount/qclass validation to `dns_authoritative.py`
 - **A045**: Map RCODE to typed status in `investigate.py` (SERVFAIL/REFUSED no longer collapse to status:ok)
 - **E026**: Fixed hardcoded collector URL in `AppViewModel.cs` (use `SyxxConfig.DimensionBaseURL`)
@@ -1200,18 +1216,21 @@ Phases 0-4 of the agent deployment plan completed. Phase 5 in progress.
 - **D053**: Added HMAC-SHA256 integrity to license DB rows in `db.py`
 
 ### Phase 3: Detection and Verdict Integrity
+
 - **A044**: Consensus now includes reachable empty vantages (NXDOMAIN/NODATA); selective censorship no longer disappears
 - **A041**: DNSSEC posture collects evidence from ALL reachable vantages, not just the first
 - **A042/A043**: RRSIG validation now checks inception time and typeCovered (must be DNSKEY)
 - **A036**: Leak verify marks observations as unattested (`observationsAttested: false`)
 
 ### Phase 4: Platform Parity and v1 Features
+
 - Fixed `build.ps1` stale Windows paths (now references `Windows\dotNET\`)
 - Created `Ubuntu/build_deb.sh` for Linux .deb package creation
 - Created `build-installer.ps1` for Windows installer package
 - Fixed SEO page hardcoded prices (E-10): now configurable via `SYXX_SEO_PRICE_MONTHLY`/`SYXX_SEO_PRICE_YEARLY` env vars
 
 ### Handoff Tasks
+
 - 6.3: Added semantic HTML to `Server/index.html` (nav, main, aria-label, role=button)
 - 6.4: API v1 prefix and OpenAPI spec already implemented
 - 8.2: User guide already exists at `docs/USER-GUIDE.md`
@@ -1560,6 +1579,7 @@ integrate the matrix-based determinative engine for real as the replacement. Lan
 (`SyxxKit`); Windows/Ubuntu parity port is NOT yet done (follow-up).
 
 **Landed and verified (compiles in-module; run on realistic evidence via an isolated swiftc harness):**
+
 - `SyxxKit/Synthesis/MatrixDeterminativeEngine.swift` — full engine (present from a prior pass this
   session): `MatrixSpec`/`DiagnosisSpec`/`DiagnosisIndicatorRule`/`ThresholdProfile`/`EvidenceBundle`/
   `ObservedIndicator`/`SectionResult`/`DeterminativeResult`/`DiagnosisScore`/`VerdictState`, with
@@ -1583,6 +1603,7 @@ integrate the matrix-based determinative engine for real as the replacement. Lan
 **B193 (orphaned DST synthesis stack blocking the build) — RESOLVED.** The earlier "remove
 synthesis" rewrite had orphaned the old DST stack, leaving `SyxxKit` non-compiling (~135 errors).
 Reconciled per-file:
+
 - Re-derived onto `Conclusion.determination`, public API preserved: `PlainExplanation.swift`,
   `VerdictAction.swift`, `ReportCard.swift` (A1/A2/A3 presentation), and `Report.swift`
   `renderText()` (datapoint dedup kept; dead verdict lines rewritten).
@@ -1634,6 +1655,7 @@ on real data.
 Complete rebrand of every GUI surface from the old "Io" dark-tech theme (Space Grotesk, `#130d26` canvas, `#8b5cf6` violet) to the new "Warden" dark-fantasy theme (Cinzel/EB Garamond, `#0b0518` canvas, `#7c5cff` violet, `#2dd4bf` teal, `#d9a441` gold). All mockup HTML files serve as the single source of truth.
 
 **macOS:**
+
 - `IoDesignSystem.swift` rewritten: 30+ color/gradient/typography tokens. Canvas `#0b0518`, window/sidebar gradients, wordmark tri-gradient (orange/pink/violet), primary/teal/red button gradients, health meter, pro covenant, Cinzel display + EB Garamond lore + system-ui + ui-monospace font stacks.
 - `ContentView.swift` rewritten: 236px WardenSidebar with Elder Futhark rune nav, gold dividers, Pro lock indicators, Dimensions gold external link, "Start your story anew" footer pill, Syxx gradient wordmark.
 - `DashboardView.swift` rewritten: "THE WATCHTOWER" eyebrow, Cinzel title, trust ring + health meter banner, transport/resolver pills, 3 action buttons, 2-column warden grid + verdict card + chronicle, Pro covenant banner.
@@ -1642,19 +1664,23 @@ Complete rebrand of every GUI surface from the old "Io" dark-tech theme (Space G
 - Artboard HTML created at `Syxx GUI Mockups/Syxx Artboard (standalone).html` for branding reference.
 
 **Windows:**
+
 - `IoDesignSystem.xaml` rewritten: Full Warden token set (164 lines). New canvas `#0B0518`, window/sidebar gradients, wordmark/primary/teal/red button gradients, health meter, pro covenant, content glow, gold nav separators, Cinzel/EB Garamond font families with Segoe UI/Cascadia Mono fallbacks.
 - `MainWindow.xaml` rewritten: 236px pane, Elder Futhark rune nav (ᚨ, ᛞ, ᛜ, ᚦ, ᚾ, ᛉ), gold PRO lock indicators, Cinzel 27px wordmark with tri-gradient, 9.5px subtitle with letter-spacing, "Start your story anew" pill button, gold group dividers. Fixed missing `IoFontGrotesk` references (replaced with `IoFontUI`).
 
 **Linux (Avalonia):**
+
 - `App.axaml`: Added `SyxSurfaceDarkBrush` and `SyxBorderSubtleBrush` aliases for views that referenced Io* names.
 - 10 view AXAML files updated (159 total resource replacements): `ProphetView`, `MirrorView`, `PortalView`, `GluttonView`, `CageView`, `WitnessView`, `ConclusionsView`, `SettingsView`, `WhatsNewView`, `LicenseView`. All `Io*` resource keys replaced with `Syx*` equivalents. No layout/structure/binding changes.
 
 **Web Server:**
+
 - `index.html`: Font import changed from Space Grotesk/Mono to Cinzel/EB Garamond. All 17 `--io-*` CSS variables updated to Warden values. Body gradient changed to `radial-gradient(130% 80% at 15% 0%, #1a0c33, #0b0518)`. Wordmark uses Cinzel with tri-gradient. Nav background darkened. Buttons use violet gradient. Terminal background updated.
 - `purchase-success.html`: Same font/variable/gradient updates. Hardcoded violet/secondary colors updated.
 - `purchase-cancel.html`: Same font/variable/gradient updates. Gold border color updated.
 
 **Remaining:**
+
 - Cinzel/EB Garamond font files not yet bundled in macOS Resources (falling back to system serif). Font registration in `SyxxAppDelegate` needs updating once fonts are added.
 - Whats-new HTML files (`whats-new-mac.html`, `whats-new-win.html`, `whats-new-deb.html`) still use Quicksand/gold-lavender palette (embedded in desktop webviews, separate design system).
 
@@ -1679,6 +1705,7 @@ result-per-warden property surface that AppModel never had.
 - **`DashboardView.swift`** — fixed `model.enableUnbound()` → `model.setUnbound(true)`.
 
 **Build verification:**
+
 - macOS: `swift build` — 0 errors.
 - Linux: `dotnet build` — 0 errors.
 - Windows: not buildable on macOS host (expected).
@@ -1796,6 +1823,7 @@ B153 triplet are NOT in this change.
 "While this result looks suspicious, it can also have harmless causes. For example, a captive
 portal (think of connecting to the WiFi at a hotel or airport) or encrypted DNS (such as a VPN,
 DNS over HTTPS, TLS, or QUIC) can give off the same or similar signals."
+
 ## WS8-04 / WS8-05 final: naming gate + scriptMismatch removed (2026-07-20)
 
 **Contract:** `WS8-04-05-CONTRACT.md` §1-4 — threat naming requires decisive act OR ≥2 independent support groups.
@@ -1823,6 +1851,7 @@ unmatched path cannot fabricate one.
 
 **Tests: 4 new, all mutation-proven RED before green.**
 `SynthesisEngineTests.swift` (macOS) and `SyxxKitTests.cs:ReferralReasonCauseTests` (Windows):
+
 - `DampenerReferral_ReportsTheMechanism_NotAMargin` — mutation: delete the dampener branch. RED.
 - `HardGateOutranksConflict_InTheStatedReason` — mutation: restore conflict above hardGated. RED,
   emitting "The sections disagree (conflict 95%)" on both platforms, identical value.
@@ -1845,7 +1874,7 @@ Verified live against production code that WS8-01 (B151), WS8-02 (B155), and WS8
 already fixed in the tree — the HANDOFF/ROADMAP described the pre-fix state.
 
 - **B151 (WS8-01):** `SectionEvidence.init` requires `completeness: Double` (no default); `DatapointCompleteness`
-  + 4 catalog constants at `Synthesizer.swift:575-588`; all 13 macOS adapter sites pass real N/M; Windows
+  - 4 catalog constants at `Synthesizer.swift:575-588`; all 13 macOS adapter sites pass real N/M; Windows
   unchanged. 3 `SectionCompletenessTests` pass (`SynthesizerDatapointWiringTests.swift:619-649`).
 - **B155 (WS8-02):** `SynthesisEngine.swift:244-248` — degraded dampeners use `degradedSectionReliability`;
   untested/invalidated sections skip via `continue`. Windows twin at `SynthesisEngine.cs:210-214`.
@@ -1881,11 +1910,13 @@ None of these deltas remain in `DELTAS.md`; they were resolved during the 2026-0
 ## D081 error-collapse pattern analysis (2026-07-20)
 
 Analyzed the error-handling pattern in `LeakDetector.swift` for the ~40 D081 sites. The pattern is:
+
 - On ANY network/parse/error → return `.verdict = .inconclusive` + `errorReason: "description"`  
 - Never conflate "error" with "negative finding" or "clean"
 - Callers can distinguish `.inconclusive` (error) from `.negative` (measured clean) vs `.positive` (tamper found)
 
 macOS sites to apply this pattern to:
+
 - `EndpointLogAnalyzer.swift:39-40` — ✅ DONE `streamLines` silently returns on file-open failure → `EndpointLogAnalysisResult` enum now returns `.error("reason")` vs `.notApplicable` vs `.success(report)`
 - `DimensionClient.swift:78-81` — `get<T>` returns nil on any failure → should return `.inconclusive` with error reason  
 - `SieveBlocklistLoader.swift:19-21` — `loadFromFile` returns nil on any error → should return meaningful error
@@ -1895,6 +1926,7 @@ Windows counterpart: `LanCartography.cs:353-358` has the identical defect patter
 ## Ledger evaluation and cleanup sweep (2026-07-20)
 
 Performed a comprehensive delta evaluation and cleanup sweep of the `DELTAS.md` ledger:
+
 - Evaluated all 450 deltas across all domains (A-F).
 - Relocated 139 deltas believed fixed to `DELTAS-fixed.md`. **Lifecycle correction
   (2026-07-30):** live-source re-verification found seven of those closures false:
@@ -1913,6 +1945,7 @@ on macOS, LocalApplicationData on Windows/Linux), not scattered UserDefaults/reg
 Round-trip + corrupt-file-falls-back-to-defaults tested (macOS 4, Windows 3).
 
 Each pane has the same sections, wired to real actions:
+
 - **Encrypted DNS** — the toggle calls the real `EncryptedDNSConfigurator` and renders the honest
   tri-state: macOS shows "needs the DNS-Settings entitlement" on the unsigned build, Windows "needs
   Administrator", Linux "needs root" — never a fake "on". Resolver + transport pickers.
@@ -1941,6 +1974,7 @@ distinct protection mode.
 (`netsh dns add encryption` templates); Linux systemd-resolved DoT (`resolvectl`).
 
 **Built:**
+
 - `EncryptedDNSConfig` (`.swift` + `.cs` twins): curated no-log resolver catalog (Cloudflare default,
   Quad9, Google, + custom), DoH/DoT transport, and the honesty-critical `classifyApply` gate.
 - macOS `EncryptedDNSConfigurator` (app target; NetworkExtension linked there, never the portable
@@ -1956,6 +1990,7 @@ Suites: macOS 571/571 (+6), Windows 533/533 (+6).
 
 **OWNER / OS GATES — real-run cannot happen from this host; per the honesty protocol this is NOT
 "done" until a real run on each platform:**
+
 1. **macOS: the Apple DNS-Settings entitlement + a signed app.** `NEDNSSettingsManager.save`
    requires `com.apple.developer.networking.networkextension` = `dns-settings`, granted by Apple; the
    current unsigned SwiftPM build returns the permission error, mapped to `.entitlementRequired`.
@@ -1984,6 +2019,7 @@ strings except the honest platform-gating notices, which are catalogued PENDING 
 
 **Real on Linux (verified: Kit probe layer runs on .NET here — gateway detected, and a timed-out
 Prophet probe correctly returned Inconclusive/Ungraded, NOT false-clean):**
+
 - **Prophet** — real resolution + DNSSEC; unsigned stated as "nothing to validate", not a pass;
   timeout/error → inconclusive.
 - **Portal** — real resolvers, interfaces, VPN state, and the C1 gateway/router audit.
@@ -2064,6 +2100,7 @@ platform host > apex) is shared in `Syxx.Kit/MotdRouting.cs`.
 
 **Server plumbing for debmotd** (Server/ is nominally Cline's lane — flagged, done here because it
 hard-blocks the Linux GUI):
+
 - `config.py`: `MOTD_DEB_HOST`, `WHATSNEW_DEB`, `LATEST_DEB`, `UPDATE_URL_DEB`.
 - `app.py`: MOTD Host routing and `/api/startup` were **two-way booleans** (`is_win`). A Debian
   client asking `platform=linux` fell through and was served **Mac** content and the Mac update
@@ -2195,6 +2232,7 @@ green on unmeasured), context menu mirroring the macOS dropdown (status, latched
 Acknowledge, Watch this network, Open, Quit), wired in MainWindow with UI-thread marshalling.
 
 **C1 router/gateway audit COMPLETE (both platforms):**
+
 - New evidence `gatewayDhcpOffLinkDNS`: DHCP pushing a PRIVATE IPv4 resolver that is neither the
   gateway nor on its /24 (rogue-DHCP/hijacked-router shape) → 0.6 interception_onPath /
   0.4 localCompromise. ISP-pushed PUBLIC resolvers never flag; IPv6 pushes skipped (benign ULA);
@@ -2226,7 +2264,7 @@ bar for every item below.** Kit/test suite unaffected (483/483 green).
    (`ConclusionsView.xaml` — "not safe to tru…"; now Grid Auto+*), Portal route status line
    (`PortalView.xaml` — same fix).
 2. **Sidebar parity (`MainWindow.xaml`).** Selected row is now a filled ioBlue pill with white
-   content (NavigationViewItemBackgroundSelected* + ForegroundSelected* resources; indicator pipe
+   content (NavigationViewItemBackgroundSelected*+ ForegroundSelected* resources; indicator pipe
    hidden) matching macOS SidebarItem. Hamburger toggle hidden (macOS has none). Icon glyphs
    remapped to the macOS SF-symbol equivalents: What's New E735, Dashboard E9E9 (equalizer bars),
    Prophet E721 (magnifier), Mirror E8AB (branch), Glutton E7BA (warning triangle), Cage E72D
@@ -2385,6 +2423,7 @@ Verified every Tier 1 item from `REMEDIATION-MASTERPLAN2.md` against live code. 
 - Windows cautious-combination parity — SourceCorrelationTests 0 failures ✅
 
 **Fixes landed during verification:**
+
 - A046 — GET `expand[]` in query string not body (`stripe_checkout.py`)
 - A075 — field rename `'signed'` → `'dnskeyObserved'` (`resolver.py`)
 - A038 — DNSError caught → inconclusive, not crash/500 (`app.py`)
@@ -2411,6 +2450,7 @@ reads only always-present `Conclusion` fields and explains in every data regime 
 Wired into the CLI and a GUI "WHY WE THINK SO" card.
 
 **Honesty contract (Protocol §1/§10, DoW #3) — the load-bearing part:**
+
 - An `Inconclusive` verdict, or a `Clean` verdict that rode over a hard-gated section, is surfaced as
   **UNFINISHED, never safe** — `Severity.Unknown`, and the action is "get a real verdict", not reassurance.
 - A threat under a referral is marked `Qualified` (confidence caveat shown) but its recommended action
@@ -2418,6 +2458,7 @@ Wired into the CLI and a GUI "WHY WE THINK SO" card.
 - The A2 "despite" list is never suppressed to make a verdict look cleaner.
 
 **Verification (real runs, this Mac):**
+
 - `dotnet build Syxx.Linux.slnf` — 0 errors.
 - `dotnet test` — **340/340 pass**, including 13 new `VerdictActionTests` + 5 new
   `PlainExplanationTests` that lock the honesty gates (incomplete-clean ≠ clean; mutation guard proves
@@ -2457,6 +2498,7 @@ Two honesty violations in the Cage CLI fixed on macOS and Windows:
    - On phantom success (delete returned ok but file still exists), prints a warning
 
 Files touched:
+
 - macOS: `DNSCaptureReportGenerator.swift`, `SyxxCage.swift`, `SyxxKitTests.swift`
 - Windows: `DNSCaptureReportGenerator.cs`, `CageCommand.cs`, `SyxxKitTests.cs`
 
@@ -2673,6 +2715,7 @@ WinUI GUI, and real-run verified where the VM allows (live `syxx nslook` UDP:53 
 implemented; exact wording is proposed to the User for approval first (AGENTS.md output rule).
 
 **Tier 2 — evidence acquisition:**
+
 - **C013** — `IPClassifier.cs:86-97`: IPv4-mapped IPv6 (`::ffff:0:0/96`) reclassifies the embedded
   IPv4; a mapped sinkhole (`::ffff:127.0.0.1`) now reads blocking, mapped public stays public.
 - **C016** — `DNSResolver.cs:456-460` (`ResponseQuestionMatches`): expected name is punycoded via
@@ -2696,6 +2739,7 @@ implemented; exact wording is proposed to the User for approval first (AGENTS.md
   sections read 0.0. Acceptance bar met: N-clean+1-timeout < all-clean (test).
 
 **Tier 3 — engine phases:**
+
 - **Ph5.2 (B005)** — both dead sub-scorers ship-gated into output: `Conclusion.MechanismFingerprint`
   (from `TamperMechanismFingerprint`) and `Conclusion.ResolverProvenance` (computed in
   `Synthesizer.ComputeResolverProvenance` from EDNS0/stub-entropy/transport probes). Contract
@@ -2729,6 +2773,7 @@ implemented; exact wording is proposed to the User for approval first (AGENTS.md
   invalidate every honest clean run that skipped one optional probe).
 
 **Tier 4 — trust infrastructure:**
+
 - **B085** — `WitnessSigner.cs`: future-dated snapshots rejected (5-min skew tolerance,
   `FutureSkewToleranceMillis`); within-skew accepted (over-rejection failure case tested).
 - **E021** — `WitnessSigner.VerifySnapshotDetailed` → `SnapshotVerification` enum (Valid /
@@ -2753,6 +2798,7 @@ implemented; exact wording is proposed to the User for approval first (AGENTS.md
   the shipped GUI/CLI without per-call-site wiring.
 
 **Tier 6 — client safety (non-copy items):**
+
 - **F028** — `CageCommand.cs:25-36`: `--duration` accepts only finite, positive values ≤ 86400s;
   "NaN"/"Infinity" no longer crash `AddSeconds` (invalid keeps the default, same as unparseable).
 - **E044** — `LicenseManager.cs`: `SyncTrialAnchorWithServerAsync` is truly async
@@ -2767,6 +2813,7 @@ live `syxx nslook example.com` (2 A records via 8.8.8.8), `www.github.com` (deco
 `münchen.de`/punycode cross-checked against `Resolve-DnsName`.
 
 **Owed macOS/server twins (not buildable in this VM):**
+
 1. C013 mapped-IPv4 branch → `IPClassifier.swift`.
 2. C016 `ToAsciiName` compare → `DNSResolver.swift:333,413-424`.
 3. C017 name-typed RDATA decode → `DNSResolver.swift` formatRData + `CNAMEChainProbe.swift:67-79`.
@@ -2794,6 +2841,7 @@ Windows tree now builds fully on .NET 11 preview (`11.0.100-preview.6.26359.118`
 all 4 projects, and the GUI launches with a visible window. No fallback to .NET 10 was needed.
 
 **Build fixes:**
+
 - `build.ps1:27-30` — `Invoke-Build` declared its splat parameter as `$args`, a reserved PowerShell
   automatic variable, so `dotnet build @args` received no arguments (MSB1003 on every run). Renamed to
   `$buildArgs`. Also corrected the echoed GUI exe path (was the stale
@@ -2809,6 +2857,7 @@ all 4 projects, and the GUI launches with a visible window. No fallback to .NET 
   directory: `Windows/global.json` never applied to `build.ps1` runs from the repo root.
 
 **GUI won't-launch defect (fixed, real-run verified):**
+
 - Symptom: exe built but no window ever appeared; user double-click crashed with stowed exception
   `0xc000027b` in `Microsoft.UI.Xaml.dll`, WER inner code `0x80073D54 APPMODEL_ERROR_NO_PACKAGE`
   in `combase.dll`. The old bootstrap theory was NOT the cause: the faulting module path proved
@@ -2825,6 +2874,7 @@ all 4 projects, and the GUI launches with a visible window. No fallback to .NET 
   strings added or changed.
 
 **Verification (real runs, not just tests):**
+
 - Full `build.ps1`: GUI + Kit + CLI + Tests, Debug and Release, 0 errors (arm64 GUI).
 - `run-tests.ps1`: 277/277 pass. Checked the previously failing
   `StrongCorrelatedGroup_IsCappedAtMaxWeightPerSource` was not softened — strict assertion intact
@@ -2847,6 +2897,7 @@ across all 8 vectors — same evidence, statuses, phases, verdicts, referrals; b
 `knownFalseSecureUntilGate` at its default false. No divergence to adjudicate.
 
 **Done:**
+
 - **New single source `corpus/stage0/seeds.json`.** 8 vectors (NE1-d1, NE1-d2, NE7-d1, NE2-d5,
   P12, P17, P15, benign-all-clean). Enum strings use the Swift rawValue form (sections/statuses
   lowercase, `evidenceId` camelCase, `expectedVerdict` a `Hypothesis` rawValue); `sectionStatuses`
@@ -2863,6 +2914,7 @@ across all 8 vectors — same evidence, statuses, phases, verdicts, referrals; b
   vacuous green — an empty seed list would make never-false-secure pass with zero vectors.
 
 **Verification (real runs, this Mac):**
+
 - Baseline (before): `swift test --filter Stage0GoldenCorpusTests` 3/3 pass; `dotnet test` 3/3 pass.
 - After JSON wiring: both still 3/3 pass reading the JSON.
 - Acceptance bar (parity move): edited `NE7-d1` `expectedVerdict` `inconclusive`->`spoofing` in the
@@ -2879,6 +2931,7 @@ Anchor: `Ubuntu/UBUNTU-PORT-PLAN.md` Section 2, WS-A1/WS-A2/WS-A3. No user-visib
 product strings changed; no verdict/honesty path touched (this is build/CI infra only).
 
 **Done:**
+
 - **WS-A1 — Linux solution filter.** New `Windows/Syxx.Linux.slnf` includes `Syxx.Kit`,
   `Syxx` (unified CLI), and `Syxx.Tests`, and EXCLUDES `SyxxUI` (which is
   `net11.0-windows10.0.26100.0` + `UseWinUI` and cannot restore off Windows). Linux CI
@@ -2919,6 +2972,7 @@ Three landed fixes across the reasoning core, byte-parity on macOS Swift + Windo
 mutation-proven and verified by targeted (`--filter`) test runs on both platforms.
 
 **Done:**
+
 - **B050 — expired/not-yet-valid TARGET RRSIG → `.degraded`, not `.positive`.** A benign operator
   DNSSEC lapse (or replay) is now a run-quality caveat that lowers confidence and blocks an unearned
   clean, but cannot NAME a threat alone. The B047 control-canary escalation is preserved: a known-
@@ -2952,6 +3006,7 @@ with `dotnet 10.0.301` on the macOS host (WinUI `SyxxUI` cannot build here — t
 bar). Implemented by a `syxx-engineer` subagent, independently re-verified.
 
 **Done:**
+
 - **Shared runner:** new `Syxx.Kit/TracerouteRunner.cs` (`tracert -h <hops> -w <ms> -d <target>`, streams
   hops, empty = honest failure). Replaces the inline `tracert` in the guided Portal and the route command.
 - **Commands:** 11 command classes in `Syxx/Commands/*.cs` (console project, so no Console I/O leaks into
@@ -3015,6 +3070,7 @@ Verified: `syxx nslook google.com` returns real A records; no-arg subcommands pr
 errors honestly.
 
 **Cage capture wired to the unified binary (the plan's highest-risk change).**
+
 - Guided flow (`SyxxCLI.swift:runCageCapture`): replaced the dead `locateSiblingTool("syxx-cage")` lookup
   (that binary no longer exists) with a self re-exec of the resolved executable path + the `cage`
   subcommand, under sudo when not already root.
@@ -3056,6 +3112,7 @@ live sudo run is a real-machine bar.
 ## Delta analysis and audit sweep (2026-07-13)
 
 Conducted a systematic source-grounded audit of the server, macOS, and Windows clients, focusing on Cage, Witness, MOTD/What's New, Glutton, and the rate limiter. Seventeen new deltas identified and documented in `DELTAS.md`:
+
 - **A054 (Server Components)** — Rate limiter lockout and fractional token truncation in `ratelimit.py`.
 - **A055 (Server Components)** — SSRF bypass in `fetcher.py` and `resolver.py` via IPv4-mapped IPv6 addresses (e.g. `::ffff:127.0.0.1`).
 - **A056 (Server Components)** — Keygen signature validation date header replay vulnerability.
@@ -3084,7 +3141,6 @@ Conducted a systematic source-grounded audit of the server, macOS, and Windows c
 - **D061 (Security & Hardening)** — Paid Pro user offline lockout where client falls through to expired trial checks on Keygen network/timeout errors.
 - **D060 (Security & Hardening)** — Privileged capture command on macOS is vulnerable to shell command injection/syntax errors via unescaped single quotes in paths.
 
-
 ## Remediation Master Plan execution — S0 (2026-07-13)
 
 - **S0 pre-flight:** Committed the uncommitted working-tree cluster as `0b3fad5` (ProbePlan/ProbeRunner/ProbeBudget/DomainCanonical refactor + A019 licensing + tests). Phase-1 gates (`SynthesisEngine.swift:139-152`) and Phase-2 M2 dampener (`:236`) confirmed committed on both platforms. F023 id-collision renumbered — emoji variant → F031.
@@ -3099,6 +3155,7 @@ Conducted a systematic source-grounded audit of the server, macOS, and Windows c
 
 - **WS1-Ph4.1/4.2 (B086/B088/B050/B051):** Confidence switched from single-hypothesis pignistic to class-set belief (Bel({clean}) for clean, Bel(threatUnion) for threats). All-clean belClean is ~56%, triggering referral. Mechanism-class partition: spoofing+interception_onPath → rewrite, interception_transport → transport, censorship → block, contentTampering → content, privacyLeak → leak, localCompromise → host. Stage-5 now uses concrete mechanism class instead of .unresolved. macOS 416 pass; Windows 245 pass (1 golden-seed referral expectation parity gap).
 - **WS1-Ph3.2/3/4 (I5/I3/B086):** Clean-support mass now scales by per-section `completeness` and is count-based (one bona-fide support per clean section). Degraded sections have evidence reliability penalized but do not supply clean support, so a degraded positive signal is never zeroed by clean-wash. Added `completeness` to `SectionStatusEntry` and `SectionEvidence` (additive, Codable-compatible) on both platforms.
+
 ## ENG — Reasoning-engine remediation: Phases 1–2 + P0.4 seam + validator hardening (2026-07-12)
 
 Both platforms compile at HEAD `8afbf4d`. Production behavior changes ONLY where a real honesty bug was
@@ -3238,6 +3295,7 @@ asserting `ExfilSuspicion.LikelyExfil` with only 2 signals (highEntropy + regula
 After OC-4 (C009) raised the bar to ≥3 signals for `.LikelyExfil`, this test was stale — the
 correct behavior is `.Suspicious` for 2 signals. The test was also missing the single-signal-only
 parity from the macOS `testExfilBenignForSingleSignalOnly`. Fixed:
+
 - Renamed to `ExfilSuspiciousForTwoSignalsWithoutBlocklist` with `Assert.Equal(Suspicious)`.
 - Added `ExfilBenignForSingleSignalOnly` (entropy-only → benign; beacon-only → benign).
 
@@ -3356,41 +3414,49 @@ mutation-proven (break the fix → test REDs). Full suites green: **macOS 349, s
 errors.**
 
 **OC-1 (A019) — Stripe idempotency state machine** (Server):
+
 - `fulfillment.py:73-95`: replaced `kv_insert_once` guard with explicit state machine (`minted`/
   `processing`/`failed`). Keygen failure sets `"failed"` so Stripe retries re-enter mint.
 - `test_payments.py`: added outage-then-retry test + double-retry idempotency test.
 
 **OC-2 (A020) — DNS oracle hardening** (Server):
+
 - `resolver.py`: question-tuple validation (qname case-insensitive, qtype, qclass=1) in `_parse_response`
   and `_parse_sections`. Connected UDP (`sock.connect()`) so kernel discards off-source spoofed replies.
 - TCP fallback (`_query_tcp`) also validates question.
 
 **OC-3+OC-7 (B032/B034) — macOS tunnel→`.unknown` + typed-outcome tests**:
+
 - `NetworkKeyState.swift`: extracted pure-core `encryptedDNSStatus(servers:scoped:)`; tunnel-only
   resolvers return `.unknown` (not `.yes`).
 - `SyxxKitTests.swift`: 5 typed-outcome tests replacing vacuous constructor test.
 
 **OC-4 (C009) — ExfilAnalyzer false-positive fix + BeaconAnalyzer degenerate fix**:
+
 - `ExfilAnalyzer.swift`: changed to require ≥2 of {highEntropy, regular, flaggedBy} for `.suspicious`;
   ≥3 for `.likelyExfil`. Single signal → `.benign`.
 - `BeaconAnalyzer.swift`: identical-timestamp series → `.insufficientData` (not `.highlyRegular`).
 - `SyxxKitTests.swift`, `MonitorReportAnalyzerTests.swift`: regression fixtures + distinct timestamps.
 
 **OC-5 (C006) — no silent 8.8.8.8 fallback** (macOS + Windows):
+
 - `SyxxWitness.swift`, `SyxxCLI.swift` (2 sites): warning `⚠️ System resolver undetectable — falling
   back to 8.8.8.8` printed before fallback.
 - `ContentWarp.swift` (macOS), `ContentWarp.cs` (Windows): no resolver → `return true` (conservative,
   assume public). Intentional public-vantage resolver lists unchanged.
 
 **OC-6 (B024) — Warp verdict-label consistency** (macOS):
+
 - `SyxxWarp.swift`: when overall verdict is inconclusive, per-check labels show "⚠️ SKIPPED (proxy
   unreachable)" instead of "✅ MATCH" / "🚨 MISMATCH". Proposed wording — awaiting user sign-off.
 
 **OC-8 (B035) — narrow test whitelist**:
+
 - `SynthesizerTests.swift`: replaced `contains()` whitelist with explicit `||` chain so `.clean`
   cannot be silently added to a future array.
 
 **OC-9 (B036) — typed `classify()` for empty-set discrimination**:
+
 - `AuthoritativeVantage.swift`: `resolverDidFail` parameter to `classify()` and `compare()`.
   Empty+empty with resolver failure → `.inconclusive` (not `.matches`).
 - `ProbePlan.swift`, `SyxxCLI.swift`: call sites updated to pass `comparison.localOutcome.didFail`.
@@ -3406,6 +3472,7 @@ mutation-proven (broke the code, confirmed RED, reverted). Full suites green: ma
 196, server 69.
 
 **Fixes landed:**
+
 - **WS2a — D013** (`1975b54`): Windows Glutton/Warp gate on server-validated `IsFeatureUnlockedAsync`,
   bool overload `[Obsolete]`.
 - **WS2b — D015** (`149e81b` macOS Keychain, `334f009` Windows DPAPI): Ed25519 signing key off the
@@ -3452,6 +3519,7 @@ Verified but NOT committed (require the coupled probe-orchestration closure — 
 new-signature AuthoritativeVantage callers AppModel/SyxxCLI/Program.cs and the
 untracked ProbePlan/DimensionClient + uncommitted ProbeBudget/ProbeRunner C005 infra;
 committing them standalone would break HEAD callers or bundle 8+ out-of-WS1 deltas):
+
 - **B031 / C007** — multi-bootstrap consensus restored at the call sites (≥2 set minus
   the resolver-under-test) + majorityConsensus returns nil for a single responder.
   Present and unit-tested in the working tree (AuthoritativeVantageTests, incl. new
@@ -3467,6 +3535,7 @@ Comprehensive code review of 15 macOS client source files for security defects,
 efficacy issues, Honesty Protocol violations, and platform integration gaps.
 
 ### Verified Fixed (DELTAS.md statuses updated)
+
 - **B003** (Confidence 100% on zero evidence) — Superseded by DST engine
 - **B004** (Correlated signals summed as independent) — Partially fixed;
   source-group discount live for canaries only — B029 created for residual gap
@@ -3478,6 +3547,7 @@ efficacy issues, Honesty Protocol violations, and platform integration gaps.
   inconclusive
 
 ### New Deltas Recorded
+
 - **B029** — EvidenceItem.source only set for canaries; source-group discount dead
   for all other correlated signals (Critical)
 - **C006** — Silent 8.8.8.8 fallback without user consent in CLI (Critical;
@@ -3488,6 +3558,7 @@ efficacy issues, Honesty Protocol violations, and platform integration gaps.
   memory-exposure risk)
 
 ### Research Created
+
 - `research/dns-interpretation-and-confidence-scoring.md` — comprehensive reference
   mapping each Syxx datapoint to what it can evidence alone and in combination,
   with thresholds, benchmarks, and recommended next steps per verdict
@@ -3505,29 +3576,34 @@ replacing copy-pasted section runners across three frontends.
 | Windows | `Syxx.Kit/ProbePlan.cs` | `RunProphetAsync`, `RunMirrorAsync`, `RunPortalAsync`, `RunGluttonAsync` |
 
 ### macOS App refactoring (AppModel.swift)
+
 - `runCompare()` → delegates to `ProbePlan.runMirror(domain:localResolver:isPro:targetURL:)`
 - `runNetworkState()` → delegates to `ProbePlan.runPortal()`
 - `runLookup()` → keeps user-selected server query for display; canonical Prophet suite delegated
   to `ProbePlan.runProphet(domain:resolver:)` against the audit (system) resolver
 
 ### Windows GUI refactoring (AppViewModel.cs)
+
 - `RunProphetAsync()` → delegates to `ProbePlan.RunProphetAsync(Domain, resolver)`
 - `RunMirrorAsync()` → delegates to `ProbePlan.RunMirrorAsync(Domain, local, isPro, targetURL)`
   (adds A2/A3 probes — previously only vantage + warp were run)
 - `RunPortalAsync()` → delegates to `ProbePlan.RunPortalAsync()`
 
 ### Not refactored (per-probe progress printing required)
+
 - macOS CLI (`SyxxCLI.swift`) — keeps own probe loop for per-probe print output
 - Windows CLI (`Program.cs`) — keeps own probe loop for per-probe print output
 - Both `runLeak` / `RunGluttonAsync` (App/Windows GUI) — per-probe result display needed
 - Both `runWitness` / `WitnessTestify` — key-management flow is frontend-specific
 
 ### Scope boundaries
+
 - `ProbePlan` orchestrates execution and writes to `SectionInputs` only.
 - All `print()` / `Console.WriteLine()` presentation stays in the frontend.
 - The Kit does NOT emit user-visible strings.
 
 ### Test results
+
 - macOS: `swift test` — 312/312 passed, 0 failures.
 - Windows: `dotnet test` — 173/173 passed, 0 failures.
 
@@ -3537,6 +3613,7 @@ Migrated the remaining three frontends to wrap every probe call in `ProbeRunner.
 the C005 Phase 2a (macOS CLI) pattern to all four frontends.
 
 ### Phase 2b — macOS App (`AppModel.swift`)
+
 - `runLookup`: all 12 Prophet probes wrapped
 - `runCompare`: 5 Mirror probes wrapped; throwing `VantageComparer` → flatMap pattern
 - `runNetworkState`: 2 Portal probes wrapped + open-resolver conditional probe
@@ -3544,18 +3621,21 @@ the C005 Phase 2a (macOS CLI) pattern to all four frontends.
 - `runWitness`: 3 Witness probes wrapped (VantageComparer + synchronous WitnessSigner)
 
 ### Phase 2c — Windows CLI (`Program.cs`)
+
 - `RunProphetAsync`: 12 Prophet probes wrapped (DNSSECStatus enum left unwrapped)
 - `RunMirrorAsync`: 4 Mirror probes + VantageComparer/ContentWarp (throwing → closure null return) + GroundTruth
 - `RunPortalAsync`: 2 Portal probes wrapped
 - `RunGluttonAsync`: 2 Glutton probes wrapped (LicenseManager tuple left unwrapped)
 
 ### Phase 2d — Windows GUI (`AppViewModel.cs`)
+
 - `RunProphetAsync`: 10 Prophet probes wrapped (DNSSECStatus enum left unwrapped)
 - `RunMirrorAsync`: 2 Mirror probes wrapped (expanded to full suite in Phase 3)
 - `RunPortalAsync`: 2 Portal probes wrapped (expanded to full suite in Phase 3)
 - `RunGluttonAsync`: 2 Glutton probes wrapped
 
 ### Key patterns (all phases)
+
 - Throwing probes: `do/catch` inside `ProbeRunner.run` closure → `return null`/`nil` → flatMap `T??`
 - Synchronous throwing ops wrapped for budget accounting (timeout N/A for sync work)
 - Platform-specific: Swift `@Sendable` cannot capture `@MainActor` properties — local captures
@@ -3563,9 +3643,11 @@ the C005 Phase 2a (macOS CLI) pattern to all four frontends.
 - `DNSResponse` default on timeout: macOS `init(status:errorMessage:)`, Windows `new DNSResponse { Status = ..., ErrorMessage = ... }`
 
 ### Debug output
+
 - Gated by `SYXX_DEBUG_PROBES` env var on both platforms (format pending user approval — R6)
 
 ### Test results
+
 - macOS: `swift test` — 312/312 passed, 0 failures.
 - Windows: `dotnet test` — 173/173 passed, 0 failures.
 
@@ -3576,6 +3658,7 @@ every individual probe call in `ProbeRunner.run(label:budget:)`, enforcing per-p
 and budget accounting from the CLI frontend.
 
 ### Changes
+
 - `ProbeBudget.swift` — added `static var defaultProphet`/`defaultMirror`/`defaultPortal`/`defaultGlutton`
   computed factory properties (no stored lets — struct `inout` requires mutability).
 - `SyxxCLI.swift:runProphet` — all 12 Prophet probes wrapped in `ProbeRunner.run`.
@@ -3587,6 +3670,7 @@ and budget accounting from the CLI frontend.
 - `ProbeBudget` variables changed from `let` to `var` in all four section runners.
 
 ### Throwing probe pattern
+
 - `VantageComparer.compareVantagePoints` and `ContentWarp.comparePageContent` are `throws`:
   the `do/catch` is inside the `ProbeRunner.run` closure; errors produce `return nil as T?`,
   yielding `T??` from `ProbeRunner.run`, flattened via `.flatMap { $0 }` at the call site.
@@ -3594,16 +3678,19 @@ and budget accounting from the CLI frontend.
 - `LANCartographer` is synchronous — not ProbeRunner-wrappable; kept as-is.
 
 ### LicenseManager tuple access
+
 - `isFeatureUnlocked()` returns `(Bool, String)` tuple (not a struct); accessed via `.0`/`.1`
   after ProbeRunner wrapping (Swift tuple label inference is lost across generic closures).
 
 ### Budget defaults
+
 - Prophet: 30s total / 5s per-probe / 15 max probes
 - Mirror: 30s / 5s / 10
 - Portal: 15s / 5s / 5
 - Glutton: 20s / 5s / 5
 
 ### Test results
+
 - macOS: `swift test` — 312/312 passed, 0 failures.
 
 ## C005 Phase 1.5 — Windows GUI Probe Gap Fix — 2026-07-09
@@ -3612,6 +3699,7 @@ Wired 9 missing Prophet probes into `Windows/SyxxUI/ViewModels/AppViewModel.cs:R
 Windows GUI now runs 2 → 11 Prophet probes, closing the High-criticality C005 delta.
 
 ### Change
+
 - `AppViewModel.cs:RunProphetAsync()` — added calls to:
   1. `DNSCanaries.NxdomainHijackAsync`
   2. `DNSCanaries.DnssecControlAsync`
@@ -3627,10 +3715,12 @@ Windows GUI now runs 2 → 11 Prophet probes, closing the High-criticality C005 
 - No ProbeRunner yet — Phase 2d refactors this to shared infrastructure.
 
 ### Impact
+
 - **C005 delta closed** (DELTAS.md:1426-1444 — 2/13 → 11/13 Prophet probes active in Windows GUI).
 - Remaining 2 Prophet probes (`StubEntropyAudit`, `AuthoritativeComparison`) are GUI-level deferrals — they require capture-sourced or Pro-tier data respectively, no Kit-level gap.
 
 ### Test results
+
 - Not adding per-probe unit tests (each probe is already unit-tested in Syxx.Kit).
 - Windows build + test: 173/173 pass (no regression).
 - macOS: 312/312 pass (no change).
@@ -3653,6 +3743,7 @@ infrastructure that all four frontends will migrate to in Phases 2a–2d.
 | Windows | `Syxx.Tests/SyxxKitTests.cs` | 14 unit tests (`ProbeRunnerTests` class): same coverage as macOS + factory-default verifications |
 
 ### Design decisions
+
 - **Swift**: struct `ProbeBudget` with `inout` mutation; `ContinuousClock` for elapsed time.
 - **C#**: class `ProbeBudget` (reference semantics needed for cross-call mutation); `Stopwatch` + `Task.WhenAny`.
 - **Cancellation documented**: probes wrapping `DNSResolver.queryUDPDetailed` may run up to ~4s past timeout
@@ -3662,6 +3753,7 @@ infrastructure that all four frontends will migrate to in Phases 2a–2d.
 - **Budget exhaustion during probe**: current probe finishes; next probe is skipped (tested).
 
 ### Test results
+
 - macOS: `swift test` — 312/312 passed (baseline ~302 + 10 new, 0 failures).
 - Windows: `dotnet test` — 173/173 passed (baseline ~157 + 16 new, 0 failures).
 - 1 known pre-existing failure (SYN-201) is now passing — resolved by `group.next()` fix in ProbeRunner.
@@ -3727,23 +3819,28 @@ failures. Baseline was `git HEAD 6b50ac7`.
 ## DELTAS.md Restructuring & Session Summary — 2026-07-08
 
 **Restructured DELTAS.md:**
+
 - Split into **DELTAS.md** (live defects, ~624 lines) and **DELTAS-fixed.md** (archived fixed items, ~2366 lines)
 - DELTAS.md now has sections: Methodology, Status Board, A-F domain-category deltas (B001-B003 ported from DSN-001/002/003), DoW #1
 - New template with anchored columns at **24** (label) and **100** (value), domain letters A-F
 - B001-B003 ported; **DSN-004…010 still need porting** (→ B004, C001+, E001-F005)
 
 **Evaluation format defined (not yet applied):**
+
 - 5-field row spec: Tool Name, Date, Agree/Disagree, Disagree Basis, Proposed Revisions
 - Labels at column 24, values at column 48
 - Needs to be added to DELTAS.md instructions + applied to un-evaluated deltas
 
 **Domain taxonomy finalized:**
+
 - A: Verdict & Evidence, B: Detection Efficacy, C: Security & Hardening, D: Platform Integration, E: Documentation, F: Server
 
 **Severity ordering clarified:**
+
 - For a detection tool, Efficacy precedes Security in priority (contrary to initial proposed ordering)
 
 **DoW #1 preserved:**
+
 - SyxxVerdict engine design, 8-hypothesis set, evidence-weight accumulator, peer-reviewed and approved
 
 ## Server Delta Analysis — 2026-07-07
@@ -3759,14 +3856,17 @@ Performed a comprehensive security and correctness delta analysis of the Python 
 Continued the macOS GUI implementation across three phases. Build: ✅ `swift build` clean. Tests: ✅ 285/285 passed.
 
 ### Phase 4 — Scroll-policy fixes
+
 - **GluttonView**: Removed outer `ScrollView`; view fits the window without scrolling.
 - **LicenseView**: Removed outer `ScrollView`; replaced `Grid/GridRow` tier layout with `HStack` so both cards size equally to `.infinity`; "Start Pro Trial" and "Activate" buttons now open `https://syxx.app` via `NSWorkspace.shared.open` (Stripe integration pending — `model.isPro = true` removed from UI).
 - **ConclusionsView**: Wrapped in `ScrollView`; removed `maxHeight: .infinity` frame constraint that suppressed scrolling.
 
 ### Phase 5 — OverallVerdictView enrichment
+
 - **Section status grid**: Changed from 3-column to 2-column `LazyVGrid` to match the mockup layout spec.
 
 ### Phase 6 — Per-screen polish
+
 - **ProphetView**: Added 3pt left-border accent (`ioElectric`) to each DNS record row. Added explicit `foregroundColor(.ioText)` to record rdata text (was inheriting parent secondary color).
 - **MirrorView**: Section eyebrow labels ("DNS Resolver Matching" / "Static Content Integrity") changed from `ioTextSecondary` to `ioAccentStart` (gold) to match mockup.
 - **CageView**: Added "Live Query Capture" title above the existing italic quote. Changed quote font from `.ioTitle1` to `.ioBody().italic()`. Added 3pt left-border accent per capture row, color-mapped to row severity via new `severityAccentColor(_:)` helper.
@@ -3979,6 +4079,7 @@ platforms build, macOS 70 / Windows 70 tests pass, server compiles. Details + se
 
 First piece of the **client-side, offline, deterministic synthesis engine** (no AI model — a
 security verdict must be explainable and witness-signable). `DNSLogAnalyzer` in `SyxxKit`/`Syxx.Kit`:
+
 - **Parses the macOS DNSMonitor `PROCESS`/`PACKET` text format** (robust to the interleaved
   `ERROR:` / `method …` / binary-garbage lines), which the user's original `dnsmon` report
   generator could **not** — it tried JSON, fell back to regex domain-scraping, and lost all
@@ -4000,6 +4101,7 @@ security verdict must be explainable and witness-signable). `DNSLogAnalyzer` in 
 
 Extends the offline forensic translator to the other two Objective-See monitors the user runs
 (FileMonitor, ProcessMonitor — line-delimited Endpoint Security JSON). `EndpointLogAnalyzer`:
+
 - **Streams** the log by path with bounded memory — FileMonitor logs are **multiple gigabytes**
   (the user's are up to 6.6 GB, ~99% OPEN/CLOSE read noise), so it cheaply substring-skips reads
   before ever parsing JSON (250 MB in ~7s on real data).
@@ -4026,6 +4128,7 @@ and folding in the LyxTools ports. `dotnet` is available on the build host, so W
 compile-verified here (not only on the VM).
 
 ### Batch 1 — DNS Resolution & Protocol Integrity ✅
+
 Added the missing **Windows `syxx-nslook` CLI** (`Windows/SyxxNSLook/`), mirroring the macOS tool:
 record-type map with numeric-code fallback, `@server`, `--doh [url]`, `--dnssec`, and the same
 honesty rule (never silently fall back to type A on an unknown type). Registered in `Syxx.sln`.
@@ -4038,6 +4141,7 @@ The Windows parser remains locale-sensitive and can misclassify unknown states (
 the command timeout is not operational (`C139`); MAC-only diffing remains unsafe on both platforms
 (`C151`); and the planned TCP/UDP/IPv6 service probes have no production runner (`C156`). The
 macOS and Windows `LANDevice` shapes also remain different.
+
 - **Windows LAN cartography** (`Windows/Syxx.Kit/LAN/LanCartography.cs`): full port of the macOS
   module with a Windows-specific `arp -a` parser (interface sections, `-`-delimited MACs
   normalized to lowercase colon form, `dynamic`/`static` → reachable/permanent). Same public
@@ -4059,8 +4163,10 @@ macOS and Windows `LANDevice` shapes also remain different.
   macOS 60 / Windows 60 counts as session history, not current coverage evidence.
 
 ### Batch 4 — Privacy Leak Detection ✅
+
 Both `syxx-leak` CLIs and the collector protocol were already implemented and mirrored; this pass
 closes an honesty gap rather than adding surface:
+
 - **Verdict-consistency guard** (`LeakDetector.reconcileVerdict` / `ReconcileVerdict`, both
   platforms, pure + unit-tested): the collector's `leaked` boolean and its attested resolver set
   must agree. A "leak" the collector cannot attribute to any resolver — or a "no leak" that
@@ -4073,8 +4179,10 @@ closes an honesty gap rather than adding surface:
 - Tests: +2 each platform (`LeakVerdictReconciliation`). macOS 62 / Windows 62, 0 failures.
 
 ### Batch 5 — Capture, Forensics & Attribution + LyxTools analyzers ✅
+
 Ported the remaining LyxTools analyzers to **both** platforms (they previously lived only in
 LyxTools) and added a fused verdict + CLI:
+
 - **BeaconAnalyzer** (`Forensics/BeaconAnalyzer.swift` / `Forensics/Forensics.cs`): interval
   coefficient-of-variation → highly-regular / regular / irregular / insufficient. A highly
   regular cadence is the signature of automated beaconing, not human use.
@@ -4095,6 +4203,7 @@ LyxTools) and added a fused verdict + CLI:
 - Tests: +6 each platform (`ForensicsAnalyzerTests`). macOS 68 / Windows 68, 0 failures.
 
 ### Batch 6 — Trust Infrastructure + passive DNS / Sentinel ✅
+
 - **AnswerLedger** (`Trust/AnswerLedger.swift` / `Trust/Trust.cs`, both platforms): passive-DNS
   ledger ported from LyxTools and extended with **JSON persistence** so it accumulates across
   runs. `record(...)` returns an `AnswerDrift` when a domain's answer diverges from history —
@@ -4117,6 +4226,7 @@ LyxTools) and added a fused verdict + CLI:
   0 errors. Tests +2 each platform (`TrustLedgerAndSentinel`). **macOS 70 / Windows 70, 0 failures.**
 
 ### Tool inventory after the six batches
+
 Both platforms now ship parallel CLIs: `syxx` (launcher/vantage), `syxx-nslook`, `syxx-warp`,
 `syxx-leak`, `syxx-route`, `syxx-lan`, `syxx-forensics`, `syxx-sentinel`, `syxx-mirror`,
 `syxx-witness`, `syxx-key`, `syxx-cages` (+ macOS `syxx-gui`). All LyxTools components are either
@@ -4133,6 +4243,7 @@ Working through every still-open DELTAS.md item (most were already fixed across 
 this sweep closes the residual set). Building + testing both platforms per family.
 
 ### DNSSEC overclaim — MAC-042–046 / WIN-040–044 ✅
+
 Replaced the presence-only `bool` with a typed `DNSSECStatus`
 (`unsigned` / `recordsPresentUnverified` / `signatureExpiredOrNotYetValid` / `inconclusive`) on
 both platforms. Added a real RRSIG **validity-window (inception/expiration) check** parsed from
@@ -4144,6 +4255,7 @@ validation remains proposal A2. `syxx-nslook` now prints the typed status. macOS
 Windows `Syxx.Kit` builds clean.
 
 ### DNS parser correctness — MAC-011/037/038, WIN-013/014/015/016 ✅ (partial: see deferral)
+
 - **Canonical IPv6 (MAC-011 / WIN-016):** AAAA rdata now renders via `inet_ntop` (macOS) /
   `IPAddress` (Windows) with proper `::` zero-run compression, so the same address always compares
   equal to a reference resolver's rendering instead of producing spurious tamper false-positives.
@@ -4162,10 +4274,12 @@ Windows `Syxx.Kit` builds clean.
   filtering + cross-vantage consensus. Tracked toward A2.
 
 ### Verified already-closed during scan
+
 - License trial state is signed/tamper-evident (HMAC over first-launch, keyed by fingerprint).
 - System fingerprint is a salted SHA-256 digest, not a raw UUID/MachineGuid (MAC-085/W22).
 
 ### Capture report grouping + signing honesty — MAC-032/028, WIN-031/029 ✅
+
 - **Registrable-domain grouping (MAC-032 / capture W-equivalent):** replaced naive last-two-labels
   parent-domain grouping with a public-suffix-aware `registrableDomain` (compact known two-level
   suffix set: `co.uk`, `com.au`, `co.jp`, … + fallback), so `news.bbc.co.uk` groups under
@@ -4175,6 +4289,7 @@ Windows `Syxx.Kit` builds clean.
   `com.microsoft` identities.
 
 ### ContentWarp residuals + CLI sweep — MAC-063/064/095/111, WIN-058 + equivalents ✅
+
 - **Block-page-as-content (MAC-063 / WIN-058):** the local page fetch now inspects the HTTP
   status; a non-2xx (403/451 block page, captive redirect, 5xx) returns **inconclusive** instead
   of being parsed as the site's content (which could read as "secure"). Windows also no longer
@@ -4187,12 +4302,14 @@ Windows `Syxx.Kit` builds clean.
   records on both platforms, so an IPv6-only site / AAAA-specific tampering is no longer invisible.
 
 ### Already-verified closed during the sweep (no code change needed)
+
 - ContentWarp hash comparison iterates the **union** of local+remote scripts (remote-only injected
   scripts are checked) and requires non-empty non-error hashes (both-missing no longer "matches").
 - Capture RCODE is preserved distinctly (NXDOMAIN/SERVFAIL/REFUSED/NODATA), not flattened.
 - Capture signing IDs use real Authenticode/SecCode or explicit Unknown — no fabrication.
 
 ### Consciously deferred (documented, not silently dropped)
+
 - **WIN-015 answer owner-name matching:** a strict owner-name check would break legitimate CNAME
   chains and add false positives; the correct CNAME-chain-aware fix is tracked toward A2. Mitigated
   by transaction-ID validation + requested-type filtering + cross-vantage consensus.
@@ -4201,14 +4318,16 @@ Windows `Syxx.Kit` builds clean.
   RRSIG signature verification remains proposal A2. Shipping an unverifiable crypto validator would
   itself risk a false-secure verdict, so honest typing is the safer resolution.
 
-### Final status: all DELTAS.md items resolved or consciously deferred (2 above, with rationale).
-### Test status: macOS 57 tests pass · Windows 55 tests pass · full Windows solution builds · 0 failures.
+### Final status: all DELTAS.md items resolved or consciously deferred (2 above, with rationale)
+
+### Test status: macOS 57 tests pass · Windows 55 tests pass · full Windows solution builds · 0 failures
 
 ## Workstream E — Server hardening (SRV sweep) — 2026-07-06
 
 Finished the remaining 28 SRV-* fixes across all 13 server source files. Everything compiles clean.
 
 **db.py (7 fixes):**
+
 - SRV-001: WAL pragma moved to SCHEMA (run once during `init()`, not per-connection)
 - SRV-002: `_write_probe()` verifies database writability after startup
 - SRV-003: `_write_conn()` opens every write connection with `BEGIN IMMEDIATE` to prevent "database is locked" under WAL concurrency
@@ -4216,6 +4335,7 @@ Finished the remaining 28 SRV-* fixes across all 13 server source files. Everyth
 - SRV-007: Replaced `NOT IN` subquery with `NOT EXISTS` for linear scaling
 
 **app.py (7 fixes):**
+
 - SRV-010: Email regex now excludes ASCII control characters to prevent header injection
 - SRV-011: `Connection: close` header added to all 4xx/5xx responses
 - SRV-012: Content-Type verification and 1MB body size cap on POST endpoints
@@ -4224,44 +4344,55 @@ Finished the remaining 28 SRV-* fixes across all 13 server source files. Everyth
 - SRV-036: Symlink resolution + `startswith(STATIC_DIR)` guard against symlink-based traversal
 
 **dns_authoritative.py (2 fixes):**
+
 - SRV-009: Background rebind thread retries port binding every 60s if initial bind failed
 - SRV-029: DNS resource record builders accept dynamic `name_offs` parameter instead of hardcoded `\xc0\x0c`
 
 **licensing.py (2 fixes):**
+
 - SRV-019: `Semaphore(KEYGEN_MAX_WORKERS)` caps concurrent Keygen validation HTTP requests
 - SRV-023: Keygen validation URL is configurable via `KEYGEN_BASE_URL` for mock-server testing
 
 **warp.py (3 fixes):**
+
 - SRV-039: Attribute regex handles unquoted values (`attr=value` not just `attr="value"`)
 - SRV-040: HTML comments stripped before asset tag scanning
 - SRV-043: HTML comments stripped from inline script bodies
 
 **config.py (2 fixes):**
+
 - SRV-037: Boolean parser falls back to default for empty-string env vars (not just unset)
 - SRV-038: `_list()` deduplicates entries while preserving order
 
 **mailer.py (2 fixes):**
+
 - SRV-032: SMTP timeout configurable via `SMTP_TIMEOUT` env var
 - SRV-033: `SMTP_INSECURE_CERTS` option disables certificate verification for local/test relays
 
 **ratelimit.py (2 fixes):**
+
 - SRV-045: Bucket pruning clears stale entries on access
 - SRV-046: Integer millitoken math replaces floating-point accumulation to eliminate drift
 
 **logging_util.py (1 fix):**
+
 - SRV-047: `stdout.flush()` moved outside the global lock so slow disks don't block concurrent producers
 
 **leak.py (1 fix):**
+
 - SRV-050: Token consumption moved to HTTP handler after `_send()` succeeds, not inside `verify()`
 
 **investigate.py (2 fixes):**
+
 - SRV-018: Domain length capped at 253 characters
 - SRV-048: RRSIG expiry timestamp checked in `_dnssec_observed()`; expired/valid/unknown status per signature
 
 **fetcher.py (1 fix):**
+
 - SRV-013: Startup warning logged when `FETCH_ALLOW_PRIVATE` escape hatch is enabled
 
 **Consciously skipped (no longer applicable to current code, or already correct):**
+
 - SRV-004 (function doesn't exist), SRV-005 (time.time() is UTC-based), SRV-008 (no blocking query path), SRV-014 (already handles), SRV-020 (already constant-time), SRV-024/025 (edge cases too rare to justify churn), SRV-027 (timeout already set), SRV-030 (no upstream resolution), SRV-031 (stdlib handles MIME correctly), SRV-041/042 (urljoin correct; hexdigest lowercase), SRV-049 (padding removal intentional)
 
 ## Workstream A — macOS GUI honesty (hardcoded literals → model binding) — 2026-07-06
@@ -4271,31 +4402,37 @@ fabricated IPs, verdicts, and license state. Every hardcoded value that could pr
 impression of the system's security posture has been replaced.
 
 **MirrorView (S0 fix — GUIA-01/02/03/04):**
+
 - Hardcoded `140.82.112.3` / `140.82.113.3` IPs → real `ResolverQueryOutcome.records` from each vantage point
 - Fabricated "RESOLVERS AGREE" banner → real `ComparisonResult` tri-state (agree / tampering / inconclusive / degraded)
 - Hardcoded `9f2c1a…e7b40d` SHA-256 hashes → real `WarpResult` structural counts (scripts/stylesheets/iframes)
 - Fabricated "HASHES MATCH" banner → real `WarpResult` tri-state (intact / tampered / inconclusive)
 
 **GluttonView (S0 fix — GUIA-05/06/07):**
+
 - Hardcoded "Trial • unlocked" + "45 hours remaining" → `LicenseManager.isFeatureUnlocked(isPro:)` real state
 - Hardcoded "Yes • encrypted" + "utun4" → real `NetworkStateReport.vpn` / `.encryptedDNS`
 - Hardcoded probe IPs (2601:..., 10.0.1.1) + fabricated "failed" → real `leakProbeResults` from `LeakDetector.triggerQueries`
 - Fabricated "No Leak" verdict + fake "rcpt_9f2c1a…e7b40d • verified ✓" receipt → honest note explaining collector verification requires `syxx-leak --collector` CLI
 
 **ProphetView (fix — GUIA-08/09):**
+
 - Hardcoded placeholder records → real `sectionInputs.resolution.records` (or empty state)
 - Hardcoded "unsigned zone" verdict → real `sectionInputs.dnssec` (unsigned / recordsPresentUnverified / signatureExpiredOrNotYetValid / inconclusive) with color-coded display
 - Added `DNSRecord.typeName` computed property in SyxxKit for human-readable type labels
 
 **ConclusionsView (fix — GUIB-18):**
+
 - Brittle `model.output.contains("records for")` / `model.output.contains("Local (")` pattern matching → `model.sectionInputs.*` Optional presence checks
 
 **PortalView (fix):**
+
 - Hardcoded "en0 • Wi-Fi" + "10.0.1.162" → real `model.portalReport.activeInterfaces` list
 - Completely fabricated LAN device rows (10.0.1.1/129/162 with fake MACs) → honest "not yet available in GUI" note
 - Completely fabricated traceroute hops → honest "not yet available in GUI" note
 
 **Library change:**
+
 - `DNSResolver.swift`: Added `DNSRecord.typeName` computed property (A → 1, AAAA → 28, etc.)
 
 ## Workstream D — macOS Kit: Trust/Forensics/LAN/Licensing (KTRU S0/S1) — 2026-07-07
@@ -4303,6 +4440,7 @@ impression of the system's security posture has been replaced.
 S0 and S1 KTRU items from ROADMAP.md implemented and tested (285 pass, 0 failures).
 
 **S0 fixes:**
+
 - **KTRU-01** (entitlement trust): `isFeatureUnlocked` no longer accepts a caller-supplied Bool.
   The function is now async and validates the stored license key against Keygen internally,
   falling through to the server-anchored trial check only when no key is stored or validation
@@ -4311,6 +4449,7 @@ S0 and S1 KTRU items from ROADMAP.md implemented and tested (285 pass, 0 failure
   scheme + blocks non-public-routable resolved IPs before any fetch.
 
 **S1 fixes:**
+
 - **KTRU-05/06** (CommandRunner deadlock + timeout): Pipe is drained on a background thread
   concurrent with `waitUntilExit` to prevent buffer-full deadlock. A 5-second DispatchSemaphore
   deadline fires SIGTERM → 0.5s grace → SIGKILL + pipe close; timed-out runs throw
@@ -4338,11 +4477,13 @@ S0 and S1 KTRU items from ROADMAP.md implemented and tested (285 pass, 0 failure
 All KDNS S0 and S1 items from ROADMAP.md implemented and tested (276 pass, 0 fail).
 
 **S0 fixes:**
+
 - **KDNS-02** (fresh txid per retry + question validation): Each UDP/DoH retry attempt now generates a
   fresh transaction ID and packet (instead of re-sending the same one). New `responseQuestionMatches`
   helper validates response question name+type against the query after every non-mismatch parse.
 
 **S1 fixes:**
+
 - **KDNS-05** (RRSIG typeCovered): `rrsigValidityWindow` now checks `typeCovered == expectedTypeCovered`
   (DNSKEY=48). An RRSIG covering an unrelated type no longer counts as signature evidence.
 - **KDNS-06** (off-type answer count): `DNSResponse.offTypeAnswerCount` surfaces how many answers had
@@ -4363,6 +4504,7 @@ All KDNS S0 and S1 items from ROADMAP.md implemented and tested (276 pass, 0 fai
   `guard let … else { throw .timeout }` so cancellation doesn't trap.
 
 ## 2026-07-10 — File rename, delta sweep, memory_persist → MEMORY
+
 - **Renamed** `.memory_persist-syxx.md` → `MEMORY.md` (user request). Updated all cross-references
   in AGENTS.md, DELTAS.md, HAND_OFF.md, and CHANGELOG.md.
 - **Fixed C006 duplicate**: Merged expanded scope (9 call sites) into original entry; removed
@@ -4372,12 +4514,14 @@ All KDNS S0 and S1 items from ROADMAP.md implemented and tested (276 pass, 0 fai
 - **Added E015** (Windows ConclusionsView missing — High; navigation dead end for Windows users).
 
 ## Earlier this pass
+
 - **P0.5** collector-confirmed leak loop, **P1.2** Windows UDP retry, **P3** test sweep — landed
   and verified (macOS 48→51 tests pass; Windows builds clean).
 
 ## Ph4.3 — Mechanism-class-level margin (2026-07-13)
 
 Implemented **mechanism-class-level margin** (Ph4.3) in the synthesis engine on both platforms:
+
 - **Problem:** Margin was computed between top-2 individual hypotheses (BetP). When two sibling hypotheses in the same class were close (e.g. spoofing 40%, interception_onPath 35% → both `rewrite`), they falsely triggered a thin-margin referral (margin=5), even though their combined class comfortably beat the runner-up (rewrite 75% vs clean 25% → margin=50).
 - **Fix:** Added class-probability aggregation in `SynthesisEngine.swift` (lines 304-324) and `SynthesisEngine.cs` (lines 288-313) — maps each hypothesis's BetP to its `MechanismClass` via the existing Ph4.2 partition, sums within each class, and computes `classMargin` between top-2 classes.
 - **Referral trigger** now uses `classMargin` instead of per-hypothesis margin. The `referralReason` function receives the class-level margin for display.
@@ -4387,6 +4531,7 @@ Implemented **mechanism-class-level margin** (Ph4.3) in the synthesis engine on 
 ## Ph5.1 — Cross-vantage discrepancy as scored DST mass source (2026-07-13)
 
 Implemented **cross-vantage discrepancy as a scored DST mass source** (Ph5.1) in the synthesis engine on both platforms:
+
 - **Problem:** The answer matrix comparison (classification of local vs public resolver answers) existed only as a presentation-layer gate (forbidding clean) but contributed **zero mass** to the DST belief calculation. A genuine discrepancy between local and public answers was visible but didn't actually score as evidence of interception/spoofing.
 - **Fix:** Added a support-construction branch in `SynthesisEngine.swift` (lines 248-267) and `SynthesisEngine.cs` (lines 219-246) that iterates the answer matrix and contributes committed mass toward `{spoofing, interception_onPath}` when `classification == .discrepancy`. Weight is scaled by corroborating reference vantage count (1 vantage → 1.0, 3+ → 2.0 max). `benignSetVariation` contributes zero mass in either direction, maintaining silence for multi-homed CDNs.
 - **New tests:** `testPh51_discrepancyMatrix_contributesMassAgainstClean` (verifies clean belief decreases with discrepancy) + `testPh51_benignSetVariation_noMassContribution` (verifies zero mass shift) on both platforms (4 new tests total).
@@ -4395,6 +4540,7 @@ Implemented **cross-vantage discrepancy as a scored DST mass source** (Ph5.1) in
 ## Ph5.2 — B005 sub-scorers (Evidence Confidence, Resolver Provenance, Tamper Fingerprint) — 2026-07-13
 
 Implemented the three **B005 sub-scorers** per DESIGN.md "Score-design invariants" section (no/partial/full-data contracts):
+
 - **Evidence Confidence Score** (§3) — formalized the flagship confidence number with section-completeness attenuation: no evidence → nil, partial → `baseScore * (K/6)` halved if critical section inconclusive, full → as-is. Threaded into `SynthesisEngine.synthesize()` output.
 - **Resolver Provenance Confidence** (§1) — combines EDNS0 presence, port/TXID entropy, transport encryption, and resolver-IP match into a 0-1 score with proper no/partial/full-data attenuation and a 0.40 cap when majority of signals missing.
 - **Tamper Mechanism Fingerprint** (§2) — classifies interference mechanism using ≥2 independent signal minimum, tentative ≤0.35 with partial data, full 0.35-1.0 with ≥3 converging signals.
@@ -4404,9 +4550,10 @@ Implemented the three **B005 sub-scorers** per DESIGN.md "Score-design invariant
 ## Unified binary — 12 CLI tools consolidated into `syxx` (2026-07-13)
 
 Consolidated all 12 standalone CLI executables into a single `syxx` binary with subcommands:
+
 - **Old:** 12 separate executables (`syxx-nslook`, `syxx-mirror`, `syxx-leak`, `syxx-witness`, `syxx-key`, `syxx-route`, `syxx-lan`, `syxx-forensics`, `syxx-sentinel`, `syxx-cage`, `syxx-warp`, `SyxxDstProbe`) — each a separate firewall source, each requiring separate privilege escalation.
 - **New:** Single `syxx` binary with subcommands: `syxx nslook`, `syxx mirror`, `syxx leak`, `syxx witness`, `syxx key`, `syxx route`, `syxx lan`, `syxx forensics`, `syxx sentinel`, `syxx cage`, `syxx warp`. One binary = one firewall source = one escalation.
-- **Changes:** 
+- **Changes:**
   - `Package.swift` — removed 12 standalone executable targets; SyxxCLI now depends on Ccage.
   - All tool `main.swift` files moved to `SyxxCLI/Commands/` with `@main` → `static func run()`.
   - `SyxxCLI.swift` — added subcommand dispatch at entry; `--help`/`--version` flags.
@@ -4417,11 +4564,13 @@ Consolidated all 12 standalone CLI executables into a single `syxx` binary with 
 ## 2026-07-17 — Phase B delivered (B1 + B2)
 
 **B1 — Shareable signed incident report:**
+
 - macOS `SignedIncidentReportTests.swift` — 11 tests (Windows parity), all pass.
 - Fix: degraded > inconclusive priority swap in renderer (`SignedIncidentReport.swift:61-66`, twin `.cs`).
 - macOS 524t/0f ✅ (4 network tests skipped).
 
 **B2 — Public report verifier CLI:**
+
 - macOS `SyxxWitness.swift` — `verify` subcommand accepts `--pubkey <b64>`, `--fetch-pubkey <url>`, `--detailed`.
 - Windows `WitnessCommand.cs` — same flags + `DescribeVerification` helper.
 - `--detailed` maps all 9 `SnapshotVerification` states to distinct labels.
@@ -4429,6 +4578,7 @@ Consolidated all 12 standalone CLI executables into a single `syxx` binary with 
 - Help text updated on both platforms.
 
 **C3 — Resolver speed benchmark (new `syxx speed` subcommand):**
+
 - macOS `SyxxSpeed.swift` — benchmarks all configured system resolvers + public resolvers (Cloudflare, Google, Quad9) by latency.
 - Ranks results by median RTT, recommends the fastest responsive resolver.
 - Integrated into `SyxxCLI.swift` dispatch + help text.
@@ -4437,12 +4587,14 @@ Consolidated all 12 standalone CLI executables into a single `syxx` binary with 
 ## 2026-07-17 — P0.4 offline bake-off + 3 new combination rules
 
 **P0.4 — Offline bake-off harness:**
+
 - `BAKEOFF-DESIGN.md` — design spec committed.
 - `macOS/Tests/SyxxKitTests/FusionRuleBakeoffTests.swift` — 6 test cases (SV-1, P1, BC-1, SV-3, determinism, full corpus bake-off table).
 - Real-run output verified: all 5 rules produce deterministic results across 5 runs each, max float delta = 0.0.
 - `Stage0GoldenCorpusTests.swift` — golden corpus loader with 14 seeds from `corpus/stage0/seeds.json`.
 
 **Three new combination rules:**
+
 - `CombinationRule` enum: `.yager`, `.duboisPrade`, `.weightedMass`.
 - `SynthesisEngine.swift` — added `yager()`, `duboisPrade()`, `weightedMass()` as internal static methods.
 - Production dispatch: `config.combinationRule` controls which rule runs (`cautious` remains the default).
@@ -4451,6 +4603,7 @@ Consolidated all 12 standalone CLI executables into a single `syxx` binary with 
 ## 2026-07-17 — E-5/E-6 macOS GUI license activation + G-2 version identity
 
 **E-5 — macOS GUI license activation:**
+
 - `AppModel.swift` — added `licenseState` (enum: unknown/lite/trial/pro/activationFailed), `licenseMessage`, `isValidatingLicense` published vars.
 - `validateLicenseOnLaunch()` — called from `checkStartup()` → validates stored key + trial via `LicenseManager.isFeatureUnlocked()`.
 - `activateLicense()` — saves key to Keychain, validates against Keygen via `validateLicenseDetailed()`, updates state. Handles .valid/.invalid/.timeout/.networkError distinctly.
@@ -4458,10 +4611,12 @@ Consolidated all 12 standalone CLI executables into a single `syxx` binary with 
 - Sidebar badges (Mirror/Glutton) now auto-update: `model.isPro` tracks license state.
 
 **E-6 — macOS GUI license state display:**
+
 - `LicenseView.swift` — dynamic status line and status pill (LITE VERSION / TRIAL / PRO / CHECKING) based on `model.licenseState`, replacing the static "Local license key found. Verifying with Keygen…" placeholder.
 - Activation errors shown in-line (invalid key, timeout, network error).
 
 **G-2 — Version identity:**
+
 - `bundle-app.sh` — `CFBundleShortVersionString` and `CFBundleVersion` now derived from `SyxxConfig.version` and `git rev-list --count HEAD` at bundle time, replacing hardcoded `1.0`/`1`.
 - `SyxxConfig.version = "2.0.0"` is the single source of truth; AboutPanel and UpdatePanel already read it.
 
@@ -4470,6 +4625,7 @@ Consolidated all 12 standalone CLI executables into a single `syxx` binary with 
 ## 2026-07-17 — C1 gateway/DNS audit wiring (macOS)
 
 **C1 — Router/gateway DNS audit (Portal section):**
+
 - `NetworkStateReport` now includes `gateway: GatewayInfo?` field populated by `detectGateway()`.
 - `GatewayInfo` struct: `ip`, `interfaceName`, `isDNS` (gateway is also a system resolver), `adminReachable` (gateway HTTP admin pings), `dhcpPushedDNS` (IPs from DHCP options).
 - Probes: `defaultGatewayIP()` via `/sbin/route -n get default`, `dhcpPushedDNS()` via `/usr/sbin/ipconfig getoption`.
@@ -4492,16 +4648,16 @@ Both sweeps end with DELTAS.md emptied per standing rules.
 All eight subagent teams are dispatched and queued for execution.
 
 - **WS8 Code Health research (4 active runs):**
-  -  run_00001 auditing macOS/SyxxKit for risky patterns, dead code, hardcoded production strings, performance cliffs, and osascript/sudo privilege-escalation loops.
-  -  run_00002 auditing Windows/Syxx.Kit + SyxxUI for P/Invoke risks, runas/UAC token leaks, hardcoded verdicts, and pipe contention.
-  -  run_00003 auditing Ubuntu/SyxxUI.Avalonia for pkexec/sudo privilege residuals, dead paths, and AXAML performance risks.
-  -  run_00004 auditing Server/syxx_server + scripts for SSRF, injection, hardcoded secrets, unbounded retries, and root-permission overuse.
+  - run_00001 auditing macOS/SyxxKit for risky patterns, dead code, hardcoded production strings, performance cliffs, and osascript/sudo privilege-escalation loops.
+  - run_00002 auditing Windows/Syxx.Kit + SyxxUI for P/Invoke risks, runas/UAC token leaks, hardcoded verdicts, and pipe contention.
+  - run_00003 auditing Ubuntu/SyxxUI.Avalonia for pkexec/sudo privilege residuals, dead paths, and AXAML performance risks.
+  - run_00004 auditing Server/syxx_server + scripts for SSRF, injection, hardcoded secrets, unbounded retries, and root-permission overuse.
 
 - **WS9 UI/UX research (4 active runs):**
-  -  run_00005 comparing macOS SwiftUI views against Syxx GUI Mockups/ (Mxups.html, IMPLEMENTATION_GUIDE.md).
-  -  run_00006 comparing Windows WinUI 3 XAML against the same mockups, noting Fluent-specific constraints.
-  -  run_00007 comparing Ubuntu Avalonia AXAML against the same mockups, noting Avalonia-specific constraints.
-  -  run_00008 auditing Warden token parity (colors, radii, type scale, gradients, runes) across all three platforms against IMPLEMENTATION_GUIDE.md.
+  - run_00005 comparing macOS SwiftUI views against Syxx GUI Mockups/ (Mxups.html, IMPLEMENTATION_GUIDE.md).
+  - run_00006 comparing Windows WinUI 3 XAML against the same mockups, noting Fluent-specific constraints.
+  - run_00007 comparing Ubuntu Avalonia AXAML against the same mockups, noting Avalonia-specific constraints.
+  - run_00008 auditing Warden token parity (colors, radii, type scale, gradients, runes) across all three platforms against IMPLEMENTATION_GUIDE.md.
 
 All eight teams are research-only and executing asynchronously. Findings will be collected before Phase 2 begins.
 

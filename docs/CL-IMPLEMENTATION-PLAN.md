@@ -25,6 +25,7 @@ This plan implements three work items that feed the determinative core:
 ### Requirements (from HANDOFF-CLINE.md)
 
 A GroundTruth may only be treated as **decisive** when it carries:
+
 1. **Signed provenance** — Ed25519 signature over the payload
 2. **Freshness** — timestamp/nonce, bounded age (e.g., ≤5 minutes)
 3. **Domain/record binding** — signature covers qname+qtype+answer
@@ -70,12 +71,14 @@ A GroundTruth may only be treated as **decisive** when it carries:
 **Files:** `Server/syxx_server/signing.py` (new), `Server/syxx_server/config.py`
 
 **Do:**
+
 - Generate Ed25519 keypair on first run, persist to `~/.syxx/server_ed25519.pem`
 - Load private key at startup, expose public key via `/api/pubkey`
 - Implement `sign_groundtruth(domain, qtype, answers, timestamp, nonce)` → signature bytes
 - Implement `verify_signature(pubkey, message, signature)` → bool
 
 **Config additions:**
+
 ```python
 # config.py
 ED25519_KEY_PATH = _s("SYXX_ED25519_KEY_PATH", os.path.join(BASE_DIR, "server_ed25519.pem"))
@@ -90,6 +93,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `Server/syxx_server/resolver.py` (extend), `Server/syxx_server/authoritative.py` (new)
 
 **Do:**
+
 - Implement `discover_authoritative_nameservers(domain)` → list of NS IPs
   - Query NS records for the domain's zone
   - Resolve NS hostnames to IPs
@@ -106,6 +110,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `Server/syxx_server/app.py` (add route)
 
 **Do:**
+
 - Route: `GET /api/authoritative?domain=example.com&qtype=A`
 - Logic:
   1. Discover authoritative nameservers
@@ -114,6 +119,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
   4. Build message: `domain|qtype|answers_json|timestamp|nonce`
   5. Sign with Ed25519
   6. Return JSON:
+
      ```json
      {
        "domain": "example.com",
@@ -131,6 +137,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
        "trustLevel": "decisive"
      }
      ```
+
 - **Trust level logic:**
   - `decisive` if: signature valid AND freshness ≤ max_age AND binding covers domain+qtype+answers AND quorum met
   - `standard` if: signature valid but quorum not met OR freshness borderline
@@ -143,6 +150,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `macOS/Sources/SyxxKit/DimensionClient.swift` (new), `Windows/Syxx.Kit/DimensionClient.cs` (new)
 
 **Do:**
+
 - Implement `fetchGroundTruth(domain, qtype)` → `GroundTruth?`
 - Implement `verifyGroundTruth(gt)` → `GroundTrustLevel`
   - Verify Ed25519 signature over (domain, qtype, answers, timestamp, nonce)
@@ -150,6 +158,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
   - Check binding: signature covers the exact domain+qtype+answers
   - Check quorum: `gt.quorum.met == true`
 - Emit tri-state:
+
   ```swift
   enum GroundTrustLevel: String, Codable {
       case decisive      // all checks pass
@@ -165,6 +174,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `macOS/Sources/SyxxKit/WitnessSigner.swift` (extend), `Windows/Syxx.Kit/WitnessSigner.cs` (extend)
 
 **Do:**
+
 - Add `groundTrustLevel: GroundTrustLevel` to evidence metadata
 - Ensure decisive acts (`authoritativeDivergesConfirmed`) require `groundTrustLevel == .decisive`
 - Sign evidence with trust level included in the signed payload
@@ -176,6 +186,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `Server/tests/test_groundtruth.py` (new), `macOS/Tests/GroundTruthTests.swift` (new), `Windows/Syxx.Tests/GroundTruthTests.cs` (new)
 
 **Do:**
+
 - Test replay attack: same signature+nonce+timestamp submitted twice → second rejected
 - Test stale timestamp: timestamp > max_age → `inconclusive`
 - Test wrong domain binding: signature for `example.com` used for `evil.com` → `inconclusive`
@@ -203,6 +214,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `macOS/Sources/SyxxKit/DNSCanaries.swift` (modify), `Windows/Syxx.Kit/DNSCanaries.cs` (modify)
 
 **Do:**
+
 - Current logic: NX canary checks if returned IP matches known block page IPs
 - New logic: **Any** A/AAAA record for a provably-nonexistent name is a hijack
   - Generate canary domain: `nx-canary-{random}.syxx.app` (guaranteed nonexistent)
@@ -218,6 +230,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `macOS/Sources/SyxxKit/DNSCanaries.swift` (modify), `Windows/Syxx.Kit/DNSCanaries.cs` (modify)
 
 **Do:**
+
 - Current logic: Single hardcoded `cloudflare.com` DNSSEC canary
 - New logic:
   - Query ≥3 DNSSEC-signed domains (e.g., `cloudflare.com`, `dnssec-deployment.org`, `verisigninc.com`)
@@ -233,6 +246,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `macOS/Sources/SyxxKit/WildcardSynthesisProbe.swift` (modify), `Windows/Syxx.Kit/WildcardSynthesisProbe.cs` (modify)
 
 **Do:**
+
 - Current logic: Reference lookup uses plain-UDP (vulnerable to transparent Do53 proxy rewrite)
 - New logic:
   - Use DoH (DNS-over-HTTPS) or DoT (DNS-over-TLS) for reference lookup
@@ -246,6 +260,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 **Files:** `macOS/Tests/DNSCanariesTests.swift` (extend), `Windows/Syxx.Tests/DNSCanariesTests.cs` (extend)
 
 **Do:**
+
 - Test round-robin block page: different IPs per query → still hijack
 - Test single DNSSEC lapse: 1 of 3 controls unsigned → not decisive
 - Test DO bit: query without DO bit → inconclusive (not decisive)
@@ -260,6 +275,7 @@ GROUNDTRUTH_MIN_QUORUM = _i("SYXX_GROUNDTRUTH_MIN_QUORUM", 2)
 ### Requirements (from HANDOFF-CLINE.md)
 
 Build a labeled corpus with **≥1 real capture per mechanism class**:
+
 - Poisoned-local
 - Transparent-proxy
 - Captive-portal
@@ -278,6 +294,7 @@ Build the **shared golden-vector runner** that replays `(evidence, sectionStatus
 **Files:** `corpus/lab/dnsmasq.conf` (new), `corpus/lab/coredns.yml` (new), `corpus/lab/README.md` (new)
 
 **Do:**
+
 - **NX-hijack rig:** dnsmasq configured to return sinkhole IP for nonexistent domains
 - **DNSSEC-strip rig:** CoreDNS configured to strip RRSIG records
 - **Transparent-proxy rig:** iptables + dnsmasq to simulate on-path interception
@@ -290,9 +307,11 @@ Build the **shared golden-vector runner** that replays `(evidence, sectionStatus
 **Files:** `corpus/captures/` (new directory), `corpus/captures/README.md` (new)
 
 **Do:**
+
 - Run Syxx against each lab rig
 - Capture: raw DNS packets (pcap), parsed evidence (JSON), section statuses (JSON)
 - Label each capture with mechanism class:
+
   ```json
   {
     "captureId": "nx-hijack-001",
@@ -303,6 +322,7 @@ Build the **shared golden-vector runner** that replays `(evidence, sectionStatus
     "sectionStatuses": [...]
   }
   ```
+
 - Collect ≥1 capture per mechanism class (6 classes × 1 capture = 6 minimum)
 
 **Done bar:** Corpus contains ≥6 labeled captures, one per mechanism class.
@@ -312,6 +332,7 @@ Build the **shared golden-vector runner** that replays `(evidence, sectionStatus
 **Files:** `corpus/golden-vectors/runner.py` (new), `corpus/golden-vectors/schema.json` (new)
 
 **Do:**
+
 - Implement Python runner that:
   1. Loads golden vector JSON: `{evidence, sectionStatuses, expected: {verdict, confidence, belief}}`
   2. Invokes macOS `SynthesisEngine.synthesize()` via subprocess or FFI
@@ -320,6 +341,7 @@ Build the **shared golden-vector runner** that replays `(evidence, sectionStatus
   5. Fails CI if platforms diverge or output doesn't match expected
 
 **Schema:**
+
 ```json
 {
   "vectorId": "nx-hijack-001",
@@ -344,11 +366,13 @@ Build the **shared golden-vector runner** that replays `(evidence, sectionStatus
 **Files:** `corpus/golden-vectors/ne1-nx-washout.json` (new), `corpus/golden-vectors/ne2-dnssec-strip.json` (new), etc.
 
 **Do:**
+
 - Translate each NE1–NE7 failing scenario into a golden vector
 - Expected behavior: current engine **fails** (red vector) because it produces wrong verdict
 - After Claude's engine remediation, vectors should pass (green)
 
 **Example (NE1 Δ1 — confirmed threat washed to CLEAN):**
+
 ```json
 {
   "vectorId": "ne1-delta1-nx-washout",
@@ -411,6 +435,7 @@ CL-3.4 (NE1–NE7 red vectors)
 ```
 
 **Cross-dependencies:**
+
 - CL-1.3 depends on CL-1.1 and CL-1.2
 - CL-2.2 depends on CL-1.2 (quorum logic reused)
 - CL-3.2 depends on CL-2 (probes must be hardened before capturing)
@@ -420,17 +445,20 @@ CL-3.4 (NE1–NE7 red vectors)
 ## Acceptance Criteria (Real-Run Bar)
 
 ### CL-1 Acceptance
+
 1. **Real run:** `curl https://syxx-server/api/authoritative?domain=cloudflare.com&qtype=A` returns signed, quorum-backed GroundTruth with `trustLevel: "decisive"`
 2. **Replay attack:** Submit same payload twice → second rejected
 3. **Stale timestamp:** Submit payload with timestamp > 5 minutes old → `inconclusive`
 4. **Wrong domain binding:** Submit signature for `example.com` with domain=`evil.com` → `inconclusive`
 
 ### CL-2 Acceptance
+
 1. **Real round-robin block page:** Query resolver that returns different IPs per query → still hijack (Positive)
 2. **Benign single DNSSEC lapse:** One control temporarily unsigned → not decisive (standard)
 3. **Real transparent Do53 proxy:** Wildcard reference over plain-UDP → inconclusive (not benign)
 
 ### CL-3 Acceptance
+
 1. **Corpus completeness:** ≥6 labeled captures, one per mechanism class
 2. **Runner parity:** macOS and Windows produce identical verdicts on all golden vectors
 3. **NE1–NE7 reproduction:** All failing scenarios reproduced as red vectors
@@ -451,6 +479,7 @@ CL-3.4 (NE1–NE7 red vectors)
 ## Next Steps
 
 **syxx-neural-executor** should:
+
 1. Begin CL-1.1 (Server signing infrastructure)
 2. Batch 25–30 tool calls per AGENTS.md
 3. Update CHANGELOG.md after each CL item

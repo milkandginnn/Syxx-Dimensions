@@ -12,6 +12,7 @@ When asked to perform `delta analysis`, systematically audit the macOS, Windows,
 ### Scope & Approach
 
 **Read the entire codebase** — macOS client (`macOS/Sources`), Windows client (`Windows/`), and server (`Server/`). Focus on code paths that:
+
 - Produce verdicts (secure/tampered/inconclusive)
 - Generate or sign evidence
 - Handle credentials, keys, or authentication
@@ -19,6 +20,7 @@ When asked to perform `delta analysis`, systematically audit the macOS, Windows,
 - Process untrusted input (DNS packets, HTML, subprocess arguments)
 
 Do not try to read every file line-by-line — instead, **trace critical paths**:
+
 1. Start at CLI entry points (`SyxxCLI.swift`, `Program.cs`) and follow to verdict synthesis
 2. Read all synthesis/aggregation logic (`SynthesisEngine.swift`, `Synthesizer.cs`, `Synthesizer.swift`)
 3. Audit all security-critical modules (LicenseManager, DNSSECVerifier, WitnessSigner, NetworkKeyState)
@@ -52,9 +54,9 @@ If a delta spans multiple domains, file it under the **most severe** applicable 
 5. **Platform Integration**
 6. **Miscellaneous**
 
-### Delta Numbers 
+### Delta Numbers
 
-When recording identified delties, take its sequence order (3-digit format) and then append it to its domain code. For instance, a delta that would be the fourth listed in the Server Components domain would be numbered A004. A delta involving Verdict and Evidence Integrity that would be the 127th recorded delta in its domain would be number B127. Each Monday, renumber deltas sequentially within each domain to fill gaps left by fixed or archived deltas. For example, if A003 and A007 are fixed, the former A008 becomes the new A003, A009 becomes A004, etc. Update all cross-references accordingly. Mark any deltas that should not be renumbered by appending `HOLD -` followed by your tool name inside of brackets above the delta number--e.g., `[HOLD - OPENCODE]` or `[HOLD - CLAUDE]`. Brackets cause XCode to set text    off in red so it is easily readable to the user. 
+When recording identified delties, take its sequence order (3-digit format) and then append it to its domain code. For instance, a delta that would be the fourth listed in the Server Components domain would be numbered A004. A delta involving Verdict and Evidence Integrity that would be the 127th recorded delta in its domain would be number B127. Each Monday, renumber deltas sequentially within each domain to fill gaps left by fixed or archived deltas. For example, if A003 and A007 are fixed, the former A008 becomes the new A003, A009 becomes A004, etc. Update all cross-references accordingly. Mark any deltas that should not be renumbered by appending `HOLD -` followed by your tool name inside of brackets above the delta number--e.g., `[HOLD - OPENCODE]` or `[HOLD - CLAUDE]`. Brackets cause XCode to set text    off in red so it is easily readable to the user.
 
 Priority can be inferred from delta numbering, whereas A- and B-numbered deltas are the highest priority and E- and F-numbered deltas are the lowest priority.
 
@@ -72,12 +74,13 @@ Report findings in `DELTAS.md` format:
 - **Fix(es):**          Brief suggestion for how to fix (not full implementation)
 
 - **Code Sample:**      [
-                        
+
                         Paste an example of the defective code.
                         For more complex involvement, choose the most severe code example(s) to paste.
                         For more simple code examples, just paste the whole thing.
 
                         ]
+
 ---
 ---
 
@@ -114,14 +117,13 @@ python3 scripts/reflow-deltas.py DELTAS.md
 
 It re-indents every delta field to column 24 and touches only the A–F ledger (instructions, template, worked example, and the Delta-of-the-Week section are left untouched). Column and wrap width are the `VALUE_COL = 24` / `WIDTH = 100` constants at the top of the script.
 
-
 ## Delta Evaluation Instructions
 
 When asked to `evaluate` deltas, you are asked to visit this document and critique the deltas submitted by your peers, i.e., peer vetting. Read each and decide:
 
 - whether you **agree** with the delta or **disagree** with the delta.
 
-- if you **disagree** with the delta, you are asked to explain the basis of your disagreement. 
+- if you **disagree** with the delta, you are asked to explain the basis of your disagreement.
 
 Disagreement can be based on any of three grounds:
 
@@ -152,7 +154,6 @@ When evaluating deltas, you are asked to make comments inline to the comment you
 
 ---
 ---
-
 
 ### Criticality
 
@@ -193,14 +194,17 @@ If none of the above apply, it's probably High or Medium, not Critical.
 #### Reporting Requirement
 
 Stop and report to the user immediately if:
+
 - You find a **Critical-severity defect** (false confidence risk, false verdict, forgeable evidence) — report immediately, don't wait for the full audit. This is critical for all, as many of you do not have persistent context and user has limited usage for all of you.
 - You hit a network/dependency failure (per AGENTS.md "Pause and Report" rules)
 - You're unsure whether a pattern is a bug or intentional design — ask before logging
 
 Do not call the analysis "complete" until you've covered all critical paths above, even if you haven't read every file in the codebase.
+
 ## **A. Server Components**
 
 ---
+
 - **[A001]**            Server passivedns.py leaks SQLite database connection on query exception
 - **Status:**           **ALREADY FIXED** — passivedns.py no longer opens its own SQLite
                         connections. The query path was refactored to delegate to
@@ -226,8 +230,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         rows = cursor.fetchall()
 
                         ]
+
 ---
 ---
+
 - **[A031]**            licensing.py HMAC column name mismatch makes DB-backed offline licenses
                         permanently fail
 - **Status:**           **OPEN** — Verified in source. licensing.py:289 still reads
@@ -236,11 +242,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         dict, so stored_hmac is always None and every DB-backed offline license is
                         rejected. This is the identical issue to A229 — A031 and A229 are the same
                         delta filed under different audit streams.
-- **Criticality:**      Critical; DB license row lookup returns row_hmac while _validate_offline
+- **Criticality:**      Critical; DB license row lookup returns row_hmac while_validate_offline
                         reads row.get("hmac"), causing false rejection of valid offline licenses.
 - **Location:**         Server/syxx_server/licensing.py:289-291; Server/syxx_server/db.py:466
 - **Issue:**            db.license_lookup() pops row_hmac before returning the dictionary, and the
-                        column is named row_hmac in the schema. However, _validate_offline()
+                        column is named row_hmac in the schema. However,_validate_offline()
                         attempts to read row.get("hmac"), which always returns None, triggering an
                         invalid HMAC error and rejecting valid offline licenses.
 - **Cross-ref. Delta:** **Same issue as A229.** Remove one to avoid duplicate tracking.
@@ -255,8 +261,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             return None
 
                         ]
+
 ---
 ---
+
 - **[A032]**            Passive DNS drift boolean fallback collapses tri-state
 - **Status:**           **OPEN** — Verified in source. passivedns.py:123 still emits
                         `"driftSuspected": drift == "suspected"`. The comment says "backward-compat
@@ -280,8 +288,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         "driftSuspected": drift == "suspected",
 
                         ]
+
 ---
 ---
+
 - **[A262]**            _route_checkout uses raw socket peer for idempotency key; all
                         users behind nginx share one Stripe checkout session
 - **Criticality:**      High; behind the shipped reverse-proxy topology (deploy.sh nginx →
@@ -310,8 +320,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         idem_key = "checkout-%s-%s-%d" % (sku, hashlib.sha256(client_ip.encode()).hexdigest()[:16], window)
 
                         ]
+
 ---
 ---
+
 - **[A263]**            _route_create_monitor default checks value "prophet" is not valid
                         JSON, so monitors created without explicit checks silently fail
 - **Criticality:**      Medium; a monitor created via POST /api/monitors with no `checks`
@@ -344,8 +356,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         checks = json.loads(monitor.get("checks", "[]"))
 
                         ]
+
 ---
 ---
+
 - **[A264]**            Signed appcast manifest ships with empty package SHA-256 and size
 - **Criticality:**      Critical; a signed update manifest with no package integrity data allows
                         package substitution to go undetected.
@@ -400,8 +414,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         manifest["signature"] = base64.b64encode(sig).decode("ascii")
 
                         ]
+
 ---
 ---
+
 - **[A265]**            DOM-based XSS via unescaped DNS record values in index.html terminal
 - **Criticality:**      Critical; DNS TXT record values are rendered as HTML without escaping.
 - **Location:**         Server/index.html:686, 698-701, 761, 765
@@ -438,8 +454,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',data.server+'#53\n\n'+(data.rcodeName==='NOERROR'?G(';; '+data.rcodeName):Y(';; '+data.rcodeName))+'\n'+fmtRecords(data.records)); }catch(e){ mrun('',R('lookup failed: '+e.message)); }
 
                         ]
+
 ---
 ---
+
 - **[A266]**            Monitor notification email stored in plaintext, contradicting zero-knowledge
                         privacy claims
 - **Criticality:**      Critical; PII is retained in plaintext in the same database the privacy
@@ -482,9 +500,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         )
 
                         ]
+
 ---
 
 ---
+
 - **[A267]**            /api/monitors create — unbounded interval + no monitor cap + unvalidated
                         domain → outbound-fetch amplification / self-DoS
 - **Criticality:**      Critical (auto-enhanced: unbounded resource use / DoS + server-as-
@@ -527,9 +547,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         db.monitor_create(monitor_id, ent.subject, domain, checks, interval_hours, notify_email)
 
                         ]
+
 ---
 
 ---
+
 - **[A268]**            DoT leak-collector observation path bypasses the per-source rate limit the
                         UDP
                         collector enforces (A034 transport-parity gap)
@@ -540,7 +562,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         and an inconsistent security control across transports.
 - **Location:**         Server/syxx_server/dot_listener.py:143-147 (the _answer collector path),
                         contrasted with Server/syxx_server/dns_authoritative.py:337-346 (UDP path that
-                        gates the same write with _dns_rate_ok)
+                        gates the same write with_dns_rate_ok)
 - **Issue:**            A034 added a per-source sliding-window rate limit (_dns_rate_ok, 50 queries
                         /
                         60 s / source IP) gating the collector's DB write on the UDP path. The DoT
@@ -552,7 +574,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         write-transaction attempts serialize against every other writer (license mint,
                         kv idempotency, monitor writes), so sustained DoT collector traffic is write-path
                         contention the UDP path is specifically designed to cap.
-- **Cross-ref. Delta:** A034 (FIXED) added _dns_rate_ok but wired it only into the UDP _serve_dns
+- **Cross-ref. Delta:** A034 (FIXED) added _dns_rate_ok but wired it only into the UDP_serve_dns
                         loop;
                         the DoT observation path (added later for encrypted-transport collection) was
                         never brought to parity. A119 (FIXED) covers the DoT accept-loop/handshake DoS
@@ -583,8 +605,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             logging_util.incr("dns_rate_limited")
 
                         ]
+
 ---
 ---
+
 - **[A269]**            Leak-collector rate-limit dictionary grows without bound from spoofed UDP
                         source IPs (memory-exhaustion DoS)
 - **Criticality:**      Critical; unauthenticated, source-spoofable remote memory-exhaustion DoS on
@@ -607,7 +631,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         collector, the HTTP API, the DoT listener, and the licensing/webhook paths
                         on the same process. This is exactly the failure class ratelimit.py was
                         hardened against for its own bucket store, which has both a stale-entry
-                        prune (SRV-045) and a hard _MAX_BUCKETS cap (A083); the collector's parallel
+                        prune (SRV-045) and a hard_MAX_BUCKETS cap (A083); the collector's parallel
                         limiter has neither protection.
 - **Cross-ref. Delta:** A034 (FIXED, added the limiter but not a bounded store); A083/SRV-045
                         (FIXED, the exact prune-plus-cap pattern in ratelimit.py that this limiter
@@ -616,14 +640,13 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 - **Fix(es):**          [Fix 1] Give _dns_rate_buckets the same discipline as ratelimit.py: prune
                         entries whose window_start is older than a stale-window threshold, and
                         enforce a hard _MAX_BUCKETS cap that evicts the least-recently-seen source
-                        when exceeded, both inside _dns_rate_ok under the existing _dns_rate_lock.
+                        when exceeded, both inside _dns_rate_ok under the existing_dns_rate_lock.
                         [Fix 2] Correct the line-26 docstring to describe the pruning that actually
                         exists once it is added.
                         [Fix 3] Prefer factoring a single shared bounded limiter that both the UDP
                         path and the DoT collector path (A268) call, so a future third transport
                         cannot reintroduce the same unbounded-state gap.
 - **Code Sample:**      [
-
 
                         // Server/syxx_server/dns_authoritative.py:24-52
                         _dns_rate_lock = _threading.Lock()
@@ -651,8 +674,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[A270]**            Email-authentication check reports total DNS failure as a determinate
                         "partial" instead of inconclusive
 - **Criticality:**      Low; honesty/tri-state collapse on an ancillary free-tier tool, not a DNS-
@@ -678,7 +703,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         "partial".
 - **Code Sample:**      [
 
-
                         // Server/syxx_server/email_auth.py:160-171
                         def _overall(spf_v, dmarc_v, dkim_v):
                             results = [spf_v, dmarc_v, dkim_v]
@@ -690,9 +714,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 
 ---
+
 - **[A271]**            Unresolved merge-conflict markers make the production server
                         unimportable
 - **Criticality:**      Critical; user made aware. The server cannot start, so DNS investigation,
@@ -732,9 +758,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         >>>>>>> Stashed changes
 
                         ]
+
 ---
 
 ---
+
 - **[A272]**            Server returns hard tampered on a single authoritative snapshot when the
                         independent clean vantage is unavailable
 - **Criticality:**      Critical; user made aware. A benign geo-distributed or rotating answer can
@@ -775,11 +803,13 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             return "tampered"
 
                         ]
+
 ---
 
 ## **B. Detection Efficacy**
 
 ---
+
 - **[B270]**            dnsSpoofing and localCompromise require the witness section, which is
                         .untested
                         on every first run — a decisive spoof is force-downgraded to inconclusive on a
@@ -809,6 +839,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         syxx-neural-engineer.
                         [Fix 2] If the gate is intentional, make the first-run overhang copy explicitly
                         tell the user "establish a baseline and re-scan to confirm."
+
 ---
 
 - **[B271]**            Disjoint CDN Rotation Still Classified Unstable on Windows (macOS Fixed by
@@ -836,6 +867,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             "answer sets change with no shared address across samples");
 
                         ]
+
 ---
 
 - **[B272]**            Windows Synthesizer.Prophet Has No Rotating Case; Benign Round-Robin
@@ -865,6 +897,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             break;
 
                         ]
+
 ---
 
 - **[B273]**            Windows MatrixDeterminativeEngine.Pct Still Takes Math.Abs — Negative Margin
@@ -894,8 +927,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             => $"{(int)Math.Round(Clamp01(Math.Abs(x)) * 100, MidpointRounding.AwayFromZero)}%";
 
                         ]
+
 ---
 ---
+
 - **[B274]**            Linux Dashboard action buttons (Conduct All Scans, Flush DNS Cache, Enable
                         Unbound DNS, Begin the trial) have no command bindings, so clicking them
                         runs nothing
@@ -927,7 +962,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         them "coming soon" so they do not present as functional.
 - **Code Sample:**      [
 
-
                         <!-- Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:55-65 -->
                         <Border CornerRadius="12" Padding="16,11" Background="{StaticResource SyxPrimaryButtonBrush}" ...>
                           <StackPanel Orientation="Horizontal" Spacing="12">
@@ -941,8 +975,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[B275]**            Windows hardcoded CHAOS-class filter silently discards version.bind answers,
                         so the VersionBind resolver-identity probe can never detect a disclosed
                         banner
@@ -975,15 +1011,16 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         off-class" is preserved.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/DNSResolver.cs:804-805
                         // B069: reject off-class RRs to prevent class-smuggled addresses.
                         if (r.Cls != 1) continue;
 
 
                         ]
+
 ---
 ---
+
 - **[B276]**            Windows DNS capture hex-dumps CNAME/NS/PTR record data instead of decoding
                         it, so captured CNAME chains cannot be compared for rewrite detection
 - **Criticality:**      Medium; a captured CNAME target is unreadable and two logically-identical
@@ -1013,7 +1050,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         today.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/DNSCapture.cs:433-436
                         var sb = new StringBuilder();
                         for (int j = 0; j < rdLength; j++) sb.Append(data[offset + j].ToString("x2", CultureInfo.InvariantCulture));
@@ -1021,8 +1057,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[B277]**            Windows DNS response parser discards authority-section, EDNS, and byte-
                         length evidence on ServFail, Refused, and Truncated responses, weakening the
                         check that tells a genuine denial from an injected one
@@ -1057,7 +1095,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         macOS per the existing wire-parity contract noted at DNSResolver.cs:84-89.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/DNSResolver.cs:665-668
                         if (combinedResponseCode == 2)
                         {
@@ -1067,6 +1104,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 
 - **[B281]**            Prophet Consensus Flags Near-Identical Pool Answers As Possible Tampering
@@ -1169,6 +1207,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         tampering). VPN-independent by design (branch cut).
 
                         ]
+
 ---
 
 - **[B282]**            Windows DetectUnanimousTampering Returns bool; undetermined Collapses To No-
@@ -1199,6 +1238,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         // macOS returns UnanimousTamperResult with .undetermined -> inconclusive.
 
                         ]
+
 ---
 
 - **[B283]**            macOS VantageComparerTests Assert A Superseded Pre-C025/C046 Contract (4-5
@@ -1230,11 +1270,13 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         XCTAssertTrue(result.redirection, "C046: a lone DoH answer (<2) is not corroboration ...")
 
                         ]
+
 ---
 
 ## **C. Verdict & Evidence Integrity**
 
 ---
+
 - **[C001]**            NetworkStateReport collapses tri-state .unknown VPN and CaptivePortal to
                         boolean false
 - **Status:**           **OPEN** — Verified in source on both platforms. macOS
@@ -1266,8 +1308,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         captivePortalDetected: captive.state == .yes,
 
                         ]
+
 ---
 ---
+
 - **[C002]**            DashboardView returns hardcoded PASSED while MirrorView reports TAMPERING
                         DETECTED for identical run data
 - **Status:**           **OPEN** — Verified in source. DashboardView.swift:357-362 now checks
@@ -1296,8 +1340,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         return "PASSED"
 
                         ]
+
 ---
 ---
+
 - **[C003]**            Empty KeygenPublicKeyHex causes valid license signatures to fail and return
                         NetworkError
 - **Status:**           **ALREADY FIXED** — KeygenPublicKeyDerHex is now populated with a 91-byte
@@ -1326,8 +1372,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             if (string.IsNullOrEmpty(KeygenPublicKeyHex)) return false;
 
                         ]
+
 ---
 ---
+
 - **[C161]**            Windows default matrix spec omits mappableIndicators
 - **Criticality:**      Critical; user not yet made aware.
 - **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:359-385;
@@ -1389,8 +1437,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         )
 
                         ]
+
 ---
 ---
+
 - **[C162]**            Windows raw scoring ignores producing-section usability for indicators
 - **Criticality:**      Critical; user not yet made aware.
 - **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:924-980;
@@ -1468,8 +1518,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 ---
+
 - **[C163]**            Windows raw scoring omits completed-observation quality floor
 - **Criticality:**      Critical; user not yet made aware.
 - **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:928-930;
@@ -1501,8 +1553,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         let effective = aligned * effectiveQuality
 
                         ]
+
 ---
 ---
+
 - **[C164]**            Windows hard-exclusion path lacks quality and section-usability guards
 - **Criticality:**      Critical; user not yet made aware.
 - **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:728-741,
@@ -1555,8 +1609,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 ---
+
 - **[C165]**            Windows margin computation treats gated and hard-excluded diagnoses as
                         rivals
 - **Criticality:**      Critical; user not yet made aware.
@@ -1621,8 +1677,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 ---
+
 - **[C166]**            Windows assemble filters hard-excluded entries from the clean-blocking
                         overhang
 - **Criticality:**      Critical; user not yet made aware.
@@ -1674,8 +1732,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 ---
+
 - **[C167]**            Windows Mirror warp adapter ignores most content-warp mismatch signals
 - **Criticality:**      Critical; user not yet made aware.
 - **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:417-429;
@@ -1728,8 +1788,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 ---
+
 - **[C168]**            runAllWardens() misrepresents timed-out probes as completed
 - **Criticality:**      Critical; user not yet made aware.
 - **Location:**         macOS/Sources/SyxxApp/AppModel.swift:493-560
@@ -1784,8 +1846,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 ---
+
 - **[C169]**            Windows FirstRunScan falls back to 8.8.8.8 and grades the public resolver as
                         the user's network
 - **Criticality:**      Critical; user not yet made aware.
@@ -1823,9 +1887,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 
 ---
+
 - **[C170]**            Invalidated sibling sub-probe silently erases a decisive threat indicator
                         from
                         the determination (adversarially-triggerable dampener)
@@ -1872,9 +1938,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         if let producing = sectionByID[obs.section], !producing.status.isUsable { continue }
 
                         ]
+
 ---
 
 ---
+
 - **[C171]**            Windows Prophet treats a Truncated response as a clean Negative; macOS
                         treats it
                         as Invalidated (false clean-support + parity divergence)
@@ -1911,9 +1979,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         else subs.Add(SectionStatus.Negative);   // Truncated lands here
 
                         ]
+
 ---
 
 ---
+
 - **[C172]**            Windows combine() checks Positive before Invalidated — B062 fix never
                         ported;
                         section status diverges from macOS on identical evidence
@@ -1951,9 +2021,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         if subs.contains(.positive) { return .positive }
 
                         ]
+
 ---
 
 ---
+
 - **[C173]**            GUI Mirror/Witness/Testify paths silently substitute a public resolver as
                         "local" → false "no tampering" + signed misleading evidence
 - **Criticality:**      Critical (auto-enhanced twice: silent fallback to a public resolver when the
@@ -2004,9 +2076,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         if (local == null) { local = "1.1.1.1"; /* TODO: Add UI notification for fallback */ }
 
                         ]
+
 ---
 
 ---
+
 - **[C174]**            MergedDatapoint.isConflicting false-fires a cross-vantage DISCREPANCY on
                         benign partially-overlapping multi-A answers; macOS pairwise logic contradicts
                         its own B170 intent and D142 would propagate it to Windows
@@ -2067,6 +2141,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         return false
 
                         ]
+
 ---
 
 - **[C175]**            Windows WitnessSigner runs time/trust/display checks BEFORE Ed25519
@@ -2114,6 +2189,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             : SnapshotVerification.InvalidSignature;
 
                         ]
+
 ---
 
 - **[C176]**            Windows SignedEvidencePayload lacks perResolverAnswers — macOS-signed
@@ -2158,7 +2234,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             // <-- MISSING: perResolverAnswers
 
                         ]
+
 ---
+
 - **[C177]**            Windows WitnessTestifyPlanner lacks the C107 gates — a degraded or
                         failed-resolver comparison is sealed as a signed AnswerDrift with an empty
                         "previous answer"
@@ -2191,7 +2269,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             : string.Join(", ", firstPublic.Records.Select(r => r.Rdata));
 
                         ]
+
 ---
+
 - **[C178]**            Windows Cage report attributes the resolver by the forgeable QR bit;
                         macOS uses the port-53 side (C042)
 - **Criticality:**      Medium; attacker-controlled packet metadata decides which IP the capture
@@ -2215,7 +2295,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         string resolverIP = record.Packet.Qr == "Query" ? record.Network.DestIP : record.Network.SourceIP;
 
                         ]
+
 ---
+
 - **[C179]**            Windows Exfil assessment never records listsEvaluated — a stub-only
                         blocklist "no match" reads as an evaluated negative (C082 Fix 2)
 - **Criticality:**      Medium; a run with only built-in stub lists (~50 domains) silently reads
@@ -2241,7 +2323,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                             ... /* no listsEvaluated parameter */
 
                         ]
+
 ---
+
 - **[C180]**            Windows Exfil analyzer still turns a single real signal into false Benign
                         evidence — C045 Fix 1 never landed on Windows
 - **Criticality:**      High; a real high-entropy or beaconing signal renders clean on Windows
@@ -2272,8 +2356,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 ---
+
 - **[C181]**            Windows signed incident report can be forged into "nothing was compared" by
                         editing fields outside the signed payload, while the signature still
                         verifies
@@ -2315,7 +2401,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         DIVERGES rather than "Nothing was compared."
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/Synthesis/SignedIncidentReport.cs:63-64 (defective, unsigned legacy fields)
                         if ((comparison.LocalRecords is null || comparison.LocalRecords.Count == 0) &&
                             (comparison.PublicResolverResults is null || comparison.PublicResolverResults.Count == 0))
@@ -2326,8 +2411,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C182]**            Windows and Linux clients accept a leak-collector attestation signed by an
                         untrusted key as a real leak/no-leak result
 - **Criticality:**      Critical; a MITM who signs a forged collector response with their own
@@ -2369,7 +2456,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         both platforms.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/LeakDetector.cs:414-424
                         if (sigValid == true)
                             built.SignatureKeyTrusted = CheckTrustSet(built.PublicKey, trustedPublicKeys);
@@ -2385,8 +2471,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C183]**            Windows Witness view renders a green "no tampering detected" claim from
                         signature validity alone, contradicting the sealed comparison it is
                         displaying
@@ -2420,7 +2508,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         parity gap cannot silently return.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/SyxxUI/Views/WitnessView.xaml.cs:199-203
                         else if (_vm.WitnessValid)
                         {
@@ -2430,8 +2517,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C184]**            Windows Glutton view renders a green "no leak" result without ever checking
                         whether the collector's transport identity was actually verified
 - **Criticality:**      Critical; a "no DNS leak" result is a privacy guarantee to the user; Windows
@@ -2463,7 +2552,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         current macOS behavior.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/SyxxUI/Views/GluttonView.xaml.cs:177 — no transportPinning gate
                         bool attested = leak.SignatureValid == true && leak.SignatureKeyTrusted != false;
                         if (!attested) { /* amber */ return; }
@@ -2471,8 +2559,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C185]**            Linux Witness silently substitutes the public resolver 8.8.8.8 as the user's
                         local resolver and cryptographically signs a "no redirection" claim about it
 - **Criticality:**      Critical; the substituted 8.8.8.8 agrees with the public vantage consensus
@@ -2505,7 +2595,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         whenever the local vantage was substituted.
 - **Code Sample:**      [
 
-
                         // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs:107-108
                         var servers = NetworkKeyState.GetSystemDNSServers();
                         string local = servers.Count > 0 ? servers[0] : "8.8.8.8";
@@ -2515,8 +2604,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C186]**            Linux Mirror substitutes the public resolver 8.8.8.8 as "local" and then
                         overwrites its own substitution warning with a green "MATCHES" tamper
                         verdict
@@ -2546,7 +2637,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         the "measured against 8.8.8.8, not your resolver" caveat still visible.
 - **Code Sample:**      [
 
-
                         // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/MirrorViewModel.cs:38-45, 82-83
                         string local = servers.Count > 0 ? servers[0] : "8.8.8.8";
                         if (servers.Count == 0) { MatchLine = "⚠️ System resolver undetectable — falling back to 8.8.8.8"; MatchBrush = Brushes.Orange; }
@@ -2555,8 +2645,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C187]**            Linux Dashboard hardcodes "Disabled — traffic already encrypted (VPN)" on
                         the encrypted-DNS tile with no measurement behind it
 - **Criticality:**      Critical; the tile positively asserts the user's DNS traffic is already
@@ -2584,7 +2676,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         only claim encryption on a positive, measured read.
 - **Code Sample:**      [
 
-
                         <!-- Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:109-110 -->
                         <TextBlock Text="Enable Encrypted DNS" .../>
                         <TextBlock Text="Disabled — traffic already encrypted (VPN)" FontSize="10.5"
@@ -2592,8 +2683,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C188]**            Windows silently discards a DNS answer spoof it actually observed when the
                         retry that follows it times out, reporting a proven injection as a plain
                         inconclusive timeout
@@ -2625,7 +2718,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         retry loop exhausts, matching the macOS return contract.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/DNSResolver.cs:238-242
                         if (attempt + 1 < MaxUDPAttempts)
                         {
@@ -2638,8 +2730,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C189]**            Windows Prophet silently substitutes the public resolver 1.1.1.1 when the
                         system resolver is undetectable and presents the returned records as the
                         user's own
@@ -2668,7 +2762,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         [Fix 2] Resolve the standing TODO at line 398 as part of this fix.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:393-399
                         var resolver = string.IsNullOrWhiteSpace(Server)
                             ? NetworkKeyState.GetSystemDNSServers().FirstOrDefault() ?? "1.1.1.1"
@@ -2678,8 +2771,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C190]**            HomeBaseline trust anchor is saved and loaded with no integrity tag on
                         either platform, so a locally-overwritten baseline file is trusted
                         unquestioningly
@@ -2716,7 +2811,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         network against it.
 - **Code Sample:**      [
 
-
                         // Windows Trust.cs:390-401 HomeBaseline.Save — no SignAndWrite (cf. AnswerLedger.Save:150)
                         public static void Save(NetworkConfigSnapshot snapshot, string? path = null) {
                             File.WriteAllText(tmpPath, JsonSerializer.Serialize(snapshot));
@@ -2734,8 +2828,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C191]**            Linux Dashboard warden status chips are static hardcoded text and stay "NOT
                         RUN" even after a real scan has actually completed
 - **Criticality:**      Medium; Prophet, Mirror-Lite, Portal, and Glutton-local all genuinely run on
@@ -2766,15 +2862,16 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         static literal.
 - **Code Sample:**      [
 
-
                         <!-- Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:138, 158 -->
                         <TextBlock Text="NOT RUN" FontSize="8.5" FontWeight="SemiBold" .../>   <!-- literal, not {Binding} -->
                         <TextBlock Text="LOCKED · PRO" FontSize="8.5" FontWeight="SemiBold" .../>
 
 
                         ]
+
 ---
 ---
+
 - **[C192]**            macOS Dashboard reports "PASSED" for the Portal warden chip merely because
                         some network data was detected, implying a route-clean verdict Portal never
                         actually rendered
@@ -2802,7 +2899,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         verdict.
 - **Code Sample:**      [
 
-
                         // macOS/Sources/SyxxApp/DashboardView.swift:363-368
                         case "Portal":
                             guard let r = model.portalReport else { return "NOT RUN" }
@@ -2811,8 +2907,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C193]**            Windows matrix engine can append the "clean" diagnosis into its own honesty
                         overhang, so a gated clean result can be narrated as an unverified possible
                         threat
@@ -2848,7 +2946,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         MatrixDeterminativeEngine.swift:660 and :670.
 - **Code Sample:**      [
 
-
                         // Windows MatrixDeterminativeEngine.cs:825 (gate) and :837 (hardExclusion) — guard missing
                         if (raw.ObservedSupport >= OverhangFloor)
                         // macOS MatrixDeterminativeEngine.swift:660 / :670 — guarded
@@ -2856,8 +2953,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C194]**            Windows required-section gate stops checking the remaining required sections
                         entirely as soon as one is missing, instead of continuing to check the rest
 - **Criticality:**      Low; currently latent under the shipped default spec, which sets
@@ -2886,7 +2985,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         `break`, matching MatrixDeterminativeEngine.swift:858-861.
 - **Code Sample:**      [
 
-
                         // Windows MatrixDeterminativeEngine.cs:985-993 (unconditional break)
                         if (!sectionById.TryGetValue(reqSection, out var section)) {
                             if (Spec.Thresholds.HardGateOnMissingRequiredSections) { r.Gate = ...MissingRequiredSection... }
@@ -2900,8 +2998,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[C195]**            Linux Prophet overwrites its own 8.8.8.8 substitution warning with the
                         record count, so the caveat that the resolver was substituted is lost even
                         though the resolver name survives
@@ -2929,7 +3029,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         fixes above.
 - **Code Sample:**      [
 
-
                         // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ProphetViewModel.cs:32-40, 63
                         string resolver = string.IsNullOrWhiteSpace(ResolverIp) ? (servers.Count > 0 ? servers[0] : "8.8.8.8") : ResolverIp.Trim();
                         if (string.IsNullOrWhiteSpace(ResolverIp) && servers.Count == 0) { StatusLine = "⚠️ System resolver undetectable — falling back to 8.8.8.8"; }
@@ -2938,9 +3037,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 
 ---
+
 - **[C197]**            Witness creation promotes failed or unverified self-verification to a
                         successful signed testimony on all three clients
 - **Criticality:**      Critical; user made aware. Evidence that fails its own signature check, or
@@ -2987,8 +3088,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         TestimonyState = WitnessTestimonyState.Signed;
 
                         ]
+
 ---
 ---
+
 - **[C198]**            Linux GUI Prophet/Mirror/Witness silently fabricate 8.8.8.8 as "local"
                         when the system resolver is undetectable and run the audit anyway
 - **Status:**           **FIXED IN CODE 2026-08-01** (owner approved parity-first); real-run
@@ -3031,11 +3134,13 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         string local = servers.Count > 0 ? servers[0] : "8.8.8.8";
 
                         ]
+
 ---
 
 ## **D. Platform Integration & Resource Safety**
 
 ---
+
 - **[D001]**            Windows retains orphaned VerdictAction.cs symbol contradicting macOS
                         ResultAction.swift parity
 - **Status:**           **REOPENED 2026-08-01** — The current tree contains both
@@ -3064,8 +3169,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         public record VerdictAction
 
                         ]
+
 ---
 ---
+
 - **[D146]**            Windows DNS capture parser never rejects IPv4 fragments, so a non-initial
                         fragment's arbitrary payload bytes are parsed as if they were a UDP and DNS
                         header, fabricating records that were never sent
@@ -3099,7 +3206,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         fragment offset is non-zero, matching the macOS parseIPUDPHeader contract.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/DNSCapture.cs:266-267
                         byte protocolNumber = data[9];
                         if (protocolNumber != 17) return null;
@@ -3107,8 +3213,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[D147]**            Windows DNS response parser has no cap on answer count and no shared
                         pointer-jump budget, so a single crafted response is far more expensive to
                         parse than the macOS budget allows
@@ -3135,7 +3243,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         the whole response parse, matching the macOS D020 contract.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/DNSResolver.cs:737
                         for (int i = 0; i < answerCount; i++)
                         {
@@ -3145,9 +3252,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 
 ---
+
 - **[D279]**            Bundled typography silently fell back to the system font: faces moved into
                         family subfolders Bundle.module cannot recurse, registration errors discarded
 - **Status:**           **FIXED 2026-08-02 (Phase 0)** — flat faces restored to the Resources root,
@@ -3207,8 +3316,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         with all-platform byte-identity, no-nested-faces, and
                         no-Jost-in-body checks (exit 0). Avalonia Debug + Release builds 0
                         errors; Linux tests 111/111.
+
 ---
 ---
+
 - **[D278]**            macOS app deadlocks on launch: runProcess waits on a semaphore only the
                         cancelled timeout work item could signal
 - **Criticality:**      Critical; user-reported and reproduced 2026-08-01 on a green build. The
@@ -3308,11 +3419,13 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         >>>>>>> Stashed changes
 
                         ]
+
 ---
 
 ## **E. Security & Hardening**
 
 ---
+
 - **[E001]**            LicenseManager Unprotect swallows DPAPI decryption exceptions as null
 - **Status:**           **OPEN** — Verified in source. LicenseManager.cs:181-184 still has
                         `catch { return null; }` around the DPAPI DecryptLegacy call. Keystore
@@ -3334,8 +3447,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         catch { return null; }
 
                         ]
+
 ---
 ---
+
 - **[E002]**            SyncTrialAnchorWithServerAsync swallows network exceptions silently
 - **Status:**           **OPEN** — Verified in source. LicenseManager.cs:248-249 still has
                         `catch { }` followed by `return null;` in SyncTrialAnchorWithServerAsync.
@@ -3356,8 +3471,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         catch { } return null;
 
                         ]
+
 ---
 ---
+
 - **[E200]**            DimensionService live control-content fetch lacks certificate pinning
 - **Criticality:**      Critical; user not yet made aware.
 - **Location:**         macOS/Sources/SyxxApp/DimensionService.swift:84-88, 121-126
@@ -3397,9 +3514,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         }
 
                         ]
+
 ---
 
 ---
+
 - **[E201]**            Windows WitnessSigner never recomputes/validates KeyId at verify — B099 fix
                         is
                         macOS-only; keyId is forgeable on signed snapshots (parity regression)
@@ -3457,6 +3576,7 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         if snapshot.keyId != recomputedKeyId { return .displayMismatch }
 
                         ]
+
 ---
 
 - **[E202]**            Windows LicenseManager verifies the Keygen signature only when meta.valid
@@ -3498,8 +3618,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         return (validation?.Meta.Valid ?? false) ? LicenseValidationResult.Valid : LicenseValidationResult.Invalid;
 
                         ]
+
 ---
 ---
+
 - **[E203]**            Windows DNS capture parser writes attacker-controlled label bytes into the
                         terminal readout and saved report with no escaping, letting a hostile
                         response rewrite terminal lines or inject fabricated report rows
@@ -3528,7 +3650,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         it can reach either the console or the saved report.
 - **Code Sample:**      [
 
-
                         // Windows/dotNET/Syxx.Kit/DNSCapture.cs:470-474
                         if ((len & 0xC0) != 0 || current + 1 + len > data.Length) return null;
                         string label = Encoding.UTF8.GetString(data, current + 1, len);   // no control-character escaping
@@ -3537,8 +3658,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 ---
+
 - **[E204]**            The DNS capture parser on both platforms silently drops or substitutes non-
                         UTF-8 label bytes, fabricating a shorter or altered domain name in the
                         trusted forensic report
@@ -3574,7 +3697,6 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         silently smoothed over.
 - **Code Sample:**      [
 
-
                         // macOS/Sources/SyxxKit/DNSCapture.swift:699-701
                         if let label = String(bytes: labelBytes, encoding: .utf8) {
                             parts.append(label)   // a non-UTF-8 label is silently dropped, shortening the name
@@ -3584,13 +3706,12 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 
                         ]
+
 ---
 
 ## **F. Miscellaneous**
 
 ---
-
-
 
 # Linux/Ubuntu Infrastructure Security Audit (2026-07-30)
 
@@ -3885,9 +4006,6 @@ Source: qa-expert + code-reviewer persona audit of 90 Swift, 47 C#, 25 Python te
 **[F063]** MEDIUM — [done] HtmlAssetParserTests.cs:10-58 lacks negative/failure test cases for malformed HTML and dangerous URI schemes
 **[F064]** MEDIUM — [done] AgreementResourceTests.swift:5 lacks negative test verifying tampered contract text or hash mismatch is rejected
 
-
-
-
 ---
 
 # Server HTML Frontend Audit (2026-07-31)
@@ -3994,6 +4112,7 @@ D129-D139, E163-E182, A238-A261, F065-F070 were read in full to avoid duplicatio
                         [Fix 2] Add a regression test: point a script src at a two-answer rebinding
                         host and assert the Windows client connects to the first (validated) answer,
                         not the rebinded internal one.
+
 ---
 
 - **[D275]**            Linux SeverityColor Maps Unknown to Info Purple, Not Neutral Grey (Parity
@@ -4028,6 +4147,7 @@ D129-D139, E163-E182, A238-A261, F065-F070 were read in full to avoid duplicatio
                         [Fix 2] Add a parity test: assert `SeverityColor.For(Severity.Unknown)` does
                         not equal `SeverityColor.For(Severity.Info)` on Linux, matching the
                         Windows/macOS twins where the two are distinct.
+
 ---
 
 - **[D276]**            Windows ContentWarp Lacks D023 Script-Count Cap (Fan-Out DoS macOS-Only

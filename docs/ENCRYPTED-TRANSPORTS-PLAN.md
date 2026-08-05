@@ -173,6 +173,7 @@ be transparently rewritten by an on-path Do53 proxy, with per-answer transport p
 downgrade is always visible. Delivers A8 and the data path for A1/B.
 
 **Key files.**
+
 - macOS `macOS/Sources/SyxxKit/DNSResolver.swift`: `DNSQuery` (5-32, no transport selector today),
   `DNSResponse` (111-190), `DNSResponseStatus` (89-100), `didFail` (181-189),
   `SecureResolutionResponse` (192-198), `queryUDPDetailed` (272), `queryDoHDetailed` (334-371),
@@ -236,6 +237,7 @@ permissive TLS callback. No encrypted-to-plaintext fallback. Claimed transport p
 `.unknown`. DoT/DoQ carry a pinning posture.
 
 **Real-run bar (per transport, plus a failure case each).**
+
 - DoT: `queryDoTDetailed(cloudflare.com, A, 1.1.1.1:853)`; pre-flight `openssl s_client -connect
   1.1.1.1:853 -servername cloudflare-dns.com`. Honest: success, records non-empty,
   `servedTransport=.dot`, TLS 1.3. Failure case: blocked :853 reports inconclusive, not clean.

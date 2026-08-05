@@ -7,6 +7,7 @@ concrete fix, the research that makes the fix *correct*, platform-parity notes, 
 it works with a real run.
 
 **Every code block is labelled by provenance:**
+
 - `— extracted: <file:line>` — real code copied verbatim from the working tree (the defect, or a
   pre-existing correct pattern to copy).
 - `— proposed` — new code sketched here; kept minimal and modelled on a pre-existing pattern wherever
@@ -75,11 +76,13 @@ Simplicity), quick honesty-fixes pulled forward where they cost almost nothing.
 "HMAC-signed … chain-of-custody evidence."
 
 **Reality — extracted.**
+
 ```swift
 // — extracted: macOS/Sources/SyxxKit/WitnessSigner.swift:83-84 (signing = symmetric MAC)
 CCHmac(
     CCHmacAlgorithm(kCCHmacAlgSHA256),
 ```
+
 ```python
 # — extracted: Server/syxx_server/leak.py:27-30 (collector signs leak verdict with a shared secret)
 def sign(obj):
@@ -87,30 +90,36 @@ def sign(obj):
         hmac.new(licensing.secret(), _canon(obj), hashlib.sha256).digest()
     ).decode("ascii").rstrip("=")
 ```
+
 The Windows side is the same (`Windows/Syxx.Kit/WitnessSigner.cs:91` `new HMACSHA256(keyBytes)`), and
 the client **never verifies** the leak signature — it stores it as an opaque string
 (`LeakDetector.swift:13-31`, `Windows/Syxx.Kit/LeakDetector.cs:22-34`).
 
 **Why it violates the mission (Security, value #1).** Symmetric MACs make the evidence
 **not third-party-verifiable** (a user can't hand it to r/AskNetSec — the explicit Delta-of-the-Week
-#1 goal — or to a court), and prove **no provenance** (can't show which machine/collector produced
+
+\# 1 goal — or to a court), and prove **no provenance** (can't show which machine/collector produced
+
 it). The client storing an unverified signature is theatre. This makes §6 "done" and §4
 "chain-of-custody" false in the adversarial sense.
 
 **Pre-existing precedent in the tree** — the codebase's own ledger already prescribes Ed25519 for the
 analogous license-verification hole, and CryptoKit is already a dependency:
+
 ```
 — extracted: Server/SERVER_DELTAS.md:65
 SD-25 · … validate-key reads the "valid" boolean straight from JSON with no response-signature
 check … Fix: use Keygen's cryptographic (Ed25519-signed) license/verification and verify the
 signature, not just the flag.
 ```
+
 ```swift
 // — extracted: macOS/Sources/SyxxKit/ContentWarp.swift:2  (CryptoKit already linked — Ed25519 is available)
 import CryptoKit
 ```
 
 **Fix — proposed (Witness, macOS; mirror on collector + Windows).**
+
 ```swift
 // — proposed: sign with Curve25519.Signing (Ed25519), emit sig + public key
 let sig = try privateKey.signature(for: payloadData)               // 64-byte Ed25519 signature
@@ -119,6 +128,7 @@ let sig = try privateKey.signature(for: payloadData)               // 64-byte Ed
 // — proposed: anyone verifies with only the public key → map Bool to tri-state
 let status: WitnessStatus = publicKey.isValidSignature(sig, for: payloadData) ? .verified : .tampered
 ```
+
 Store the **private** key with the OS protection already used for the license (Keychain on macOS,
 DPAPI on Windows); the verifier must never hold signing power. Publish the collector's public key at
 a stable URL (or pin it in the client) so leak attestations verify offline. Add a `keyId` for
@@ -134,7 +144,7 @@ signature. **Effort.** M.
 
 ---
 
-### CF-02 — Cage: capture actually captures on macOS (stop printing `[SUCCESS]` over zero packets)
+## CF-02 — Cage: capture actually captures on macOS (stop printing `[SUCCESS]` over zero packets)
 
 **STATUS: DONE — verified capturing real traffic (2026-07-09).** libpcap bridge landed as `91bae82`
 (`Sources/Ccage/`), then made to actually run in `3357d0b`: `cage_pcap_lookupdev` returned
@@ -153,28 +163,34 @@ a full forensic report.
 
 **Reality — extracted + user's run.** Even with `sudo`, every run reports `Parsed records: 0` while
 claiming success.
+
 ```swift
 // — extracted: macOS/Sources/SyxxCage/SyxxCage.swift:68-69  (wrong socket type on BSD)
 let sockV4 = socket(AF_INET, SOCK_RAW, IPPROTO_UDP)
 let sockV6 = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP)
 ```
+
 ```swift
 // — extracted: macOS/Sources/SyxxCage/SyxxCage.swift:80  (unconditional success)
 print("\n[SUCCESS] Sniffer started. Capturing packet streams...")
 ```
+
 The report generator only warns when *lines fail to parse*, never when **zero** records were
 captured:
+
 ```swift
 // — extracted: macOS/Sources/SyxxKit/DNSCaptureReportGenerator.swift:100-102
 let unparsedWarning = unparsedCount > 0 && parsedRecords == 0
     ? "\n⚠️  WARNING: every line failed to parse — this report reflects NO capture data, not a clean network.\n"
     : ""
 ```
+
 So the whole `Interpretation` block (`:156-161`, "The capture contains 0 parsed DNS event
 record(s)…") prints as if the run were valid. Secondary bugs: bare duration arg dropped (`syxx-cage
 90` runs 10s, `:28-38`); under `sudo`, output lands in root's home (`:51`).
 
 **Windows is NOT broken — the working pattern already lives in the tree:**
+
 ```csharp
 // — extracted: Windows/SyxxCage/Program.cs:183-214  (promiscuous capture that actually works)
 socket = new Socket(family, SocketType.Raw, protocol);            // ProtocolType.IP, not UDP
@@ -183,12 +199,14 @@ byte[] byIn = new byte[] { 1, 0, 0, 0 };
 byte[] byOut = new byte[] { 1, 0, 0, 0 };
 socket.IOControl(IOControlCode.ReceiveAll, byIn, byOut);          // SIO_RCVALL → all IP traffic
 ```
+
 This is a **parity break**: the design is realized on Windows and impossible-as-written on macOS.
 
 **Why.** Protocol §4 (mocked success), §1 (report before evidence), Efficacy (value #2), and §5
 "done" is false on macOS.
 
 **Fix — proposed.**
+
 - **Capture:** replace the macOS raw socket with **libpcap** (ships with macOS):
   `pcap_open_live(dev, 65535, 0, 250, err)` → `pcap_compile(&bpf, "udp or tcp port 53", 1, PCAP_NETMASK_UNKNOWN)`
   → `pcap_setfilter` → `pcap_loop`; parse from the datalink header (`DLT_EN10MB` vs loopback
@@ -197,6 +215,7 @@ This is a **parity break**: the design is realized on Windows and impossible-as-
   `NEFilterDataProvider`/EndpointSecurity flow extension instead of guessing PID from a port table.
 - **Honesty guard — model it on the pattern already at `DNSCaptureReportGenerator.swift:100-102`,
   broadened to zero records:**
+
   ```swift
   // — proposed: extend the existing warning to the zero-record case → return inconclusive
   guard parsedRecords > 0 else {
@@ -204,6 +223,7 @@ This is a **parity break**: the design is realized on Windows and impossible-as-
            + "capture may have failed or required privileges/BPF access were missing."
   }
   ```
+
 - Move/replace `[SUCCESS]` to after the first parsed packet; accept a bare/`90s` duration; resolve
   the output dir from `SUDO_USER` so captures aren't hidden in `/var/root`.
 
@@ -237,6 +257,7 @@ censorship 2.0` weight (same class); B3 approach (a) — belief as the *primary*
 
 **Reality — extracted.** `SynthesisEngine.synthesize` is real, explainable, and — credit where due —
 **already has a referral safety net** that always fires on an inconclusive verdict:
+
 ```swift
 // — extracted: macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:86-92
 let top = ranked.first?.probability ?? 0
@@ -246,14 +267,17 @@ let referralTriggered = confInt < config.confidenceReferralBelow
     || margin < config.marginReferralBelow
     || verdict == .inconclusive
 ```
+
 But confidence is built **top-down** — start at 100, subtract reliability penalties — and
 `inconclusive` is mixed into the same softmax simplex as the hypotheses:
+
 ```swift
 // — extracted: SynthesisEngine.swift:63-67  (inconclusive is a softmax class)
 scored[.inconclusive] = Double(inconclusiveCount) * 0.8 + Double(degradedCount) * 0.4
     + ((totalThreat < 1.0 && (scored[.clean] ?? 0) < 1.0) ? 1.0 : 0.0)
 let ranked = softmax(scored, temperature: config.softmaxTemperature).sorted { $0.probability > $1.probability }
 ```
+
 ```swift
 // — extracted: SynthesisEngine.swift:78-84  (confidence = 100 × ∏(1 − penalty); thin-evidence only if totalThreat < 1.0)
 var confidence = 100.0
@@ -264,6 +288,7 @@ let confInt = Int(max(0, min(100, confidence.rounded())))
 ```
 
 **Honest assessment of what's actually wrong (this is a judgment call, not a lie):**
+
 1. **Single-signal 100% threat verdicts, no referral.** One `(.redirection, .spoofing) = 2.0`
    (`Conclusion.swift`) gives `totalThreat = 2.0 ≥ 1.0`, so the thin-evidence penalty never fires;
    with no degraded/inconclusive sections, confidence stays 100 and the margin is wide → **no
@@ -278,6 +303,7 @@ let confInt = Int(max(0, min(100, confidence.rounded())))
    behavior. The 0.4/0.6/2.0/3.0 weight tiers are undocumented magic constants.
 
 **Fix — proposed (recommended: a belief model; keep the referral net you already have).**
+
 - Model each section as a **mass function** over `Θ = {clean, spoofing, censorship, interception,
   contentTampering, privacyLeak, localCompromise}`, with a section that didn't run contributing
   `m(Θ)=1` (pure ignorance) — it *cannot* raise confidence.
@@ -305,6 +331,7 @@ requirement-level tests. **Effort.** L.
 ### CF-04 — `resolveSecurely` must return `inconclusive`, not throw (CUR-002, Prophet)
 
 **Reality — extracted.** The loopback path already returns a correct tri-state; the DoH path throws:
+
 ```swift
 // — extracted: macOS/Sources/SyxxKit/DNSResolver.swift:217-229
 if servers.contains(where: { IPClassifier.classify($0) == .loopback }) {
@@ -315,6 +342,7 @@ if servers.contains(where: { IPClassifier.classify($0) == .loopback }) {
 guard let dohURL = URL(string: "https://cloudflare-dns.com/dns-query") else { throw DNSResolverError.transport("Invalid DoH URL") }
 let records = try await queryDoH(name: query.name, type: query.type, url: dohURL)   // ← network failure escapes as a throw
 ```
+
 A DoH timeout/error escapes the `throws` function instead of becoming `inconclusive`. Same on
 `Windows/Syxx.Kit/DNSResolver.cs:207-227`.
 
@@ -322,6 +350,7 @@ A DoH timeout/error escapes the `throws` function instead of becoming `inconclus
 could treat "threw" as "insecure" or crash the run.
 
 **Fix — proposed, modelled on the loopback branch above:**
+
 ```swift
 // — proposed: wrap the DoH call in the SAME shape the loopback branch already uses
 do {
@@ -338,22 +367,27 @@ do {
 ### CF-05 — GUI must not print ✅ on a degraded baseline (CUR-004, Mirror)
 
 **Reality — extracted.** The CLI is honest; the GUI is not.
+
 ```swift
 // — extracted: macOS/Sources/SyxxCLI/SyxxCLI.swift:227-228  (honest — copy this)
 if result.isDegraded {
     print("⚠️  No tampering detected, but the baseline was DEGRADED.")
 ```
+
 ```swift
 // — extracted: macOS/Sources/SyxxApp/AppModel.swift:235  (misleading — ✅ + "No tampering")
 else if result.isDegraded { verdict = "✅ No tampering (baseline degraded — some resolvers failed)" }
 ```
+
 The ✅ + "No tampering" prefix reads as *secure* to a novice, contradicting the caveat.
 
 **Fix — proposed, modelled on the CLI wording at `SyxxCLI.swift:227-228`:**
+
 ```swift
 // — proposed
 else if result.isDegraded { verdict = "⚠️ Inconclusive-leaning — baseline degraded (some resolvers failed); not a clean bill of health." }
 ```
+
 `VantageComparer`'s data is already correct; this is presentation only.
 
 **Verify.** Force one public resolver to fail in the GUI path → ⚠️, never ✅. **Effort.** S.
@@ -363,6 +397,7 @@ else if result.isDegraded { verdict = "⚠️ Inconclusive-leaning — baseline 
 **Reality — extracted.** Baselines are selected by record count, so a truncated response
 (`DidFail=true`, 0 records) is silently dropped, yet if even one *other* resolver returned records a
 redirection verdict still issues:
+
 ```csharp
 // — extracted: Windows/Syxx.Kit/VantageComparer.cs:72-73 (macOS VantageComparer.swift:~122 is identical)
 var publicBaselines = publicOutcomes.Values.Where(outcome => outcome.Records.Count > 0).ToList();
@@ -386,6 +421,7 @@ S–M. **Parity:** both platforms.
 ### CF-07 — `syxx-route`: perform the path-anomaly analysis it advertises (CUR-006, Portal)
 
 **Reality — extracted.** The binary prints raw traceroute verbatim; there is no analysis:
+
 ```swift
 // — extracted: macOS/Sources/SyxxRoute/SyxxRoute.swift:50-57
 print("\nTrace Route Hops:")
@@ -394,6 +430,7 @@ for line in lines {
     if !trimmed.isEmpty { print("  \(trimmed)") }
 }
 ```
+
 Yet `PortalView.swift:18` claims it "geolocates route hops … to find path anomalies … highlighting
 where transparent proxies or middleboxes intercept queries." No Windows `SyxxRoute` exists.
 
@@ -413,12 +450,14 @@ hop flagged. **Effort.** M. **Parity:** add a Windows equivalent or drop the cro
 
 **Reality — extracted.** `DNSSECVerifier.checkStatus` checks record **presence** + RRSIG validity
 window, no cryptography — and is honest about it (so this is *incomplete*, not false-secure):
+
 ```swift
 // — extracted: macOS/Sources/SyxxKit/DNSSECVerifier.swift (status is explicitly "not cryptographically verified")
 /// DNSKEY and RRSIG records are present and at least one RRSIG is within its validity
 /// window, but the signatures were not cryptographically verified by this client.
 case recordsPresentUnverified
 ```
+
 One sub-bug: the back-compat `verifyDNSSEC(...) -> Bool` returns `true` for
 `signatureExpiredOrNotYetValid`, conflating a stale/replay signal with "OK."
 
@@ -439,12 +478,14 @@ and chain DS→DNSKEY to the pinned IANA **root** KSK. Return typed
 
 **Reality — extracted.** The collector attests which resolver IPs were *observed*, and
 `leaked = len(resolvers) > 0` — not the resolver's egress interface, upstream, protocol, or timing:
+
 ```python
 # — extracted: Server/syxx_server/leak.py:70-75
 resolvers = sorted({o["resolver_ip"] for o in obs})
 result = { "token": label, "zone": rec["zone"], "issuedAt": rec["issued_at"],
            "leaked": len(resolvers) > 0, "observedResolvers": resolvers, ... }
 ```
+
 A hostile resolver could *claim* forwarding it didn't do, and the collector can't tell. (Also depends
 on CF-01: the attestation must be Ed25519-signed to be worth anything.)
 

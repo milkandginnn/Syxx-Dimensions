@@ -8,17 +8,15 @@
 
 ## 0.1 RESERVED — do not edit ProphetView (macOS)-- Gold Standard
 
-
 ### 0.1.0 macOS first
 
 Finish the GUI for macOS first. Then begin translating to Windows and Linux. Only translate to Windows and Linux after i've applroved what has been done so far. Do not continue this work unless you have a solid plan for reaching full parity, and a design that will enable full parity. That means: consider what content/captions/data need to be displayued, and what's the best way to display it. Then apply the color treatments to the captions and content that should get them (not everythoing).
 
-### 0.1.1 ProphetView on macOS and associated files represent the gold standard to which parity should be reached.
+### 0.1.1 ProphetView on macOS and associated files represent the gold standard to which parity should be reached
 
 ProphetView is as of now th§e gold standard aesthetic. It is incomplete, including having a result that is clipped on the lower end of the window, a couple incorrect fonts, and some spacing issues, but is still the aesthetic gold standard. To the extent practical, the panels should be style after it, except to use the highlight color assigned to the pane you're working on.
 
 When creating an input, body copy, button, etc., feel free to copy directly from the ProphetView.swift code, translate to the language you're using, adapt for your UI framework, but do so in a way that preserves the style. Then change the highlight color (leaving the gradient alpha channels and styles), change the copy, resize objects, and adapt to the presentation needs of the pane you're currently working in.
-
 
 ## 0.1.2 Color Palette
 
@@ -34,15 +32,13 @@ Cage: Gray/Silver
 
 Witness: Red
 
-The color scheme goes cool, warm, cool, warm, cool, warm. When selecting a specific hex code/rgba for your highlight color, once again, style after ProphetView.swift. Prophet uses a particular value for blue that is bright, energetic, almost neon; Portal already has a highlight color that matches the intensity, it just isnt fully applied. Choose an orange that matches that intensity, a red that is just as bright, a pink that catches your attention. 
+The color scheme goes cool, warm, cool, warm, cool, warm. When selecting a specific hex code/rgba for your highlight color, once again, style after ProphetView.swift. Prophet uses a particular value for blue that is bright, energetic, almost neon; Portal already has a highlight color that matches the intensity, it just isnt fully applied. Choose an orange that matches that intensity, a red that is just as bright, a pink that catches your attention.
 
 Match how ProphetView applies the highlight color to its ocntents: what text on the pane is colored in the highlight color> Matchg it on yours. How is the highlight color applied to containers, and which containers receive the treatment. Try to match.  Make it look consistent on panes within macOS, and then duplicate for Windows and Linux.
 
 ---
 
-## 0.2 
-
-
+## 0.2
 
 ## 1. RESERVED — do not edit these files
 

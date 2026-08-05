@@ -4,6 +4,7 @@ Anchor: DIAG-glutton-2026-07-29.md. Scope: macOS/Sources/SyxxKit/LeakDetector.sw
 Windows/dotNET/Syxx.Kit/LeakDetector.cs (+ tests). NOT SyxxApp/**, NOT SyxxUI/**.
 
 ## Findings before edits (verified, not re-derived)
+
 - macOS LeakDetector.swift:381-384 `CollectorError` is bare `Error`; `badStatus(Int)` value
   never read. Confirmed by grep: zero hits for 402/payment/requiresPro in macOS/Sources.
 - macOS :191-193 and :273-275 collapse every non-200 into one `.error` + bridge-dump string.
@@ -20,6 +21,7 @@ Windows/dotNET/Syxx.Kit/LeakDetector.cs (+ tests). NOT SyxxApp/**, NOT SyxxUI/**
   never shown. UI patch goes in the report, not applied (SyxxUI is another agent's lane).
 
 ## Plan
+
 1. Swift: add `CollectorFailure` (entitlementRequired/authenticationFailed/rateLimited/
    serverError/unexpectedStatus/malformedResponse/collectorIdentityUnverified/transportFailure),
    carry it on `LeakTestResult.collectorFailure`, classify status + error, conform
@@ -30,6 +32,7 @@ Windows/dotNET/Syxx.Kit/LeakDetector.cs (+ tests). NOT SyxxApp/**, NOT SyxxUI/**
 4. Tests + mutation runs on every new branch.
 
 ## CONCURRENT-EDIT WARNING (affects test counts, not correctness)
+
 Another agent is editing this working tree DURING this session. Observed at 11:00 CDT:
 `macOS/Tests/SyxxKitTests/WitnessKeyValidationTests.swift` mtime 11:00:05, three seconds before
 my check; `macOS/Sources/SyxxKit/WitnessKeyManager.swift` 10:53; SyxxAppTests/
@@ -39,6 +42,7 @@ in scope". The macOS total moved 543 -> 565 executed and 6 -> 4 skipped for reas
 mine. Report the failure count (0), not an attributable delta.
 
 ## Status log
+
 - [x] read diag, both twins, consumers
 - [x] baseline macOS: 543 executed / 6 skipped / 0 failures (10:32, before the concurrent edits)
 - [x] baseline Windows: 175 passed / 0 failed
@@ -54,6 +58,7 @@ mine. Report the failure count (0), not an attributable delta.
       through 402/429/503/418/403 and all five now read differently and honestly.
 
 ## BLOCKED / ENVIRONMENT (needs the owner)
+
 The `syxx` CLI binary cannot reach https://syxx.app from this machine. Its requests die with
 NSURLErrorNetworkConnectionLost (-1005, errno 57) on interface utun7, while a standalone binary
 issuing the byte-identical request over the same URLSession config succeeds (HTTP 402 in 1.33s)

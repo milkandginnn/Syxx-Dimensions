@@ -7,6 +7,7 @@ items are flagged; the fail-closed posture decision (Phase 1b) is recorded here 
 as its own gated changeset because of its self-verify blast radius.
 
 Decisions locked by owner (2026-08-03):
+
 1. **H1 trust posture → fail-CLOSED on empty set (Option A).** (Phase 1b, see §3.)
 2. **B099 keyId-recompute parity gap → folded into Phase 1a.**
 3. **Scope of this proposal → Phase 0 + Phase 1a.**
@@ -28,6 +29,7 @@ order changes — and differs only for adversarial input, where a non-crypto ver
 masks a forgery.
 
 ### Current order (crypto LAST)
+
 | # | Check | line |
 |---|---|---|
 | 0 | auto-load trust set (B211) | :240 |
@@ -42,6 +44,7 @@ masks a forgery.
 | 9 | **Ed25519 Verify → Valid / InvalidSignature** | :334-346 |
 
 ### Target order (crypto FIRST — mirrors macOS)
+
 | # | Check | macOS ref |
 |---|---|---|
 | 0 | auto-load trust set (B211) — unchanged | :254-257 |
@@ -57,12 +60,14 @@ masks a forgery.
 | — | Valid | :368 |
 
 ### Invariant comment to add above step 3 (mirrors `WitnessSigner.swift:268-271`)
+>
 > `// B184: cryptographic verification MUST precede time-based and trust checks. A wholly`
 > `// fabricated snapshot with a past ExpiresAt previously returned Expired — asserting the`
 > `// file is an authentic-but-lapsed document. No verdict before evidence: the signature`
 > `// must be valid before any claim about the snapshot's age or trust anchor.`
 
 **Notes**
+
 - The empty-`PublicKey` guard (current :242) moves to *after* the format check, folding into
   the parse block with the C070 empty-payload guard — matching macOS `:274-283`. No state is
   lost; MalformedInput still covers both.
@@ -80,6 +85,7 @@ macOS rejects a relabeled snapshot by recomputing the keyId from the verified pu
 (`WitnessSigner.cs:37`, set at sign-time `:164`) but is never re-derived at verify.
 
 Add, as step 4 (immediately after the Ed25519 verify, before the display guard):
+
 ```csharp
 // B099: derive the key ID from the VERIFIED public key and reject a serialized mismatch.
 // An attacker cannot relabel a valid snapshot with a different keyId without this catching it.
@@ -87,6 +93,7 @@ var recomputedKeyId = Convert.ToHexString(SHA256.HashData(pubKeyData))[..16].ToL
 if (!string.Equals(snapshot.KeyId, recomputedKeyId, StringComparison.Ordinal))
     return SnapshotVerification.DisplayMismatch;
 ```
+
 **Confirm before landing:** the Windows sign side (`WitnessSigner.cs` ~:150-164) derives
 `KeyId` with the identical `SHA256(pubKey).first-8-bytes → hex` formula as macOS `:180`
 (first 8 bytes = 16 hex chars). If the sign-side derivation differs, match *it*, not macOS's
@@ -117,6 +124,7 @@ Windows twin. A failing honesty test is data — here the owner has changed the 
 
 **Blast radius (the reason 1b is gated behind 1a):** self-verify paths pass no trust set and
 would now read their *own* freshly-signed seal as `UntrustedSigner`:
+
 - macOS testify self-verify `AppModel.swift:1348`; macOS/Windows/Linux GUI verify; Linux
   signs with a fresh ephemeral key (`WitnessViewModel.cs:142`) then self-verifies (`:167`).
 
@@ -160,6 +168,7 @@ ahead of its fix; it ships with 1b so the suite stays green-after-each-phase.
 ## 5. Verification for this slice
 
 **Mutation (RED-before-restore, per honesty spine):**
+
 - After 1a lands green, **revert the reorder** (move the time/trust/display checks back ahead
   of `Algorithm.Verify`) → GV-A/A′/B flip back to `.Expired`/`.UntrustedSigner` (RED). Restore.
 - Simultaneously confirm the **isolated** honest paths stay green — `WitnessSignerTests.cs`
@@ -168,10 +177,11 @@ ahead of its fix; it ships with 1b so the suite stays green-after-each-phase.
 - B099: **revert the keyId recompute** → the relabeled-but-valid test goes RED. Restore.
 
 **Real-run bar (one honest run per platform, not green suites alone):**
+
 - macOS Kit: `cd macOS && swift test --filter WitnessVerificationDetailedTests` and
   `--filter WitnessCrossPlatformGoldenVectorTests`; full `swift test` at close-out.
 - Windows + Linux Kit on this host: `dotnet test Windows/Syxx.Linux.slnf` (bundles `Syxx.Kit`
-  + `Syxx.Tests` + the Avalonia projects). ⚠️ `dotnet build Windows/Syxx.sln` FAILS here
+  - `Syxx.Tests` + the Avalonia projects). ⚠️ `dotnet build Windows/Syxx.sln` FAILS here
   (NETSDK1100 — no Windows targets); the slnf is the supported path.
 - Real CLI, both engines, on the forged+expired artifact:
   `syxx witness verify corpus/witness-crossplatform/witness-forged-expired.json` — macOS via
@@ -207,6 +217,7 @@ ahead of its fix; it ships with 1b so the suite stays green-after-each-phase.
 ---
 
 ### Immediate next actions (for approval)
+
 1. Approve Phase 1a (reorder + B099) + the three Phase 0 vectors → engine lane implements,
    mutation-verifies, runs the real-CLI bar.
 2. Separately approve Phase 1b (fail-closed) **after** the self-verify disclosure mechanism

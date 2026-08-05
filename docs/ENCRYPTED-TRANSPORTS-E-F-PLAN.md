@@ -42,6 +42,7 @@ template is *configured*, not that resolution is *flowing through us*. It is
 only by a live resolution through the intended path this session (F1).
 
 **Ledger convention (Protocol §2, binding).** Each step is tagged:
+
 - `[real-runnable now]` — has a concrete real run that can be executed today on the named
   platform. `[done]` only after that run produces honest output.
 - `[code-complete, real-run pending entitlement]` — macOS NetworkExtension pieces that
@@ -81,6 +82,7 @@ only by a live resolution through the intended path this session (F1).
 ```
 
 **Hard ordering constraints (each with its reason):**
+
 - **E1 → E2 → E3 → E4 → E5 → E6.** You cannot health-check a resolver you have not
   started; you cannot start one without a config; the config's validating mode is
   meaningless without the `unbound-anchor` trust anchor (E2), so E2 must precede E3's
@@ -125,6 +127,7 @@ sequenced behind the honesty scaffolding that prevents it.
 # Sub-project E — Bundled Unbound (paid, both modes)
 
 New files (proposed paths):
+
 - macOS: `macOS/Sources/SyxxKit/UnboundManager.swift`, config template assets under
   `macOS/Sources/SyxxApp/Resources/unbound/`.
 - Windows: `Windows/Syxx.Kit/UnboundManager.cs`, service host `Windows/Syxx.Service/`
@@ -137,6 +140,7 @@ resource tree and make them locatable by the same discovery pattern the app alre
 for the `syxx` CLI.
 
 **macOS targets.**
+
 - `macOS/bundle-app.sh:17-27` — the resource-copy block. Add copies of
   `Resources/unbound/unbound` and `Resources/unbound/unbound-anchor` into
   `"$APP/Contents/Resources/unbound/"`, mirroring the existing `cp "$BINDIR/syxx"` line
@@ -146,6 +150,7 @@ for the `syxx` CLI.
   `Bundle.main.resourceURL/unbound/<name>`, then next to the executable.
 
 **Windows targets.**
+
 - `Windows/SyxxUI/SyxxUI.csproj` — add the two binaries as `<Content>` with
   `CopyToOutputDirectory=PreserveNewest` under `Assets/unbound/`.
 - Discovery: `UnboundManager.LocateBinary(string name)` off `AppContext.BaseDirectory`.
@@ -155,6 +160,7 @@ for the `syxx` CLI.
 writes its anchor + PID there).
 
 **Pre-queued commands.**
+
 ```
 # macOS — obtain a BSD-3 unbound build (Homebrew binary is a starting reference; a
 # notarizable build for distribution is E-dist, out of local-run scope):
@@ -166,6 +172,7 @@ otool -L macOS/Sources/SyxxApp/Resources/unbound/unbound  # list dylib deps to c
 ```
 
 **Real-run acceptance bar.**
+
 ```
 # macOS
 ./macOS/bundle-app.sh release && ./Syxx.app/Contents/Resources/unbound/unbound -V
@@ -173,6 +180,7 @@ otool -L macOS/Sources/SyxxApp/Resources/unbound/unbound  # list dylib deps to c
 # Windows
 Assets\unbound\unbound.exe -V   # prints version, exits 0
 ```
+
 The bar is **the vendored binary runs from inside the app tree**, proving it is present and
 its dylib/DLL deps resolve — not merely that a file was copied.
 
@@ -206,6 +214,7 @@ anchor is **not trustworthy** → recursion mode must refuse to start and report
 "anchor OK."
 
 **Pre-queued commands.**
+
 ```
 # macOS (writable dir, e.g. ~/Library/Application Support/Syxx/unbound)
 D="$HOME/Library/Application Support/Syxx/unbound"; mkdir -p "$D"
@@ -229,6 +238,7 @@ and re-running: the manager must refuse recursion mode, not start it insecure.)
 **Action.** Generate the Unbound config for the selected mode into the writable config dir.
 
 **E3(a) Recursion template** (verified DNSSEC-validating):
+
 ```
 server:
   interface: 127.0.0.1@<PORT>          # 5335 macOS, 53 Windows
@@ -245,6 +255,7 @@ server:
 
 **E3(b) Forward-over-DoT template** (guarantee is only as good as upstream — **never**
 labeled validating):
+
 ```
 server:
   interface: 127.0.0.1@<PORT>
@@ -254,6 +265,7 @@ forward-zone:
   forward-tls-upstream: yes
   forward-addr: <ip>@853#<hostname>    # TEMPLATED FROM THE SELECTED C PROFILE
 ```
+
 `<ip>`, `<hostname>` come from the sub-project C resolver profile struct. **F3 fail-closed:**
 no Do53 `forward-addr` fallback line is ever emitted; if the DoT upstream is unreachable
 Unbound returns SERVFAIL, which E6 must surface as `down`/`forwarding-insecure`, not clean.
@@ -267,6 +279,7 @@ only and have `renderConfig` throw/return unavailable for `.forwardDoT` (surface
 `.untested`), never substitute a hardcoded upstream.**
 
 **Pre-queued commands.**
+
 ```
 # validate whichever template rendered:
 ./Syxx.app/Contents/Resources/unbound/unbound-checkconf "$D/unbound.conf"   # macOS
@@ -314,6 +327,7 @@ requests to that service.
 Windows via the elevated service + `ServiceController`.
 
 **Pre-queued commands.**
+
 ```
 # macOS LaunchAgent
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/app.syxx.unbound.plist
@@ -364,6 +378,7 @@ classifying into `validating / forwardingInsecure / down / unknown`, reusing the
 **loopback-UDP query fn** instead of the DoH fn.
 
 **How the tri-state is derived (the honest distinguisher):**
+
 1. **down** — control query to loopback times out / transport error (E5 sender returns
    `.timeout`/`.transportError`).
 2. **validating** — query a known DNSSEC-**signed** name (e.g. `cloudflare.com`) *with the
@@ -391,6 +406,7 @@ small resolver change E requires; it belongs to E6, not a separate delta, and is
 (defined in F0 so F reuses it). `UnboundManager.checkHealth() -> ResolverHealth`.
 
 **Pre-queued commands.**
+
 ```
 # macOS — prove the four states by hand before trusting the classifier:
 dig @127.0.0.1 -p 5335 +dnssec cloudflare.com A      | grep -E 'flags:|status:'  # want 'ad' flag, NOERROR
@@ -401,6 +417,7 @@ Resolve-DnsName -Server 127.0.0.1 dnssec-failed.org -Type A   # -> query refused
 ```
 
 **Real-run acceptance bar (this is the load-bearing E bar).**
+
 - Recursion mode: signed name returns records with the **AD flag set**, bogus name returns
   **SERVFAIL** ⇒ classifier reports `validating`. Observed via the `dig`/`Resolve-DnsName`
   lines above matching the classifier output.
@@ -434,6 +451,7 @@ struct EngageProof  { let resolvedName: String; let servedVia: String;  // F1 li
                       let observedAt: Date }                              // nil proof => cannot be engaged
 struct SystemDNSCheck { let pointsAtUs: Bool; let observedServers: [String] }  // F2
 ```
+
 Rule baked in: a `RoutingState.engaged` value is **constructible only** with a non-nil
 `EngageProof` AND a `SystemDNSCheck.pointsAtUs == true`. Absent either ⇒ `.unknown`. This
 makes F1+F2 unrepresentable-to-violate at the type level, mirroring the A0 tri-state fix.
@@ -458,6 +476,7 @@ and is fully real-runnable **without** any entitlement — only the routing *act
 gated.
 
 **Targets.**
+
 - `macOS/bundle-app.sh:29-48` — add `<key>LSUIElement</key><true/>` to the generated
   `Info.plist` (currently ends at `ATSApplicationFontsPath`, `bundle-app.sh:44-45`). **Note:
   this makes the whole app agent-style/Dock-less** — confirm the product wants the menu-bar
@@ -486,6 +505,7 @@ static label.
 (Fm3).**
 
 **Targets.** New `macOS/Sources/SyxxApp/DNSRoutingManager.swift`:
+
 - `NEDNSSettingsManager.shared()`, build `NEDNSOverTLSSettings` (DoT profile) or, for local
   Unbound, an `NEDNSSettings` pointing at `127.0.0.1:5335` (loopback via the resolver's
   `servers`; validate NE accepts a loopback server — see Risks). No permissive fallback
@@ -502,6 +522,7 @@ Any failure → `.unknown` + auto-disengage. Disengage: `removeFromPreferences()
 confirm system DNS restored (F5).
 
 **Pre-queued commands (runnable only once entitled).**
+
 ```
 scutil --dns | grep -A2 'resolver #1'   # after engage: nameserver should be us / NE-managed
 ```
@@ -553,6 +574,7 @@ engage/disengage/mode commands to it over a local IPC channel (named pipe). The 
 elevation; the GUI does not.
 
 **Targets.**
+
 - New project `Windows/Syxx.Service/` (`ServiceBase`/`BackgroundService` worker), registered
   auto-start, ACL'd named-pipe control endpoint (authenticate the caller to the interactive
   user; reject remote/unauthorized callers).
@@ -577,6 +599,7 @@ register encryption → add NRPT rule; disengage restores exactly (F5). All writ
 the Fw1 service.
 
 **Engage (fail-closed, F3):**
+
 ```
 # capture first (for exact restore, F5):
 Get-DnsClientServerAddress -AddressFamily IPv4 | Export-Clixml $state\dns.xml
@@ -590,6 +613,7 @@ Add-DnsClientNrptRule -Namespace "." -NameServers <ip> -DohTemplate <url>
 ```
 
 **Disengage (F5, exact restore):**
+
 ```
 Remove-DnsClientNrptRule -Name <captured> -Force
 netsh dnsclient delete encryption server=<ip>
@@ -605,6 +629,7 @@ proves configuration, not flow. **F1 proof:** run E6 loopback health (local Unbo
 A-transport probe (remote profile) for a live `EngageProof`.
 
 **Real-run acceptance bar (real-runnable on Win11/Server-2022+ today).**
+
 ```
 # engage, then prove routing is live and fail-closed:
 Resolve-DnsName cloudflare.com   # resolves via us
@@ -613,6 +638,7 @@ netsh dnsclient show encryption  # udpfallback : no
 # disengage, then prove exact restore:
 Get-DnsClientServerAddress       # back to captured values; Get-DnsClientNrptRule shows our rule gone
 ```
+
 Honest bar: while engaged, resolution flows through us with `udpfallback=no` (blocked
 :853/DoH does **not** fall open to Do53 — verify by blocking the upstream and confirming
 resolution **fails**, not silently plaintexts); after disengage, state is byte-for-byte the
@@ -663,6 +689,7 @@ any engaged claim. Fail safe on disengage (never strand DNS), and **never** repo
 "encrypted/secure" while disengaged.
 
 **Targets.** Reuse the existing tri-state, **verified** anchors (no new detection logic):
+
 - macOS `NetworkKeyState.captivePortalStatus()` — `NetworkKeyState.swift:324-347`.
 - Windows `NetworkKeyState.CaptivePortalStatusAsync()` — `NetworkKeyState.cs:256-300`.
 
@@ -673,6 +700,7 @@ auto-disengages on portal appearance. Route through the Fw1 service on Windows /
 DNSRoutingManager on macOS.
 
 **Real-run acceptance bar.**
+
 - Join a real captive-portal network (or simulate: point `captive.apple.com` / MS
   connect-test at an intercepting responder). Engage is **refused** with a portal notice; if
   a portal appears while engaged, routing **auto-disengages** and the state reads

@@ -64,11 +64,13 @@ that another DNS utility does not provide?"
 ---
 
 ## Part C — CLI/GUI-Agnostic Service Architecture
+
 The `SyxxKit` / `Syxx.Kit` core shall be refactored into a stateless, event-driven service layer (JSON-RPC or structured IPC) to ensure CLI tools and GUI dashboards provide a unified view of the system's state.
 
 *Vetting:* Agree. A clean stateless backend model with structured JSON IPC allows multi-platform wrappers to share state and prevent parsing inconsistencies.
 
 ## Part D — Enhanced Audit Capabilities (10 Enhancements)
+
 - **A1. Multi-transport corroboration:** Compare UDP, TCP, DoH, DoT per vantage.
 *Vetting:* Agree. Comparing results across UDP, TCP, DoH, and DoT is essential to reveal transport-specific DNS hijacking (e.g. transparent proxying on UDP/53 but clean responses on DoH).
 
@@ -99,8 +101,8 @@ The `SyxxKit` / `Syxx.Kit` core shall be refactored into a stateless, event-driv
 - **A10. Transactional capture:** EDNS-aware, low-memory, streamed DNS capture.
 *Vetting:* Agree. Low-memory streaming DNS capture prevents process crashes under high traffic volumes.
 
-
 ## Part E — Architectural Capabilities (10 New Broad Features)
+
 - **B1. SyxxSentry:** Continuous background integrity-monitoring daemon (launchd/Windows Service).
 *Vetting:* Agree. A continuous background monitor is necessary for active alert protection.
 
@@ -131,7 +133,6 @@ The `SyxxKit` / `Syxx.Kit` core shall be refactored into a stateless, event-driv
 - **B10. SyxxAudit:** Automated end-to-end security compliance reports.
 *Vetting:* Agree. Standard compliance reports are highly useful for network admin compliance.
 
-
 ---
 
 ## Front-End Feature Analysis — 2026-07-06
@@ -139,31 +140,37 @@ The `SyxxKit` / `Syxx.Kit` core shall be refactored into a stateless, event-driv
 To make DNS investigation complete, intuitive, and store-ready, the front-end GUI is missing several critical interactive visualizers and diagnostics that bridge raw CLI output with human analysis:
 
 ### 1. Interactive DNS Packet Inspector (Wire-Level Visualizer)
+
 - **What is missing:** The GUI currently displays flat lists of query names and IP answers. It lacks the ability to inspect the internal DNS packet structure (flags like RD, RA, AA, TC, DNSSEC RRSIG payload fields, and EDNS0 options).
 - **Proposal:** A collapsible hierarchical protocol tree view (similar to Wireshark but streamlined) for captured queries, highlighting anomalous fields (e.g., mismatched transaction IDs or invalid signatures) in bright warn/error colors.
 - *Vetting:* Agree. Wire-level field validation is essential for detailed analysis.
 
 ### 2. Interactive Network Path Map (Visual Traceroute)
+
 - **What is missing:** Path diagnostics are shown as raw text lists of hops.
 - **Proposal:** A dynamic node-link graph showing the packet path from the client to the target. Hops are styled by round-trip latency, with geographic geolocation and Autonomous System Number (ASN) details mapped directly onto the nodes, highlighting where private/internal IPs unexpectedly appear in public routes (indicating transparent proxy interception).
 - *Vetting:* Agree. Visual hop-by-hop latency tracing is much clearer than text logs.
 
 ### 3. Resolver Consensus & Drift Matrix
+
 - **What is missing:** The Mirror tab lists results but does not show side-by-side comparisons of resolved records.
 - **Proposal:** A comparative grid displaying record values (A, AAAA, CNAME, NS) resolved across multiple vantages (System, Cloudflare, Google, Quad9, and local LAN gateway). Divergent answers are highlighted in a heat-map style, making regional DNS blocking or cache poisoning instantly visible.
 - *Vetting:* Agree. Makes cross-resolver differences immediately visible.
 
 ### 4. Interactive LAN Cartography Node Graph
+
 - **What is missing:** `syxx-lan` results are rendered in static grids.
 - **Proposal:** A topological map representing the local network. Nodes show the gateway, the client, configured DNS servers, and discovered network hosts. Rogue resolvers (e.g. unrecognized MAC addresses offering DNS services) are colored red with warning badges.
 - *Vetting:* Agree. Simplifies local network rogue device detection.
 
 ### 5. Live Stream & Process-Correlated Audit Cockpit
+
 - **What is missing:** DNS capture (`syxx-cages`) requires stopping the probe before viewing logs.
 - **Proposal:** A real-time scrolling cockpit showing DNS lookups as they are sent, grouped by their originating system process (e.g., Slack, Chrome, or unsigned binaries). High-entropy queries (potential DNS tunnels) or plaintext UDP/53 requests are flagged in real-time with action alerts.
 - *Vetting:* Agree. Real-time process attribution allows active threat response.
 
 ### 6. Longitudinal Latency & Packet Loss Charts
+
 - **What is missing:** Network performance metrics are static snapshots.
 - **Proposal:** Interactive time-series line charts tracking DNS latency and packet loss rates across all interfaces over 24-hour, 7-day, and 30-day windows to help users identify periodic or time-of-day censorship.
 - *Vetting:* Agree. Tracks intermittent ISP network degradation over time.
@@ -264,7 +271,6 @@ The app already collects Rdata values, response statuses, transport metadata, an
 - **Status:** Not collected. No ECS option code exists anywhere in the codebase, and there is no probe that varies query parameters to detect ECS behavior.
 - *Vetting:* Agree. Checking ECS support helps identify geo-diversity versus tampering.
 
-
 ---
 
 ## Syxx — Features Analysis (night pass)
@@ -282,6 +288,7 @@ authoritative; `encryptedDNSStatus` is a loopback heuristic, not an active probe
 diagnostic value.
 
 #### 1. Per-resolver query latency (RTT) + retransmission/timeout counts
+
 **Gap:** resolution is recorded as success / no-data / timeout — a boolean. No timing.
 **Why it matters:** "DNS is slow" is one of the most common real complaints, and it's invisible today.
 Latency per vantage separates a degraded forwarder from a healthy one, exposes a resolver that's up but
@@ -290,6 +297,7 @@ sluggish, and gives the retransmit count that signals packet loss on the path.
 count, and which transport won the race. Feeds a new `degraded` signal when RTT ≫ peers.
 
 #### 2. Authoritative-vs-resolver ground truth
+
 **Gap:** the tool establishes "truth" only by *consensus* across recursive resolvers. If an answer is
 hijacked upstream of all of them (or is a legitimate CDN/geo difference), consensus can't tell which.
 **Why it matters:** this is the missing anchor. Resolve the domain's delegation (NS + glue), query an
@@ -299,6 +307,7 @@ disagrees with authoritative is real evidence of resolver-level manipulation; ag
 distinguishing `spoofing`/`interception` from benign CDN variance.
 
 #### 3. HTTPS/SVCB records (type 65) — and CNAME-chain / MX / TXT / NS / CAA breadth
+
 **Gap:** only A/AAAA are queried. Modern connectivity increasingly rides SVCB/HTTPS RRs (ECH keys,
 HTTP/3 alt-svc, port/ALPN hints).
 **Why it matters:** a stripped or tampered HTTPS RR silently breaks ECH / downgrades transport — a real,
@@ -307,6 +316,7 @@ broader hijacks. The full CNAME chain (not just the final address) reveals redir
 **Collect where:** Prophet — add qtypes 65/5/15/16/2/257. Mirror can compare SVCB/ECH across vantages.
 
 #### 4. EDNS0 capabilities + large-response / fragmentation behavior
+
 **Gap:** queries carry no OPT record, so nothing about EDNS0 is observed.
 **Why it matters:** EDNS0/large-answer handling is among the most common actual breakages — DNSSEC
 responses exceed 512 bytes, UDP fragments get dropped, buffer sizes mismatch, and resolvers fall back to
@@ -315,6 +325,7 @@ version/flags, and whether a deliberately large answer survives UDP or forces TC
 **Collect where:** Prophet — send an EDNS0 OPT (DO set, 1232-byte buffer) and a known-large probe.
 
 #### 5. Full response-flag set + resolver identity (NSID / version.bind)
+
 **Gap:** only `AD` and `TC` are read. `RA`, `AA`, `CD`, `RD`-echo, and RCODE-extended are ignored.
 **Why it matters:** `RA=0` means the resolver won't recurse (misconfig/forwarder); `AA=1` on a recursive
 answer is suspicious; `CD` state affects DNSSEC meaning. NSID (RFC 5001) and a `version.bind` CH TXT
@@ -323,6 +334,7 @@ and for spotting an unexpected middlebox.
 **Collect where:** Prophet — parse all header flags; add an NSID EDNS option and a `version.bind` probe.
 
 #### 6. Authenticated denial-of-existence for negatives (SOA + NSEC/NSEC3)
+
 **Gap:** an NXDOMAIN/NODATA is opaque — just the rcode.
 **Why it matters:** a genuine NXDOMAIN carries an SOA (with the minimum/negative-cache TTL) and, in a
 signed zone, NSEC/NSEC3 records proving the name really doesn't exist. An *injected* NXDOMAIN (blocking /
@@ -332,6 +344,7 @@ genuinely absent" — a core censorship-detection distinction.
 benign-negative status.
 
 #### 7. EDNS Client Subnet (ECS) behavior + ASN/geo of resolver and answers
+
 **Gap:** ECS is never sent, and resolved IPs / the resolver IP are never enriched.
 **Why it matters:** whether the resolver forwards your client subnet explains "why do I get a different
 IP than my friend," and reveals a privacy leak (your subnet handed to authoritatives). Annotating each
@@ -341,6 +354,7 @@ jumps to an unexpected ASN/country is a strong tamper signal that resolver-conse
 ASN/geo table shipped with the app to stay dependency-free.
 
 #### 8. Encrypted-transport health (active DoH/DoT probe + TLS/cert validation)
+
 **Gap:** `encryptedDNSStatus` infers encryption from a loopback-resolver heuristic (also flagged in
 KDNS-23) — it never *proves* the encrypted path works.
 **Why it matters:** users think they're on DoH/DoT while it's silently failing open to Do53. Actively
@@ -350,6 +364,7 @@ encryption" and "encrypted right now."
 **Collect where:** Prophet/Glutton — active encrypted-transport probe with cert introspection.
 
 #### 9. Answer stability over repeated queries (+ TTL honoring / cache behavior)
+
 **Gap:** each vantage is queried once.
 **Why it matters:** repeating a query a few times exposes round-robin rotation vs genuine instability vs
 a resolver that ignores TTLs (a cache-poisoning or broken-cache signal). A resolver returning a
@@ -358,6 +373,7 @@ signal for "intermittent DNS."
 **Collect where:** Prophet — N repeats with TTL-decay tracking; new `unstable`/`ttl-anomaly` status.
 
 #### 10. System resolver configuration depth (search/match domains, split-horizon, 0x20 / QNAME-min)
+
 **Gap:** the system-resolver read gets server IPs (and scoped detection is itself buggy — KDNS-28), but
 not search domains, per-domain (split-horizon) resolvers, resolver ordering, or hardening posture.
 **Why it matters:** split-horizon and search-domain misconfig are extremely common real-world DNS
@@ -377,6 +393,7 @@ resolver consensus alone.
 ### Part B — Feature opportunities (normal features directive)
 
 #### B1. Turn the ten datapoints into three shipped capabilities
+
 - **"Ground Truth" mode (datapoints 2, 6, 7):** authoritative + denial-of-existence + ASN/geo give a
   real reference, upgrading Mirror from "resolvers disagree" to "resolver disagrees with authoritative,
   and the answer moved to an unexpected network."
@@ -386,6 +403,7 @@ resolver consensus alone.
   trust dossier on the box answering you.
 
 #### B2. Synthesis / product features
+
 - **Historical trend & drift dashboard.** AnswerLedger/Sentinel already persist snapshots; surface a
   per-datapoint timeline ("your resolver's answer for X changed 3 days ago") — high-value, mostly a
   read-model over data already captured.
@@ -399,6 +417,7 @@ resolver consensus alone.
   change, rather than one-shot — moves Syxx from a scanner to a monitor (aligns with Zzyn/Nnyx family).
 
 #### B3. Coverage gaps worth a feature
+
 - **DoT (853) alongside DoH**, and **DNSCrypt** detection — the encrypted-transport story is DoH-only today.
 - **IPv6 parity** across LAN probing and service checks (several KTRU/KDNS deltas note v4-only paths).
 - **Public-suffix-aware** registrable-domain logic (KTRU-24) unlocks correct blocklist + grouping.
@@ -548,7 +567,7 @@ If the goal is "what datapoints are we not collecting but should," two more meri
 | 2 | Full CNAME chain collection | "Was the resolution path altered?" | CNAME injection, alias hijacking, redirection | Med |
 | 3 | Real DNSSEC validation + negative-answer proofs | "Is this NXDOMAIN real or injected?" | Forged denial, blocking via NXDOMAIN, DNSSEC stripping | Med |
 | 4 | Multi-transport comparison | "Is only one transport tampered?" | Selective interception, transparent proxy, DoH downgrade | Med |
-| 5 | Resolver provenance classification | "Who actually answered the query?" | On-path interceptor, rogue resolver, loopback malware | Med
+| 5 | Resolver provenance classification | "Who actually answered the query?" | On-path interceptor, rogue resolver, loopback malware | Med |
 
 ---
 
@@ -596,13 +615,13 @@ separate days (`AGENTS.md:36` parity). Estimates assume the existing Kit is reus
   working set is **the domains the user just looked up**, a default-configured crash report
   exfiltrates *someone's browsing history to our server*. For this product that is not a bug, it is
   a headline. Therefore:
-    - `beforeSend` scrubbing, **denylist-by-default** — strip anything carrying a hostname, QNAME,
+  - `beforeSend` scrubbing, **denylist-by-default** — strip anything carrying a hostname, QNAME,
       resolver IP, licence key, or capture payload.
-    - **Breadcrumbs off**, or filtered to a hardcoded allowlist of event types. The default
+  - **Breadcrumbs off**, or filtered to a hardcoded allowlist of event types. The default
       breadcrumb trail is where DNS data will leak.
-    - **No local-variable capture** (`includeLocalVariables = false` on .NET; the cocoa equivalent).
-    - The `MachineFingerprint` **hash** may travel; the raw fingerprint never.
-    - Gated behind G12 consent. Crash payloads are unbounded; the existing phone-home is two fields.
+  - **No local-variable capture** (`includeLocalVariables = false` on .NET; the cocoa equivalent).
+  - The `MachineFingerprint` **hash** may travel; the raw fingerprint never.
+  - Gated behind G12 consent. Crash payloads are unbounded; the existing phone-home is two fields.
   *Bar:* crash the app **during a live Prophet run** and read what actually arrives at Bugsink. A
   scrubber's presence is not proof it scrubs — the same lesson the collector key taught (a non-empty
   variable holding a wrong-format key read as "configured").

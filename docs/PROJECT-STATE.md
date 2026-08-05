@@ -5,11 +5,13 @@
 > **READ THIS FIRST.** Single source of truth for the reasoning-engine remediation. If anything you're about to do contradicts this doc, **stop and reconcile — do not freelance.** Fast is good; drift is not. Stay in your lane, build to the contracts, don't relitigate what's decided.
 
 ## Mission
+
 Investigate & detect DNS tampering / hijacking / spoofing / censorship and produce evidence a user can **trust**. The reasoning engine turns Prophet / Mirror / Portal / Glutton / Cage / Witness evidence into one honest tri-state verdict.
 
 **Explicit-path commits only** (`git diff --cached --name-only` before every commit; never `git add -A`). Need something in another lane? **Flag it — don't edit it.**
 
 ## DECIDED — do not relitigate
+
 - **Design:** `REASONING-SYSTEM-DESIGN.md` = **v2.1, APPROVED** (2 audit blockers closed, O2/O3/O7 amendments folded).
 - **Framework:** keep DST → complete as **TBM** (credal `Bel` headline; `BetP` for decisions only). **Cautious-conjunctive *within* a lineage cluster, Dempster *across* clusters** (= the existing group-merge minus the `maxWeightPerSource` cap — a *small* change). **M1** Shafer discounting for source reliability only; **M2** benign context conditions/refers, never discounts a reliable observation; **M3** completeness = separate dimension (never a `Bel` multiplier); **M4** decisive safety gate *outside* the belief number. Invariants **I1–I8** hold at every commit.
 - **Contracts — build to these, don't invent parallel ones:** `STAGE5-CONTRACT.md` (engine↔UI DTO `Stage5Presentation`), `STAGE0-GOLDEN-VECTOR-CONTRACT.md` (fixture schema). Claude owns both; flag needs, don't fork them.
@@ -17,6 +19,7 @@ Investigate & detect DNS tampering / hijacking / spoofing / censorship and produ
 - **The fusion-rule swap is NOT open work** — deferred to the Phase-0 **bake-off RUN** (after Phase 1 lands); see `BAKEOFF-DESIGN.md`. Do not implement a fusion change yet. This pass, NE1 Δ1 lands as **inconclusive + referral**, NOT "REWRITE"-named.
 
 ## Landed (committed) — both platforms compile at HEAD `4fd5091`
+
 - `bcf817e` **P1.0** — additive `Stage5Presentation` DTO twins + validator + byte-parity fixture.
 - `f40dc58` **P0.1** — integer-% gate + away-from-zero rounding parity + deterministic DST fold.
 - `daa97c4` **P0.2/P0.3** — Stage0 golden-vector parity harness (both platforms).
@@ -33,7 +36,9 @@ Investigate & detect DNS tampering / hijacking / spoofing / censorship and produ
 - `4fd5091` **Stage-5 §14 parity test** — frozen 4749-byte populated-object fixture + cross-platform round-trip/semantic-anchor tests + 4 negative cases (bad schemaVersion, misspelled enum, bad within-class shares, dangling link). macOS 6/6 + Windows 6/6 pass; the manual byte-parity checks are now a permanent regression guard.
 
 ## In flight / next — THE WALL (do NOT fake past it)
+
 Phases **1 and 2 are complete**; the P0.4 bake-off seam is laid. The **core-math** Phases 3+ are **gated on data/decisions that don't exist yet** (below). The **Stage-5 presentation track (§16, Claude's lane) is now essentially COMPLETE for everything un-gated + in-lane + sandbox-doable:** CX-1 answer matrix, CX-2 honesty, determination-state, provenance (direct + unavailable), within-class, target plumbing, and the §14 parity test all landed end-to-end on both platforms, byte-identical (4749-byte object). What remains is NOT un-gated Claude-lane work: **(a)** the finalized hypothesis→mechanism headline map + prioritized findings = Phase-4 **O5 sign-off** (below); **(b)** datapoint-level completeness (retire `profile.sections.v0`) = a contract/profile-definition decision, not a free edit; **(c)** CLI/GUI rendering of the new fields = **Copilot's** surfacing lane (see WS6-07 gating-panel directive); **(d)** the §15 real-run acceptance = a **real-machine** run (sandbox has no UDP:53). Also parked: the **witness-signing GUI failure** (CLI signs fine end-to-end; break is GUI-only, suspected Keychain-ACL/code-signature mismatch after rebuilds — needs the live app's error string).
+
 - **Phase 3 (commit the fusion rule)** is BLOCKED on the bake-off running on a **real-capture corpus** (O1) + the **lineage map** (O4) — captured-data work in **Cline's** lane. The seam is ready; do **not** flip `combinationRule`'s default on synthetic data.
 - **Phase 4 (mechanism-class partition)** needs **user sign-off** (O5 — it drives the headline number).
 - **Phase 7 (calibration)** needs the labeled real corpus (O1).
@@ -41,6 +46,7 @@ Phases **1 and 2 are complete**; the P0.4 bake-off seam is laid. The **core-math
 - **Copilot (GUI lane only):** wire approved copy → `Conclusion.stage5`; render absent/invalid `stage5` as unavailable. The engine gates on `isValid` (V1–V4) — do NOT reach into engine internals or edit `Synthesis/`.
 
 ## Standing rules (binding, all lanes)
+
 1. **No stopping / no checkpoints / no interaction** — only pause = a `CHANGELOG.md` update, then continue. **Commit per step** so a crash loses nothing.
 2. **Steps in the order written.** A phase completing is not a finish line.
 3. **Batch tool calls.** Keep a live tiered TODO.

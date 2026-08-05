@@ -155,11 +155,13 @@ Usage: syxx nslook <domain> [record_type] [@server] [--dnssec] [--doh [url]]
 Only the three helpers shared between CLI and GUI move. Formatting helpers stay in SyxxCLI.
 
 **NEW:** `macOS/Sources/SyxxKit/CageHelpers.swift`
+
 - Move `cageCapturesDir()` from SyxxCLI.swift:603-612
 - Move `newestCaptureFile(in:after:)` from SyxxCLI.swift:616-629
 - Move `analyzeMonitorReport(path:inputs:)` from SyxxCLI.swift:635-667
 
 **Files touched:**
+
 - NEW: `macOS/Sources/SyxxKit/CageHelpers.swift`
 - EDIT: `macOS/Sources/SyxxCLI/SyxxCLI.swift` (delete moved helpers, add `import SyxxKit` if not present)
 
@@ -170,11 +172,13 @@ Only the three helpers shared between CLI and GUI move. Formatting helpers stay 
 ### Step 2 — Extract TracerouteRunner into SyxxKit
 
 Three duplicate traceroute wrappers exist:
+
 - SyxxCLI.swift:423-445 (guided Portal flow, maxHops=15)
 - SyxxRoute.swift:24-66 (standalone tool, maxHops=30)
 - AppModel.swift:455-484 (GUI, maxHops=30)
 
 **NEW:** `macOS/Sources/SyxxKit/TracerouteRunner.swift`
+
 ```swift
 public enum TracerouteRunner {
     /// Runs /usr/sbin/traceroute and returns trimmed output lines.
@@ -190,6 +194,7 @@ public enum TracerouteRunner {
 Implementation: extract from SyxxRoute.swift:24-66 (the most complete version with 30-hop max and 45s timeout).
 
 **Files touched:**
+
 - NEW: `macOS/Sources/SyxxKit/TracerouteRunner.swift`
 - EDIT: `macOS/Sources/SyxxCLI/SyxxCLI.swift:423-445` → replace with `let lines = await TracerouteRunner.trace(target: domain, maxHops: 15)`
 - EDIT: `macOS/Sources/SyxxRoute/SyxxRoute.swift:24-66` → replace with `let lines = await TracerouteRunner.trace(target: target)`
@@ -204,6 +209,7 @@ Implementation: extract from SyxxRoute.swift:24-66 (the most complete version wi
 For each of the 11 standalone tools, create a command type in SyxxKit.
 
 **NEW files (11):**
+
 | File | Source | Lines | Key dependencies |
 |------|--------|-------|------------------|
 | `SyxxKit/Commands/NSLookCommand.swift` | SyxxNSLook.swift | 116 | DNSResolver, SyxxConfig |
@@ -219,6 +225,7 @@ For each of the 11 standalone tools, create a command type in SyxxKit.
 | `SyxxKit/Commands/WarpCommand.swift` | SyxxWarp.swift | 129 | ContentWarp, LicenseManager |
 
 **Protocol (in CLIHelpers.swift):**
+
 ```swift
 public protocol SyxxCommand {
     static func run(args: [String]) async
@@ -228,6 +235,7 @@ public protocol SyxxCommand {
 **Extraction method:** For each tool, take the `main()` body (after the `handleGlobalFlags` guard and argument parsing), wrap it in `static func run(args: [String]) async`, and move it to the command type. The argument parsing stays inline (each command parses its own args from the `args` parameter).
 
 **Order of extraction (dependency-aware):**
+
 1. KeyCommand — simplest, no sub-dependencies
 2. LanCommand — uses LANCartographer only
 3. SentinelCommand — uses Sentinel only
@@ -241,6 +249,7 @@ public protocol SyxxCommand {
 11. CageCommand — most complex, uses Ccage, needs privilege detection
 
 **Files deleted (11):**
+
 - `macOS/Sources/SyxxNSLook/SyxxNSLook.swift`
 - `macOS/Sources/SyxxMirror/SyxxMirror.swift`
 - `macOS/Sources/SyxxLeak/SyxxLeak.swift`
@@ -254,6 +263,7 @@ public protocol SyxxCommand {
 - `macOS/Sources/SyxxWarp/SyxxWarp.swift`
 
 **Directories deleted:**
+
 - `macOS/Sources/SyxxNSLook/`
 - `macOS/Sources/SyxxMirror/`
 - `macOS/Sources/SyxxLeak/`
@@ -337,6 +347,7 @@ static func runCageCapture(durationSeconds: Int) async -> String? {
 Delete `locateSiblingTool()` (:586-598).
 
 **Files touched:**
+
 - REWRITE: `macOS/Sources/SyxxCLI/SyxxCLI.swift` (entry point + delete helpers moved in Step 1)
 
 **Verification:** `swift build` succeeds. `syxx` (no args) enters interactive mode. `syxx nslook example.com` works. `syxx cage --duration 3 --keep` prompts for sudo and captures.
@@ -348,12 +359,14 @@ Delete `locateSiblingTool()` (:586-598).
 **EDIT:** `macOS/Package.swift`
 
 Remove 12 executable targets. Keep:
+
 - `.executable(name: "syxx", dependencies: ["SyxxKit", "Ccage"], path: "Sources/SyxxCLI")`
 - `.executableTarget(name: "SyxxApp", dependencies: ["SyxxKit"], path: "Sources/SyxxApp", resources: [.copy("Resources")])`
 
 Also delete `SyxxDstProbe` target (temporary diagnostic harness).
 
 **Files touched:**
+
 - EDIT: `macOS/Package.swift`
 
 **Verification:** `swift build` succeeds. `swift build --target syxx` succeeds. `swift build --target SyxxApp` succeeds.
@@ -378,6 +391,7 @@ let script = "do shell script \"'\(bin.path)' cage --duration \(duration) --keep
 The `bin.path` must now resolve to the unified `syxx` binary, not `syxx-cage`. Verify that `Bundle.main.executablePath` or the equivalent resolves correctly.
 
 **Files touched:**
+
 - EDIT: `macOS/Sources/SyxxApp/AppModel.swift:614`
 
 **Verification:** GUI launches, cage capture works from GUI, live-tail updates during capture.
@@ -405,6 +419,7 @@ The `bin.path` must now resolve to the unified `syxx` binary, not `syxx-cage`. V
 | `PortalView.swift` | 148 | `syxx-key --scan` | `syxx key --scan` |
 
 **Files touched:**
+
 - EDIT: `macOS/Sources/SyxxApp/AppModel.swift` (5 lines)
 - EDIT: `macOS/Sources/SyxxApp/WitnessView.swift` (1 line)
 - EDIT: `macOS/Sources/SyxxApp/GluttonView.swift` (1 line)
@@ -418,6 +433,7 @@ The `bin.path` must now resolve to the unified `syxx` binary, not `syxx-cage`. V
 ### Step 8 — Build app bundle and verify
 
 **Commands:**
+
 ```bash
 cd macOS && swift build -c release && swift build --target SyxxApp -c release
 ```
@@ -435,6 +451,7 @@ Verify the app bundle is created and `syxx-gui.app` launches.
 Create `Windows/Syxx.Kit/CLIHelpers.cs` with the Windows equivalents of `triLabel()`, `hostOnly()`, `isSafeTraceTarget()`, `isOwnNetworkAddress()`, `cageCapturesDir()`, `newestCaptureFile()`.
 
 **Files touched:**
+
 - NEW: `Windows/Syxx.Kit/CLIHelpers.cs`
 
 ---
@@ -444,6 +461,7 @@ Create `Windows/Syxx.Kit/CLIHelpers.cs` with the Windows equivalents of `triLabe
 Create `Windows/Syxx.Kit/TracerouteRunner.cs` using `tracert` instead of `traceroute`.
 
 **Files touched:**
+
 - NEW: `Windows/Syxx.Kit/TracerouteRunner.cs`
 - EDIT: `Windows/Syxx/Program.cs` (replace inline traceroute)
 - EDIT: `Windows/SyxxUI/ViewModels/AppViewModel.cs` (replace inline traceroute)
@@ -455,6 +473,7 @@ Create `Windows/Syxx.Kit/TracerouteRunner.cs` using `tracert` instead of `tracer
 Create 11 command files in `Windows/Syxx.Kit/Commands/` mirroring the macOS extraction.
 
 **Files touched:**
+
 - NEW: `Windows/Syxx.Kit/Commands/*.cs` (11 files)
 
 ---
@@ -464,6 +483,7 @@ Create 11 command files in `Windows/Syxx.Kit/Commands/` mirroring the macOS extr
 Add subcommand dispatch to `Windows/Syxx/Program.cs`. Keep the interactive menu as `RunInteractiveMode()`.
 
 **Files touched:**
+
 - REWRITE: `Windows/Syxx/Program.cs`
 
 ---
@@ -473,6 +493,7 @@ Add subcommand dispatch to `Windows/Syxx/Program.cs`. Keep the interactive menu 
 Remove 11 standalone CLI project references. Keep `Syxx` (unified CLI), `Syxx.Kit`, `SyxxUI`, `Syxx.Tests`.
 
 **Files touched:**
+
 - EDIT: `Windows/Syxx.sln`
 
 ---
@@ -486,6 +507,7 @@ Remove 11 standalone CLI project references. Keep `Syxx` (unified CLI), `Syxx.Ki
 ### Step 7 — Build and verify
 
 **Commands:**
+
 ```bash
 dotnet build Windows/Syxx.sln
 dotnet test Windows/Syxx.Tests/
@@ -500,6 +522,7 @@ Verify all tests pass. Log outputs to `outputs-catalog.csv`.
 ### What to test and failure cases
 
 **For each subcommand, test:**
+
 1. Happy path: valid input → correct output
 2. Failure path: invalid input → honest error message (not crash)
 3. Edge case: empty args → usage text
@@ -521,12 +544,14 @@ Verify all tests pass. Log outputs to `outputs-catalog.csv`.
 | `sentinel` | `syxx sentinel` | N/A (always works) | First run saves baseline |
 
 **Guided flow test:**
+
 - Run `syxx` interactively
 - Select each option (1-6, C, L, Q)
 - Verify each produces real output (not empty, not hardcoded)
 - Verify Conclusions (C) shows evidence only after running checks
 
 **Subprocess consolidation verification:**
+
 - Verify `TracerouteRunner.trace()` produces the same output as the old inline code
 - Verify no `Process()` spawns remain outside of TracerouteRunner and CageCommand
 
@@ -601,6 +626,7 @@ dotnet test /Users/masterrabbit/Software/Syxx/Windows/Syxx.Tests/ 2>&1 | tail -1
 ## DESIGN.md Update
 
 After implementation, update `DESIGN.md` to reflect:
+
 - Single binary architecture (`syxx` with subcommands)
 - Updated CLI entry points (no more standalone binaries)
 - Updated cage launch mechanism (unified binary re-exec)
@@ -610,6 +636,7 @@ After implementation, update `DESIGN.md` to reflect:
 ## outputs-catalog.csv
 
 Log all CLI and GUI output during verification to `outputs-catalog.csv`:
+
 ```bash
 # Capture each subcommand's output
 for cmd in "nslook google.com" "mirror google.com" "key" "route 8.8.8.8" "lan" "forensics --lists" "sentinel" "witness --gen-keypair" "warp https://example.com"; do
@@ -624,6 +651,7 @@ done
 ## Verification Checklist
 
 ### Phase 1 (macOS)
+
 - [ ] `syxx --help` lists all subcommands (proposed text approved by user)
 - [ ] `syxx --version` prints `syxx 2.0.0`
 - [ ] `syxx` (no args) enters interactive guided mode
@@ -650,10 +678,12 @@ done
 - [ ] App bundle created and launches
 
 ### Phase 2 (Windows)
+
 - [ ] All same subcommands work via `dotnet run --project Syxx -- <subcommand>`
 - [ ] `dotnet test` passes
 - [ ] GUI cage capture works
 
 ### Cross-platform
+
 - [ ] Output comparison: each subcommand produces equivalent output on both platforms
 - [ ] No standalone binary names remain in PATH

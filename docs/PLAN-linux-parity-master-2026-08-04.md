@@ -47,7 +47,7 @@ signing key and then instruct you into overwriting the one you have.
 
 ## 1. Status and coverage
 
-### 1.1 Landed — pass 1's build pass (four seats, one read-only auditor). Not pushed.
+### 1.1 Landed — pass 1's build pass (four seats, one read-only auditor). Not pushed
 
 | Item | State | Note |
 |---|---|---|
@@ -367,6 +367,7 @@ beside a domain it was never measured against. macOS shares the shape but has **
 **Inert affordances — a gap class, not a bug.** On a product whose value is that its output can be
 trusted, a control that silently does nothing is the same failure mode as a fabricated value: the user
 believes an action occurred.
+
 - ★ `DashboardView.axaml` — `grep -c 'Command|Click'` returns **0**. All five primary actions inert.
 - ★ `MainWindow.axaml` — **0**. The "Start your story anew" reset pill is a bare `<Border>`. macOS's is a
   real button behind a confirmation dialog offering "Erase session results," because destructive actions
@@ -380,6 +381,7 @@ believes an action occurred.
 `flushDNSCache` has **no C# twin at all**; `witnessFree` exists on macOS and Windows and nowhere on Linux.
 
 **Fabricated and stale claims:**
+
 - ★ **D1-07:** the Dashboard hardcodes **"Disabled — traffic already encrypted (VPN)"** and the dimming
   with it. macOS drives both from `model.isEncrypted` with a four-way clause whose `nil` arm is **"not yet
   checked."** — the arm Linux most needs and entirely lacks.
@@ -614,6 +616,7 @@ for the macOS view.
 ## 5. Verified clean, falsified, and non-gaps — do not re-litigate
 
 **Falsified hypotheses, recorded because a falsification is a result:**
+
 - **G-06** — nothing non-positive is ever rendered green, on any platform. All nine
   `SnapshotVerification` members map to distinct messages in each GUI switch; Windows and macOS wording is
   verbatim-identical to each other. **Caveat that does need work:** three collapses exist *inside* the
@@ -879,7 +882,9 @@ superseded by §7.
 
 One read-only seat runs continuously through every wave. Its dimensions: spine #2 (does any new path let a
 failure read as success), spine #3 (did anyone collapse a tri-state to a bool, including in a fake), spine
-#5 (**do the new tests assert, or merely execute** — hunt for non-emptiness-only assertions, tests that
+
+\# 5 (**do the new tests assert, or merely execute** — hunt for non-emptiness-only assertions, tests that
+
 pass because validation short-circuits before the code under test, and fakes so permissive the assertion is
 vacuous), spine #6 (both twins changed; every `ISecretStore` implementation and fake updated), scope and
 keep-out discipline, and house rules. It **runs the suites itself** and checks failure **names**, not
@@ -893,7 +898,7 @@ accepted. Equally, it made one instructive mistake: it cleared the libsecret sch
 reasoning as a vacuous test. **For varargs and P/Invoke, count arguments into their slots against the
 signature.**
 
-### 10.2 Request this pack first
+## 10.2 Request this pack first
 
 One command block, under a minute, unblocking §3.3:
 
@@ -903,6 +908,7 @@ echo "--- RESOLVCONF"; cat /etc/resolv.conf; echo "--- MODE"; readlink -f /etc/r
 ```
 
 **Expectation declared in advance, so the result cannot be rationalised afterwards:**
+
 - **PASS** — a `Global` section and ≥1 `Link` section, with DoT state appearing as a `Protocols:` token
   (`+DNSOverTLS`/`-DNSOverTLS`) or a `DNSOverTLS setting:` line.
 - **FAIL for the current parser** — neither the literal `DNS Over TLS:` nor `DNSOverHTTPS:` appears

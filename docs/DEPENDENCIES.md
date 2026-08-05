@@ -39,7 +39,7 @@ This document tracks all external wrappers over unix/system commands, homebrew/g
 - Publisher: Apple Inc. / LBNL.
 - License: BSD License.
 - Wrapped or edited status: Wrapped. Executed as a subprocess to trace paths and latency. Original code is unmodified.
-- Modules used: 
+- Modules used:
   - [macOS/Sources/SyxxRoute/SyxxRoute.swift](file:///Users/masterrabbit/Software/Syxx/macOS/Sources/SyxxRoute/SyxxRoute.swift#L23-L54)
   - [macOS/Sources/SyxxApp/AppModel.swift](file:///Users/masterrabbit/Software/Syxx/macOS/Sources/SyxxApp/AppModel.swift#L224-L234)
   - [macOS/Sources/SyxxCLI/SyxxCLI.swift](file:///Users/masterrabbit/Software/Syxx/macOS/Sources/SyxxCLI/SyxxCLI.swift#L229-L239)

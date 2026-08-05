@@ -25,3 +25,35 @@ including the happy path.
 *share* a snapshot field between verify paths (DELTAS.md G-15). Whether their self-verify has the
 same missing domain guard is a parity question for cross-platform-parity_20260805 Phase 4 —
 checking it is out of this track's scope, but the question is now written down.
+
+---
+
+## C-02 · VerifyExternal tests observed the wrong panel; the type assert masked it
+
+The six `VerifyExternal_*` tests asserted `VerifyBrush`/`VerifyLine` (self-verify panel) while the
+command writes `ExternalVerifyBrush`/`ExternalVerifyLine` — the G-14 separation the T-6 test pins
+as intended design. Untouched, `VerifyBrush` stayed `Brushes.Gray`, an immutable brush, so CI
+reported a brush *type* error where the truth was a wrong-*property* error. Corrected as a declared
+harness fix; every severity-color and wording assertion preserved. All 10 verify tests green.
+
+## C-03 · Claude Code Review workflow — accepted exception, owner action required
+
+The workflow fails with `"anthropic_api_key": ""` — the `ANTHROPIC_API_KEY` repository secret is
+not configured. No code change can fix this; it needs the owner to add the secret in GitHub repo
+settings (or disable the workflow). Recorded as this track's one accepted exception, pending owner
+acknowledgment.
+
+## C-04 · Root-cause ledger for the run-3 reds (all fixed this session)
+
+| Red | Cause | Fix |
+|---|---|---|
+| macos legs ×2 | runner Swift 5.10 vs tools 6.0 | `runs-on: macos-15` |
+| Avalonia + ubuntu legs | C-01 false-green + C-02 + FileFallback | product fix + harness fix + verified fallthrough |
+| FileFallback ×4 | `Store()` trusted secret-tool on existence | round-trip verify, fall through |
+| keyring leg | empty `--unlock` password → no login collection | throwaway non-empty password |
+| Server pytest | committed corpus builder ≠ committed corpus | committed the reconciled builder |
+| `.deb` smoke ×2 | `libcoreclrtraceptprovider.so` needs liblttng | optional provider dropped from payload |
+| snap | `dotnet-sdk/latest` has no .NET 10 | pin `10.0/stable` track |
+| windows-x64 | 3 real C# breaks, first Windows build ever | Suspending removed, ResolverRow renamed, Evaluation→Result |
+| markdownlint | 50 real violations incl. records misparsed | fixed content-preservingly to zero |
+| Validate | plugin sources behind committed artifacts | sources committed, validate green locally |

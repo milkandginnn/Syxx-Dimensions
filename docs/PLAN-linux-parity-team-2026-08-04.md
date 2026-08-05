@@ -389,10 +389,20 @@ seat, evidence-or-falsify). **3 of 5 hypotheses were falsified as stated** — r
 falsification is a result, not a blank. Every entry carries first-hand `file:line` evidence; nothing
 here is inferred from a doc or another agent's summary.
 
-**The headline correction to this plan's premise:** Linux is *not* uniformly behind. It builds green
-(165/165) and CI gates it twice. Each of the three clients is now the worst platform for a
-*different* defect, because the Witness/Warp wave landed per-platform rather than through the shared
-contract. Several files now contradict their own doc comments; three tests assert nothing they claim.
+**Scope of this register — read before quoting it.** These findings come from a debug pass over the
+**in-flight Witness/Warp wave only**. It was **not** a survey of the Linux client against macOS. Within
+that narrow wave, Linux is not uniformly the worst platform — each of the three clients is worst at a
+*different* defect, because the wave landed per-platform rather than through the shared contract, and
+several files now contradict their own doc comments while three tests assert nothing they claim.
+
+**That says nothing about overall parity, and an earlier draft of this section wrongly implied it did.**
+It read "the premise was wrong — Linux is not uniformly behind", where the premise in question was
+"the Linux client lags macOS and Windows". **That premise is correct.** Linux lags substantially, and
+the narrow finding above must not be read as reassurance about the product as a whole. The actual
+feature-by-feature comparison is `docs/PLAN-linux-macos-parity-pass2-2026-08-04.md`, which found five
+inert primary buttons, a hardcoded claim that the user's traffic is already VPN-encrypted, two Linux
+packages that each ship half the product, and a resolver parser that measures the local systemd stub
+instead of the real upstream. None of that was in this pass's scope, which is why none of it is here.
 
 ### 7.0 Implementation status — 2026-08-04 build pass (§7.1 only)
 

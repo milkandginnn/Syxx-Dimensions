@@ -285,11 +285,16 @@ public sealed class LinuxSecretStore : ISecretStore
                 return;
         }
 
-        // 2. Try secret-tool CLI
+        // 2. Try secret-tool CLI — and VERIFY the round-trip rather than assume it. On a headless
+        // system the binary exists while no Secret Service answers (CI's ubuntu runners proved
+        // this): the store call no-ops, the secret vanishes, and Retrieve returns null. Returning
+        // here on mere tool-availability made the "always-available" file fallback unreachable
+        // exactly when it was needed. A backend counts only when it demonstrably holds the secret.
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && SecretTool.IsAvailable())
         {
             SecretTool.Store(keyType, keyId, secret);
-            return;
+            if (SecretTool.Retrieve(keyType, keyId) == secret)
+                return;
         }
 
         // 3. Fallback: AES-256-GCM encrypted file

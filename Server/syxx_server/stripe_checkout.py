@@ -40,7 +40,7 @@ def _request(path, method, params=None, idempotency_key=None):
         data = None
     else:
         data = qs.encode() if qs else None
-    req = urllib.request.Request(url, data=data, method=method)  # noqa: S310
+    req = urllib.request.Request(url, data=data, method=method)  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
     req.add_header("Authorization", "Bearer " + config.STRIPE_SECRET_KEY)
     req.add_header("Stripe-Version", config.STRIPE_API_VERSION)
     if data is not None:
@@ -48,13 +48,13 @@ def _request(path, method, params=None, idempotency_key=None):
     if idempotency_key:
         req.add_header("Idempotency-Key", idempotency_key)  # safe retries (Stripe API reference)
     try:
-        with urllib.request.urlopen(req, timeout=15) as r:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=15) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         detail = ""
         try:
             detail = json.loads(e.read()).get("error", {}).get("message", "")
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down
             pass
         raise StripeError(f"stripe {e.code}: {detail or 'request failed'}") from e
     except OSError as e:

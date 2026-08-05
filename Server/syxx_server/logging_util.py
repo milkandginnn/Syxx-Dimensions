@@ -64,7 +64,7 @@ def _emit(level, event, **fields):
                 severity_text="ERROR",
             )
             _otel_logger.emit(rec_obj)
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down
             pass  # telemetry is best-effort
 
 

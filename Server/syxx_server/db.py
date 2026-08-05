@@ -831,11 +831,11 @@ def _cap_rows(conn, table, order_col, max_rows):
     Table and column names here are internal constants, never caller input."""
     if max_rows <= 0:
         return
-    row = conn.execute(f"SELECT COUNT(*) c FROM {table}").fetchone()  # noqa: S608
+    row = conn.execute(f"SELECT COUNT(*) c FROM {table}").fetchone()  # noqa: S608 — table/column are module constants, never caller input (call sites: db.py _purge_old)
     excess = (row["c"] if row else 0) - max_rows
     if excess > 0:
         conn.execute(
-            f"DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} ORDER BY {order_col} ASC LIMIT ?)",  # noqa: S608
+            f"DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} ORDER BY {order_col} ASC LIMIT ?)",  # noqa: S608 — table/column are module constants, never caller input (call sites: db.py _purge_old)
             (excess,),
         )
 

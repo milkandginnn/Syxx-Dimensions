@@ -116,7 +116,7 @@ def _resolve_all(domain, qtype, deadline=None):
                 passivedns.ingest(domain, "A" if qtype == 1 else "AAAA", v, "investigate", label)
         except resolver.DNSError as e:
             per_resolver[label] = {"status": "error", "transport": kind, "error": str(e), "values": []}
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
             # A155 Fix 2: a bug anywhere in the mapping above must degrade this ONE
             # vantage to an honest error and let consensus report inconclusive — never
             # escape as a 500 that hides the outcome of the vantages that did answer

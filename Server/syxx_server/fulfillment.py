@@ -56,12 +56,12 @@ def _keygen_create_license(policy_id, email):
             }
         }
     ).encode()
-    req = urllib.request.Request(base + "/licenses", data=body, method="POST")  # noqa: S310
+    req = urllib.request.Request(base + "/licenses", data=body, method="POST")  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Content-Type", "application/vnd.api+json")
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             data = json.loads(r.read()).get("data", {})
         return data.get("attributes", {}).get("key"), data.get("id")
     except (urllib.error.HTTPError, OSError, ValueError) as e:
@@ -75,11 +75,11 @@ def _keygen_suspend_license(license_id):
     if not config.KEYGEN_ADMIN_TOKEN or not license_id:
         return False
     base = (config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}").rstrip("/")
-    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/suspend", data=b"", method="POST")  # noqa: S310
+    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/suspend", data=b"", method="POST")  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             r.read()
         return True
     except (urllib.error.HTTPError, OSError, ValueError) as e:
@@ -98,11 +98,11 @@ def _keygen_reinstate_license(license_id):
     if not config.KEYGEN_ADMIN_TOKEN or not license_id:
         return False
     base = (config.KEYGEN_BASE_URL or f"https://api.keygen.sh/v1/accounts/{config.KEYGEN_ACCOUNT_ID}").rstrip("/")
-    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/reinstate", data=b"", method="POST")  # noqa: S310
+    req = urllib.request.Request(base + f"/licenses/{license_id}/actions/reinstate", data=b"", method="POST")  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             r.read()
         return True
     except (urllib.error.HTTPError, OSError, ValueError) as e:

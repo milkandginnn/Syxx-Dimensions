@@ -197,7 +197,7 @@ def _resolve_subdomains(names, deadline):
             for fut in concurrent.futures.as_completed(futures, timeout=remaining):
                 try:
                     name, ips = fut.result()
-                except Exception:  # noqa: S112
+                except Exception:  # noqa: S112 — one enumeration candidate failing must not abort the sweep
                     continue
                 # A166: store all queried names (including empty results).
                 # None means deadline-skipped (absent from dict); [] means queried-and-empty.
@@ -218,7 +218,7 @@ def _resolve_one_sequential(name, resolvers):
         for qtype in (resolver.TYPE_A, resolver.TYPE_AAAA):
             try:
                 resp = resolver.query(name, qtype, server, timeout=_RESOLVE_TIMEOUT)
-            except Exception:  # noqa: S112
+            except Exception:  # noqa: S112 — one enumeration candidate failing must not abort the sweep
                 continue
             if resp.get("rcode") == 0 and resp.get("records"):
                 return [a["value"] for a in resp["records"] if a.get("type") in ("A", "AAAA")]

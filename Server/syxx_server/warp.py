@@ -264,7 +264,7 @@ def _brotli_decompress(body, max_bytes):
             ) from e
     try:
         out = _brotli.decompress(body)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
         raise fetcher.FetchError(f"brotli decode failed: {e}") from e
     if len(out) > max_bytes:
         raise fetcher.TruncatedError("decompressed body exceeds cap; asset is inconclusive")

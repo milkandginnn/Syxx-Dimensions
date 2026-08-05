@@ -159,6 +159,10 @@ parts:
 
     stage-packages:
       - libicu74
+      # libunwind8: the .NET runtime links libunwind-x86_64.so.8 for exception unwinding, and the
+      # snapcraft build environment reported it missing ('cannot open shared object file') when the
+      # SDK ran. core24 does not ship it, so it must be staged explicitly.
+      - libunwind8
       # libsecret is dlopened by Syxx.Kit/LinuxSecretStore.cs:380; secret-tool is the only
       # backend that can genuinely write to and enumerate the keyring (see the Depends audit in
       # Linux/Ubuntu/build_deb.sh). Without them key storage silently degrades to the encrypted

@@ -103,7 +103,7 @@ def _resolve_public(host):
     return next(iter(ips))
 
 
-import time as _time  # noqa: E402
+import time as _time  # noqa: E402 — import placed after runtime setup above it, deliberately
 
 
 def _one_request(url, timeout, max_bytes, deadline=None):

@@ -113,7 +113,7 @@ def _is_filtered(user_status, user_addrs, clean_status, clean_addrs):
     return False
 
 
-import time as _time  # noqa: E402
+import time as _time  # noqa: E402 — import placed after runtime setup above it, deliberately
 
 # A162: aggregate wall-clock deadline for the entire test run. 10 domains × 3
 # queries × 5s = 150s without a cap; this default is generous but bounded.

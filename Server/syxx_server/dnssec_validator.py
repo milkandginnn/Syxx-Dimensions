@@ -255,7 +255,7 @@ def _dsm(ds, dk, ow):
         return None
     h = w + struct.pack(">HBB", kf, kp, ka) + kk
     if dt == 1:
-        return hashlib.sha1(h).digest() == dd  # noqa: S324
+        return hashlib.sha1(h).digest() == dd  # noqa: S324 — DS digest type 1 IS SHA-1 per RFC 4034 §5.1.4 — the protocol picks it, not us
     if dt == 2:
         return hashlib.sha256(h).digest() == dd
     if dt == 4:

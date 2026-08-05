@@ -78,14 +78,14 @@ def collector_key_error(env_key):
         return "unset"
     try:
         raw = base64.b64decode(env_key, validate=True)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
         return "not valid base64. " + _GENERATE_HINT
     if len(raw) == 32:
         # The specific mistake the old message invited. Name it exactly.
         return "looks like a bare 32-byte Ed25519 seed, not a DER PKCS#8 key. " + _GENERATE_HINT
     try:
         load_der_private_key(raw, password=None)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
         return f"does not parse as a DER PKCS#8 private key ({exc}). {_GENERATE_HINT}"
     return None
 

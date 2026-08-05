@@ -79,7 +79,7 @@ try:
             send_default_pii=False,
             enable_tracing=True,
         )
-except Exception:  # noqa: S110
+except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down
     pass  # Sentry is best-effort; never crash the server for it
 
 # --- OpenTelemetry error reporting to bugsmasher.syxx.app ---
@@ -2509,7 +2509,7 @@ class Handler(BaseHTTPRequestHandler):
                 # all already-collected results.
                 try:
                     results.append(fut.result())
-                except Exception:  # noqa: S110
+                except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down
                     pass
         except concurrent.futures.TimeoutError:
             pass

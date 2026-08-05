@@ -192,7 +192,7 @@ def log_commerce_readiness(log):
     """
     try:
         findings = commerce_findings()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
         log.warn("preflight_failed", detail=str(exc))
         return []
 

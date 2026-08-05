@@ -264,11 +264,14 @@ struct PurpleScrollView<Content: View>: NSViewRepresentable {
         nonisolated(unsafe) private var frameObserver: NSObjectProtocol?
 
         deinit {
-            if let boundsObserver {
-                NotificationCenter.default.removeObserver(boundsObserver)
+            // deinit is nonisolated and may not call main-actor members, so the tokens are read
+            // through their nonisolated(unsafe) storage and handed straight to NotificationCenter,
+            // which is itself thread-safe. Nothing else on the Coordinator is touched here.
+            if let token = boundsObserver {
+                NotificationCenter.default.removeObserver(token)
             }
-            if let frameObserver {
-                NotificationCenter.default.removeObserver(frameObserver)
+            if let token = frameObserver {
+                NotificationCenter.default.removeObserver(token)
             }
         }
 

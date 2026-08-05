@@ -24,7 +24,7 @@ TYPE_AAAA = 28
 # A034: per-source-IP rate limit for the DNS collector. A simple sliding-window
 # counter prevents a single resolver from flooding the collector with queries.
 # Uses a dict of {ip: [count, window_start]} with periodic pruning.
-import threading as _threading  # noqa: E402
+import threading as _threading  # noqa: E402 — import placed after runtime setup above it, deliberately
 
 _dns_rate_lock = _threading.Lock()
 _dns_rate_buckets = {}  # ip -> [count, window_start]

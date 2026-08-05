@@ -11,7 +11,10 @@ final class ResponseSizeProbeTests: XCTestCase {
     }
 
     func testSustainedLargeIsOversized() {
-        let sizes = [100, 120, 150, 200, 180, 90] + [2100, 3000, 2500, 4096]   // 4 of 10 ≥ 2048
+        // Explicit [Int]: `[literal] + [literal]` is ambiguous — IndexPath is also
+        // ExpressibleByArrayLiteral and defines `+`, and CI's toolchain resolved it that way
+        // ("cannot convert IndexPath", then "type 'Equatable' has no member 'oversized'").
+        let sizes: [Int] = [100, 120, 150, 200, 180, 90] + [2100, 3000, 2500, 4096]   // 4 of 10 ≥ 2048
         let a = ResponseSizeProbe.audit(responseSizes: sizes)
         XCTAssertEqual(a.status, .oversized)
         XCTAssertEqual(a.oversizedCount, 4)

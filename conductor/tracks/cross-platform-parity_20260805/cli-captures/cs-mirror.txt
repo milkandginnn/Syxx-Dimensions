@@ -1,0 +1,3 @@
+syxx mirror 2.0.0
+
+Usage: syxx mirror <domain> [--local <resolver>]

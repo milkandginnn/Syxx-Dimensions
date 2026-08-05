@@ -1,0 +1,3 @@
+syxx sentinel 2.0.0
+
+Usage: syxx sentinel [--reset] [--forget] [--set-home] [--home]   (detect changes to your DNS-relevant network configuration; compare against your home network)

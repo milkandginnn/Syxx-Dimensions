@@ -1,0 +1,3 @@
+syxx lan 2.0.0
+
+Usage: syxx lan   (map on-link devices from the ARP table and flag your DNS resolver)

@@ -31,8 +31,8 @@ depends on it.
       payload. Write it down as a short contract document before writing either loader
 - [x] Task 1.2: Inventory existing corpora against that format. Record which can feed the emitter
       directly, which need a shim, and which cannot — with the reason for each
-- [ ] Task 1.3: Swift loader in `SyxxCLI`
-- [ ] Task 1.4: C# loader in `Syxx/Commands`
+- [~] Task 1.3: Swift loader in `SyxxCLI`
+- [~] Task 1.4: C# loader in `Syxx/Commands`
 - [ ] Task 1.5: Decide and document the behavior for a malformed vector — it must fail loudly, never
       be skipped
 - [ ] Task 1.6: Author the initial vector set — no existing corpus is feed-ready (see
@@ -194,7 +194,9 @@ finding keeps its filed record; these tasks fix them.
 - [x] Task 8.5: F-01 — add `resolverSubstituted` and the Mirror degraded-cap to the C# twin, so
       substituted evidence cannot read clean on Windows and Linux
 - [x] Task 8.6: F-02 — thread `DNSTransportWindow` into the C# `SectionInputs`
-- [ ] Task 8.7: F-06 — correct the `DELTAS-fixed.md` record for F042. It is not fixed
+- [x] Task 8.7: F-06 — correct the `DELTAS-fixed.md` record for F042. It is not fixed
+      (landed in 85c328b before this session; checkbox reconciled 2026-08-05 — the correction text
+      and the ledger F-06 row were verified present and committed)
 - [x] Task 8.9: F-07 — port the vector-evaluation and classification tests to the C# twin
 - [x] Task 8.10: F-09 — port B156 `mappableIndicators` to C# (spec field, engine filter, builder), with discriminating twin tests
 - [ ] Task 8.8: The `-h` / `-v` CLI asymmetry from Task 3.3 — now fixable in-track

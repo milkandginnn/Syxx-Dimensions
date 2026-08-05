@@ -4,7 +4,7 @@
   "type": "feature",
   "status": "in_progress",
   "created": "2026-08-05T00:00:00Z",
-  "updated": "2026-08-05T21:30:00Z",
+  "updated": "2026-08-05T22:20:00Z",
   "scope": {
     "mode": "detection + remediation (amended 2026-08-05)",
     "axes": [
@@ -26,7 +26,7 @@
   },
   "tasks": {
     "total": 42,
-    "completed": 11
+    "completed": 16
   },
   "current_phase": 1,
   "current_task": "1.3",
@@ -72,7 +72,8 @@
     {
       "id": "F-08",
       "state": "open",
-      "summary": "-v means verbose on macOS and version on Windows/Linux; B240 and E088 contradict; owner decision"
+      "summary": "-v means verbose on macOS and version on Windows/Linux; B240 and E088 contradict; owner decision",
+      "note": "Addendum 2026-08-05: Swift top-level -V is dead code (lowercasing at SyxxCLI.swift:48), verified by execution; subcommand path unaffected. Fix = Task 8.8, owner-gated (B240 vs E088)."
     },
     {
       "id": "F-09",

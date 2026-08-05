@@ -136,3 +136,18 @@ A loader exits non-zero, naming the case and the reason, when:
 5. `pinnedUnixSeconds` is absent or not an integer
 
 There is no partial-success path. A corpus either loads whole or fails loudly.
+
+## Amendments — 2026-08-05
+
+**A1 — the field-count table above is stale; the 32-field scope is retained deliberately.**
+The "shared field set" section was measured before commit `84e9bd7` (Tasks 8.5/8.6, same day)
+added `ResolverSubstituted` (`Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:72`) and
+`TransportObservation` (`:84`) to C#. Both platforms now carry 34 fields, and both act on
+`resolverSubstituted` (the Mirror degraded-cap is ported and twin-tested). The v1 loaders still
+**reject** `resolverSubstituted` and `transportObservation` by name — but that is now a scope
+decision, not a capability limit as the original text implies. Rationale for retaining it:
+the cap's cross-platform parity is proven by in-process twin tests
+(`ResolverSubstitutedCapTests`), not yet by the transcript gate, and widening the vector
+surface mid-build would change the contract under two in-flight loader implementations.
+Extending v1 → v2 with the two fields is a candidate once the corpus gate is live on all
+four legs. Loader behavior is unchanged by this amendment.

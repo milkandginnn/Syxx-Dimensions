@@ -79,8 +79,11 @@ emitted strings, not symbol names, so renames stay cheap and contract drift stay
       aliases, and exit codes
 - [ ] Task 3.2: Gate asserting the two surfaces are identical; fails on any asymmetry, and fails
       on an empty extraction rather than passing vacuously
-- [ ] Task 3.3: File the known `-h` / `-v` asymmetry with `file:line` evidence. **Do not fix it** —
+- [x] Task 3.3: File the known `-h` / `-v` asymmetry with `file:line` evidence. **Do not fix it** —
       remediation is a separate track
+      (filed as F-08 with both platforms' file:line; 2026-08-05 addendum adds the executed proof
+      that Swift's top-level -V branch is dead code via the :48 lowercasing. Fix remains Task 8.8,
+      blocked on the owner's B240-vs-E088 call)
 - [x] Task 3.4: Choose a set of invocations whose output is deterministic offline (`--help`,
       `--version`, and each command's usage text) and capture both builds' output
       (verified-by-real-run 2026-08-05; report + 36 raw captures in cli-capture-report.md,
@@ -121,18 +124,27 @@ The same defect this track exists to prevent, one layer down.
 
 ### Tasks
 
-- [~] Task 5.1: `WarpEngineTests.swift` — brotli cases currently `return nil` and the caller
+- [x] Task 5.1: `WarpEngineTests.swift` — brotli cases currently `return nil` and the caller
       `continue`s, with no skip marker and no counter. Either decode (the justifying comment is
       wrong: `COMPRESSION_BROTLI` ships in the macOS SDK from macOS 12 and the package targets 14)
       or emit an explicit `XCTSkip`
-- [~] Task 5.2: Add an evaluated-case counter to that suite, asserted equal to the case count
-- [~] Task 5.3: Audit the other harnesses for the same `return nil` → `continue` shape and fix any
+      (decoded for real — brotli AND the gzip path, which had the same silent swallow; commit 8615996)
+- [x] Task 5.2: Add an evaluated-case counter to that suite, asserted equal to the case count
+      (31 of 31 printed and asserted, nonzero-guarded; counter proven able to fail: reinserted skip
+      → "30 is not equal to 31")
+- [x] Task 5.3: Audit the other harnesses for the same `return nil` → `continue` shape and fix any
       found
+      (macOS/Tests audit complete: VersionConsistencyTests + GuidedSetupLifecycleTests fixed; ~25
+      sites examined clean, list in the warp-skip-fix report; two deliberate leave-alones carried to
+      Task 7.4. C# side: MatrixGoldenCorpusTests already counts; broader C# audit not done — noted)
 
 ### Verification
 
-- [ ] The Warp suite reports how many of the 31 cases it evaluated, and asserts the number
-- [ ] A run with a deliberately unreadable case fails rather than passing quietly
+- [x] The Warp suite reports how many of the 31 cases it evaluated, and asserts the number
+      (verified-by-real-run: "[warp corpus] evaluated 31 of 31 cases")
+- [x] A run with a deliberately unreadable case fails rather than passing quietly
+      (verified-by-real-run: truncated case 014 → red naming case+file+encoding+bytes; fixture
+      restored digest-matched)
 
 ---
 

@@ -291,6 +291,26 @@ as superseded by this entry.
 `syxx -v` prints a version string on Windows and Linux, and enables verbose output on macOS. A
 script written on one platform behaves differently on the other, silently.
 
+### Addendum — 2026-08-05, verified by execution: Swift's top-level `-V` is dead code
+
+The table above is right about intent and about the subcommand path, but the top-level Swift row
+overstates. `SyxxCLI.swift:48` lowercases `args[1]` **before** the dispatch switch, so `-V`
+arrives as `-v`, matches neither `"--version"` nor `"-V"` at `SyxxCLI.swift:93`, and falls through
+to `default` — "Unknown subcommand". Measured against the built binary:
+
+```
+syxx --version   exit=0   Syxx 2.0.0
+syxx -V          exit=3   Unknown subcommand '-V'. Use 'syxx --help' for usage.
+```
+
+The subcommand path is unaffected — `SyxxConfig.handleGlobalFlags`
+(`macOS/Sources/SyxxKit/SyxxConfig.swift:48-63`) checks the **un**-lowercased argv, so
+`syxx nslook -V` works. Swift therefore disagrees with itself between levels, and B240's
+reserved `-V` is defeated by the lowercasing at exactly the level where C# accepts it
+(`Program.cs:96`). `CLIExitCodeProcessTests.swift:42-61` tests only the long forms, which is
+why the dead branch never surfaced. Any remediation of F-08 must fix the lowercasing as well
+as pick a winner between B240 and E088.
+
 ### Two decisions, both documented, that contradict each other
 
 - **B240** (`SyxxCLI.swift:91`): *"reserve -V for version (not -v) to avoid collision with -v =

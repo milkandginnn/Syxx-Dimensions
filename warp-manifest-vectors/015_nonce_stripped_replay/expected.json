@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "replayNonceMismatch",
+  "htmlState": "notEvaluated",
+  "manifestState": "parsed",
+  "notes": "client sent a nonce; manifest echoed a different one.",
+  "signatureState": "verified"
+}

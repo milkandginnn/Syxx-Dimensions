@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "notEvaluated",
+  "htmlState": "notEvaluated",
+  "manifestState": "notEvaluated",
+  "notes": "envelope field 'key_id' is missing or not a string (malformed envelope).",
+  "signatureState": "malformed"
+}

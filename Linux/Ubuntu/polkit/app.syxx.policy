@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+
+<!--
+  Syxx polkit action (P-02). Installed by build_deb.sh to
+  /usr/share/polkit-1/actions/app.syxx.policy.
+
+  WHY THIS EXISTS
+    pkexec was ALREADY load-bearing on Linux before this file: Syxx.Kit/UpdateService.cs:409
+    shells `/usr/bin/pkexec dpkg -i <package>` to install an update. So graphical escalation
+    was never missing — it was undeclared. Without an action file pkexec falls back to
+    org.freedesktop.policykit.exec, whose dialog says only "Authentication is required to run
+    `/usr/bin/syxx' as the super user". The user is asked to grant root to a program with no
+    stated purpose. Declaring the action replaces that with the message below.
+
+  WHY pkexec AND NOT setcap (owner decision 2)
+    `setcap cap_net_raw+ep /opt/syxx/cli/Syxx` would let Cage capture with no prompt at all —
+    and would hand raw-socket capability to EVERY local user, permanently, from the moment the
+    package is installed. For a forensics tool that is a worse trade than one prompt per
+    capture. This is the same reasoning scripts/syxx-capture-hardware-id.sh already applied
+    when it rejected a setuid helper and a root daemon.
+
+  WHY auth_admin AND NOT auth_admin_keep
+    `_keep` caches the authorization for ~5 minutes, so a second capture inside that window
+    starts silently. The decision is pkexec-PER-CAPTURE: every privileged capture is a thing
+    the user consciously authorized. Do not "improve" this to _keep.
+
+  SCOPE — STATED PLAINLY BECAUSE IT IS BROADER THAN THE NAME SUGGESTS
+    exec.path is /usr/bin/syxx, the whole CLI. One authorization therefore runs ANY syxx
+    subcommand as root, not just `cage`. That is the same surface `sudo syxx cage` already
+    has, so this is not a regression — but it is not least-privilege either. Narrowing it
+    needs a dedicated capture-only helper verb on the CLI (a C#-side change, not a packaging
+    one); see the E3 report's CROSS-SEAT REQUESTS.
+
+  CALLERS MUST INVOKE EXACTLY `/usr/bin/syxx`
+    polkit matches the action to the path pkexec was given. `pkexec /opt/syxx/cli/Syxx cage`
+    resolves to a DIFFERENT path, matches no action here, and silently falls back to the
+    generic org.freedesktop.policykit.exec dialog. Use /usr/bin/syxx.
+-->
+<policyconfig>
+
+  <vendor>Syxx</vendor>
+  <vendor_url>https://syxx.app</vendor_url>
+  <icon_name>syxx</icon_name>
+
+  <action id="app.syxx.run-privileged">
+    <description>Run a privileged Syxx investigation</description>
+    <message>Authentication is required to capture DNS traffic on this machine. Syxx records the
+    packets it captures as evidence; it does not change your network configuration.</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/syxx</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+
+</policyconfig>

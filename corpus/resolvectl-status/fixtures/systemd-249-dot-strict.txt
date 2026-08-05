@@ -1,0 +1,36 @@
+# PROVENANCE: DERIVED-FROM-DOCUMENTATION
+# NOT captured from a real host. Authored on macOS, which has no systemd-resolved.
+#
+# Shape source: systemd printing code
+#   https://github.com/systemd/systemd/blob/main/src/resolve/resolvectl.c
+#   strv_extend_extended_bool(&s, "DNSOverTLS", configuration->dns_over_tls_mode_str)
+#   emits "+DNSOverTLS" when the mode parses as boolean true.
+# Server-token syntax ADDRESS[:PORT][#SERVERNAME] per resolved.conf(5) DNS=:
+#   https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html
+#   The "#name" suffix is the DNS-over-TLS certificate name, NOT a match domain.
+# The quad9 server list shape is taken verbatim from the paste in
+#   https://github.com/systemd/systemd/issues/21123
+#
+# Represents: DNS over TLS in STRICT mode against Quad9, DNSSEC on.
+#
+# WHAT THIS PINS:
+#  - the DoT branch. The replaced parser matched the literal "DNS Over TLS:", a string
+#    systemd has never printed, so DoT was never detected on any machine.
+#  - "#dns.quad9.net" must become the DoT certificate name, not a match domain. The
+#    replaced parser filed it as a match domain, making every DoT resolver look
+#    domain-scoped.
+#  - "Fallback DNS Servers" must NOT be collected: systemd uses those only when nothing
+#    else is configured, so reporting them attributes queries to servers that are not
+#    answering them.
+Global
+           Protocols: -LLMNR -mDNS +DNSOverTLS DNSSEC=yes/supported
+    resolv.conf mode: stub
+  Current DNS Server: 9.9.9.9#dns.quad9.net
+         DNS Servers: 9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net 2620:fe::fe#dns.quad9.net
+Fallback DNS Servers: 8.8.8.8#dns.google 8.8.4.4#dns.google
+
+Link 2 (enp5s0)
+    Current Scopes: DNS
+         Protocols: +DefaultRoute +LLMNR -mDNS +DNSOverTLS DNSSEC=yes/supported
+Current DNS Server: 9.9.9.9#dns.quad9.net
+       DNS Servers: 9.9.9.9#dns.quad9.net

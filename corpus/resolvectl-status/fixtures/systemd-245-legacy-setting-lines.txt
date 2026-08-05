@@ -1,0 +1,44 @@
+# PROVENANCE: DERIVED-FROM-DOCUMENTATION
+# NOT captured from a real host. Authored on macOS, which has no systemd-resolved.
+#
+# Shape source: systemd v245 printing code (the release stream shipped in Ubuntu 20.04 LTS)
+#   https://github.com/systemd/systemd/blob/v245/src/resolve/resolvectl.c
+#   Field labels in that version: "LLMNR setting:", "MulticastDNS setting:",
+#   "DNSOverTLS setting:", "DNSSEC setting:", "DNSSEC supported:", "Current DNS Server:",
+#   "DNS Servers:", "Fallback DNS Servers:", "DNS Domain:", "DNSSEC NTA:".
+#   Multi-value rows use TABLE_STRV (one entry per line, aligned under the value column)
+#   rather than the TABLE_STRV_WRAPPED of v249+.
+#
+# Represents: the older per-setting-line generation of the output. Ubuntu 20.04 LTS is in
+# support until 2030 with ESM, so this generation is still live.
+#
+# WHAT THIS PINS:
+#  - "DNSOverTLS setting: no" is a second real spelling of the DoT state. Note that the
+#    literal the replaced parser looked for, "DNS Over TLS:" with spaces, is not this one
+#    either — it matches NO systemd version.
+#  - unlabelled continuation lines must be attributed to the field above them. The
+#    "DNSSEC NTA:" continuation lines here are the trap: a parser that treats any
+#    unlabelled line as more DNS servers would ingest "16.172.in-addr.arpa" as a resolver.
+#  - this generation prints no DefaultRoute field, so scoped/unscoped cannot be determined
+#    from it; links are treated as unscoped rather than guessed at.
+Global
+       LLMNR setting: yes
+MulticastDNS setting: no
+  DNSOverTLS setting: no
+      DNSSEC setting: no
+    DNSSEC supported: no
+          DNSSEC NTA: 10.in-addr.arpa
+                      16.172.in-addr.arpa
+                      168.192.in-addr.arpa
+
+Link 2 (enp0s3)
+      Current Scopes: DNS
+       LLMNR setting: yes
+MulticastDNS setting: no
+  DNSOverTLS setting: no
+      DNSSEC setting: no
+    DNSSEC supported: no
+  Current DNS Server: 192.168.1.1
+         DNS Servers: 192.168.1.1
+                      8.8.8.8
+          DNS Domain: lan

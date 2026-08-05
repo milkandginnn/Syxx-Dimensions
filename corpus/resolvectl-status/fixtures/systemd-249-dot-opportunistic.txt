@@ -1,0 +1,32 @@
+# PROVENANCE: DERIVED-FROM-DOCUMENTATION
+# NOT captured from a real host. Authored on macOS, which has no systemd-resolved.
+#
+# Shape source: systemd printing code
+#   https://github.com/systemd/systemd/blob/main/src/resolve/resolvectl.c
+#     static int strv_extend_extended_bool(char ***strv, const char *name, const char *value) {
+#             if (value) {
+#                     r = parse_boolean(value);
+#                     if (r >= 0)
+#                             return strv_extendf(strv, "%s%s", plus_minus(r), name);
+#             }
+#             return strv_extendf(strv, "%s=%s", name, value ?: "???");
+#     }
+#   "opportunistic" does not parse as a boolean, so it renders as "DNSOverTLS=opportunistic"
+#   rather than "+DNSOverTLS" / "-DNSOverTLS".
+# Meaning of the mode, per resolved.conf(5) DNSOverTLS=:
+#   https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html
+#   opportunistic attempts DoT and falls back to unencrypted DNS when the server does not
+#   support it, and provides no protection against downgrade attacks.
+#
+# WHAT THIS PINS — the honesty case. Opportunistic DoT silently falls back to cleartext
+# and the client cannot tell which happened. Reporting it encrypted is a fabricated
+# assurance; reporting it plaintext is a fabricated alarm. It must be Unknown.
+Global
+         Protocols: -LLMNR -mDNS DNSOverTLS=opportunistic DNSSEC=no/unsupported
+  resolv.conf mode: stub
+
+Link 3 (wlp3s0)
+    Current Scopes: DNS
+         Protocols: +DefaultRoute +LLMNR -mDNS DNSOverTLS=opportunistic DNSSEC=no/unsupported
+Current DNS Server: 192.168.1.1
+       DNS Servers: 192.168.1.1

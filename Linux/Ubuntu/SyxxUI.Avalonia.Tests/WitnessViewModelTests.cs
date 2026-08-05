@@ -329,8 +329,12 @@ public class WitnessViewModelTests
     private static readonly string AmberHex = "#FFF2B33D";
     private static readonly string RedHex = "#FFFF4D6D";
 
+    // Declared harness fix (ci-green-pr2 2.1): assert the INTERFACE, not the concrete class.
+    // Avalonia hands theme brushes back as Immutable.SolidColorBrush; the exact-type assert made
+    // every color check fail on CI over an implementation detail. The behavioral assertion — the
+    // rendered COLOR — is unchanged and still exact.
     private static string ColorOf(IBrush brush) =>
-        Assert.IsType<SolidColorBrush>(brush).Color.ToString().ToUpperInvariant();
+        Assert.IsAssignableFrom<ISolidColorBrush>(brush).Color.ToString().ToUpperInvariant();
 
     [Theory]
     [InlineData(SnapshotVerification.Valid, "#FF3FD08A")]
@@ -376,8 +380,8 @@ public class WitnessViewModelTests
 
         vm.VerifyExternalCommand.Execute(null);
 
-        Assert.Equal(GreenHex, ColorOf(vm.VerifyBrush));
-        Assert.Contains("valid", vm.VerifyLine, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(GreenHex, ColorOf(vm.ExternalVerifyBrush));
+        Assert.Contains("valid", vm.ExternalVerifyLine, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -389,8 +393,8 @@ public class WitnessViewModelTests
 
         vm.VerifyExternalCommand.Execute(null);
 
-        Assert.Equal(AmberHex, ColorOf(vm.VerifyBrush));
-        Assert.Contains("Expired", vm.VerifyLine, StringComparison.Ordinal);
+        Assert.Equal(AmberHex, ColorOf(vm.ExternalVerifyBrush));
+        Assert.Contains("Expired", vm.ExternalVerifyLine, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -403,8 +407,8 @@ public class WitnessViewModelTests
 
         vm.VerifyExternalCommand.Execute(null);
 
-        Assert.Equal(RedHex, ColorOf(vm.VerifyBrush));
-        Assert.Contains("INVALID", vm.VerifyLine, StringComparison.Ordinal);
+        Assert.Equal(RedHex, ColorOf(vm.ExternalVerifyBrush));
+        Assert.Contains("INVALID", vm.ExternalVerifyLine, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -417,11 +421,18 @@ public class WitnessViewModelTests
 
         vm.VerifyExternalCommand.Execute(null);
 
-        Assert.Equal(RedHex, ColorOf(vm.VerifyBrush));
-        Assert.Contains("Display mismatch", vm.VerifyLine, StringComparison.Ordinal);
+        Assert.Equal(RedHex, ColorOf(vm.ExternalVerifyBrush));
+        Assert.Contains("Display mismatch", vm.ExternalVerifyLine, StringComparison.Ordinal);
     }
 
     [Fact]
+    // Declared harness fix (ci-green-pr2 2.1b): the VerifyExternal_* tests asserted VerifyBrush /
+    // VerifyLine — the SELF-verify panel — but the command writes its dedicated
+    // ExternalVerifyBrush / ExternalVerifyLine (the G-14 separation the T-6 test pins as the
+    // intended design). Untouched, VerifyBrush stayed Brushes.Gray, an immutable brush, which the
+    // old exact-type assert reported as a TYPE error and thereby masked the property mismatch.
+    // Every behavioral assertion (severity color, message wording) is unchanged — it now reads
+    // the panel the user actually sees for an external testimony.
     public void VerifyExternal_GarbageInput_RendersRedMalformed()
     {
         var vm = NewIdleViewModel();
@@ -429,8 +440,8 @@ public class WitnessViewModelTests
 
         vm.VerifyExternalCommand.Execute(null);
 
-        Assert.Equal(RedHex, ColorOf(vm.VerifyBrush));
-        Assert.Contains("malformed", vm.VerifyLine, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(RedHex, ColorOf(vm.ExternalVerifyBrush));
+        Assert.Contains("malformed", vm.ExternalVerifyLine, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -442,8 +453,8 @@ public class WitnessViewModelTests
         vm.VerifyExternalCommand.Execute(null);
 
         // No result for no input: a caution-tier prompt, not green/valid and not red/forged.
-        Assert.Equal(AmberHex, ColorOf(vm.VerifyBrush));
-        Assert.DoesNotContain("valid", vm.VerifyLine, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AmberHex, ColorOf(vm.ExternalVerifyBrush));
+        Assert.DoesNotContain("valid", vm.ExternalVerifyLine, StringComparison.OrdinalIgnoreCase);
     }
 
     // ── T-5: SelfVerify tests (Phase 3 §4.1) ──────────────────────────────────────────────────

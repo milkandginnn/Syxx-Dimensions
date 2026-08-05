@@ -74,16 +74,16 @@ struct WitnessView: View {
                     Text("\u{16C9}")
                         .font(.custom("Cinzel-SemiBold", size: 28))
                         .frame(width: 54, height: 54)
-                        .background(Color.ioElectric.opacity(0.10))
+                        .background(Color.ioWitnessRed.opacity(0.10))
                         .cornerRadius(14)
-                        .foregroundColor(Color.ioElectric)
-                        .shadow(color: Color.ioElectric.opacity(0.35), radius: 22)
+                        .foregroundColor(Color.ioWitnessRed)
+                        .shadow(color: Color.ioWitnessRed.opacity(0.35), radius: 22)
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("THE SEALBEARER \u{00B7} ENVIRONMENT TRUST")
                             .font(.ioCaption(.bold))
-                            .foregroundColor(Color.ioElectric)
+                            .foregroundColor(Color.ioWitnessRed)
                             .tracking(0.26)
 
                         Text("Witness")

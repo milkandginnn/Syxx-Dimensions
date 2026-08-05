@@ -20,16 +20,16 @@ struct MirrorView: View {
                 Text("\u{16DE}")
                     .font(.custom("Cinzel-SemiBold", size: 28))
                     .frame(width: 54, height: 54)
-                    .background(Color.ioElectric.opacity(0.10))
+                    .background(Color.ioMirrorYellow.opacity(0.10))
                     .cornerRadius(14)
-                    .foregroundColor(Color.ioElectric)
-                    .shadow(color: Color.ioElectric.opacity(0.35), radius: 22)
+                    .foregroundColor(Color.ioMirrorYellow)
+                    .shadow(color: Color.ioMirrorYellow.opacity(0.35), radius: 22)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("THE REFLECTION \u{00B7} REMOTE VS LOCAL")
                         .font(.ioCaption(.bold))
-                        .foregroundColor(Color.ioElectric)
+                        .foregroundColor(Color.ioMirrorYellow)
                         .tracking(0.26)
 
                     Text("Mirror")

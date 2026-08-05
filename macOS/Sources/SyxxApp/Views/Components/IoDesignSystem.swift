@@ -44,6 +44,19 @@ extension Color {
     /// on the pale canvas (#eee7fb) is ~1.4:1 and unreadable, while #8a6a00 is ~6.4:1. This
     /// follows the palette's own darken-for-light convention (see ioSuccessGreen / ioText).
     static let ioMirrorYellow = ioDynamic(light: 0x8a6a00, dark: 0xffd400)  // Mirror highlight
+    /// Glutton highlight (owner directive 2026-08-05): hot pink, matching the intensity of
+    /// ioProphetBlue (#00b4ff) and ioSuccessGreen (#2dd4bf). Deliberately distinct from
+    /// ioCriticalRed (#ff4d6d) so the module colour is never confused with a severity state.
+    /// Light mode darkens for readability on pale canvas (same convention as ioMirrorYellow).
+    static let ioGluttonPink  = ioDynamic(light: 0xb0286e, dark: 0xff6eb4)  // Glutton highlight
+    /// Cage highlight (owner directive 2026-08-05): cyan — a cool third distinct from
+    /// Prophet's blue (#00b4ff) and Portal's teal (#2dd4bf). Sits between them on the hue
+    /// wheel without overlapping either.
+    static let ioCageCyan     = ioDynamic(light: 0x0a8a8a, dark: 0x00e5ff)  // Cage highlight
+    /// Witness highlight (owner directive 2026-08-05): red, matching the intensity of the
+    /// other module highlights. Deliberately distinct from ioCriticalRed (#ff4d6d) which is
+    /// a semantic severity colour — this is a module identity colour.
+    static let ioWitnessRed   = ioDynamic(light: 0xb01e38, dark: 0xff3355)  // Witness highlight
     static let ioDeepBlue    = ioDynamic(light: 0x5228b0, dark: 0x5b3fd6)   // Violet deep
     static let ioElectric    = ioDynamic(light: 0x8a6ef0, dark: 0xa78bff)   // Bright violet (links)
     static let ioAccentStart = ioDynamic(light: 0xd9a441, dark: 0xd9a441)   // Gold

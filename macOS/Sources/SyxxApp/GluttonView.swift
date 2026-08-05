@@ -14,16 +14,16 @@ struct GluttonView: View {
                     Text("\u{16A6}")
                         .font(.custom("Cinzel-SemiBold", size: 28))
                         .frame(width: 54, height: 54)
-                        .background(Color.ioCriticalRed.opacity(0.10))
+                        .background(Color.ioGluttonPink.opacity(0.10))
                         .cornerRadius(14)
-                        .foregroundColor(Color.ioCriticalRed)
-                        .shadow(color: Color.ioCriticalRed.opacity(0.35), radius: 22)
+                        .foregroundColor(Color.ioGluttonPink)
+                        .shadow(color: Color.ioGluttonPink.opacity(0.35), radius: 22)
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("THE DEVOURER \u{00B7} DNS LEAK TEST")
                             .font(.ioCaption(.bold))
-                            .foregroundColor(Color.ioCriticalRed)
+                            .foregroundColor(Color.ioGluttonPink)
                             .tracking(0.26)
 
                         Text("Glutton")

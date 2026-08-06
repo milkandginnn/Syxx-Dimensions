@@ -31,14 +31,27 @@ depends on it.
       payload. Write it down as a short contract document before writing either loader
 - [x] Task 1.2: Inventory existing corpora against that format. Record which can feed the emitter
       directly, which need a shim, and which cannot — with the reason for each
-- [~] Task 1.3: Swift loader in `SyxxCLI`
+- [x] Task 1.3: Swift loader in `SyxxCLI`
+      (sited in SyxxKit deliberately — ExfilAssessment has no public init outside the module and no
+      SyxxCLITests target exists; 21 tests; verified-by-real-run incl. byte-identical single-vector
+      regression. Outstanding: swift-field-shapes.md from the seat)
 - [~] Task 1.4: C# loader in `Syxx/Commands`
-- [ ] Task 1.5: Decide and document the behavior for a malformed vector — it must fail loudly, never
+      (seat died on the usage limit with nothing landed; resumed with the Swift twin's exact
+      list-only output contract)
+- [x] Task 1.5: Decide and document the behavior for a malformed vector — it must fail loudly, never
       be skipped
-- [ ] Task 1.6: Author the initial vector set — no existing corpus is feed-ready (see
+      (decided + documented in docs/parity-vector-v1-spec.md "Rejection behavior" — five rules, no
+      partial success; implemented and rejection-tested in the Swift loader, real-run demonstrated;
+      C# twin implements the same rules under Task 1.4)
+- [x] Task 1.6: Author the initial vector set — no existing corpus is feed-ready (see
       [corpus-inventory.md](./corpus-inventory.md)). Cover each of the 6 sections populated, plus the
       fail-closed boundaries: unfetchable, unverifiable, degenerate. Mirror the
       `warp-manifest-vectors` per-case directory layout
+      (11 cases in corpus/parity-vectors/ — all 6 sections + unfetchable/unverifiable/degenerate;
+      loads 11/11 on Swift, verified-by-real-run; C# acceptance pending Task 1.4. Layout deviation,
+      deliberate: flat NNN_id.json per the v1 contract's one-file-per-case rule rather than
+      warp-manifest's per-case directories — each parity case has exactly one artifact, and the
+      contract is the authority; the numbering/sort/drift-gate discipline is what was mirrored)
 
 ### Verification
 

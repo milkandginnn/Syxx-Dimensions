@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "degenerate-present-but-uninformative",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "authoritative": {
+      "status": "untested",
+      "authoritativeAnswers": [],
+      "resolverAnswers": [],
+      "nameservers": [],
+      "detail": "not run"
+    },
+    "ecs": {
+      "status": "inconclusive",
+      "detail": "no OPT in the response - cannot assess"
+    }
+  }
+}

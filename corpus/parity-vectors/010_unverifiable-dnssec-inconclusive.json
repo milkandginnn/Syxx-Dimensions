@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "unverifiable-dnssec-inconclusive",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "dnssec": "inconclusive"
+  }
+}

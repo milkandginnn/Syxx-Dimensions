@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "prophet-dnssec-unsigned",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "dnssec": "unsigned"
+  }
+}

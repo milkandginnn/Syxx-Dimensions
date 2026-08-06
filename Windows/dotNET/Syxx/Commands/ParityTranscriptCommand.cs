@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Syxx.Kit;
@@ -5,17 +7,35 @@ using Syxx.Kit;
 namespace Syxx.Commands
 {
 /// <summary>
-/// Phase 4.2: emit a canonical behavioral transcript from the production synthesizer.
+/// Emit a canonical behavioral transcript from the production synthesizer.
 /// Hidden CI subcommand — not advertised in user help until owner-approved.
 /// </summary>
+/// <remarks>
+/// <para>Two invocations, ONE record builder (<see cref="Record"/>):</para>
+/// <list type="bullet">
+/// <item><description>no <c>--vectors</c> — one record for an empty <see cref="SectionInputs"/> at
+/// the fixed epoch, written bare. This is the shape the existing CI job consumes.</description></item>
+/// <item><description><c>--vectors=&lt;dir&gt;</c> — one record per corpus case, each concluded at
+/// its own pinned clock, inside the transcript envelope.</description></item>
+/// </list>
+///
+/// <para>The builder is shared rather than duplicated because a second copy is how the two shapes
+/// drift: a key added to one path and not the other produces a corpus transcript that disagrees
+/// with the single-vector transcript about what a record even is, and the cross-platform diff would
+/// blame the engines for it. Twin of <c>macOS/Sources/SyxxCLI/Commands/ParityTranscript.swift:41</c>.</para>
+/// </remarks>
 internal static class ParityTranscriptCommand
 {
+    /// Fixed epoch so single-vector transcripts are byte-stable across hosts. Corpus cases ignore
+    /// it entirely — each carries its own `pinnedUnixSeconds`.
     private static readonly DateTimeOffset FixedNow =
         DateTimeOffset.FromUnixTimeSeconds(1_752_268_477);
 
+    private const string DefaultOutPath = "transcript.net-win-x64.json";
+
     public static int Run(string[] args)
     {
-        var outPath = "transcript.net-win-x64.json";
+        var outPath = DefaultOutPath;
         string? vectorsDir = null;
         var listOnly = false;
         foreach (var a in args)
@@ -28,15 +48,26 @@ internal static class ParityTranscriptCommand
                 listOnly = true;
         }
 
-        // Corpus mode is entered only by --vectors. With the flag absent every byte below is the
-        // pre-track single-vector path, so the existing CI job cannot regress while Phase 2 is built
-        // (plan Task 2.4).
+        // Corpus mode is entered only by --vectors. With the flag absent the single-vector path
+        // below emits exactly the bytes it emitted before the track, so the existing CI job cannot
+        // regress while the corpus path is built (plan Task 2.4).
         if (vectorsDir is not null)
-            return RunCorpus(vectorsDir, listOnly);
+            return RunCorpus(vectorsDir, listOnly, outPath);
 
-        var inputs = new SectionInputs();
-        var conclusion = Synthesizer.Conclude(inputs, now: FixedNow);
+        return Write(Record(new SectionInputs(), "empty-section-inputs", FixedNow), outPath);
+    }
 
+    /// <summary>
+    /// One canonical record — the single shared builder for both the single-vector path and the
+    /// corpus path.
+    /// </summary>
+    private static JsonObject Record(SectionInputs inputs, string vectorId, DateTimeOffset now)
+    {
+        var conclusion = Synthesizer.Conclude(inputs, now: now);
+
+        // Ordinal, per the spec's "Output record" ordering rule: Dictionary and Set iteration order
+        // differs between the two runtimes, so anything reaching output is explicitly sorted, and
+        // the comparison must be ordinal rather than locale-aware on both sides.
         var diagnoses = (conclusion.Determination?.Diagnoses ?? [])
             .Select(d => d.Id.Value)
             .OrderBy(s => s, StringComparer.Ordinal)
@@ -45,10 +76,10 @@ internal static class ParityTranscriptCommand
         var untested = conclusion.SectionStatuses.Count(s => s.Status == SectionStatus.Untested);
         var total = conclusion.SectionStatuses.Count;
 
-        var root = new JsonObject
+        return new JsonObject
         {
             ["schemaVersion"] = 1,
-            ["vectorId"] = "empty-section-inputs",
+            ["vectorId"] = vectorId,
             ["evidenceCompleteness"] = new JsonObject
             {
                 ["untestedSections"] = untested,
@@ -61,13 +92,23 @@ internal static class ParityTranscriptCommand
             ["confidencePresent"] = false,
             ["engine"] = "Synthesizer.conclude",
         };
+    }
 
-        var json = root.ToJsonString(new JsonSerializerOptions
+    /// <summary>Serialize and write, or report why not.</summary>
+    /// <remarks>
+    /// Keys are emitted in the insertion order established above, NOT sorted. The Swift twin
+    /// serializes with <c>.sortedKeys</c>, so the two transcripts are not byte-identical and the
+    /// cross-platform comparison normalises with <c>jq --sort-keys</c> (spec, "Output record").
+    /// Recorded here because the previous comment on this line claimed the opposite — that a
+    /// re-parse forced sorted keys — and nothing in this method ever did that.
+    /// </remarks>
+    private static int Write(JsonNode payload, string outPath)
+    {
+        var json = payload.ToJsonString(new JsonSerializerOptions
         {
             WriteIndented = true,
         });
 
-        // Force sorted keys via re-parse (JsonObject insertion order is already controlled above).
         try
         {
             File.WriteAllText(outPath, json + "\n");
@@ -81,26 +122,24 @@ internal static class ParityTranscriptCommand
     }
 
     /// <summary>
-    /// <c>--vectors=&lt;dir&gt;</c>. Only <c>--list-only</c> is implemented here: it loads the corpus
-    /// and prints <c>caseCount=&lt;n&gt;</c> followed by one vectorId per line, in case order.
+    /// Corpus mode. <c>--list-only</c> proves both runtimes read one directory into the same case
+    /// count and the same sorted id list (Phase 1 verification); without it, one canonical record is
+    /// emitted per case inside the transcript envelope (plan Task 2.1).
     /// </summary>
     /// <remarks>
-    /// <para>That output is diffed BYTE-FOR-BYTE against the Swift twin's, so it is written with
-    /// explicit <c>\n</c> through <see cref="Console.Out"/>: <c>Console.WriteLine</c> would emit
-    /// CRLF on Windows and the two legs would differ on line endings alone.</para>
+    /// <para><c>evaluated</c> is written from a counter incremented per case actually concluded —
+    /// never from the input list's length. Those two numbers are equal only when nothing went wrong,
+    /// and taking the length would make them equal by construction, which is exactly how a harness
+    /// comes to report full coverage of a corpus it partly skipped. The emitter refuses to write at
+    /// all when the counter disagrees with the case count, or when it is zero.</para>
     ///
-    /// <para><c>--vectors</c> WITHOUT <c>--list-only</c> exits non-zero rather than falling back to
-    /// the single-vector path. A silent fallback would write a one-record transcript from a
-    /// 31-case corpus and exit 0 — a run that measured almost nothing, reported as success.</para>
+    /// <para>The <c>--list-only</c> stdout is diffed BYTE-FOR-BYTE against the Swift twin's, so it
+    /// is written with explicit <c>\n</c> through <see cref="Console.Out"/>:
+    /// <c>Console.WriteLine</c> would emit CRLF on Windows and the two legs would differ on line
+    /// endings alone.</para>
     /// </remarks>
-    private static int RunCorpus(string vectorsDir, bool listOnly)
+    private static int RunCorpus(string vectorsDir, bool listOnly, string outPath)
     {
-        if (!listOnly)
-        {
-            Console.Error.WriteLine("parity-transcript: full-corpus emission arrives with Phase 2");
-            return 3;
-        }
-
         IReadOnlyList<LoadedCase> cases;
         try
         {
@@ -112,14 +151,57 @@ internal static class ParityTranscriptCommand
             return 3;
         }
 
-        var sb = new System.Text.StringBuilder();
-        sb.Append("caseCount=")
-          .Append(cases.Count.ToString(System.Globalization.CultureInfo.InvariantCulture))
-          .Append('\n');
-        foreach (var c in cases) sb.Append(c.VectorId).Append('\n');
-        Console.Out.Write(sb.ToString());
-        Console.Out.Flush();
-        return 0;
+        if (listOnly)
+        {
+            var sb = new StringBuilder();
+            sb.Append("caseCount=")
+              .Append(cases.Count.ToString(CultureInfo.InvariantCulture))
+              .Append('\n');
+            foreach (var c in cases) sb.Append(c.VectorId).Append('\n');
+            Console.Out.Write(sb.ToString());
+            Console.Out.Flush();
+            return 0;
+        }
+
+        var evaluated = 0;
+        var records = new JsonArray();
+        foreach (var c in cases)
+        {
+            JsonObject record;
+            try
+            {
+                record = Record(c.Inputs, c.VectorId, c.PinnedNow);
+            }
+            catch (Exception ex)
+            {
+                // A case the engine cannot conclude is named and NOT counted, so the guard below
+                // refuses the whole transcript. Swift traps here instead; a named refusal carries
+                // the same "no partial success" meaning and tells CI which case did it.
+                Console.Error.WriteLine(
+                    $"parity-transcript: case {c.CaseFile}: the engine could not conclude it — {ex.Message}");
+                continue;
+            }
+            records.Add(record);
+            evaluated++;
+        }
+
+        if (evaluated != cases.Count || evaluated == 0)
+        {
+            Console.Error.WriteLine(
+                $"parity-transcript: evaluated {evaluated.ToString(CultureInfo.InvariantCulture)} of " +
+                $"{cases.Count.ToString(CultureInfo.InvariantCulture)} cases — " +
+                "refusing to write a transcript that does not cover its corpus");
+            return 3;
+        }
+
+        var envelope = new JsonObject
+        {
+            ["schemaVersion"] = 1,
+            ["caseCount"] = cases.Count,
+            ["evaluated"] = evaluated,
+            ["records"] = records,
+        };
+        return Write(envelope, outPath);
     }
 
     private static string MapState(DeterminativeState? state) => state switch

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 using Syxx.Kit;
 using Xunit;
 
@@ -476,5 +478,265 @@ public class ParityVectorLoaderTests
         var dir = Path.GetDirectoryName(thisFile)
                   ?? throw new InvalidOperationException("Cannot resolve source directory.");
         return Path.GetFullPath(Path.Combine(dir, "..", "..", ".."));
+    }
+}
+
+/// <summary>
+/// The corpus emitter (track cross-platform-parity_20260805, Task 2.1) — the transcript envelope,
+/// its <c>evaluated</c> counter, and the shared record builder.
+/// </summary>
+/// <remarks>
+/// <para>These tests SPAWN THE REAL CLI. That is forced rather than chosen:
+/// <c>ParityTranscriptCommand</c> is <c>internal</c> to the <c>Syxx</c> executable and
+/// <c>Syxx.Tests.csproj</c> references that project with <c>ReferenceOutputAssembly="false"</c>, so
+/// its types are unreachable in-process. Same idiom, and the same reference, as
+/// <see cref="WitnessVerifyExitCodeTests"/>.</para>
+///
+/// <para>It also happens to be the right level: the guarantees under test are about a written file
+/// and an exit code, and "refused to write" is not observable from a function return.</para>
+/// </remarks>
+public sealed class ParityVectorTranscriptEmitterTests : IDisposable
+{
+    private readonly string _dir;
+
+    public ParityVectorTranscriptEmitterTests()
+    {
+        _dir = Path.Combine(Path.GetTempPath(), "syxx-transcript-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(_dir);
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_dir, recursive: true); }
+        catch (IOException) { /* a leaked temp dir must never fail a test */ }
+    }
+
+    private string Corpus(params (string File, string VectorId, string SectionInputs)[] cases)
+    {
+        var dir = Path.Combine(_dir, "corpus-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        foreach (var (file, id, inputs) in cases)
+        {
+            File.WriteAllText(Path.Combine(dir, file), $$"""
+                {
+                  "schemaVersion": 1,
+                  "vectorId": "{{id}}",
+                  "pinnedUnixSeconds": 1752268477,
+                  "sectionInputs": {{inputs}}
+                }
+                """);
+        }
+        return dir;
+    }
+
+    // MARK: - The envelope
+
+    [Fact]
+    public void EmitsOneRecordPerCaseInCaseOrder()
+    {
+        var corpus = Corpus(
+            ("002_populated.json", "populated", """{"dnssec": "unsigned"}"""),
+            ("001_empty.json", "empty", "{}"),
+            ("003_ecs.json", "ecs", """{"ecs": {"status": "forwarded", "scopePrefixLength": 24, "detail": "scope /24"}}"""));
+        var outPath = Path.Combine(_dir, "transcript.json");
+
+        var run = RunSyxx("parity-transcript", $"--vectors={corpus}", $"--out={outPath}");
+        Assert.True(run.Code == 0, $"expected exit 0, got {run.Code}.\n{run.Output}");
+
+        var root = JsonNode.Parse(File.ReadAllText(outPath))!.AsObject();
+        Assert.Equal(1, (int)root["schemaVersion"]!);
+        Assert.Equal(3, (int)root["caseCount"]!);
+        Assert.Equal(3, (int)root["evaluated"]!);
+
+        var records = root["records"]!.AsArray();
+        Assert.Equal(3, records.Count);
+        Assert.Equal(["empty", "populated", "ecs"],
+                     records.Select(r => (string)r!.AsObject()["vectorId"]!));
+
+        // Envelope key order is part of the contract with the Swift twin's reader.
+        Assert.Equal(["schemaVersion", "caseCount", "evaluated", "records"],
+                     root.Select(kv => kv.Key));
+    }
+
+    /// <summary>
+    /// `evaluated` must equal the number of case FILES on disk, not merely the length of whatever
+    /// the emitter chose to write. Deriving it from the records array would make the two agree by
+    /// construction — which is how a harness comes to report full coverage of a corpus it partly
+    /// skipped, the defect this envelope exists to close.
+    /// </summary>
+    [Fact]
+    public void EvaluatedEqualsTheNumberOfCaseFilesOnDisk()
+    {
+        var corpus = Corpus(
+            ("001_a.json", "a", "{}"),
+            ("002_b.json", "b", "{}"),
+            ("003_c.json", "c", "{}"),
+            ("004_d.json", "d", "{}"));
+        var outPath = Path.Combine(_dir, "t.json");
+
+        var run = RunSyxx("parity-transcript", $"--vectors={corpus}", $"--out={outPath}");
+        Assert.True(run.Code == 0, $"expected exit 0, got {run.Code}.\n{run.Output}");
+
+        var onDisk = Directory.GetFiles(corpus, "*.json").Length;
+        var root = JsonNode.Parse(File.ReadAllText(outPath))!.AsObject();
+
+        Assert.Equal(4, onDisk);
+        Assert.Equal(onDisk, (int)root["caseCount"]!);
+        Assert.Equal(onDisk, (int)root["evaluated"]!);
+        Assert.Equal(onDisk, root["records"]!.AsArray().Count);
+    }
+
+    // MARK: - The engine actually sees the inputs
+
+    /// <summary>
+    /// The emitter's whole purpose: a populated case must produce a DIFFERENT record from the empty
+    /// one. If the loader parsed a case and then handed the engine an empty `SectionInputs`, every
+    /// record in an 11-case transcript would be identical, the cross-platform diff would be clean,
+    /// and a corpus that exercised nothing would render as coverage.
+    /// </summary>
+    [Fact]
+    public void PopulatedCaseProducesADifferentRecordThanTheEmptyCase()
+    {
+        var corpus = Corpus(
+            ("001_empty-section-inputs.json", "empty-section-inputs", "{}"),
+            ("002_dnssec.json", "dnssec", """{"dnssec": "unsigned"}"""));
+        var outPath = Path.Combine(_dir, "t.json");
+
+        var run = RunSyxx("parity-transcript", $"--vectors={corpus}", $"--out={outPath}");
+        Assert.True(run.Code == 0, $"expected exit 0, got {run.Code}.\n{run.Output}");
+
+        var records = JsonNode.Parse(File.ReadAllText(outPath))!.AsObject()["records"]!.AsArray();
+        var empty = records[0]!.AsObject();
+        var populated = records[1]!.AsObject();
+
+        Assert.Equal(6, (int)empty["evidenceCompleteness"]!["untestedSections"]!);
+        Assert.Equal("untested", (string)empty["determinationState"]!);
+
+        // Prophet ran, so one fewer section is untested and the run no longer reads as never-run.
+        Assert.Equal(5, (int)populated["evidenceCompleteness"]!["untestedSections"]!);
+        Assert.NotEqual((string)empty["determinationState"]!, (string)populated["determinationState"]!);
+    }
+
+    // MARK: - No partial success
+
+    [Fact]
+    public void MalformedCaseRefusesTheWholeTranscript()
+    {
+        var corpus = Corpus(
+            ("001_good.json", "good", "{}"),
+            ("002_bad.json", "bad", """{"resolverSubstituted": true}"""));
+        var outPath = Path.Combine(_dir, "t.json");
+
+        var run = RunSyxx("parity-transcript", $"--vectors={corpus}", $"--out={outPath}");
+
+        Assert.Equal(3, run.Code);
+        Assert.Contains("002_bad.json", run.Output, StringComparison.Ordinal);
+        Assert.False(File.Exists(outPath), "a refused corpus must leave no transcript behind");
+    }
+
+    [Fact]
+    public void EmptyCorpusRefusesToWrite()
+    {
+        var corpus = Path.Combine(_dir, "empty-corpus");
+        Directory.CreateDirectory(corpus);
+        var outPath = Path.Combine(_dir, "t.json");
+
+        var run = RunSyxx("parity-transcript", $"--vectors={corpus}", $"--out={outPath}");
+
+        Assert.Equal(3, run.Code);
+        Assert.False(File.Exists(outPath), "a zero-case corpus must not produce a transcript");
+    }
+
+    // MARK: - The shared builder
+
+    /// <summary>
+    /// The refactor's actual invariant: both paths build records through ONE builder, so a record
+    /// emitted alone and a record emitted inside the envelope have the same members in the same
+    /// order. A second copy of the builder would drift here first, and the cross-platform diff would
+    /// blame the engines for it.
+    /// </summary>
+    [Fact]
+    public void SingleVectorAndCorpusRecordsShareOneShape()
+    {
+        var singleOut = Path.Combine(_dir, "single.json");
+        var single = RunSyxx("parity-transcript", $"--out={singleOut}");
+        Assert.True(single.Code == 0, $"expected exit 0, got {single.Code}.\n{single.Output}");
+
+        var corpus = Corpus(("001_empty-section-inputs.json", "empty-section-inputs", "{}"));
+        var corpusOut = Path.Combine(_dir, "corpus.json");
+        var run = RunSyxx("parity-transcript", $"--vectors={corpus}", $"--out={corpusOut}");
+        Assert.True(run.Code == 0, $"expected exit 0, got {run.Code}.\n{run.Output}");
+
+        var singleRoot = JsonNode.Parse(File.ReadAllText(singleOut))!.AsObject();
+        var corpusRecord = JsonNode.Parse(File.ReadAllText(corpusOut))!
+            .AsObject()["records"]!.AsArray()[0]!.AsObject();
+
+        Assert.Equal(singleRoot.Select(kv => kv.Key), corpusRecord.Select(kv => kv.Key));
+
+        // Same inputs and the same clock, so the two records are identical value-for-value too.
+        Assert.Equal(singleRoot.ToJsonString(), corpusRecord.ToJsonString());
+    }
+
+    /// <summary>Every transcript ends with exactly one newline, on both paths.</summary>
+    [Fact]
+    public void TranscriptsEndWithASingleTrailingNewline()
+    {
+        var singleOut = Path.Combine(_dir, "single.json");
+        Assert.Equal(0, RunSyxx("parity-transcript", $"--out={singleOut}").Code);
+
+        var corpus = Corpus(("001_a.json", "a", "{}"));
+        var corpusOut = Path.Combine(_dir, "corpus.json");
+        Assert.Equal(0, RunSyxx("parity-transcript", $"--vectors={corpus}", $"--out={corpusOut}").Code);
+
+        foreach (var path in new[] { singleOut, corpusOut })
+        {
+            var text = File.ReadAllText(path);
+            Assert.EndsWith("}\n", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("\n\n", text[^2..], StringComparison.Ordinal);
+        }
+    }
+
+    // MARK: - Process plumbing
+
+    private readonly record struct Run(int Code, string Output);
+
+    private static Run RunSyxx(params string[] args)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.ArgumentList.Add(CliAssemblyPath());
+        foreach (var a in args) psi.ArgumentList.Add(a);
+
+        using var p = Process.Start(psi)
+            ?? throw new InvalidOperationException("could not start the Syxx CLI");
+        string stdout = p.StandardOutput.ReadToEnd();
+        string stderr = p.StandardError.ReadToEnd();
+        p.WaitForExit();
+        return new Run(p.ExitCode, stdout + stderr);
+    }
+
+    /// <summary>
+    /// Locate the CLI built alongside this test assembly, exactly as
+    /// <see cref="WitnessVerifyExitCodeTests"/> does. Throws rather than skipping when it is
+    /// missing: a silently-skipped emitter test is indistinguishable from a passing one.
+    /// </summary>
+    private static string CliAssemblyPath()
+    {
+        var tfmDir = new DirectoryInfo(AppContext.BaseDirectory);
+        string tfm = tfmDir.Name;
+        string config = tfmDir.Parent!.Name;
+        var solutionDir = tfmDir.Parent!.Parent!.Parent!.Parent!;   // bin -> Syxx.Tests -> dotNET
+        string candidate = Path.Combine(solutionDir.FullName, "Syxx", "bin", config, tfm, "Syxx.dll");
+        if (File.Exists(candidate)) return candidate;
+
+        throw new FileNotFoundException(
+            $"the Syxx CLI was not found at {candidate}. Build it with " +
+            "`dotnet build Syxx/Syxx.csproj` first. Failing rather than skipping on purpose.",
+            candidate);
     }
 }

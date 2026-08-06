@@ -72,26 +72,34 @@ depends on it.
 
 ### Tasks
 
-- [ ] Task 2.1: C# — iterate vectors, emit one canonical record per case, clock pinned per case
+- [x] Task 2.1: C# — iterate vectors, emit one canonical record per case, clock pinned per case
+      (29 tests; verified-by-real-run by the lead: 11-case envelope caseCount=11 evaluated=11,
+      single-vector path byte-identical to baseline)
 - [x] Task 2.2: Swift — same contract, same field set, same ordering rules
       (verified-by-real-run: 11-case envelope caseCount=11 evaluated=11; single shared record
       builder for both paths so shapes cannot drift; diagnosisIds now ordinal — UTF-8 byte order
       matching C# StringComparer.Ordinal, closing the latent Unicode-canonical divergence, byte-
       identical today because all ids are ASCII)
-- [~] Task 2.3: Add `evaluated == case_count` assertion to both; exit non-zero on mismatch
-      (Swift half landed: counter incremented per concluded case, mismatch/zero refuses to write;
-      C# half rides Task 2.1)
+- [x] Task 2.3: Add `evaluated == case_count` assertion to both; exit non-zero on mismatch
+      (both engines: counter incremented per concluded case, never the input length; empty corpus
+      refused with exit 3 and no output file written on either side, verified-by-real-run)
 - [x] Task 2.4: Keep the single-vector invocation working, so the existing CI job never regresses
       while the corpus job is being built
       (verified-by-real-run twice: --out with no --vectors byte-identical to the pre-track baseline)
-- [ ] Task 2.5: Prove the gate can fail — perturb one vector's expected output and confirm red
+- [x] Task 2.5: Prove the gate can fail — perturb one vector's expected output and confirm red
+      (verified-by-real-run: case 005 `ecs.status` forwarded → notForwarded, Swift side re-emitted,
+      diff against the unperturbed C# transcript exits 1 on
+      `observedEvidenceCount: 0` vs `1`; corpus restored clean)
 
 ### Verification
 
-- [ ] Local full-corpus run: `dotnet run … parity-transcript --vectors=<dir>` and
+- [x] Local full-corpus run: `dotnet run … parity-transcript --vectors=<dir>` and
       `swift run … parity-transcript --vectors=<dir>`, then `diff <(jq --sort-keys …)` — clean, or
       every divergence captured
-- [ ] The proven-red run from 2.5 is recorded, with what was perturbed and what the gate printed
+      (**verified-by-real-run 2026-08-05 — the track's core claim: over all 11 populated cases the
+      two engines' transcripts are IDENTICAL under `jq --sort-keys`.** Raw bytes differ only in
+      indentation, which is exactly what CI's jq normalization absorbs)
+- [x] The proven-red run from 2.5 is recorded, with what was perturbed and what the gate printed
 
 ---
 

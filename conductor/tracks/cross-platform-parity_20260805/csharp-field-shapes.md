@@ -13,7 +13,7 @@ engine, and that is a finding rather than a formatting difference.
 | Notation | Meaning |
 |---|---|
 | **req** | Member must be present and non-null. Refusal names the member and its path |
-| **opt** | Member may be omitted (omitted → `null`). Present-but-`null` is also a refusal |
+| **opt** | Member may be omitted (omitted → `null`). An explicit JSON `null` is treated as absent, matching Swift's `decodeIfPresent`. A `null` where a member is **req** is a refusal on both sides |
 | **def `x`** | Member may be omitted and defaults to `x` — used only where the Swift decoder defaults |
 | **unrep** | Accepted, type-checked, then carried by nothing (see [Unrepresented members](#unrepresented-members)) |
 | **refused** | Present → rejection by name |
@@ -408,8 +408,9 @@ authored case; filed so it is not discovered by a red CI job later.
 
 ## Contract ambiguities encountered (not resolved here)
 
-1. **The spec says "no nesting beyond one level"** (docs/parity-vector-v1-spec.md:14), but 26 of the
-   32 fields are objects whose own members are objects or arrays of objects — `network.gateway` and
+1. **The spec says "no nesting beyond one level"** (docs/parity-vector-v1-spec.md:14), but 28 of the
+   32 fields take an object or an array of objects (only `dnssec`, `targetDomain`, `targetQueryType`
+   and `cageAttributionRate` are scalars), and several nest further — `network.gateway` and
    `comparison.publicResolverOutcomes.<name>.records[]` are three and five levels deep. Both loaders
    nest freely. The sentence describes the ENVELOPE, not `sectionInputs`; worth amending so a later
    reader does not take it as a constraint that was violated.
@@ -443,3 +444,9 @@ member spelling) have no twin to match and are worded to name the case, the key,
 
 Exit code is **3** on every rejection, matching the twin. Rejections go to stderr; the `--list-only`
 stdout is written only on success, so a failed load never emits a partial case list.
+
+`--vectors` without `--list-only` also exits **3** on both engines rather than falling back to the
+single-vector path — a fallback would write a one-record transcript from an 11-case corpus and exit
+0, which is a run that measured almost nothing reported as success. The two messages differ by one
+word (`Full-corpus emission` here, `Full-corpus record emission` on Swift); stderr is not part of the
+byte-diffed surface, so this is recorded rather than reconciled.

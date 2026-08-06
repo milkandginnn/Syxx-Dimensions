@@ -228,6 +228,19 @@ Swift-vs-C# engine parity. Full evidence in
 | F-11 | `open` | The `--json` global flag exists only on macOS (`SyxxConfig.swift:72`) — machine-readable output missing on Windows/Linux. Gate-ledgered |
 | F-12 | `open` | `cage` accepted-flag surface diverges: Swift-only `--interface/-i/--owner-uid/--owner-gid`, Windows-only `--out` alias — user-visible edge of the capture-mechanism split. Gate-ledgered |
 | F-13 | `open` | `firstrun --local/-l` recognised only on macOS ("not yet supported" vs "Unknown option"). Gate-ledgered |
+| F-14 | `open` | C# `witness verify` has no clock seam (`WitnessSigner.cs:232-233`) — wall-clock staleness conclusions, hermetic fixtures impossible on Windows/Linux |
+| F-15 | `open` | `unbound verify-dnscrypt` exists only on macOS (`UnboundCommand.cs:21-28` has no case) |
+| F-16 | `open` | `witness` trust anchors resolve from different sources per platform — same snapshot can be `valid` on one and `untrustedSigner` on the other |
+| F-17 | `open` | `mirror` with no detectable resolver: Swift inconclusive, C# silently queries `127.0.0.1` and concludes (`MirrorCommand.cs:29-36`) |
+| F-18 | `open` | Ten C# commands never set an exit code; documented 0/1/2/3 contract honored on one platform (captive-portal detected: 1 on macOS, 2 on Windows) |
+| F-19 | `open` | C# `cage` deletes the raw capture even when the queries-JSON export failed (`CageCommand.cs:292-319`) — evidence loss |
+| F-20 | `open` | C# `cage` omits the transport-coverage disclosure and capture counters — empty capture reads as "no DNS activity" |
+| F-21 | `open` | `sentinel`: corrupt-baseline quarantine, JSONL change log, tri-state display, save-failure surfacing — all Swift-only |
+| F-22 | `open` | C# `lan` states absent-from-ARP resolvers are "off-LAN" — unsound; Swift hedges and persists the snapshot |
+| F-23 | `open` | C# `leak` collector path hardcodes "1 resolver observed" and drops signature state — fabricated value rendered as measured |
+| F-24 | `open` | `witness --gen-keypair` presence probe fails open on macOS (`fileExists`); C# refuses on Undetermined even with `--force` |
+| F-25 | `open` | `route` timeout 20s vs 1s and different target validation |
+| F-26 | `open` | `firstrun` license state not threaded on Windows; CONCLUSIONS/RESULTS banner and suppressed-line format differ |
 | F-08 | `open` | `-v` means verbose on macOS and version on Windows/Linux. B240 and E088 are both documented and contradict each other. Owner decision — it changes a shipped CLI flag |
 
 **Not covered by this track so far:** the six matrix tests failing before this work began (four in

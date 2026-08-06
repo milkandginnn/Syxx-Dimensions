@@ -442,3 +442,105 @@ nothing tells the user what that is.
 
 Same exit code, different contract: macOS reserves the flag and says so; Windows denies it exists.
 The messages differ, so output capture diverges even though the exit codes agree.
+
+---
+
+## F-14..F-26 · Effect-surface divergences from the Task 4.1 triage
+
+Filed 2026-08-05 from [command-triage.md](./command-triage.md), which carries the full file:line
+evidence per item; each entry below is the finding of record with its own ledger row. All are
+**State: `open`**, found by Task 4.1, severity as marked.
+
+### F-14 · `witness verify` has no clock seam on C# — High
+
+Swift `verifySnapshotDetailed(…, now: Date = Date())` (`WitnessSigner.swift:246-251`); the C#
+signature has no `now` (`WitnessSigner.cs:232-233`), so expired/stale/future-dated conclusions read
+the wall clock with no injection point. Blocks hermetic `witness verify` fixtures on Windows/Linux
+(Tasks 4.2/4.3) — a code change, not a test change. (triage difference 1)
+
+### F-15 · `unbound verify-dnscrypt` exists only on macOS — Medium
+
+Dispatched and implemented on Swift (`SyxxUnbound.swift:24,39-73`); no case in the C# switch
+(`UnboundCommand.cs:21-28`). Windows/Linux have no DNSCrypt-chain verification at all. Already
+gate-ledgered as D3; this row makes it a finding of record. (triage difference 2)
+
+### F-16 · `witness` trust-anchor sources differ per platform — High
+
+Swift resolves `CollectorPinning.configuredTrustedSigningKeys()` at the call sites
+(`SyxxWitness.swift:304,344,422`); C# uses `WitnessPinning.ConfiguredTrustedWitnessKeys()` via
+verifier auto-load (`WitnessCommand.cs:735,480,515,611`). Different environment variables anchor
+each platform, and macOS conflates the collector trust set with the witness signing set (documented
+at `SyxxWitness.swift:501-507`). The same snapshot can verify `valid` on one platform and
+`untrustedSigner` on the other. (triage differences 3 + 14)
+
+### F-17 · `mirror` with no detectable system resolver: Swift refuses, C# queries 127.0.0.1 — High
+
+`SyxxMirror.swift:28-32` returns inconclusive; `MirrorCommand.cs:29-36` silently substitutes
+`127.0.0.1` and proceeds — emitting a query Swift never sends and reaching a conclusion Swift
+deliberately withholds on identical evidence. Swift's system read also precedes `--local` parsing
+(`:27` vs `:35`), so `--local` cannot rescue such a host on macOS. (triage difference 4)
+
+### F-18 · Exit codes are largely absent on the C# side — High
+
+Only mirror/leak/warp/witness/firstrun set `Environment.ExitCode`; ten commands inherit the seeded
+2 (`Program.cs:25`). Concrete inversions: `key` with a DETECTED captive portal exits 1 on macOS
+(`SyxxKey.swift:60-62`) and 2 on Windows; `forensics --classify` on a flagged domain exits 1 vs 2
+(`SyxxForensics.swift:57`). The documented 0/1/2/3 contract (`Program.cs:19-24`) is declared on
+both platforms and honored on one. (triage difference 5; includes the filter exit-code note)
+
+### F-19 · `cage` deletes the raw capture even when the evidence export failed — C# only — High
+
+Swift refuses to delete the raw capture when the queries-JSON export failed, retaining the only
+surviving evidence artifact (`SyxxCage.swift:402-407`); C# deletes whenever `--keep` was absent,
+regardless (`CageCommand.cs:292-319`). Evidence-loss divergence. (triage difference 7)
+
+### F-20 · `cage` reporting honesty gaps on C#: no transport disclosure, no capture counters — Medium
+
+Swift prints that only cleartext UDP/TCP:53 is visible and DoH/DoT/DoQ are structurally invisible
+(`SyxxCage.swift:336-338`) and threads six capture counters into the report (`:343-358`); C# does
+neither (`CageCommand.cs:245-251`), so an empty Windows capture reads as "no DNS activity
+occurred". (triage differences 8 + 9)
+
+### F-21 · `sentinel` Swift-only behaviors: corrupt-baseline quarantine, change log, tri-state, save-failure surfacing — Medium
+
+Swift quarantines a corrupt baseline and re-establishes (`SyxxSentinel.swift:89-94`); C# leaves it
+and returns (`SentinelCommand.cs:95-100`). Swift keeps an append-only JSONL change log
+(`:121,139-159`); no C# equivalent. Swift prints tri-state `dnsEncrypted` (`:27`) vs C# boolean
+(`:51`). Swift surfaces persistence failures (`:36,72,85`); C# ignores every Save result
+(`:56,89,103,123`). (triage difference 10)
+
+### F-22 · `lan` on C# states an unsound categorical claim; Swift hedges — Medium
+
+C# prints that resolvers absent from the ARP cache "are reached through the gateway (off-LAN)"
+(`LanCommand.cs:106`) — a resolver merely not contacted recently is also absent. Swift hedges
+(`SyxxLan.swift:76-78`), prints the ARP-unauthenticated caveat (`:65-66`), and persists the
+snapshot for future diffs (`:83`, no C# equivalent). (triage difference 11)
+
+### F-23 · `leak` collector path on C# hardcodes "1 resolver observed" and drops signature state — High
+
+`LeakCommand.cs:132` prints a fixed count on NotDetected — a fabricated value rendered as measured,
+the exact class product rule 4 forbids. C# also prints no signature-validity state (`:147-151`) and
+collapses `.invalid` into the default branch (`:135-138`) where Swift maps it to inconclusive
+(`SyxxLeak.swift:101-103`; full state rendering `:88-135`). (triage difference 12)
+
+### F-24 · `witness --gen-keypair` presence probe fails open on macOS — Medium
+
+C# distinguishes Present/Absent/Undetermined by opening the file and refuses on Undetermined even
+with `--force` (`WitnessCommand.cs:124-142,796-819`); Swift uses `fileExists` (`SyxxWitness.swift:72`)
+— the mode the C# comment itself names "M-01 on macOS". macOS can mint over a present-but-unreadable
+key, orphaning previously sealed snapshots. (triage difference 13)
+
+### F-25 · `route` timeout and target validation differ — Low
+
+Swift `timeout: 20` (`SyxxRoute.swift:25`) vs C# `waitMs: 1000` (`RouteCommand.cs:33`); different
+truncation on slow paths, and C# labels the failure reason where Swift prints one generic line.
+Character-allowlist vs `TryParse/CheckHostName` validation accept different target strings
+(`:40-41` vs `:67`). (triage difference 15)
+
+### F-26 · `firstrun` does not thread license state on Windows; result banners differ — Medium
+
+Swift computes `isPro` and passes it into the scan (`FirstRunScan.swift:82-86`); C# calls
+`RunAsync(domain, progress)` without it (`FirstRunCommand.cs:75`) — a licensed user gets different
+scan coverage per platform. Banner "CONCLUSIONS" vs "RESULTS" (`:91` vs `:87`); suppressed-signals
+line format differs (`:146` vs `:143`). The nslook DNSSEC-rendering note from the triage rides
+here as a transcript-parity risk. (triage difference 16 + smaller notes)

@@ -212,10 +212,14 @@ The same defect this track exists to prevent, one layer down.
 
 ### Tasks
 
-- [ ] Task 7.1: File each divergence as its own track with `file:line` evidence and a reproduction
+- [~] Task 7.1: File each divergence as its own track with `file:line` evidence and a reproduction
+      (F-10..F-26 filed as findings-of-record with file:line and ledger rows — 17 divergences.
+      Deliberate deviation from "its own track" per divergence: seventeen new conductor tracks
+      would bury the owner; the findings + ledger rows carry the evidence and each names its
+      reproduction. Spinning any into a track is a one-step owner action when prioritized)
 - [~] Task 7.2: Add a `Linux/PARITY-LEDGER.md` row per finding, carrying one of the five states
-      (F-10..F-13 rows added with the gate-ledger cross-reference; rows for the 16 triage
-      effect-surface candidates and the D1/D2/D4/D5 capture divergences still to file)
+      (F-10..F-26 rows in place — 17 findings. Remaining: rows for the D1/D2/D4/D5 capture
+      divergences once they get F-ids or are folded into existing findings)
 - [ ] Task 7.3: Where a finding implies a contract change, write a dated amendment **proposal**
       against `docs/warp-manifest-v1-spec.md`. Do not edit the contract
 - [ ] Task 7.4: Record what this track did *not* cover, so the next reader is not misled by its green

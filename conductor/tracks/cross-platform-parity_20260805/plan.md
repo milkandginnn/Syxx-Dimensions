@@ -123,12 +123,18 @@ emitted strings, not symbol names, so renames stay cheap and contract drift stay
 
 ### Tasks
 
-- [ ] Task 4.1: Triage all 15 module commands into deterministic-offline, deterministic-with-fixture,
+- [x] Task 4.1: Triage all 15 module commands into deterministic-offline, deterministic-with-fixture,
       and inherently-live
+      (command-triage.md — per-sub-action, both platforms, file:line throughout; offline 9 /
+      fixture 7 / live 21 sub-actions; 16 cross-platform effect-surface finding candidates for
+      Phase 7, incl. the C# witness-verifier missing clock seam that blocks hermetic fixtures on
+      Windows)
 - [ ] Task 4.2: Author behavioral vectors for the first two groups
 - [ ] Task 4.3: Run both builds against them; capture one canonical record per case
-- [ ] Task 4.4: Write down the inherently-live set as explicitly uncovered, with the reason each
+- [~] Task 4.4: Write down the inherently-live set as explicitly uncovered, with the reason each
       cannot be made deterministic. This list is a deliverable, not an omission
+      (13-entry draft with reasons sits in command-triage.md; publication "where a reader of the
+      gate's output will see it" pends the Phase 4/6 gate wiring)
 
 ### Verification
 

@@ -241,7 +241,11 @@ Swift-vs-C# engine parity. Full evidence in
 | F-24 | `open` | `witness --gen-keypair` presence probe fails open on macOS (`fileExists`); C# refuses on Undetermined even with `--force` |
 | F-25 | `open` | `route` timeout 20s vs 1s and different target validation |
 | F-26 | `open` | `firstrun` license state not threaded on Windows; CONCLUSIONS/RESULTS banner and suppressed-line format differ |
+
 | F-08 | `open` | `-v` means verbose on macOS and version on Windows/Linux. B240 and E088 are both documented and contradict each other. Owner decision — it changes a shipped CLI flag |
+
+What the cross-platform-parity track did NOT cover — the boundary of its green — is recorded in
+`conductor/tracks/cross-platform-parity_20260805/not-covered.md`.
 
 **Not covered by this track so far:** the six matrix tests failing before this work began (four in
 `MatrixDeterminativeEngineTests`, one each in `MatrixAllNegativeParityTests` and

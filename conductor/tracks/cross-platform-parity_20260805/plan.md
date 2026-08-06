@@ -227,15 +227,25 @@ The same defect this track exists to prevent, one layer down.
 - [~] Task 7.2: Add a `Linux/PARITY-LEDGER.md` row per finding, carrying one of the five states
       (F-10..F-26 rows in place — 17 findings. Remaining: rows for the D1/D2/D4/D5 capture
       divergences once they get F-ids or are folded into existing findings)
-- [ ] Task 7.3: Where a finding implies a contract change, write a dated amendment **proposal**
+- [x] Task 7.3: Where a finding implies a contract change, write a dated amendment **proposal**
       against `docs/warp-manifest-v1-spec.md`. Do not edit the contract
-- [ ] Task 7.4: Record what this track did *not* cover, so the next reader is not misled by its green
+      (no proposal needed and none written: none of F-01..F-26 implies a warp-manifest contract
+      change — they are engine-input, CLI-surface, and effect-surface divergences. The contract is
+      verified untouched. The parity-vector spec's Amendment A1 is a track-owned document, not
+      this contract)
+- [x] Task 7.4: Record what this track did *not* cover, so the next reader is not misled by its green
+      (not-covered.md — scope exclusions, the inherently-live surfaces, the 32-of-34 field scope,
+      the unrun runtime matrix, the un-swept C# test tree, the two flagged Swift coverage gaps)
 
 ### Verification
 
-- [ ] Every finding has a ledger row and a track
-- [ ] `git diff docs/warp-manifest-v1-spec.md` is empty
-- [ ] The not-covered list exists and is reachable from the ledger
+- [~] Every finding has a ledger row and a track
+      (all 26 have ledger rows and findings-of-record; the per-divergence-track deviation is
+      recorded under Task 7.1)
+- [x] `git diff docs/warp-manifest-v1-spec.md` is empty
+      (verified: no diff, and no commit in this track touches it)
+- [x] The not-covered list exists and is reachable from the ledger
+      (pointer at the end of the parity-ledger findings table)
 
 ---
 

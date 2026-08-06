@@ -35,9 +35,12 @@ depends on it.
       (sited in SyxxKit deliberately — ExfilAssessment has no public init outside the module and no
       SyxxCLITests target exists; 21 tests; verified-by-real-run incl. byte-identical single-vector
       regression. Outstanding: swift-field-shapes.md from the seat)
-- [~] Task 1.4: C# loader in `Syxx/Commands`
-      (seat died on the usage limit with nothing landed; resumed with the Swift twin's exact
-      list-only output contract)
+- [x] Task 1.4: C# loader in `Syxx/Commands`
+      (sited in Syxx.Kit mirroring the Swift twin — Syxx.Tests cannot reference the exe's types;
+      22 tests; hand-walked JsonNode decoding, never reflection binding, dodging the
+      IncludeFields=false silent-empty trap. Verified-by-real-run by the lead: 22/22, C#
+      single-vector path byte-identical to baseline. Outstanding from the seat:
+      csharp-field-shapes.md)
 - [x] Task 1.5: Decide and document the behavior for a malformed vector — it must fail loudly, never
       be skipped
       (decided + documented in docs/parity-vector-v1-spec.md "Rejection behavior" — five rules, no
@@ -55,9 +58,13 @@ depends on it.
 
 ### Verification
 
-- [ ] Both loaders read the same directory and report identical case counts and identical sorted
+- [x] Both loaders read the same directory and report identical case counts and identical sorted
       case ID lists
-- [ ] A deliberately malformed vector causes both to exit non-zero with the case named
+      (verified-by-real-run 2026-08-05: --list-only over corpus/parity-vectors is BYTE-identical
+      across the two builds — caseCount=11 + the same 11 ids in the same order)
+- [x] A deliberately malformed vector causes both to exit non-zero with the case named
+      (verified-by-real-run: injected `resolverSubstituted` into case 002 → both exit 3 with
+      byte-identical error text naming case and key; corpus restored clean)
 
 ---
 

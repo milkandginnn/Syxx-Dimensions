@@ -95,10 +95,16 @@ emitted strings, not symbol names, so renames stay cheap and contract drift stay
 
 ### Tasks
 
-- [ ] Task 3.1: Extract the dispatch surface from both CLIs — command names, long flags, short
+- [x] Task 3.1: Extract the dispatch surface from both CLIs — command names, long flags, short
       aliases, and exit codes
-- [ ] Task 3.2: Gate asserting the two surfaces are identical; fails on any asymmetry, and fails
+      (scripts/cli-surface-gate.py + cli-surface-extraction.md: 17 commands, three levels —
+      top-level, global-flag handler, per-command accepted/advertised/actions — with dead-arm
+      detection through the lowercasing bind)
+- [x] Task 3.2: Gate asserting the two surfaces are identical; fails on any asymmetry, and fails
       on an empty extraction rather than passing vacuously
+      (exit 0 on the tree with 18 asymmetries ledgered by finding id — F-08/D3/D5 + newly filed
+      F-10..F-13; stale-exception hygiene fails the gate when an exception outlives its divergence;
+      red-proof and both anti-vacuity refusals verified-by-real-run)
 - [x] Task 3.3: File the known `-h` / `-v` asymmetry with `file:line` evidence. **Do not fix it** —
       remediation is a separate track
       (filed as F-08 with both platforms' file:line; 2026-08-05 addendum adds the executed proof
@@ -200,7 +206,9 @@ The same defect this track exists to prevent, one layer down.
 ### Tasks
 
 - [ ] Task 7.1: File each divergence as its own track with `file:line` evidence and a reproduction
-- [ ] Task 7.2: Add a `Linux/PARITY-LEDGER.md` row per finding, carrying one of the five states
+- [~] Task 7.2: Add a `Linux/PARITY-LEDGER.md` row per finding, carrying one of the five states
+      (F-10..F-13 rows added with the gate-ledger cross-reference; rows for the 16 triage
+      effect-surface candidates and the D1/D2/D4/D5 capture divergences still to file)
 - [ ] Task 7.3: Where a finding implies a contract change, write a dated amendment **proposal**
       against `docs/warp-manifest-v1-spec.md`. Do not edit the contract
 - [ ] Task 7.4: Record what this track did *not* cover, so the next reader is not misled by its green

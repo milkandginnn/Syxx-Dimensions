@@ -366,3 +366,79 @@ wiring, all twinned against the Swift lines.
 - **My builder edit was initially incomplete** — it computed the set and never passed it. The C#
   oracle test caught it (emission jumped `knownSections`→`thresholds`). The gate caught a real
   wiring bug before it shipped, which is the argument for the gate.
+
+---
+
+## F-10 · `guided` is a Windows-only top-level command
+
+**State:** `open` · **Found by:** Task 3.2 (CLI surface gate) · **Severity:** Low
+
+### Evidence
+
+| | |
+|---|---|
+| C# | `Windows/dotNET/Syxx/Program.cs:66` — `args.Length == 0 \|\| args[0] == "guided"` enters interactive mode |
+| Swift | interactive mode only on zero args; `syxx guided` falls to `default` and exits 3 "Unknown subcommand" |
+
+### What it means
+
+An invocation that works on Windows/Linux is an operational error on macOS. Anything teaching
+`syxx guided` (docs, scripts, support answers) breaks on one platform.
+
+---
+
+## F-11 · the `--json` global flag exists only on macOS
+
+**State:** `open` · **Found by:** Task 3.2 (CLI surface gate) · **Severity:** High — an output-contract asymmetry
+
+### Evidence
+
+| | |
+|---|---|
+| Swift | `macOS/Sources/SyxxKit/SyxxConfig.swift:72` — global `--json` handled for every subcommand |
+| C# | absent from all of `Windows/dotNET/` (confirmed by grep, independent of the gate) |
+
+### What it means
+
+Machine-readable output exists on one platform only. Automation written against macOS `--json`
+gets human-formatted text (or an unknown-option path) on Windows/Linux — the exact class of
+divergence the CLI-parity acceptance criterion exists to catch.
+
+---
+
+## F-12 · `cage` accepted-flag surface diverges — the capture-mechanism family
+
+**State:** `open` · **Found by:** Task 3.2 (CLI surface gate); mechanism split documented in command-triage.md difference 6 · **Severity:** Medium
+
+### Evidence
+
+| | |
+|---|---|
+| Swift-only | `--interface` / `-i` (`macOS/Sources/SyxxCLI/Commands/SyxxCage.swift:84`), `--owner-uid` (`:95`), `--owner-gid` (`:104`) |
+| Windows-only | `--out` legacy alias (`Windows/dotNET/Syxx/Commands/CageCommand.cs:71`; explained `:55-70` as a D108 alias, no finding id) |
+| Root | libpcap+PKTAP capture on macOS vs raw sockets on Windows (command-triage.md §6) |
+
+### What it means
+
+The flag asymmetry is the user-visible edge of the deeper capture-mechanism split. Interface
+selection and output-ownership control exist on one platform only; the other platform carries an
+undocumented alias. Any cross-platform cage invocation must use the lowest common denominator, and
+nothing tells the user what that is.
+
+---
+
+## F-13 · `firstrun --local` / `-l` accepted only on macOS
+
+**State:** `open` · **Found by:** Task 3.2 (CLI surface gate) · **Severity:** Low
+
+### Evidence
+
+| | |
+|---|---|
+| Swift | `macOS/Sources/SyxxCLI/Synthesis/FirstRunScan.swift:38` — recognised, exits 3 "not yet supported" |
+| C# | unknown option, exits 3 "Unknown option" |
+
+### What it means
+
+Same exit code, different contract: macOS reserves the flag and says so; Windows denies it exists.
+The messages differ, so output capture diverges even though the exit codes agree.

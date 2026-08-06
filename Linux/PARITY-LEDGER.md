@@ -224,6 +224,10 @@ Swift-vs-C# engine parity. Full evidence in
 | F-06 | `open` | F042 was recorded FIXED on a file that never compiled. `docs/DELTAS-fixed.md` corrected 2026-08-05 |
 | F-07 | `verified-by-real-run` | Fixed 2026-08-05 (8.9): vector-evaluation and classification twins on C#, with the evaluated-count assertion |
 | F-09 | `verified-by-real-run` | B156 `mappableIndicators` was Swift-only: C# counted unmappable rules in the coverage denominator, so diagnoses reachable on macOS could be unreachable on Windows/Linux. Ported; discriminating twin tests proven red without the filter. The golden vectors do NOT discriminate on it — gv-3's stored coverage equals the unfiltered ratio and predates B156 |
+| F-10 | `open` | `guided` is a Windows-only top-level command (`Program.cs:66`); macOS exits 3 on it. Gate-ledgered |
+| F-11 | `open` | The `--json` global flag exists only on macOS (`SyxxConfig.swift:72`) — machine-readable output missing on Windows/Linux. Gate-ledgered |
+| F-12 | `open` | `cage` accepted-flag surface diverges: Swift-only `--interface/-i/--owner-uid/--owner-gid`, Windows-only `--out` alias — user-visible edge of the capture-mechanism split. Gate-ledgered |
+| F-13 | `open` | `firstrun --local/-l` recognised only on macOS ("not yet supported" vs "Unknown option"). Gate-ledgered |
 | F-08 | `open` | `-v` means verbose on macOS and version on Windows/Linux. B240 and E088 are both documented and contradict each other. Owner decision — it changes a shipped CLI flag |
 
 **Not covered by this track so far:** the six matrix tests failing before this work began (four in

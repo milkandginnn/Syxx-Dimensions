@@ -278,6 +278,100 @@ LEDGERED_EXCEPTIONS: tuple[Ledgered, ...] = (
             "while this holds — there is no macOS help text to compare against."
         ),
     ),
+    Ledgered(
+        level="top",
+        dimension="command",
+        token="guided",
+        side=WIN,
+        finding="F-10",
+        why=(
+            "`guided` is dispatched as an explicit command token on Windows (Program.cs:66); "
+            "macOS enters guided mode only on zero args, so `syxx guided` exits 3 there. Filed "
+            "2026-08-05; remediation is a shipped-surface change, owner-gated."
+        ),
+    ),
+    Ledgered(
+        level=GLOBAL_LEVEL,
+        dimension="globalflag",
+        token="--json",
+        side=MAC,
+        finding="F-11",
+        why=(
+            "Machine-readable output exists only on macOS (SyxxConfig.swift:72). High-severity "
+            "output-contract asymmetry; adding a C# twin is a feature, not a flag alias, so it is "
+            "filed rather than fixed in this track."
+        ),
+    ),
+    Ledgered(
+        level="cage",
+        dimension="accepted",
+        token="--interface",
+        side=MAC,
+        finding="F-12",
+        why=(
+            "Interface selection exists only where libpcap capture does. User-visible edge of the "
+            "capture-mechanism split (command-triage.md difference 6)."
+        ),
+    ),
+    Ledgered(
+        level="cage",
+        dimension="accepted",
+        token="-i",
+        side=MAC,
+        finding="F-12",
+        why="Short alias of --interface; same capture-mechanism family.",
+    ),
+    Ledgered(
+        level="cage",
+        dimension="accepted",
+        token="--owner-uid",
+        side=MAC,
+        finding="F-12",
+        why=(
+            "Output-ownership control for sudo-created files is a macOS-only concept in cage "
+            "(SyxxCage.swift:95); the raw-socket Windows path never drops privileges this way."
+        ),
+    ),
+    Ledgered(
+        level="cage",
+        dimension="accepted",
+        token="--owner-gid",
+        side=MAC,
+        finding="F-12",
+        why="Companion of --owner-uid (SyxxCage.swift:104); same rationale.",
+    ),
+    Ledgered(
+        level="cage",
+        dimension="accepted",
+        token="--out",
+        side=WIN,
+        finding="F-12",
+        why=(
+            "Windows-only legacy alias for --output (CageCommand.cs:71, D108 note at :55-70). "
+            "Carried in the ledger so the alias cannot silently spread; the D108 comment alone "
+            "carries no finding id."
+        ),
+    ),
+    Ledgered(
+        level="firstrun",
+        dimension="accepted",
+        token="--local",
+        side=MAC,
+        finding="F-13",
+        why=(
+            "macOS reserves the flag and refuses with 'not yet supported' (FirstRunScan.swift:38); "
+            "Windows calls it an unknown option. Same exit code, different contract and different "
+            "message bytes."
+        ),
+    ),
+    Ledgered(
+        level="firstrun",
+        dimension="accepted",
+        token="-l",
+        side=MAC,
+        finding="F-13",
+        why="Short alias of --local; same divergence.",
+    ),
 )
 
 

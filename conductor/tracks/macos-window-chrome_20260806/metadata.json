@@ -1,8 +1,21 @@
 {
   "track_id": "macos-window-chrome_20260806",
   "type": "bug",
-  "status": "new",
+  "status": "in_progress",
   "created_at": "2026-08-06T12:00:00Z",
-  "updated_at": "2026-08-06T12:00:00Z",
-  "description": "Fix the issue with the macOS app opening without traffic lights to manage the window, as well as there being no clickable space that you can use to move the window around the viewport."
+  "updated_at": "2026-08-06T11:15:00Z",
+  "description": "Fix the issue with the macOS app opening without traffic lights to manage the window, as well as there being no clickable space that you can use to move the window around the viewport.",
+  "current_phase": 1,
+  "current_task": "1.5",
+  "phases": {
+    "total": 3,
+    "completed": 1
+  },
+  "tasks": {
+    "total": 10,
+    "completed": 5
+  },
+  "commits": [
+    "bed358c: macOS window chrome: traffic lights visible, window draggable by background"
+  ]
 }

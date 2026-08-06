@@ -28,7 +28,7 @@
     - [x] If the inset calculation is wrong when traffic lights are visible, adjust the `contentInset` calculation to account for the traffic light region
     - [x] Verify the 35pt top origin and 46pt sidebar padding are preserved
 
-- [ ] Task: Conductor - User Manual Verification 'Diagnose and Fix Window Chrome Configuration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Diagnose and Fix Window Chrome Configuration' (Protocol in workflow.md)
 
 ## Phase 2: Verify and Test
 

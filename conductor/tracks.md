@@ -8,4 +8,6 @@
 
 | [x] | [gui-complete-macos_20260805](./tracks/gui-complete-macos_20260805/index.md) | Complete macOS GUI — Mockup-Faithful SwiftUI (31 tasks, 5 phases) | 2026-08-05 | 2026-08-05 |
 
+| [ ] | [macos-window-chrome_20260806](./tracks/macos-window-chrome_20260806/index.md) | macOS Window Chrome: Traffic Lights & Drag Area | 2026-08-06 | 2026-08-06 |
+
 <!-- Tracks registered by /conductor:new-track -->

@@ -66,10 +66,17 @@ depends on it.
 ### Tasks
 
 - [ ] Task 2.1: C# — iterate vectors, emit one canonical record per case, clock pinned per case
-- [ ] Task 2.2: Swift — same contract, same field set, same ordering rules
-- [ ] Task 2.3: Add `evaluated == case_count` assertion to both; exit non-zero on mismatch
-- [ ] Task 2.4: Keep the single-vector invocation working, so the existing CI job never regresses
+- [x] Task 2.2: Swift — same contract, same field set, same ordering rules
+      (verified-by-real-run: 11-case envelope caseCount=11 evaluated=11; single shared record
+      builder for both paths so shapes cannot drift; diagnosisIds now ordinal — UTF-8 byte order
+      matching C# StringComparer.Ordinal, closing the latent Unicode-canonical divergence, byte-
+      identical today because all ids are ASCII)
+- [~] Task 2.3: Add `evaluated == case_count` assertion to both; exit non-zero on mismatch
+      (Swift half landed: counter incremented per concluded case, mismatch/zero refuses to write;
+      C# half rides Task 2.1)
+- [x] Task 2.4: Keep the single-vector invocation working, so the existing CI job never regresses
       while the corpus job is being built
+      (verified-by-real-run twice: --out with no --vectors byte-identical to the pre-track baseline)
 - [ ] Task 2.5: Prove the gate can fail — perturb one vector's expected output and confirm red
 
 ### Verification

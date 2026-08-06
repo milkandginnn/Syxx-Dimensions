@@ -2,31 +2,31 @@
 
 ## Phase 1: Diagnose and Fix Window Chrome Configuration
 
-- [ ] Task: Verify current traffic light visibility in `.ready` state
-    - [ ] Build and launch the macOS app bundle
-    - [ ] Complete onboarding to reach `.ready` state
-    - [ ] Confirm whether traffic lights are present but hidden, or absent
-    - [ ] Run with `SYXX_GEOM_DEBUG=1` and capture baseline geometry values
-    - [ ] Record findings as evidence (screenshot + geom.log output)
+- [x] Task: Verify current traffic light visibility in `.ready` state
+    - [x] Build and launch the macOS app bundle
+    - [x] Complete onboarding to reach `.ready` state
+    - [x] Confirm whether traffic lights are present but hidden, or absent
+    - [x] Run with `SYXX_GEOM_DEBUG=1` and capture baseline geometry values
+    - [x] Record findings as evidence (screenshot + geom.log output)
 
-- [ ] Task: Fix `isMovableByWindowBackground` in `FirstRunWindowConfigurator`
-    - [ ] Change `window.isMovableByWindowBackground = false` (SyxxApp.swift:226) to `true` in the `.ready` case
-    - [ ] This enables the standard macOS drag-by-content behavior for transparent-titlebar windows
-    - [ ] Verify the first-run `.default` case still uses `isMovableByWindowBackground = true` (no change needed)
+- [x] Task: Fix `isMovableByWindowBackground` in `FirstRunWindowConfigurator`
+    - [x] Change `window.isMovableByWindowBackground = false` (SyxxApp.swift:226) to `true` in the `.ready` case
+    - [x] This enables the standard macOS drag-by-content behavior for transparent-titlebar windows
+    - [x] Verify the first-run `.default` case still uses `isMovableByWindowBackground = true` (no change needed)
 
-- [ ] Task: Fix traffic light visibility
-    - [ ] In `WindowChromeConfigurator` (ContentView.swift), add explicit configuration to ensure traffic lights are visible:
+- [x] Task: Fix traffic light visibility
+    - [x] In `WindowChromeConfigurator` (ContentView.swift), add explicit configuration to ensure traffic lights are visible:
         - Keep `titlebarAppearsTransparent = true` and `titleVisibility = .hidden`
         - Ensure `window.toolbar = nil` is still set (removes the opaque toolbar band)
         - Add `window.standardWindowButton(.closeButton)?.isHidden = false` and same for `.miniaturizeButton` and `.zoomButton` to force visibility
         - Alternatively, if the traffic lights are present but occluded by the full-bleed content, adjust the content's safe area inset so the traffic light region (top ~28pt, left ~78pt) is not painted over
-    - [ ] Test both approaches and select the one that preserves the transparent titlebar aesthetic
+    - [x] Test both approaches and select the one that preserves the transparent titlebar aesthetic
 
-- [ ] Task: Prevent PurpleScrollView content drift
-    - [ ] Read PurpleScrollView.swift:139 (the automatic content inset adjustment for the titlebar band)
-    - [ ] Verify that the `automaticallyAdjustsScrollInset` setting accounts for the transparent titlebar
-    - [ ] If the inset calculation is wrong when traffic lights are visible, adjust the `contentInset` calculation to account for the traffic light region
-    - [ ] Verify the 35pt top origin and 46pt sidebar padding are preserved
+- [x] Task: Prevent PurpleScrollView content drift
+    - [x] Read PurpleScrollView.swift:139 (the automatic content inset adjustment for the titlebar band)
+    - [x] Verify that the `automaticallyAdjustsScrollInset` setting accounts for the transparent titlebar
+    - [x] If the inset calculation is wrong when traffic lights are visible, adjust the `contentInset` calculation to account for the traffic light region
+    - [x] Verify the 35pt top origin and 46pt sidebar padding are preserved
 
 - [ ] Task: Conductor - User Manual Verification 'Diagnose and Fix Window Chrome Configuration' (Protocol in workflow.md)
 

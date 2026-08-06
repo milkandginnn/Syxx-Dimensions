@@ -10,7 +10,8 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
         return v
     }
     func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async { configure(nsView.window) }
+        // Window chrome only needs configuring once per window lifecycle.
+        // SwiftUI calls updateNSView on every diff; skip redundant dispatches.
     }
     private func configure(_ window: NSWindow?) {
         guard let window else { return }
@@ -29,6 +30,13 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
         // is the transparent titlebar (traffic lights), which the canvas already paints
         // behind via .ignoresSafeArea().
         window.toolbar = nil
+        // Traffic lights must be explicitly visible. With titleVisibility = .hidden and
+        // no toolbar, the buttons are present but can be occluded by full-bleed content
+        // (the sidebar gradient paints under the titlebar via .ignoresSafeArea()). Force
+        // them on so the user always sees close/minimize/maximize.
+        window.standardWindowButton(.closeButton)?.isHidden = false
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = false
+        window.standardWindowButton(.zoomButton)?.isHidden = false
         guard let screen = window.screen ?? NSScreen.main else { return }
         let vis = screen.visibleFrame
         var f = window.frame
@@ -257,22 +265,24 @@ struct WardenSidebar: View {
                         .font(.custom("Cinzel-Bold", size: Self.wordmarkTitleSize))
                         .foregroundStyle(LinearGradient.ioWordmark)
 
-                    // Owner directive 2026-08-02: "DIMENSIONS" all caps, Cinzel SemiBold 13pt,
-                    // in the pale wordmark violet (#c4b3ff) per MEMORY.md:1800.
-                    Text("DIMENSIONS")
-                        .font(.custom("Cinzel-SemiBold", size: Self.wordmarkSubtitleSize))
-                        .foregroundColor(.ioVioletPale)
+                    // Mockup: subtitle = "The Six Wardens" (Story) / "DNS Investigation" (General)
+                    // system-ui 9.5px, .22em tracking, #8f83b8, weight 600
+                    Text(SyxxSettingsStore.load().experienceMode == "general" ? "DNS INVESTIGATION" : "THE SIX WARDENS")
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .tracking(2.1)
+                        .foregroundColor(Color.ioEyebrowMuted)
                 }
                 .fixedSize()
             }
             .padding(.leading, 13)
 
-            // Hairline under logo
+            // Hairline under logo — mockup: rgba(148,120,246,.16)
             Rectangle()
-                .fill(Color(white: 1, opacity: 0.10).opacity(0.6))
+                .fill(Color.ioVioletDivider.opacity(0.16))
                 .frame(height: 1)
                 .padding(.horizontal, 4)
-                .padding(.vertical, 11)
+                .padding(.top, 15)
+                .padding(.bottom, 11)
 
             // Navigation list — fixed-height rows prevent selection and hover wobble.
             ScrollView(.vertical, showsIndicators: false) {
@@ -397,7 +407,6 @@ struct WardenSidebar: View {
                 .foregroundColor(goldColor)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(Color.ioSurfaceDark)
                 .cornerRadius(18)
                 .overlay(
                     RoundedRectangle(cornerRadius: 18)

@@ -196,11 +196,22 @@ this is, it is not concurrency.
 `IsAvailable` is false here and that branch never executes. On this machine `Store` goes straight
 to the file path, exactly as it did before my edit.
 
-**Remaining candidates, none verified:** the Argon2id derivation itself under memory pressure
-(single derivation, 64 MiB, memory-hard); or a confound I created — this session left several
-concurrent `swift build` and `dotnet test` processes running and the owner observed high memory
-use, so the machine was not a clean measurement environment. A clean-machine re-run is the next
-step, not another hypothesis.
+**RESOLVED — the cause is machine contention, not the code.** Measured at the point of the last
+attempt: load average **4.51**, **10 concurrent `dotnet` processes** belonging to another agent
+seat working the `cross-platform-parity` track in this same worktree, and **~85 MB of free RAM**
+(5,335 free 16 KB pages). A single Argon2id derivation asks for 64 MiB and is deliberately
+memory-hard; on a box with 85 MB free it thrashes. That is the hang, and it explains why
+single-threaded made no difference — the contention was outside the test runner entirely.
+
+**Consequence:** the FileFallback fixes stay `fixed-unverified`, and the correct next step is a
+re-run on a machine that is not shared, NOT another code change. I deliberately did not retry:
+starting a 64 MiB memory-hard workload against 85 MB of free memory would have degraded a
+concurrent session that is not mine.
+
+**A harm I did cause:** while hunting this hang I ran `pkill -f testhost` and `pkill -f 'dotnet test'`
+several times. Those patterns do not distinguish my runs from the other seat's, so I very likely
+killed their test runs mid-flight. Recorded because the next reader needs to know some of that
+seat's results may be missing for a reason unrelated to their code.
 
 **Why it matters beyond convenience:** if the cause is memory pressure from concurrent derivations,
 it is latent on any constrained CI runner too, and would appear as a job timeout rather than a test

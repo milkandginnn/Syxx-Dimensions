@@ -120,6 +120,9 @@ public enum ParityVectorLoader {
         case unknownSectionInputsKey(caseFile: String, key: String)
         /// A known field whose payload does not match the field's type. Named, never skipped.
         case undecodableSectionInputsValue(caseFile: String, key: String, reason: String)
+        /// F-27 — spec rule 3 applied below the top level: a member inside a nested object that the
+        /// field's type does not carry. Swift's synthesized `Decodable` would ignore it silently.
+        case unknownNestedMember(caseFile: String, path: String)
 
         public var description: String {
             switch self {
@@ -149,6 +152,8 @@ public enum ParityVectorLoader {
                 return "case \(caseFile): unknown sectionInputs key '\(key)' — outside the PARITY_VECTOR_V1 shared field set, so it cannot be expressed in v1 and is refused rather than dropped"
             case .undecodableSectionInputsValue(let caseFile, let key, let reason):
                 return "case \(caseFile): sectionInputs key '\(key)' could not be decoded — \(reason)"
+            case .unknownNestedMember(let caseFile, let path):
+                return "case \(caseFile): unknown member at \(path) — the shared shape has no such member, so it is refused rather than dropped"
             }
         }
     }
@@ -257,6 +262,8 @@ public enum ParityVectorLoader {
                                              declared: decoded.vectorId,
                                              fromFilename: vectorIdFromFilename)
         }
+
+        try DecodedCase.assertNoDroppedMembers(data: data, decoded: decoded, caseFile: caseFile)
 
         return LoadedCase(vectorId: decoded.vectorId,
                           sortKey: sortKey,
@@ -369,6 +376,108 @@ private struct DecodedCase: Decodable {
                 caseFile: caseFile, key: "sectionInputs", reason: "expected an object")
         }
         inputs = try DecodedCase.decodeSectionInputs(from: section, caseFile: caseFile)
+    }
+
+    /// F-27 — enforce the format's reject-never-ignore rule BELOW the top level.
+    ///
+    /// Swift's synthesized `Decodable` conformances ignore members they do not recognise, so
+    /// delegating nested objects to them abandoned spec rule 3 one level down: a vector with a
+    /// misspelled probe member (`scopePrefixLenght`) loaded clean here while the C# twin refused it,
+    /// which means the same corpus produced different coverage on the two engines and the accepting
+    /// side silently tested a default. Reproduced 2026-08-05 before this check existed.
+    ///
+    /// Rather than hand-maintain 32 member lists that would drift from the types, each decoded field
+    /// is re-encoded and compared against the bytes that produced it: a member present in the vector
+    /// but absent from the round-trip is one the type did not carry. Explicit `null` is skipped —
+    /// it carries nothing by definition — and non-objects have no members to drop.
+    static func assertNoDroppedMembers(data: Data,
+                                               decoded: DecodedCase,
+                                               caseFile: String) throws {
+        guard
+            let top = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rawSection = top["sectionInputs"] as? [String: Any],
+            !rawSection.isEmpty
+        else { return }
+
+        for (name, rawValue) in rawSection.sorted(by: { $0.key < $1.key }) {
+            guard let roundTripped = reencodedField(named: name, from: decoded.inputs) else { continue }
+            try compareMembers(raw: rawValue, roundTripped: roundTripped, path: name, caseFile: caseFile)
+        }
+    }
+
+    /// Walk a vector value against its round-trip, refusing the first member the types dropped.
+    private static func compareMembers(raw: Any,
+                                       roundTripped: Any,
+                                       path: String,
+                                       caseFile: String) throws {
+        if let rawObject = raw as? [String: Any] {
+            guard let roundObject = roundTripped as? [String: Any] else { return }
+            for (member, value) in rawObject.sorted(by: { $0.key < $1.key }) {
+                if value is NSNull { continue }
+                guard let counterpart = roundObject[member] else {
+                    throw ParityVectorLoader.LoadError.unknownNestedMember(
+                        caseFile: caseFile, path: "\(path).\(member)")
+                }
+                try compareMembers(raw: value, roundTripped: counterpart,
+                                   path: "\(path).\(member)", caseFile: caseFile)
+            }
+        } else if let rawArray = raw as? [Any] {
+            guard let roundArray = roundTripped as? [Any], roundArray.count == rawArray.count else { return }
+            for (index, element) in rawArray.enumerated() {
+                try compareMembers(raw: element, roundTripped: roundArray[index],
+                                   path: "\(path)[\(index)]", caseFile: caseFile)
+            }
+        }
+    }
+
+    /// Encode one populated field back to Foundation JSON. Values are wrapped in an array before
+    /// encoding so fragment-valued fields (the bare-enum and scalar ones) round-trip too.
+    private static func reencodedField(named name: String, from inputs: SectionInputs) -> Any? {
+        func box<T: Encodable>(_ value: T?) -> Any? {
+            guard let value else { return nil }
+            guard
+                let data = try? JSONEncoder().encode([value]),
+                let array = try? JSONSerialization.jsonObject(with: data) as? [Any],
+                let first = array.first
+            else { return nil }
+            return first
+        }
+
+        switch name {
+        case "resolution":          return box(inputs.resolution)
+        case "dnssec":              return box(inputs.dnssec)
+        case "comparison":          return box(inputs.comparison)
+        case "targetDomain":        return box(inputs.targetDomain)
+        case "targetQueryType":     return box(inputs.targetQueryType)
+        case "warp":                return box(inputs.warp)
+        case "warpManifest":        return box(inputs.warpManifest)
+        case "network":             return box(inputs.network)
+        case "cageAttributionRate": return box(inputs.cageAttributionRate)
+        case "drifts":              return box(inputs.drifts)
+        case "configChanges":       return box(inputs.configChanges)
+        case "latency":             return box(inputs.latency)
+        case "stability":           return box(inputs.stability)
+        case "wildcardSynthesis":   return box(inputs.wildcardSynthesis)
+        case "denial":              return box(inputs.denial)
+        case "dualStack":           return box(inputs.dualStack)
+        case "edns0":               return box(inputs.edns0)
+        case "versionBind":         return box(inputs.versionBind)
+        case "stubEntropy":         return box(inputs.stubEntropy)
+        case "authoritative":       return box(inputs.authoritative)
+        case "svcb":                return box(inputs.svcb)
+        case "ttlAnomaly":          return box(inputs.ttlAnomaly)
+        case "cnameChain":          return box(inputs.cnameChain)
+        case "encryptedTransport":  return box(inputs.encryptedTransport)
+        case "openResolver":        return box(inputs.openResolver)
+        case "ecs":                 return box(inputs.ecs)
+        case "responseSize":        return box(inputs.responseSize)
+        case "serverGroundTruth":   return box(inputs.serverGroundTruth)
+        // nxCanary, dnssecCanary, leak and exfil reach SectionInputs through types that are not
+        // Encodable, so they cannot be round-tripped. Their nested members are unchecked here; the
+        // gap is recorded in F-27 rather than papered over with a hand-maintained member list that
+        // would drift from the types.
+        default:                    return nil
+        }
     }
 
     /// Decode the `sectionInputs` object into `SectionInputs`, refusing any key outside the shared

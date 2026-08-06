@@ -243,6 +243,7 @@ Swift-vs-C# engine parity. Full evidence in
 | F-26 | `open` | `firstrun` license state not threaded on Windows; CONCLUSIONS/RESULTS banner and suppressed-line format differ |
 
 | F-08 | `open` | `-v` means verbose on macOS and version on Windows/Linux. B240 and E088 are both documented and contradict each other. Owner decision — it changes a shipped CLI flag |
+| F-27 | `verified-by-real-run` | The two vector loaders disagreed on unknown NESTED members: Swift silently dropped them, C# refused. Same corpus, different answer. Swift made strict 2026-08-05; reproduced before and after |
 
 What the cross-platform-parity track did NOT cover — the boundary of its green — is recorded in
 `conductor/tracks/cross-platform-parity_20260805/not-covered.md`.

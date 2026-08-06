@@ -544,3 +544,70 @@ Swift computes `isPro` and passes it into the scan (`FirstRunScan.swift:82-86`);
 scan coverage per platform. Banner "CONCLUSIONS" vs "RESULTS" (`:91` vs `:87`); suppressed-signals
 line format differs (`:146` vs `:143`). The nslook DNSSEC-rendering note from the triage rides
 here as a transcript-parity risk. (triage difference 16 + smaller notes)
+
+---
+
+## F-27 · The two vector loaders disagree on unknown NESTED members — the silent-drop defect, one level down
+
+**State:** `verified-by-real-run` (found and fixed 2026-08-05) · **Found by:** Task 2.1 (csharp-loader seat raised it; lead reproduced) · **Severity:** High — a corpus could load on one engine and be refused by the other, and the loading engine would be silently testing something the vector did not say
+
+### Evidence — reproduced on this host
+
+Vector with a misspelled nested member (`scopePrefixLenght` inside `ecs`):
+
+```
+swift:  caseCount=1 / typo-nested          exit 0   ← accepted, member silently dropped
+c#:     case 001_typo-nested.json: … unknown member 'scopePrefixLenght' at ecs.scopePrefixLenght
+                                          exit 3   ← refused
+```
+
+Root cause: the Swift loader delegated nested objects to each type's synthesized `Decodable`, and
+Swift's synthesized conformances ignore unrecognised members by design. So the unknown-key sweep
+covered the top level of `sectionInputs` and nothing beneath it. The C# loader hand-walks every
+level and refuses at any depth.
+
+### Why it matters
+
+`docs/parity-vector-v1-spec.md` calls reject-never-ignore "the single most important rule in the
+format", because a silently dropped input means a vector claims to exercise a field that nothing
+read — a coverage hole that renders as a pass. The rule was enforced at depth 1 and abandoned at
+depth 2 on one platform. A vector with a typo'd probe member would have been recorded as covering
+that probe while testing its default.
+
+### Fix
+
+The Swift loader adopts the stricter behavior (the relaxed side moves, never the strict one): every
+nested object is validated against its known member set before decoding, and an unknown member at
+any depth is refused, naming the dotted path. Same corpus, same answer, both engines.
+
+### Adjacent divergences raised with it, NOT fixed here
+
+- **`drifts` is accepted by Swift and refused by C#** as v1-unrepresentable. Two independent reasons
+  it cannot stand as-is: `AnswerDrift.DetectedAt` is a date (the format bans dates, and the two
+  runtimes disagree on the wire form — Foundation writes seconds-since-2001, and C#'s only reader
+  for that convention exists because naive conversion lands on the wrong millisecond ~1 in 1000,
+  `WitnessWireJson.cs:148-163`), and Swift's `AnswerDrift` carries an `id: UUID`
+  (`AnswerLedger.swift:39`) that the C# type has no member for (`Trust.cs:25-33`). The current
+  corpus uses `configChanges` for Witness, so nothing is blocked today. **Owner/lead decision:**
+  refuse on both sides, admit a dateless drift shape, or record `drifts` as out of v1 scope the way
+  `resolverSubstituted` is.
+- **Duplicate JSON members**: C# refuses, Swift takes last-wins. Same direction as the above — the
+  strict side is right, but changing it is a contract clarification the spec should carry first.
+
+### F-27 fix verification (2026-08-05)
+
+- **CLI real run, before:** Swift `caseCount=1` exit 0 / C# refusal exit 3 on the same file.
+- **CLI real run, after:** both refuse, both name `ecs.scopePrefixLenght`, both exit 3.
+- **Corpus unaffected:** `corpus/parity-vectors` still loads 11/11 on Swift, and the full-corpus
+  transcripts remain identical across engines under `jq --sort-keys`.
+- **Unit tests: NOT RUN.** Two regression tests were added
+  (`testUnknownNestedMemberIsRejectedByPath`, `testCorrectlySpelledNestedMembersLoad`) but
+  `swift test` builds every target and `macOS/Sources/SyxxApp/SyxxApp.swift` is mid-refactor and
+  uncommitted from a concurrent session, so the suite cannot compile. The tests are
+  `fixed-unverified` until that clears; the behavior claims above are `verified-by-real-run`
+  through the CLI, which is the stronger evidence for the defect itself.
+- **Implementation note:** rather than hand-maintaining 32 member lists that would drift from the
+  types, each decoded field is re-encoded and compared against the bytes that produced it. Four
+  fields (`nxCanary`, `dnssecCanary`, `leak`, `exfil`) cannot be round-tripped because their models
+  are not `Encodable`; their nested members remain unchecked on the Swift side and that gap is
+  recorded here rather than hidden.

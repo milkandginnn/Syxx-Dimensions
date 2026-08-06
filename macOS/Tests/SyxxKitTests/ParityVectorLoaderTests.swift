@@ -206,6 +206,33 @@ final class ParityVectorLoaderTests: XCTestCase {
         XCTAssertTrue(message.contains("dnsec"), message)
     }
 
+    // MARK: - Rejection: unknown NESTED member (F-27)
+
+    /// The same corpus must not load on one engine and be refused by the other. Before this check,
+    /// a misspelled member inside a nested object was silently dropped here — Swift's synthesized
+    /// `Decodable` ignores members it does not recognise — while the C# twin refused it, so a vector
+    /// could claim to exercise a probe member that nothing read.
+    func testUnknownNestedMemberIsRejectedByPath() throws {
+        try write("001_nested-typo.json", """
+            {"schemaVersion":1,"vectorId":"nested-typo","pinnedUnixSeconds":\(Self.pinned),\
+            "sectionInputs":{"ecs":{"status":"forwarded","scopePrefixLenght":24,"detail":"typo"}}}
+            """)
+        let message = try rejectionMessage()
+        XCTAssertTrue(message.contains("001_nested-typo.json"), message)
+        XCTAssertTrue(message.contains("ecs.scopePrefixLenght"), message)
+    }
+
+    /// The check must not fire on correctly-spelled members, or the corpus stops loading.
+    func testCorrectlySpelledNestedMembersLoad() throws {
+        try write("001_nested-ok.json", """
+            {"schemaVersion":1,"vectorId":"nested-ok","pinnedUnixSeconds":\(Self.pinned),\
+            "sectionInputs":{"ecs":{"status":"forwarded","scopePrefixLength":24,"detail":"ok"}}}
+            """)
+        let cases = try ParityVectorLoader.load(directory: dir)
+        XCTAssertEqual(cases.count, 1)
+        XCTAssertEqual(cases[0].inputs.ecs?.scopePrefixLength, 24)
+    }
+
     // MARK: - Rejection: unknown top-level key
 
     func testUnknownTopLevelKeyIsRejectedByName() throws {

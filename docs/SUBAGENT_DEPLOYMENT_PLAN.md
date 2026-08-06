@@ -91,6 +91,7 @@
 ## Deployment Rules
 
 ### When to Deploy
+
 - **Phase 0:** Immediately when beginning a delta cycle. These agents coordinate all others.
 - **Phase 1:** After Phase 0 agents are running. Core dev agents review code.
 - **Phase 2:** After Phase 1 agents report back. Language specialists provide implementation advice.
@@ -98,6 +99,7 @@
 - **Phase 4:** After revisions complete. Domain/business agents review final plan.
 
 ### How to Manage
+
 - **Task assignment:** Each agent receives tasks from the table above. Do not improvise tasks outside the table.
 - **Drift prevention:** multi-agent-coordinator monitors all agents. If an agent drifts from its assigned tasks, redirect it.
 - **Context management:** context-manager advises agents on when to compact context. Agents should not let context grow unbounded.
@@ -105,14 +107,18 @@
 - **Completion:** An agent is complete when it has answered all (A), (B), (C) questions in its task row and reported back.
 
 ### What to Collect
+
 From each agent, collect:
+
 1. **Code review findings** (A): What did they find in the relevant code?
 2. **Plan recommendations** (B): What changes do they suggest to IMPLEMENTATION_PLAN.md?
 3. **Overlooked deltas** (C): What items in DELTAS.md should be implemented but were missed?
 4. **Conflicts**: Any disagreements with other agents' findings?
 
 ### How to Synthesize
+
 After all agents report:
+
 1. Deduplicate findings across agents
 2. Categorize: must-fix, should-fix, defer
 3. Flag user-visible text changes for approval (AGENTS.md §4.7)

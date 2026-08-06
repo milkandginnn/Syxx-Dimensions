@@ -1,0 +1,3 @@
+syxx speed 2.0.0
+
+Usage: syxx speed [domain]   (ranks all configured resolvers by latency)

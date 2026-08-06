@@ -31,8 +31,8 @@ when the control measurement itself did not land.
 # Reserved, non-routable, non-impersonating answers (RFC 5737 TEST-NET / RFC 3849 doc range). Serving
 # these can never be mistaken for hijacking a real name, and a distinctive value makes a substituted
 # answer obvious.
-_BASELINE_A = "198.51.100.77"        # TEST-NET-2
-_BASELINE_AAAA = "2001:db8::5177"    # RFC 3849 documentation range
+_BASELINE_A = "198.51.100.77"  # TEST-NET-2
+_BASELINE_AAAA = "2001:db8::5177"  # RFC 3849 documentation range
 
 CLEAN = "clean"
 TAMPERED = "tampered"
@@ -50,8 +50,8 @@ PROBES = [
         "expect": _BASELINE_A,
         "asks": "Does your resolver return our answer for an A record unchanged?",
         "tampered_means": "Your resolver returned a DIFFERENT address than we served — the answer "
-                          "was rewritten in transit. This is active DNS hijacking; the substituted "
-                          "address is shown.",
+        "was rewritten in transit. This is active DNS hijacking; the substituted "
+        "address is shown.",
     },
     {
         "id": "nxdomain_honesty",
@@ -60,8 +60,8 @@ PROBES = [
         "expect": "NXDOMAIN",
         "asks": "For a name we say does not exist, does your resolver also say it does not exist?",
         "tampered_means": "We serve NXDOMAIN for this name, but your resolver returned an address — "
-                          "it is FABRICATING answers for names that do not exist (typo monetization, "
-                          "a captive portal, or injection). Honest resolvers return NXDOMAIN.",
+        "it is FABRICATING answers for names that do not exist (typo monetization, "
+        "a captive portal, or injection). Honest resolvers return NXDOMAIN.",
     },
     {
         "id": "block_detection",
@@ -70,7 +70,7 @@ PROBES = [
         "expect": _BASELINE_A,
         "asks": "For a name that DOES resolve, do you receive the answer at all?",
         "tampered_means": "We serve a valid answer for this name, but your resolver returned "
-                          "NXDOMAIN/SERVFAIL or nothing — the name is being BLOCKED on your path.",
+        "NXDOMAIN/SERVFAIL or nothing — the name is being BLOCKED on your path.",
     },
 ]
 
@@ -81,8 +81,7 @@ def probe_plan():
     """The client-facing plan: what to resolve and what each probe asks. The server fills in the
     actual per-session names (labelled tokens under the probe zone) at issue time; this is the static
     catalogue of what a full run measures."""
-    return [{"id": p["id"], "kind": p["kind"], "asks": p["asks"], "critical": p["critical"]}
-            for p in PROBES]
+    return [{"id": p["id"], "kind": p["kind"], "asks": p["asks"], "critical": p["critical"]} for p in PROBES]
 
 
 def _classify_one(probe, report):
@@ -97,15 +96,14 @@ def _classify_one(probe, report):
 
     # A probe that could not run measures nothing. Not clean.
     if status in ("timeout", "error", None):
-        return INCONCLUSIVE, "The probe could not be completed (%s) — nothing was measured." % (
-            status or "no status")
+        return INCONCLUSIVE, "The probe could not be completed (%s) — nothing was measured." % (status or "no status")
 
     if probe["kind"] == "nxdomain":
         # We serve NXDOMAIN. Honest = the client also got NXDOMAIN. An address means fabrication.
         if status == "nxdomain":
             return CLEAN, "Your resolver correctly returned NXDOMAIN."
         if status == "ok" and values:
-            return TAMPERED, probe["tampered_means"] + " Fabricated address(es): %s." % ", ".join(values)
+            return TAMPERED, probe["tampered_means"] + " Fabricated address(es): {}.".format(", ".join(values))
         if status == "servfail":
             return INCONCLUSIVE, "SERVFAIL — the resolver errored rather than answering; inconclusive."
         return INCONCLUSIVE, "Unexpected response shape for an NXDOMAIN probe; inconclusive."
@@ -114,13 +112,14 @@ def _classify_one(probe, report):
     if status == "ok" and values:
         if probe["expect"] in values:
             return CLEAN, "Your resolver returned our answer unchanged."
-        return TAMPERED, probe["tampered_means"] + " We served %s; you received %s." % (
-            probe["expect"], ", ".join(values))
+        return TAMPERED, probe["tampered_means"] + " We served {}; you received {}.".format(
+            probe["expect"], ", ".join(values)
+        )
     if status in ("nxdomain", "servfail"):
         # For block_detection this IS the finding; for baseline it means the control did not land.
         if probe["id"] == "block_detection":
-            return TAMPERED, probe["tampered_means"] + " (Received: %s.)" % status
-        return INCONCLUSIVE, "The control answer did not arrive (%s) — cannot judge this probe." % status
+            return TAMPERED, probe["tampered_means"] + f" (Received: {status}.)"
+        return INCONCLUSIVE, f"The control answer did not arrive ({status}) — cannot judge this probe."
     return INCONCLUSIVE, "No usable answer for an A probe; inconclusive."
 
 
@@ -143,22 +142,24 @@ def classify(reports):
     results = []
     for p in PROBES:
         result, detail = _classify_one(p, reports.get(p["id"]))
-        results.append({"id": p["id"], "conclusion": result, "detail": detail,
-                        "asks": p["asks"], "critical": p["critical"]})
+        results.append(
+            {"id": p["id"], "conclusion": result, "detail": detail, "asks": p["asks"], "critical": p["critical"]}
+        )
 
     tampered = [r for r in results if r["conclusion"] == TAMPERED]
-    critical_inconclusive = [r for r in results
-                             if r["critical"] and r["conclusion"] == INCONCLUSIVE]
+    critical_inconclusive = [r for r in results if r["critical"] and r["conclusion"] == INCONCLUSIVE]
 
     if tampered:
         overall = TAMPERED
-        summary = ("DNS tampering CONFIRMED on your path: "
-                   + "; ".join(r["id"] for r in tampered) + ".")
+        summary = "DNS tampering CONFIRMED on your path: " + "; ".join(r["id"] for r in tampered) + "."
     elif critical_inconclusive:
         overall = INCONCLUSIVE
-        summary = ("Inconclusive — a control probe (%s) did not complete, so we cannot certify your "
-                   "DNS is untampered. This is NOT a clean result; re-run on a stable connection."
-                   % ", ".join(r["id"] for r in critical_inconclusive))
+        summary = (
+            "Inconclusive — a control probe ({}) did not complete, so we cannot certify your "
+            "DNS is untampered. This is NOT a clean result; re-run on a stable connection.".format(
+                ", ".join(r["id"] for r in critical_inconclusive)
+            )
+        )
     else:
         overall = CLEAN
         summary = "No tampering detected across the probes that completed."

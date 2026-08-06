@@ -31,7 +31,10 @@ struct SyxxWarpCLI {
         print("Fetching the signed manifest and verifying content bytes from your vantage...")
 
         let client = DimensionClient(baseURL: SyxxConfig.dimensionBaseURL, licenseKey: LicenseManager.getStoredLicenseKey())
-        let result = await WarpEngine.runVantageCheck(origin: origin, client: client)
+        // Fresh per-run replay nonce (§4.5): the server must echo it inside the signed manifest,
+        // so a captured manifest cannot be replayed into a later run.
+        let result = await WarpEngine.runVantageCheck(origin: origin, client: client,
+                                                      nonce: WarpEngine.makeNonce())
 
         print("\n----------------------------------------------------------------------------------")
         print("🔍 WARP CONTENT DIAGNOSTICS REPORT (WARP_MANIFEST_V1):")

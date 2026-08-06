@@ -158,7 +158,7 @@ caller cannot distinguish from a real measurement.*
 | **B024** | do **not** move to fixed | Marked resolved-pending-move; the fix was lost in a refactor |
 | **B016** | reopen | Closed as "superseded by DST"; the nondeterminism reproduces under the shipped DST engine at `Scorers.swift:112` |
 | **E022** | re-rate Medium → Critical | Predates the B070 off-name filter; the macOS silent label-drop now defeats a live security control |
-| **B035** | reopen | The applied fix rewrote `contains([...])` as an `||` chain; the whitelist is byte-for-byte identical |
+| **B035** | reopen | The applied fix rewrote `contains([...])` as an `\|\|` chain; the whitelist is byte-for-byte identical |
 | **E013** | reopen and rescope | Marked fixed; live on Windows **and has since spread to macOS**, so its stated basis ("macOS differs") is now false |
 | **E017(a)** | rescope | Parity was reached by *deleting* the working half — neither platform now emits the TTL-anomaly evidence item |
 | **F020** | re-rate and re-domain to C | Filed Low; it is the structural cause of the C005 divergence class |
@@ -178,13 +178,13 @@ Also unexecuted: no Windows or Avalonia build ran during this audit (macOS host)
 Windows and Ubuntu verdict is a source read**. `E011` byte-identity in particular is correct on
 both sides by inspection but has no cross-platform fixture and was never executed.
 
-### Note from User on first run:
+### Note from User on first run
 
-At first run, the app should load the license agreement and give the end user an opportunity to explicitly accept or decline. The software should not be visible and you should not be able to interact with the software, directly or indrectly, until and unless the "agree" button is clicked. If the decline link is clicked, all aspects of the app should immediatly close. If the agree button is clicked, the next presentation should be of the guided setup screen. 
+At first run, the app should load the license agreement and give the end user an opportunity to explicitly accept or decline. The software should not be visible and you should not be able to interact with the software, directly or indrectly, until and unless the "agree" button is clicked. If the decline link is clicked, all aspects of the app should immediatly close. If the agree button is clicked, the next presentation should be of the guided setup screen.
 
 Options for the guided setup screen should include: (1) Story Mode or Non-Story Mode; (2) Preferred resolver; (3) information as to whether DNS traffic is currently encrypted (at the time the screen loads); (4) if DNS queries are unencrypted, whether the user wants their DNS queries encrypted by DNS over HTTPS/3; (5) whether the user wants continuous monitoring of DNS trust conditions on device; and (6) if so, whether the user wants notifications of changes to trust conditions on device. The Software begins loading only after the guided setup screen has been completed and the user clicks Begin," OR after the user selects "Skip -- use defaults".
 
-If the user chose continuous monitoring,the menu bar icon should display and the popover should display below it upon click (macOS). Equivalent behavior for Windows and Linux installations. The main window should display with the entry point being the NMOTD. 
+If the user chose continuous monitoring,the menu bar icon should display and the popover should display below it upon click (macOS). Equivalent behavior for Windows and Linux installations. The main window should display with the entry point being the NMOTD.
 
 ---
 

@@ -53,12 +53,12 @@ public sealed partial class UpdatePanel : Page
             LastCheckedText.Text = _lastChecked.Value.ToLocalTime().ToString("yyyy-MM-dd h:mm tt");
             return;
         }
-        if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckOutcome.Live)
+        if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckState.Live)
         {
             _lastChecked = DateTime.UtcNow;
         }
         ApplyFromService();
-        if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckOutcome.Live &&
+        if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckState.Live &&
             _updates.CurrentState is UpdateState.Idle)
         {
             // Startup said up-to-date live, service idle — show the existing up-to-date copy.
@@ -73,7 +73,7 @@ public sealed partial class UpdatePanel : Page
                 LastCheckedText.Text = _lastChecked.Value.ToLocalTime().ToString("yyyy-MM-dd h:mm tt");
             }
         }
-        else if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckOutcome.Cached)
+        else if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckState.Cached)
         {
             StatusDot.Fill = new SolidColorBrush(IoTextSecondary);
             StatusText.Text = "Last answer was from a cached check; could not reach the server to re-check.";
@@ -82,7 +82,7 @@ public sealed partial class UpdatePanel : Page
             StatusBanner.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, IoTextSecondary.R, IoTextSecondary.G, IoTextSecondary.B));
             DownloadBtn.Visibility = Visibility.Collapsed;
         }
-        else if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckOutcome.Failed &&
+        else if (_vm.UpdateCheckOutcome == AppViewModel.UpdateCheckState.Failed &&
                  _updates.CurrentState is UpdateState.Idle)
         {
             StatusDot.Fill = new SolidColorBrush(IoCriticalRed);
@@ -108,11 +108,11 @@ public sealed partial class UpdatePanel : Page
         if (_updates.CurrentState is not UpdateState.Failed)
         {
             _lastChecked = DateTime.UtcNow;
-            _vm.UpdateCheckOutcome = AppViewModel.UpdateCheckOutcome.Live;
+            _vm.UpdateCheckOutcome = AppViewModel.UpdateCheckState.Live;
         }
         else
         {
-            _vm.UpdateCheckOutcome = AppViewModel.UpdateCheckOutcome.Failed;
+            _vm.UpdateCheckOutcome = AppViewModel.UpdateCheckState.Failed;
         }
 
         if (_updates.CurrentState is UpdateState.AvailableState avail)

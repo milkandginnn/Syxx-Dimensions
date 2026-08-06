@@ -180,6 +180,167 @@ namespace Syxx.Tests
                 Assert.DoesNotContain("protected", text);
             }
         }
+
+        // -----------------------------------------------------------------------------------------
+        // D1.2 / C059 + C125 — zone binding and DNSKEY field validation.
+        // Twin of macOS DNSSECVerifier.swift:100-157. Without these the signature-stripping canary
+        // is defeated by construction: DNSKEY and RRSIG records are public data, so an on-path
+        // attacker can strip a zone's real signatures and append a genuine, in-window pair harvested
+        // from any other signed zone.
+        // -----------------------------------------------------------------------------------------
+
+        /// DNSKEY rdata: flags(2) protocol(1) algorithm(1) publicKey(var). Defaults are a valid
+        /// zone-signing key (flags 0x0101 → ZONE bit set, protocol 3, algorithm 13).
+        private static DNSRecord DnskeyFor(string owner, ushort flags = 0x0101,
+                                           byte protocolField = 3, byte algorithm = 13) =>
+            new DNSRecord
+            {
+                Name = owner, Type = 48, Ttl = 3600,
+                Rdata = Convert.ToHexString(new byte[]
+                {
+                    (byte)(flags >> 8), (byte)flags, protocolField, algorithm, 0xab, 0xcd, 0xef
+                }).ToLower()
+            };
+
+        /// RRSIG rdata with an explicit signer name encoded as DNS labels after the key tag.
+        private static string RrsigHexSigned(uint inception, uint expiration, string signer, ushort typeCovered = 48)
+        {
+            var b = new List<byte> { (byte)(typeCovered >> 8), (byte)typeCovered, 0x08, 0x02, 0x00, 0x00, 0x01, 0x2C };
+            b.AddRange(new byte[] { (byte)(expiration >> 24), (byte)(expiration >> 16), (byte)(expiration >> 8), (byte)expiration });
+            b.AddRange(new byte[] { (byte)(inception >> 24), (byte)(inception >> 16), (byte)(inception >> 8), (byte)inception });
+            b.AddRange(new byte[] { 0x12, 0x34 });                        // key tag
+            foreach (var label in signer.TrimEnd('.').Split('.', StringSplitOptions.RemoveEmptyEntries))
+            {
+                b.Add((byte)label.Length);
+                b.AddRange(System.Text.Encoding.UTF8.GetBytes(label));
+            }
+            b.Add(0x00);                                                  // root terminator
+            return Convert.ToHexString(b.ToArray()).ToLower();
+        }
+
+        private static DNSRecord RrsigFor(string owner, string signer, uint inception, uint expiration) =>
+            new DNSRecord
+            {
+                Name = owner, Type = 46, Ttl = 3600,
+                Rdata = RrsigHexSigned(inception, expiration, signer)
+            };
+
+        [Fact]
+        public void ClassifyRejectsADnskeyHarvestedFromAnUnrelatedZone()
+        {
+            // The attack C059 exists to stop. Every record here is genuine and in-window — it just
+            // belongs to a different zone. Before zone binding this reported
+            // RecordsPresentUnverified, i.e. "signature window valid", for a zone whose signatures
+            // had been removed on the path.
+            var records = new List<DNSRecord>
+            {
+                DnskeyFor("evil.com"),
+                RrsigFor("evil.com", "evil.com", 1_000_000, 2_000_000)
+            };
+            Assert.Equal(DNSSECStatus.Unsigned,
+                DNSSECVerifier.Classify(records, AtEpoch(1_500_000), "example.com"));
+
+            // Not vacuous: the very same records ARE a valid observation of evil.com itself.
+            Assert.Equal(DNSSECStatus.RecordsPresentUnverified,
+                DNSSECVerifier.Classify(records, AtEpoch(1_500_000), "evil.com"));
+        }
+
+        [Fact]
+        public void ClassifyRejectsAnRrsigSignedByAnUnrelatedZone()
+        {
+            // Half of the attack: the DNSKEY owner is right, but the covering RRSIG names an
+            // unrelated signer. DNSKEY present with no admissible covering RRSIG is INCONCLUSIVE —
+            // never "unsigned" (we did see a key) and never a valid signature window.
+            var records = new List<DNSRecord>
+            {
+                DnskeyFor("example.com"),
+                RrsigFor("example.com", "evil.com", 1_000_000, 2_000_000)
+            };
+            Assert.Equal(DNSSECStatus.Inconclusive,
+                DNSSECVerifier.Classify(records, AtEpoch(1_500_000), "example.com"));
+        }
+
+        [Fact]
+        public void ClassifyAcceptsAnAncestorZoneAsSigner()
+        {
+            // The guard must not over-reject: a parent zone legitimately signs a child name.
+            var records = new List<DNSRecord>
+            {
+                DnskeyFor("www.example.com"),
+                RrsigFor("www.example.com", "example.com", 1_000_000, 2_000_000)
+            };
+            Assert.Equal(DNSSECStatus.RecordsPresentUnverified,
+                DNSSECVerifier.Classify(records, AtEpoch(1_500_000), "www.example.com"));
+        }
+
+        [Fact]
+        public void ClassifyOwnerComparisonIgnoresCaseAndTrailingDot()
+        {
+            // DNS names are case-insensitive and the wire form carries the root dot. Binding must
+            // not reject an honest answer over presentation.
+            var records = new List<DNSRecord>
+            {
+                DnskeyFor("Example.COM."),
+                RrsigFor("Example.COM.", "example.com", 1_000_000, 2_000_000)
+            };
+            Assert.Equal(DNSSECStatus.RecordsPresentUnverified,
+                DNSSECVerifier.Classify(records, AtEpoch(1_500_000), "example.com"));
+        }
+
+        [Theory]
+        // RFC 4034 2.1.2 — Protocol MUST be 3.
+        [InlineData((ushort)0x0101, (byte)2, (byte)13)]
+        // RFC 4034 2.1.1 — ZONE flag (0x0100) must be set; 0x0001 is a key with the bit clear.
+        [InlineData((ushort)0x0001, (byte)3, (byte)13)]
+        // RFC 4034 2.1.3 — algorithm 0 is reserved and cannot support a conclusion.
+        [InlineData((ushort)0x0101, (byte)3, (byte)0)]
+        public void ClassifyRejectsStructurallyInvalidDnskeys(ushort flags, byte protocolField, byte algorithm)
+        {
+            var records = new List<DNSRecord>
+            {
+                DnskeyFor("example.com", flags, protocolField, algorithm),
+                RrsigFor("example.com", "example.com", 1_000_000, 2_000_000)
+            };
+            Assert.Equal(DNSSECStatus.Unsigned,
+                DNSSECVerifier.Classify(records, AtEpoch(1_500_000), "example.com"));
+        }
+
+        [Fact]
+        public void ClassifyAcceptsAStructurallyValidDnskey()
+        {
+            // Control for the theory above: the same shape with all three fields correct passes.
+            var records = new List<DNSRecord>
+            {
+                DnskeyFor("example.com"),
+                RrsigFor("example.com", "example.com", 1_000_000, 2_000_000)
+            };
+            Assert.Equal(DNSSECStatus.RecordsPresentUnverified,
+                DNSSECVerifier.Classify(records, AtEpoch(1_500_000), "example.com"));
+        }
+
+        [Fact]
+        public void ParseSignerNameReadsLabelsAndRejectsShortRdata()
+        {
+            Assert.Equal("example.com",
+                DNSSECVerifier.ParseSignerName(RrsigHexSigned(1_000_000, 2_000_000, "example.com")));
+            // A bare root label parses as ".", which IsSignerValid then refuses to accept for a
+            // specific zone — the root cannot vouch for example.com here.
+            Assert.Equal(".", DNSSECVerifier.ParseSignerName(RrsigHexSigned(1_000_000, 2_000_000, "")));
+            Assert.Null(DNSSECVerifier.ParseSignerName("0001"));
+            Assert.Null(DNSSECVerifier.ParseSignerName("zznothex"));
+        }
+
+        [Fact]
+        public void IsSignerValidAcceptsSelfAndAncestorsOnly()
+        {
+            Assert.True(DNSSECVerifier.IsSignerValid("example.com", "example.com"));
+            Assert.True(DNSSECVerifier.IsSignerValid("www.example.com", "example.com"));
+            Assert.True(DNSSECVerifier.IsSignerValid("a.b.example.com", "example.com"));
+            Assert.False(DNSSECVerifier.IsSignerValid("example.com", "evil.com"));
+            Assert.False(DNSSECVerifier.IsSignerValid("example.com", "www.example.com"));  // child, not ancestor
+            Assert.False(DNSSECVerifier.IsSignerValid("example.com", "."));                // bare root
+            Assert.False(DNSSECVerifier.IsSignerValid("notexample.com", "example.com"));   // suffix, not a label boundary
+        }
     }
 
     public class DnssecExpiredDegradationTests

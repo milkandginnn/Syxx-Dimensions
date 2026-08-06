@@ -105,6 +105,7 @@ M1–M4 all present); only Stage-3's within-cluster rule varies.
 **SV-1 — wash-out (NE1 Δ1).** `NE1-d1-dnssec-strip-washed-to-clean`.
 A Prophet `.positive` carrying `dnssecCanaryStripped` (REWRITE, canonical weight 3.0 on
 `{spoofing, interceptionOnPath}`) against Mirror/Portal/Cage/Witness `.negative`, Glutton `untested`.
+
 - *Current engine (RED):* three overlapping clean-supports stack under Dempster to `1−e^{−6}≈0.9975`,
   drive `Bel(threatUnion)` below `threatNameFloor=0.40` (`SynthesisEngine.swift:63,216`) → verdict
   **CLEAN, 55%** (reproduced in NE1.json Δ1).
@@ -122,6 +123,7 @@ A Prophet `.positive` carrying `dnssecCanaryStripped` (REWRITE, canonical weight
 **SV-2 — two-mechanism inversion (NE1 Δ2).** `NE1-d2-two-mechanism-inversion`.
 A resolver that **both** NX-hijacks (`nxCanaryHijack`, BLOCK, weight 3.0 on `{censorship}`) **and**
 strips DNSSEC (`dnssecCanaryStripped`, REWRITE, 3.0), on **disjoint** raw-observation/control lineage.
+
 - *Current engine (RED):* both share `source:"canaries"`, are merged, per-hypothesis-max'd, and
   **capped at 2.0** (`:150–156`), collapsing to `verdict = spoofing, 31%`, forced referral — *lower*
   than `nxCanaryHijack` alone (`74%`). Detecting a second attack made the engine less sure (NE1.json Δ2).
@@ -140,6 +142,7 @@ strips DNSSEC (`dnssecCanaryStripped`, REWRITE, 3.0), on **disjoint** raw-observ
 A Mirror `.positive` `redirection` (REWRITE, 2.0 on `{spoofing, interceptionOnPath}`) with a clean
 Prophet (NX+DNSSEC canaries pass) and clean/empty Witness, both of which *cover* `{spoofing,
 interceptionOnPath}` in the current section-wide mask.
+
 - *Current engine (RED):* clean Prophet drops `Bel(threatUnion)` 0.865→0.463 (conflict 0.748 forces
   referral); clean Witness drops it to 0.104 → verdict flips to **inconclusive**, `Bel(clean)≈0`
   (NE2.json Δ3). A detected redirection demoted to "I don't know" by sections that observed unrelated
@@ -160,6 +163,7 @@ interceptionOnPath}` in the current section-wide mask.
 **P1 — Idempotence on redundant / co-derived evidence.** Feed the *same* support twice within one
 lineage cluster (`A^{ω}` and `A^{ω}` on identical focus/lineage). Assert `combine(m, m) ≡ m` at the
 `_epsN` tier.
+
 - Predicted: **R-C passes** (min-weight → `max(ω,ω)=ω`). **R-D fails** (`ω→2ω`). **R-Y fails**
   (conjunctive core, `ω→2ω` with the excess on Θ). **R-DP fails** in general. **R-M fails**
   (`avg(m,m)=m` then `Dempster(m,m)=A^{2ω}`). This is the discriminator that most directly answers the
@@ -168,6 +172,7 @@ lineage cluster (`A^{ω}` and `A^{ω}` on identical focus/lineage). Assert `comb
 **P2 — Monotonicity-or-safety-gate (a confirmed act never lowers threat belief → an honest verdict).**
 Belief monotonicity is **not** guaranteed under non-independent evidence for any candidate (the design
 dropped it as an invariant, §5.4). P2 is therefore a **two-part** assertion:
+
 - (a) *Verdict correctness (must pass, rule-independent):* adding a confirmed act never turns a threat
   verdict into CLEAN. Guaranteed by **M4/D1** (validated-decisive safety gate) and **I8** (committed
   confirmed-mass floor) — both outside the DST number. Asserted to pass under **all five** rules.
@@ -180,6 +185,7 @@ dropped it as an invariant, §5.4). P2 is therefore a **two-part** assertion:
 (`captivePortalActive`) with M2 in place (context modeled as observation-gated benign explanation, not
 negative mass). Assert the reported `conflict` ≈ 0 (no "the sections disagree" line) because there is
 only one section.
+
 - Predicted: with M2 fixing the *source* of the false conflict, **all rules** should pass this vector;
   the rule is then differentiated on *genuine* two-section conflict: **R-Y** (→Θ) and **R-DP** (→union)
   never surface a spurious high-conflict referral; **R-D** renormalizes and reports `K` (the NE1 Δ4
@@ -400,6 +406,7 @@ Deliverable (offline, no shipped-verdict change): for the **selected** rule, a t
 corpus of `(vector, Bel_swift, Bel_csharp, δ, round100_swift, round100_csharp, margin-to-half-integer)`
 plus the aggregate `ε_rule`, the count of nonzero `δ`, and the count of integer-gate disagreements
 (target **0** after §3.4).
+
 - **If integer disagreements are 0 with margin ≥ some safe threshold** → answer O3 "yes, integer-stable
   at the gate without a dead-band"; pin `ε_rule` into `_epsN`; no boundary needed.
 - **If any vector's margin is unsafe (≤ `ε_rule·100`)** → answer O3 "an integer-stable readout boundary

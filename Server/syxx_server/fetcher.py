@@ -11,6 +11,7 @@ Residual: a determined attacker could still race DNS between our check and the
 socket connect (rebinding). We pin the connection to the vetted IP to close that
 window for the common case.
 """
+
 import http.client
 import ipaddress
 import socket
@@ -20,9 +21,11 @@ import urllib.parse
 from . import config, logging_util, netutil
 
 if config.FETCH_ALLOW_PRIVATE:
-    logging_util.warn("fetcher_ssrf_disabled",
-                      detail="SYXX_FETCH_ALLOW_PRIVATE=True: private-IP block is disabled. "
-                             "This is a security risk intended for testing only.")
+    logging_util.warn(
+        "fetcher_ssrf_disabled",
+        detail="SYXX_FETCH_ALLOW_PRIVATE=True: private-IP block is disabled. "
+        "This is a security risk intended for testing only.",
+    )
 
 
 class FetchError(Exception):
@@ -62,8 +65,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
     def connect(self):
         # pin_ip is numeric -> create_connection does not query DNS (no rebind).
-        sock = socket.create_connection((self._pin_ip, self.port), self.timeout,
-                                        self.source_address)
+        sock = socket.create_connection((self._pin_ip, self.port), self.timeout, self.source_address)
         self.sock = self._context.wrap_socket(sock, server_hostname=self._server_hostname)
 
 
@@ -87,13 +89,13 @@ def _resolve_public(host):
     try:
         infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
     except socket.gaierror as e:
-        raise FetchError("dns resolution failed: %s" % e)
+        raise FetchError(f"dns resolution failed: {e}") from e
     ips = {i[4][0] for i in infos}
     if not ips:
         raise FetchError("no addresses for host")
     for ip in ips:
         if not _ip_is_public(ip):
-            raise BlockedError("blocked non-public address %s for %s" % (ip, host))
+            raise BlockedError(f"blocked non-public address {ip} for {host}")
     # Prefer IPv4 for the pinned connection.
     for ip in ips:
         if ipaddress.ip_address(ip).version == 4:
@@ -101,13 +103,13 @@ def _resolve_public(host):
     return next(iter(ips))
 
 
-import time as _time
+import time as _time  # noqa: E402 — import placed after runtime setup above it, deliberately
 
 
 def _one_request(url, timeout, max_bytes, deadline=None):
     parts = urllib.parse.urlsplit(url)
     if parts.scheme not in ("http", "https"):
-        raise BlockedError("scheme not allowed: %r" % parts.scheme)
+        raise BlockedError(f"scheme not allowed: {parts.scheme!r}")
     host = parts.hostname
     if not host:
         raise BlockedError("missing host")
@@ -115,7 +117,7 @@ def _one_request(url, timeout, max_bytes, deadline=None):
     # A033: reject non-web ports. This runs on every hop (fetch() re-enters here per
     # redirect), so an http->https:PORT redirect cannot bypass a first-request-only check.
     if port not in _ALLOWED_PORTS:
-        raise BlockedError("port not allowed: %d" % port)
+        raise BlockedError(f"port not allowed: {port}")
     ip = _resolve_public(host)
 
     # A164: derive per-hop timeout from the remaining deadline budget so the
@@ -145,7 +147,7 @@ def _one_request(url, timeout, max_bytes, deadline=None):
     # which carries any user:pass@ userinfo (credential leak to the target) and is a
     # CRLF-injection surface. hostname is already normalized and separator-free.
     default_port = 443 if parts.scheme == "https" else 80
-    host_header = host if port == default_port else "%s:%d" % (host, port)
+    host_header = host if port == default_port else f"{host}:{port}"
 
     try:
         conn.putrequest("GET", path, skip_host=True, skip_accept_encoding=True)
@@ -199,13 +201,12 @@ def _fetch_loop(url, timeout, max_bytes, max_redirects):
 
     current = url
     for _ in range(max_redirects + 1):
-        status, location, ctype, body, cenc = _one_request(current, timeout, max_bytes,
-                                                            deadline=deadline)
+        status, location, ctype, body, cenc = _one_request(current, timeout, max_bytes, deadline=deadline)
         if status in (301, 302, 303, 307, 308) and location:
             current = urllib.parse.urljoin(current, location)  # re-validated next loop
             continue
         if status >= 400:
-            raise FetchError("upstream status %d" % status)
+            raise FetchError(f"upstream status {status}")
         return body, ctype, cenc, current
     raise FetchError("too many redirects")
 

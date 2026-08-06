@@ -300,6 +300,32 @@ public struct MatrixSpec: Codable, Sendable, Equatable {
         self.mappableIndicators = mappableIndicators
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case diagnoses, thresholds, knownSections, mappableIndicators
+    }
+
+    /// F-04: encode the two `Set` members as SORTED arrays.
+    ///
+    /// `Set` has no stable iteration order and Swift seeds its hasher per process, so the
+    /// synthesized encoding emitted a different byte sequence on every run — three consecutive
+    /// runs on one build produced three different `knownSections` orders. That makes this output
+    /// unusable as the frozen-oracle reference `docs/MATRIX-MIGRATION-PLAN.md` designates macOS to
+    /// produce, and unstable under any hash, signature, or cross-platform comparison taken over it.
+    ///
+    /// Sorted by `rawValue`. These identifiers are ASCII, so Swift's `<` agrees with the C# twin's
+    /// `StringComparer.Ordinal` here; ordinal is the intended semantics, not locale-aware collation.
+    ///
+    /// Decoding is unaffected — the synthesized `init(from:)` reads an array into a `Set`, so this
+    /// changes byte order only, never the spec's meaning.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(diagnoses, forKey: .diagnoses)
+        try c.encode(thresholds, forKey: .thresholds)
+        try c.encode(knownSections.sorted { $0.rawValue < $1.rawValue }, forKey: .knownSections)
+        try c.encodeIfPresent(mappableIndicators?.sorted { $0.rawValue < $1.rawValue },
+                              forKey: .mappableIndicators)
+    }
+
     /// Structural invariants a well-formed spec must satisfy. Thrown at engine construction so a
     /// malformed matrix fails loudly at load time rather than silently mis-scoring at run time.
     public func validate() throws {

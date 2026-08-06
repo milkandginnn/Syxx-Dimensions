@@ -67,7 +67,6 @@ W6 may run in parallel with W2–W4. W2 must not begin until W1 exits; W3 not un
 
 Each table below is the complete delta membership for that group. `**C**` marks Critical.
 
-
 ---
 
 ## Wave W1
@@ -85,6 +84,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | D019 | **C** | ContentWarp SSRF Guard TOCTOU/DNS-Rebind + Fails Open on No-Resolver | `macOS/Sources/SyxxKit/ContentWarp.swift:312-347 (fetches :87, :118, :140,` |
 | D025 | **C** | Public IPs Classify .other → isProbeable → Unannounced TCP-Connect Scan | `macOS/Sources/SyxxKit/NetworkAddressClassifier.swift:52, 13-20` |
 | D075 | **C** | Windows SSRF Guard Fails Open on No-Resolver (macOS Parity Gap, cf. D019) | `Windows/Syxx.Kit/ContentWarp.cs:308-349 (especially 327-329)` |
+
 ### G08 Budgets, timeouts & concurrency — 5 deltas (3 Critical)
 
 **Root cause.** Budgets are not derived from the transports beneath them. `perProbeTimeout` is 2.5 s while UDP is 2×2.0 s and DoH is 5–8 s, so the retry that provides KDNS-02 spoofed-retry immunity is structurally unreachable — an attacker who injects one bogus response converts a detectable spoof into a "timeout", i.e. chooses the verdict.
@@ -99,6 +99,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | C035 |  | Endpoint Forensics Consumes Its 400-Line Budget on Invalid Lines | `Windows/Syxx.Kit/Forensics/EndpointLogAnalyzer.cs:47-65` |
 | D020 | **C** | Name-Decompression O(n^2) on a Hostile TCP Response — CPU DoS | `macOS/Sources/SyxxKit/DNSResolver.swift:737-772, 949-994 (via sendTCP:1078)` |
 | D024 | **C** | MDNSScanner Uncapped Sequential Resolves in a Thread That Outlives scan() | `macOS/Sources/SyxxKit/MDNSScanner.swift:125-156, 98, 105` |
+
 ### G10 Persistence & secrets at rest — 4 deltas (2 Critical)
 
 **Root cause.** Protection applied at the wrong moment or to the wrong artefacts. `db.py` chmods before `connect()` creates the file, so a fresh deploy is world-readable; WAL/SHM sidecars — which hold the most recent rows including session tokens — are never chmod'd at all.
@@ -137,6 +138,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | B075 | **C** | CNAME Loops and Hop-Cap Exhaustion Are Returned as Ordinary Chains | `macOS/Sources/SyxxKit/CNAMEChainProbe.swift:65-80;` |
 | C017 | **C** | CNAME Comparison Uses Raw Wire Hex Instead of Decoded Names | `macOS/Sources/SyxxKit/DNSResolver.swift:762-767;` |
 | F018 | **C** | ProphetView DNSSEC .inconclusive Rendered Critical-Red — Unmeasured State | `macOS/Sources/SyxxApp/ProphetView.swift:246-250` |
+
 ### G06 Leak detection & collector attestation — 19 deltas (12 Critical)
 
 **Root cause.** Count of unique resolver IPs is treated as evidence of encryption or leakage — a signal structurally incapable of establishing either. Compounded by a wire-format break: the server renamed `leaked`→`queriesObserved` and neither client was updated, so the collector-confirmed path is dead on both desktops.
@@ -152,7 +154,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | A111 |  | Leak Verification Is Not an Atomic One-Time Operation | `Server/syxx_server/leak.py:125-170;` |
 | A114 |  | Collector Public-Key Endpoint Omits the Rotation Contract Marked Shipped | `Server/syxx_server/app.py:427-438; ROADMAP.md:368-440` |
 | B067 | **C** | Glutton Colors `notDetected` Green When Collector Pinning Is Unconfigured | `macOS/Sources/SyxxApp/GluttonView.swift:173-203;` |
-| B137 | **C** | macOS CLI Never Sets a Non-Zero Exit Code — a Confirmed Leak Exits 0 | `macOS/Sources/SyxxCLI/** (zero occurrences of `exit(`/`EXIT_FAILURE` in the en` |
+| B137 | **C** | macOS CLI Never Sets a Non-Zero Exit Code — a Confirmed Leak Exits 0 | `macOS/Sources/SyxxCLI/** (zero occurrences of`exit(`/`EXIT_FAILURE`in the en` |
 | B138 | **C** | Synthetic ECS Option Is Promoted to a Claim That the User's Subnet Leaked | `macOS/Sources/SyxxKit/ECSProbe.swift:39-59;` |
 | C026 |  | Leak verdict cannot tell "no leak" from "query never arrived" | `Server/syxx_server/leak.py:125-164 (verify: leaked = len(resolvers) > 0);` |
 | C031 | **C** | Collector Protocol Calls Every Successful Recursive Lookup a DNS Leak | `Server/syxx_server/leak.py:138-151;` |
@@ -165,6 +167,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | F013 | **C** | Feature Lock Banner Has Ugly Presentation — Emoji, Red Styling, Parsing Issues | `macOS/Sources/SyxxApp/ (GluttonView, MirrorView, or wherever feature` |
 | F024 | **C** | RemoteContentView WKWebView Static Cache Never Evicts (Memory Leak) | `macOS/Sources/SyxxApp/RemoteContentView.swift:25, 63` |
 | F030 |  | Server Route Test Setup Leaks a Global Auth Stub When Socket Bind Fails | `Server/tests/test_routes.py:45-67;` |
+
 ### G16 ContentWarp & HTML/script comparison — 14 deltas (10 Critical)
 
 **Root cause.** HTML is parsed with regex against adversarial input, and failures are serialised as if they were measurements — a failed fetch becomes a comparable hash, so "different" and "could not fetch" are indistinguishable downstream.
@@ -221,6 +224,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | F033 | **C** | Windows `FirstRunScan.Track(bool)` Conflates "Inconclusive" With "Produced" | `Windows/Syxx.Kit/FirstRunScan.cs:126-129, 135-138` |
 | F034 | **C** | Windows `SyxxSettingsStore.Save` Bool Cannot Distinguish Failure Modes | `Windows/Syxx.Kit/SyxxSettings.cs:51-61` |
 | F035 | **C** | Windows `MonitorScheduler.IsRunning` Bool Hides Starting/Stopping/Crashed States | `Windows/Syxx.Kit/MonitorScheduler.cs:28, 104-129` |
+
 ### G02 Attestation, signing & evidence provenance — 21 deltas (16 Critical)
 
 **Root cause.** Signature validity is conflated with trustworthiness, and the trust set is never supplied. `verifySnapshotDetailed(snap)` is called bare at `AppModel.swift:1580` and `SyxxWitness.swift:185`, so `.untrustedSigner` is unreachable and a snapshot signed by any attacker-chosen key renders VALID (B081).
@@ -250,7 +254,8 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | D063 | **C** | Authoritative Leak DNS Server Signs Observations From Non-Query/Malformed Packets | `Server/syxx_server/dns_authoritative.py:40-99,175-190;` |
 | E012 |  | Console.OutputEncoding Failure Silently Swallowed Across All Windows CLIs | `Windows/Syxx/Program.cs:15; Windows/SyxxWitness/Program.cs:13` |
 | E017 | **C** | Answer-Stability Sub-Signal Diverges — macOS Drops the TTL-Anomaly Evidence | `macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:118-131;` |
-| E047 | **C** | Windows CLI Cage Prints Unconditional `[SUCCESS] Sniffer started` Before Any Packet — No `No pac | `Windows/Syxx/Commands/CageCommand.cs:72 (eager `[SUCCESS]` print), :98-149 (ca` |
+| E047 | **C** | Windows CLI Cage Prints Unconditional `[SUCCESS] Sniffer started` Before Any Packet — No `No pac | `Windows/Syxx/Commands/CageCommand.cs:72 (eager`[SUCCESS]`print), :98-149 (ca` |
+
 ### G18 Scoring heuristics & classification thresholds — 13 deltas (12 Critical)
 
 **Root cause.** Heuristics that convert absence of measurement into a positive classification: identical TTLs reported as varying, CDN rotation as instability, a failed amplification measurement as `recursiveLowAmp`, NXDOMAIN/NODATA as active enforcement.
@@ -303,6 +308,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | E036 |  | Windows LookupProcessInfo Shells Out to cmd.exe Per Unique Port — | `Windows/Syxx.Kit/DNSCapture.cs:487-523 (LookupProcessInfo);` |
 | E037 |  | Windows Raw Socket Captures All IP Traffic — No Kernel-Level Packet Filter | `Windows/SyxxCage/Program.cs:219-223 (IOControlCode.ReceiveAll);` |
 | E046 |  | Windows DNS Capture Process Attribution Always Fails Due to Incorrect netstat Regex Search | `Windows/Syxx.Kit/DNSCapture.cs:494` |
+
 ### G13 Telemetry & observability — 1 deltas (1 Critical)
 
 **Root cause.** Telemetry violated the doctrine it exists to enforce: unconditional `status = .ok`, skipped probes emitting no span, verdicts absent from spans. Partly fixed this session; the export path remains unbuilt.
@@ -313,6 +319,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | ID | Critical | Delta | Location |
 |----|----------|-------|----------|
 | E041 | **C** | macOS Route Trace Lacks Graceful Streaming and Timeout Handling — Deadlock Risk | `macOS/Sources/SyxxRoute/SyxxRoute.swift:37-63;` |
+
 ### G14 Cross-platform parity & packaging — 2 deltas (1 Critical)
 
 **Root cause.** Twins drift because nothing fails when they do.
@@ -339,8 +346,8 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | ID | Critical | Delta | Location |
 |----|----------|-------|----------|
 | A126 |  | DoH JSON Returns `Status: 2` for All Upstream Failures — Indistinguishable From Genuine | `Server/syxx_server/app.py:1242` |
-| B041 | **C** | `renderText`/`RenderText` Silently Drops `conclusion.advisories` — the | `macOS/Sources/SyxxKit/Synthesis/Report.swift:111-155 (`renderText` renders` |
-| B042 | **C** | `renderText`/`RenderText` Drops `conflict` and `uncertainty` — the Documented | `macOS/Sources/SyxxKit/Synthesis/Conclusion.swift:26-30 (doc: `conflict` is` |
+| B041 | **C** | `renderText`/`RenderText` Silently Drops `conclusion.advisories` — the | `macOS/Sources/SyxxKit/Synthesis/Report.swift:111-155 (`renderText`renders` |
+| B042 | **C** | `renderText`/`RenderText` Drops `conflict` and `uncertainty` — the Documented | `macOS/Sources/SyxxKit/Synthesis/Conclusion.swift:26-30 (doc:`conflict`is` |
 | B076 | **C** | Identical Zero TTLs Are Labeled Independent Caching | `macOS/Sources/SyxxKit/TTLAnomalyProbe.swift:67-79;` |
 | B096 |  | Windows Prophet Record-Type Picker Is Decorative and Always Audits A | `Windows/SyxxUI/Views/ProphetView.xaml:32-39;` |
 | C036 |  | Exfil Analyzer Still Uses a Last-Two-Labels Registrable-Domain Heuristic | `macOS/Sources/SyxxKit/Forensics/ExfilAnalyzer.swift:43-88;` |
@@ -352,6 +359,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | F019 | **C** | DashboardView "Queries seen" / Resolver IP Green Even With No Data — Absence | `macOS/Sources/SyxxApp/DashboardView.swift:81, 266-268, 70-72` |
 | F021 | **C** | macOS “Early Access” Update Toggle Is Disconnected | `macOS/Sources/SyxxApp/UpdatePanel.swift:9, 46-61, 155-166` |
 | F025 | **C** | Windows Startup Dialog Race Can Permanently Lose a Critical Broadcast | `Windows/SyxxUI/MainWindow.xaml.cs:30-41,44-57,65-101` |
+
 ### G12 CLI surfacing & exit codes — 2 deltas (2 Critical)
 
 **Root cause.** Exit codes and machine-readable output are advertised but unreachable: every subcommand returns `Void`, so `syxx nslook` exits 2 whatever happens, and `--json`/`--verbose` are parsed then discarded.
@@ -393,6 +401,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | E050 |  | Windows `LicenseManager.ValidateLicenseAsync` Bool Wrapper Hides Timeout/NetworkError at | `Windows/Syxx/Program.cs:105; Windows/Syxx.Kit/LicenseManager.cs:492-496` |
 | F016 | **C** | LicenseView Fabricated Machine ID / Activation Count / "CURRENT" Pill | `macOS/Sources/SyxxApp/LicenseView.swift:129, 31` |
 | F022 | **C** | Shipped EULA Is Explicitly a Placeholder | `macOS/Sources/SyxxApp/EULAPanel.swift:81-110` |
+
 ### G09 Server routing & API surface — 5 deltas (2 Critical)
 
 **Root cause.** Endpoints report success they did not perform and expose more than intended. `_route_revoke_api_key` returns `{"revoked": true}` unconditionally — for a nonexistent key and for another tenant's key alike.
@@ -407,6 +416,7 @@ Each table below is the complete delta membership for that group. `**C**` marks 
 | B095 |  | Windows Endpoint Indicators Are Bypassed by Ordinary Case Variation | `Windows/Syxx.Kit/Forensics/EndpointLogAnalyzer.cs:18-38,153-154,220-224` |
 | D038 | **C** | Dimension Base URL Accepts Plain HTTP and Arbitrary Origins | `macOS/Sources/SyxxApp/DimensionService.swift:36-38, 57-64;` |
 | F027 |  | Shipped What’s-New Pages Contradict the Self-Contained CSP Contract | `Server/syxx_server/app.py:409-422;` |
+
 ### G17 Server deployment & service hardening — 3 deltas (2 Critical)
 
 **Root cause.** Deployment reports success it has not achieved. The Sentry install swallowed a hard failure with `|| echo` and continued, burying the true cause under a misleading image-resolution error; `useradd` failure silently falls back to running as root.

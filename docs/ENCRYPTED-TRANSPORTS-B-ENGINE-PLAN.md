@@ -88,6 +88,7 @@ mass path (`SynthesisEngine.swift:270-280`) because:
    of a transient false-secure regression.
 
 **Two tiers (mirroring A2):**
+
 - `transportDivergence` — strong, **non-decisive**. One proven encrypted vantage diverges from Do53.
   Produces a tamper verdict that, as a lone signal, is forced to **referral**.
 - `transportDivergenceConfirmed` — **decisive candidate**. The divergence has a *second independent
@@ -120,6 +121,7 @@ everything.**
 | **Full-data** | encrypted proven **and** disjoint **and** a **second independent leg** confirms | `.positive` | `transportDivergenceConfirmed` | decisive mass; fires the M4 decisive gate (`SynthesisEngine.swift:146`) |
 
 **Invariants this table enforces (map to DESIGN `:134-145`):**
+
 1. *No score defaults to confident.* An unproven encrypted path emits `.inconclusive` — never
    `.negative`, so it can **never** add clean support (the load-bearing rule: a `.negative`
    sub-status from an unproven comparison would wash toward clean = false-secure).
@@ -317,6 +319,7 @@ the classifier, dedicated `TransportCorroboratorTests`. Every seed asserts the *
 never-false-secure invariant**. Failure cases are first-class, not afterthoughts.
 
 **Classifier-level (B1):**
+
 - `TC-agree` — encrypted proven (`.dot`, `!wasDowngraded`), Do53 == encrypted → `.matches`.
 - `TC-diverge` — encrypted proven, Do53 disjoint (block IP) → `.diverges`.
 - `TC-confirmed` — encrypted proven + 2nd encrypted agrees, Do53 disjoint → `.divergesConfirmed`.
@@ -332,6 +335,7 @@ never-false-secure invariant**. Failure cases are first-class, not afterthoughts
 - **`TC-FAIL-nodo53`** — Do53 `nil`/`didFail` → **`.inconclusive`** (no plaintext to compare).
 
 **Engine-boundary (B3 / B4):**
+
 - `NE-transport-lone` — one `transportDivergence`, all other sections `.negative` → verdict
   `interception_onPath` **with forced referral** (`positiveSupportGroups < 2`). Confidence bounded.
 - `NE-transport-confirmed` (B4) — one `transportDivergenceConfirmed`, other sections `.negative` →

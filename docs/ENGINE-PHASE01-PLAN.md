@@ -18,6 +18,7 @@ drifted, noted inline).
 ## 0. Plan overview
 
 ### Goal
+
 Make the engine **honest under the current (Dempster) arithmetic** without committing a fusion rule: no
 confirmed threat may read `clean`; no critical section that ran inconclusive/degraded/invalidated may ride
 to `clean`; no single signal may name a threat with un-referred confidence; the poisoned-local-vs-consensus
@@ -25,6 +26,7 @@ split and the three honesty signals become *visible*; and both platforms agree t
 additive `Stage5Presentation` DTO **first** — Codex (CX-1..CX-3) is blocked on it.
 
 ### The honesty spine (why this ordering is safe)
+
 Every Phase-1 step is **monotone toward honesty**: each one either *removes* a false-`clean` / false-`tampered`
 / false-confident path, or *adds* a referral / a reported figure. **No Phase-1 step introduces a transient
 false-secure state.** The only intra-phase ordering constraint is P1.9↔P1.10 (surfacing a divergence in
@@ -38,12 +40,14 @@ threat that still gets washed below the floor falls through to **inconclusive+re
 naming (`REWRITE` at high confidence) arrives with Phase 3/4.
 
 ### Phases ordered by mission risk
+
 - **Phase 0 (engine side)** — the golden-vector oracle + integer-% determinism + the offline bake-off harness.
   Enables regression-proofing and cross-platform parity; selects nothing yet.
 - **Phase 1 (structural honesty gates)** — the rule-agnostic gates that close the false-secure classes, plus
   the additive Stage-5 presentation model and the answer-matrix/honesty-signal population.
 
 ### Hard dependency graph
+
 ```
 P0.1 rounding/integer-% parity ─┐
                                 ├─> P0.2 oracle adapter ─> P0.3 seed RED→GREEN + phase-greening map
@@ -61,11 +65,13 @@ P1.6 I8 committed-threat-mass floor ─┤
 P1.7 min-corroboration → referral ─┤
 P1.8 NE5 Δ1 Windows parity fix ─┘
 ```
+
 All Phase-1 gates are independent of each other and independent of the fusion rule. They depend on Phase 0
 only for **regression proof** (the corpus), not for correctness — each carries its own real-data acceptance
 bar and can land before the full corpus exists.
 
 ### Recommended landing sequence
+
 `P1.0` → `P0.1` → `P0.2` → `P0.3` → `P1.1` → `P1.5` → `P1.6` → `P1.2` → `P1.3` → `P1.7` → `P1.8` →
 `P1.4` → `P1.9` → `P1.10` → `P1.11` → `P0.4`. (P1.0 first for Codex; the false-secure gates P1.1/P1.5/P1.6
 next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0 is in.)
@@ -75,6 +81,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 ## Phase 0 — golden-vector oracle + determinism + bake-off setup (engine side)
 
 ### P0.1 — Cross-platform rounding parity + a shared integer-% gate primitive
+
 - **Action:** Make the confidence/verdict/name/referral comparisons compare **exact integer percentages** with
   one rounding mode on both platforms; add a single `roundPercent(_:)` gate helper used everywhere a float
   crosses a threshold. Align C# `Math.Round` (banker's/ToEven) to Swift's away-from-zero.
@@ -93,6 +100,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 - **Depends on:** nothing.
 
 ### P0.2 — Engine-side golden-vector oracle adapter
+
 - **Action:** Provide the engine half of the STAGE0 contract: a deterministic adapter that maps a fixture's
   `input.evidence` / `input.sectionStatuses` / `input.unobserved` onto `SynthesisEngine.synthesize(...)` /
   `Synthesizer.conclude(...)` and extracts the two assertion tiers — `_exact` (integer `verdict` / `withinClass`
@@ -113,6 +121,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 - **Depends on:** P0.1 (integer-% extraction must be settled first).
 
 ### P0.3 — Seed RED→GREEN oracle + per-vector phase-greening map + never-false-secure invariant
+
 - **Action:** Encode the NE1-NE7 seeds (STAGE0 §"Seed corpus") as expected-design vectors, and add two
   engine-side controls the runner needs: (a) a **`greensAtPhase` tag per vector** — because several seeds
   (NE1 Δ1 *naming* REWRITE, NE1 Δ2 *inversion*) only reach their full `_exact` verdict after the deferred
@@ -136,6 +145,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   a schema field that isn't here, flag it" rule. Do not redefine the schema unilaterally.
 
 ### P0.4 — Offline fusion-rule bake-off harness (setup only; selects nothing)
+
 - **Action:** Build an **offline, test-target** harness that can evaluate candidate combination functions
   (Dempster / cautious / Yager / Dubois–Prade / weighted-mass, design §4.2) over the golden corpus and emit, per
   candidate, (i) adversarial-vector pass/fail and (ii) a **float-determinism measurement** (the cross-platform
@@ -158,6 +168,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 ## Phase 1 — structural honesty gates (fusion-rule-agnostic)
 
 ### P1.0 — `Stage5Presentation` DTO twins (additive, no behavior change) — **LAND FIRST**
+
 - **Action:** Add the STAGE5-CONTRACT DTOs exactly as specified: the optional additive `stage5` property plus
   `Stage5Presentation`, `ProvenancePartition`, `DirectObservation`, `InferredFinding`, `UnavailableDatapoint`,
   `AnswerMatrixRow` / `VantageAnswer` / `AnswerComparison`, `HonestySignals`, `MechanismDetermination` /
@@ -187,6 +198,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 - **Depends on:** nothing. **Priority: first** (task directive; Codex is blocked).
 
 ### P1.1 — `.invalidated` dominates `combine()`
+
 - **Action:** Rank `.invalidated` above `.negative`/`.degraded` so a required-premise failure can never be
   laundered into clean-support. Order: `positive > invalidated(any) > inconclusive > degraded > negative`
   (design §5.2). Replace the `allSatisfy(.invalidated)` guard with `contains(.invalidated)` **after** the
@@ -206,6 +218,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 - **Depends on:** nothing.
 
 ### P1.2 — Critical section not conclusive (inconclusive/degraded) forbids `clean`
+
 - **Action:** Implement the M3 clean-gate: if any **critical** section (Prophet, Mirror, Glutton per
   DESIGN.md:185-190) is not conclusive (`inconclusive` / `degraded` / `untested` / `invalidated`), forbid a
   `clean` verdict. (`untested`/`invalidated` already block via `blocksClean`; the **new** coverage is
@@ -226,6 +239,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 - **Depends on:** shares its critical-not-conclusive predicate with P1.3 — land together or P1.2 first.
 
 ### P1.3 — M1 degraded intrinsic-source discounting (pre-combination Shafer α)
+
 - **Action:** Discount evidence originating from a `.degraded` section toward ignorance **at mass-construction
   time, before combination**: `m'(A)=α·m(A)` for `A≠Θ`, `m'(Θ)=α·m(Θ)+(1−α)`, `α∈(0,1)` (design §3 M1). Map each
   `EvidenceItem` to its section's combined status (via `EvidenceItem.section`) and apply α when that section is
@@ -252,6 +266,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   block Phase 1 on it.
 
 ### P1.5 — `.positive` blocks `clean` (engine-local predicate)
+
 - **Action:** A section that affirmatively found tampering (`.positive`) must forbid a `clean` verdict, exactly as
   `untested`/`invalidated` do. Implement at the engine's `cleanBlocked` computation, **not** by widening
   `SectionStatus.blocksClean`.
@@ -278,6 +293,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   prefilled-post call sites — flag before doing so.)*
 
 ### P1.6 — I8 confirmed-threat-mass floor gate (verdict-level, outside DST, rule-independent)
+
 - **Action:** Add the BLOCKER-2 backstop: a **committed** threat mass — the mass a *confirmed* source assigns
   **directly** to a subset of the threat union via its **own** simple-support focal set, evaluated **before**
   dilution by other supports — that meets/exceeds `threatNameFloor` (`0.40`) **forbids `clean`** and floors the
@@ -306,6 +322,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   Phase-5 discrepancy act arrives).
 
 ### P1.7 — Minimum-corroboration gate (single source → force referral)
+
 - **Action:** A single evidence item (or a single **lineage cluster** — for Phase 1, a single `source`/
   `correlationGroup`, since full-lineage clustering is the deferred R4 pass) may *raise* a threat but must **force
   referral** (tentative, confidence-capped) unless it is a **validated decisive act**. The validated-decisive set is
@@ -327,6 +344,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   lone confirmed strip lands as "not clean + refer", honest for Phase 1.
 
 ### P1.8 — NE5 Δ1 minimal parity fix (Windows: stop emitting threat-weighted run-quality overlays)
+
 - **Action:** Windows Prophet must stop injecting threat mass from run-quality-only sub-signals that macOS
   withholds. Remove the `EvidenceItem.Create(...)` emission in the latency-`Degraded` and stability-`TtlAnomaly`
   branches so they contribute **only** a `.Degraded` sub-status, matching macOS. (This is the **minimal** parity
@@ -354,6 +372,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   the NE5 parity vector stays red until Phase 3 — recommend landing the minimal fix now so the corpus greens.
 
 ### P1.4 — K/M completeness as a separate reported dimension (M3)
+
 - **Action:** Compute `K` = sections that reached a **conclusive** status (`negative`/`positive`) and `M` = sections
   **scheduled** for this invocation (D3: user-skipped decrements `M`; scheduled-but-failed stays in `M`), and expose
   it via the Stage-5 `EvidenceCompleteness` DTO + `DataRegime`. It is a **reported figure and a clean-eligibility
@@ -379,6 +398,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   schedule. This is an additive signature change, not a behavior regression.
 
 ### P1.9 — Populate provenance partition + canonical answer matrix into `stage5`
+
 - **Action:** Extract every vantage's answer set — local resolver, each `publicResolverResults` vantage,
   `authoritative`, `serverGroundTruth` — into `ProvenancePartition` (direct/inferred/unavailable) and the canonical
   `AnswerMatrix` with engine-owned canonicalization (lower-case absolute names, one canonical IP form, de-dup, ordinal
@@ -407,6 +427,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   production rendering before P1.10 lands (or the two land together).
 
 ### P1.10 — Canonical cross-vantage discrepancy forbids `clean` (verdict-level gate)
+
 - **Action:** When the P1.9 answer matrix classifies a **canonical** key (`target_answer`, `local_resolver`) as
   `AnswerComparisonClass.discrepancy` (a local outlier vs a valid reference consensus — **not** `benignSetVariation`),
   forbid a `clean`/`negative` verdict (the Phase-1, presentation-time analog of I8: a verdict-level gate that
@@ -427,6 +448,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 - **Depends on:** P1.9 (needs the set-valued classification). **This is P1.9's honesty partner — see P1.9.**
 
 ### P1.11 — Populate structured honesty signals + `generatedAt` into `stage5`
+
 - **Action:** Populate `HonestySignals` as **three independent** structured signals (hard-gate / conflict /
   uncertainty), the `DataRegime`, and the RFC 3339 UTC `generatedAt` mirroring legacy `Conclusion.generatedAt`.
   `hardGate` present iff a decision-policy gate blocks a verdict (P1.2/P1.5/P1.6/P1.10), naming the engine-supplied
@@ -454,6 +476,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
 ## Risks & open questions
 
 ### Gating open questions (block the LATER pass, not this slice)
+
 - **O3 — fusion rule + `ε` (GATES the deferred Phase-3/4).** The winning combination rule and the `_epsN`
   display-tolerance `ε` are outputs of the P0.4 bake-off + the float-determinism spike. Until they exist: mark all
   `_epsN` assertions `pending-bakeoff` (STAGE0 §"assertion tiers"); do **not** pre-pin `ε`; the naming vectors
@@ -464,6 +487,7 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   full=6 / nslook=1 is safe; the exact per-CLI schedule is a small caller-side follow-up.
 
 ### Assumptions / decisions to confirm
+
 - **P1.5 `.positive` gate placement** — recommended at the engine-local `cleanBlocked`, **not** by widening
   `SectionStatus.blocksClean` (which would corrupt the "not run / not trustable" referral list). Confirm before
   implementing; if widening `blocksClean` is preferred, the two prefilled-post call sites must also change.
@@ -476,11 +500,13 @@ next as highest mission risk; matrix pair P1.9/P1.10 late so its dependency P1.0
   in-scope for this slice (it is required for P1.9 to be honest).
 
 ### Where a lone step transiently breaks honesty (call-outs)
+
 - **P1.9 without P1.10** — a `discrepancy` in the Stage-5 matrix beside a `clean` determination is a dishonest
   intermediate. **Do not** ship P1.9 to production rendering before P1.10. (Only such pairing in the slice.)
 - Every other Phase-1 step is monotone toward honesty and safe to land alone.
 
 ### Reference-drift caught during verification (use the live-tree numbers above)
+
 - Windows clean-support loop is `SynthesisEngine.cs:152-157` (design cited ~:180).
 - Windows has **two** combine methods — `Combine` (`Synthesizer.cs:53-63`) **and** `CombineWithEvidence`
   (`:65-75`) — both need the P1.1 invalidated-dominates fix (design cited one).

@@ -99,6 +99,33 @@ internal sealed class DpapiSecretStore : ISecretStore
         }
     }
 
+    /// <summary>
+    /// G-02: definitive for this store — every secret is one file named
+    /// <c>{keyType}_{keyId}</c> in a single directory, so the keyType prefix can be enumerated
+    /// without knowing any keyId. An undecryptable blob still counts as Present: the question is
+    /// whether a secret EXISTS, and a blob we cannot read is emphatically not an absent one.
+    /// An IO/permission failure yields <see cref="SecretExistence.Unknown"/> — never Absent, which
+    /// would license the caller to mint over a key that is sitting right there.
+    /// </summary>
+    public SecretExistence Exists(string keyType)
+    {
+        try
+        {
+            if (!Directory.Exists(StoreDir))
+            {
+                // No store directory: this user has never had a secret written here.
+                return SecretExistence.Absent;
+            }
+            return Directory.EnumerateFiles(StoreDir, Sanitize(keyType) + "_*").Any()
+                ? SecretExistence.Present
+                : SecretExistence.Absent;
+        }
+        catch
+        {
+            return SecretExistence.Unknown;
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────────
 
     private static string GetStorePath(string keyType, string keyId)

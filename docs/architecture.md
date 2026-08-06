@@ -48,7 +48,7 @@ This marketplace follows industry best practices with a focus on granularity, co
 
 ### Component Breakdown
 
-**203 Local Specialized Agents**
+**164 Local Specialized Agents**
 
 - Domain experts with deep knowledge
 - Organized across architecture, languages, infrastructure, quality, data/AI, documentation, business, and SEO

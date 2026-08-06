@@ -1,0 +1,3 @@
+syxx leak 2.0.0
+
+Usage: syxx leak [--domain <base>] [--servers <ip...>] [--collector <url>] [--token <bearer>] [--key <license>]

@@ -79,6 +79,7 @@ change to the combination rule and must be fixed on their own terms. Naming the 
 System in STEM*, 2026, pp.1-2: classification "converts the error from an event into data").
 
 ### P1 — Dempster over non-independent evidence (over-count *and* wash-out) [belief calculus]
+
 `coveredThreats` assigns the *same* threat to multiple sections — spoofing is "covered" by Prophet,
 Mirror **and** Witness (SynthesisEngine.swift:96-101). Each `.negative` section emits
 `cleanSupportPerSection = 2.0` (SynthesisEngine.swift:62, 184-187) as an *independent* Dempster
@@ -88,6 +89,7 @@ DNSSEC strip to CLEAN** (NE1 Δ1; NE2 Δ3/Δ8). The same independence error runs
 co-derived positives, which Dempster over-counts into inflated confidence (NE4 fusion proposal).
 
 ### P2 — Negative-mass dampeners collide with confirmed signals (anti-cancellation violation) [belief calculus + modeling]
+
 Dampeners are realized as support for the complement `Θ∖{h}` (SynthesisEngine.swift:170-175;
 Conclusion.swift:190-196) and Dempster-combined against **every** positive with no immunity.
 `captivePortalActive` carries `-2.0` on spoofing *and* interception_onPath — exactly cancelling
@@ -102,6 +104,7 @@ at the calculus level. **Note:** the *fix* is not "discount the source" (that ju
 weaponization — see §3, R1); it is a causal benign-explanation model plus a decision-layer safety gate.
 
 ### P3 — Gate, name, and confidence are three different quantities [belief calculus / readout]
+
 The gate is `Bel(threatUnion) ≥ 0.40` on **set** mass (SynthesisEngine.swift:216); the name is
 `argmax BetP` over **singletons** (line 214); the confidence is `BetP(verdict)` — the singleton's
 `1/|A|` share of that set-mass (lines 241-242). So the engine prints "spoofing, 55%" when
@@ -112,6 +115,7 @@ strip surfaces as "48%, ask a human" (NE1 Δ3). The margin gate conflates *withi
 (spoofing-vs-interception, both bad) with *threat-vs-clean* ambiguity (the only case warranting defer).
 
 ### P4 — The §B005 partial-data contracts do not exist [aggregation; NOT a Dempster defect]
+
 `DESIGN.md:182` is binding: `score = baseScore * (K/6)` and "if any critical section (Prophet, Mirror,
 Glutton) is inconclusive, the score is further halved." Grep confirms **neither DST synthesis engine
 (`SynthesisEngine.swift`/`.cs`) applies a `.degraded` discount/penalty to confidence** — `.degraded`
@@ -128,6 +132,7 @@ malformed target answer reads Prophet-CLEAN and *emits* clean-support (NE2 Δ5; 
 tree; R2 supersedes any post-combination multiplier regardless.)*
 
 ### P5 — Evidence dropped before it can score; probes fragile; platforms diverge [pipeline/probe/parity; NOT a Dempster defect]
+
 Real cross-vantage divergence never reaches the verdict: `DatapointExtractor` reads `localRecords`/
 `localServer` but **never `publicResolverResults`** (Report.swift:78-91 vs
 `ComparisonResult.publicResolverResults`), so a poisoned local answer renders as an *agreed fact*
@@ -222,6 +227,7 @@ mechanisms** with disjoint responsibilities and non-interfering effects on the n
 makes the confidence contract (§5) internally consistent.
 
 ### M1 — SOURCE RELIABILITY (Shafer discounting, intrinsic only)  [R1]
+
 A source is discounted toward ignorance **only for reasons intrinsic to the source's own trust-
 worthiness**: a `.degraded` section (ran on partial data), a thin `N/M` coverage fraction, or a probe
 that half-completed. Discounting is applied at **mass-construction time, before combination**:
@@ -233,10 +239,12 @@ a statement about whether *this observation's source* is reliable; routing it th
 category error the reviewers rejected (see M2).
 
 ### M2 — BENIGN EXPLANATION (causal / observation-gated, or force referral)  [R1]
+
 A benign cause (captive portal, VPN, CDN/geo divergence, encryption on) is modeled by a **causal
 likelihood/signature test**, not by discounting a reliable observation. Concretely, for each benign
 cause the design declares the **observation signature** it produces, and the cause may explain away an
 observation **only when that observation matches the signature**:
+
 - Captive portal explains a `redirection` **only when the redirect target equals the portal/gateway
   IP** (NE4 Δ1 fix). If the redirect points elsewhere, the portal explains nothing and the redirection
   stands at full strength.
@@ -260,8 +268,10 @@ signature and is untouched. When the context is present but the observation is g
 between benign and adversarial, M2 **forces referral** rather than guessing.
 
 ### M3 — EVIDENCE COMPLETENESS (a separate reported dimension; forbids clean; never multiplies Bel)  [R2, D3]
+
 Completeness is `K/M` where `K` = sections that reached a *conclusive* status (`negative`/`positive`)
 and `M` = sections *scheduled to run* for this invocation. Per **D3**:
+
 - A **user-skipped** section **decrements `M`** — it was never scheduled, so it is not a penalty
   (`syxx-nslook` legitimately runs 1 section; `M=1`).
 - A **scheduled-but-failed / timed-out** section **stays in `M`** and lowers `K/M` — the run *tried*
@@ -276,8 +286,10 @@ lets I6 hold: the confidence number stays the single credal quantity `Bel(class-
 complete was the run" is its own honest figure the user and the report can see.
 
 ### M4 — DECISION POLICY (deterministic safety gate outside DST; integer-% gating)  [R3, R7, D1, D2]
+
 The verdict/name/referral decision is a deterministic layer **on top of** the DST number, and it never
 overwrites that number.
+
 - **Deterministic safety gate (D1, replaces v1's post-combination belief floor).** A **VALIDATED
   decisive act** forbids a `clean` verdict and floors the **verdict** at referral-or-tampered,
   regardless of contradictory contextual evidence. This is enforced *outside* the belief arithmetic:
@@ -379,6 +391,7 @@ discount` chain anywhere (R2), and nothing overwrites `Bel` after combination (R
 ## 4. Framework choice and fusion-rule selection
 
 ### 4.1 Representation — keep DST, complete it as a Transferable Belief Model
+
 DST stays the belief representation: ignorance is unassigned mass `m(Θ)`, so zero-data ⇒ ~0 committed
 belief by construction, and the engine stays deterministic, `WitnessSigner`-reproducible, and
 explainable per-datum (no black-box ML). The missing discipline behind P3 is the **two-level
@@ -389,6 +402,7 @@ display, never as the confidence). This is the architecture the engine header al
 Artificial Intelligence 66(2), 1994.)
 
 ### 4.2 The combination rule is a Phase-0 EXPERIMENT, not a pre-commitment  [R5]
+
 v1 asserted Denoeux's cautious conjunctive rule as *the* answer. v2 does **not** pre-commit. The rule
 that governs combination *within a non-independent lineage cluster* (R4) is **selected by a Phase-0
 bake-off** that scores candidate rules on two axes simultaneously: (a) correct behavior on the
@@ -412,6 +426,7 @@ D2, and (iii) is the least aggressive on conflict consistent with (i). The cauti
 across genuinely disjoint-lineage clusters** regardless (independence there is real).
 
 ### 4.3 What we borrow, and what we reject
+
 - **Subjective Logic** — reject a full switch; its opinions `(b,d,u,a)` carry their own independence
   assumptions and the marginal gain over "TBM + selected rule" is small. **Borrow** its explicit
   base-rate `a` discipline into calibration (§8).
@@ -428,6 +443,7 @@ Binding contract for Stages 3-4. It makes `DESIGN.md:126-192` real. `K`, `M`, an
 gate are defined by M3 (§3, D3).
 
 ### 5.1 No-data regime (zero conclusive sections)
+
 - **Input:** all sections `untested`/`inconclusive`/empty, or every probe timed out.
 - **Belief state:** no supports ⇒ vacuous mass ⇒ `Bel(h)=0 ∀h`, `m(Θ)=1`.
 - **Output (binding, R8):** verdict = `inconclusive`; **confidence = NIL / ABSENT (not numeric 0)** —
@@ -436,7 +452,9 @@ gate are defined by M3 (§3, D3).
   invariant 1). *Closes the false-clean-from-nothing class (NE7 Δ1 no-data half; B008 lineage).*
 
 ### 5.2 Partial-data regime (0 < K < M, or any critical section not conclusive)
+
 Where the current engine lies, and where §B005 must become code.
+
 - **Completeness (M3, D3).** `K/M` is reported as its own dimension. If a critical section is not
   conclusive, completeness **forbids `clean`** (not "halves confidence"). This removes the
   coverage-redundancy loophole that let an inconclusive Prophet ride to CLEAN because Mirror+Witness
@@ -456,6 +474,7 @@ Where the current engine lies, and where §B005 must become code.
   gap is **visible** (unobserved datapoints listed in the explanation, §7).
 
 ### 5.3 Full-data regime (K = M, all sections conclusive)
+
 - Normal DST composition (Stage 3, selected rule), credal readout (Stage 4).
 - **Minimum-corroboration gate (DESIGN.md:169-172).** A single evidence item may *raise* a threat but
   must **force referral** (tentative, confidence-capped) unless it is a **validated decisive act**
@@ -484,6 +503,7 @@ be an invariant. The safety-gate form of I5 is deterministic and robust to any b
 ## 6. Composition across the six disciplines
 
 ### 6.1 What each discipline contributes (three channels, never conflated)
+
 1. **Positive act-supports** — for hypotheses the section *directly observed* (Stage 1 acts).
 2. **Datapoint-scoped clean-support** — only for datapoints that ran clean, N/M-scaled, against the
    *specific* threat each datapoint rules out (a clean NX canary dampens NX-hijack; it does **not**
@@ -512,6 +532,7 @@ Windows injects false censorship/spoofing mass from a merely-slow resolver (NE5 
 route overlays identically through the caveat channel.
 
 ### 6.2 Coverage corrections (which sections may dampen which threats)
+
 - **Witness** coverage narrows from `{spoofing, interception_onPath}` to what a longitudinal drift
   baseline actually rules out (answer-drift persistence — arguably nothing about *live* spoofing); and
   `witness()` returns `.untested`, not `.negative`, when no trustworthy baseline was compared (NE2 Δ8;
@@ -535,6 +556,7 @@ route overlays identically through the caveat channel.
     subject to the wash — it is not a deterministic backstop.
 
 ### 6.3 Correlation keyed on FULL LINEAGE, not act class alone  [R4]
+
 Two bodies of evidence are **independent** (eligible for Dempster) only when their **full lineage
 tuple is disjoint** on all four fields: `{source/vantage identity, raw-observation lineage (which
 captured packets / response set), probe-and-control dependency (which reference/control it used), act
@@ -543,6 +565,7 @@ the *same* captured response set, or validated against the *same* reference cont
 dependent and must combine under the Phase-0-selected non-independent rule.
 
 This both fixes and refines v1:
+
 - **Splits genuinely independent acts** that the current coarse `source:"canaries"` tag merged: today
   `nxCanaryHijack` and `dnssecCanaryStripped` share `source:"canaries"` (Conclusion.swift correlation
   map + DNSCanaries source tag), so a resolver that *both* NX-hijacks and DNSSEC-strips has its two
@@ -555,6 +578,7 @@ This both fixes and refines v1:
   proposal), which would over-count.
 
 ### 6.4 Mechanism-class partition (fixes P3 confidence + margin)
+
 Confidence and the margin gate operate on **mechanism classes**, not raw singletons:
 
 - REWRITE = `{spoofing, interception_onPath}` (someone is changing the answer; both bad)
@@ -565,6 +589,7 @@ Confidence and the margin gate operate on **mechanism classes**, not raw singlet
 - HOST = `{localCompromise}`
 
 Rules:
+
 - **Confidence** = `Bel` of the smallest mechanism-class set carrying the committed mass — the single
   credal quantity (I6). A confirmed `dnssecCanaryStripped` reports `Bel(REWRITE) ≈ 0.95`, not
   `BetP(spoofing) = 48%` (NE1 Δ3).
@@ -599,6 +624,7 @@ Every `Conclusion` carries a three-partition provenance view:
   explicitly, and reflected in completeness (M3). The gap is *shown*, not hidden.
 
 Three **distinct** honesty lines (today they collapse to one bare "inconclusive" — NE3 Δ2):
+
 1. **Hard gate** — "A clean verdict is impossible until Mirror and Glutton run (required checks did not
    run)." Surfaces `hasHardGatedSection` as prose.
 2. **Conflict** — "The sections genuinely disagree (conflict N%)" — and *only* when they do, now that
@@ -610,6 +636,7 @@ orders which finding leads when several are present. **Honest scope (D4, amended
 there is no labeled corpus, so the shipped RPN is `RPN = Severity × detection-tier` (a defensible
 two-factor priority), **not** the full `S × O × D` FMEA, and this is stated as such in the report. The
 **Occurrence axis is built as a pluggable source** with two backings:
+
 - **Static expert-elicited constants** — shipped for v1, deterministic, zero learning surface (the
   default backing).
 - **Adaptive Dirichlet-Multinomial per-SSID priors** — an **opt-in** backing store behind **five hard
@@ -641,6 +668,7 @@ Several deltas are *direct consequences* of un-calibrated constants interacting.
 respect that these are **belief-function** parameters, not probabilities:
 
 ### 8.1 What is and is not an LLR
+
 - **Singleton-focal weights** (a signal that argues for exactly `{h}` vs `¬h`) may be estimated as a
   genuine LLR `log[P(signal|h)/P(signal|¬h)]` from a labeled corpus, with the base rate stated
   (borrowing Subjective Logic's base-rate discipline). This is well-posed because `{h}` vs its
@@ -654,10 +682,12 @@ respect that these are **belief-function** parameters, not probabilities:
   result confidence — the exact P3 error.
 
 ### 8.2 A valid calibration target (not a naive reliability diagram on Bel)
+
 `Bel(A)` is a **lower probability bound**, not a probability (Dempster, *Upper and Lower Probabilities
 Induced by a Multivalued Mapping*, Annals of Mathematical Statistics 38, 1967), so plotting observed
 frequency against `Bel` is ill-posed. Two well-posed targets, both declared with explicit hypotheses,
 base rates, and sampling assumptions:
+
 - **Coverage calibration of the credal interval `[Bel(class), Pl(class)]`.** Over the labeled corpus,
   the true mechanism class must fall within the reported interval at ≥ the nominal coverage. This is
   the correct calibration notion for lower/upper probability bounds.
@@ -668,6 +698,7 @@ base rates, and sampling assumptions:
   layer, and the coverage target to calibrate the **credal** confidence number.
 
 ### 8.3 The false-secure budget
+
 Set the naming floor and referral thresholds to hit an explicit **false-secure (missed-tampering)
 budget** on a held-out adversarial set. Still no black-box ML: every number traces to a datapoint and
 its derivation is recorded next to the weight and is signable (NE1/NE4/NE7 calibration proposals).
@@ -929,6 +960,7 @@ acquisition); WitnessSigner.swift / Windows/Syxx.Kit/WitnessSigner.cs (signing s
 contain **no** `.degraded` reference (MINOR-3).
 
 **Papers / standards (cited by title):**
+
 - P. Smets & R. Kennes, *The Transferable Belief Model*, Artificial Intelligence 66(2), 1994 — credal
   vs pignistic two-level architecture.
 - A. P. Dempster, *Upper and Lower Probabilities Induced by a Multivalued Mapping*, Annals of

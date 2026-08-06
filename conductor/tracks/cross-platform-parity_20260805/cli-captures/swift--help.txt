@@ -1,0 +1,25 @@
+Usage: syxx [subcommand] [options]
+
+Subcommands:
+  nslook     DNS lookup (type, resolver)
+  mirror     Vantage comparison (local vs public)
+  leak       VPN DNS leak test
+  witness    Signed evidence (keygen, sign, verify)
+  key        Network state (resolver, interface, VPN)
+  route      Traceroute to a target
+  lan        ARP/LAN map
+  forensics  DNS forensics analysis
+  sentinel   Config drift detection
+  cage       Packet capture (requires sudo)
+  warp       Content integrity check
+  speed      Resolver speed benchmark (ranks all resolvers by latency)
+  unbound    Local DNSSEC-validating resolver (verify | status | enable | disable)
+  filter     DNS blocklist / Pi-hole enforcement + bypass check
+  firstrun   Five-minute first-run scan — runs all disciplines, grades the network
+
+Without a subcommand, enters interactive guided mode.
+Examples:
+  syxx nslook google.com MX @8.8.8.8
+  syxx mirror google.com
+  syxx route 8.8.8.8
+  sudo syxx cage --duration 10

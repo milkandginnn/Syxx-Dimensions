@@ -51,6 +51,7 @@ accent gradient: #05b5d4 (io-blue) → #8c5cf5 (io-electric)
 severity: critical #f5405e · high #fa7317 · warning #f59e0a · success #0d9487 · info #8c5cf5
 fonts: Space Grotesk (display/sans) · Space Mono (mono)   (Io tokens: font-rounded/sans/mono)
 ```
+
 > **Palette-divergence flag (needs a USER decision, not a blocker):** the GUI "Io" accent is
 > cyan→electric-violet, but the finalized **Syxx app icon** is violet→gold→magenta (the ribbon
 > logo), and the Nnyx/Zzyn icons are on that same violet-gold-magenta family. Build to the Io
@@ -131,6 +132,7 @@ public enum Severity: String, Codable, Sendable { case clean, info, warning, hig
 ```
 
 **Render rules (cardinal — must match the engine's intent):**
+
 - **`inconclusive` and any low-confidence result must NEVER render green.** Reserve the affirmative
   (green) treatment for `clean` with high confidence. Map `Hypothesis.severity` → Io color.
 - Keep **three axes visually separate**: operation status (did the run finish) · finding (the

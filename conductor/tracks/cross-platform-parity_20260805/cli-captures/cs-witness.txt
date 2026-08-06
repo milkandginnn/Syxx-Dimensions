@@ -1,0 +1,3 @@
+syxx witness 2.0.0
+
+Usage: syxx witness create <domain> --key-file <path> [--output f] | verify <file> [--pubkey <b64>] [--fetch-pubkey <url>] [--detailed] [--max-age <seconds>] | report <file> [--conclusion <file>] | --gen-keypair [--key-file <path>] [--force]

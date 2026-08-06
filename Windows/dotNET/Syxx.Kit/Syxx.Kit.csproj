@@ -22,5 +22,11 @@
          assemblies: "Syxx" = Avalonia GUI AssemblyName (and the CLI), "SyxxUI" = WinUI. -->
     <InternalsVisibleTo Include="Syxx" />
     <InternalsVisibleTo Include="SyxxUI" />
+    <!-- D004: the Avalonia test project exercises LinuxSecretStore's file-fallback
+         on CI (no keyring daemon). Without this grant the tests must write to the
+         real ~/.syxx/keystore through the public constructor, and a silent failure
+         in StoreWithFile is invisible — Retrieve returns null with no diagnostic.
+         The internal constructor takes a temp directory so each test is hermetic. -->
+    <InternalsVisibleTo Include="SyxxUI.Avalonia.Tests" />
   </ItemGroup>
 </Project>

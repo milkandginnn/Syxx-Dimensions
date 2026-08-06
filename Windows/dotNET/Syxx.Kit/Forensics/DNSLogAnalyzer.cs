@@ -148,6 +148,10 @@ namespace Syxx.Kit
         public List<string> ExfilCandidates { get; init; } = new();
         /// C6 — domains impersonating a known brand (homoglyph / typosquat).
         public List<LookalikeDetector.Finding> LookalikeFindings { get; init; } = new();
+        /// K-17 / C083 (macOS twin parity) — count of records whose question name failed
+        /// NormalizeDomain and were excluded from every forensic tally. Surfaced so the coverage
+        /// gap is disclosed rather than implied away.
+        public int NamesExcludedCount { get; init; }
         public List<string> Interpretation { get; init; } = new();
     }
 
@@ -162,6 +166,7 @@ namespace Syxx.Kit
             var process = new Dictionary<string, int>();
             var longDomains = new HashSet<string>();
             var encoded = new HashSet<string>();
+            int namesExcluded = 0;   // K-17 / C083: records whose question name failed NormalizeDomain
 
             void Bump(Dictionary<string, int> d, string k) => d[k] = d.TryGetValue(k, out var v) ? v + 1 : 1;
 
@@ -173,7 +178,9 @@ namespace Syxx.Kit
 
                 if (string.IsNullOrEmpty(r.QuestionName)) continue;
                 var d = NormalizeDomain(r.QuestionName!);
-                if (d == null) continue;
+                // K-17 / C083: count names excluded by NormalizeDomain so the coverage gap is
+                // disclosed. A dropped record vanishes from every tally below, including exfil.
+                if (d == null) { namesExcluded++; continue; }
                 Bump(domain, d);
                 var reg = DNSCaptureReportGenerator.RegistrableDomain(d);
                 if (reg != null) Bump(registrable, reg);
@@ -211,6 +218,7 @@ namespace Syxx.Kit
                 EncodedDomains = encoded.OrderBy(x => x, StringComparer.Ordinal).ToList(),
                 ExfilCandidates = exfil,
                 LookalikeFindings = lookalikes,
+                NamesExcludedCount = namesExcluded,
                 Interpretation = interp
             };
         }
@@ -243,6 +251,12 @@ namespace Syxx.Kit
             outp.Add($"Source: {source}");
             outp.Add($"Parsed records: {a.RecordCount}");
             outp.Add($"Unique domains: {a.UniqueDomains}  |  Unique registrable domains: {a.UniqueRegistrable}");
+            // K-17 / C083: disclose names excluded from analysis by NormalizeDomain — the coverage
+            // gap must be visible so the record count's completeness claim is honest.
+            if (a.NamesExcludedCount > 0)
+            {
+                outp.Add($"Names excluded from analysis: {a.NamesExcludedCount} (non-ASCII, single-label, or invalid characters)");
+            }
             outp.Add("");
             Section("Top Domains", a.DomainCounts);
             Section("Top Registrable Domains", a.RegistrableCounts);
@@ -283,8 +297,13 @@ namespace Syxx.Kit
             if (s.Length == 0 || !s.Contains('.', StringComparison.Ordinal) || s.Length > 253) return null;
             var labels = s.Split('.');
             if (labels.Any(l => l.Length == 0 || l.Length > 63)) return null;
+            // K-17 / C083 (macOS twin parity): allow underscores — valid in DNS (RFC 8552) and
+            // ubiquitous in SRV, DKIM, DMARC and mDNS service discovery (_dmarc.example.com,
+            // _sip._udp.example.com, _services._dns-sd._udp.local). Rejecting `_` returned null
+            // here, and the caller DROPS a null-normalising record entirely — so those names
+            // vanished from every forensic tally including exfil detection. A silent drop.
             foreach (var c in s)
-                if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '.' || c == '-')) return null;
+                if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '_')) return null;
             return s;
         }
 

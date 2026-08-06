@@ -40,6 +40,7 @@
 ```
 
 **Dual-channel approach:**
+
 - **Sentry SDK** → crash reports, unhandled exceptions, breadcrumbs, release tracking (what Sentry does best)
 - **OTel exporter** → structured traces with custom spans for DNS operations, probe pipelines, server requests (what OTel does best)
 - Sentry accepts OTLP natively — both channels flow into one dashboard
@@ -53,6 +54,7 @@
 ### Steps
 
 1. **Deploy via Docker Compose** on `bugsmasher.syxx.app` (or a subdomain like `sentry.syxx.app`):
+
    ```bash
    git clone https://github.com/getsentry/self-hosted.git
    cd self-hosted
@@ -86,11 +88,13 @@
 ### 2a. macOS — `sentry-cocoa`
 
 **File:** `macOS/Package.swift`
+
 ```swift
 .package(url: "https://github.com/getsentry/sentry-cocoa", from: "8.40.0")
 ```
 
 **File:** `macOS/Sources/SyxxApp/SentryBootstrap.swift` (new)
+
 ```swift
 import Sentry
 
@@ -113,6 +117,7 @@ enum SentryBootstrap {
 **Call site:** `SyxxApp.swift` `init()` — call `SentryBootstrap.setup()` before `OTelBootstrap.setup()`.
 
 **What you get automatically:**
+
 - Mach exception capture (SIGSEGV, SIGABRT, SIGBUS)
 - Swift error capture via `SentrySDK.capture(error:)`
 - App hang detection (>2s main thread block)
@@ -122,11 +127,13 @@ enum SentryBootstrap {
 ### 2b. Windows — `Sentry.NET`
 
 **File:** `Windows/SyxxUI/SyxxUI.csproj`
+
 ```xml
 <PackageReference Include="Sentry" Version="4.13.0" />
 ```
 
 **File:** `Windows/SyxxUI/App.xaml.cs` (modify)
+
 ```csharp
 using Sentry;
 
@@ -155,6 +162,7 @@ public partial class App : Application
 **File:** `Windows/Syxx/Program.cs` (CLI entry — add same init)
 
 **What you get automatically:**
+
 - Unhandled .NET exceptions
 - Native crashes via `Sentry.Native` (included in package)
 - Win32 SEH exceptions
@@ -167,11 +175,13 @@ Same as Windows — `Sentry.NET` works on Linux. Add to `Ubuntu/SyxxUI.Avalonia/
 ### 2d. Python Server — `sentry-sdk`
 
 **File:** `Server/requirements.txt`
+
 ```
 sentry-sdk[opentelemetry]>=2.0
 ```
 
 **File:** `Server/syxx_server/app.py` (add before OTel init)
+
 ```python
 import sentry_sdk
 sentry_sdk.init(
@@ -184,6 +194,7 @@ sentry_sdk.init(
 ```
 
 **What you get automatically:**
+
 - Unhandled Python exceptions
 - `http.server` request instrumentation
 - Database query spans (if using sqlite3)
@@ -319,6 +330,7 @@ server.request
 **Goal:** Instrument the Linux/Avalonia client to match Windows.
 
 **File:** `Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj`
+
 ```xml
 <PackageReference Include="OpenTelemetry" Version="1.16.0" />
 <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
@@ -326,6 +338,7 @@ server.request
 ```
 
 **File:** `Ubuntu/SyxxUI.Avalonia/App.axaml.cs` (add to `OnFrameworkInitializationCompleted`)
+
 ```csharp
 _tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddSource("SyxxKit")
@@ -346,6 +359,7 @@ _tracerProvider = Sdk.CreateTracerProviderBuilder()
 ### macOS dSYM upload
 
 **File:** `.github/workflows/ci.yml` (add after `swift build`)
+
 ```yaml
 - name: Upload dSYMs to Sentry
   if: matrix.os == 'macos-latest'
@@ -374,6 +388,7 @@ _tracerProvider = Sdk.CreateTracerProviderBuilder()
 ### Source map for Python
 
 Python stack traces are already readable (no compilation), but Sentry can use source context:
+
 ```yaml
 - name: Create Sentry release
   run: |
@@ -416,11 +431,13 @@ Python stack traces are already readable (no compilation), but Sentry can use so
 **Goal:** Let agents query Sentry directly during debugging workflows.
 
 Install the Sentry MCP extension:
+
 ```bash
 qwen extensions install https://github.com/getsentry/sentry-mcp
 ```
 
 This gives `syxx-neural-debugger` and `syxx-researcher` direct access to:
+
 - Search issues by platform, release, or error signature
 - Read full stack traces with symbolicated frames
 - Check crash trends across releases
@@ -533,6 +550,7 @@ Add OTel spans when each toolset view appears and disappears, capturing how long
 ```
 
 Span hierarchy:
+
 ```
 gui.session
 ├── gui.view.prophet (onAppear → onDisappear)
@@ -565,6 +583,7 @@ Sentry's `enableAppHangTracking = true` with `appHangTimeoutInterval = 2.0` auto
 #### Layout shift metrics (future)
 
 For each high-severity finding, track whether the fix has been applied:
+
 - Before fix: conditional views cause layout shift → Sentry breadcrumb on state change
 - After fix: reserved space prevents shift → no breadcrumb needed
 

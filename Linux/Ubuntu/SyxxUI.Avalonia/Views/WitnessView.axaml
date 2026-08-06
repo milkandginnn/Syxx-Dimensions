@@ -31,6 +31,9 @@
                      Foreground="{StaticResource SyxTextSecondaryBrush}" />
           <TextBlock Text="{Binding VerifyLine}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"
                      Foreground="{Binding VerifyBrush}" />
+          <!-- 5(b): re-run the forensic verification over the last seal on demand. -->
+          <Button Content="Re-verify last seal" Command="{Binding SelfVerifyCommand}"
+                  HorizontalAlignment="Left" />
         </StackPanel>
       </Border>
       <Border CornerRadius="10" Padding="14" Background="{StaticResource SyxSurfaceDarkBrush}"
@@ -40,8 +43,28 @@
       </Border>
     </StackPanel>
 
-    <!-- Verify a testimony sealed elsewhere: paste its JSON and check the signature. Renders into the
-         same VerifyLine/VerifyBrush the self-verify path uses. -->
+    <!-- 5(c) bring-your-own-key: paste an existing base64 Ed25519 private key to adopt it as this
+         machine's signing identity. Validated before it is persisted; on failure nothing is saved. -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="BRING YOUR OWN KEY" FontSize="12" FontWeight="Bold"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBlock Text="Paste a base64 Ed25519 private key (exactly 32 bytes) to make it this machine's signing identity. It is validated before it is saved; nothing is stored if it is invalid."
+                   FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <TextBox Text="{Binding ImportKeyText}" AcceptsReturn="False" TextWrapping="Wrap"
+                 FontFamily="monospace" FontSize="12" PasswordChar="•"
+                 Watermark="base64 Ed25519 private key" />
+        <Button Content="Save signing key" Command="{Binding ImportKeyCommand}"
+                HorizontalAlignment="Left" />
+        <TextBlock Text="{Binding ImportStatusLine}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap"
+                   Foreground="{Binding ImportStatusBrush}" IsVisible="{Binding ImportStatusLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Verify a testimony sealed elsewhere: paste its JSON and check the signature. G-14: renders
+         into its own ExternalVerifyLine/ExternalVerifyBrush so the conclusion is visible without a
+         prior self-sign. -->
     <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
             BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
       <StackPanel Spacing="10">
@@ -54,6 +77,9 @@
                  Watermark="{}{ &quot;targetDomain&quot;: &quot;github.com&quot;, &quot;signature&quot;: … }" />
         <Button Content="Verify Testimony" Command="{Binding VerifyExternalCommand}"
                 HorizontalAlignment="Left" />
+        <TextBlock Text="{Binding ExternalVerifyLine}" Foreground="{Binding ExternalVerifyBrush}"
+                   IsVisible="{Binding ExternalVerifyLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   TextWrapping="Wrap" Margin="0,4,0,0" />
       </StackPanel>
     </Border>
   </StackPanel>

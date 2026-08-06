@@ -264,7 +264,7 @@ public sealed partial class AppViewModel : ObservableObject
     [ObservableProperty] private bool _showValidation;
     [ObservableProperty] private bool _witnessValid;
     [ObservableProperty] private WitnessSnapshot? _witnessSnapshot;
-    /    // E021: the detailed verification outcome behind WitnessValid; null when never verified.
+    /// E021: the detailed verification outcome behind WitnessValid; null when never verified.
     [ObservableProperty] private SnapshotVerification? _witnessVerification;
     /// Monotonically increasing generation counter incremented by WitnessFree() so that a
     /// concurrently running WitnessTestifyAsync() can detect that its snapshot was cleared
@@ -279,6 +279,18 @@ public sealed partial class AppViewModel : ObservableObject
     [ObservableProperty] private WitnessTestimonyState _witnessTestimony = WitnessTestimonyState.Idle;
     /// The failure reason surfaced when WitnessTestimony == Failed; empty otherwise.
     [ObservableProperty] private string _witnessTestimonyMessage = string.Empty;
+    /// #22 (Windows parity with Linux WitnessViewModel.VerifyExternal, WitnessViewModel.cs:257-284):
+    /// raw JSON of an externally-supplied signed testimony — a seal made on another device — pasted
+    /// by the user so its signature can be checked here. Kept separate from the self-verify path;
+    /// both are judged by the SAME <see cref="WitnessSigner.VerifySnapshotDetailed"/> and rendered
+    /// through the SAME result switch (WitnessView.UpdateValidation).
+    [ObservableProperty] private string _externalSnapshotJson = string.Empty;
+
+    /// Canonical snapshot reader options — case-insensitive, matching the CLI verify path and the
+    /// Linux twin (WitnessViewModel.cs:161-162). The date/status wire converters are attribute-bound
+    /// on WitnessSnapshot itself, so no extra converter registration is needed here.
+    private static readonly System.Text.Json.JsonSerializerOptions ExternalVerifyReaderOptions =
+        new() { PropertyNameCaseInsensitive = true };
 
     // ──────────────────────────────────────────────────────────────────────────
     // MARK: Conclusion screen
@@ -298,8 +310,11 @@ public sealed partial class AppViewModel : ObservableObject
 
     /// E129: tri-state outcome for the last update check, so the UI can distinguish
     /// "server said current" from "server never answered" or "served from stale cache."
-    public enum UpdateCheckOutcome { Live, Cached, Failed }
-    [ObservableProperty] private UpdateCheckOutcome _updateCheckOutcome = UpdateCheckOutcome.Failed;
+    // Named ...State, not ...Outcome: [ObservableProperty] on _updateCheckOutcome generates a
+    // PROPERTY called UpdateCheckOutcome, and a nested type of that name collides with it
+    // (CS0102 from the source generator — surfaced by the first real Windows build in CI).
+    public enum UpdateCheckState { Live, Cached, Failed }
+    [ObservableProperty] private UpdateCheckState _updateCheckOutcome = UpdateCheckState.Failed;
 
     /// Called once on launch — one phone-home per day. Shows broadcast if undismissed.
     /// Mirrors macOS checkStartup() which calls validateLicenseOnLaunch() FIRST, before
@@ -313,10 +328,10 @@ public sealed partial class AppViewModel : ObservableObject
         StartupResponse = resp;
         // E129: record whether the check actually succeeded live, fell back to cache, or failed entirely.
         UpdateCheckOutcome = resp is null
-            ? UpdateCheckOutcome.Failed
+            ? UpdateCheckState.Failed
             : DimensionService.Shared.LastResponseWasCached
-                ? UpdateCheckOutcome.Cached
-                : UpdateCheckOutcome.Live;
+                ? UpdateCheckState.Cached
+                : UpdateCheckState.Live;
         if (resp?.Update is not null)
         {
             UpdateAvailable = resp.Update.Available;
@@ -510,6 +525,11 @@ public sealed partial class AppViewModel : ObservableObject
             _sectionInputs.TtlAnomaly = plan.TtlAnomaly;
             _sectionInputs.CnameChain = plan.CnameChain;
             _sectionInputs.Warp = plan.Warp;
+            // UI-PRELUDE: ProbePlan populates the WARP_MANIFEST_V1 result, not the retired
+            // proxy-path Warp field (always null). Without this assignment a completed Mirror run
+            // rendered the never-ran branch. The legacy assignment above stays while the Mirror
+            // View surface (owned by the UI stream) migrates to WarpManifest.
+            _sectionInputs.WarpManifest = plan.WarpManifest;
 
             OnPropertyChanged(nameof(SectionInputs));
             MirrorRunState = ProbeRunState.Completed;
@@ -620,7 +640,7 @@ public sealed partial class AppViewModel : ObservableObject
             data: new Dictionary<string, string>
             {
                 ["result"] = determination?.State.ToString() ?? "none",
-                ["section_count"] = (SectionInputs?.Count() ?? 0).ToString(),
+                ["has_inputs"] = (SectionInputs is not null).ToString(),
                 ["engine_version"] = "matrix.1"
             });
     }
@@ -690,10 +710,14 @@ public sealed partial class AppViewModel : ObservableObject
     /// </summary>
     public void SaveWitnessKey(string base64Key)
     {
-        var trimmed = base64Key?.Trim() ?? string.Empty;
-        if (trimmed.Length == 0) return;
+        // Reset the failure sentinel BEFORE the empty-input early-return, not after — otherwise a
+        // stale WitnessKeySaveFailed from a prior failed attempt would linger when the user clears
+        // the field and re-submits empty, and the save-gate (WitnessView.SaveKeyBoxToViewModel)
+        // would keep refusing to seal even though there is now nothing to save.
         WitnessKeyError = string.Empty;
         WitnessKeySaveFailed = false;
+        var trimmed = base64Key?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0) return;
         try { WitnessKeyStore.SaveKey(trimmed); }
         catch (System.Exception ex)
         {
@@ -844,6 +868,58 @@ public sealed partial class AppViewModel : ObservableObject
         // E021: keep the DISTINCT outcome (expired vs stale vs untrusted vs forged) so the
         // surface can render forensically different failures differently.
         var detailed = WitnessSigner.VerifySnapshotDetailed(WitnessSnapshot);
+        WitnessVerification = detailed;
+        WitnessValid = detailed == SnapshotVerification.Valid;
+    }
+
+    /// <summary>
+    /// #22 (Windows parity with Linux WitnessViewModel.VerifyExternal): verify a testimony sealed on
+    /// another device by pasting its snapshot JSON. Deserializes with the canonical case-insensitive
+    /// reader contract and routes the outcome through the SAME
+    /// <see cref="WitnessSigner.VerifySnapshotDetailed"/> and result switch as self-verify, so a third
+    /// party's seal is judged by exactly the same rules and rendered by the same code
+    /// (WitnessView.UpdateValidation reads WitnessSnapshot/WitnessVerification/WitnessValid).
+    /// Synchronous: JSON parse + Ed25519 verify are CPU-bound and fast, matching WitnessVerify.
+    ///
+    /// Unreadable input (empty, malformed JSON, or a JSON <c>null</c>) folds into
+    /// <see cref="SnapshotVerification.MalformedInput"/> — an honest inconclusive rendered by the
+    /// same switch, never a green pass and never a crash. WitnessSnapshot is left null in that case
+    /// so the switch's MalformedInput branch (not the "no snapshot / press Testimony" prompt) fires.
+    /// </summary>
+    [RelayCommand]
+    private void WitnessVerifyExternal()
+    {
+        ShowValidation = true;
+
+        WitnessSnapshot? parsed = null;
+        if (!string.IsNullOrWhiteSpace(ExternalSnapshotJson))
+        {
+            try
+            {
+                parsed = System.Text.Json.JsonSerializer.Deserialize<WitnessSnapshot>(
+                    ExternalSnapshotJson, ExternalVerifyReaderOptions);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Unreadable bytes are a MalformedInput outcome, not a guessed result — fall through
+                // with parsed still null.
+            }
+        }
+
+        if (parsed is null)
+        {
+            // Empty / malformed / JSON-null: honest inconclusive via the shared switch. Snapshot is
+            // deliberately left null; the UpdateValidation "no verification outcome" and "no snapshot"
+            // guards both key off WitnessVerification, so a non-null MalformedInput here renders the
+            // malformed message rather than the pre-seal prompt.
+            WitnessSnapshot = null;
+            WitnessVerification = SnapshotVerification.MalformedInput;
+            WitnessValid = false;
+            return;
+        }
+
+        WitnessSnapshot = parsed;
+        var detailed = WitnessSigner.VerifySnapshotDetailed(parsed);
         WitnessVerification = detailed;
         WitnessValid = detailed == SnapshotVerification.Valid;
     }

@@ -12,6 +12,7 @@ Contract enforced (same discipline as the html5lib suite):
   * xfail=true cases are EXPECTED to diverge; matching anyway is an "unexpected pass", not a failure;
   * a divergence WITHOUT an xfail marker fails the suite (no silent, undocumented gap).
 """
+
 import json
 import os
 import pathlib

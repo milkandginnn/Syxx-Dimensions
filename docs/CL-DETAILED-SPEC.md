@@ -1,7 +1,7 @@
 # CL-1/CL-2/CL-3 Detailed Technical Specification — syxx-neural-planner
 
 **Generated:** 2026-07-11 · **Agent:** syxx-neural-planner  
-**Spec:** [`HANDOFF-CLINE.md`](HANDOFF-CLINE.md) · **Master:** [`REASONING-SYSTEM-DESIGN.md`](REASONING-SYSTEM-DESIGN.md)  
+**Spec:** [`HANDOFF-CLINE.md`](HANDOFF-CLINE-IMPLEMENTATION.md) · **Master:** [`REASONING-SYSTEM-DESIGN.md`](REASONING-SYSTEM-DESIGN.md)  
 **Status:** Ready for syxx-neural-executor
 
 ---
@@ -9,17 +9,20 @@
 ## Current State Summary (from code survey)
 
 ### Server (Python)
+
 - **`resolver.py:384-456`** — `resolve_authoritative()` already exists. Full iterative root-walker with AA-bit validation, SSRF protection (`_ip_is_public`), DNSKEY zone-signing check, bounded depth (16), bounded servers per level (4). Returns `{name, qtype, delegation, authoritative: {answers, aa, rcode, signed}, verdict}`.
 - **`app.py:680-700`** — `_route_authoritative()` already exists. Calls `resolve_authoritative()`, returns JSON. Paid route (requires entitlement).
 - **`app.py:415-426`** — `_route_pubkey()` already exists. Returns the leak collector's Ed25519 public key (from `leak.collector_public_key()`).
 - **What's missing:** Ed25519 signing of the GroundTruth response, freshness (timestamp/nonce), domain/record binding in the signature, quorum (≥2 auth IPs queried independently), replay protection, and a typed trust level enum.
 
 ### Client (Swift)
+
 - **`DNSCanaries.swift:41-79`** — `nxdomainHijack()` queries two random names, checks for shared IP. **Defect:** requires shared IP between two names — a round-robin block page that returns different IPs per query evades detection.
 - **`DNSCanaries.swift:86-117`** — `dnssecControl()` uses single hardcoded `cloudflare.com`. **Defect:** single control — a benign lapse fires decisive stripping.
 - **What's missing:** Structural NXDOMAIN rule (RFC 8020: any answer for nonexistent name = hijack), multi-control DNSSEC quorum (≥3 controls, ≥2 must agree), DO-bit gate, encrypted-transport wildcard reference.
 
 ### Client (Windows)
+
 - Not yet surveyed in detail, but per AGENTS.md parity rule, every Swift change needs a C# twin.
 
 ---
@@ -29,6 +32,7 @@
 ### 1.1 What already exists and what must be added
 
 The server already produces authoritative ground truth via `resolve_authoritative()`. The gap is that the response is **unsigned, unauthenticated, and has no freshness/binding/quorum metadata**. A client consuming `/api/authoritative` has no way to verify:
+
 - The response came from the Syxx server (not a MITM)
 - The response is fresh (not replayed)
 - The response covers the exact domain+qtype+answers (not a different query)
@@ -1010,6 +1014,7 @@ public static func wildcardSynthesis(
 ### 3.3 Lab harness configurations
 
 #### dnsmasq NX-hijack rig
+
 ```
 # corpus/lab/dnsmasq-nx-hijack.conf
 port=5353
@@ -1020,6 +1025,7 @@ address=/#/10.10.10.1
 ```
 
 #### CoreDNS DNSSEC-strip rig
+
 ```yaml
 # corpus/lab/coredns-dnssec-strip.yml
 .:5354 {
@@ -1033,6 +1039,7 @@ address=/#/10.10.10.1
 ```
 
 #### Captive portal rig
+
 ```
 # corpus/lab/dnsmasq-captive.conf
 port=5355
@@ -1222,6 +1229,7 @@ CL-3.4 corpus/golden-vectors/*.json (NEW vectors)
 ## Acceptance Criteria (Real-Run Bar)
 
 ### CL-1 Acceptance
+
 1. `curl https://syxx.app/api/authoritative?domain=cloudflare.com&type=A` returns signed GroundTruth with `trustLevel: "decisive"`
 2. Replay: same payload twice → second rejected
 3. Stale: timestamp > 5 min → `inconclusive`
@@ -1229,11 +1237,13 @@ CL-3.4 corpus/golden-vectors/*.json (NEW vectors)
 5. Quorum fail: 1 of 2 NS agrees → `standard`
 
 ### CL-2 Acceptance
+
 1. Round-robin block page (different IPs per query) → hijack (Positive)
 2. Single DNSSEC lapse (1 of 3 controls) → not decisive
 3. Wildcard over plain-UDP with transparent proxy → inconclusive
 
 ### CL-3 Acceptance
+
 1. ≥6 labeled captures, one per mechanism class
 2. macOS and Windows produce identical verdicts on all golden vectors
 3. All NE1–NE7 failing scenarios reproduced as red vectors

@@ -3,6 +3,7 @@
 The clean-vantage fetch (`warp.build_baseline`) is monkeypatched, so no network. Run from Server/:
     python3 -m unittest tests.test_diff -v
 """
+
 import os
 import unittest
 
@@ -23,8 +24,10 @@ class DiffContentTests(unittest.TestCase):
 
     def test_cross_host_injection_is_tampered(self):
         self._baseline(["https://cdn.example.com/app.js"])
-        local = ('<script src="https://evil.tracker.net/inject.js"></script>'
-                 '<script src="https://cdn.example.com/app.js"></script>')
+        local = (
+            '<script src="https://evil.tracker.net/inject.js"></script>'
+            '<script src="https://cdn.example.com/app.js"></script>'
+        )
         c = app._diff_content("https://example.com/", local, None, None)
         self.assertEqual(c["assessment"], "injected")
         self.assertIn("evil.tracker.net", c["injectedScriptHosts"])
@@ -32,11 +35,10 @@ class DiffContentTests(unittest.TestCase):
 
     def test_same_host_churn_is_divergent_not_accused(self):
         self._baseline(["https://example.com/a.js"])
-        local = ('<script src="https://example.com/a.js"></script>'
-                 '<script src="https://example.com/b.js"></script>')
+        local = '<script src="https://example.com/a.js"></script><script src="https://example.com/b.js"></script>'
         c = app._diff_content("https://example.com/", local, None, None)
         self.assertEqual(c["assessment"], "divergent")
-        self.assertEqual(c["injectedScriptHosts"], [])          # same host → never accused of injection
+        self.assertEqual(c["injectedScriptHosts"], [])  # same host → never accused of injection
         self.assertEqual(app._diff_result("match", c), "inconclusive")
 
     def test_identical_structure_is_clean(self):
@@ -50,6 +52,7 @@ class DiffContentTests(unittest.TestCase):
     def test_fetch_failure_is_inconclusive(self):
         def boom(url):
             raise app.fetcher.FetchError("blocked")
+
         warp.build_baseline = boom
         c = app._diff_content("https://example.com/", "<html></html>", None, None)
         self.assertEqual(c["assessment"], "inconclusive")

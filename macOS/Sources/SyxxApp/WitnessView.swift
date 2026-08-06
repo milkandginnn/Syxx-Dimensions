@@ -7,6 +7,12 @@ struct WitnessView: View {
     /// It is routed into the Keychain via `model.saveWitnessKey` on submit.
     @State private var witnessKeyInput: String = ""
 
+    /// M-01: which action was interrupted by the overwrite confirmation, so confirming resumes
+    /// exactly what the user asked for and cancelling resumes nothing. Nothing has been written to
+    /// the Keychain while this is non-nil.
+    private enum PendingKeyWrite { case testify, verify, generate }
+    @State private var pendingKeyWrite: PendingKeyWrite? = nil
+
     /// The ONE honest result rendered in the validation report (D069/B049/E021). Icon/color/copy
     /// are driven entirely by `model.witnessResult`; there is no unconditional "valid" row.
     /// Every forensic failure reason is distinct so expired honest snapshots are never confused
@@ -43,9 +49,17 @@ struct WitnessView: View {
         case .unsupportedFormat:
             return ("xmark.seal.fill", .ioCriticalRed,
                     "Cannot verify — the snapshot format version is not supported by this verifier.")
-        case .noKey:
+        case .noKey(.confirmedAbsent):
+            // The Keychain gave a real answer (errSecItemNotFound). Inviting the user to enter a
+            // key is correct here and destroys nothing, because there is nothing to destroy.
             return ("xmark.seal.fill", .ioWarningAmber,
                     "Cannot verify — no signing key on this machine. Enter your key above, then verify again.")
+        case .noKey(.undetermined):
+            // M-01: missing data, not an answer. This arm deliberately carries NO "enter your key
+            // above" instruction: following it would overwrite a key that probably still exists,
+            // and every testimony already sealed with it would stop verifying.
+            return ("questionmark.circle.fill", .ioWarningAmber,
+                    "Cannot verify — the Keychain could not be read, so whether a signing key is present here could not be determined. This is not the same as having no key; do not enter a new one yet. Unlock the Keychain and verify again.")
         case .notVerified:
             return ("xmark.seal.fill", .ioWarningAmber,
                     "No signed snapshot available for comparison — press Witness Testimony first.")
@@ -60,16 +74,16 @@ struct WitnessView: View {
                     Text("\u{16C9}")
                         .font(.custom("Cinzel-SemiBold", size: 28))
                         .frame(width: 54, height: 54)
-                        .background(Color.ioElectric.opacity(0.10))
+                        .background(Color.ioWitnessRed.opacity(0.10))
                         .cornerRadius(14)
-                        .foregroundColor(Color.ioElectric)
-                        .shadow(color: Color.ioElectric.opacity(0.35), radius: 22)
+                        .foregroundColor(Color.ioWitnessRed)
+                        .shadow(color: Color.ioWitnessRed.opacity(0.35), radius: 22)
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("THE SEALBEARER \u{00B7} ENVIRONMENT TRUST")
                             .font(.ioCaption(.bold))
-                            .foregroundColor(Color.ioElectric)
+                            .foregroundColor(Color.ioWitnessRed)
                             .tracking(0.26)
 
                         Text("Witness")
@@ -99,7 +113,7 @@ struct WitnessView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Tell the witness a secret that you can remember (essentially, a password):")
+                        Text("Provide the Ed25519 signing key (base64) that seals your testimony — paste an existing key, or click Generate Keypair below to create one:")
                             .font(.ioCaption())
                             .foregroundColor(.ioTextSecondary)
                         Text("Entrust the Witness with the private key by which your testimony is sealed. It rests upon this machine alone and is never sent abroad; only the seal it makes travels with your evidence. (Whoever holds this key could forge testimony in your name. Guard it well.)")
@@ -114,8 +128,12 @@ struct WitnessView: View {
                         Button(action: {
                             // Only proceed (and clear the field) if the key actually saved. On a
                             // Keychain failure saveWitnessKey surfaces the error and returns false;
-                            // we keep the typed key so the user can retry (D052).
+                            // we keep the typed key so the user can retry (D052). M-01: it also
+                            // returns false when a key already exists — the confirmation below then
+                            // resumes this action, or drops it.
+                            pendingKeyWrite = .testify
                             if model.saveWitnessKey(witnessKeyInput) {
+                                pendingKeyWrite = nil
                                 witnessKeyInput = ""   // don't let the plaintext key linger in view state
                                 model.witnessTestify()
                             }
@@ -125,7 +143,9 @@ struct WitnessView: View {
                         .buttonStyle(IoFilledButtonStyle())
 
                         Button(action: {
+                            pendingKeyWrite = .verify
                             if model.saveWitnessKey(witnessKeyInput) {
+                                pendingKeyWrite = nil
                                 witnessKeyInput = ""
                                 model.witnessVerify()
                             }
@@ -138,7 +158,14 @@ struct WitnessView: View {
                         // Previously WitnessKeyManager.generateAndStoreKey() existed but was
                         // never exposed to the GUI, forcing users to CLI or external tools.
                         Button(action: {
-                            model.generateWitnessKey()
+                            pendingKeyWrite = .generate
+                            if model.generateWitnessKey() {
+                                pendingKeyWrite = nil
+                                // A fresh keypair is generated and stored directly in the Keychain;
+                                // clear any stale typed text so the next "Witness Testimony" doesn't
+                                // re-validate it and fail while a valid key is already stored.
+                                witnessKeyInput = ""
+                            }
                         }) {
                             Text("Generate Keypair")
                         }
@@ -150,7 +177,51 @@ struct WitnessView: View {
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
-                
+
+                // 5(b): verify a testimony sealed on ANOTHER machine. Distinct from the self-verify
+                // above — no local key is required; the paste is checked against your witness trust
+                // set. Malformed JSON renders an honest failure, never a crash.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Verify a testimony from another machine")
+                        .font(.ioCaption())
+                        .foregroundColor(.ioTextSecondary)
+                    Text("Paste a signed testimony sealed elsewhere. Its Ed25519 seal is checked against the witness keys you trust; nothing here is signed or stored. If the text is not a valid signed testimony, the report says so plainly.")
+                        .font(.ioSmall())
+                        .foregroundColor(.ioTextSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ZStack(alignment: .topLeading) {
+                        if model.externalSnapshotJson.isEmpty {
+                            Text("Paste a signed testimony (JSON)…")
+                                .font(.ioMono(13))
+                                .foregroundColor(.ioTextMuted)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 8)
+                                .allowsHitTesting(false)
+                        }
+                        TextEditor(text: $model.externalSnapshotJson)
+                            .font(.ioMono(13))
+                            .frame(minHeight: 96)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.ioBackgroundDark)
+                    }
+                    .background(Color.ioBackgroundDark)
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ioBorderSubtle, lineWidth: 1))
+
+                    Button(action: {
+                        model.witnessVerifyExternal()
+                    }) {
+                        Text("Verify pasted testimony")
+                    }
+                    .buttonStyle(IoOutlineButtonStyle())
+                    .padding(.top, 4)
+                }
+                .frame(maxWidth: 640)
+                .padding(18)
+                .background(Color.ioSurfaceDark)
+                .cornerRadius(12)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+
                 // Testimony Output
                 if model.showTestimony {
                     VStack(alignment: .leading, spacing: 12) {
@@ -205,9 +276,10 @@ struct WitnessView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: 820, alignment: .leading)
+                    .background(Color.ioWitnessRed.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioWitnessRed.opacity(0.15), lineWidth: 1))
                 }
                 
                 // Validation Report
@@ -270,9 +342,10 @@ struct WitnessView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: 820, alignment: .leading)
+                    .background(Color.ioWitnessRed.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioWitnessRed.opacity(0.15), lineWidth: 1))
                 }
     
                 Spacer(minLength: 24)
@@ -297,6 +370,39 @@ struct WitnessView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // M-01 (Linux RG-2 adoption): replacing the signing key is irreversible and silently
+        // invalidates every testimony already sealed with the old one. It now requires an explicit
+        // confirmation; until this returns, NOTHING has been written to the Keychain.
+        .alert("Replace the signing key on this machine?",
+               isPresented: $model.witnessKeyOverwritePending) {
+            Button("Cancel", role: .cancel) { pendingKeyWrite = nil }
+            Button("Replace key", role: .destructive) { confirmKeyOverwrite() }
+        } message: {
+            Text("A signing key is already stored here. Replacing it destroys the old key: every testimony you have already sealed will stop verifying, and it cannot be recovered. Nothing has been changed yet.")
+        }
+    }
+
+    /// M-01: resume the interrupted action, once, with the user's explicit consent. A refusal or a
+    /// failed write still stops the follow-on action — consent to replace the key is not consent to
+    /// seal or verify with a key that was never stored.
+    private func confirmKeyOverwrite() {
+        let action = pendingKeyWrite
+        pendingKeyWrite = nil
+        switch action {
+        case .testify:
+            guard model.saveWitnessKey(witnessKeyInput, confirmOverwrite: true) else { return }
+            witnessKeyInput = ""
+            model.witnessTestify()
+        case .verify:
+            guard model.saveWitnessKey(witnessKeyInput, confirmOverwrite: true) else { return }
+            witnessKeyInput = ""
+            model.witnessVerify()
+        case .generate:
+            guard model.generateWitnessKey(confirmOverwrite: true) else { return }
+            witnessKeyInput = ""
+        case .none:
+            break
+        }
     }
 }
 

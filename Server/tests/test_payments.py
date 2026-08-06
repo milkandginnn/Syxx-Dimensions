@@ -5,6 +5,7 @@ suspend helpers, and the db/mailer side effects are all monkeypatched. Run from 
 
     python3 -m unittest tests.test_payments -v
 """
+
 import json
 import os
 import unittest
@@ -13,7 +14,7 @@ from unittest.mock import patch
 os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_fake")
 
 from syxx_server import config, db, fulfillment, mailer  # noqa: E402
-from syxx_server import stripe_checkout as sc            # noqa: E402
+from syxx_server import stripe_checkout as sc  # noqa: E402
 
 # Live SKUs (from config.STRIPE_SKUS). Tiers are PRICES on one product per platform, so the
 # catalog is keyed by SKU: a product id no longer identifies what someone bought.
@@ -39,13 +40,18 @@ class _Base(unittest.TestCase):
         self.kv = {}
         self.sent = []
         self._orig = {
-            "kv_get": db.kv_get, "kv_set": db.kv_set, "kv_insert_once": db.kv_insert_once,
+            "kv_get": db.kv_get,
+            "kv_set": db.kv_set,
+            "kv_insert_once": db.kv_insert_once,
             "kv_get_with_created_at": getattr(db, "kv_get_with_created_at", None),
-            "audit": db.audit, "send": mailer.send,
-            "mint": fulfillment._keygen_create_license, "suspend": fulfillment._keygen_suspend_license,
+            "audit": db.audit,
+            "send": mailer.send,
+            "mint": fulfillment._keygen_create_license,
+            "suspend": fulfillment._keygen_suspend_license,
             "request": sc._request,
         }
         import time as _time
+
         self._created_at = {}
         db.kv_get = lambda k, d=None: self.kv.get(k, d)
 
@@ -104,8 +110,11 @@ class CheckoutTests(_Base):
         def fake(path, method, params=None, idempotency_key=None):
             calls.append((path, method, params))
             if path.startswith("/prices/"):
-                return {"id": path.split("/prices/")[1], "active": active,
-                        "recurring": {"interval": "month"} if recurring else None}
+                return {
+                    "id": path.split("/prices/")[1],
+                    "active": active,
+                    "recurring": {"interval": "month"} if recurring else None,
+                }
             return {"id": "cs_1", "url": "https://checkout.stripe.com/cs_1"}
 
         sc._request = fake
@@ -152,12 +161,10 @@ class CheckoutTests(_Base):
         PRICE and the policy. Under the old product-keyed table these two were indistinguishable:
         one entry, one policy, one price."""
         with patch.dict(os.environ, self._prices()):
-            for m, y in ((MAC_MONTHLY, MAC_YEARLY), (WIN_MONTHLY, WIN_YEARLY),
-                         (DEB_MONTHLY, DEB_YEARLY)):
+            for m, y in ((MAC_MONTHLY, MAC_YEARLY), (WIN_MONTHLY, WIN_YEARLY), (DEB_MONTHLY, DEB_YEARLY)):
                 self.assertEqual(config.stripe_product_for(m), config.stripe_product_for(y))
                 self.assertNotEqual(config.stripe_price_for(m), config.stripe_price_for(y))
-                self.assertNotEqual(config.STRIPE_SKUS[m]["policy_env"],
-                                    config.STRIPE_SKUS[y]["policy_env"])
+                self.assertNotEqual(config.STRIPE_SKUS[m]["policy_env"], config.STRIPE_SKUS[y]["policy_env"])
 
     def test_one_time_price_yields_payment_mode(self):
         calls = self._mock_stripe(recurring=False)
@@ -172,12 +179,13 @@ class CheckoutTests(_Base):
         for the NEXT tier somebody adds."""
         calls = self._mock_stripe()
         table = dict(config.STRIPE_SKUS)
-        table["syxx_mac_unpriced_sub"] = dict(table[MAC_YEARLY], price_default="",
-                                              priceid_env="SYXX_STRIPE_PRICEID_MAC_UNPRICED")
+        table["syxx_mac_unpriced_sub"] = dict(
+            table[MAC_YEARLY], price_default="", priceid_env="SYXX_STRIPE_PRICEID_MAC_UNPRICED"
+        )
         with patch.object(config, "STRIPE_SKUS", table):
             with self.assertRaises(sc.StripeError):
                 sc.create_checkout_session("syxx_mac_unpriced_sub")
-        self.assertEqual(calls, [])   # refused locally; never reached Stripe
+        self.assertEqual(calls, [])  # refused locally; never reached Stripe
 
     def test_an_archived_price_is_refused_before_the_buyer_commits(self):
         self._mock_stripe(active=False)
@@ -187,8 +195,9 @@ class CheckoutTests(_Base):
             # failure, bad JSON, and every signature fault — the message distinguishes them.
             with self.assertRaises(sc.StripeError) as ctx:
                 sc.create_checkout_session(WIN_YEARLY)
-            self.assertIn("archived", str(ctx.exception),
-                          "the error must name the archived price, not just 'StripeError'")
+            self.assertIn(
+                "archived", str(ctx.exception), "the error must name the archived price, not just 'StripeError'"
+            )
 
 
 class FulfillmentTests(_Base):
@@ -198,20 +207,29 @@ class FulfillmentTests(_Base):
         os.environ.pop("SYXX_KEYGEN_POLICY_MAC_YEARLY", None)  # yearly policy deliberately unset
         # mint succeeds only for the mac-monthly policy; everything else returns no key.
         fulfillment._keygen_create_license = lambda policy, email: (
-            ("KEY-1", "lic_1") if policy == "pol_mac_monthly" else (None, None))
+            ("KEY-1", "lic_1") if policy == "pol_mac_monthly" else (None, None)
+        )
 
     def tearDown(self):
         os.environ.pop("SYXX_KEYGEN_POLICY_MAC_MONTHLY", None)
         super().tearDown()
 
     def _session(self, sku, email="a@b.com", customer="cus_1", status="paid"):
-        return {"payment_status": status, "metadata": {"sku": sku},
-                "customer_details": {"email": email}, "customer": customer}
+        return {
+            "payment_status": status,
+            "metadata": {"sku": sku},
+            "customer_details": {"email": email},
+            "customer": customer,
+        }
 
     def _legacy_session(self, product, email="a@b.com", customer="cus_1", status="paid"):
         """A session created BEFORE the SKU refactor: it stamped metadata[product]."""
-        return {"payment_status": status, "metadata": {"product": product},
-                "customer_details": {"email": email}, "customer": customer}
+        return {
+            "payment_status": status,
+            "metadata": {"product": product},
+            "customer_details": {"email": email},
+            "customer": customer,
+        }
 
     def test_paid_with_policy_mints_emails_and_maps_customer(self):
         r = fulfillment.handle_event(_evt("e1", "checkout.session.completed", self._session(MAC_MONTHLY)))
@@ -228,9 +246,8 @@ class FulfillmentTests(_Base):
         and Stripe's redelivery reported "duplicate" and never retried. Silent, and it costs a real
         person a real key they paid for.
         """
-        mailer.send = lambda to, s, b, html=None, attachments=None: False   # SMTP down / unconfigured
-        r = fulfillment.handle_event(_evt("e-mail-fail", "checkout.session.completed",
-                                          self._session(MAC_MONTHLY)))
+        mailer.send = lambda to, s, b, html=None, attachments=None: False  # SMTP down / unconfigured
+        r = fulfillment.handle_event(_evt("e-mail-fail", "checkout.session.completed", self._session(MAC_MONTHLY)))
 
         self.assertEqual(r, "minted-undelivered")
         self.assertNotEqual(r, "fulfilled", "an undelivered key is not a fulfilled sale")
@@ -248,10 +265,9 @@ class FulfillmentTests(_Base):
 
         mints = []
         orig = fulfillment._keygen_create_license
-        fulfillment._keygen_create_license = lambda p, e: (mints.append(p) or ("KEY-2", "lic_2"))
+        fulfillment._keygen_create_license = lambda p, e: mints.append(p) or ("KEY-2", "lic_2")
         try:
-            r = fulfillment.handle_event(_evt("e-dup", "checkout.session.completed",
-                                              self._session(MAC_MONTHLY)))
+            r = fulfillment.handle_event(_evt("e-dup", "checkout.session.completed", self._session(MAC_MONTHLY)))
         finally:
             fulfillment._keygen_create_license = orig
 
@@ -261,25 +277,25 @@ class FulfillmentTests(_Base):
     def test_successful_delivery_still_marks_minted(self):
         """Mutation guard: the fix must reject only FAILED delivery. Without this, always
         reporting "minted-undelivered" would pass the tests above while breaking every real sale."""
-        r = fulfillment.handle_event(_evt("e-ok", "checkout.session.completed",
-                                          self._session(MAC_MONTHLY)))
+        r = fulfillment.handle_event(_evt("e-ok", "checkout.session.completed", self._session(MAC_MONTHLY)))
         self.assertEqual(r, "fulfilled")
         self.assertEqual(self.kv["stripe_evt:e-ok"], "minted")
 
     def test_missing_policy_records_pending_never_drops(self):
         r = fulfillment.handle_event(_evt("e2", "checkout.session.completed", self._session(MAC_YEARLY)))
         self.assertEqual(r, "pending-mint")
-        self.assertEqual(self.kv["stripe_evt:e2"], "failed")   # "failed" so Stripe retries re-enter
-        self.assertEqual(self.sent, [])   # no key -> no email
+        self.assertEqual(self.kv["stripe_evt:e2"], "failed")  # "failed" so Stripe retries re-enter
+        self.assertEqual(self.sent, [])  # no key -> no email
 
     def test_unpaid_session_is_held_for_async(self):
         r = fulfillment.handle_event(
-            _evt("e3", "checkout.session.completed", self._session(MAC_MONTHLY, status="unpaid")))
+            _evt("e3", "checkout.session.completed", self._session(MAC_MONTHLY, status="unpaid"))
+        )
         self.assertEqual(r, "await-async")
-        self.assertNotIn("stripe_evt:e3", self.kv)   # not marked done; async success will follow
+        self.assertNotIn("stripe_evt:e3", self.kv)  # not marked done; async success will follow
 
     def test_async_payment_succeeded_mints_even_without_paid_flag(self):
-        s = self._session(MAC_MONTHLY, status="unpaid")   # async event doesn't require payment_status
+        s = self._session(MAC_MONTHLY, status="unpaid")  # async event doesn't require payment_status
         r = fulfillment.handle_event(_evt("e4", "checkout.session.async_payment_succeeded", s))
         self.assertEqual(r, "fulfilled")
 
@@ -287,29 +303,33 @@ class FulfillmentTests(_Base):
         fulfillment.handle_event(_evt("e1", "checkout.session.completed", self._session(MAC_MONTHLY)))
         r = fulfillment.handle_event(_evt("e1", "checkout.session.completed", self._session(MAC_MONTHLY)))
         self.assertEqual(r, "duplicate")
-        self.assertEqual(len(self.sent), 1)   # not emailed twice
+        self.assertEqual(len(self.sent), 1)  # not emailed twice
 
     def test_keygen_outage_then_retry_mints_on_second_attempt(self):
         """A019: a Keygen 5xx on the first delivery followed by a Stripe retry must mint
         the license on the retry (not silently drop it as 'duplicate')."""
         call_count = [0]
+
         def mint_fail_then_succeed(policy, email):
             call_count[0] += 1
             if call_count[0] == 1:
-                return (None, None)   # first call: Keygen failure
+                return (None, None)  # first call: Keygen failure
             return ("KEY-RETRY", "lic_retry")  # retry: success
+
         fulfillment._keygen_create_license = mint_fail_then_succeed
 
         # First delivery — Keygen fails
-        r1 = fulfillment.handle_event(_evt("e_retry", "checkout.session.completed",
-                                            self._session(MAC_MONTHLY, customer="cus_retry")))
+        r1 = fulfillment.handle_event(
+            _evt("e_retry", "checkout.session.completed", self._session(MAC_MONTHLY, customer="cus_retry"))
+        )
         self.assertEqual(r1, "pending-mint")
         self.assertEqual(self.kv["stripe_evt:e_retry"], "failed")  # retryable state
         self.assertEqual(self.sent, [])  # no email on failure
 
         # Second delivery (same event id, Stripe retry) — Keygen succeeds
-        r2 = fulfillment.handle_event(_evt("e_retry", "checkout.session.completed",
-                                            self._session(MAC_MONTHLY, customer="cus_retry")))
+        r2 = fulfillment.handle_event(
+            _evt("e_retry", "checkout.session.completed", self._session(MAC_MONTHLY, customer="cus_retry"))
+        )
         self.assertEqual(r2, "fulfilled")
         self.assertEqual(self.kv["stripe_evt:e_retry"], "minted")
         self.assertEqual(self.sent, ["a@b.com"])  # email sent on retry
@@ -317,16 +337,20 @@ class FulfillmentTests(_Base):
     def test_keygen_double_retry_still_one_license(self):
         """A019: when both deliveries succeed, exactly one license is minted (idempotent)."""
         mint_count = [0]
+
         def mint(policy, email):
             mint_count[0] += 1
             return ("KEY-1", "lic_1")
+
         fulfillment._keygen_create_license = mint
 
-        fulfillment.handle_event(_evt("e_double", "checkout.session.completed",
-                                       self._session(MAC_MONTHLY, customer="cus_double")))
-        r2 = fulfillment.handle_event(_evt("e_double", "checkout.session.completed",
-                                            self._session(MAC_MONTHLY, customer="cus_double")))
-        self.assertEqual(r2, "duplicate")   # second delivery: already minted
+        fulfillment.handle_event(
+            _evt("e_double", "checkout.session.completed", self._session(MAC_MONTHLY, customer="cus_double"))
+        )
+        r2 = fulfillment.handle_event(
+            _evt("e_double", "checkout.session.completed", self._session(MAC_MONTHLY, customer="cus_double"))
+        )
+        self.assertEqual(r2, "duplicate")  # second delivery: already minted
         self.assertEqual(mint_count[0], 1)  # only called once
 
     def test_concurrent_deliveries_mint_exactly_once(self):
@@ -347,12 +371,14 @@ class FulfillmentTests(_Base):
 
         # Atomic reserve modelling the real DB's INSERT OR IGNORE (INSERT-only, serialised).
         reserve_lock = threading.Lock()
+
         def atomic_reserve(k, v):
             with reserve_lock:
                 if k in self.kv:
                     return False
                 self.kv[k] = v
                 return True
+
         db.kv_insert_once = atomic_reserve
 
         # Rendezvous the readers of the event key. A non-atomic (get-then-set) claim calls this for
@@ -364,6 +390,7 @@ class FulfillmentTests(_Base):
         # "minted" state -> duplicate. No timing luck: the snapshot is what makes it deterministic.
         cond = threading.Condition()
         readers = {"n": 0}
+
         def racing_get(k, d=None):
             if k == evt_key:
                 with cond:
@@ -379,23 +406,27 @@ class FulfillmentTests(_Base):
                     if "snapshot" in readers:
                         return readers["snapshot"]
             return self.kv.get(k, d)
+
         db.kv_get = racing_get
 
         mint_calls = []
         mint_lock = threading.Lock()
+
         def mint(policy, email):
             with mint_lock:
                 mint_calls.append(policy)
             return ("KEY-C", "lic_c")
+
         fulfillment._keygen_create_license = mint
 
         start = threading.Barrier(2, timeout=5)
         results = {}
+
         def deliver(tag):
-            start.wait()   # release both deliveries together to maximise the race window
+            start.wait()  # release both deliveries together to maximise the race window
             results[tag] = fulfillment.handle_event(
-                _evt("e_conc", "checkout.session.completed",
-                     self._session(MAC_MONTHLY, customer="cus_conc")))
+                _evt("e_conc", "checkout.session.completed", self._session(MAC_MONTHLY, customer="cus_conc"))
+            )
 
         threads = [threading.Thread(target=deliver, args=(t,)) for t in ("a", "b")]
         for t in threads:
@@ -406,7 +437,7 @@ class FulfillmentTests(_Base):
         self.assertEqual(len(mint_calls), 1, "double-mint: the event claim was not atomic")
         self.assertEqual(sorted(results.values()), ["duplicate", "fulfilled"])
         self.assertEqual(self.kv["stripe_evt:e_conc"], "minted")
-        self.assertEqual(self.sent, ["a@b.com"])   # emailed exactly once
+        self.assertEqual(self.sent, ["a@b.com"])  # emailed exactly once
 
     def test_subscription_deleted_suspends_mapped_license(self):
         self.kv["stripe_cust:cus_sub"] = "lic_sub"
@@ -423,7 +454,7 @@ class FulfillmentTests(_Base):
         fulfillment._keygen_suspend_license = lambda lid: suspended.append(lid) or True
         r = fulfillment.handle_event(_evt("d2", "invoice.payment_failed", {"customer": "cus_sub"}))
         self.assertEqual(r, "lapse-noted")
-        self.assertEqual(suspended, [])   # dunning still running — never over one decline
+        self.assertEqual(suspended, [])  # dunning still running — never over one decline
 
     def test_subscription_deleted_without_map_is_noted(self):
         r = fulfillment.handle_event(_evt("d3", "customer.subscription.deleted", {"customer": "cus_none"}))
@@ -469,8 +500,7 @@ class ChargebackRevocationTests(_Base):
         self.kv["stripe_cust:cus_ref"] = "lic_ref"
         r = fulfillment.handle_event(self._refund())
         self.assertEqual(r, "revoked")
-        self.assertEqual(self.suspended, ["lic_ref"],
-                         "a refunded customer must lose their Keygen license")
+        self.assertEqual(self.suspended, ["lic_ref"], "a refunded customer must lose their Keygen license")
         self.assertEqual(self.kv["stripe_evt:r1"], "revoked")
 
     def test_refund_also_revokes_local_api_keys(self):
@@ -482,9 +512,13 @@ class ChargebackRevocationTests(_Base):
     def test_dispute_created_revokes_via_payment_intent(self):
         """A Stripe dispute object carries NO customer field — only payment_intent/charge."""
         self.kv["stripe_pi:pi_9"] = "lic_ref"
-        r = fulfillment.handle_event(_evt("dp1", "charge.dispute.created",
-                                          {"id": "dp_1", "amount": 395, "currency": "usd",
-                                           "payment_intent": "pi_9"}))
+        r = fulfillment.handle_event(
+            _evt(
+                "dp1",
+                "charge.dispute.created",
+                {"id": "dp_1", "amount": 395, "currency": "usd", "payment_intent": "pi_9"},
+            )
+        )
         self.assertEqual(r, "revoked")
         self.assertEqual(self.suspended, ["lic_ref"])
 
@@ -499,14 +533,13 @@ class ChargebackRevocationTests(_Base):
         first = fulfillment.handle_event(self._refund("r_dup"))
         second = fulfillment.handle_event(self._refund("r_dup"))
         self.assertEqual(first, "revoked")
-        self.assertEqual(second, "duplicate",
-                         "a redelivered event must not re-run the revocation")
-        self.assertEqual(self.suspended, ["lic_ref"],
-                         "suspend ran twice: the event claim is not idempotent")
+        self.assertEqual(second, "duplicate", "a redelivered event must not re-run the revocation")
+        self.assertEqual(self.suspended, ["lic_ref"], "suspend ran twice: the event claim is not idempotent")
 
     def test_concurrent_deliveries_revoke_exactly_once(self):
         """Two simultaneous deliveries of one event: compare-and-set, not check-then-act."""
         import threading
+
         self.kv["stripe_cust:cus_ref"] = "lic_ref"
         results = {}
         start = threading.Barrier(2)
@@ -542,8 +575,7 @@ class ChargebackRevocationTests(_Base):
         fulfillment._keygen_suspend_license = lambda lid: False
         r = fulfillment.handle_event(self._refund("r_fail"))
         self.assertEqual(r, "revoke-failed")
-        self.assertNotEqual(r, "revoked",
-                            "an unconfirmed suspend must never read as a completed revocation")
+        self.assertNotEqual(r, "revoked", "an unconfirmed suspend must never read as a completed revocation")
 
     def test_keygen_failure_still_revokes_local_keys(self):
         """Fail CLOSED: this server's own surface locks down even when Keygen is unreachable."""
@@ -565,8 +597,7 @@ class ChargebackRevocationTests(_Base):
     def test_dispute_closed_does_not_revoke(self):
         """A dispute can be WON. Revoking a customer found legitimate is the mirror error."""
         self.kv["stripe_pi:pi_9"] = "lic_ref"
-        r = fulfillment.handle_event(_evt("dp3", "charge.dispute.closed",
-                                          {"payment_intent": "pi_9", "status": "won"}))
+        r = fulfillment.handle_event(_evt("dp3", "charge.dispute.closed", {"payment_intent": "pi_9", "status": "won"}))
         self.assertEqual(r, "chargeback-logged")
         self.assertEqual(self.suspended, [])
 
@@ -582,8 +613,7 @@ class TrialPeriodTests(_Base):
     def setUp(self):
         super().setUp()
         self._orig_trial = config.STRIPE_TRIAL_DAYS
-        for k, v in {e["priceid_env"]: "price_" + sku
-                     for sku, e in config.STRIPE_SKUS.items()}.items():
+        for k, v in {e["priceid_env"]: "price_" + sku for sku, e in config.STRIPE_SKUS.items()}.items():
             os.environ[k] = v
 
     def tearDown(self):
@@ -598,8 +628,11 @@ class TrialPeriodTests(_Base):
 
         def fake(path, method, params=None, idempotency_key=None):
             if method == "GET":
-                return {"id": path.rsplit("/", 1)[-1], "active": True,
-                        "recurring": {"interval": "month"} if recurring else None}
+                return {
+                    "id": path.rsplit("/", 1)[-1],
+                    "active": True,
+                    "recurring": {"interval": "month"} if recurring else None,
+                }
             seen.update(params or {})
             return {"url": "https://checkout.stripe.test/s", "id": "cs_1"}
 
@@ -608,8 +641,7 @@ class TrialPeriodTests(_Base):
         return seen
 
     def test_default_is_no_trial_so_shipped_behaviour_is_unchanged(self):
-        self.assertEqual(self._orig_trial, 0,
-                         "a nonzero DEFAULT gives product away on every purchase")
+        self.assertEqual(self._orig_trial, 0, "a nonzero DEFAULT gives product away on every purchase")
         config.STRIPE_TRIAL_DAYS = 0
         self.assertNotIn("subscription_data[trial_period_days]", self._capture())
 
@@ -634,11 +666,13 @@ class TrialPeriodTests(_Base):
         os.environ["SYXX_STRIPE_TRIAL_DAYS"] = "-5"
         try:
             import importlib
+
             importlib.reload(config)
             self.assertEqual(config.STRIPE_TRIAL_DAYS, 0)
         finally:
             os.environ.pop("SYXX_STRIPE_TRIAL_DAYS", None)
             import importlib
+
             importlib.reload(config)
 
 
@@ -673,14 +707,15 @@ class MachineBindingTests(_Base):
             sent["body"] = json.loads(req.data.decode())
             return _Resp()
 
-        with patch("syxx_server.fulfillment.urllib.request.urlopen", fake_urlopen), \
-             patch.object(config, "KEYGEN_ADMIN_TOKEN", "tok"), \
-             patch.object(config, "KEYGEN_BASE_URL", "https://keygen.test/v1/accounts/acct"):
+        with (
+            patch("syxx_server.fulfillment.urllib.request.urlopen", fake_urlopen),
+            patch.object(config, "KEYGEN_ADMIN_TOKEN", "tok"),
+            patch.object(config, "KEYGEN_BASE_URL", "https://keygen.test/v1/accounts/acct"),
+        ):
             key, lic = fulfillment._keygen_create_license("pol_1", "a@b.com")
         self.assertEqual((key, lic), ("KEY-X", "lic_x"))
         attrs = sent["body"]["data"]["attributes"]
-        self.assertEqual(attrs["maxMachines"], 5,
-                         "a minted license must carry the device ceiling")
+        self.assertEqual(attrs["maxMachines"], 5, "a minted license must carry the device ceiling")
         self.assertEqual(attrs["metadata"]["email"], "a@b.com")
 
     def test_a_zero_limit_omits_the_attribute_entirely(self):
@@ -700,10 +735,12 @@ class MachineBindingTests(_Base):
             sent["body"] = json.loads(req.data.decode())
             return _Resp()
 
-        with patch("syxx_server.fulfillment.urllib.request.urlopen", fake_urlopen), \
-             patch.object(config, "KEYGEN_ADMIN_TOKEN", "tok"), \
-             patch.object(config, "KEYGEN_MAX_MACHINES", 0), \
-             patch.object(config, "KEYGEN_BASE_URL", "https://keygen.test/v1/accounts/acct"):
+        with (
+            patch("syxx_server.fulfillment.urllib.request.urlopen", fake_urlopen),
+            patch.object(config, "KEYGEN_ADMIN_TOKEN", "tok"),
+            patch.object(config, "KEYGEN_MAX_MACHINES", 0),
+            patch.object(config, "KEYGEN_BASE_URL", "https://keygen.test/v1/accounts/acct"),
+        ):
             fulfillment._keygen_create_license("pol_1", "a@b.com")
         self.assertNotIn("maxMachines", sent["body"]["data"]["attributes"])
 
@@ -721,19 +758,23 @@ class LegacySessionTests(_Base):
         super().setUp()
         os.environ["SYXX_KEYGEN_POLICY_MAC_MONTHLY"] = "pol_mac_monthly"
         fulfillment._keygen_create_license = lambda policy, email: (
-            ("KEY-legacy", "lic_legacy") if policy == "pol_mac_monthly" else (None, None))
+            ("KEY-legacy", "lic_legacy") if policy == "pol_mac_monthly" else (None, None)
+        )
 
     def tearDown(self):
         os.environ.pop("SYXX_KEYGEN_POLICY_MAC_MONTHLY", None)
         super().tearDown()
 
     def _legacy(self, product):
-        return {"payment_status": "paid", "metadata": {"product": product},
-                "customer_details": {"email": "a@b.com"}, "customer": "cus_legacy"}
+        return {
+            "payment_status": "paid",
+            "metadata": {"product": product},
+            "customer_details": {"email": "a@b.com"},
+            "customer": "cus_legacy",
+        }
 
     def test_an_in_flight_pre_refactor_session_still_mints(self):
-        r = fulfillment.handle_event(
-            _evt("legacy-1", "checkout.session.completed", self._legacy(LEGACY_MAC_PRODUCT)))
+        r = fulfillment.handle_event(_evt("legacy-1", "checkout.session.completed", self._legacy(LEGACY_MAC_PRODUCT)))
         self.assertEqual(r, "fulfilled")
         self.assertEqual(self.sent, ["a@b.com"])
 
@@ -749,10 +790,8 @@ class LegacySessionTests(_Base):
         fulfilled. Previously asserted assertNotEqual(r, "fulfilled"), which six other result
         strings satisfy (including "ignored" — silently dropping a paid session). The exact
         expected result is "pending-mint": the session is recorded but no key is minted."""
-        r = fulfillment.handle_event(
-            _evt("legacy-2", "checkout.session.completed", self._legacy("prod_gone")))
-        self.assertEqual(r, "pending-mint",
-                         "an unresolvable sale must be pending-mint, not silently ignored")
+        r = fulfillment.handle_event(_evt("legacy-2", "checkout.session.completed", self._legacy("prod_gone")))
+        self.assertEqual(r, "pending-mint", "an unresolvable sale must be pending-mint, not silently ignored")
         self.assertEqual(self.sent, [])
 
 
@@ -797,24 +836,35 @@ class ConfigTests(unittest.TestCase):
         So pin the two lists to each other. Every policy env the code can read must appear in
         scripts/deploy.sh, and every one the template offers must be readable by the code.
         """
-        import pathlib, re
+        import pathlib
+        import re
+
         deploy = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "deploy.sh"
         self.assertTrue(deploy.is_file(), "cannot find scripts/deploy.sh to pin against")
         text = deploy.read_text()
-        in_template = set(re.findall(r"^(SYXX_(?:KEYGEN_POLICY|STRIPE_PRODID|STRIPE_PRICEID)_[A-Z_]+)=",
-                                     text, re.MULTILINE))
-        in_code = ({e["policy_env"] for e in config.STRIPE_SKUS.values()}
-                   | {e["prodid_env"] for e in config.STRIPE_SKUS.values()}
-                   | {e["priceid_env"] for e in config.STRIPE_SKUS.values()}
-                   | set(config.TRIAL_POLICY_ENVS.values())
-                   | set(config.PERM_POLICY_ENVS.values()))
+        in_template = set(
+            re.findall(r"^(SYXX_(?:KEYGEN_POLICY|STRIPE_PRODID|STRIPE_PRICEID)_[A-Z_]+)=", text, re.MULTILINE)
+        )
+        in_code = (
+            {e["policy_env"] for e in config.STRIPE_SKUS.values()}
+            | {e["prodid_env"] for e in config.STRIPE_SKUS.values()}
+            | {e["priceid_env"] for e in config.STRIPE_SKUS.values()}
+            | set(config.TRIAL_POLICY_ENVS.values())
+            | set(config.PERM_POLICY_ENVS.values())
+        )
 
-        self.assertEqual(in_code - in_template, set(),
-                         "vars the code reads but deploy.sh never seeds: an operator has no way to "
-                         "know they exist, so the SKU records sales pending forever")
-        self.assertEqual(in_template - in_code, set(),
-                         "vars deploy.sh seeds but no code reads: setting them does nothing (this is "
-                         "exactly what happened to the TRIAL vars in production)")
+        self.assertEqual(
+            in_code - in_template,
+            set(),
+            "vars the code reads but deploy.sh never seeds: an operator has no way to "
+            "know they exist, so the SKU records sales pending forever",
+        )
+        self.assertEqual(
+            in_template - in_code,
+            set(),
+            "vars deploy.sh seeds but no code reads: setting them does nothing (this is "
+            "exactly what happened to the TRIAL vars in production)",
+        )
 
     def test_a_price_variable_is_never_shared_between_skus(self):
         """BEHAVIOURAL, not label-checking.
@@ -827,8 +877,9 @@ class ConfigTests(unittest.TestCase):
         env = {e["priceid_env"]: "price_" + sku for sku, e in config.STRIPE_SKUS.items()}
         with patch.dict(os.environ, env):
             resolved = {sku: config.stripe_price_for(sku) for sku in config.STRIPE_SKUS}
-        self.assertEqual(len(set(resolved.values())), len(resolved),
-                         "two SKUs resolved to the SAME price: %r" % (resolved,))
+        self.assertEqual(
+            len(set(resolved.values())), len(resolved), f"two SKUs resolved to the SAME price: {resolved!r}"
+        )
         for sku, price in resolved.items():
             self.assertEqual(price, "price_" + sku)
 
@@ -836,8 +887,7 @@ class ConfigTests(unittest.TestCase):
         """Same product id is CORRECT — two prices on one product. The price must differ."""
         env = {e["priceid_env"]: "price_" + sku for sku, e in config.STRIPE_SKUS.items()}
         with patch.dict(os.environ, env):
-            for m, y in ((MAC_MONTHLY, MAC_YEARLY), (WIN_MONTHLY, WIN_YEARLY),
-                         (DEB_MONTHLY, DEB_YEARLY)):
+            for m, y in ((MAC_MONTHLY, MAC_YEARLY), (WIN_MONTHLY, WIN_YEARLY), (DEB_MONTHLY, DEB_YEARLY)):
                 self.assertEqual(config.stripe_product_for(m), config.stripe_product_for(y))
                 self.assertNotEqual(config.stripe_price_for(m), config.stripe_price_for(y))
 
@@ -863,11 +913,11 @@ class ConfigTests(unittest.TestCase):
         nothing upstream would catch it — Stripe validates that a price EXISTS, never that it is
         the one the buyer clicked."""
         self.assertEqual(config.stripe_price_for(MAC_MONTHLY), "price_1TqPt10Owf1ALdZDpXWZqB2r")
-        self.assertEqual(config.stripe_price_for(MAC_YEARLY),  "price_1Ttwpw0Owf1ALdZDhfZ2LTlz")
+        self.assertEqual(config.stripe_price_for(MAC_YEARLY), "price_1Ttwpw0Owf1ALdZDhfZ2LTlz")
         self.assertEqual(config.stripe_price_for(WIN_MONTHLY), "price_1TqQBk0Owf1ALdZDKVoRroPD")
-        self.assertEqual(config.stripe_price_for(WIN_YEARLY),  "price_1TtxCb0Owf1ALdZDwybXuuz9")
+        self.assertEqual(config.stripe_price_for(WIN_YEARLY), "price_1TtxCb0Owf1ALdZDwybXuuz9")
         self.assertEqual(config.stripe_price_for(DEB_MONTHLY), "price_1TtxLd0Owf1ALdZDD175vTFK")
-        self.assertEqual(config.stripe_price_for(DEB_YEARLY),  "price_1TtxNs0Owf1ALdZDOT0EMfce")
+        self.assertEqual(config.stripe_price_for(DEB_YEARLY), "price_1TtxNs0Owf1ALdZDOT0EMfce")
         prices = [config.stripe_price_for(s) for s in config.STRIPE_SKUS]
         self.assertEqual(len(set(prices)), len(prices), "two SKUs share a price id")
 
@@ -888,24 +938,24 @@ class WebhookTests(unittest.TestCase):
     def _sign(payload, ts):
         import hashlib
         import hmac
-        return hmac.new(b"whsec_test", ("%d." % ts).encode() + payload, hashlib.sha256).hexdigest()
+
+        return hmac.new(b"whsec_test", f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
 
     def test_valid_signature_parses_event(self):
         payload = b'{"id":"evt_1","type":"checkout.session.completed"}'
         sig = self._sign(payload, 1000)
-        event = sc.verify_webhook(payload, "t=1000,v1=%s" % sig, tolerance=10 ** 12, now=1000)
+        event = sc.verify_webhook(payload, f"t=1000,v1={sig}", tolerance=10**12, now=1000)
         self.assertEqual(event["id"], "evt_1")
 
     def test_secret_rotation_accepts_any_matching_v1_signature(self):
         payload = b'{"id":"evt_1","type":"checkout.session.completed"}'
         sig = self._sign(payload, 1000)
-        event = sc.verify_webhook(payload, "t=1000,v1=deadbeef,v1=%s" % sig,
-                                  tolerance=10 ** 12, now=1000)
+        event = sc.verify_webhook(payload, f"t=1000,v1=deadbeef,v1={sig}", tolerance=10**12, now=1000)
         self.assertEqual(event["id"], "evt_1")
 
     def test_tampered_signature_rejected(self):
         with self.assertRaises(sc.StripeError):
-            sc.verify_webhook(b'{"id":"evt_1"}', "t=1000,v1=deadbeef", tolerance=10 ** 12, now=1000)
+            sc.verify_webhook(b'{"id":"evt_1"}', "t=1000,v1=deadbeef", tolerance=10**12, now=1000)
 
     def test_replayed_old_timestamp_rejected(self):
         payload = b'{"id":"evt_1"}'
@@ -914,9 +964,10 @@ class WebhookTests(unittest.TestCase):
         # any StripeError. The same exception type is raised for malformed headers,
         # signature mismatches, and missing secrets — the message distinguishes them.
         with self.assertRaises(sc.StripeError) as ctx:
-            sc.verify_webhook(payload, "t=1000,v1=%s" % sig, tolerance=300, now=1000 + 10_000)
-        self.assertIn("timestamp", str(ctx.exception),
-                      "the error must name the timestamp fault, not just 'StripeError'")
+            sc.verify_webhook(payload, f"t=1000,v1={sig}", tolerance=300, now=1000 + 10_000)
+        self.assertIn(
+            "timestamp", str(ctx.exception), "the error must name the timestamp fault, not just 'StripeError'"
+        )
 
     def test_malformed_header_rejected(self):
         with self.assertRaises(sc.StripeError):

@@ -1,0 +1,1 @@
+Unknown subcommand 'nslook mirror leak witness key route lan forensics sentinel cage warp speed unbound filter firstrun'. Use 'syxx --help' for usage.

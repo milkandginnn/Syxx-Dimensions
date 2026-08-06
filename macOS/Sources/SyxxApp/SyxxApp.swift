@@ -276,7 +276,10 @@ extension TrayGlyph {
     /// menu bar controls, so it reads white on a dark bar and dark on a light one. Built once from
     /// the bundled logo; falls back to a shield SF Symbol if the resource is somehow missing (an
     /// empty menu-bar item would be worse than a generic mark).
-    static let syxxTemplateMark: NSImage = {
+    ///
+    /// `nonisolated(unsafe)`: NSImage is not Sendable, but this image is built once at launch on
+    /// the main thread and never mutated — safe to share across actors.
+    nonisolated(unsafe) static let syxxTemplateMark: NSImage = {
         let fallback = NSImage(systemSymbolName: "shield.fill", accessibilityDescription: "Syxx")
             ?? NSImage()
         guard let url = Bundle.module.url(forResource: "Syxx-logo", withExtension: "png"),

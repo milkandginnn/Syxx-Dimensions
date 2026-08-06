@@ -341,6 +341,7 @@ Cutover branch: builds green (Linux slnf + tests), Phase 5 harness byte-identica
   - `corpus/matrix/vectors/GV-*.json` — one file per vector: `{ "name", "why" (delta/design cite), "spec": "default" | inline MatrixSpec, "input": SyxxRunInput JSON, "expected": canonical DeterminativeResult JSON }`.
 - **Canonical encoding rule (decide once, both platforms):** sorted keys, no pretty-print in the comparison form, doubles pre-rounded through `round6` at every boundary the engine already rounds, and serialized via a shared fixed-format rule (shortest round-trip / invariant culture on C#, verified byte-equal against Swift's output for every vector; if any double formats differently textually, the canonical form switches to fixed 6-decimal strings on BOTH platforms — semantic doubles still compared bitwise in tests). The comparison is `Data ==` / `byte[]` equality, plus a decoded-struct equality pass so a failure prints WHICH field diverged.
 - **The vector set (initial, frozen only after Phase 1 lands):**
+
   | ID | Vector | Pins |
   |---|---|---|
   | GV-1 | zero evidence, all sections present-but-inconclusive | `.inconclusive`, EMPTY diagnoses — the dead uniform-12% behavior can never return |
@@ -355,6 +356,7 @@ Cutover branch: builds green (Linux slnf + tests), Phase 5 harness byte-identica
   | GV-10 | round6/pct boundary bundle (values engineering ties at the 6th decimal, incl. negatives) | banker's-rounding parity, bit-identical doubles, identical explanation strings |
   | GV-11 | contradictory-flag attenuation | bounded contradiction: threat attenuated, not zeroed |
   | GV-12 | minors-only support at high coverage | probable ceiling; conclusive gate (`requireDecisiveOrTwoMajors`) holds |
+
 - **Runners:** macOS: rewrite `Stage0GoldenCorpusTests.swift` into `MatrixGoldenCorpusTests.swift` (decode → evaluate → encode canonical → byte-compare). Windows: `MatrixGoldenCorpusTests.cs` twin. Expected outputs are GENERATED once on macOS (the reference platform), reviewed by hand against this table's intent (never accepted blind), then frozen; regeneration requires an explicit spec-version bump commit.
 - **CI:** both runners wired into `.github/workflows/ci.yml`; a vector failure blocks merge.
 - **Failure cases (mandatory):** corrupt one expected byte → red; perturb one spec weight → red; flip `MidpointRounding` → GV-10 red.
@@ -431,6 +433,7 @@ P2a (macOS test compile unblock)
 3. **Session block B:** P5-freeze (after P1.4), then P3.1 and P3.2 (additive; can be one agent while a second, GUI-lane agent pre-drafts P3.7/P4 view changes on the branch — different files, no conflict).
 4. **Session block C (cutover branch):** P3.3 → P3.4 → P3.5 → P3.6 → P3.7 ∥ P4 → P3.8 → P5-xplat re-run → merge. Kit steps serial; 3.7 (WinUI) and P4 (Avalonia) parallel after 3.6.
 5. **Gates afterward, in any order as they unblock:** P3.9 (owner: Windows host), P6 (owner+Cline: corpus), P7 (immediately after P1-P5 merge; amended when P3.9/P6 close), P1.5 (owner decision).
+
 - **Do not parallelize:** anything inside `macOS/Sources/SyxxKit/Synthesis/` across agents; the cutover branch with mainline Windows work; vector freezing with engine edits in flight.
 
 ## 10. The honesty-gate checklist (every phase, before "done")

@@ -86,6 +86,15 @@ struct ConclusionsView: View {
                             .accessibilityLabel(resultAccessibilityLabel(conclusion))
                             .accessibilityAddTraits(.isHeader)
 
+                        // M-02, adopted from Linux (`ConclusionsViewModel.cs:100-105`): when the
+                        // engine produced no determination, `OverallResultView` gates its whole
+                        // Determination section behind `if let det` and therefore renders NOTHING —
+                        // a report with no stated finding, which reads as a report that found
+                        // nothing. Linux says so out loud; macOS now does too.
+                        if conclusion.determination == nil {
+                            nullDeterminationGate
+                        }
+
                         explanationCard(PlainExplanations.For(conclusion))
                             .accessibilityLabel("Explanation of conclusion")
                         actionCard(ResultActions.For(conclusion))
@@ -109,6 +118,11 @@ struct ConclusionsView: View {
                                 )
                         }
 
+                        // M-02: coverage survives the result. Before this, the module-status grid
+                        // lived only on the pre-result branch, so the moment a conclusion existed
+                        // the screen stopped naming the wardens that never ran.
+                        coverageCard(conclusion)
+
                         HStack {
                             Button(action: {
                                 // E121: clear collected evidence too, so the user truly starts clean.
@@ -118,7 +132,7 @@ struct ConclusionsView: View {
                                 Text("Reset Analysis")
                             }
                             .buttonStyle(IoOutlineButtonStyle())
-                            
+
                             Spacer()
                         }
                     }
@@ -276,6 +290,93 @@ struct ConclusionsView: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(completed ? Color.ioTextSecondary.opacity(0.3) : Color.ioBorderSubtle, lineWidth: 1)
         )
+    }
+
+    // MARK: - M-02 — coverage and the null-determination gate (adopted from Linux)
+
+    /// The Linux reference is `Views/ConclusionsView.axaml:107-134` + `ConclusionsViewModel.cs:49-51,
+    /// 118-119`: a COVERAGE card carrying "Checks that ran:" **and** "Checks that did not run:", the
+    /// second list in orange. macOS had the equivalent only on the *pre-result* branch; once a
+    /// conclusion existed, the sole completeness signal left on this screen was the one-bit
+    /// QUALIFIED pill.
+    ///
+    /// Driven by `conclusion.sectionStatuses` — what the synthesis engine actually consumed — rather
+    /// than the view's own `sectionInputs` reading, so this card can never disagree with the result
+    /// it sits beside. All six sections are always present in that array
+    /// (`Synthesizer.conclude` appends one entry per `Section`), `.untested` being "never ran".
+    private func coverageCard(_ conclusion: Conclusion) -> some View {
+        let ran = conclusion.sectionStatuses.filter { $0.status != .untested }
+        let skipped = conclusion.sectionStatuses.filter { $0.status == .untested }
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Coverage")
+                .font(.ioCaption(.bold))
+                .foregroundColor(.ioTextSecondary)
+                .textCase(.uppercase)
+
+            Text("Checks that ran:")
+                .font(.ioCaption())
+                .foregroundColor(.ioTextSecondary)
+            if ran.isEmpty {
+                // Not a formatting edge case: it means the report rests on no measurement at all.
+                Text("None. Nothing in this report was measured.")
+                    .font(.ioBody())
+                    .foregroundColor(.ioWarningAmber)
+                    .padding(.leading, 10)
+            } else {
+                ForEach(ran, id: \.section.rawValue) { entry in
+                    Text(entry.section.rawValue.capitalized)
+                        .font(.ioBody())
+                        .foregroundColor(.ioText)
+                        .padding(.leading, 10)
+                }
+            }
+
+            Text("Checks that did not run:")
+                .font(.ioCaption())
+                .foregroundColor(.ioTextSecondary)
+                .padding(.top, 6)
+            if skipped.isEmpty {
+                Text("None — every check ran.")
+                    .font(.ioBody())
+                    .foregroundColor(.ioTextSecondary)
+                    .padding(.leading, 10)
+            } else {
+                ForEach(skipped, id: \.section.rawValue) { entry in
+                    Text(entry.section.rawValue.capitalized)
+                        .font(.ioBody())
+                        .foregroundColor(.ioWarningAmber)
+                        .padding(.leading, 10)
+                }
+                Text("A check that did not run is a gap in the evidence, not a clean result.")
+                    .font(.ioCaption())
+                    .foregroundColor(.ioWarningAmber)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.ioSurfaceDark)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioBorderSubtle, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    /// Linux's null-determination gate, adopted verbatim (`ConclusionsViewModel.cs:103-104`).
+    /// Amber, because an absent determination is missing data — never a quiet omission.
+    private var nullDeterminationGate: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.ioWarningAmber)
+            Text("Detailed reasoning is unavailable for this run. That is a gap in the evidence, not a clean result.")
+                .font(.ioBody())
+                .foregroundColor(.ioWarningAmber)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.ioWarningAmber.opacity(0.08))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioWarningAmber.opacity(0.3), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func evidenceRow(title: String, fact: String) -> some View {

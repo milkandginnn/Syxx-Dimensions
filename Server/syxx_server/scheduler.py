@@ -9,8 +9,7 @@ import json
 import threading
 import time
 
-from . import config, db, investigate, licensing, logging_util, mailer, passivedns, resolver, warp
-
+from . import config, db, investigate, licensing, logging_util, mailer, warp
 
 # A197 Fix 3: sentinel returned by _diff_previous when the stored history is
 # unreadable. Distinct from None (no changes) and from a change list.
@@ -34,15 +33,13 @@ def _diff_previous(monitor_id, check_type, new_raw):
     except (json.JSONDecodeError, TypeError):
         # A197 Fix 3: missing/corrupt history is NOT the same as "no changes".
         # Return a sentinel so the caller can persist 'unknown' and log the gap.
-        logging_util.warn("monitor_history_unreadable",
-                          monitor_id=monitor_id, check_type=check_type)
+        logging_util.warn("monitor_history_unreadable", monitor_id=monitor_id, check_type=check_type)
         return _UNREADABLE_HISTORY
 
     changes = []
     if check_type == "investigate":
         if old.get("consensus") != new.get("consensus"):
-            changes.append(
-                f"consensus changed: {old.get('consensus')} -> {new.get('consensus')}")
+            changes.append(f"consensus changed: {old.get('consensus')} -> {new.get('consensus')}")
         if old.get("ipv4Consensus") != new.get("ipv4Consensus"):
             changes.append("ipv4 consensus changed")
         if old.get("ipv6Consensus") != new.get("ipv6Consensus"):
@@ -65,8 +62,8 @@ def _run_one(monitor):
 
     runners = {
         "investigate": ("investigate", lambda: investigate.investigate(domain)),
-        "baseline":    ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
-        "warp":        ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
+        "baseline": ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
+        "warp": ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
     }
 
     for name in checks:
@@ -76,15 +73,12 @@ def _run_one(monitor):
         try:
             result, err = fn()
         except Exception as exc:
-            logging_util.error("monitor_check_error",
-                               monitor_id=mid, check=name, err=str(exc))
-            db.monitor_result_save(mid, check_type, "error",
-                                   raw_json=json.dumps({"error": str(exc)}))
+            logging_util.error("monitor_check_error", monitor_id=mid, check=name, err=str(exc))
+            db.monitor_result_save(mid, check_type, "error", raw_json=json.dumps({"error": str(exc)}))
             continue
 
         if err:
-            db.monitor_result_save(mid, check_type, "error",
-                                   raw_json=json.dumps({"error": err}))
+            db.monitor_result_save(mid, check_type, "error", raw_json=json.dumps({"error": err}))
             continue
 
         raw = json.dumps(result, default=str)
@@ -109,9 +103,13 @@ def _run_one(monitor):
         # A197 Fix 3: when history is unreadable, persist as "unknown" not clean.
         if changes is _UNREADABLE_HISTORY:
             verdict = "unknown"
-        db.monitor_result_save(mid, check_type, verdict,
-                               changes=json.dumps(changes) if changes and changes is not _UNREADABLE_HISTORY else None,
-                               raw_json=raw)
+        db.monitor_result_save(
+            mid,
+            check_type,
+            verdict,
+            changes=json.dumps(changes) if changes and changes is not _UNREADABLE_HISTORY else None,
+            raw_json=raw,
+        )
         if changes and changes is not _UNREADABLE_HISTORY:
             all_changes.extend(changes)
     return all_changes
@@ -129,9 +127,11 @@ def _send_alert(monitor, changes):
         return False
     domain = monitor["domain"]
     lines = "\n".join(f"  - {c}" for c in changes)
-    body = (f"Syxx Monitor Alert: {domain}\n\n"
-            f"Detected {len(changes)} change(s):\n{lines}\n\n"
-            f"View details at https://syxx.app\n")
+    body = (
+        f"Syxx Monitor Alert: {domain}\n\n"
+        f"Detected {len(changes)} change(s):\n{lines}\n\n"
+        f"View details at https://syxx.app\n"
+    )
     return mailer.send(email, f"Syxx Alert: changes detected for {domain}", body)
 
 
@@ -149,8 +149,7 @@ def _tick():
                     # SMTP path is visible in metrics rather than silently dropped.
                     logging_util.incr("monitor_alerts_undelivered")
         except Exception as exc:
-            logging_util.error("monitor_tick_error",
-                               monitor_id=monitor["id"], err=str(exc))
+            logging_util.error("monitor_tick_error", monitor_id=monitor["id"], err=str(exc))
         finally:
             db.monitor_advance(monitor["id"])  # always advance to prevent retry loops
 
@@ -193,8 +192,7 @@ def _sync_api_keys():
             logging_util.warn("api_key_sync_transient", subject=subject)
         # status is True → license still active, nothing to do
     if revoked_count:
-        logging_util.info("api_key_sync_complete", checked=len(subjects),
-                          revoked=revoked_count)
+        logging_util.info("api_key_sync_complete", checked=len(subjects), revoked=revoked_count)
 
 
 def start():
@@ -231,5 +229,4 @@ def start():
                     logging_util.error("db_backup_error", err=str(exc))
 
     threading.Thread(target=_loop, name="syxx-scheduler", daemon=True).start()
-    logging_util.info("scheduler_started",
-                      api_key_sync_interval_hours=config.API_KEY_SYNC_INTERVAL_HOURS)
+    logging_util.info("scheduler_started", api_key_sync_interval_hours=config.API_KEY_SYNC_INTERVAL_HOURS)

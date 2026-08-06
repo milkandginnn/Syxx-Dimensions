@@ -1,0 +1,3 @@
+syxx cage 2.0.0
+
+Usage: syxx cage [--duration <seconds>] [--keep] [--output <dir>]   (captures port-53 DNS packets; requires root/sudo on Linux and macOS, Administrator on Windows)

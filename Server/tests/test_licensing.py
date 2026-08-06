@@ -9,6 +9,7 @@ Or with unittest:
 
     python3 -m unittest tests.test_licensing -v
 """
+
 import base64
 import email.utils
 import hashlib
@@ -40,15 +41,14 @@ from syxx_server import config, licensing  # noqa: E402
 def _ed25519_sign(payload_bytes: bytes) -> str:
     """Sign bytes with the test Ed25519 private key, return base64 signature."""
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(_TEST_HEX_PRIVKEY))
     return base64.b64encode(priv.sign(payload_bytes)).decode("ascii")
 
 
-def _build_response(body_dict, sign: bool = True,
-                    status: int = 200,
-                    method: str = "post",
-                    url: str = None,
-                    account_id: str = None) -> io.BytesIO:
+def _build_response(
+    body_dict, sign: bool = True, status: int = 200, method: str = "post", url: str = None, account_id: str = None
+) -> io.BytesIO:
     """Return a mock urllib response object.
 
     When *sign* is True, the response includes valid Keygen-Signature, Digest,
@@ -59,11 +59,10 @@ def _build_response(body_dict, sign: bool = True,
         aid = account_id or config.KEYGEN_ACCOUNT_ID
         url = f"https://api.keygen.sh/v1/accounts/{aid}/licenses/actions/validate-key"
 
-    import urllib.request
     from urllib.parse import urlparse
 
     body_bytes = json.dumps(body_dict).encode("utf-8")
-    body_str = body_bytes.decode("utf-8")
+    body_bytes.decode("utf-8")
 
     # Build the digest
     digest_b64 = base64.b64encode(hashlib.sha256(body_bytes).digest()).decode("ascii")
@@ -118,13 +117,13 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
     def tearDown(self):
         config.KEYGEN_PUBLIC_KEY = self._orig_pubkey
 
-    def _valid_headers(self, body_str, method="post",
-                       url="https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"):
+    def _valid_headers(
+        self, body_str, method="post", url="https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+    ):
         """Helper: return (sig_header, digest_header, date_header) for a valid signature."""
-        digest_b64 = base64.b64encode(
-            hashlib.sha256(body_str.encode("utf-8")).digest()
-        ).decode("ascii")
+        digest_b64 = base64.b64encode(hashlib.sha256(body_str.encode("utf-8")).digest()).decode("ascii")
         from urllib.parse import urlparse
+
         parsed = urlparse(url)
         # A056: use a current Date so the signed, freshly-dated response verifies; the
         # stale-Date replay path is covered by its own dedicated test below.
@@ -137,9 +136,7 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         )
         signature = _ed25519_sign(signing_data.encode("utf-8"))
         sig_header = (
-            f'keyid="test", algorithm="ed25519", '
-            f'signature="{signature}", '
-            f'headers="(request-target) host date digest"'
+            f'keyid="test", algorithm="ed25519", signature="{signature}", headers="(request-target) host date digest"'
         )
         return sig_header, f"sha-256={digest_b64}", date_str
 
@@ -154,8 +151,12 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         config.KEYGEN_PUBLIC_KEY = ""
         with patch.dict(os.environ, {"SYXX_DEV_MODE": "1"}):
             result = licensing._verify_validate_key_response(
-                '{"meta":{"valid":true}}', "some-sig", "sha-256=x", "date", "post",
-                "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+                '{"meta":{"valid":true}}',
+                "some-sig",
+                "sha-256=x",
+                "date",
+                "post",
+                "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key",
             )
         self.assertTrue(result)  # dev mode only
 
@@ -170,8 +171,12 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if k != "SYXX_DEV_MODE"}
         with patch.dict(os.environ, env, clear=True):
             result = licensing._verify_validate_key_response(
-                '{"meta":{"valid":true}}', "some-sig", "sha-256=x", "date", "post",
-                "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+                '{"meta":{"valid":true}}',
+                "some-sig",
+                "sha-256=x",
+                "date",
+                "post",
+                "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key",
             )
         self.assertFalse(result, "no pubkey configured must DENY in production, not skip")
 
@@ -179,8 +184,7 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         body_str = '{"meta":{"valid":true}}'
         sig, dgst, dt = self._valid_headers(body_str)
         result = licensing._verify_validate_key_response(
-            body_str, sig, dgst, dt, "post",
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+            body_str, sig, dgst, dt, "post", "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
         )
         self.assertTrue(result)
 
@@ -193,8 +197,7 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         # The forged body has a different SHA-256 digest, so the signature
         # over the original body's digest won't match.
         result = licensing._verify_validate_key_response(
-            forged_body, sig, dgst, dt, "post",
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+            forged_body, sig, dgst, dt, "post", "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
         )
         self.assertFalse(result)
 
@@ -202,8 +205,12 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         # A205: use a fresh date so the Date guard doesn't reject before signature check.
         fresh_date = email.utils.formatdate(usegmt=True)
         result = licensing._verify_validate_key_response(
-            '{"meta":{"valid":true}}', "", "sha-256=x", fresh_date, "post",
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+            '{"meta":{"valid":true}}',
+            "",
+            "sha-256=x",
+            fresh_date,
+            "post",
+            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key",
         )
         self.assertFalse(result)
 
@@ -213,8 +220,10 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         result = licensing._verify_validate_key_response(
             '{"meta":{"valid":true}}',
             'keyid="test", algorithm="ed25519", signature="abc"',
-            "", fresh_date, "post",
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+            "",
+            fresh_date,
+            "post",
+            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key",
         )
         self.assertFalse(result)
 
@@ -225,8 +234,10 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         result = licensing._verify_validate_key_response(
             '{"meta":{"valid":true}}',
             'keyid="test", algorithm="ed25519", signature="AAAA"',
-            "sha-256=x", fresh_date, "post",
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+            "sha-256=x",
+            fresh_date,
+            "post",
+            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key",
         )
         self.assertFalse(result)
 
@@ -234,26 +245,22 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         """If a MITM replays the response on a different path, the (request-target)
         component of the signing data won't match, so verification fails."""
         body_str = '{"meta":{"valid":true}}'
-        sig, dgst, dt = self._valid_headers(body_str, url=(
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
-        ))
-        wrong_url = "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key/other"
-        result = licensing._verify_validate_key_response(
-            body_str, sig, dgst, dt, "post", wrong_url
+        sig, dgst, dt = self._valid_headers(
+            body_str, url=("https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key")
         )
+        wrong_url = "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key/other"
+        result = licensing._verify_validate_key_response(body_str, sig, dgst, dt, "post", wrong_url)
         self.assertFalse(result)
 
     def test_wrong_host_fails(self):
         """If a MITM proxies through a different host, the host part of the
         signing data won't match."""
         body_str = '{"meta":{"valid":true}}'
-        sig, dgst, dt = self._valid_headers(body_str, url=(
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
-        ))
-        wrong_url = "https://evil.example.com/v1/accounts/test/licenses/actions/validate-key"
-        result = licensing._verify_validate_key_response(
-            body_str, sig, dgst, dt, "post", wrong_url
+        sig, dgst, dt = self._valid_headers(
+            body_str, url=("https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key")
         )
+        wrong_url = "https://evil.example.com/v1/accounts/test/licenses/actions/validate-key"
+        result = licensing._verify_validate_key_response(body_str, sig, dgst, dt, "post", wrong_url)
         self.assertFalse(result)
 
     def test_replayed_old_date_fails(self):
@@ -268,9 +275,7 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         when the key was active is replayable forever, defeating expiry.
         """
         body_str = '{"meta":{"valid":true}}'
-        digest_b64 = base64.b64encode(
-            hashlib.sha256(body_str.encode("utf-8")).digest()
-        ).decode("ascii")
+        digest_b64 = base64.b64encode(hashlib.sha256(body_str.encode("utf-8")).digest()).decode("ascii")
         # One hour old: far outside the 300s skew window, but internally consistent.
         stale_date = email.utils.formatdate(time.time() - 3600, usegmt=True)
         signing_data = (
@@ -281,13 +286,15 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         )
         sig = _ed25519_sign(signing_data.encode("utf-8"))
         sig_header = (
-            'keyid="test", algorithm="ed25519", '
-            f'signature="{sig}", '
-            'headers="(request-target) host date digest"'
+            f'keyid="test", algorithm="ed25519", signature="{sig}", headers="(request-target) host date digest"'
         )
         result = licensing._verify_validate_key_response(
-            body_str, sig_header, f"sha-256={digest_b64}", stale_date, "post",
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+            body_str,
+            sig_header,
+            f"sha-256={digest_b64}",
+            stale_date,
+            "post",
+            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key",
         )
         self.assertFalse(result, "a validly-signed but stale response must be rejected as a replay")
 
@@ -297,10 +304,10 @@ class ValidateKeygenSignatureTests(unittest.TestCase):
         body_str = '{"meta":{"valid":true}}'
         sig, dgst, dt = self._valid_headers(body_str)
         result = licensing._verify_validate_key_response(
-            body_str, sig, dgst, dt, "post",
-            "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
+            body_str, sig, dgst, dt, "post", "https://api.keygen.sh/v1/accounts/test/licenses/actions/validate-key"
         )
         self.assertTrue(result, "a correctly signed, freshly dated response must verify")
+
 
 @patch.object(licensing, "_keygen_sem")
 class ValidateKeygenIntegrationTests(unittest.TestCase):
@@ -320,11 +327,9 @@ class ValidateKeygenIntegrationTests(unittest.TestCase):
         licensing.urllib.request.urlopen = self._orig_urllib
         config.KEYGEN_PUBLIC_KEY = self._orig_pubkey
 
-    def _install_mock(self, body_dict, sign=True, status=200, method="post",
-                      url=None):
+    def _install_mock(self, body_dict, sign=True, status=200, method="post", url=None):
         """Monkeypatch urllib.request.urlopen to return a controlled response."""
-        mock_resp = _build_response(body_dict, sign=sign, status=status,
-                                    method=method, url=url)
+        mock_resp = _build_response(body_dict, sign=sign, status=status, method=method, url=url)
         licensing.urllib.request.urlopen = lambda req, **kw: mock_resp
 
     def test_valid_key_with_signature_grants_pro(self, mock_sem):
@@ -353,9 +358,9 @@ class ValidateKeygenIntegrationTests(unittest.TestCase):
         genuine_body = {"meta": {"valid": True}}
         genuine_resp = _build_response(genuine_body, sign=True)
         # Body B: the forged body the MITM wants to substitute
-        forged_body_bytes = json.dumps({"meta": {"valid": True},
-                                        "data": {"type": "licenses", "id": "forged"}}
-                                       ).encode("utf-8")
+        forged_body_bytes = json.dumps({"meta": {"valid": True}, "data": {"type": "licenses", "id": "forged"}}).encode(
+            "utf-8"
+        )
         # Deliver body B with body A's signature headers — the server must reject
         # because body B's digest does not match body A's signature.
         forged_raw = io.BytesIO(forged_body_bytes)
@@ -364,8 +369,7 @@ class ValidateKeygenIntegrationTests(unittest.TestCase):
         forged_raw.url = genuine_resp.url
         licensing.urllib.request.urlopen = lambda req, **kw: forged_raw
         result = licensing._validate_keygen("FORGED-BODY")
-        self.assertIsNone(result,
-                          "a stolen signature over a substituted body must be rejected")
+        self.assertIsNone(result, "a stolen signature over a substituted body must be rejected")
 
     def test_transient_http_error_still_transient(self, mock_sem):
         """Regression: HTTP 503 still returns __transient__, not None."""
@@ -373,8 +377,7 @@ class ValidateKeygenIntegrationTests(unittest.TestCase):
 
         def _raise_503(req, **kw):
             raise urllib.error.HTTPError(
-                req.full_url or req.get_full_url(),
-                code=503, msg="Service Unavailable", hdrs={}, fp=None
+                req.full_url or req.get_full_url(), code=503, msg="Service Unavailable", hdrs={}, fp=None
             )
 
         licensing.urllib.request.urlopen = _raise_503
@@ -387,8 +390,7 @@ class ValidateKeygenIntegrationTests(unittest.TestCase):
 
         def _raise_401(req, **kw):
             raise urllib.error.HTTPError(
-                req.full_url or req.get_full_url(),
-                code=401, msg="Unauthorized", hdrs={}, fp=None
+                req.full_url or req.get_full_url(), code=401, msg="Unauthorized", hdrs={}, fp=None
             )
 
         licensing.urllib.request.urlopen = _raise_401
@@ -401,8 +403,7 @@ class ValidateKeygenIntegrationTests(unittest.TestCase):
 
         def _raise_404(req, **kw):
             raise urllib.error.HTTPError(
-                req.full_url or req.get_full_url(),
-                code=404, msg="Not Found", hdrs={}, fp=None
+                req.full_url or req.get_full_url(), code=404, msg="Not Found", hdrs={}, fp=None
             )
 
         licensing.urllib.request.urlopen = _raise_404
@@ -412,9 +413,7 @@ class ValidateKeygenIntegrationTests(unittest.TestCase):
     def test_network_timeout_still_transient(self, mock_sem):
         """Regression: network/timeout error returns __transient__."""
         mock_sem.acquire.return_value = True
-        licensing.urllib.request.urlopen = lambda req, **kw: (_ for _ in ()).throw(
-            Exception("Connection refused")
-        )
+        licensing.urllib.request.urlopen = lambda req, **kw: (_ for _ in ()).throw(Exception("Connection refused"))
         result = licensing._validate_keygen("KEY-ANY")
         self.assertEqual(result, "__transient__")
 

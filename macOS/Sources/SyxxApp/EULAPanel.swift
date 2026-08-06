@@ -15,43 +15,62 @@ struct EULAView: View {
     }
 
     var body: some View {
+        // Mockup: 600px card, rgba(28,17,52,.85) + backdrop-filter:blur(24px),
+        // border rgba(160,140,255,.24), radius 18, shadow 0 40px 100px rgba(0,0,0,.6).
         VStack(spacing: 0) {
+            // Header: icon + Cinzel title + EB Garamond italic subtitle
             VStack(spacing: 5) {
                 Text("⚖").font(.system(size: 30))
+                    .padding(.bottom, 6)
                 Text("End-User License Agreement")
                     .font(.custom("Cinzel-SemiBold", size: 22))
                     .foregroundStyle(Color.ioText)
                 Text("Please read these terms before continuing.")
                     .font(.custom("EBGaramond-Italic", size: 14))
-                    .foregroundStyle(Color.ioTextSecondary)
+                    .foregroundStyle(Color.ioTextMuted)
+                    .padding(.top, 4)
             }
             .padding(.vertical, 14)
+            .padding(.horizontal, 30)
             .frame(maxWidth: .infinity)
 
-            Divider().overlay(Color.ioBorderSubtle)
+            Divider().overlay(Color(white: 1, opacity: 0.06))
 
+            // Agreement body: EB Garamond 14.5px per mockup, scrollable
             PurpleScrollView(geometry: .compact) {
                 Text(agreementText)
-                    .font(.body(14.5))
-                    .foregroundStyle(Color.ioText)
+                    .font(.custom("EBGaramond-Regular", size: 14.5))
+                    .foregroundStyle(Color.ioTextSecondary)
                     .lineSpacing(3)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(24)
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 20)
             }
+            .frame(maxHeight: 320)
 
-            Divider().overlay(Color.ioBorderSubtle)
+            Divider().overlay(Color(white: 1, opacity: 0.06))
 
+            // Footer: Decline text link + Agree & Continue gradient button
             HStack {
+                Button("Decline") { dismiss() }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.ioTextMuted)
+
                 Spacer()
-                Button("Close") { dismiss() }
+
+                Button("Agree & Continue →") { dismiss() }
                     .buttonStyle(IoFilledButtonStyle(color: .ioBlue))
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(16)
+            .padding(.horizontal, 30)
+            .padding(.vertical, 16)
         }
-        .frame(width: 600, height: 520)
-        .background(Color.ioSurfaceDark)
+        .frame(width: 600)
+        .background(Color(red: 28/255, green: 17/255, blue: 52/255).opacity(0.85))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color(red: 160/255, green: 140/255, blue: 255/255).opacity(0.24), lineWidth: 1))
+        .shadow(color: .black.opacity(0.6), radius: 50, y: 24)
     }
 }
 

@@ -1,0 +1,56 @@
+#!/bin/sh
+# Syxx .deb post-removal script (P-10).
+#
+# /var/lib/syxx/hardware-id is created by postinst, not unpacked by dpkg, so dpkg does not know
+# it exists and will never remove it. Debian Policy §6.8 makes that this script's job on purge.
+#
+# WHY REMOVING IT ON PURGE IS SAFE FOR LICENSING
+#   The file holds a salted hash of the machine's DMI UUID — a pure function of the HARDWARE,
+#   not of the install. A purge followed by a reinstall recaptures the identical hash, so it
+#   reads as the same machine and burns no additional activation. That is the whole point of
+#   using the DMI UUID rather than /etc/machine-id, which is regenerated per install and would
+#   read as two machines. Leaving a root-owned file behind after `dpkg --purge` would be the
+#   defect here, not removing it.
+#
+# `set -e`-safe: every step is guarded or terminated with `|| true`.
+
+set -e
+
+HARDWARE_ID='/var/lib/syxx/hardware-id'
+STATE_DIR='/var/lib/syxx'
+
+refresh_desktop_caches() {
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database -q /usr/share/applications || true
+    fi
+    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+        gtk-update-icon-cache -q -f -t /usr/share/icons/hicolor || true
+    fi
+    return 0
+}
+
+case "$1" in
+    purge)
+        rm -f "$HARDWARE_ID"
+        # Only if empty: another package or a local admin may own something else in there.
+        rmdir "$STATE_DIR" 2>/dev/null || true
+        refresh_desktop_caches
+        ;;
+
+    remove)
+        # Deliberately KEEPS the hardware id. `apt remove` is not `apt purge`, and the user has
+        # not asked to discard state — this is the shape that makes a remove/reinstall cycle
+        # cost nothing.
+        refresh_desktop_caches
+        ;;
+
+    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

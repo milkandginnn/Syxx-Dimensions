@@ -1,6 +1,7 @@
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Syxx.Kit;
 using SyxxUI.Services;
 using SyxxUI.ViewModels;
@@ -41,12 +42,14 @@ public sealed partial class MainWindow : Window
             (Application.Current as App)?.FlushTelemetry();
 
         FirstRunGate.Ready += FirstRunGate_Ready;
-        Loaded += MainWindow_Loaded;
+        if (Content is FrameworkElement root)
+            root.Loaded += MainWindow_Loaded;
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        Loaded -= MainWindow_Loaded;
+        if (Content is FrameworkElement root)
+            root.Loaded -= MainWindow_Loaded;
         FirstRunGate.Initialize(_firstRun);
     }
 

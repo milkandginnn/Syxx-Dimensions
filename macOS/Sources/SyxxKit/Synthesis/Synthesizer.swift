@@ -357,8 +357,12 @@ public enum EvidenceAdapters {
                 subs.append(.negative)
             }
         }
-        // A2 — authoritative ground truth. A full divergence (CDN/geo already dampened to inconclusive
-        // upstream) is real evidence of an upstream rewrite; a match is clean; anything ambiguous is inconclusive.
+        // A2 — authoritative ground truth. A full divergence is real evidence of an upstream rewrite;
+        // a match is clean; anything ambiguous is inconclusive. CDN/geo routing is NOT dampened
+        // upstream: `AuthoritativeVantage.classify` RETAINS `.diverges` when both answer sets sit in
+        // one provider's ranges (C015/K-16) — it annotates the provider rather than erasing the
+        // finding, because an attacker may sit inside that provider's own ASN. The rationale emitted
+        // below states that limit rather than claiming CDN/geo has been ruled out.
         if let a = authoritative {
             switch a.status {
             case .diverges:
@@ -383,11 +387,20 @@ public enum EvidenceAdapters {
                             + (a.nameservers.isEmpty ? "" : " (\(a.nameservers.prefix(2).joined(separator: ", ")))"),
                         rationale: "The Dimension server also reports the authority does not serve the address your resolver returned — corroborates an upstream rewrite over TLS, but the response is unsigned and should be independently verified."))
                 } else {
+                    // K-16 COUPLING — the rationale below is load-bearing on the classifier.
+                    // It used to end "(benign CDN/geo routing is already excluded for a full
+                    // divergence)". That was never true on this platform: `classify` RETAINS
+                    // `.diverges` when both answer sets lie in one provider's ranges (C015),
+                    // annotating the provider instead of softening, because an attacker may sit
+                    // inside the provider's own ASN. A `.diverges` can therefore legitimately carry
+                    // a shared provider, so the old claim told the user CDN/geo had been ruled out
+                    // when it had not. The wording states what is actually established, and matches
+                    // the C# twin at Syxx.Kit/Synthesis/Synthesizer.cs:488 verbatim.
                     ev.append(EvidenceItem(section: .mirror,
                         evidenceId: .authoritativeDiverges,
                         observation: "Recursive answer diverges from the domain's authoritative nameservers"
                             + (a.nameservers.isEmpty ? "" : " (\(a.nameservers.prefix(2).joined(separator: ", ")))"),
-                        rationale: "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite (benign CDN/geo routing is already excluded for a full divergence)."))
+                        rationale: "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite. CDN/geo routing can also produce this shape, including when both answers sit in one provider's ranges, so corroborate before concluding."))
                 }
                 subs.append(.positive)
             case .matches:      subs.append(.negative)

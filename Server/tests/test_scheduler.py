@@ -11,6 +11,7 @@ These tests close that gap for the two most dangerous entry points:
   _tick       — the monitor processing loop; must advance due monitors exactly once
                 and write an "error" row when a check raises.
 """
+
 import json
 import os
 import sqlite3
@@ -64,12 +65,13 @@ class BackupDbSchedulerTests(unittest.TestCase):
         # If it fails silently, the only evidence is a log line no one reads.
         scheduler._backup_db()
         bdir = config.BACKUP_DIR
-        self.assertTrue(os.path.isdir(bdir),
-                        "_backup_db must create the backup directory; it does not exist")
+        self.assertTrue(os.path.isdir(bdir), "_backup_db must create the backup directory; it does not exist")
         backups = [f for f in os.listdir(bdir) if f.endswith(".db")]
-        self.assertGreater(len(backups), 0,
-                           "_backup_db must produce a .db file; an empty backup dir means "
-                           "the wrapper silently swallowed a failure")
+        self.assertGreater(
+            len(backups),
+            0,
+            "_backup_db must produce a .db file; an empty backup dir means the wrapper silently swallowed a failure",
+        )
 
 
 class TickAndRunOneTests(unittest.TestCase):
@@ -82,8 +84,7 @@ class TickAndRunOneTests(unittest.TestCase):
     def test_run_one_writes_error_row_when_check_raises(self):
         """A raising check must persist an 'error' conclusion, not a clean one."""
         mid = "mon-sched-test-1"
-        monitor = {"id": mid, "domain": "example.com",
-                   "checks": json.dumps(["investigate"])}
+        monitor = {"id": mid, "domain": "example.com", "checks": json.dumps(["investigate"])}
         # Ensure the monitor is in the DB for result saving
         db.monitor_create(mid, "test-subject", "example.com", json.dumps(["investigate"]))
 
@@ -93,22 +94,20 @@ class TickAndRunOneTests(unittest.TestCase):
         with patch.object(scheduler.investigate, "investigate", side_effect=_raise):
             changes = scheduler._run_one(monitor)
 
-        self.assertEqual(changes, [],
-                         "a raising check must produce no changes, not a fabricated clean result")
+        self.assertEqual(changes, [], "a raising check must produce no changes, not a fabricated clean result")
         # The error must be persisted as an "error" row.
         results = db.monitor_results_for(mid, "investigate", limit=1)
-        self.assertTrue(len(results) > 0,
-                        "a raising check must persist a result row in the DB")
+        self.assertTrue(len(results) > 0, "a raising check must persist a result row in the DB")
         # DB column is `result` (code vocabulary); the stored value must be "error".
-        self.assertEqual(results[0]["result"], "error",
-                         "a raising check must persist result='error', not a clean value")
+        self.assertEqual(
+            results[0]["result"], "error", "a raising check must persist result='error', not a clean value"
+        )
 
     def test_tick_advances_due_monitors(self):
         """_tick must call monitor_advance for each due monitor, preventing retry loops."""
         # Insert a monitor and force next_run into the past so it is "due"
         mid = "mon-sched-test-tick"
-        db.monitor_create(mid, "test-subject-tick", "tick-test.example.com",
-                          json.dumps(["investigate"]))
+        db.monitor_create(mid, "test-subject-tick", "tick-test.example.com", json.dumps(["investigate"]))
         conn = db.connect()
         try:
             conn.execute("UPDATE monitors SET next_run=0 WHERE id=?", (mid,))
@@ -123,13 +122,14 @@ class TickAndRunOneTests(unittest.TestCase):
             call_log.append(monitor_id)
             return original_advance(monitor_id)
 
-        with patch.object(scheduler.db, "monitor_advance", side_effect=_tracking_advance), \
-             patch.object(scheduler, "_run_one", return_value=[]):
+        with (
+            patch.object(scheduler.db, "monitor_advance", side_effect=_tracking_advance),
+            patch.object(scheduler, "_run_one", return_value=[]),
+        ):
             scheduler._tick()
 
         # The monitor should have been advanced at least once
-        self.assertIn(mid, call_log,
-                      "_tick must advance each due monitor exactly once per cycle")
+        self.assertIn(mid, call_log, "_tick must advance each due monitor exactly once per cycle")
 
 
 if __name__ == "__main__":

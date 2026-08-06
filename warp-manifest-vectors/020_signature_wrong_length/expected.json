@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "TAMPERING_DETECTED",
+  "freshnessState": "notEvaluated",
+  "htmlState": "notEvaluated",
+  "manifestState": "notEvaluated",
+  "notes": "signature present but does not verify over the decoded bytes.",
+  "signatureState": "invalidSignature"
+}

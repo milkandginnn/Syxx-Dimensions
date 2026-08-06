@@ -53,15 +53,24 @@ public static class ProbeRunner
         ProbeBudget budget,
         Func<CancellationToken, Task<T?>> operation) where T : class
     {
-        return await RunInternalAsync(label, budget, async ct =>
-        {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(budget.PerProbeTimeout);
-            return await operation(cts.Token);
-        }, supportsCancellation: true);
+        // The token handed down by RunInternalAsync already carries the deadline (and, per C058,
+        // the grace window beyond it). A second linked CTS here would be a duplicate copy of that
+        // policy which could silently disagree with it — it previously cancelled at
+        // PerProbeTimeout, which would have cut the grace drain off before it could drain.
+        return await RunInternalAsync(label, budget, operation, supportsCancellation: true);
     }
 
     // ── Shared implementation ──
+
+    /// <summary>
+    /// C058: when the deadline fires, the transport may still complete moments later — a UDP retry
+    /// issued at 2s arriving at 2.6s, a DoH request at 5.1s. Rather than discard a late-but-valid
+    /// answer and report a fabricated absence, wait this much longer for the in-flight operation.
+    /// Matches the macOS <c>ProbeRunner.swift</c> grace deadline exactly. The effective hard cap on
+    /// a probe is therefore <c>PerProbeTimeout + GraceDrain</c>, and cancellation is armed for that
+    /// total so a cooperative probe is not torn down during the window meant to recover its answer.
+    /// </summary>
+    private static readonly TimeSpan GraceDrain = TimeSpan.FromSeconds(1.5);
 
     private static async Task<T?> RunInternalAsync<T>(
         string label,
@@ -92,6 +101,10 @@ public static class ProbeRunner
         // cannot, which is why its reason token is deliberately the weaker
         // "probe_deadline_or_error". Do not "align" them by making this one vaguer.
         string? failureReason = null;
+        // C058: set when the deadline fired but the grace drain recovered a real answer. Reported
+        // as `late_but_valid` — a real (late) answer is preferred over a fabricated absence, and
+        // the tag says plainly that it arrived past the deadline.
+        bool lateButValid = false;
 
         // Wrap in an OTel span for observability — parity with macOS ProbeRunner.swift
         using var span = SyxxTracer.StartSpan($"probe.{label}", ActivityKind.Internal,
@@ -105,7 +118,12 @@ public static class ProbeRunner
             if (supportsCancellation)
             {
                 // Operation receives its own CancellationToken; the runner just forwards.
-                using var cts = new CancellationTokenSource(budget.PerProbeTimeout);
+                // C058: armed for PerProbeTimeout + GraceDrain, not PerProbeTimeout. Cancelling at
+                // the deadline would tear the operation down at the exact moment the grace drain
+                // starts waiting for it, making the drain inert for cooperative probes — which are
+                // the ones it exists to recover. macOS's task group only calls `cancelAll()` when
+                // the group closure returns, i.e. after the grace window, so this matches it.
+                using var cts = new CancellationTokenSource(budget.PerProbeTimeout + GraceDrain);
                 // BACKSTOP. This branch previously relied entirely on the operation honoring the
                 // token, so a non-cooperative probe ran past PerProbeTimeout unbounded and the span
                 // never ended — macOS's task-group deadline applies unconditionally, so this was
@@ -117,14 +135,13 @@ public static class ProbeRunner
                     result = await opTask.ConfigureAwait(false);
                     // A COOPERATIVE probe returns null on cancellation rather than throwing
                     // (DNSResolver.QueryUDPDetailedAsync returns a status, per F006). Without this
-                    // check that lands in "operation_returned_null" — asserting it ran to
+                    // check that lands in "operation_returned_nil" — asserting it ran to
                     // completion and found nothing, about a probe that was cut off at the deadline.
                     if (result == null && cts.IsCancellationRequested) { failureReason = "probe_deadline"; }
                 }
                 else
                 {
-                    result = null;
-                    failureReason = "probe_deadline";
+                    (result, failureReason, lateButValid) = await DrainAsync(opTask).ConfigureAwait(false);
                 }
             }
             else
@@ -140,8 +157,9 @@ public static class ProbeRunner
                 }
                 else
                 {
-                    result = null;             // the deadline task won — a genuine timeout
-                    failureReason = "probe_deadline";
+                    // The deadline task won. Before calling it an absence, give the in-flight
+                    // operation the C058 grace window to deliver a late answer (see DrainAsync).
+                    (result, failureReason, lateButValid) = await DrainAsync(task).ConfigureAwait(false);
                 }
             }
         }
@@ -163,9 +181,31 @@ public static class ProbeRunner
         {
             // `null` with no recorded cause means the operation returned null of its own accord:
             // it ran and produced nothing, which is not the same as never finishing.
-            span?.SetTag("probe.result", failureReason ?? "no_result");
-            SyxxTracer.SetOutcome(span, SyxxTracer.Outcome.Inconclusive,
-                                  failureReason ?? "operation_returned_null", evidence: false);
+            var reason = failureReason ?? "operation_returned_nil";
+            // `probe.result` MIRRORS the reason so the two tags cannot drift. They previously
+            // disagreed — "no_result" on this tag against "operation_returned_null" on the outcome
+            // — which is exactly the drift the macOS twin's comment guards against, and it filed
+            // one condition under two names.
+            span?.SetTag("probe.result", reason);
+            if (reason == "operation_returned_nil")
+            {
+                // Unclassified, NOT Inconclusive: nothing prevented the measurement. The operation
+                // ran to completion and chose to return nothing, and only the probe itself is
+                // competent to say what that means. Calling it Inconclusive claims a
+                // could-not-measure that did not happen. (macOS: `.unclassified`.)
+                SyxxTracer.SetOutcome(span, SyxxTracer.Outcome.Unclassified, reason);
+            }
+            else
+            {
+                SyxxTracer.SetOutcome(span, SyxxTracer.Outcome.Inconclusive, reason, evidence: false);
+            }
+        }
+        else if (lateButValid)
+        {
+            // C058: the deadline fired, but the grace drain recovered a real answer. Recorded as a
+            // result, not an absence — and named so the lateness is not hidden.
+            span?.SetTag("probe.result", "late_but_valid");
+            SyxxTracer.SetOutcome(span, SyxxTracer.Outcome.Unclassified, "late_but_valid");
         }
         else
         {
@@ -183,6 +223,31 @@ public static class ProbeRunner
         DebugLog(label, sw.Elapsed, budget.ProbesRun, budget.MaxProbes, budget.Elapsed, budget.TotalTimeout, result != null);
 
         return result;
+    }
+
+    /// <summary>
+    /// C058 grace drain. The per-probe deadline has already fired; give the in-flight operation
+    /// <see cref="GraceDrain"/> longer to deliver an answer before recording an absence.
+    /// </summary>
+    /// <returns>
+    /// The recovered value with <c>lateButValid</c> set, or <c>(null, "probe_deadline", false)</c>
+    /// if the grace window expired or the operation drained to null. A fault is deliberately
+    /// re-thrown so the caller's catch arms classify it as <c>transport_error</c> — an operation
+    /// that threw during the drain did not time out, and must not borrow the deadline's label.
+    /// </returns>
+    private static async Task<(T? Result, string? Reason, bool LateButValid)> DrainAsync<T>(Task<T?> opTask)
+        where T : class
+    {
+        var drained = await Task.WhenAny(opTask, Task.Delay(GraceDrain)).ConfigureAwait(false);
+        if (drained != opTask)
+        {
+            // Grace expired with the operation still in flight. Orphaned, as before.
+            return (null, "probe_deadline", false);
+        }
+
+        var value = await opTask.ConfigureAwait(false);   // may re-throw if the task faulted
+        // A drain that yields null recovered nothing: the deadline remains the honest cause.
+        return value == null ? (null, "probe_deadline", false) : (value, null, true);
     }
 
     // ── Debug logging ──

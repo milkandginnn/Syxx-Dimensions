@@ -1,0 +1,3 @@
+syxx forensics 2.0.0
+
+Usage: syxx forensics [--lists] [--classify <domain...>] [--exfil <domain> [--times t1,t2,...]] [--beacon t1,t2,...]

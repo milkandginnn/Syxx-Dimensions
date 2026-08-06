@@ -26,6 +26,7 @@ producing evidence an end user can actually trust.
 **Read the design-related documents** — `DESIGN.md`, `MEMORY.md`, `ROADMAP.md`,
 `PROPOSALS.md`, `PROJECT-STATE.md`, the engine / Stage-5 / CL specs, GUI plans, handoffs,
 skills, and server design docs. Focus on document passages that:
+
 - Describe verdict logic (secure/tampered/inconclusive) or how confidence is computed
 - Describe evidence generation, signing, or attestation
 - Prescribe credential, key, or authentication handling
@@ -33,6 +34,7 @@ skills, and server design docs. Focus on document passages that:
 - Present proposed features, architectures, or code snippets
 
 Do not try to read every document line-by-line — instead, **trace the claims**:
+
 1. Start from `DESIGN.md` (the functional map) and follow each feature to its spec
 2. Read the engine/synthesis/aggregation design (`REASONING-SYSTEM-DESIGN.md`, Stage-5 / CL specs)
 3. Audit security-critical descriptions (LicenseManager, DNSSECVerifier, WitnessSigner, key handling)

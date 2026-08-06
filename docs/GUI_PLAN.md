@@ -1,4 +1,5 @@
 # Syxx GUI Implementation Plan
+
 ## macOS (Swift 6 / SwiftUI) + Windows 11 (WinUI 3 / C#)
 
 **Source of truth:** `Mockups-Web-Promos/SyxxApp.dc.html` (canonical component),
@@ -16,7 +17,7 @@
 
 The mockup overrides the Nnyx/Io base with a **violet/gold** palette in `SyxxApp.dc.html`
 `renderVals()` darkT object. These are the authoritative values; they differ from Nnyx's
-cyan-electric palette. The existing [`IoDesignSystem.swift`](macOS/Sources/SyxxApp/Views/Components/IoDesignSystem.swift)
+cyan-electric palette. The existing [`IoDesignSystem.swift`](../macOS/Sources/SyxxApp/Views/Components/IoDesignSystem.swift)
 already uses these exact hex values — no changes needed.
 
 | Token | Hex (dark) | Swift name | Use |
@@ -87,10 +88,12 @@ Fonts are already bundled in `macOS/Sources/SyxxApp/Resources/` and referenced i
 ## Part 1 — Shell (ContentView + CustomSidebar)
 
 ### Current state
-[`ContentView.swift`](macOS/Sources/SyxxApp/ContentView.swift) and the embedded `CustomSidebar`
+
+[`ContentView.swift`](../macOS/Sources/SyxxApp/ContentView.swift) and the embedded `CustomSidebar`
 are substantially correct. The following gaps need closing:
 
 ### 1.1 Title Bar
+
 **Mockup:** macOS title bar is 44pt tall, `--syxx-chrome` backdrop, centered "Syxx — Lyin' Eyes"
 text, real traffic-light dots at left. Windows title bar is 40pt, logo+title at left, standard
 Win11 caption buttons (minimize/maximize/close) at right.
@@ -107,6 +110,7 @@ The mockup sidebar uses **custom SVG icons** for each nav item (not SF Symbols).
 launch; SF Symbols read clearly. This is a **cosmetic delta, not a blocker**.
 
 **Gaps to close:**
+
 - The `--syxx-label` gold divider pills between sidebar sections should be `height: 2pt`,
   `cornerRadius: 2pt`, `opacity: 0.85`. Currently correct in `ContentView.swift` line 143–147. ✅
 - Sidebar footer: `StatusPill` + theme toggle + help + logs buttons. Currently correct. ✅
@@ -117,6 +121,7 @@ launch; SF Symbols read clearly. This is a **cosmetic delta, not a blocker**.
   on small screens. `ScrollView` is justified here.
 
 ### 1.3 Background Radial Gradient
+
 The main pane background in the mockup is:
 `radial-gradient(130% 70% at 50% -12%, rgba(140,80,240,.20), transparent 62%)`
 overlaid on `--io-bg`. The existing `IoCanvasBackground` (`IoDesignSystem.swift` line 56–73)
@@ -129,6 +134,7 @@ implements this correctly for dark mode. ✅
 ### 2.1 Design spec (from `SyxxApp.dc.html` lines 972–1048)
 
 **Layout:** Full-height column, dark `#0a1120` bg, NO scroll (fills the 800pt window).
+
 - Header strip: 22pt top/32pt h-pad, gradient-to-dark bg, border-bottom.
   - Eyebrow: "FROM MILKANDGIN · PRIVATE BETA" in `.ioElectric`
   - Title 24px/700 "Meet the rest of the family" in `#eaf0ff` (use `.ioText` in light mode)
@@ -151,10 +157,11 @@ content may clip — acceptable, Syxx has a minimum window size.
 **Current `BetaView.swift`** uses `ScrollView` wrapping a `VStack`. The mockup is **not scrollable**.
 
 **Plan:**
+
 1. Replace the outer `ScrollView` with a plain `VStack(spacing: 0)`.
 2. Header strip: `VStack(alignment: .leading, spacing: 4)` with bg
    `LinearGradient(colors: [Color(hex: "#0c1526"), Color(hex: "#0a1120")], startPoint: .top, endPoint: .bottom)`
-   + border-bottom. Pad: 22pt top, 16pt bottom, 32pt horizontal.
+   - border-bottom. Pad: 22pt top, 16pt bottom, 32pt horizontal.
 3. Content area: `VStack(spacing: 14)` `.frame(maxHeight: .infinity)` `.padding(16).padding(.horizontal, 16)`.
 4. Nnyx card: `HStack(spacing: 0)` where left column = `VStack` (logo + bullets) at `.frame(maxWidth: .infinity)` and right column = `HStack` of two `Image` views with `object-fit: contain` equivalent (`.scaledToFit()`).
 5. Zzyn card: Same but images LEFT, text RIGHT — use `HStack` with the image HStack appearing first.
@@ -162,6 +169,7 @@ content may clip — acceptable, Syxx has a minimum window size.
 7. **WKWebView future hook:** Per HANDOFF-BOB.md, this panel should eventually be a `RemoteContentView` (WKWebView, JS off, origin-allowlisted). For the Store launch: ship the current SwiftUI layout. Leave a `// TODO: replace with RemoteContentView(url: …)` comment at the top of the content area for the follow-up. Do not implement WKWebView now; that is a separate task.
 
 ### 2.3 Data bindings
+
 | Element | Binding |
 |---|---|
 | Email field | `@State private var email: String` (local, no AppModel) |
@@ -183,10 +191,12 @@ The beta signup POST endpoint and response format need to be confirmed with Clau
 **Scroll policy:** The mockup content (header + stat row + two info cards + support blurb + 2 upgrade cards) fits in 800pt minus the 44pt title bar = 756pt usable. Currently `DashboardView.swift` has no `ScrollView` — correct. ✅
 
 **Differences from current `DashboardView.swift`:**
+
 - The mockup shows a **5-column stat grid** (Trust score, Alerts today, Resolvers, Leak found, Queries seen) — NOT a ring + 4 stats. The current code has a `IoProgressRing` + 4 `IoStatCard`. **The mockup dropped the ring from the dashboard** in the final design; the ring lives in the Conclusion screen only.
 - The stat row has a **"System status"** eyebrow + resolver label (`Resolver: 1.1.1.1` in success green) at the top of the card.
 
 **Plan for Dashboard:**
+
 1. Remove the `ZStack { IoProgressRing … VStack … }` ring cluster.
 2. Expand stat grid to 5 columns: `LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 5), spacing: 12)`.
 3. Add "System status" eyebrow + resolver label row above the grid.
@@ -202,6 +212,7 @@ The beta signup POST endpoint and response format need to be confirmed with Clau
 
 **Layout:** `VStack(spacing: 24)` with 32pt padding. No scroll.
 **Four output cards** in a 2×2 LazyVGrid (gap 16pt):
+
 - Local DNS server (mono IP + interface label)
 - System DNS encryption status (colored dot + label + explanation)
 - Returned domain records (scrollable list of `type / rdata / TTL` rows with left-border color)
@@ -213,6 +224,7 @@ the record list). The outer VStack is NOT scrollable. The current `ProphetView.s
 plain `VStack` — correct. ✅
 
 **Gaps to close in `ProphetView.swift`:**
+
 - The form input strip currently shows three fields (Domain, RecordType picker, Resolver IP).
   The mockup shows Domain input + Check button in a clean `HStack`, with the record type picker
   **removed** from the top bar (it's implicit). **Decision:** Keep the record type picker — it's
@@ -235,6 +247,7 @@ plain `VStack` — correct. ✅
 
 **Layout:** `VStack(spacing: 24)` with 32pt padding. No scroll.
 **Two sections:**
+
 1. **Resolver comparison** (2-col grid): Remote resolver card + Local resolver card + result banner.
 2. **Static content matching** (2-col grid): Remote hash card + Local hash card + hash-match row + result banner.
 
@@ -242,6 +255,7 @@ plain `VStack` — correct. ✅
 in a plain `VStack` — correct. ✅
 
 **Gaps to close in `MirrorView.swift`:**
+
 - The mockup renders the resolver section with individual resolver cards (Remote vantage + Local),
   not the full `publicResolverOutcomes` table. The current code iterates all public resolvers
   (Cloudflare, Google, Quad9) as separate rows. **Decision:** Keep the full table — it provides
@@ -264,6 +278,7 @@ in a plain `VStack` — correct. ✅
 
 **Layout:** `VStack(spacing: 12)` with 18pt top / 30pt horizontal padding. No scroll.
 **Four sections stacked:**
+
 1. Header + domain input + Check button
 2. 2-col grid: Resolvers card + Interfaces+VPN card (compact, ~100pt each)
 3. LAN devices grid (3-col, 6 rows)
@@ -273,6 +288,7 @@ in a plain `VStack` — correct. ✅
 The current `PortalView.swift` is a plain `VStack` without `ScrollView` — correct. ✅
 
 **Gaps to close in `PortalView.swift`:**
+
 - Interfaces card: shows `en0 · Wi-Fi / 10.0.1.162`, `utun4 · VPN / 10.2.0.2`, `lo0 · loopback`
   as rows. Current code only shows interface names without IPs. **Fix:** The `NetworkStateReport`
   needs to expose IP addresses per interface. This requires a SyxxKit change — **leave a note for
@@ -298,6 +314,7 @@ The current `PortalView.swift` is a plain `VStack` without `ScrollView` — corr
 **Layout:** `VStack(spacing: 24)` with 32pt padding. No scroll.
 
 **Sections:**
+
 1. Header + "Check for Leaks" button (right-aligned)
 2. Italic quote + description body
 3. 2-col grid: Feature Status card + VPN/Encryption card
@@ -309,6 +326,7 @@ The current `GluttonView.swift` uses a `ScrollView`. Per HANDOFF-BOB.md, remove 
 **Fix:** Remove the outer `ScrollView`; wrap in a plain `VStack` with `.frame(maxHeight: .infinity, alignment: .top)`.
 
 **Gaps to close in `GluttonView.swift`:**
+
 - The description text should be an **italic quote** in `--font-rounded` (Space Grotesk) followed
   by a secondary body copy. Current code has a single non-italic paragraph. **Fix:** Add `.italic()` and `font-style` to the quote line.
 - Feature Status card: shows "⏳ Trial · unlocked" with time remaining. Current code calls
@@ -336,6 +354,7 @@ The current `GluttonView.swift` uses a `ScrollView`. Per HANDOFF-BOB.md, remove 
 
 **Layout:** `VStack(spacing: 20)` with 32pt padding. No scroll.
 **Section order:**
+
 1. Header + duration input + "Close the Cages" primary btn + "Hide the Cages" secondary btn
 2. Italic quote + description
 3. Status pill (CAPTURING/IDLE) + events count
@@ -349,6 +368,7 @@ always wrap the entire content in a `ScrollView` since the terminal + rows can g
 correct behavior and justified. The current `CageView.swift` uses `ScrollView` correctly. ✅
 
 **Gaps to close in `CageView.swift`:**
+
 - The title should be "Live Query Capture" (28px/600) not "CAGE • DNS CAPTURE" as the main
   heading. The eyebrow is `CAGE · DNS CAPTURE`. **Fix:** Add a `Text("Live Query Capture").font(.ioTitle1())` below the eyebrow.
 - The italic quote is missing from the current view. **Fix:** Add the italicized quote text.
@@ -372,8 +392,9 @@ exceed 756pt when both testimony and validation are shown simultaneously. **Use 
 the current `WitnessView.swift` already does. ✅
 
 **Gaps to close in `WitnessView.swift`:**
+
 - Testimony output card: shows "Creating signed Witness Testimony for {domain} via {resolver}."
-  + snapshot signature row + "Saved to ~/Documents/Testimony.txt" note.
+  - snapshot signature row + "Saved to ~/Documents/Testimony.txt" note.
   Current code shows this correctly IF `witnessSignature` is set. However, the "Saved to
   ~/Documents/Testimony.txt" claim (line 99–103) is **fabricated** — no file is actually saved.
   Per AGENTS.md/ROADMAP.md honesty rules: **Remove** the "Saved to" line. Replace with:
@@ -466,6 +487,7 @@ explicitly shows the full-height version at `vh=1560`).
 `ScrollView` wrapper. The current `LicenseView.swift` wraps in `ScrollView` — fix.
 
 **Gaps:**
+
 - **Payment buttons:** Per HANDOFF-BOB.md §License Page: "send people to the website,
   `https://syxx.app`." Replace the `model.isPro = true` action on "Start Pro Trial" and
   "Buy Permanent" with `NSWorkspace.shared.open(URL(string: "https://syxx.app")!)`.
@@ -494,6 +516,7 @@ explicitly shows the full-height version at `vh=1560`).
 `Windows/SyxxUI/Views/WelcomeView.xaml` (when the WinUI project is scaffolded).
 
 **Layout (XAML):**
+
 ```
 ScrollViewer (VerticalScrollBarVisibility=Hidden if content fits, else Auto)
   StackPanel Padding="32" Spacing="22"
@@ -505,6 +528,7 @@ ScrollViewer (VerticalScrollBarVisibility=Hidden if content fits, else Auto)
 ```
 
 **ViewModel bindings:**
+
 | Control | Binding | Source |
 |---|---|---|
 | "Start Pro Trial" button | `Command=GoToWebsiteCommand` | Opens `https://syxx.app` via `Launcher.LaunchUriAsync` |
@@ -520,6 +544,7 @@ ScrollViewer (VerticalScrollBarVisibility=Hidden if content fits, else Auto)
 The Windows project currently has only CLI executables. A GUI project needs to be created.
 
 **Plan:**
+
 1. New project: `Windows/SyxxUI/SyxxUI.csproj`
    - TargetFramework: `net10.0-windows10.0.19041.0`
    - UseWinUI: true
@@ -547,12 +572,15 @@ The Windows project currently has only CLI executables. A GUI project needs to b
 Per HANDOFF-BOB.md §What's New and §Welcome panels:
 
 **macOS — `RemoteContentView.swift`:**
+
 ```swift
 // macOS/Sources/SyxxApp/Views/Components/RemoteContentView.swift
 // WKWebView wrapper: JS off, origin allow-list, offline cache, ephemeral store.
 // Payment links → NSWorkspace.shared.open(); never navigate in-WebView.
 ```
+
 Implementation steps:
+
 1. `struct RemoteContentView: NSViewRepresentable` wrapping `WKWebView`.
 2. `WKWebViewConfiguration.defaultWebpagePreferences.allowsContentJavaScript = false`.
 3. `WKWebView.navigationDelegate` blocks non-Dimension navigation and opens externally.
@@ -566,6 +594,7 @@ to `https://syxx.app/app/whats-new/macos`. The current SwiftUI layout ships firs
 launch); `RemoteContentView` is a follow-up. **Do not implement now.**
 
 **Windows — `RemoteContentPanel.xaml`:**
+
 - `WebView2` control, `CoreWebView2Settings.IsScriptEnabled = false`.
 - Navigation handler: block non-Dimension hosts, open externally via `Launcher.LaunchUriAsync`.
 - Same offline-cache pattern.
@@ -594,31 +623,37 @@ launch); `RemoteContentView` is a follow-up. **Do not implement now.**
 Ordered by dependency and risk. Each phase must leave the build green before proceeding.
 
 ### Phase 1 — Token + design system alignment (LOW risk, no AppModel touch)
+
 - Verify `IoDesignSystem.swift` tokens match the Syxx-specific `darkT` values above. ✅ (already correct)
 - Fix `--syxx-label` gold color usages: any `.ioTextSecondary` used as a section eyebrow should be `.ioAccentStart`.
 - Files: `IoDesignSystem.swift` (read-only verify), then each view file's eyebrow labels.
 
 ### Phase 2 — BetaView redesign (no AppModel touch)
+
 - New layout per §2.2. Remove ScrollView, add header strip, Nnyx/Zzyn cards with screenshots, sign-up strip.
 - Add asset images to Resources/ and Package.swift.
 - Files: `BetaView.swift`, `macOS/Sources/SyxxApp/Resources/` (new images), `macOS/Package.swift`.
 
 ### Phase 3 — Dashboard stat grid (no AppModel touch)
+
 - Remove ring, add 5-column stat grid, add "System status" header.
 - File: `DashboardView.swift`.
 
 ### Phase 4 — Scroll policy fixes (no AppModel touch)
+
 - `GluttonView.swift`: remove outer ScrollView.
 - `LicenseView.swift`: remove ScrollView; redirect payment buttons to syxx.app.
 - `ConclusionsView.swift`: add ScrollView.
 
 ### Phase 5 — Conclusion screen enrichment (no AppModel touch)
+
 - `OverallVerdictView.swift`: add horizontal confidence bar, section status 2-col grid + legend,
   evidence grouped by section with weak-signal toggle, About collapsible.
 - `ConclusionsView.swift`: scroll wrapper.
 - Files: `ConclusionsView.swift`, `OverallVerdictView.swift`.
 
 ### Phase 6 — Per-screen polish (no AppModel touch unless noted)
+
 - `ProphetView.swift`: left-border on record rows, alignment fix.
 - `MirrorView.swift`: eyebrow gold color, hash comparison widget.
 - `CageView.swift`: title fix, italic quote, left-border on capture rows.
@@ -626,12 +661,14 @@ Ordered by dependency and risk. Each phase must leave the build green before pro
 - `PortalView.swift`: padding fix (30pt h-pad / 18pt top).
 
 ### Phase 7 — AppModel-touching fixes (coordinate with Claude)
+
 - `GluttonView.swift`: wire `LeakTestResult` collector result panel + probe-failure explanation.
 - `LicenseView.swift`: wire real LicenseManager activation.
 - `PortalView.swift`: LAN device data (after Claude wires `LANCartographer` into `sectionInputs`).
 - Announced edits to `AppModel.swift` per HANDOFF-BOB.md.
 
 ### Phase 8 — Windows GUI scaffold (new project, new files)
+
 - Create `Windows/SyxxUI/` project per §13.
 - Shell + NavigationView.
 - All 10 UserControls.

@@ -223,6 +223,28 @@ namespace Syxx.Kit
         }
 
         /// <summary>
+        /// C055/C117: the A(1)/AAAA(28) rdata of a record set — the ONLY thing a vantage comparison
+        /// may look at.
+        /// </summary>
+        /// <remarks>
+        /// <c>DNSResolver</c> deliberately surfaces CNAME (type 5) and RRSIG (type 46) alongside the
+        /// requested type (<c>DNSResolver.cs</c>, "Surface answers of the requested type (M04), CNAMEs
+        /// ... and RRSIGs"), and their rdata are domain names and hex strings, not addresses. Letting
+        /// them into the comparison breaks it in both directions:
+        /// <list type="bullet">
+        /// <item><description>False positive: <c>IPAddress.TryParse</c> rejects "e1.akamaiedge.net" ⇒
+        /// <c>IPAddressClass.Invalid</c> ⇒ <c>IPClassifier.IsBlockingAnswer</c> returns <c>true</c> ⇒
+        /// every CDN-fronted domain reads as a blocked/redirected answer.</description></item>
+        /// <item><description>False negative: two vantages that share a CNAME target but return
+        /// disjoint A records are no longer disjoint, so a genuine redirection is suppressed.</description></item>
+        /// </list>
+        /// Twin of the <c>filter { $0.type == 1 || $0.type == 28 }</c> guard applied at every
+        /// comparison site in macOS <c>VantageComparer.swift</c>.
+        /// </remarks>
+        private static HashSet<string> AddressRdatas(IEnumerable<DNSRecord> records) =>
+            new(records.Where(r => r.Type == 1 || r.Type == 28).Select(r => r.Rdata));
+
+        /// <summary>
         /// Pure decision logic, factored out so it can be unit-tested without a network.
         /// Mirrors <c>VantageComparer.evaluate</c> on macOS.
         /// </summary>
@@ -253,15 +275,17 @@ namespace Syxx.Kit
             // WS2-B.2 (B058/B059): poisoned baseline must not suppress redirection.
             // Use union-based overlap for redirection (CDN-compatible), but flag when a single
             // overlapping resolver has a unique uncorroborated answer as degraded (potential poison).
-            var publicUnion = new HashSet<string>(baselines.SelectMany(o => o.Records.Select(r => r.Rdata)));
-            var localRdatas = new HashSet<string>(localOutcome.Records.Select(r => r.Rdata));
-            int resolverOverlapCount = baselines.Count(bl =>
-            {
-                var blRdatas = new HashSet<string>(bl.Records.Select(r => r.Rdata));
-                return blRdatas.Overlaps(localRdatas);
-            });
+            // C117: compare ADDRESS records only. See AddressRdatas — mixing CNAME/RRSIG rdata into
+            // these sets fabricates redirections on CDN-fronted names and suppresses genuine ones.
+            var publicUnion = new HashSet<string>(baselines.SelectMany(o => AddressRdatas(o.Records)));
+            var localRdatas = AddressRdatas(localOutcome.Records);
+            int resolverOverlapCount = baselines.Count(bl => AddressRdatas(bl.Records).Overlaps(localRdatas));
 
-            bool localLooksBlocked = localOutcome.Records.Any(r => IPClassifier.IsBlockingAnswer(r.Rdata));
+            // A local resolver returning private/loopback/blocking IPs while the public resolvers
+            // return routable addresses is a strong redirection signal on its own.
+            // C055: restrict the blocking test to ADDRESS records. Passing a CNAME target or an RRSIG
+            // hex string to IsBlockingAnswer fails IPAddress.TryParse ⇒ Invalid ⇒ a false "blocked".
+            bool localLooksBlocked = localRdatas.Any(IPClassifier.IsBlockingAnswer);
 
             bool redirection;
             bool inconclusiveFromDivergence = false;  // B281: disjoint answer not confirmable as a redirect
@@ -280,10 +304,9 @@ namespace Syxx.Kit
                 // silent clean, never a bare accusation). No VPN branch (finding 3). Twin of macOS
                 // VantageComparer.swift.
                 var dohConsensus = CrossVantageConsensus.DohCorroboratedPool(dohOutcomes);
-                // Type-filter the candidate to A/AAAA (C117) so the decision matches macOS byte-for-byte;
-                // the surrounding `localRdatas` retains its existing (unfiltered) shape for the legacy paths.
-                var localAddrs = CrossVantageConsensus.AddressSet(localOutcome.Records) ?? new HashSet<string>();
-                switch (CrossVantageConsensus.ClassifyDivergence(localAddrs, dohConsensus))
+                // C117: `localRdatas` is already the A/AAAA-only set, so the candidate handed to the
+                // shared decision is the same one macOS hands it.
+                switch (CrossVantageConsensus.ClassifyDivergence(localRdatas, dohConsensus))
                 {
                     case CrossVantageOutcome.Mismatch:
                         redirection = true;
@@ -305,16 +328,12 @@ namespace Syxx.Kit
             bool onlyOverlapIsUnique = false;
             if (!redirection && resolverOverlapCount == 1)
             {
-                var overlapping = baselines.FirstOrDefault(bl =>
-                {
-                    var blRdatas = new HashSet<string>(bl.Records.Select(r => r.Rdata));
-                    return blRdatas.Overlaps(localRdatas);
-                });
+                // C117: address records only in every overlap/corroboration check.
+                var overlapping = baselines.FirstOrDefault(bl => AddressRdatas(bl.Records).Overlaps(localRdatas));
                 if (overlapping is not null)
                 {
-                    var onlyAns = new HashSet<string>(overlapping.Records.Select(r => r.Rdata));
-                    int corroborators = baselines.Count(bl =>
-                        new HashSet<string>(bl.Records.Select(r => r.Rdata)).SetEquals(onlyAns));
+                    var onlyAns = AddressRdatas(overlapping.Records);
+                    int corroborators = baselines.Count(bl => AddressRdatas(bl.Records).SetEquals(onlyAns));
                     onlyOverlapIsUnique = corroborators < 2;
                 }
             }
@@ -328,14 +347,14 @@ namespace Syxx.Kit
             // resolvers disagree with each other) at DEGRADED instead of a fabricated positive.
             if (!redirection && resolverOverlapCount == 1 && onlyOverlapIsUnique)
             {
+                // C117: address records only.
                 var nonOverlapping = baselines
-                    .Where(bl => !new HashSet<string>(bl.Records.Select(r => r.Rdata)).Overlaps(localRdatas))
+                    .Where(bl => !AddressRdatas(bl.Records).Overlaps(localRdatas))
                     .ToList();
                 bool corroboratedAlternative = nonOverlapping.Any(candidate =>
                 {
-                    var cand = new HashSet<string>(candidate.Records.Select(r => r.Rdata));
-                    return nonOverlapping.Count(bl =>
-                        new HashSet<string>(bl.Records.Select(r => r.Rdata)).SetEquals(cand)) >= 2;
+                    var cand = AddressRdatas(candidate.Records);
+                    return nonOverlapping.Count(bl => AddressRdatas(bl.Records).SetEquals(cand)) >= 2;
                 });
                 if (corroboratedAlternative)
                     redirection = true;
@@ -349,8 +368,9 @@ namespace Syxx.Kit
             // never a false-secure clean result. Only applies when redirection was NOT already
             // detected (no double-counting) and when DoH outcomes were provided.
             bool dohProvided = dohOutcomes is not null && dohOutcomes.Count > 0;
+            // C117: address records only in the B010 residual unanimity check.
             var udpSetsForCheck = publicOutcomes.Values.Where(o => o.Records.Count > 0)
-                .Select(o => new HashSet<string>(o.Records.Select(r => r.Rdata))).ToList();
+                .Select(o => AddressRdatas(o.Records)).ToList();
             bool udpUnanimous = udpSetsForCheck.Count >= 2
                 && udpSetsForCheck.All(s => s.SetEquals(udpSetsForCheck[0]));
             bool allDohFailed = dohProvided && dohOutcomes!.Values.All(o => o.Records.Count == 0);
@@ -383,9 +403,12 @@ namespace Syxx.Kit
             if (dohOutcomes == null || dohOutcomes.Count == 0) return false;
 
             // Collect UDP rdata sets from resolvers that returned records.
+            // C117: address records only. CNAME/RRSIG rdata differ across resolvers even when the
+            // A/AAAA answers agree, so leaving them in manufactures a spurious "disagreement" that
+            // breaks unanimity and SUPPRESSES a genuine unanimous-UDP tamper detection.
             var udpSets = publicOutcomes.Values
                 .Where(o => o.Records.Count > 0)
-                .Select(o => new HashSet<string>(o.Records.Select(r => r.Rdata)))
+                .Select(o => AddressRdatas(o.Records))
                 .ToList();
             if (udpSets.Count < 2) return false;
 
@@ -394,9 +417,10 @@ namespace Syxx.Kit
             if (!udpSets.All(s => s.SetEquals(firstUdp))) return false;
 
             // Collect DoH rdata sets from endpoints that returned records.
+            // C117: address records only (same rationale as udpSets above).
             var dohSets = dohOutcomes.Values
                 .Where(o => o.Records.Count > 0)
-                .Select(o => new HashSet<string>(o.Records.Select(r => r.Rdata)))
+                .Select(o => AddressRdatas(o.Records))
                 .ToList();
             if (dohSets.Count < 2) return false;
 

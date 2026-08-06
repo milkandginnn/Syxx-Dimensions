@@ -12,7 +12,7 @@ struct ProphetView: View {
         // window without a pane-level scrollbar. Fixed children (rune header, body, domain
         // card, resolver consensus card with its 4-line inner scroller) take their natural
         // height; the DNSSEC card flexes to fill the remainder down to 20px from the bottom.
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             // Warden header. Owner directive 2026-08-02 (superseding the stacked variant):
             // the rune tile sits to the LEFT of the eyebrow + module name, matching the
             // `HStack(alignment: .top, spacing: 15)` header every other pane uses
@@ -121,7 +121,12 @@ struct ProphetView: View {
 
             // Results
             if let result = model.prophetResult {
+                // Resolver consensus card: capped height so the DNSSEC card below always
+                // has room. The card's internal roster already scrolls at 3 rows (99px);
+                // this cap also constrains the headline + detail + footer + padding so the
+                // DNSSEC flex slot is never starved below ~120px in the 613pt pane.
                 prophetResultCard(result)
+                    .frame(maxHeight: 210)
                 // DNSSEC duplicate result container (owner directive, MEMORY.md:1822):
                 // flexes to fill the remaining pane height down to 20px from the bottom.
                 // Tri-state via DNSSECStatus, never a Bool, never a mocked "secure"; the
@@ -267,74 +272,79 @@ struct ProphetView: View {
             medianLatency: result.consensus.medianLatency
         )
 
-        VStack(alignment: .leading, spacing: 10) {
-            if let secondary = pres.headlineSecondary {
-                // Lore headline (agree/disagree): Spectral-Light, two adjacent runs. Owner
-                // directive 2026-08-02: BOTH runs use pres.color (ioProphetBlue for agree,
-                // ioWarningAmber for disagree) so the AGREE conclusion reads in the blue
-                // highlight. The semantic dot keeps secure and tampered distinct.
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Circle()
-                        .fill(pres.color)
-                        .frame(width: 9, height: 9)
-                        .shadow(color: pres.color, radius: 8)
-                    Text(pres.headlinePrimary)
-                        .font(.custom("Spectral-Light", size: 20))
-                        .foregroundColor(pres.color)
-                    Text(secondary)
-                        .font(.custom("Spectral-Light", size: 17))
-                        .foregroundColor(pres.color)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
+        // Resolver consensus card content wrapped in ScrollView so the maxHeight cap
+        // (applied by the caller) causes internal scrolling rather than clipping.
+        // The card styling (gradient, border, corner radius) stays on the outer container.
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 10) {
+                if let secondary = pres.headlineSecondary {
+                    // Lore headline (agree/disagree): Spectral-Light, two adjacent runs. Owner
+                    // directive 2026-08-02: BOTH runs use pres.color (ioProphetBlue for agree,
+                    // ioWarningAmber for disagree) so the AGREE conclusion reads in the blue
+                    // highlight. The semantic dot keeps secure and tampered distinct.
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Circle()
+                            .fill(pres.color)
+                            .frame(width: 9, height: 9)
+                            .shadow(color: pres.color, radius: 8)
+                        Text(pres.headlinePrimary)
+                            .font(.custom("Spectral-Light", size: 20))
+                            .foregroundColor(pres.color)
+                        Text(secondary)
+                            .font(.custom("Spectral-Light", size: 17))
+                            .foregroundColor(pres.color)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                } else {
+                    // Honest non-lore status (inconclusive/insufficient): single title, semantic colour.
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(pres.color)
+                            .frame(width: 9, height: 9)
+                            .shadow(color: pres.color, radius: 8)
+                        Text(pres.headlinePrimary)
+                            .font(.ioDisplay(size: 16, weight: .semibold))
+                            .foregroundColor(pres.color)
+                    }
                 }
-            } else {
-                // Honest non-lore status (inconclusive/insufficient): single title, semantic colour.
-                HStack(spacing: 10) {
-                    Circle()
-                        .fill(pres.color)
-                        .frame(width: 9, height: 9)
-                        .shadow(color: pres.color, radius: 8)
-                    Text(pres.headlinePrimary)
-                        .font(.ioDisplay(size: 16, weight: .semibold))
+
+                Text(pres.detail)
+                    .font(.ioLore(15))
+                    .foregroundColor(.ioTextMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Consensus footer. Owner directive 2026-08-02: the "Consensus" label AND the
+                // fraction use pres.color (ioProphetBlue for agree).
+                HStack {
+                    Text("Consensus")
+                        .font(.body(15))
+                        .foregroundColor(pres.color)
+                    Spacer()
+                    Text(pres.agreementFraction)
+                        .font(.ioMono(13))
                         .foregroundColor(pres.color)
                 }
+
+                // Resolver rows (owner directive 2026-08-02): the 12 oracles now live INSIDE the
+                // consensus card as an inner scrollable list, INVISIBLE until a scan has run (this
+                // card is only rendered when model.prophetResult != nil). Fixed height of ~3 lines;
+                // rows beyond the window are reached by scrolling within the card. Resolver row text
+                // keeps its existing colours (owner: "leave the text inside as it is").
+                prophetResolverRosterRows()
             }
-
-            Text(pres.detail)
-                .font(.ioLore(15))
-                .foregroundColor(.ioTextMuted)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // Consensus footer. Owner directive 2026-08-02: the "Consensus" label AND the
-            // fraction use pres.color (ioProphetBlue for agree).
-            HStack {
-                Text("Consensus")
-                    .font(.body(15))
-                    .foregroundColor(pres.color)
-                Spacer()
-                Text(pres.agreementFraction)
-                    .font(.ioMono(13))
-                    .foregroundColor(pres.color)
-            }
-
-            // Resolver rows (owner directive 2026-08-02): the 12 oracles now live INSIDE the
-            // consensus card as an inner scrollable list, INVISIBLE until a scan has run (this
-            // card is only rendered when model.prophetResult != nil). Fixed height of ~4 lines;
-            // rows beyond the window are reached by scrolling within the card. Resolver row text
-            // keeps its existing colours (owner: "leave the text inside as it is").
-            prophetResolverRosterRows()
+            .padding(16)
         }
-        .padding(16)
-        // Owner directive 2026-08-02: the container fill is the state colour on a VARIABLE
-        // alpha ramp (for agree: rgba(0, 180, 255, 0.14) down to rgba(0, 180, 255, 0.03)),
-        // and the border a brighter step of the same colour. A non-matching or otherwise
-        // non-agreeing state keeps its own colour here — only the alpha channel is shared.
+        // Owner directive 2026-08-05: highlight tone-down. The container fill is the state
+        // colour on a VARIABLE alpha ramp, reduced from 0.14→0.03 to 0.08→0.02 so the
+        // module highlight reads as a tint rather than a wash. Border reduced from 0.28
+        // to 0.18 for the same reason. A non-matching state keeps its own colour here.
         .background(
-            LinearGradient(colors: [pres.color.opacity(0.14), pres.color.opacity(0.03)],
+            LinearGradient(colors: [pres.color.opacity(0.08), pres.color.opacity(0.02)],
                            startPoint: .top, endPoint: .bottom)
         )
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.28), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.18), lineWidth: 1))
     }
 
     // MARK: - Resolver roster (inner scrollable; the 12 oracles + honest per-leg answer state)
@@ -398,10 +408,12 @@ struct ProphetView: View {
             localServer: model.server,
             responses: model.prophetResult?.resolverResponses
         )
-        // Inner scroll sized to exactly four rows: Cormorant Garamond 15pt lays out on a 19pt
+        // Inner scroll sized to exactly three rows: Cormorant Garamond 15pt lays out on a 19pt
         // line box (measured from the shipped face, not estimated), plus 7pt padding above and
-        // below = a 33pt row, so 4 * 33 = 132. The compact PurpleScrollView keeps the app's
-        // purple knob; the remaining oracles are reached by scrolling inside the card.
+        // below = a 33pt row, so 3 * 33 = 99. Reduced from 4 rows (132px) to free 33px for
+        // the DNSSEC card below (owner directive 2026-08-05: DNSSEC result must fit in pane).
+        // The compact PurpleScrollView keeps the app's purple knob; the remaining oracles are
+        // reached by scrolling inside the card.
         PurpleScrollView(geometry: .compact) {
             VStack(spacing: 0) {
                 ForEach(entries) { entry in
@@ -420,7 +432,7 @@ struct ProphetView: View {
                 }
             }
         }
-        .frame(height: 132)
+        .frame(height: 99)
     }
 
     /// One resolver's answer cell, rendered per its honest state. A measured address is the
@@ -503,14 +515,15 @@ struct ProphetView: View {
             }
         }
         .padding(16)
-        // Same variable-alpha ramp as the consensus container. `pres.color` is #00b4ff only for
-        // the configured-but-unverified state; unsigned / broken / inconclusive keep their own.
+        // Same toned-down variable-alpha ramp as the consensus container (0.08→0.02 fill,
+        // 0.18 border). `pres.color` is #00b4ff only for the configured-but-unverified state;
+        // unsigned / broken / inconclusive keep their own.
         .background(
-            LinearGradient(colors: [pres.color.opacity(0.14), pres.color.opacity(0.03)],
+            LinearGradient(colors: [pres.color.opacity(0.08), pres.color.opacity(0.02)],
                            startPoint: .top, endPoint: .bottom)
         )
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.28), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(pres.color.opacity(0.18), lineWidth: 1))
     }
 
     // MARK: - DNSSEC presentation (tri-state: unsigned / configured / broken / inconclusive)

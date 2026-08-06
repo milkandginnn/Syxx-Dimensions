@@ -282,5 +282,123 @@ namespace Syxx.Tests
             Assert.False(result.Redirection,
                 "a lone DoH answer does not meet the ≥2 corroboration floor");
         }
+
+        // ---------------------------------------------------------------------------------------
+        // D1.1 / C055 / C117 — CNAME and RRSIG rdata must never enter a vantage comparison.
+        // DNSResolver deliberately surfaces type 5 (CNAME) and type 46 (RRSIG) alongside the
+        // requested type, and IPClassifier maps anything IPAddress.TryParse rejects to
+        // IPAddressClass.Invalid, which IsBlockingAnswer reports as blocking. Both directions of
+        // the resulting defect are pinned below. Twin of the type filter in macOS
+        // VantageComparer.swift:181-200.
+        // ---------------------------------------------------------------------------------------
+
+        /// Builds an outcome carrying a CNAME (type 5) ahead of its A records, as a CDN-fronted
+        /// name genuinely resolves on the wire.
+        private static ResolverQueryOutcome CnameFronted(string cnameTarget, params string[] ips)
+        {
+            var records = new List<DNSRecord>
+            {
+                new DNSRecord { Name = "example.com", Type = 5, Ttl = 60, Rdata = cnameTarget }
+            };
+            foreach (var ip in ips)
+                records.Add(new DNSRecord { Name = cnameTarget, Type = 1, Ttl = 60, Rdata = ip });
+            return new ResolverQueryOutcome { Records = records, Status = DNSResponseStatus.Success };
+        }
+
+        [Fact]
+        public void CnameRdataDoesNotFabricateABlockedAnswer()
+        {
+            // The fabricated-positive direction. Local agrees with both public baselines on the
+            // address, and merely carries the CNAME that fronts it. Before the C055 filter, the
+            // CNAME target failed IPAddress.TryParse ⇒ Invalid ⇒ IsBlockingAnswer ⇒ Redirection.
+            // That accused every CDN-hosted site of tampering on ordinary traffic.
+            var local = CnameFronted("e1.akamaiedge.net", GoodIP);
+            var publics = new Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = CnameFronted("e1.akamaiedge.net", GoodIP),
+                ["Google"]     = CnameFronted("e1.akamaiedge.net", GoodIP)
+            };
+            var result = VantageComparer.Evaluate(local, publics);
+
+            Assert.False(result.Redirection,
+                "a CNAME target is a domain name, not a blocking IP — it must never fabricate a redirection");
+            Assert.False(result.Inconclusive);
+            Assert.False(result.Degraded);
+        }
+
+        [Fact]
+        public void RrsigRdataDoesNotFabricateABlockedAnswer()
+        {
+            // Same defect, second carrier: RRSIG (type 46) rdata is surfaced as a hex string, which
+            // also fails IPAddress.TryParse. A DO-enabled answer must not read as blocked.
+            var local = Success(GoodIP);
+            local.Records.Add(new DNSRecord
+            {
+                Name = "example.com", Type = 46, Ttl = 60,
+                Rdata = "00010802000151800000000000000000"
+            });
+            var publics = new Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = Success(GoodIP),
+                ["Google"]     = Success(GoodIP)
+            };
+            var result = VantageComparer.Evaluate(local, publics);
+
+            Assert.False(result.Redirection,
+                "RRSIG hex rdata is not an address — it must never fabricate a redirection");
+            Assert.False(result.Inconclusive);
+        }
+
+        [Fact]
+        public void CnameInTheUdpBaselinesDoesNotSuppressUnanimousTamperDetection()
+        {
+            // The false-negative direction (C117), exercised where it is actually reachable.
+            //
+            // In the disjointness branch the false negative is masked: any CNAME in the LOCAL answer
+            // trips the C055 fabricated-positive first, so it never gets that far. The reachable case
+            // is the B010 unanimous-UDP comparison, where the local answer carries only an address
+            // and the rewritten UDP baselines carry the CNAME as well. Before the filter, the extra
+            // CNAME string broke `localRdatas.SetEquals(firstUdp)` and the whole tamper detection —
+            // corroborated by two independent DoH endpoints — returned a silent clean.
+            var local = Success(TamperIP);                                   // address only, no CNAME
+            var publics = new Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = CnameFronted("cdn.example.net", TamperIP),
+                ["Google"]     = CnameFronted("cdn.example.net", TamperIP),
+                ["Quad9"]      = CnameFronted("cdn.example.net", TamperIP)
+            };
+            // Two attacker-independent DoH endpoints agree on the real destination, which is what
+            // licenses the accusation at all (B010 needs the cross-transport disagreement).
+            var doh = new Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = Success(GoodIP),
+                ["Quad9"]      = Success(GoodIP)
+            };
+            var result = VantageComparer.Evaluate(local, publics, doh);
+
+            Assert.True(result.Redirection,
+                "a CNAME present only in the UDP baselines must not break unanimity and suppress a DoH-corroborated tamper detection");
+        }
+
+        [Fact]
+        public void CnameOnlyLocalAnswerIsInconclusiveNotRedirection()
+        {
+            // Honesty guard on the fix itself: once CNAME rdata is excluded, a local answer that
+            // carries ONLY a CNAME has no address to compare. That is "cannot determine", not
+            // "tampering" — the empty candidate must fall through ClassifyDivergence to
+            // Inconclusive, never to an accusation.
+            var local = CnameFronted("cdn.example.net");   // CNAME, no A record
+            var publics = new Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = Success(GoodIP),
+                ["Google"]     = Success(GoodIP)
+            };
+            var result = VantageComparer.Evaluate(local, publics);
+
+            Assert.False(result.Redirection,
+                "no address in the local answer is no evidence of redirection");
+            Assert.True(result.Inconclusive,
+                "an address-free local answer must read as inconclusive, never as a clean or a positive");
+        }
     }
 }

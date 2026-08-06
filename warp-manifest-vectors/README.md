@@ -1,8 +1,10 @@
 # `warp-manifest-vectors/` — WARP_MANIFEST_V1 signed-manifest fixture corpus
 
 Cross-language **oracle** for the signed-manifest content-integrity protocol.
-The Python server tests **and** the C#/Swift client tests all load this one
-corpus to prove they reach **identical** conclusions from identical inputs.
+The C# and Swift client tests load this one corpus to prove they reach
+**identical** conclusions from identical inputs. (A Python server-side loader is
+planned but has not landed yet — as of 2026-08-04 the server does not load this
+corpus; do not claim three-way arbitration until it does.)
 
 The frozen contract is [`docs/warp-manifest-v1-spec.md`](../docs/warp-manifest-v1-spec.md).
 If a case here and the spec ever disagree, **the spec wins** and the case is a
@@ -150,7 +152,7 @@ MUST support br** (spec §8) — deterministic.
 
 ```json
 { "conclusion": "VERIFIED_MATCH | TAMPERING_DETECTED | INCONCLUSIVE",
-  "signatureState": "verified | invalidSignature | untrustedSigner | notEvaluated",
+  "signatureState": "verified | invalidSignature | untrustedSigner | malformed | notEvaluated",
   "manifestState": "parsed | malformed | notEvaluated",
   "freshnessState": "fresh | expired | futureDated | originMismatch | replayNonceMismatch | notEvaluated",
   "htmlState": "match | mismatch | notEvaluated",
@@ -162,6 +164,14 @@ MUST support br** (spec §8) — deterministic.
 (e.g. an untrusted signer is never freshness-checked). `assets` is `[]` whenever
 the manifest was never parsed (untrusted / invalid-signature / malformed).
 
+`signatureState: malformed` (spec Amendment A1, 2026-08-04) means the transport
+**envelope** was structurally broken — unparseable JSON, a missing
+`manifest_b64`/`signature_ed25519`/`key_id` string field, or an undecodable
+base64 field. That is the *absence* of a signature, never `invalidSignature`:
+transport corruption is INCONCLUSIVE, not tampering. A **decodable** signature
+that fails to verify (including wrong length) is `invalidSignature` →
+TAMPERING_DETECTED (Amendment A2; cases 020 vs 026 pin the boundary).
+
 ---
 
 ## 7. The mandatory sequence + conclusion lattice (spec §4–§5)
@@ -169,15 +179,23 @@ the manifest was never parsed (untrusted / invalid-signature / malformed).
 Every loader MUST reproduce this exact order and land on the same conclusion.
 `_build_vectors.py :: evaluate()` is the executable reference:
 
-1. base64-decode `manifest_b64` → `B`. (Un-decodable ⇒ `malformed` → INCONCLUSIVE.)
+0. *(spec Amendment A1, 2026-08-04)* Envelope structural integrity: the envelope must be parseable
+   JSON carrying `manifest_b64`, `signature_ed25519`, and `key_id` as strings, and **both** base64
+   fields must decode. Any structural failure ⇒ `signatureState: malformed`,
+   `manifestState: notEvaluated` → INCONCLUSIVE, stop.
+1. base64-decode `manifest_b64` → `B` (structurally guaranteed by step 0; the decode itself happens
+   here in the sequence).
 2. Is `key_id` in `pinned_keys.json.trusted_key_ids`? **No ⇒ `untrustedSigner` → INCONCLUSIVE, stop.** (Never a match, even if the signature is cryptographically valid — the D011 rule.)
-3. Ed25519-verify `signature_ed25519` over `B`, **before any JSON parse**. Fail ⇒ `invalidSignature` → **TAMPERING_DETECTED**, stop.
+3. Ed25519-verify `signature_ed25519` over `B`, **before any JSON parse**. Fail — including a
+   decoded signature of the wrong length (Amendment A2) ⇒ `invalidSignature` → **TAMPERING_DETECTED**, stop.
 4. `json.parse(B)`. Unparseable ⇒ `malformed` → INCONCLUSIVE, stop.
 5. Freshness, in order — any failure ⇒ INCONCLUSIVE, stop:
    - `now_ms - timestamp > freshness_seconds*1000` ⇒ `expired`
    - `timestamp > now_ms + 300000` (skew) ⇒ `futureDated`
    - `origin_url != requested_origin` ⇒ `originMismatch`
-   - client sent a nonce and `nonce` ≠ it ⇒ `replayNonceMismatch`
+   - client sent a nonce and `nonce` ≠ it ⇒ `replayNonceMismatch` — **including when the manifest
+     `nonce` is null** (a stripped echo is a replay signal; Amendment A7, cases 015/025). If the
+     client sent no nonce, there is no nonce check at all.
 6. For each asset: fetch from the client vantage (= read the `inputs/` file),
    decode (§5), hash, compare to declared `sha256`. Hash the HTML too.
    - **any** raw-byte mismatch (HTML or asset) ⇒ **TAMPERING_DETECTED**
@@ -211,6 +229,20 @@ Base origin for every case: `https://example.test/`. Evaluation clock
 | `012_css_import_closure` | VERIFIED_MATCH | HTML → CSS → `@import` nested CSS (class `CSS_IMPORT`) all declared and matching — transitive-closure coverage. |
 | `013_gzip_identity` | VERIFIED_MATCH | An asset delivered `gzip` decodes to the same bytes ⇒ same sha256. |
 | `014_br_identity` | VERIFIED_MATCH | An asset delivered `br` (brotli) decodes to the same bytes ⇒ same sha256. |
+| `015_nonce_stripped_replay` | INCONCLUSIVE | Client sent a nonce; manifest echoes **null** ⇒ `replayNonceMismatch` (Amendment A7 — a stripped echo is a replay signal, not a pass). |
+| `016_mismatch_outranks_declared_missing` | TAMPERING_DETECTED | One asset mismatches AND another is `fetch_failed` — §5 precedence: the confirmed mismatch is never downgraded by the missing sibling. |
+| `017_client_fetch_error_asset` | INCONCLUSIVE | An asset declared with a real sha256 cannot be fetched by the CLIENT ⇒ `fetchError` — never a skip, never a pass. |
+| `018_mismatch_outranks_client_fetch_error` | TAMPERING_DETECTED | §5 precedence on the client-side missing branch (distinct code path from 016). |
+| `019_origin_html_unfetchable` | INCONCLUSIVE | No client-vantage HTML at all (`htmlState: fetchError`) while every asset matches — asset greenness cannot manufacture a page match. |
+| `020_signature_wrong_length` | TAMPERING_DETECTED | Valid-base64 signature of 32 bytes (not 64) ⇒ `invalidSignature` (Amendment A2) — the decodable boundary against 026. |
+| `021_expired_with_asset_mismatch` | INCONCLUSIVE | Expired manifest AND tampered bytes — freshness short-circuit (Amendment A8): content is never compared against a stale baseline. |
+| `022_declared_hash_uppercase_hex` | VERIFIED_MATCH | Declared digests UPPERCASE ⇒ still a match (Amendment A5: compare case-insensitively). |
+| `023_bytes_field_is_advisory` | VERIFIED_MATCH | Wrong `bytes` value with a correct sha256 ⇒ still a match (Amendment A6: `bytes` is display-only). |
+| `024_empty_asset_body` | VERIFIED_MATCH | Zero-length asset body with the empty-input sha256 (`e3b0c442…`) — empty is a real body, not a missing one. |
+| `025_manifest_nonce_client_sent_none` | VERIFIED_MATCH | Manifest carries a nonce the client never sent ⇒ no nonce check at all (Amendment A7). |
+| `026_signature_not_base64` | INCONCLUSIVE | Undecodable `signature_ed25519` ⇒ `signatureState: malformed` (Amendment A1) — the absence of a signature, never `invalidSignature`. |
+| `027_manifest_b64_not_base64` | INCONCLUSIVE | Undecodable `manifest_b64` ⇒ same structural tuple as 026 (Amendment A1). |
+| `028_envelope_missing_key_id` | INCONCLUSIVE | Envelope lacks `key_id` ⇒ `malformed` (Amendment A1) — a missing key_id must never default to a pinned key (trust-set bypass). |
 
 ---
 
@@ -263,7 +295,9 @@ let h = SHA256.hash(data: body).map { String(format:"%02x",$0) }.joined()
 // reproduce §7; assert conclusion/states == expected.json
 ```
 (CryptoKit `Curve25519.Signing` + `SHA256`; gzip/br via the platform
-`Compression` framework or libz/libbrotli.)
+`Compression` framework — brotli is native there as `COMPRESSION_BROTLI`,
+available macOS 12+, so no libbrotli dependency is needed. Spec Amendment A10,
+2026-08-04.)
 
 > Note (§9, flagged to the lead): `key_id` here is raw-pubkey-hex, chosen so the
 > id is trivially recomputable in all three languages. The production
@@ -289,4 +323,11 @@ computed with real tools (`hashlib`, `cryptography` Ed25519, stdlib `gzip`, the
 `brotli` module/CLI) — never hand-guessed. The `014_br_identity` regeneration
 needs either the `brotli` Python module or the `brotli` CLI on `PATH`.
 
-Never hand-edit a generated file. Change the script and re-run; CI fails on drift.
+Never hand-edit a generated file; change the script and re-run. Regeneration is
+idempotent: every uncompressed artifact is byte-identical on any host, and the
+two compressed bodies (013/014) are kept as-is whenever they decode to the
+declared bytes, because zlib and brotli encoder output is build-dependent (a
+Linux zlib-ng build and a macOS zlib emit different, equally valid, streams for
+the same input). `--force-reencode` re-encodes them; a diff after that is
+compressor variance, not semantic drift — the decoded bytes, hashes, and
+signatures are unchanged. CI runs the builder and fails on any `git diff`.

@@ -1,0 +1,37 @@
+# PROVENANCE: DERIVED-FROM-DOCUMENTATION
+# NOT captured from a real host. Authored on macOS, which has no systemd-resolved.
+#
+# Shape source: verbatim `resolvectl status` paste in systemd upstream bug report
+#   https://github.com/systemd/systemd/issues/21123
+# Field labels and rendering confirmed against systemd's own printing code
+#   https://github.com/systemd/systemd/blob/main/src/resolve/resolvectl.c
+#   (print_configuration / dump_list / strv_extend_extended_bool):
+#     - section headers "Global" and "Link %i (%s)"
+#     - TABLE_FIELD labels "Current Scopes", "Protocols", "Current DNS Server",
+#       "DNS Servers", "Fallback DNS Servers", "DNS Domain", "resolv.conf mode"
+#     - boolean settings render as "+Name"/"-Name" via plus_minus()
+#     - DNS Servers uses TABLE_STRV_WRAPPED, i.e. space-separated on one line
+#
+# Represents: systemd v249+ (Ubuntu 22.04 / 24.04 era) desktop in the default
+# stub configuration, DNS over TLS off, router as resolver on the WiFi link.
+#
+# WHAT THIS PINS: multi-server rows, the Global block, and the "-DNSOverTLS"
+# token. The parser this corpus replaced returned ZERO resolvers for this input.
+Global
+         Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+  resolv.conf mode: stub
+
+Link 2 (enp0s31f6)
+Current Scopes: none
+     Protocols: -DefaultRoute +LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+
+Link 3 (wlp3s0)
+    Current Scopes: DNS
+         Protocols: +DefaultRoute +LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+Current DNS Server: 192.168.1.1
+       DNS Servers: 192.168.1.1 8.8.8.8
+        DNS Domain: lan
+
+Link 4 (docker0)
+Current Scopes: none
+     Protocols: -DefaultRoute +LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported

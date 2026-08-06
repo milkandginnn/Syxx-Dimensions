@@ -1,0 +1,3 @@
+syxx firstrun 2.0.0
+
+Usage: syxx firstrun [--domain <d>]   (five-minute first-run scan — runs all disciplines, grades the network)

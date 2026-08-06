@@ -22,6 +22,7 @@ Run from the Server/ dir:
 
     python3 -m pytest tests/test_leak_signature.py -v
 """
+
 import base64
 import json
 import os
@@ -29,6 +30,7 @@ import unittest
 
 # A214: use the shared temp DB from conftest.py.
 import conftest  # noqa: F401
+
 os.environ["SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY"] = "1"
 os.environ.setdefault("SYXX_LEAK_ZONES", "leak.syxx.app")
 
@@ -68,18 +70,14 @@ class TestLeakSignatureEncoding(unittest.TestCase):
 
         # A215: the signature MUST be standard base64 (padded, not url-safe).
         # If leak.py drifts to urlsafe_b64encode, these assertions go RED.
-        self.assertEqual(len(sig_b64) % 4, 0,
-                         "standard base64 must be padded (len % 4 == 0)")
-        self.assertNotIn("-", sig_b64,
-                         "standard base64 uses '+' not '-' (url-safe)")
-        self.assertNotIn("_", sig_b64,
-                         "standard base64 uses '/' not '_' (url-safe)")
+        self.assertEqual(len(sig_b64) % 4, 0, "standard base64 must be padded (len % 4 == 0)")
+        self.assertNotIn("-", sig_b64, "standard base64 uses '+' not '-' (url-safe)")
+        self.assertNotIn("_", sig_b64, "standard base64 uses '/' not '_' (url-safe)")
 
         # Round-trip: decode with STRICT standard b64decode (not urlsafe_b64decode)
         # and verify with the public key. This would fail if encoding drifted.
         sig_raw = base64.b64decode(sig_b64)
-        pub = Ed25519PublicKey.from_public_bytes(
-            base64.b64decode(result["publicKey"]))
+        pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(result["publicKey"]))
         payload = base64.b64decode(result["signedPayload"])
         pub.verify(sig_raw, payload)  # raises InvalidSignature on failure
 

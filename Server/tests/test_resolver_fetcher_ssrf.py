@@ -7,6 +7,7 @@ fix is reverted (mutation-proven).
 
 Run from Server/:  python3 -m unittest tests.test_resolver_fetcher_ssrf -v
 """
+
 import struct
 import unittest
 
@@ -26,7 +27,7 @@ class PinnedConnectionTests(unittest.TestCase):
         class FakeCtx:
             def wrap_socket(self, sock, server_hostname=None):
                 dialed["sni"] = server_hostname
-                return "tls(%s)" % sock
+                return f"tls({sock})"
 
         def fake_cc(addr, timeout=None, source_address=None):
             dialed["addr"] = addr
@@ -46,10 +47,10 @@ class PinnedConnectionTests(unittest.TestCase):
             module.socket.create_connection = orig_cc
             module.socket.getaddrinfo = orig_gai
 
-        self.assertEqual(dialed["addr"], ("203.0.113.7", 443),
-                         "must dial the pinned IP, never the hostname")
-        self.assertEqual(dialed["sni"], "rebind.evil.example",
-                         "TLS SNI/cert validation must still use the real hostname")
+        self.assertEqual(dialed["addr"], ("203.0.113.7", 443), "must dial the pinned IP, never the hostname")
+        self.assertEqual(
+            dialed["sni"], "rebind.evil.example", "TLS SNI/cert validation must still use the real hostname"
+        )
         self.assertEqual(conn.sock, "tls(rawsock)")
 
     def test_resolver_pinned_connection_dials_ip(self):
@@ -92,6 +93,7 @@ class PinnedConnectionTests(unittest.TestCase):
                         # calls return empty so the reader terminates (A164 loop).
                         self._reads += 1
                         return b"ok" if self._reads == 1 else b""
+
                 return R()
 
             def close(self):
@@ -107,8 +109,9 @@ class PinnedConnectionTests(unittest.TestCase):
             fetcher._PinnedHTTPSConnection = orig_pin
             fetcher._resolve_public = orig_resolve
 
-        self.assertEqual(captured.get("pin_ip"), "93.184.216.34",
-                         "HTTPS fetch must pin the vetted IP, not re-resolve the hostname")
+        self.assertEqual(
+            captured.get("pin_ip"), "93.184.216.34", "HTTPS fetch must pin the vetted IP, not re-resolve the hostname"
+        )
         self.assertEqual(captured.get("sni"), "example.com")
         self.assertEqual(captured.get("port"), 443)
 
@@ -132,18 +135,25 @@ class PinnedConnectionTests(unittest.TestCase):
 # A063 — out-of-bailiwick referral / glue must not redirect the walk           #
 # --------------------------------------------------------------------------- #
 def _referral(owner_zone, ns_value, glue_owner, glue_ip):
-    return {"rcode": 0, "aa": False, "truncated": False, "answers": [],
-            "authority": [{"owner": owner_zone, "type": "NS", "rtype": resolver.TYPE_NS,
-                           "ttl": 3600, "value": ns_value}],
-            "additional": [{"owner": glue_owner, "type": "A", "rtype": resolver.TYPE_A,
-                            "ttl": 3600, "value": glue_ip}]}
+    return {
+        "rcode": 0,
+        "aa": False,
+        "truncated": False,
+        "answers": [],
+        "authority": [{"owner": owner_zone, "type": "NS", "rtype": resolver.TYPE_NS, "ttl": 3600, "value": ns_value}],
+        "additional": [{"owner": glue_owner, "type": "A", "rtype": resolver.TYPE_A, "ttl": 3600, "value": glue_ip}],
+    }
 
 
 def _forged_answer():
-    return {"rcode": 0, "aa": True, "truncated": False,
-            "answers": [{"owner": "example.com", "type": "A", "rtype": resolver.TYPE_A,
-                         "ttl": 60, "value": "6.6.6.6"}],
-            "authority": [], "additional": []}
+    return {
+        "rcode": 0,
+        "aa": True,
+        "truncated": False,
+        "answers": [{"owner": "example.com", "type": "A", "rtype": resolver.TYPE_A, "ttl": 60, "value": "6.6.6.6"}],
+        "authority": [],
+        "additional": [],
+    }
 
 
 class BailiwickTests(unittest.TestCase):
@@ -178,20 +188,19 @@ class BailiwickTests(unittest.TestCase):
             if server in roots:
                 if name == "example.com":
                     return _referral("com", "ns1.com", "ns1.com", "12.34.56.78")
-                raise resolver.DNSError("root: nothing for %s" % name)
+                raise resolver.DNSError(f"root: nothing for {name}")
             if server == "12.34.56.78" and name == "example.com":
                 # in-bailiwick delegation, but OUT-of-bailiwick glue owner.
                 return _referral("example.com", "ns.evil.net", "ns.evil.net", attacker_ip)
             if server == attacker_ip:
                 return _forged_answer()  # reachable ONLY if the glue filter is removed
-            raise resolver.DNSError("unreachable %s" % server)
+            raise resolver.DNSError(f"unreachable {server}")
 
         resolver._query_sections = mock
         result = resolver.resolve_authoritative("example.com", resolver.TYPE_A)
         self.assertEqual(result["conclusion"], "inconclusive")
         self.assertIsNone(result["authoritative"])
-        self.assertNotIn(attacker_ip, self.queried,
-                         "out-of-bailiwick glue IP was queried -> ground truth is forgeable")
+        self.assertNotIn(attacker_ip, self.queried, "out-of-bailiwick glue IP was queried -> ground truth is forgeable")
 
     def test_out_of_bailiwick_delegation_is_rejected(self):
         """A .com server answers our example.com query with a referral whose owner is
@@ -204,20 +213,21 @@ class BailiwickTests(unittest.TestCase):
             if server in roots:
                 if name == "example.com":
                     return _referral("com", "ns1.com", "ns1.com", "12.34.56.78")
-                raise resolver.DNSError("root: nothing for %s" % name)
+                raise resolver.DNSError(f"root: nothing for {name}")
             if server == "12.34.56.78" and name == "example.com":
                 # delegated_zone == evil.net is NOT within the zone we asked (com).
                 return _referral("evil.net", "ns.evil.net", "ns.evil.net", attacker_ip)
             if server == attacker_ip:
                 return _forged_answer()
-            raise resolver.DNSError("unreachable %s" % server)
+            raise resolver.DNSError(f"unreachable {server}")
 
         resolver._query_sections = mock
         result = resolver.resolve_authoritative("example.com", resolver.TYPE_A)
         self.assertEqual(result["conclusion"], "inconclusive")
         self.assertIsNone(result["authoritative"])
-        self.assertNotIn(attacker_ip, self.queried,
-                         "out-of-bailiwick referral was followed -> ground truth is forgeable")
+        self.assertNotIn(
+            attacker_ip, self.queried, "out-of-bailiwick referral was followed -> ground truth is forgeable"
+        )
 
     def test_in_bailiwick_glue_is_still_followed(self):
         """Guard against over-blocking: a legitimate in-bailiwick delegation with
@@ -231,7 +241,7 @@ class BailiwickTests(unittest.TestCase):
                 return _referral("example.com", "ns1.example.com", "ns1.example.com", "23.45.67.89")
             if server == "23.45.67.89":
                 return _forged_answer()  # here it is the legitimate authoritative
-            raise resolver.DNSError("unreachable %s" % server)
+            raise resolver.DNSError(f"unreachable {server}")
 
         resolver._query_sections = mock
         result = resolver.resolve_authoritative("example.com", resolver.TYPE_A)
@@ -252,6 +262,7 @@ class PortAllowlistTests(unittest.TestCase):
     def test_redirect_to_disallowed_port_blocked_on_next_hop(self):
         """Fix 2: the allowlist must be re-checked on every redirect hop, so an
         http->:9000 redirect cannot bypass a first-request-only check."""
+
         class Resp:
             status = 302
 
@@ -339,15 +350,14 @@ class DohJsonShapeTests(unittest.TestCase):
         with self.assertRaises(resolver.DNSError):
             resolver._parse_doh_json({"Status": 0, "Answer": [42]})
         with self.assertRaises(resolver.DNSError):
-            resolver._parse_doh_json({"Status": 0, "Answer": [{"type": 1}]})       # no data
+            resolver._parse_doh_json({"Status": 0, "Answer": [{"type": 1}]})  # no data
         with self.assertRaises(resolver.DNSError):
-            resolver._parse_doh_json({"Status": 0, "Answer": [{"data": "x"}]})     # no type
+            resolver._parse_doh_json({"Status": 0, "Answer": [{"data": "x"}]})  # no type
         with self.assertRaises(resolver.DNSError):
             resolver._parse_doh_json({"Status": 0, "Answer": [{"type": "A", "data": "x"}]})  # type not int
 
     def test_valid_noerror_answer_preserved(self):
-        out = resolver._parse_doh_json({"Status": 0, "AD": True,
-                                        "Answer": [{"type": 1, "data": "1.2.3.4"}]})
+        out = resolver._parse_doh_json({"Status": 0, "AD": True, "Answer": [{"type": 1, "data": "1.2.3.4"}]})
         self.assertEqual(out["rcode"], 0)
         self.assertTrue(out["ad"])
         self.assertEqual(out["records"], [{"type": "A", "value": "1.2.3.4"}])

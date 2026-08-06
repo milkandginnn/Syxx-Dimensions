@@ -265,6 +265,42 @@ struct DashboardView: View {
             }
 
             Spacer(minLength: 8)
+
+            // Pro Covenant banner (mockup §3.6). Gradient fill per IMPLEMENTATION_GUIDE
+            // §1.2: linear-gradient(120deg, rgba(124,92,255,.16), rgba(45,212,191,.06)).
+            HStack(spacing: 12) {
+                Text("✧")
+                    .font(.system(size: 18))
+                    .foregroundColor(Color(red: 124/255, green: 92/255, blue: 255/255))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("The Pro Covenant")
+                        .font(.bodyAlternate(14))
+                        .foregroundColor(.ioText)
+                    Text("Server-backed checks, signed testimony, and the full Mirror reflection await those who hold the Covenant.")
+                        .font(.ioLore(11))
+                        .foregroundColor(.ioTextMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Text("UNLOCK")
+                    .font(.uiLabel(11))
+                    .tracking(1.5)
+                    .foregroundColor(Color(red: 124/255, green: 92/255, blue: 255/255))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(red: 124/255, green: 92/255, blue: 255/255).opacity(0.4), lineWidth: 1))
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 124/255, green: 92/255, blue: 255/255).opacity(0.16),
+                             Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.06)],
+                    startPoint: UnitPoint(x: 0.25, y: 0.933),
+                    endPoint: UnitPoint(x: 0.75, y: 0.067)
+                )
+            )
+            .cornerRadius(14)
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(red: 148/255, green: 120/255, blue: 246/255).opacity(0.14), lineWidth: 1))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -280,8 +316,8 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 10) {
                     Text(w.rune)
-                        .font(.ioDisplay(size: 18, weight: .semibold))
-                        .frame(width: 28, height: 28)
+                        .font(.ioDisplay(size: 20, weight: .semibold))
+                        .frame(width: 32, height: 32)
                         .background(w.tint)
                         .cornerRadius(8)
                         .foregroundColor(w.color)
@@ -314,7 +350,7 @@ struct DashboardView: View {
                 }
             }
             // IMPLEMENTATION_GUIDE §2.4: Dashboard warden tile radius 11, padding ~7–10px, 32px rune.
-            .padding(6)
+            .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(white: 1, opacity: 0.025))
             .cornerRadius(11)

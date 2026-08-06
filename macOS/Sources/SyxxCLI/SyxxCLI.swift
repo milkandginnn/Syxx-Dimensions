@@ -565,8 +565,11 @@ struct SyxxCLI {
         } else {
             let origin = target.contains("://") ? target : "https://\(domain)"
             let client = DimensionClient(baseURL: SyxxConfig.dimensionBaseURL, licenseKey: LicenseManager.getStoredLicenseKey())
+            // Fresh per-run replay nonce (§4.5): the server must echo it inside the signed
+            // manifest, so a captured manifest cannot be replayed into a later run.
+            let nonce = WarpEngine.makeNonce()
             let warp = await ProbeRunner.run(label: "warp", budget: &budget) {
-                await WarpEngine.runVantageCheck(origin: origin, client: client)
+                await WarpEngine.runVantageCheck(origin: origin, client: client, nonce: nonce)
             }
             inputs.warpManifest = warp
             if let w = warp {

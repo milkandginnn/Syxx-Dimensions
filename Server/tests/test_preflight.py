@@ -4,6 +4,7 @@ The point of the preflight is that a stock deploy is UNSELLABLE and says so at b
 a customer. These tests exist because a diagnostic that silently stops diagnosing is worse than no
 diagnostic — you would trust a clean startup log that means nothing.
 """
+
 import os
 import unittest
 from unittest.mock import patch
@@ -21,11 +22,11 @@ def _real_collector_key():
     test is asserting the bug.
     """
     import base64
+
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography.hazmat.primitives.serialization import (
-        Encoding, PrivateFormat, NoEncryption)
-    der = Ed25519PrivateKey.generate().private_bytes(
-        Encoding.DER, PrivateFormat.PKCS8, NoEncryption())
+    from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+
+    der = Ed25519PrivateKey.generate().private_bytes(Encoding.DER, PrivateFormat.PKCS8, NoEncryption())
     return base64.b64encode(der).decode("ascii")
 
 
@@ -37,27 +38,35 @@ def _real_keygen_public_key_hex():
     test_a_fully_configured_deploy_reports_nothing asserts the bug it claims to guard.
     """
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography.hazmat.primitives.serialization import (
-        Encoding, PublicFormat)
-    pub = Ed25519PrivateKey.generate().public_key().public_bytes(
-        Encoding.Raw, PublicFormat.Raw)
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+    pub = Ed25519PrivateKey.generate().public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     return pub.hex()
 
 
 class _Log:
     def __init__(self):
         self.warns, self.infos = [], []
+
     def warn(self, event, **kw):
         self.warns.append((event, kw))
+
     def info(self, event, **kw):
         self.infos.append((event, kw))
 
 
 class PreflightTests(unittest.TestCase):
     def setUp(self):
-        self._orig = {k: getattr(config, k) for k in
-                      ("KEYGEN_PUBLIC_KEY", "KEYGEN_ADMIN_TOKEN", "STRIPE_SECRET_KEY",
-                       "STRIPE_WEBHOOK_SECRET", "SMTP_HOST")}
+        self._orig = {
+            k: getattr(config, k)
+            for k in (
+                "KEYGEN_PUBLIC_KEY",
+                "KEYGEN_ADMIN_TOKEN",
+                "STRIPE_SECRET_KEY",
+                "STRIPE_WEBHOOK_SECRET",
+                "SMTP_HOST",
+            )
+        }
 
     def tearDown(self):
         for k, v in self._orig.items():
@@ -96,8 +105,11 @@ class PreflightTests(unittest.TestCase):
         /api/pubkey on every call, and nothing said so at boot. The first version of this preflight
         did not check it — the logs are what proved the gap."""
         self._blank_everything()
-        env = {k: v for k, v in os.environ.items()
-               if k not in ("SYXX_COLLECTOR_PRIVATE_KEY", "SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY")}
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if k not in ("SYXX_COLLECTOR_PRIVATE_KEY", "SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY")
+        }
         with patch.dict(os.environ, env, clear=True):
             findings = preflight.commerce_findings()
         blockers = {var for sev, var, _ in findings if sev == "blocker"}
@@ -119,11 +131,13 @@ class PreflightTests(unittest.TestCase):
         operator trusts the clean line and stops looking. Presence is not function.
         """
         import base64
+
         self._configure_everything()
-        seed = base64.b64encode(b"\x01" * 32).decode("ascii")     # what bit us, exactly
-        with patch.dict(os.environ, self._fully_configured_env(
-                SYXX_COLLECTOR_PRIVATE_KEY=seed,
-                SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY="")):
+        seed = base64.b64encode(b"\x01" * 32).decode("ascii")  # what bit us, exactly
+        with patch.dict(
+            os.environ,
+            self._fully_configured_env(SYXX_COLLECTOR_PRIVATE_KEY=seed, SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY=""),
+        ):
             findings = preflight.commerce_findings()
 
         blockers = {v for s, v, _ in findings if s == "blocker"}
@@ -138,9 +152,12 @@ class PreflightTests(unittest.TestCase):
     def test_a_garbage_collector_key_is_a_blocker(self):
         """The other half of present-but-unusable: not even base64."""
         self._configure_everything()
-        with patch.dict(os.environ, self._fully_configured_env(
-                SYXX_COLLECTOR_PRIVATE_KEY="not a key at all!!",
-                SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY="")):
+        with patch.dict(
+            os.environ,
+            self._fully_configured_env(
+                SYXX_COLLECTOR_PRIVATE_KEY="not a key at all!!", SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY=""
+            ),
+        ):
             blockers = {v for s, v, _ in preflight.commerce_findings() if s == "blocker"}
         self.assertIn("SYXX_COLLECTOR_PRIVATE_KEY", blockers)
 
@@ -148,8 +165,7 @@ class PreflightTests(unittest.TestCase):
         """Mutation guard: the check must accept the documented dev escape, or every local test
         run would scream about a blocker that is intentional there."""
         self._configure_everything()
-        with patch.dict(os.environ, {"SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY": "1",
-                                     "SYXX_COLLECTOR_PRIVATE_KEY": ""}):
+        with patch.dict(os.environ, {"SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY": "1", "SYXX_COLLECTOR_PRIVATE_KEY": ""}):
             blockers = {v for s_, v, _ in preflight.commerce_findings() if s_ == "blocker"}
         self.assertNotIn("SYXX_COLLECTOR_PRIVATE_KEY", blockers)
 
@@ -168,8 +184,7 @@ class PreflightTests(unittest.TestCase):
         # An operator reading the log must learn WHY valid keys are rejected. "SYXX_KEYGEN_PUBLIC_KEY
         # is unset" alone does not connect to the symptom they are actually seeing.
         self._blank_everything()
-        why = next(w for sev, var, w in preflight.commerce_findings()
-                   if var == "SYXX_KEYGEN_PUBLIC_KEY")
+        why = next(w for sev, var, w in preflight.commerce_findings() if var == "SYXX_KEYGEN_PUBLIC_KEY")
         self.assertIn("denied", why.lower())
         self.assertIn("402", why)
 
@@ -213,8 +228,9 @@ class PreflightTests(unittest.TestCase):
         with patch.dict(os.environ, env):
             findings = preflight.commerce_findings()
         self.assertTrue(findings)
-        self.assertTrue(all(sev == "degraded" for sev, _, _ in findings),
-                        "a missing policy id must not be reported as a blocker")
+        self.assertTrue(
+            all(sev == "degraded" for sev, _, _ in findings), "a missing policy id must not be reported as a blocker"
+        )
 
     def test_a_sku_with_no_price_id_is_reported(self):
         """The shipped state on 2026-07-16: SKUs exist in code, prices do not exist in Stripe yet.
@@ -227,22 +243,27 @@ class PreflightTests(unittest.TestCase):
         # patched catalog and helpfully supply a price for the SKU that must not have one.
         env = self._fully_configured_env()
         table = dict(config.STRIPE_SKUS)
-        table["syxx_mac_unpriced_sub"] = dict(table["syxx_mac_yearly_sub"], price_default="",
-                                              priceid_env="SYXX_STRIPE_PRICEID_MAC_UNPRICED")
+        table["syxx_mac_unpriced_sub"] = dict(
+            table["syxx_mac_yearly_sub"], price_default="", priceid_env="SYXX_STRIPE_PRICEID_MAC_UNPRICED"
+        )
         with patch.object(config, "STRIPE_SKUS", table), patch.dict(os.environ, env):
             findings = preflight.commerce_findings()
 
         self.assertIn("price:syxx_mac_unpriced_sub", {v for _, v, _ in findings})
-        self.assertTrue(all(s == "degraded" for s, _, _ in findings),
-                        "an unpriced SKU delays a sale; it must not outrank a real blocker")
+        self.assertTrue(
+            all(s == "degraded" for s, _, _ in findings),
+            "an unpriced SKU delays a sale; it must not outrank a real blocker",
+        )
 
     def test_logging_warns_on_blockers_and_never_raises(self):
         self._blank_everything()
         log = _Log()
         preflight.log_commerce_readiness(log)
 
-        self.assertTrue(any(e == "commerce_not_sellable" for e, _ in log.warns),
-                        "an unsellable deploy must say so in one unmissable line")
+        self.assertTrue(
+            any(e == "commerce_not_sellable" for e, _ in log.warns),
+            "an unsellable deploy must say so in one unmissable line",
+        )
 
     def test_logging_says_ready_when_configured(self):
         self._configure_everything()
@@ -257,7 +278,7 @@ class PreflightTests(unittest.TestCase):
         # missing Stripe key into an outage of the part that does work.
         log = _Log()
         with patch.object(preflight, "commerce_findings", side_effect=RuntimeError("boom")):
-            preflight.log_commerce_readiness(log)   # must not raise
+            preflight.log_commerce_readiness(log)  # must not raise
         self.assertTrue(any(e == "preflight_failed" for e, _ in log.warns))
 
 

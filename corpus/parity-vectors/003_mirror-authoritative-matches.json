@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "mirror-authoritative-matches",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "authoritative": {
+      "status": "matches",
+      "authoritativeAnswers": ["93.184.216.34"],
+      "resolverAnswers": ["93.184.216.34"],
+      "nameservers": ["a.iana-servers.net"],
+      "detail": "recursive answer contained in authoritative truth"
+    }
+  }
+}

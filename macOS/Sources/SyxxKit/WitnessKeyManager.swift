@@ -32,14 +32,19 @@ public enum WitnessKeyManager {
 
     /// Whether a witness signing key is present in the Keychain.
     ///
-    /// D084: `false` now genuinely means "confirmed absent" (errSecItemNotFound). Keychain
-    /// errors (locked, auth failed, etc.) are surfaced via `checkKeyPresence()` — callers that
-    /// need to distinguish "no key" from "could not ask" should use that method instead.
+    /// - Returns: `true` only when the Keychain confirms the item exists. Returns `false` for
+    ///   both **confirmed absent** (`errSecItemNotFound`) and **undetermined** (Keychain locked,
+    ///   auth failed, user cancelled, I/O error). The two false-cases are deliberately collapsed
+    ///   here: callers that need to distinguish "no key" from "could not ask" MUST use
+    ///   `checkKeyPresence()` instead, which returns the full `KeyPresence` tri-state.
+    ///
+    /// G-17: product code (AppModel.swift) uses `checkKeyPresence()` directly. This property
+    /// exists for simple boolean contexts (e.g. test guards) where the collapse is acceptable.
     public static var hasKey: Bool {
         switch checkKeyPresence() {
         case .present: return true
         case .absent: return false
-        case .undetermined: return false
+        case .undetermined: return false   // G-17: deliberate collapse — see checkKeyPresence()
         }
     }
 

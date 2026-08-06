@@ -1,0 +1,3 @@
+syxx unbound 2.0.0
+
+Usage: syxx unbound [verify|status|enable|disable]   (local DNSSEC-validating resolver)

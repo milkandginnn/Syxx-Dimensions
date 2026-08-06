@@ -36,7 +36,7 @@
                         </StackPanel>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="Tell the witness a secret that you can remember (essentially, a password):"
+                            <TextBlock Text="Provide the Ed25519 signing key (base64) that seals your testimony — paste an existing key, or click Generate Keypair below to create one:"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
                                        Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                             <TextBlock Text="Entrust the Witness with the private key by which your testimony is sealed. It rests upon this machine alone and is never sent abroad; only the seal it makes travels with your evidence. (Whoever holds this key could forge testimony in your name. Guard it well.)"
@@ -140,6 +140,30 @@
                                            Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Item 5(b)-Windows: verify a testimony sealed on ANOTHER device by pasting its
+                     snapshot JSON. Routes through the SAME VerifySnapshotDetailed + result switch as
+                     self-verify (renders into the ValidationPanel above via code-behind). Parity with
+                     Linux WitnessView.axaml's "VERIFY A TESTIMONY" block. New copy below is
+                     owner-approved (button label, help line, placeholder). -->
+                <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                        MaxWidth="820" HorizontalAlignment="Left"
+                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="VERIFY A TESTIMONY"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                        <TextBlock Text="Paste a signed testimony (JSON) sealed on any device to check whether its signature holds."
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
+                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <TextBox x:Name="ExternalSnapshotBox"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96"
+                                 FontFamily="{StaticResource IoFontMono}" FontSize="12"
+                                 PlaceholderText="{}{ &quot;targetDomain&quot;: &quot;github.com&quot;, &quot;signature&quot;: … }" />
+                        <Button x:Name="ExternalVerifyBtn" Content="Verify pasted testimony"
+                                Click="ExternalVerifyBtn_Click" HorizontalAlignment="Left" />
                     </StackPanel>
                 </Border>
 

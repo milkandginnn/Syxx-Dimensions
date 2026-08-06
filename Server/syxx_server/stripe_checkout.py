@@ -8,6 +8,7 @@ HMAC-SHA256 (stdlib `hmac`), constant-time compared.
 
 Nothing here activates until the STRIPE_* env vars are set (see config.py).
 """
+
 import hashlib
 import hmac
 import json
@@ -39,25 +40,25 @@ def _request(path, method, params=None, idempotency_key=None):
         data = None
     else:
         data = qs.encode() if qs else None
-    req = urllib.request.Request(url, data=data, method=method)
+    req = urllib.request.Request(url, data=data, method=method)  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
     req.add_header("Authorization", "Bearer " + config.STRIPE_SECRET_KEY)
     req.add_header("Stripe-Version", config.STRIPE_API_VERSION)
     if data is not None:
         req.add_header("Content-Type", "application/x-www-form-urlencoded")
     if idempotency_key:
-        req.add_header("Idempotency-Key", idempotency_key)   # safe retries (Stripe API reference)
+        req.add_header("Idempotency-Key", idempotency_key)  # safe retries (Stripe API reference)
     try:
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         detail = ""
         try:
             detail = json.loads(e.read()).get("error", {}).get("message", "")
-        except Exception:
+        except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down
             pass
-        raise StripeError("stripe %d: %s" % (e.code, detail or "request failed"))
+        raise StripeError(f"stripe {e.code}: {detail or 'request failed'}") from e
     except OSError as e:
-        raise StripeError("stripe unreachable: %s" % e)
+        raise StripeError(f"stripe unreachable: {e}") from e
 
 
 def create_checkout_session(sku, idempotency_key=None):
@@ -75,31 +76,31 @@ def create_checkout_session(sku, idempotency_key=None):
     """
     entry = config.STRIPE_SKUS.get(sku)
     if entry is None:
-        raise StripeError("unknown sku: %r" % sku)
+        raise StripeError(f"unknown sku: {sku!r}")
     price_id = config.stripe_price_for(sku)
     if not price_id:
         # Provisioned in code, not yet in Stripe. Fail loudly: the alternative is charging a price
         # nobody chose.
-        raise StripeError("sku %s has no price id configured — it is not sellable yet" % sku)
+        raise StripeError(f"sku {sku} has no price id configured — it is not sellable yet")
 
     price = _request("/prices/" + price_id, "GET")
     if not price.get("id"):
-        raise StripeError("sku %s: price %s not found in Stripe" % (sku, price_id))
+        raise StripeError(f"sku {sku}: price {price_id} not found in Stripe")
     if price.get("active") is False:
         # An archived price still fetches. Checkout would reject it later, after the buyer has
         # committed — better to refuse here than to hand them a broken Stripe page.
-        raise StripeError("sku %s: price %s is archived in Stripe" % (sku, price_id))
+        raise StripeError(f"sku {sku}: price {price_id} is archived in Stripe")
     mode = "subscription" if price.get("recurring") else "payment"
 
     params = {
         "mode": mode,
         "line_items[0][price]": price["id"],
         "line_items[0][quantity]": "1",
-        "managed_payments[enabled]": "true",   # <- Stripe as merchant of record
+        "managed_payments[enabled]": "true",  # <- Stripe as merchant of record
         "success_url": config.CHECKOUT_SUCCESS_URL,
         "cancel_url": config.CHECKOUT_CANCEL_URL,
         "client_reference_id": sku,
-        "metadata[sku]": sku,                  # <- read back by the webhook to pick the Keygen policy
+        "metadata[sku]": sku,  # <- read back by the webhook to pick the Keygen policy
     }
     # Stripe subscription trial. Gated on the mode DERIVED from the price, never assumed:
     # `subscription_data` is invalid on a one-time `payment` session and Stripe rejects the whole
@@ -112,8 +113,7 @@ def create_checkout_session(sku, idempotency_key=None):
         # a completed purchase — `payment_status: no_payment_required` alone cannot, because a
         # 100%-off coupon reports exactly the same thing.
         params["metadata[trial_days]"] = str(config.STRIPE_TRIAL_DAYS)
-    session = _request("/checkout/sessions", "POST", params,
-                       idempotency_key=idempotency_key or str(uuid.uuid4()))
+    session = _request("/checkout/sessions", "POST", params, idempotency_key=idempotency_key or str(uuid.uuid4()))
     return session.get("url"), session.get("id")
 
 
@@ -130,8 +130,7 @@ def create_billing_portal_session(customer_id, return_url=None):
         raise StripeError("customer_id is required")
     params = {
         "customer": customer_id,
-        "return_url": return_url or config.CHECKOUT_SUCCESS_URL.replace(
-            "{CHECKOUT_SESSION_ID}", "").rstrip("?"),
+        "return_url": return_url or config.CHECKOUT_SUCCESS_URL.replace("{CHECKOUT_SESSION_ID}", "").rstrip("?"),
     }
     return _request("/billing_portal/sessions", "POST", params)
 
@@ -169,12 +168,15 @@ def verify_webhook(payload_bytes, sig_header, tolerance=None, now=None):
         # can distinguish NTP skew (large consistent offset), VM pause/resume
         # (sudden jump), or replay attacks (timestamp far in the past) from a
         # transient delivery delay.
-        logging_util.warn("stripe_webhook_timestamp_skew",
-                          server_time=now, webhook_time=int(ts), skew_seconds=skew,
-                          tolerance=tolerance,
-                          detail="webhook rejected: server clock and Stripe timestamp "
-                                 "differ by %ds (tolerance %ds). Check NTP sync."
-                                 % (skew, tolerance))
+        logging_util.warn(
+            "stripe_webhook_timestamp_skew",
+            server_time=now,
+            webhook_time=int(ts),
+            skew_seconds=skew,
+            tolerance=tolerance,
+            detail=f"webhook rejected: server clock and Stripe timestamp "
+            f"differ by {skew}s (tolerance {tolerance}s). Check NTP sync.",
+        )
         raise StripeError("timestamp outside tolerance")
     signed = ts.encode() + b"." + payload_bytes
     expected = hmac.new(config.STRIPE_WEBHOOK_SECRET.encode(), signed, hashlib.sha256).hexdigest()

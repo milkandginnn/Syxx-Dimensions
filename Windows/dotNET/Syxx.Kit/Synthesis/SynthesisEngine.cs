@@ -278,6 +278,12 @@ public static class SynthesisEngine
     /// The unambiguous `EvidenceId` → (`SyxxIndicator`, strength) table. Anything not listed is
     /// deliberately unmapped. Strengths are conservative: a "confirmed" observation reads
     /// near-certain, an unconfirmed one moderate.
+    /// B156 / F-09: the set of indicator IDs with at least one reachable EvidenceId mapping — the
+    /// C# twin of the computation at SyxxMatrixIntegration.swift:206. Internal: consumed by
+    /// SyxxMatrixBuilder to populate MatrixSpec.MappableIndicators.
+    internal static IReadOnlySet<IndicatorId> MappableIndicatorIds() =>
+        IndicatorMapping.Values.Select(v => v.Indicator.Id()).ToHashSet();
+
     private static readonly Dictionary<EvidenceId, (SyxxIndicator Indicator, double Strength)> IndicatorMapping = new()
     {
         // Prophet — answer authenticity

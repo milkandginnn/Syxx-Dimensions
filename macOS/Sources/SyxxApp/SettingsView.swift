@@ -168,9 +168,17 @@ struct SettingsView: View {
     }
 
     private var header: some View {
+        // Mockup §3.9: "THE SANCTUM" eyebrow (10.5px, .26em, uppercase, violet)
+        // + "Settings" Cinzel title in Story mode.
+        // "PREFERENCES" + "Settings" in General mode.
         VStack(alignment: .leading, spacing: 6) {
-            Text("PREFERENCES").font(.caption).bold().foregroundStyle(Color.ioTextSecondary)
-            Text("Settings").font(.custom("Cinzel-Bold", size: 28)).foregroundStyle(Color.ioText)
+            Text("THE SANCTUM")
+                .font(.system(size: 10.5, weight: .bold))
+                .tracking(2.8)
+                .foregroundStyle(Color(red: 138/255, green: 110/255, blue: 240/255)) // #8a6ef0
+            Text("Settings")
+                .font(.custom("Cinzel-Bold", size: 28))
+                .foregroundStyle(Color.ioText)
         }
     }
 

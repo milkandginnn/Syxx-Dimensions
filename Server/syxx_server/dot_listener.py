@@ -14,7 +14,7 @@ Honesty (§3 contract):
   * A hard connection cap (SD-51 retirement for this path): DoT keep-alive makes unbounded
     thread-per-connection worse than plain TCP, so the cap is a prerequisite, not a nicety.
 """
-import socket
+
 import socketserver
 import ssl
 import struct
@@ -78,12 +78,10 @@ class _Handler(socketserver.BaseRequestHandler):
         if self.server._ssl_context is not None:
             self.request.settimeout(self._HANDSHAKE_TIMEOUT)
             try:
-                self.request = self.server._ssl_context.wrap_socket(
-                    self.request, server_side=True)
-            except (ssl.SSLError, OSError, socket.timeout) as e:
+                self.request = self.server._ssl_context.wrap_socket(self.request, server_side=True)
+            except (TimeoutError, ssl.SSLError, OSError) as e:
                 logging_util.incr("dot_handshake_failed")
-                logging_util.warn("dot_handshake_error", err=str(e),
-                                  peer=self.client_address[0])
+                logging_util.warn("dot_handshake_error", err=str(e), peer=self.client_address[0])
                 return  # close the connection; the slot is released by shutdown_request
         self.request.settimeout(config.DOT_READ_TIMEOUT)
         served = 0
@@ -96,7 +94,7 @@ class _Handler(socketserver.BaseRequestHandler):
             served += 1
             try:
                 reply = self._answer(msg)
-            except Exception as e:                       # never let one bad query kill the conn
+            except Exception as e:  # never let one bad query kill the conn
                 logging_util.warn("dot_answer_error", err=str(e))
                 return
             if reply is None:
@@ -113,10 +111,10 @@ class _Handler(socketserver.BaseRequestHandler):
             if prefix is None:
                 return None
             (length,) = struct.unpack(">H", prefix)
-            if length == 0 or length > 4096:            # a DNS message over TCP is bounded
+            if length == 0 or length > 4096:  # a DNS message over TCP is bounded
                 return None
             return self._recv_exact(length)
-        except (OSError, socket.timeout):
+        except (TimeoutError, OSError):
             return None
 
     def _recv_exact(self, n):
@@ -159,7 +157,7 @@ def run(stop_event=None):
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(config.DOT_TLS_CERT, config.DOT_TLS_KEY)
     except (ssl.SSLError, OSError) as e:
-        listeners.set_state("dot", "down", detail="cert load failed: %s" % e)
+        listeners.set_state("dot", "down", detail=f"cert load failed: {e}")
         logging_util.error("dot_cert_failed", err=str(e))
         return
 
@@ -169,14 +167,13 @@ def run(stop_event=None):
         # handshake before the connection cap (_slots) can reject over-limit
         # clients. The handler performs the handshake in its own thread after
         # acquiring a slot.
-        server = _BoundedThreadingTCPServer(
-            (config.DOT_HOST, config.DOT_PORT), _Handler, ssl_context=ctx)
+        server = _BoundedThreadingTCPServer((config.DOT_HOST, config.DOT_PORT), _Handler, ssl_context=ctx)
     except OSError as e:
-        listeners.set_state("dot", "down", detail="bind :%d failed: %s" % (config.DOT_PORT, e))
+        listeners.set_state("dot", "down", detail=f"bind :{config.DOT_PORT} failed: {e}")
         logging_util.error("dot_bind_failed", port=config.DOT_PORT, err=str(e))
         return
 
-    listeners.set_state("dot", "listening", detail="TLS on :%d" % config.DOT_PORT)
+    listeners.set_state("dot", "listening", detail=f"TLS on :{config.DOT_PORT}")
     logging_util.info("dot_listening", port=config.DOT_PORT)
     try:
         server.serve_forever()

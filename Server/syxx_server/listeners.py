@@ -18,6 +18,7 @@ States (the §3 honesty contract's "listening / degraded-fallback / down", plus 
   - "down"               — failed to bind / serve. This is the only state that flips /readyz to 503.
   - "unknown"            — never reported. The safe default; means "we have not heard from it".
 """
+
 import threading
 
 _VALID = {"listening", "degraded-fallback", "down", "unknown"}
@@ -36,7 +37,7 @@ def set_state(name, state, detail=None):
     listener added before its _KNOWN entry) but an invalid STATE is a programming error and raises,
     because a typo'd state silently absent from _VALID would defeat the /readyz check."""
     if state not in _VALID:
-        raise ValueError("invalid listener state %r (want one of %s)" % (state, sorted(_VALID)))
+        raise ValueError(f"invalid listener state {state!r} (want one of {sorted(_VALID)})")
     with _lock:
         _state[name] = {"state": state, "detail": detail}
 

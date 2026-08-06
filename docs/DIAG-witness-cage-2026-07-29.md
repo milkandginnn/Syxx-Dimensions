@@ -8,6 +8,7 @@ Read-only diagnosis. No source edited. Classification legend:
 ## FAILURE A — Witness: "WitnessSignerError error 1" on "Witness Testimony"
 
 ### Decode of the error (done first)
+
 Enum: `macOS/Sources/SyxxKit/WitnessSigner.swift:50-57`, declaration order:
 
 | index | case | line |
@@ -35,6 +36,7 @@ It is index 1, not 0 (`emptyKey`), which proves the stored key string was **non-
 but did not base64-decode to exactly 32 bytes**.
 
 ### Reproduction path (traced from the production entry point)
+
 - Button "Witness Testimony": `WitnessView.swift:111-121` → `saveWitnessKey(witnessKeyInput)`
   then `model.witnessTestify()`.
 - `witnessTestify()` `AppModel.swift:1515` → loads key from Keychain (`:1537`) →
@@ -54,6 +56,7 @@ Keychain is confirmed reachable in this failure: `hasKey` (`:1533`) and `loadKey
 **not** a keychain-access failure; the stored string simply is not a valid key.
 
 ### The originating defect (why the key is invalid)
+
 The value stored is whatever the owner typed into the SecureField. The UI is
 internally **contradictory and misleading**:
 
@@ -69,6 +72,7 @@ only key origin is `WitnessSigner.generateKeyPair()`), so a memorable secret suc
 "thisvid-secret" is stored verbatim and can never decode to 32 bytes.
 
 Compounding gaps:
+
 - `AppModel.saveWitnessKey` `AppModel.swift:1497-1513` and
   `WitnessKeyManager.saveKey` `WitnessKeyManager.swift:73-79` accept **any UTF-8
   string** with zero validation that it base64-decodes to 32 bytes. The invalid key
@@ -80,13 +84,16 @@ Compounding gaps:
   (`AppModel.swift:963`) — is a CLI command a GUI-only owner cannot reach.
 
 ### Honesty check
+
 The crypto guard at `WitnessSigner.swift:104` is **HONESTY GUARD FIRING CORRECTLY** —
 it refuses to sign with bogus key material rather than fabricating a seal (the C070
 class: never sign/verify against invalid/empty key bytes). No false "sealed" is
 produced. That guard is the **symptom**, not the bug.
 
 ### Verdict — FAILURE A
+
 **CODE DEFECT (upstream), guard firing correctly (downstream).**
+
 - The `.invalidPrivateKey` throw is correct and must stay.
 - The real defect is the UI/logic contradiction: the interface tells the user to
   enter a memorable password, no KDF turns a password into an Ed25519 key, save-time
@@ -105,6 +112,7 @@ produced. That guard is the **symptom**, not the bug.
 ## FAILURE B — Cage: "Helper installation failed: CFErrorDomainLaunchd (8)"
 
 ### Reproduction / evidence (runtime, this machine)
+
 Error surfaced from `PrivilegeManager.installHelper()` `PrivilegeManager.swift:134-158`:
 `SMJobBless(...)` returned false with a CFError of domain `CFErrorDomainLaunchd`,
 code 8, wrapped into "Helper installation failed: ..." at `:153`.
@@ -113,6 +121,7 @@ code 8, wrapped into "Helper installation failed: ..." at `:153`.
 error enumeration.
 
 **Decisive test (run just now):**
+
 ```
 $ otool -l Syxx.app/Contents/Library/LaunchServices/com.milkandgin.deepsyxx | grep -c __launchd_plist
 0                       # REQUIRED section is ABSENT
@@ -120,6 +129,7 @@ $ otool -l ... | grep -c __info_plist
 1                       # only __info_plist is embedded
 # __TEXT sectnames present: __info_plist, __unwind_info, __objc_imageinfo
 ```
+
 `SMJobBless` requires the helper executable to **embed** its launchd plist in
 `__TEXT,__launchd_plist`. It is absent → launchd cannot find the job plist →
 `kSMErrorJobPlistNotFound` (error 8). `Package.swift:81-84` embeds only `__info_plist`;
@@ -130,6 +140,7 @@ the binary, which SMJobBless does not read.
 helper has never successfully installed.
 
 ### The "unsigned build" prior is WRONG — stated plainly
+
 The task's strong prior (unsigned / ad-hoc build, no Developer ID → registration
 refusal) does **not** hold on this machine. Runtime evidence:
 
@@ -151,6 +162,7 @@ notarization is still needed for *distribution* to other machines, but it is not
 cause of error 8 here.)
 
 ### Already filed
+
 This is **delta D079** `DELTAS.md:29269-29325` (CRITICAL, still OPEN — present in
 DELTAS.md, not in DELTAS-fixed.md), part (a) exactly:
 missing `__TEXT,__launchd_plist` → `kSMErrorJobPlistNotFound`. D079 also records a
@@ -161,6 +173,7 @@ XPC connect would fail next. The current symptom is (a); (b) would block the ver
 step.
 
 ### Fix direction (no bypass)
+
 Per D079 fixes: add the `__launchd_plist` linker section to the DeepSyxx target,
 switch the listener API, and add a `bundle-app.sh` post-build assertion that fails if
 `otool -l "$HELPER" | grep -q __launchd_plist` is false. Migration to
@@ -168,8 +181,10 @@ switch the listener API, and add a `bundle-app.sh` post-build assertion that fai
 macOS 26.5.2). **No SIP/authorization/sudo bypass — none is needed; the mechanism is
 sound once the plist is embedded and the listener is fixed.**
 
-### Honesty check — does Cage report the failure honestly? YES.
+### Honesty check — does Cage report the failure honestly? YES
+
 Trace of the failure path:
+
 - `startCageCapture` throws; caught at `AppModel.swift:1132` →
   `resultBox.finish(cageLaunchErrorMarker + error.localizedDescription)`.
 - `finalMessage` `AppModel.swift:1386-1388` detects the marker **first** and returns
@@ -186,6 +201,7 @@ completed clean/empty capture. This path is as honest as the missing-binary path
 surfacer, not a false-clean.
 
 ### Verdict — FAILURE B
+
 **CODE DEFECT (build/packaging), already filed as D079 (OPEN).** Root cause verified
 by runtime `otool`: helper lacks the `__TEXT,__launchd_plist` section, so
 `SMJobBless` fails with `kSMErrorJobPlistNotFound` = `CFErrorDomainLaunchd` error 8.
@@ -196,6 +212,7 @@ fix to the macOS build/helper owner (syxx-neural-executor); it is confined to
 `Package.swift`, `DeepSyxx/main.swift`, and `bundle-app.sh`.
 
 ### Blast radius
+
 - Witness (A): `SyxxKit` core + `SyxxApp` GUI. The `syxx witness` CLI path is not hit
   by the passphrase contradiction if the user supplies a real base64 key; the GUI is
   the affected surface. Parity: Windows `Syxx.Kit.WitnessSigner` has the same

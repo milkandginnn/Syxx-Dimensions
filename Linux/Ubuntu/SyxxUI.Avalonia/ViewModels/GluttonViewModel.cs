@@ -13,7 +13,7 @@ namespace SyxxUI.Avalonia.ViewModels;
 /// <c>SyxxApp/GluttonView.swift</c> and Windows <c>SyxxUI/Views/GluttonView.xaml(.cs)</c>.
 ///
 /// <b>Parity scope (Aug 2026 catch-up):</b> the Linux client previously shipped with only a
-/// "Check VPN / encryption status" button and a static "the collector verdict is deferred on
+/// "Check VPN / encryption status" button and a static "the collector result is deferred on
 /// Linux" note — while macOS and Windows already ran the real probe dispatch and the real
 /// collector-attested leak test. Both halves now run for real on Linux, against the same
 /// <c>Syxx.Kit.LeakDetector</c> the other twins use, so a leak claim on Linux is held to the
@@ -23,7 +23,7 @@ namespace SyxxUI.Avalonia.ViewModels;
 /// <list type="bullet">
 /// <item><b>B030</b>: the false-negative class this test refuses. "No leak detected" is ONLY ever
 ///   stated by the collector's signed attestation — never from the absence of evidence.</item>
-/// <item><b>D004 / D011 / B066 / B067</b>: a green verdict requires a valid Ed25519 signature by a
+/// <item><b>D004 / D011 / B066 / B067</b>: a green result requires a valid Ed25519 signature by a
 ///   TRUSTED key AND an enforced transport pin. Crypto-valid-but-untrusted or unpinned-transport
 ///   reads amber (inconclusive), never green. See <see cref="RenderLeakResult"/>.</item>
 /// <item><b>E117</b>: the FEATURE STATUS card has three distinct states (unknown / locked /
@@ -102,7 +102,7 @@ public partial class GluttonViewModel : ObservableObject
     [ObservableProperty] private string _gluttonRunMessage = "";
     [ObservableProperty] private string _leakTestSubdomain = "";
     [ObservableProperty] private bool _hasSubdomain;
-    // E118: sent renders NEUTRAL — green is reserved for the collector's attested verdict below.
+    // E118: sent renders NEUTRAL — green is reserved for the collector's attested result below.
     public ObservableCollection<LeakProbeRow> LeakProbeResults { get; } = new();
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ public partial class GluttonViewModel : ObservableObject
     /// <c>AppModel.run()</c> lines 1124-1126 and Windows <c>RunGluttonAsync</c> lines 576-585.
     ///
     /// This step ALONE proves nothing about leaks — it only confirms the DNS queries LEFT this
-    /// machine. The leak VERDICT comes from <see cref="RunCollectorVerificationAsync"/>. The probe
+    /// machine. The leak RESULT comes from <see cref="RunCollectorVerificationAsync"/>. The probe
     /// table is therefore rendered in the NEUTRAL text tone for "sent" (E118), never green.
     /// </summary>
     [RelayCommand]
@@ -330,7 +330,7 @@ public partial class GluttonViewModel : ObservableObject
     /// Runs the full collector-attested leak test against <see cref="CollectorURL"/>. Twin of macOS
     /// <c>AppModel.runCollectorVerification()</c> and the Windows <c>RunGluttonAsync</c> collector
     /// half. The result is rendered through <see cref="RenderLeakResult"/>, which honesty-gates the
-    /// verdict on the signed attestation: no valid+trusted signature AND enforced transport pin
+    /// result on the signed attestation: no valid+trusted signature AND enforced transport pin
     /// means the result reads INCONCLUSIVE, never "no leak" (B030, D004, B066, B067).
     /// </summary>
     [RelayCommand]
@@ -372,7 +372,7 @@ public partial class GluttonViewModel : ObservableObject
             // one. Windows keys its collector call off LeakTestSubdomain unconditionally — but on
             // macOS the collector path can run before the local half, in which case a fresh token
             // is minted inside RunCollectorTestAsync's step 1 (server returns its own subdomain).
-            // Either way, the SIGNED payload the collector returns is what carries the verdict;
+            // Either way, the SIGNED payload the collector returns is what carries the result;
             // the local subdomain is informational on this screen.
             string subdomain = !string.IsNullOrEmpty(LeakTestSubdomain)
                 ? LeakTestSubdomain
@@ -406,7 +406,7 @@ public partial class GluttonViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Honesty gate central to every leak/no-leak verdict on this screen. Mirrors macOS
+    /// Honesty gate central to every leak/no-leak result on this screen. Mirrors macOS
     /// <c>gluttonResultColor()</c> (lines 305-320) and Windows <c>RenderLeakResult</c>
     /// (lines 148-237) case-for-case:
     /// <list type="bullet">
@@ -461,7 +461,7 @@ public partial class GluttonViewModel : ObservableObject
                 break;
 
             case LeakResult.NotDetected:
-                // B067: gate the green verdict on enforced transport pinning — a notDetected over a
+                // B067: gate the green result on enforced transport pinning — a notDetected over a
                 // non-enforced transport is unverified identity and reads amber.
                 if (leak.TransportPinning != CollectorTransportPinning.Enforced)
                 {

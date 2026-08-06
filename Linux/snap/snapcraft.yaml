@@ -1,28 +1,60 @@
 name: syxx
-# Keep in step with SyxxConfig.Version (Windows/dotNET/Syxx.Kit/SyxxConfig.cs:13).
-version: '2.0.0'
+# P-12: the version is DERIVED, never typed here.
+#
+# It used to read `version: '2.0.0'` under a comment asking a human to "keep in step with
+# SyxxConfig.Version". Linux/Ubuntu/build_deb.sh greps the constant and FAILS CLOSED if the grep
+# misses, so the two packagers disagreed about whether the product version is a fact or a note.
+# `adopt-info` below points at the syxx-cli part, whose override-pull greps the same constant and
+# exits non-zero when it cannot read it. A snap can no longer be built carrying a stale version.
+adopt-info: syxx-cli
+
 summary: DNS tampering detection toolkit
 description: |
   Syxx investigates and detects DNS tampering, hijacking, spoofing,
   and censorship. It produces evidence a user can actually trust across
   six integrated toolsets: Prophet, Mirror, Portal, Glutton, Cage, and Witness.
 
+  Ships two programs: the `syxx` command-line investigator and the
+  `syxx.syxx-gui` desktop client.
+
 grade: stable
 confinement: strict
 base: core24
 
+# --------------------------------------------------------------------------------------------
+# WHERE THIS FILE LIVES, AND WHAT `source: .` MEANS
+#   This file is committed at Linux/snap/snapcraft.yaml, but the parts below reference paths from
+#   the REPOSITORY ROOT (Windows/dotNET/Syxx, Linux/Ubuntu/SyxxUI.Avalonia). snapcraft resolves
+#   `source: .` against the directory that CONTAINS the `snap/` directory, so the build must be
+#   driven from a tree where this file sits at <repo-root>/snap/snapcraft.yaml.
+#   .github/workflows/ci.yml copies it there before invoking snapcraft, which keeps one
+#   source of truth. Building by hand: `mkdir -p snap && cp Linux/snap/snapcraft.yaml snap/ &&
+#   snapcraft` from the repo root.
+#
+# P-03 — A DELIBERATE, DOCUMENTED DIVERGENCE FROM THE .deb. DO NOT PAPER OVER IT.
+#   The .deb runs scripts/syxx-capture-hardware-id.sh from DEBIAN/postinst, as root, once, and
+#   writes a salted hash of the machine's DMI UUID to /var/lib/syxx/hardware-id. That is what
+#   lets a licence node-lock to the HARDWARE, so a reinstall — or a second distro on the same
+#   box — reads as the same machine and does not burn another activation.
+#
+#   A snap has no postinst. There is no install-time root hook of any kind, and under strict
+#   confinement the app cannot read /sys/class/dmi/id/product_uuid (mode 0400, root-only) at
+#   runtime either. So THE SNAP CANNOT NODE-LOCK. MachineFingerprint falls back to an
+#   InstallScoped fingerprint, and a `snap remove` + `snap install` cycle reads as a new machine.
+#
+#   This is stated here rather than fixed because every available fix is worse: a setuid helper,
+#   a root daemon, or a per-launch pkexec prompt just to answer "which machine is this" — the
+#   three alternatives scripts/syxx-capture-hardware-id.sh already reasoned its way out of. The
+#   licensing surface must present snap installs honestly as install-scoped rather than pretend
+#   they are hardware-locked. Owner decision 5: wire it for .deb, accept and document this.
+# --------------------------------------------------------------------------------------------
+
 apps:
+  # The unified CLI. Named `syxx` so `snap install syxx` yields the command `syxx`, matching
+  # every printed instruction in the product (`sudo syxx cage --duration 30`) and the .deb's
+  # /usr/bin/syxx.
   syxx:
-    # Must match <AssemblyName> in Windows/dotNET/Syxx/Syxx.csproj, which is `Syxx`.
-    # This read `Syxx.CLI`, a name the build never produces, so the snap installed and
-    # then failed to launch.
-    #
-    # UNVERIFIED ON THIS HOST: `command` is resolved relative to $SNAP, and the exact
-    # stage path depends on where the core24 dotnet plugin publishes (root vs bin/).
-    # snapcraft cannot run on macOS, so this must be confirmed by one real
-    # `snapcraft` build on Ubuntu before shipping. If the plugin publishes to a
-    # subdirectory, prefix accordingly. The assembly NAME is correct either way.
-    command: Syxx
+    command: opt/syxx/cli/Syxx
     plugs:
       - network
       - network-bind
@@ -32,27 +64,184 @@ apps:
       # Without it, strict remaps $HOME into ~/snap/syxx/<rev>/ which snap remove
       # deletes, and the paths are unreachable from outside the snap.
       - home
+      # LinuxSecretStore reaches the GNOME Keyring / KDE Wallet Secret Service over D-Bus, both
+      # through libsecret and through `secret-tool`. Without this plug both backends are
+      # unreachable and every secret lands in the encrypted file store instead.
+      - password-manager-service
       # NOTE: raw-socket capture (`syxx cage`) needs CAP_NET_RAW, which no plug
       # here grants to an unprivileged process. Under strict confinement Cage
       # must report untested, never a clean or empty-normal capture.
       # Install docs must include: snap connect syxx:network-observe
 
-# E055: build-snaps installs the SDK that DOTNET_ROOT points at; project-path dropped
-# (not a dotnet-plugin key); source-subdir points at the CLI project directly;
-# platforms declares both amd64 and arm64 (Ubuntu Desktop arm64 ISO target).
+  # P-09/P-17: the GUI. It was absent entirely — this file declared one app whose part pointed
+  # at Windows/dotNET/Syxx, the CLI. The .deb had the mirror-image defect and shipped only the
+  # GUI. Both assemblies are named `Syxx`, which is why neither was noticed.
+  syxx-gui:
+    command: opt/syxx/gui/Syxx
+    desktop: usr/share/applications/syxx.desktop
+    plugs:
+      - network
+      - network-bind
+      - network-observe
+      - home
+      - password-manager-service
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - opengl
+    # UNVERIFIED ON THIS HOST: snapcraft cannot run on macOS, so the desktop integration below
+    # the plug list — theme and cursor resolution, portal access — has not been exercised. The
+    # conventional fix if fonts or theming misbehave on a real Ubuntu build is `extensions:
+    # [gnome]`, which adds the desktop-launch command-chain and the gnome-46-2404 content snap.
+    # It is deliberately NOT set here rather than set on a guess: it changes the runtime the app
+    # links against, and that is not a change to make without one real build to look at.
+    # The `package-snap` CI job is the thing that turns this note into an answer.
+
 platforms:
   amd64:
   arm64:
 
 parts:
-  syxx:
-    plugin: dotnet
-    dotnet-build-configuration: Release
+  # ---------------------------------------------------------------------------- CLI
+  syxx-cli:
+    plugin: nil
     source: .
-    source-subdir: Windows/dotNET/Syxx
     build-snaps:
-      - dotnet-sdk/latest/stable
+      - dotnet-sdk-100
     build-environment:
-      - DOTNET_ROOT: /snap/dotnet-sdk/current
+      - DOTNET_ROOT: /snap/dotnet-sdk-100/current/usr/lib/dotnet
+      - PATH: /snap/dotnet-sdk-100/current/usr/bin:$PATH
+      - DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      - DOTNET_NOLOGO: "1"
+
+    # P-12: derive the version, fail closed. This runs before any build work, so a version that
+    # cannot be read stops the build rather than producing a mislabelled snap.
+    override-pull: |
+      craftctl default
+      syxx_version="$(sed -n 's/.*public const string Version[^"]*"\([^"]*\)".*/\1/p' \
+        Windows/dotNET/Syxx.Kit/SyxxConfig.cs | head -1)"
+      if [ -z "$syxx_version" ]; then
+        echo "ERROR: could not extract SyxxConfig.Version from Windows/dotNET/Syxx.Kit/SyxxConfig.cs." >&2
+        echo "Refusing to build an unversioned or stale-versioned snap. This is the same" >&2
+        echo "fail-closed rule Linux/Ubuntu/build_deb.sh already applies." >&2
+        exit 1
+      fi
+      craftctl set version="$syxx_version"
+
+    # `plugin: dotnet` is deliberately not used. Its publish destination is an implementation
+    # detail — the previous revision of this file carried a committed UNVERIFIED marker saying
+    # exactly that, because `command:` depended on where the plugin happened to put the output.
+    # Publishing explicitly removes the unknown, and gives somewhere to put the fail-closed
+    # guard that macOS/bundle-app.sh:29-33 has and this file never did.
+    override-build: |
+      case "${CRAFT_ARCH_BUILD_FOR}" in
+        amd64) rid=linux-x64 ;;
+        arm64) rid=linux-arm64 ;;
+        *)
+          echo "ERROR: unsupported build architecture '${CRAFT_ARCH_BUILD_FOR}' (want amd64 or arm64)." >&2
+          exit 1
+          ;;
+      esac
+      # Untrimmed on purpose, matching Syxx.csproj: NSec and the DNS reflection paths are
+      # trim-hostile. Do NOT add PublishTrimmed to shrink the snap.
+      dotnet publish Windows/dotNET/Syxx/Syxx.csproj \
+        -c Release -r "$rid" --self-contained true \
+        -o "${CRAFT_PART_INSTALL}/opt/syxx/cli"
+      # Fail-closed guard (P-09/P-17). Twin of macOS/bundle-app.sh:29-33 and of the
+      # assert_shipped_binary() calls in Linux/Ubuntu/build_deb.sh.
+      if [ ! -x "${CRAFT_PART_INSTALL}/opt/syxx/cli/Syxx" ]; then
+        echo "ERROR: the CLI apphost is missing from the staged tree." >&2
+        echo "Expected: ${CRAFT_PART_INSTALL}/opt/syxx/cli/Syxx" >&2
+        echo "Without it the snap installs and 'syxx cage' cannot start a real capture." >&2
+        exit 1
+      fi
+
     stage-packages:
       - libicu74
+      # libunwind8: the .NET runtime links libunwind-x86_64.so.8 for exception unwinding, and the
+      # snapcraft build environment reported it missing ('cannot open shared object file') when the
+      # SDK ran. core24 does not ship it, so it must be staged explicitly.
+      - libunwind8
+      # libsecret is dlopened by Syxx.Kit/LinuxSecretStore.cs:380; secret-tool is the only
+      # backend that can genuinely write to and enumerate the keyring (see the Depends audit in
+      # Linux/Ubuntu/build_deb.sh). Without them key storage silently degrades to the encrypted
+      # file store.
+      - libsecret-1-0
+      - libsecret-tools
+      # TracerouteRunner shells out to `traceroute` on Linux; absent, Portal's path evidence is
+      # unavailable rather than wrong, but it is unavailable every single time.
+      - traceroute
+      # LAN/LanCartography.cs:715 runs `ip neigh show`, catching the failure and falling back to
+      # `arp -a`. A snap sees only what is staged into it, so without this NEITHER command exists
+      # and the neighbour table is unreadable on every single run. Twin of the `iproute2` entry in
+      # Linux/Ubuntu/build_deb.sh's Depends. Reading the kernel neighbour table also needs the
+      # network-observe plug, which is declared on both apps above.
+      - iproute2
+
+  # ---------------------------------------------------------------------------- GUI
+  syxx-gui:
+    plugin: nil
+    source: .
+    after: [syxx-cli]
+    build-snaps:
+      - dotnet-sdk-100
+    build-environment:
+      - DOTNET_ROOT: /snap/dotnet-sdk-100/current/usr/lib/dotnet
+      - PATH: /snap/dotnet-sdk-100/current/usr/bin:$PATH
+      - DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      - DOTNET_NOLOGO: "1"
+
+    override-build: |
+      case "${CRAFT_ARCH_BUILD_FOR}" in
+        amd64) rid=linux-x64 ;;
+        arm64) rid=linux-arm64 ;;
+        *)
+          echo "ERROR: unsupported build architecture '${CRAFT_ARCH_BUILD_FOR}' (want amd64 or arm64)." >&2
+          exit 1
+          ;;
+      esac
+      # Separate destination from the CLI, and this is mandatory rather than tidy: both projects
+      # set <AssemblyName>Syxx</AssemblyName>, so a shared prime directory would have one apphost
+      # silently overwrite the other and the snap would again contain half the product.
+      dotnet publish Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj \
+        -c Release -r "$rid" --self-contained true \
+        -o "${CRAFT_PART_INSTALL}/opt/syxx/gui"
+      if [ ! -x "${CRAFT_PART_INSTALL}/opt/syxx/gui/Syxx" ]; then
+        echo "ERROR: the GUI apphost is missing from the staged tree." >&2
+        echo "Expected: ${CRAFT_PART_INSTALL}/opt/syxx/gui/Syxx" >&2
+        exit 1
+      fi
+
+      # Desktop entry + icon, so the GUI appears in the launcher with the real mark rather than
+      # a generic placeholder. Exec is rewritten by snapd from the `desktop:` key above.
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/share/applications"
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/share/icons/hicolor/512x512/apps"
+      if [ ! -f Design/logos/syxx-logo-source.png ]; then
+        echo "ERROR: Design/logos/syxx-logo-source.png not found." >&2
+        echo "A desktop entry with Icon=syxx and no icon file is a broken launcher." >&2
+        exit 1
+      fi
+      cp Design/logos/syxx-logo-source.png \
+        "${CRAFT_PART_INSTALL}/usr/share/icons/hicolor/512x512/apps/syxx.png"
+      cat > "${CRAFT_PART_INSTALL}/usr/share/applications/syxx.desktop" <<'DESKTOP'
+      [Desktop Entry]
+      Type=Application
+      Name=Syxx
+      Comment=DNS tampering detection toolkit
+      Exec=syxx.syxx-gui
+      Icon=${SNAP}/usr/share/icons/hicolor/512x512/apps/syxx.png
+      Terminal=false
+      Categories=Network;Security;
+      Keywords=DNS;Security;Tampering;
+      DESKTOP
+
+    stage-packages:
+      - libicu74
+      # SkiaSharp (Avalonia's renderer) links fontconfig and libstdc++; the X11 backend dlopens
+      # the X libraries. Any one of them missing is a GUI that exits before drawing a frame.
+      - libfontconfig1
+      - libstdc++6
+      - libx11-6
+      - libice6
+      - libsm6

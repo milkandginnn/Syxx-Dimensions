@@ -16,7 +16,7 @@ import Foundation
 /// PROVENANCE, stated honestly:
 ///  - `witness-macos-degraded.json` was originally a verbatim copy of the output of a real
 ///    `syxx witness create example.com` run on 2026-07-29. That capture predated the E011 wire-key
-///    rename (`verdict` → `conclusion`) and became undecodable by the current readers, so on
+///    rename (the former wire key → `conclusion`) and became undecodable by the current readers, so on
 ///    2026-08-01 it was regenerated HERE with the real SyxxKit `WitnessSigner` and the real Swift
 ///    `JSONEncoder`, from stated inputs that mirror the original capture's observed statuses
 ///    (local + public legs `timeout`, DoH legs `transportError`, no records anywhere, U+2019 in
@@ -165,8 +165,8 @@ final class WitnessCrossPlatformFixtureGenerator: XCTestCase {
     //
     // Every pre-existing vector exercises expired / forged / untrusted in ISOLATION, so the
     // crypto-LAST ordering bug on Windows/Linux is invisible. These two combine two conditions in a
-    // single artifact so the masking is caught: a non-crypto verdict (`.expired`) must never be
-    // returned ahead of the cryptographic/display verdict it hides. Neither file is a member of
+    // single artifact so the masking is caught: a non-crypto result (`.expired`) must never be
+    // returned ahead of the cryptographic/display result it hides. Neither file is a member of
     // `WitnessCrossPlatformGoldenVectorTests.vectorNames` (the "must be .valid" set) — a corrupted
     // fixture must never be folded into the valid set. See docs/PROPOSAL-witness-crypto-first-2026-08-03.md §4.
 

@@ -4,6 +4,7 @@ The honesty rule: a measurement that looks bad, or a missing measurement, must D
 on a box that cannot hold it is an outage waiting to happen; "we could not measure" must never
 resolve to "ship". These test the pure gate; the live aioquic run happens on the box.
 """
+
 import os
 import sys
 import unittest
@@ -36,35 +37,35 @@ class LinearityTests(unittest.TestCase):
 class ResultTests(unittest.TestCase):
     def test_healthy_linear_with_headroom_ships(self):
         v = probe.compute_result(
-            rss_0_mb=80, per_conn_by_n={100: 0.1, 500: 0.1, 1000: 0.1},
-            mem_available_mb=4000, realistic_peak_conns=200)
+            rss_0_mb=80, per_conn_by_n={100: 0.1, 500: 0.1, 1000: 0.1}, mem_available_mb=4000, realistic_peak_conns=200
+        )
         self.assertEqual(v["conclusion"], "ship")
         self.assertGreater(v["max_safe_conns"], 200)
 
     def test_superlinear_scaling_defers_even_with_ram(self):
         v = probe.compute_result(
-            rss_0_mb=80, per_conn_by_n={100: 0.1, 500: 0.3, 1000: 0.6},
-            mem_available_mb=8000, realistic_peak_conns=50)
+            rss_0_mb=80, per_conn_by_n={100: 0.1, 500: 0.3, 1000: 0.6}, mem_available_mb=8000, realistic_peak_conns=50
+        )
         self.assertEqual(v["conclusion"], "defer")
         self.assertIs(v["linear"], False)
 
     def test_no_measurement_defers_never_ships(self):
         v = probe.compute_result(
-            rss_0_mb=80, per_conn_by_n={100: None, 500: None},
-            mem_available_mb=8000, realistic_peak_conns=50)
+            rss_0_mb=80, per_conn_by_n={100: None, 500: None}, mem_available_mb=8000, realistic_peak_conns=50
+        )
         self.assertEqual(v["conclusion"], "defer")
 
     def test_tight_ram_defers(self):
         # Per-conn fine and linear, but the box has almost no free memory after co-residents.
         v = probe.compute_result(
-            rss_0_mb=80, per_conn_by_n={100: 0.1, 500: 0.1},
-            mem_available_mb=420, realistic_peak_conns=200)  # 420 - 400 reserve = 20MB budget
+            rss_0_mb=80, per_conn_by_n={100: 0.1, 500: 0.1}, mem_available_mb=420, realistic_peak_conns=200
+        )  # 420 - 400 reserve = 20MB budget
         self.assertEqual(v["conclusion"], "defer")
 
     def test_peak_above_max_safe_defers(self):
         v = probe.compute_result(
-            rss_0_mb=80, per_conn_by_n={100: 0.5, 500: 0.5},
-            mem_available_mb=1000, realistic_peak_conns=5000)
+            rss_0_mb=80, per_conn_by_n={100: 0.5, 500: 0.5}, mem_available_mb=1000, realistic_peak_conns=5000
+        )
         self.assertEqual(v["conclusion"], "defer")
 
 

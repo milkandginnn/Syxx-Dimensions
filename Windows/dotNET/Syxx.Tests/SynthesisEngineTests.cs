@@ -12,6 +12,14 @@ namespace Syxx.Tests
     public class AuthoritativeVantageConsensusTests
     {
         // Answers NS/A lookups for any bootstrap and a direct auth answer, mirroring the macOS mock.
+        //
+        // NS glue MUST be public-routable. The D018 SSRF guard (AuthoritativeVantage.cs:102-106)
+        // keeps only `PublicRoutable` NS IPs, so RFC 5737 documentation blocks — 203.0.113.x
+        // (TEST-NET-3), 192.0.2.x, 198.51.100.x — are ALL filtered out by IPClassifier and Compare
+        // short-circuits to Inconclusive at :107-112 without ever reaching Classify(). These
+        // fixtures used 203.0.113.x, which silently turned this suite into a test of the early
+        // return. 93.184.216.x is IANA's example.com block: routable, and matched by no
+        // NetworkCohort range, so it also cannot steer the same-provider branch of Classify().
         private static Func<DNSQuery, Task<DNSResponse>> Mock() => q =>
         {
             var bootstraps = new[] { "1.1.1.1", "8.8.8.8", "9.9.9.9" };
@@ -32,7 +40,7 @@ namespace Syxx.Tests
                     Records = new List<DNSRecord>
                     {
                         new() { Name = q.Name, Type = 1, Ttl = 3600,
-                                Rdata = q.Name == "ns1.example.com" ? "203.0.113.1" : "203.0.113.2" }
+                                Rdata = q.Name == "ns1.example.com" ? "93.184.216.34" : "93.184.216.35" }
                     }
                 });
             return Task.FromResult(new DNSResponse
@@ -59,6 +67,15 @@ namespace Syxx.Tests
             var r = await AuthoritativeVantage.Compare(
                 domain: "example.com", resolverAnswers: new[] { "1.2.3.4" }, query: Mock());
             Assert.Equal(AuthComparisonStatus.Diverges, r.Status);
+
+            // Reachability guard. This assertion is the point: with documentation-range NS glue the
+            // D018 filter emptied nsIPs and Compare returned the early Inconclusive, so Classify()
+            // was never called and this test exercised nothing. Pin a detail string that ONLY
+            // Classify() can produce, and explicitly reject the short-circuit message.
+            Assert.DoesNotContain("could not resolve authoritative nameserver IPs", r.Detail);
+            Assert.Contains("share nothing with the authoritative set", r.Detail);
+            Assert.Equal(IPAddressClass.PublicRoutable, IPClassifier.Classify("93.184.216.34"));
+            Assert.Null(NetworkCohort.ProviderForIPv4("93.184.216.34"));
         }
     }
 

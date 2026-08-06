@@ -1,0 +1,3 @@
+syxx warp 2.0.0
+
+Usage: syxx warp <url> [--diff]   (WARP_MANIFEST_V1 signed-manifest content-integrity check; --diff shows the local-vs-server-clean HTML diff)

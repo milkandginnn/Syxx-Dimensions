@@ -38,6 +38,7 @@ over a narrower file set; what matters is before == after under one identical co
 ## Files changed
 
 Production:
+
 - `macOS/Sources/SyxxKit/WitnessSigner.swift` — `LocalizedError` on `WitnessSignerError`;
   new shared `validatedPrivateKey(fromBase64:)` / `validatePrivateKey(base64:)`.
 - `macOS/Sources/SyxxKit/WitnessKeyManager.swift` — `saveKey` validates before writing;
@@ -49,6 +50,7 @@ Production:
 - `Windows/dotNET/Syxx.Kit/WitnessKeyStore.cs` — `SaveKey` validates before writing.
 
 Tests:
+
 - NEW `macOS/Tests/SyxxKitTests/WitnessKeyValidationTests.swift` (12)
 - NEW `Windows/dotNET/Syxx.Tests/WitnessKeyValidationTests.cs` (9)
 - NEW `macOS/Tests/SyxxAppTests/WitnessKeychainTestSupport.swift`

@@ -51,6 +51,7 @@ def _ip_is_public(ip):
     """True only for publicly-routable unicast IPs. Prevents SSRF. Delegates to the
     shared netutil gate (adds IPv4-mapped IPv6 normalization the local copy lacked)."""
     from . import netutil
+
     return netutil.ip_is_public(ip)
 
 
@@ -73,8 +74,7 @@ def _query_resolver(domain, server, timeout):
         return "refused", []
     if rcode != 0:
         return "error", []
-    addrs = [r["value"] for r in resp.get("records", [])
-             if r.get("type") == "A" and isinstance(r.get("value"), str)]
+    addrs = [r["value"] for r in resp.get("records", []) if r.get("type") == "A" and isinstance(r.get("value"), str)]
     if not addrs:
         # A159: NOERROR with no A records is "nodata" — a filtering signal
         # (e.g. Pi-hole/AdGuard NODATA mode), not a generic error.
@@ -113,8 +113,7 @@ def _is_filtered(user_status, user_addrs, clean_status, clean_addrs):
     return False
 
 
-import time as _time
-
+import time as _time  # noqa: E402 — import placed after runtime setup above it, deliberately
 
 # A162: aggregate wall-clock deadline for the entire test run. 10 domains × 3
 # queries × 5s = 150s without a cap; this default is generous but bounded.
@@ -193,13 +192,15 @@ def test(resolver_ip, timeout=5):
         if expected == "resolve" and user_status != "resolved":
             clean_domains_ok = False
 
-        results.append({
-            "domain": domain,
-            "category": category,
-            "userConclusion": user_status,
-            "cleanConclusion": clean_status,
-            "filtered": filtered,
-        })
+        results.append(
+            {
+                "domain": domain,
+                "category": category,
+                "userConclusion": user_status,
+                "cleanConclusion": clean_status,
+                "filtered": filtered,
+            }
+        )
 
     tested = len(_TEST_DOMAINS)
 

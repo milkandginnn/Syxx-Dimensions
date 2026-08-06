@@ -81,6 +81,59 @@ public readonly record struct SectionId(string Value)
     public override string ToString() => Value;
 }
 
+/// F-04: emit an <see cref="IReadOnlySet{SectionId}"/> as an ORDINAL-SORTED array.
+///
+/// A set has no meaningful order, but JSON arrays do, so serializing one directly leaks the hash
+/// order into the bytes. `SectionId` is a record struct over `string`, and .NET randomizes string
+/// hashing per process, so those bytes differ between launches. Anything that hashes, signs, or
+/// byte-compares this output — the frozen spec oracle, the cross-platform parity gate — is unstable
+/// with it.
+///
+/// Ordinal to match the Swift twin's `MatrixSpec.encode(to:)`, which sorts by `rawValue`. Reading
+/// is order-insensitive: the array goes back into a set.
+/// F-09: same rationale as <see cref="SortedSectionIdSetConverter"/>, for the B156
+/// `mappableIndicators` set — sorted emission keeps the spec bytes stable and matches the Swift
+/// twin's `encode(to:)`, which sorts both sets by rawValue.
+internal sealed class SortedIndicatorIdSetConverter : JsonConverter<IReadOnlySet<IndicatorId>>
+{
+    public override IReadOnlySet<IndicatorId> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var ids = JsonSerializer.Deserialize<List<IndicatorId>>(ref reader, options)
+                  ?? throw new JsonException("mappableIndicators must be an array of indicator identifiers");
+        return new HashSet<IndicatorId>(ids);
+    }
+
+    public override void Write(Utf8JsonWriter writer, IReadOnlySet<IndicatorId> value, JsonSerializerOptions options)
+    {
+        writer.WriteStartArray();
+        foreach (var id in value.OrderBy(i => i.Value, StringComparer.Ordinal))
+        {
+            JsonSerializer.Serialize(writer, id, options);
+        }
+        writer.WriteEndArray();
+    }
+}
+
+internal sealed class SortedSectionIdSetConverter : JsonConverter<IReadOnlySet<SectionId>>
+{
+    public override IReadOnlySet<SectionId> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var ids = JsonSerializer.Deserialize<List<SectionId>>(ref reader, options)
+                  ?? throw new JsonException("knownSections must be an array of section identifiers");
+        return new HashSet<SectionId>(ids);
+    }
+
+    public override void Write(Utf8JsonWriter writer, IReadOnlySet<SectionId> value, JsonSerializerOptions options)
+    {
+        writer.WriteStartArray();
+        foreach (var id in value.OrderBy(s => s.Value, StringComparer.Ordinal))
+        {
+            JsonSerializer.Serialize(writer, id, options);
+        }
+        writer.WriteEndArray();
+    }
+}
+
 [JsonConverter(typeof(IndicatorIdJsonConverter))]
 public readonly record struct IndicatorId(string Value)
 {
@@ -362,11 +415,36 @@ public sealed record MatrixSpec
     [JsonPropertyName("thresholds")] public ThresholdProfile Thresholds { get; init; }
     /// The universe of section identifiers a `RequiredSections` list may reference. Defaults to the
     /// six canonical Syxx sections; validated in `Validate()`.
-    /// NOTE (parity, observed while porting): Swift encodes `Set&lt;SectionID&gt;` as an array in
-    /// per-process hash order — the Swift-side `defaultSpecJSON` is therefore NOT byte-stable for
-    /// this one field across launches. Flagged for the Phase 5 canonical-encoding rule (sort the
-    /// set on BOTH platforms in the frozen oracle); everything else in the spec is order-stable.
-    [JsonPropertyName("knownSections")] public IReadOnlySet<SectionId> KnownSections { get; init; }
+    /// F-04 (2026-08-05): the canonical-encoding rule this note asked for is now IMPLEMENTED on
+    /// both platforms — Swift sorts in `MatrixSpec.encode(to:)`, C# sorts via
+    /// <see cref="SortedSectionIdSetConverter"/> below. The original note is kept because it
+    /// records that the hazard was seen during the port:
+    ///
+    ///   "Swift encodes Set&lt;SectionID&gt; as an array in per-process hash order — the Swift-side
+    ///    defaultSpecJSON is therefore NOT byte-stable for this one field across launches. Flagged
+    ///    for the Phase 5 canonical-encoding rule (sort the set on BOTH platforms in the frozen
+    ///    oracle); everything else in the spec is order-stable."
+    ///
+    /// Its one inaccuracy: this side was not exempt. `SectionId` is a record struct over `string`,
+    /// so its hash comes from the string's, and .NET randomizes string hashing per process — a
+    /// `HashSet&lt;SectionId&gt;` enumerates in a per-process order here too. Only the sorted
+    /// emission below makes either platform byte-stable.
+    [JsonPropertyName("knownSections")]
+    [JsonConverter(typeof(SortedSectionIdSetConverter))]
+    public IReadOnlySet<SectionId> KnownSections { get; init; }
+
+    /// B156 / F-09 (ported 2026-08-05): the set of indicator IDs that have at least one reachable
+    /// EvidenceId mapping in the evidence model. Support rules referencing unmappable indicators
+    /// are excluded from the coverage denominator so that unmapped rules don't create permanent
+    /// dead weight that hard-caps coverage below the minimum thresholds and makes entire diagnoses
+    /// unreachable. When null (legacy JSON), all indicators are treated as mappable (original
+    /// behavior). Twin of `MatrixSpec.mappableIndicators` (MatrixDeterminativeEngine.swift:286);
+    /// this side lacked both the field and the coverage filter, so diagnoses reachable on macOS
+    /// could be unreachable on Windows and Linux from identical evidence.
+    [JsonPropertyName("mappableIndicators")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(SortedIndicatorIdSetConverter))]
+    public IReadOnlySet<IndicatorId>? MappableIndicators { get; init; }
 
     public static IReadOnlySet<SectionId> DefaultKnownSections { get; } = new HashSet<SectionId>
     {
@@ -377,11 +455,13 @@ public sealed record MatrixSpec
     [JsonConstructor]
     public MatrixSpec(IReadOnlyList<DiagnosisSpec> diagnoses,
                       ThresholdProfile thresholds,
-                      IReadOnlySet<SectionId>? knownSections = null)
+                      IReadOnlySet<SectionId>? knownSections = null,
+                      IReadOnlySet<IndicatorId>? mappableIndicators = null)
     {
         Diagnoses = diagnoses;
         Thresholds = thresholds;
         KnownSections = knownSections ?? DefaultKnownSections;
+        MappableIndicators = mappableIndicators;
     }
 
     /// Structural invariants a well-formed spec must satisfy. Thrown at engine construction so a
@@ -915,7 +995,15 @@ public sealed class MatrixDeterminativeEngine
         var supportRules = d.Rules.Where(x => x.Polarity == IndicatorPolarity.Supports).ToList();
         var excludeRules = d.Rules.Where(x => x.Polarity == IndicatorPolarity.Excludes).ToList();
 
-        var totalSupportWeight = supportRules.Sum(x => x.Weight);
+        // B156: normalise coverage over *mappable* indicator weight only. Rules referencing
+        // unmappable indicators (those with no EvidenceId mapping) are permanent dead weight in
+        // the denominator, hard-capping coverage below the minimum thresholds and making entire
+        // diagnoses unreachable. When `MappableIndicators` is null (legacy spec), all rules count.
+        // Twin of MatrixDeterminativeEngine.swift:789-800; ported 2026-08-05 (F-09) — before this,
+        // the two engines computed different coverage from identical evidence.
+        var totalSupportWeight = Spec.MappableIndicators is { } mappable
+            ? supportRules.Where(x => mappable.Contains(x.IndicatorId)).Sum(x => x.Weight)
+            : supportRules.Sum(x => x.Weight);
         var observedSupportWeight = 0.0;
         var alignedSupport = 0.0;          // Σ weight*effective for non-contradictory support
         var contradictionMass = 0.0;

@@ -284,6 +284,7 @@ transmitted, Responder's static key Known to initiator). This pattern is chosen 
 - Forward secrecy: ephemeral keys from both parties contribute to the session keys.
 
 **Protocol name string:**
+
 ```
 Noise_IK_25519_XChaCha20Poly1305_BLAKE2s
 ```
@@ -293,6 +294,7 @@ Noise PSK mechanism. The PSK is placed at position 0 (mixed into the chaining ke
 before any DH operations), binding the handshake to the user's identity.
 
 **Modified protocol name with PSK:**
+
 ```
 Noise_IKpsk0_25519_XChaCha20Poly1305_BLAKE2s
 ```
@@ -377,6 +379,7 @@ ciphertext = XChaCha20-Poly1305(key, nonce, plaintext, associated_data)
 ```
 
 Where:
+
 - `key` is the 32-byte transport key
 - `counter` is a monotonically increasing 64-bit counter per direction, starting at 0
 - `associated_data` is the message header (see Section 3.2), which is authenticated but not encrypted
@@ -726,7 +729,7 @@ even if the transport key is reused across multiple messages.
 | Response Timestamp | 8 bytes | Unix timestamp in milliseconds (big-endian, 64-bit). Used for receipt verification and anti-replay. |
 | DNS Response | Variable | Standard DNS response wire format (RFC 1035 Section 4.1.1). Transaction ID set to 0. |
 | Resolution Receipt | Variable | Present only when `RECEIPT_REQUESTED` flag was set in query. See Section 6.2. |
-| Ed25519 Signature | 64 bytes | Present when response includes a receipt. Signs `response_timestamp || H(dns_response)`. |
+| Ed25519 Signature | 64 bytes | Present when response includes a receipt. Signs `response_timestamp \|\| H(dns_response)`. |
 
 ### 3.6 Session Establishment Flow (1-RTT)
 
@@ -819,6 +822,7 @@ Syxx Cipher supports parallel queries over a single session using a lightweight 
 multiplexing scheme inspired by QUIC streams but without QUIC's full transport complexity.
 
 **Stream ID allocation:**
+
 - Stream IDs are 16-bit unsigned integers (1 to 65535).
 - Client-initiated streams use odd IDs: 1, 3, 5, ...
 - Server-initiated streams (for push notifications, future use) use even IDs: 2, 4, 6, ...
@@ -997,6 +1001,7 @@ channel). The PSK is never transmitted over the network; it is mixed into the No
 handshake as a pre-shared key.
 
 **PSK generation requirements:**
+
 - MUST be generated from a cryptographically secure random number generator (CSPRNG)
 - MUST be exactly 32 bytes
 - MUST be unique per user per server
@@ -1021,6 +1026,7 @@ Name: my-syxx-server
 ```
 
 Binary payload (hex):
+
 ```
 C6                                              # Protocol ID
 4503000000000000                                # Properties (LE)
@@ -1035,6 +1041,7 @@ d4b1c8a7f2e39d04a5c6b7e8f1a2d3c4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a
 ```
 
 Stamp:
+
 ```
 cipher://zAUAAAAAAAAAAAAAEzIwMy4wLjExMy4xOjU0NDMg1LHIp_LjnQSlxrf
 o8aLTxOX2p7jJ0OHyo7TF1ueQCZogGiy7TNZebouccQ0uL3KpCxyjWtA1IzXlV
@@ -1052,6 +1059,7 @@ Name: private-resolver
 ```
 
 Stamp:
+
 ```
 cipher://zAMAAAAAAAAAAAAAEzE5OC41MS4xMDAuNDI6NTQ0MyChss
 vU5fanuMnQ4fKjtMX2CJERERMUFRUTFhcYGSAhICDtvu78
@@ -1301,6 +1309,7 @@ serialized in a compact binary format (not JSON) to minimize size within the fix
 
 **Signature verification:** The client verifies the block response signature using the
 server's Ed25519 public key (from the stamp). A valid signature proves:
+
 1. The block decision came from the server's policy engine (not injected by a MITM).
 2. The block reason and category are authentic.
 3. The server is accountable for the block decision (non-repudiation).
@@ -1311,6 +1320,7 @@ Analytics are opt-in and user-controlled. When enabled, the server logs query me
 for the user's dashboard:
 
 **Logged fields (when analytics enabled):**
+
 - Timestamp (server time)
 - QNAME (queried domain)
 - QTYPE (query type)
@@ -1321,6 +1331,7 @@ for the user's dashboard:
 - DNSSEC status
 
 **NOT logged:**
+
 - Client IP address
 - Client PSK or identity
 - Full DNS response content
@@ -1370,6 +1381,7 @@ The Syxx Cipher server performs full DNSSEC validation using a chain-of-trust mo
 derived from Unbound's architecture:
 
 **Trust anchor management:**
+
 - Root zone KSK (Key Signing Key) is the trust anchor.
 - Trust anchors are managed via automated root key rollover (following RFC 5011).
 - The server ships with the current root KSK embedded and updates via the standard
@@ -1395,6 +1407,7 @@ derived from Unbound's architecture:
 ```
 
 **BOGUS handling:** When DNSSEC validation returns BOGUS, the server:
+
 1. Sets `DNSSEC Status = 0x03` in the response.
 2. Includes an Extended DNS Error (EDE, RFC 8914) code explaining the failure.
 3. Returns the answer anyway (with the BOGUS status) so the client can decide whether
@@ -1437,6 +1450,7 @@ DelegationStep {
 ```
 
 **Client verification:**
+
 1. Verify `receipt_signature` using the server's Ed25519 public key.
 2. Verify `query_hash` matches the hash of the original query.
 3. Verify `response_hash` matches the hash of the received response.
@@ -1452,12 +1466,14 @@ Every response that includes a receipt is additionally signed with the server's 
 signing key (derived from the provider key or a separate attestation key).
 
 **What is signed:**
+
 ```
 signature_input = response_timestamp || BLAKE2s-256(dns_response_wire_format)
 signature = Ed25519_Sign(attestation_private_key, signature_input)
 ```
 
 **What this proves:**
+
 - The response was generated by the holder of the attestation private key.
 - The response content has not been modified since signing.
 - The timestamp is authentic (prevents replay of old responses).
@@ -1475,6 +1491,7 @@ When the client sets the `MULTIPATH_REQUESTED` flag, the server queries addition
 upstream resolvers and compares results:
 
 **Cross-reference process:**
+
 1. Server resolves the query through its normal recursive path.
 2. Server additionally queries 2-3 configured cross-reference resolvers (e.g., Cloudflare
    1.1.1.1, Google 8.8.8.8, Quad9 9.9.9.9) via DoH or DoT.
@@ -1500,6 +1517,7 @@ PathResult {
 ```
 
 **Client interpretation:**
+
 - `UNANIMOUS`: All paths returned identical answers. High confidence in answer integrity.
 - `MAJORITY`: Most paths agree. The primary result matches the majority. Moderate confidence.
 - `CONFLICT`: Paths disagree. Possible tampering on one or more paths. The client should
@@ -1552,6 +1570,7 @@ All protocol messages are padded to fixed sizes, eliminating size-based traffic 
 | Session Close | 10 bytes | Header + 2-byte close code. |
 
 **Wire size invariance:** An observer watching the encrypted traffic sees only:
+
 - Handshake: always 768B → 1280B
 - Queries: always 512B
 - Responses: always 1024B
@@ -1634,6 +1653,7 @@ mean `cover_interval_max_ms / 2`, truncated to `[cover_interval_min_ms, cover_in
 This prevents periodic patterns that would be detectable by Fourier analysis.
 
 **Server processing:** Cover queries are:
+
 - Decrypted normally (to verify they are legitimate client traffic)
 - Flagged as cover traffic via the `COVER_TRAFFIC` header flag
 - Returned with a synthetic NXDOMAIN response
@@ -1683,6 +1703,7 @@ Cipher supports an optional relay mode inspired by Anonymized DNSCrypt.
 ```
 
 **Anti-abuse measures:**
+
 - Relay MUST NOT modify the encrypted query payload.
 - Relay MUST NOT add, remove, or modify any bytes after the relay header.
 - Server enforces the same fixed-size constraints on relayed traffic.
@@ -1752,6 +1773,7 @@ server is a standalone process that:
 ### 8.2 Key Management
 
 **Provider Key (Ed25519):**
+
 - Generated once during server initialization: `syxx-cipherd init`.
 - Private key stored in `/etc/syxx-cipher/provider.key` with mode `0600`.
 - Recommended: store in HSM or hardware token (YubiKey, Nitrokey) for production.
@@ -1760,12 +1782,14 @@ server is a standalone process that:
 - Rotation: manual process, requires re-issuing all user stamps. Should be rare (years).
 
 **Server Key (X25519 ephemeral):**
+
 - Generated automatically on server start and rotated every 24 hours (configurable).
 - Signed certificate: `Ed25519_Sign(provider_private_key, server_public_key || serial || validity_period)`.
 - Old server keys are discarded after rotation (no longer needed).
 - Stored in memory only; never written to disk.
 
 **Per-User PSKs (32 bytes):**
+
 - Generated during user provisioning: `syxx-cipherd user add <name>`.
 - Stored in `users.db` (SQLite, encrypted at rest with server master key).
 - Each PSK is independent; rotating one user's PSK does not affect others.
@@ -1796,27 +1820,32 @@ server is a standalone process that:
 The server implements a multi-layer caching strategy derived from Unbound:
 
 **Layer 1: Message Cache**
+
 - Caches complete DNS response messages keyed by (QNAME, QTYPE, QCLASS).
 - TTL-based expiration following the response's minimum TTL.
 - Maximum cache size: configurable (default: 50 MB, ~500K entries).
 - Cache entries include DNSSEC validation status.
 
 **Layer 2: RRset Cache**
+
 - Caches individual resource record sets.
 - Enables partial cache hits (e.g., A record cached but AAAA requires new query).
 - Shared with the message cache for efficiency.
 
 **Layer 3: Key Cache**
+
 - Caches DNSKEY and DS records to accelerate DNSSEC validation.
 - Reduces the number of upstream queries needed for chain-of-trust validation.
 - TTL-based expiration following the DNSKEY/DS TTL.
 
 **Layer 4: Aggressive NSEC Cache**
+
 - Caches NSEC and NSEC3 records from negative responses.
 - Enables synthesis of negative answers for names within cached NSEC intervals (RFC 8198).
 - Significantly reduces upstream query volume for NXDOMAIN-heavy workloads.
 
 **Layer 5: Authority Zones (Optional)**
+
 - Complete zone copies loaded locally (e.g., root zone, commonly used TLDs).
 - Eliminates upstream queries for these zones entirely.
 - Updated via zone transfer (AXFR/IXFR) or HTTP fetch.
@@ -1828,16 +1857,19 @@ response time, so the client cannot distinguish cache state from response timing
 ### 8.4 Rate Limiting and Abuse Prevention
 
 **Per-session rate limiting:**
+
 - Maximum queries per second per session: 100 (configurable).
 - Exceeded queries receive an encrypted error response with code `0x05` (RATE_LIMITED).
 - Rate limiter uses a token bucket algorithm with burst allowance of 2x the rate limit.
 
 **Per-IP rate limiting:**
+
 - Maximum new sessions per minute per IP: 10 (configurable).
 - Prevents session-flooding attacks.
 - Exceeded connections are silently dropped (no error response).
 
 **Amplification prevention:**
+
 - Over UDP: the server ensures the response size never exceeds the query size by more
   than a factor of 2 (1024B response vs 512B query). This is within the acceptable
   amplification factor for DNS.
@@ -1846,6 +1878,7 @@ response time, so the client cannot distinguish cache state from response timing
   fixed sizes before forwarding, preventing the relay from being used as an amplifier.
 
 **Anti-enumeration:**
+
 - Failed handshake attempts (wrong PSK) are silently dropped with no error response.
 - The `BAD_HANDSHAKE` error is sent only for malformed messages, not for authentication
   failures, preventing PSK enumeration.
@@ -1857,6 +1890,7 @@ response time, so the client cannot distinguish cache state from response timing
 Syxx Cipher is designed to integrate with the Syxx Dimensions server for:
 
 **Leak Detection Integration:**
+
 - The Syxx Cipher server can serve as the leak detection collector endpoint.
 - `syxx leak` sends test queries through the Cipher protocol to verify that DNS traffic
   is routed through the expected path.
@@ -1864,12 +1898,14 @@ Syxx Cipher is designed to integrate with the Syxx Dimensions server for:
   collector-confirmed leak proof as the existing Syxx leak detection system.
 
 **Investigation API:**
+
 - `syxx mirror` can use a Syxx Cipher server as one of its vantage points for
   cross-vantage comparison.
 - The server provides resolution receipts that can be included in Syxx investigation
   reports as evidence of answer integrity.
 
 **Witness Integration:**
+
 - Resolution receipts and Ed25519-signed responses from Syxx Cipher can be incorporated
   into Syxx Witness signed evidence packages.
 - The Cipher server's attestation key can be registered as a trusted signer in the
@@ -1885,6 +1921,7 @@ The Syxx Cipher protocol provides the following security properties under the st
 assumptions for its cryptographic primitives:
 
 **Confidentiality (IND-CCA2):**
+
 - All query and response content is encrypted using XChaCha20-Poly1305, which provides
   IND-CCA2 security under the assumption that XChaCha20 is a secure PRF and Poly1305
   is a secure MAC.
@@ -1894,12 +1931,14 @@ assumptions for its cryptographic primitives:
   of long-term keys does not expose past session content.
 
 **Integrity (INT-CTXT):**
+
 - AEAD authentication provides ciphertext integrity: any modification of encrypted
   messages is detected.
 - Ed25519 signatures on responses and receipts provide additional integrity guarantees
   that survive beyond the session (non-repudiable).
 
 **Authentication:**
+
 - Server authentication: the client verifies the server's identity via the pinned Ed25519
   provider key in the stamp. The server proves possession of the corresponding private
   key by signing ephemeral certificates.
@@ -1907,6 +1946,7 @@ assumptions for its cryptographic primitives:
   the Noise handshake. No plaintext identity is transmitted.
 
 **Replay Resistance:**
+
 - Within a session: client nonces are tracked; duplicate nonces are rejected.
 - Across sessions: session tickets include a creation timestamp and are valid for a
   bounded period (default: 24 hours). The server tracks used tickets to prevent replay.
@@ -1931,6 +1971,7 @@ assumptions for its cryptographic primitives:
 | Formal verification | None | Noise_IK pattern has formal proofs |
 
 **Key improvements over DNSCrypt:**
+
 1. Per-user authentication without network-visible identity.
 2. Session-based operation eliminates per-query key exchange overhead.
 3. Non-repudiable response signatures enable third-party verification.
@@ -1985,6 +2026,7 @@ languages.
 **Scope:** Handshake, encryption, single-user operation.
 
 **Deliverables:**
+
 - Noise_IK handshake implementation (client and server)
 - XChaCha20-Poly1305 AEAD encryption for queries and responses
 - Fixed-size padding (512B queries, 1024B responses)
@@ -2017,6 +2059,7 @@ languages.
 | `Windows/Syxx.Kit/Cipher/CipherStamp.cs` | C# | Client-side stamp parser (parity) |
 
 **Dependencies:**
+
 - Python: `cryptography` or `PyNaCl` for X25519, Ed25519, XChaCha20-Poly1305
 - Swift: `CryptoKit` (native X25519, Ed25519); `swift-crypto` for XChaCha20-Poly1305
 - C#: `NSec` or `BouncyCastle` for X25519, Ed25519, XChaCha20-Poly1305
@@ -2024,6 +2067,7 @@ languages.
 **Estimated effort:** 3-4 weeks (1 full-time developer).
 
 **Verification:**
+
 - Handshake test vectors (known key pairs, verify derived session keys match)
 - Encryption test vectors (known plaintext, key, nonce → known ciphertext)
 - Round-trip test: encrypt query, decrypt on server, encrypt response, decrypt on client
@@ -2034,6 +2078,7 @@ languages.
 **Scope:** Multi-user authentication, policy configuration, structured block responses.
 
 **Deliverables:**
+
 - PSK-based user authentication in handshake
 - User provisioning CLI (`syxx-cipherd user add/remove/revoke`)
 - User database (SQLite)
@@ -2048,6 +2093,7 @@ languages.
 **Estimated effort:** 3-4 weeks.
 
 **Verification:**
+
 - Multi-user test: two users with different policies get different responses for the same query
 - Block test: query for known malware domain returns structured block response with valid signature
 - Allow test: query for allowlisted domain resolves even when blocklist would block it
@@ -2058,6 +2104,7 @@ languages.
 **Scope:** DNSSEC validation, resolution receipts, Ed25519 attestation.
 
 **Deliverables:**
+
 - Full DNSSEC chain-of-trust validation (root anchor → leaf)
 - DNSSEC status in response metadata
 - Resolution receipt generation and serialization
@@ -2070,6 +2117,7 @@ languages.
 **Estimated effort:** 4-5 weeks.
 
 **Verification:**
+
 - DNSSEC test: query for `dnssec.works` returns VALIDATED status
 - DNSSEC failure test: query for `fail01.dnssec.works` returns BOGUS status
 - Receipt test: verify receipt signature, verify delegation chain is complete and consistent
@@ -2081,6 +2129,7 @@ languages.
 **Scope:** Constant-time responses, cover traffic, relay support.
 
 **Deliverables:**
+
 - Constant-time response normalization with configurable target
 - Response jitter
 - Cover traffic client implementation
@@ -2092,6 +2141,7 @@ languages.
 **Estimated effort:** 2-3 weeks.
 
 **Verification:**
+
 - Timing test: measure response time variance across 1000 queries; verify standard deviation is within jitter range
 - Cover traffic test: verify cover queries are processed and discarded without logging
 - Relay test: verify server sees relay IP, not client IP; verify relay cannot decrypt queries
@@ -2102,6 +2152,7 @@ languages.
 **Scope:** Leak detection integration, investigation API, witness integration, post-quantum.
 
 **Deliverables:**
+
 - Syxx Cipher as leak detection collector endpoint
 - `syxx mirror` vantage point integration
 - Resolution receipt inclusion in Witness evidence packages
@@ -2112,6 +2163,7 @@ languages.
 **Estimated effort:** 3-4 weeks.
 
 **Verification:**
+
 - Leak test: `syxx leak` through Cipher protocol detects expected resolver IPs
 - Mirror test: `syxx mirror` includes Cipher server as vantage point, compares results
 - Witness test: Cipher resolution receipt passes Witness signature verification

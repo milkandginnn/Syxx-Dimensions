@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "witness-config-changes",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "configChanges": [
+      {"kind": "Resolvers changed", "detail": "192.0.2.1 -> 192.0.2.2"},
+      {"kind": "VPN state changed", "detail": "connected -> disconnected"}
+    ]
+  }
+}

@@ -60,6 +60,28 @@ public sealed class SectionInputs
     public ResponseSizeAudit? ResponseSize;
     /// Mirror · A2 server corroboration (Pro, additive).
     public GroundTruth? ServerGroundTruth;
+    /// B174: true when the system resolver was undetectable and a public substitute (e.g. 8.8.8.8)
+    /// was used instead. Under substitution Mirror's local-versus-public comparison degenerates —
+    /// local IS public — so `Conclude` caps the Mirror section at Degraded and the outcome can
+    /// never be clean on that evidence.
+    ///
+    /// F-01 (2026-08-05): this field and its cap existed only on the Swift side. Windows and Linux
+    /// had no substituted-resolver input and therefore no cap, so the same run could return a clean
+    /// Mirror section from evidence macOS treats as too degenerate to conclude from. Twin of
+    /// `macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:82`.
+    public bool ResolverSubstituted;
+    /// The OBSERVED DNS-transport state during this section's own query window — the third
+    /// transport question, distinct from the configured one (`Network.EncryptedDNS`) and the
+    /// reachability one (`EncryptedTransport`). The three can legitimately disagree and a
+    /// disagreement is itself a finding. `null` means not observed for this run, which is
+    /// undetermined — never "cleartext".
+    ///
+    /// F-02 (2026-08-05): added for structural parity with
+    /// `macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:67`. **Neither platform reads it yet** —
+    /// it is carried, not consumed, on macOS too, so no conclusion depends on it today. The field
+    /// is mirrored now precisely because the first code that starts reading it on one side would
+    /// otherwise create a silent behavioral divergence.
+    public DNSTransportWindow? TransportObservation;
 }
 
 public static class EvidenceAdapters
@@ -475,10 +497,17 @@ public static class EvidenceAdapters
                     }
                     else
                     {
+                        // K-16 COUPLING — the rationale below is load-bearing on the classifier.
+                        // It used to end "(benign CDN/geo routing is already excluded for a full
+                        // divergence)". That was only true because AuthoritativeVantage.Classify
+                        // softened a same-provider disjoint result to Inconclusive. K-16 removed that
+                        // softening (an attacker may sit inside the provider's own ASN), so a
+                        // `Diverges` can now legitimately carry a shared provider and the old claim
+                        // would be false. The wording states what is actually established.
                         ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.AuthoritativeDiverges,
                             "Recursive answer diverges from the domain's authoritative nameservers"
                                 + (ac.Nameservers is { Count: > 0 } ? $" ({string.Join(", ", ac.Nameservers.Take(2))})" : ""),
-                            "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite (benign CDN/geo routing is already excluded for a full divergence)."));
+                            "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite. CDN/geo routing can also produce this shape, including when both answers sit in one provider's ranges, so corroborate before concluding."));
                     }
                     subs.Add(SectionStatus.Positive);
                     break;
@@ -942,6 +971,18 @@ public static class Synthesizer
                 se.DatapointsObserved, se.DatapointsExpected));
             evidence.AddRange(se.Evidence);
             advisories.AddRange(se.Advisories);
+        }
+        // B174: when the system resolver was undetectable and a public substitute was used,
+        // the Mirror section's local-vs-public comparison degenerates (local IS public).
+        // Cap the Mirror section at Degraded so the result is never clean on substituted evidence.
+        // Twin of macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:772.
+        if (inputs.ResolverSubstituted)
+        {
+            var idx = statuses.FindIndex(s => s.Section == Section.Mirror);
+            if (idx >= 0 && statuses[idx].Status == SectionStatus.Negative)
+            {
+                statuses[idx] = statuses[idx] with { Status = SectionStatus.Degraded };
+            }
         }
         // The matrix determinative engine consumes evidence + section statuses directly. The old
         // DST-era extra inputs to `synthesize` (the answer-matrix, the decisive-act catalog, and the

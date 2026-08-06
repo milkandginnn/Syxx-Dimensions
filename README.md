@@ -1,7 +1,7 @@
 # Agentic Plugin Marketplace
 
-> Production-ready agentic workflow building blocks: **94 plugins**, **203 agents**,
-> **175 skills**, **109 commands** — built for Claude Code and consumed natively by
+> Production-ready agentic workflow building blocks: **94 plugins**, **164 agents**,
+> **175 skills**, **103 commands** — built for Claude Code and consumed natively by
 > OpenAI Codex CLI, Cursor, OpenCode, Gemini CLI, and GitHub Copilot from a single Markdown source.
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-native-blueviolet)](#claude-code) [![Codex CLI](https://img.shields.io/badge/Codex%20CLI-supported-black)](docs/harnesses.md) [![Cursor](https://img.shields.io/badge/Cursor-supported-purple)](docs/harnesses.md) [![OpenCode](https://img.shields.io/badge/OpenCode-supported-green)](docs/harnesses.md) [![Gemini CLI](https://img.shields.io/badge/Gemini%20CLI-supported-blue)](GEMINI.md) [![Copilot](https://img.shields.io/badge/Copilot-supported-lightgrey)](docs/harnesses.md)
@@ -126,7 +126,7 @@ uv run plugin-eval certify path/to/skill
 Detail lives in `docs/`. Read in this order:
 
 - **[docs/plugins.md](docs/plugins.md)** — full catalog of all 94 plugins
-- **[docs/agents.md](docs/agents.md)** — all 203 agents by category
+- **[docs/agents.md](docs/agents.md)** — all 164 agents by category
 - **[docs/agent-skills.md](docs/agent-skills.md)** — 175 skills with progressive disclosure
 - **[docs/usage.md](docs/usage.md)** — commands, workflows, examples
 - **[docs/architecture.md](docs/architecture.md)** — design principles

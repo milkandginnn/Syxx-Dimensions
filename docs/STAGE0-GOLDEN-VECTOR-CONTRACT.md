@@ -50,6 +50,7 @@
 ## Seed corpus = the NE1–NE7 failing scenarios as RED vectors
 
 Encode each confirmed defect as a fixture whose `expected` is the **design-correct** output and whose **current-engine output is wrong** (so it REDs today, GREENs when the fix lands). Minimum seed set:
+
 - NE1 Δ1 wash-to-CLEAN (above) · NE1 Δ2 two-mechanism confidence inversion (74→31) · NE2 Δ3 clean-support conflation · NE2 Δ5 / NE7 Δ2 invalidated laundered to negative · NE7 Δ1 critical-inconclusive→CLEAN · NE1 Δ4 / NE4 Δ1 captive-portal cancels confirmed redirection · NE3 Δ1 publicResolverResults dropped · NE6 Δ1 discrepancy display-only · NE5 Δ1 slow-resolver→false-censorship (macOS vs Windows divergence — a **parity** vector) · NE7 Δ5 rounding straddles the gate (boundary vector at `round(100·BetP)=74.5`).
 
 ## Never-false-secure invariant (universal — every vector, every phase)
@@ -63,6 +64,7 @@ Encode each confirmed defect as a fixture whose `expected` is the **design-corre
 - The **expected oracle** comes from the v2.1 design until the engine lands; when Claude ships `Conclusion`/`Report`, the runner asserts against the real output.
 
 ## Lanes
+
 - **Cline (CL-3):** builds the runner, the real captures, and the seed RED vectors to this schema. Owns `Server/**` + test-fixture files.
 - **Claude (engine):** owns this schema; lands the engine so the RED vectors go GREEN; sets `ε` from the Phase-0 bake-off.
 - If you need a schema field that isn't here, **flag it in your output** for Claude — do not redefine the schema unilaterally.

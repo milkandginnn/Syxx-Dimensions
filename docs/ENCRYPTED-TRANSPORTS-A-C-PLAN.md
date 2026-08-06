@@ -57,12 +57,15 @@ Every user-visible string in this plan is **proposed, not finalized** (§7); not
 **Anchor:** delta **E030** (`DELTAS.md:15888`, CONFIRMED, vetted; do NOT file a new delta). E030 Fix 1 (port the Windows enum as the sole verdict field) + Fix 2 (reject unknown decoded enum values) ARE the A0 work — **extended**: E030 only anticipated the existing `{Secure, Inconclusive}` shape and did not foresee the proven-downgrade case A1–A4 introduce. A0 therefore adds a third member for "an answer arrived but the encrypted-transport guarantee failed."
 
 **Files (verified):**
+
 - macOS `macOS/Sources/SyxxKit/DNSResolver.swift:192-198` — `struct SecureResolutionResponse` with two independent Bools `isSecure` / `isInconclusive` (the defect). Constructors at `:219-262` (`resolveSecurely`). **[corrected]** E030 cites `:191-197` / `:218-260`; live lines are `:192-198` / `:219-262`.
 - Windows `Windows/Syxx.Kit/DNSResolver.cs:65-69` — `enum SecureResolutionResult { Secure, Inconclusive }`; `:71-77` `class SecureResolutionResponse`; constructors `:223-282` (`ResolveSecurelyAsync`). **[corrected]** E030 cites `:213-268`; live enum is `:65-69`, consumers `:223-282`.
 - Consumers to migrate (small blast radius — no production caller today; only tests + the resolver itself): macOS test `macOS/Tests/SyxxKitTests/SyxxKitTests.swift:609-613` (`response.isSecure`); Windows test `Windows/Syxx.Tests/SyxxKitTests.cs:526-531` (`SecureResolutionResult.Inconclusive`).
 
 **Method signatures / types to add:**
+
 - macOS — replace the two Bools with one enum, the sole verdict field:
+
   ```swift
   public enum SecureResolutionResult: String, Codable, Sendable {
       case secure          // answer carried by a proven encrypted transport
@@ -85,22 +88,27 @@ Every user-visible string in this plan is **proposed, not finalized** (§7); not
       public let reason: String?
   }
   ```
+
 - Windows — extend the existing enum and reject unknown values on deserialize:
+
   ```csharp
   public enum SecureResolutionResult { Secure, Inconclusive, Unverifiable }
   // SecureResolutionResponse keeps Result/Records/Provenance/Reason; add a guarded
   // deserialization path (custom JsonConverter or Enum.IsDefined check) so an out-of-range
   // integer/string cannot decode to Secure or Inconclusive by default.
   ```
+
 - Rewrite `resolveSecurely` (`:242-248` success path) to `result: .secure`; loopback (`:223-229`), invalid-URL (`:232-238`), and catch (`:254-260`) paths to `.inconclusive`. **A0 introduces no `.unverifiable` producer yet** — that state is wired by A2/A3/A4 when a proven downgrade is detected. Windows `ResolveSecurelyAsync` mirrors: `:261-266`→`.Secure`, `:229-235`/`:253-259`/`:274-280`→`.Inconclusive`.
 
 **Honesty / fail-closed rules enforced:** retires the boolean-where-tri-state defect (both-true / both-false impossible states can no longer be decoded — honesty spine rule 3). Fix 2 makes a hostile/stale serialized verdict fail closed to a decode error, never a silent `.secure`. Cancellation still propagates (never becomes a verdict). No verdict path changes meaning for existing callers (loopback + transport-failure still read inconclusive — rule 2).
 
 **Pre-queued build/test:**
+
 ```
 swift build --package-path macOS && swift test --package-path macOS --filter SecureResolution
 dotnet build Windows/Syxx.sln && dotnet test Windows/Syxx.Tests/Syxx.Tests.csproj --filter FullyQualifiedName~ResolveSecurely
 ```
+
 Carry forward E030's **mandatory tests** on both platforms: (happy) DoH success → `.secure`; loopback + transport failure → `.inconclusive`; (failure) a malformed/unknown serialized state fails to decode into `.secure`/`.inconclusive`; cancellation propagates rather than becoming a verdict.
 
 **Real-data acceptance bar (E030's bar, carried forward):** run the production unified binary `swift build --package-path macOS --product syxx` then `./macOS/.build/debug/syxx nslook cloudflare.com A` against (1) a reachable DoH endpoint and (2) an intentionally unreachable endpoint (`--doh https://10.255.255.1/dns-query`). Honest output: reachable → verdict maps to `.secure` with real records; unreachable → `.inconclusive` with a reason, **never** an empty-but-secure answer. Windows: `dotnet run --project Windows/Syxx -- nslook cloudflare.com A` same two cases. Tests are the floor; this run is the bar.
@@ -114,6 +122,7 @@ Carry forward E030's **mandatory tests** on both platforms: (happy) DoH success 
 **Files (verified):** macOS `DNSResolver.swift:111-190` (`struct DNSResponse`: stored fields `112-131`, memberwise `init 133-159`, decode-tolerant `init(from:) 163-177`, `didFail 181-189`). Windows `DNSResolver.cs:88-120` (`class DNSResponse`, `DidFail 113-119`).
 
 **Types / fields to add (additive + defaulted, so every current call site and every persisted `DNSResponse` still decodes — mirror the existing `authorityRecords`/`edns` decode-tolerance at macOS `:167-168`, Windows `:96-99`):**
+
 ```swift
 public enum DNSTransport: String, Codable, Sendable {
     case udp, tcp, doh, dot, doq, doh3, unknown
@@ -127,6 +136,7 @@ public var wasDowngraded: Bool {                        // derived, not stored
     return served != .unknown && served != requestedTransport
 }
 ```
+
 Windows mirror: `public enum DNSTransport { Udp, Tcp, Doh, Dot, Doq, Doh3, Unknown }`; `RequestedTransport`/`ServedTransport?`/`NegotiatedProtocol?` auto-properties defaulted; `public bool WasDowngraded => ServedTransport is { } s && s != DNSTransport.Unknown && s != RequestedTransport;`.
 
 Add both to the decode-tolerant initializers (macOS `init(from:) :163-177` via `decodeIfPresent … ?? .udp` / `?? nil`; Windows defaulted auto-props already decode-tolerant).
@@ -136,10 +146,12 @@ Add both to the decode-tolerant initializers (macOS `init(from:) :163-177` via `
 **Honesty / fail-closed rules enforced (contract §3.1, §3.3):** the label reflects the transport that *actually carried* the answer, never what was requested. `servedTransport == .unknown` on any encrypted/DoH3 path forces the caller to treat the claim as inconclusive (feeds A0 `.inconclusive`). A proven downgrade to plaintext feeds A0 `.unverifiable`. No bare-bool transport flags anywhere.
 
 **Pre-queued build/test:**
+
 ```
 swift build --package-path macOS && swift test --package-path macOS --filter DNSResolver
 dotnet build Windows/Syxx.sln && dotnet test Windows/Syxx.Tests/Syxx.Tests.csproj --filter FullyQualifiedName~DNSResolver
 ```
+
 Add unit tests: a legacy-serialized `DNSResponse` (no transport fields) decodes with `servedTransport == nil`, `wasDowngraded == false`; a `.doh` requested / `.udp` served response has `wasDowngraded == true`.
 
 **Real-data acceptance bar:** `syxx nslook cloudflare.com A --doh` (existing flag) now prints `served: doh` for the real Cloudflare answer; a plain `syxx nslook cloudflare.com A @1.1.1.1` prints `served: udp`. A truncated answer that falls back to TCP prints `served: tcp` with `wasDowngraded=false` (both plaintext). No fabricated transport label appears when the field is genuinely unknown — it prints `served: unknown`, not a guess.
@@ -153,6 +165,7 @@ Add unit tests: a legacy-serialized `DNSResponse` (no transport fields) decodes 
 **Files (verified):** macOS clone `sendTCP` (`:1098-1150`) + `readTCPResponse` (`:1152-1182`) into `sendDoT`; new public `queryDoTDetailed`. Windows clone `SendTCPAsync` (`:955-977`) reusing `ReadExactAsync` (`:979-998`) into `SendDoTAsync`; new `QueryDoTDetailedAsync`. Pinning-posture pattern to mirror (NOT reuse): `CollectorTransportPinning` enum `LeakDetector.swift:10-17` (`enforced`/`notConfigured`/`failed`) and `CollectorPinning.decide` `:447-454`.
 
 **Method signatures:**
+
 ```swift
 // macOS
 public static func queryDoTDetailed(name: String, type: UInt16, server: String,
@@ -160,11 +173,13 @@ public static func queryDoTDetailed(name: String, type: UInt16, server: String,
 private static func sendDoT(_ framed: Data, to server: String, port: UInt16,
     sni: String, pins: Set<String>) async throws -> (data: Data, pinning: TransportPinning, tlsVersion: String?)
 ```
+
 ```csharp
 // Windows
 public static Task<DNSResponse> QueryDoTDetailedAsync(string name, ushort type, string server,
     ushort port = 853, string sni = null, ISet<string> pins = null);
 ```
+
 - macOS transport: `NWParameters(tls: tlsOpts, tcp: .init())` to `server:853`; `tlsOpts = NWProtocolTLS.Options()`; `sec_protocol_options_set_tls_server_name(sec, sni)`; ALPN via `sec_protocol_options_add_tls_application_protocol(sec, "dot")`; **fail-closed** `sec_protocol_options_set_verify_block` that runs system trust evaluation and, when `pins` is non-empty, additionally requires the leaf SPKI pin (reuse `CollectorPinning.spkiPin(forCertificateDER:)` `LeakDetector.swift:435` and `.decide` logic `:447-454`, but a **new** `sec_protocol` verify block — the D003 URLSession delegate does not apply to NWConnection, per contract note and program plan `:181`). Same 2-byte length-prefix framing as `sendTCP` (`:1100-1106`).
 - Windows transport: `SslStream` over `TcpClient` to `:853`; `SslClientAuthenticationOptions { TargetHost = sni, ApplicationProtocols = [ new("dot") ], RemoteCertificateValidationCallback = <fail-closed> }`; **never** a permissive callback that returns `true` — validate `sslPolicyErrors == None` first, then optional pin check; reuse `ReadExactAsync` + length prefix (`:968-974`).
 
@@ -175,6 +190,7 @@ Add a transport-pinning posture field to the returned `DNSResponse` (or a siblin
 **Honesty / fail-closed rules (contract §3.2, §3.4):** handshake/cert/SNI/timeout → `.transportError`/`.inconclusive`, never success. No permissive TLS callback on either stack. **No encrypted-to-plaintext fallback** — DoT must NOT copy the UDP→TCP fallback; if the TLS path fails it returns inconclusive, it does not retry over Do53. On success stamp `requestedTransport=.dot`, `servedTransport=.dot`, `negotiatedProtocol="TLS1.3"` (read from `sec_protocol_metadata` / `SslStream.NegotiatedCipherSuite`+`SslProtocol`). If ALPN negotiated something other than "dot" or the peer offered no TLS, stamp `servedTransport=.unknown` → inconclusive.
 
 **Pre-queued build/test:**
+
 ```
 swift build --package-path macOS && swift test --package-path macOS --filter DoT
 dotnet build Windows/Syxx.sln && dotnet test Windows/Syxx.Tests/Syxx.Tests.csproj --filter FullyQualifiedName~DoT
@@ -195,11 +211,13 @@ openssl s_client -connect 1.1.1.1:853 -servername cloudflare-dns.com -alpn dot <
 **The RFC 9250 ID-0 trap (load-bearing).** RFC 9250 §4.2.1: *"the Message ID field of the DNS message SHOULD be set to 0. The stream mapping ... allows for unambiguous correlation."* Today the builder randomizes the ID and the parser rejects mismatches (macOS `:654`, Windows `:459`) — a compliant DoQ resolver echoes ID 0, so a randomized-ID query would make the honest answer look spoofed (`.responseIdMismatch`). Fix: a DoQ builder that forces ID 0, and parse with `expectedTransactionID: 0` (macOS) / `expectedTransactionId: 0` (Windows). Correlation is guaranteed by QUIC stream binding (one query per client-initiated bidirectional stream) + the existing `responseQuestionMatches` check (macOS `~:1020-1035`, Windows `~:426`), not by the DNS ID.
 
 **Method signatures:**
+
 ```swift
 // macOS — @available(macOS 15.0, *)
 public static func queryDoQDetailed(name: String, type: UInt16, server: String,
     port: UInt16 = 853, sni: String, pins: Set<String> = []) async -> DNSResponse
 ```
+
 macOS transport (spike-proven): `let q = NWProtocolQUIC.Options(alpn: ["doq"]); q.direction = .bidirectional; q.idleTimeout = 5000;` fail-closed verify block on `q.securityProtocolOptions` (system trust + optional SPKI pin, same `CollectorPinning.decide` logic, new `sec_protocol` verify block — NOT the URLSession pin); `NWConnectionGroup(with: NWMultiplexGroup(to: .hostPort(host, 853)), using: NWParameters(quic: q))`; `NWConnection(from: group)` for the client-initiated stream; send the length-prefixed DoQ message (RFC 9250 uses the 2-byte length prefix, same framing as DoT/TCP); `receiveMessage`; read `context.protocolMetadata(definition: NWProtocolQUIC.definition) as? NWProtocolQUIC.Metadata` and require `metadata.negotiatedALPN == "doq"` as the honest proof.
 
 ```csharp
@@ -207,6 +225,7 @@ macOS transport (spike-proven): `let q = NWProtocolQUIC.Options(alpn: ["doq"]); 
 public static Task<DNSResponse> QueryDoQDetailedAsync(string name, ushort type, string server,
     ushort port = 853, string sni = null, ISet<string> pins = null);
 ```
+
 Windows transport: `if (!QuicConnection.IsSupported) return DNSResponse{ Status=TransportError, ServedTransport=Unknown, ErrorMessage="DoQ unsupported on this host" }` → **`.untested`/inconclusive, never fail-silent** (requires msquic: Win11 22H2+ or app-local). `QuicClientConnectionOptions { DefaultStreamErrorCode=…, DefaultCloseErrorCode=…, RemoteEndPoint=new(IPAddress.Parse(server),853), ClientAuthenticationOptions = new(){ ApplicationProtocols=[ new SslApplicationProtocol("doq") ], TargetHost=sni, RemoteCertificateValidationCallback=<fail-closed> } }`; `await QuicConnection.ConnectAsync(...)`; `await conn.OpenOutboundStreamAsync(QuicStreamType.Bidirectional)`; write length-prefixed message; read; prove `stream`/`conn.NegotiatedApplicationProtocol == "doq"`.
 
 **Gating (PAID):** identical to A2 (`isFeatureUnlocked` / `IsFeatureUnlockedAsync`, server-validated, at the call site).
@@ -214,12 +233,14 @@ Windows transport: `if (!QuicConnection.IsSupported) return DNSResponse{ Status=
 **Honesty / fail-closed rules:** ID 0 built and expected (proves the fix). No permissive TLS callback. No fallback to plaintext or to DoT. Handshake/idle-timeout/ALPN-mismatch → `.inconclusive`. Where the QUIC stack is unavailable → `.untested`/inconclusive, never a fabricated result. On success stamp `requestedTransport=.doq`, `servedTransport=.doq`, `negotiatedProtocol="doq"` (from `negotiatedALPN`); if `negotiatedALPN != "doq"` stamp `.unknown` → inconclusive.
 
 **Pre-queued build/test:**
+
 ```
 swift build --package-path macOS && swift test --package-path macOS --filter DoQ
 dotnet build Windows/Syxx.sln && dotnet test Windows/Syxx.Tests/Syxx.Tests.csproj --filter FullyQualifiedName~DoQ
 # cross-check the live endpoint independently:
 kdig +tls +quic @94.140.14.14 cloudflare.com A
 ```
+
 Tests (floor): a DoQ builder emits header bytes `00 00` for the ID; the parser with `expectedTransactionID: 0` accepts an ID-0 answer and does NOT return `.responseIdMismatch`; on Windows where `QuicConnection.IsSupported == false` the path returns the untested/inconclusive result, not an exception.
 
 **Real-data acceptance bar:** `queryDoQDetailed("cloudflare.com", A, server:"94.140.14.14", sni:"unfiltered.adguard-dns.com")` via paid-unlocked `syxx nslook cloudflare.com A --doq @94.140.14.14`. Honest success: non-empty records, `servedTransport=.doq`, `negotiatedProtocol="doq"`. **Failure case #1 (proves the ID-0 fix shipped):** a compliant resolver must NOT report `.responseIdMismatch`. **Failure case #2:** blocked :853/udp → inconclusive, never clean. **Windows-specific:** on a host without msquic, output is the untested/inconclusive state, not a crash or a false clean. Record the DoQ-macOS ledger status as `[code-complete]` until this run passes on hardware, then `[done]`; if the runtime handshake fails, `[untested]`.
@@ -233,16 +254,20 @@ Tests (floor): a DoQ builder emits header bytes `00 00` for the ID; the parser w
 **Files (verified):** macOS `dohSession` (`:204-210`) + `queryDoHDetailed` (`:334-371`) — add an h3 variant `queryDoH3Detailed`. Windows `_httpClient` (`:124-127`) + `QueryDoHDetailedAsync` (`:289-331`) — add `QueryDoH3DetailedAsync`. Reuse the **D003 URLSession/HttpClient pin here** (it DOES apply to DoH3, unlike DoT/DoQ): macOS `LeakDetector.makeCollectorSession(pins:)` `:101-108` + `CollectorPinningDelegate` `:512`.
 
 **Method signatures:**
+
 ```swift
 // macOS
 public static func queryDoH3Detailed(name: String, type: UInt16, url: URL,
     pins: Set<String> = []) async -> DNSResponse
 ```
+
 macOS: build the request as in `queryDoHDetailed` (`:345-350`) but set **`request.assumesHTTP3Capable = true`** (verified API — NOT on the config). Use a session with a `URLSessionTaskDelegate` capturing `urlSession(_:task:didFinishCollecting:)` → `metrics.transactionMetrics.last?.networkProtocolName`. **Prove h3:** label `servedTransport=.doh3` / `negotiatedProtocol="h3"` **only** when that token equals `"h3"`; if it is `"h2"`/`"http/1.1"` → `servedTransport=.doh` + `wasDowngraded=true` (requested `.doh3`, served `.doh`), which A0 maps to `.unverifiable` for a DoH3 claim.
+
 ```csharp
 // Windows
 public static Task<DNSResponse> QueryDoH3DetailedAsync(string name, ushort type, string dohUrl, ISet<string> pins = null);
 ```
+
 Windows: `request.Version = HttpVersion.Version30; request.VersionPolicy = HttpVersionPolicy.RequestVersionExact;` (forces h3 — the honest choice; RequestVersionOrLower would silently downgrade). **Prove h3:** `response.Version == HttpVersion.Version30` (i.e. `3.0`); otherwise stamp `.doh` + downgraded.
 
 **Gating: FREE.** No license check — DoH3 is available to everyone.
@@ -250,12 +275,14 @@ Windows: `request.Version = HttpVersion.Version30; request.VersionPolicy = HttpV
 **Honesty / fail-closed rules (contract §3.1, honesty crux):** "we asked for h3" ≠ "the answer came over h3." An on-path attacker can strip Alt-Svc to hold the client on h2; DoH3 is labeled ONLY when the metric/version proves h3, else it is honest DoH-over-h2 (still TLS, not h3) and marked downgraded. TLS failure → `.transportError`/inconclusive; reuse the fail-closed pin delegate; no permissive callback.
 
 **Pre-queued build/test:**
+
 ```
 swift build --package-path macOS && swift test --package-path macOS --filter DoH3
 dotnet build Windows/Syxx.sln && dotnet test Windows/Syxx.Tests/Syxx.Tests.csproj --filter FullyQualifiedName~DoH3
 # confirm the endpoint really offers h3:
 curl -sI --http3-only https://cloudflare-dns.com/dns-query | head -1
 ```
+
 Tests (floor): given a stubbed metrics token `"h2"`, the classifier returns `servedTransport=.doh` + `wasDowngraded=true`, NOT `.doh3`; given `"h3"`, returns `.doh3`.
 
 **Real-data acceptance bar:** `queryDoH3Detailed("cloudflare.com", A, url: https://cloudflare-dns.com/dns-query)` via `syxx nslook cloudflare.com A --doh3`. Honest success: non-empty records AND `networkProtocolName == "h3"` (macOS) / `response.Version == 3.0` (Windows) → `served: doh3`. **Failure case:** an Alt-Svc-stripped / h2-only host (or a proxy that blocks UDP/443) → `served: doh`, `wasDowngraded=true`, and the DoH3 claim reads inconclusive — **never** a green "DoH3" label without the metric.
@@ -267,11 +294,13 @@ Tests (floor): given a stubbed metrics token `"h2"`, the classifier returns `ser
 ## Step C — Resolver profiles: struct, persistence, selection, routing, Unbound template
 
 **Files (verified — note the persistence gap):**
+
 - macOS `SyxxConfig.swift:3-37` is an **enum with no persistence** (static consts + a `dimensionBaseURL` computed off `UserDefaults` key `"dimension_base_url"` at `:12-15`). Windows `SyxxConfig.cs:7-46` is a **static class with no persistence** (env-var-backed `DimensionBaseURL` at `:44-45`). **There is no existing profile/selection store on either platform.** The program plan's "selection persisted in `SyxxConfig`" therefore requires *adding* a persistence mechanism, not just a field. **[design decision — see Risks]**
 - License gate: macOS `LicenseManager.isFeatureUnlocked()` `:210`; Windows `LicenseManager.IsFeatureUnlockedAsync()` `:483`.
 - Routing consumers: the A transports (A2/A3/A4) + `EncryptedTransportProbe` (macOS `.swift:42-48`, Windows `.cs:21-30`) and its callers (`ProbePlan.swift:167-169`, `ProbePlan.cs:171-172`, `SyxxCLI.swift:412`, `Program.cs:453`).
 
 **Types to add (both platforms, mirrored):**
+
 ```swift
 public struct ResolverProfile: Codable, Sendable, Equatable {
     public let id: String                 // stable key, e.g. "cloudflare", "nextdns"
@@ -283,9 +312,11 @@ public struct ResolverProfile: Codable, Sendable, Equatable {
     public var isPaid: Bool { transport == .dot || transport == .doq }  // DoH3 free
 }
 ```
+
 Built-in presets (endpoints are factual, not user copy): Cloudflare (`1.1.1.1` / `cloudflare-dns.com`), Quad9 (`9.9.9.9`), Google (`8.8.8.8` / `dns.google`), AdGuard (`94.140.14.14`), Mullvad (`dns.mullvad.net`), NextDNS (per-user config id), OpenDNS (`208.67.222.222`). Display **names** are user-visible → §7 approval.
 
 **Persistence + selection (recommended shape — see Risks for the open decision):**
+
 ```swift
 // macOS: persist the selected profile id via UserDefaults, same pattern as dimension_base_url
 public static var selectedResolverProfileID: String? {
@@ -293,34 +324,42 @@ public static var selectedResolverProfileID: String? {
     set { UserDefaults.standard.set(newValue, forKey: "selected_resolver_profile") }
 }
 ```
+
 ```csharp
 // Windows: persist to %APPDATA%\Syxx\config.json (JsonSerializer), since SyxxConfig has no store today.
 public static string? SelectedResolverProfileID { get; set; }   // loaded/saved from config.json
 ```
+
 Custom profiles (NextDNS config id, arbitrary endpoint) serialize into the same store.
 
 **Routing + gating:** a resolver `resolve(name, type, via profile)` dispatcher selects the A transport by `profile.transport`; if `profile.isPaid`, gate on `isFeatureUnlocked`/`IsFeatureUnlockedAsync` **before** dispatch and return `.inconclusive` with the paid-gate reason when locked. Free (DoH3) profiles route with no gate. The selected profile feeds `EncryptedTransportProbe.probe(endpoint:)` so Portal reports the encrypted path of the *chosen* resolver.
 
 **Unbound forward-over-DoT template (consumed by sub-project E):**
+
 ```swift
 public static func unboundForwardOverDoTConfig(for profile: ResolverProfile) -> String
 ```
+
 emits (only valid for a DoT profile; guard `profile.transport == .dot`):
+
 ```
 forward-zone:
     name: "."
     forward-tls-upstream: yes
     forward-addr: <endpoint>@853#<sni>
 ```
+
 A DoH3/DoQ profile has no Unbound forward-over-DoT representation → return nil / throw, never emit a plaintext `forward-addr` (that would silently drop the encryption E is supposed to provide).
 
 **Honesty / fail-closed rules:** a paid profile selected without an unlock must NOT silently fall back to a free transport or to Do53 — it returns inconclusive with the gate reason. Selecting a profile does not itself claim "engaged/encrypted"; only a live resolution through it, proven by A's `servedTransport`, does (contract §3.1). The UI frames profiles as *trusted third parties*, not Syxx-verified recursion (`DESIGN.md:325`). The generated Unbound template is inert config text — E owns proving the resolver actually came up (its own tri-state health).
 
 **Pre-queued build/test:**
+
 ```
 swift build --package-path macOS && swift test --package-path macOS --filter ResolverProfile
 dotnet build Windows/Syxx.sln && dotnet test Windows/Syxx.Tests/Syxx.Tests.csproj --filter FullyQualifiedName~ResolverProfile
 ```
+
 Tests (floor): a DoH3 profile has `isPaid==false`; a DoT/DoQ profile `isPaid==true`; the Unbound template for Cloudflare-DoT contains `forward-tls-upstream: yes` and `1.1.1.1@853#cloudflare-dns.com`; the template generator refuses a DoH3 profile.
 
 **Real-data acceptance bar:** select the Cloudflare-DoH3 (free) profile → `syxx nslook cloudflare.com A --profile cloudflare` resolves and prints `served: doh3` (proven by A4). Select a DoT profile while **locked** → the probe reports the paid-gate message and does NOT resolve over Do53. Select AdGuard-DoQ while **unlocked** → resolves with `served: doq` against `94.140.14.14`. Generate the Unbound forward-over-DoT config for a DoT profile and confirm it is textually valid (spot-check with `unbound-checkconf` in sub-project E's scope). The bar is the real routed resolution reporting the *proven* transport, not a config write.

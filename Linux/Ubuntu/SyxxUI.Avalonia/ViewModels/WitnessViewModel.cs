@@ -36,7 +36,7 @@ public enum WitnessTestimonyState
 /// via the shared <see cref="WitnessKeyStore"/>, backed on Linux by <see cref="LinuxSecretStore"/>
 /// (system keyring, or an encrypted file when the keyring is unavailable) — so the same identity
 /// signs every testimony, and only the PUBLIC identity (public key + key id) is ever displayed; the
-/// private key never appears on screen.
+/// private key is masked with a password character in the import field and never displayed in cleartext.
 ///
 /// The same forensic verification also runs over an externally-supplied testimony via
 /// <see cref="VerifyExternalCommand"/> (paste JSON), driven through the identical severity switch as
@@ -65,9 +65,28 @@ public partial class WitnessViewModel : ObservableObject
     [ObservableProperty] private IBrush _verifyBrush = Brushes.Gray;
 
     /// The testimony JSON a user pastes to verify a seal made elsewhere (drives
-    /// <see cref="VerifyExternalCommand"/>). Kept separate from the self-verify path; both render
-    /// into the shared <see cref="VerifyLine"/> / <see cref="VerifyBrush"/>.
+    /// <see cref="VerifyExternalCommand"/>). Kept separate from the self-verify path.
     [ObservableProperty] private string _externalSnapshotJson = "";
+
+    /// G-14: external-verify result message, rendered in its own TextBlock below the verify button
+    /// so that a user who only opens the app to check someone else's testimony sees the conclusion
+    /// without needing to trigger a self-sign first. Separate from <see cref="VerifyLine"/> so the
+    /// two output sinks cannot overwrite each other (also helps with G-12 stale-snapshot concerns).
+    [ObservableProperty] private string _externalVerifyLine = "";
+    [ObservableProperty] private IBrush _externalVerifyBrush = Brushes.Gray;
+
+    /// 5(c): the base64 Ed25519 private key a user pastes to import (bring-your-own-key), bound to the
+    /// import TextBox. Cleared once persisted so the secret does not linger in the input.
+    [ObservableProperty] private string _importKeyText = "";
+
+    /// 5(c): result of the last import attempt (success or the specific failure reason). Rendered on
+    /// its own status line so a failed import is never mistaken for a saved one.
+    [ObservableProperty] private string _importStatusLine = "";
+    [ObservableProperty] private IBrush _importStatusBrush = Brushes.Gray;
+
+    /// 5(b): the most recent successfully-sealed snapshot, retained so <see cref="SelfVerifyCommand"/>
+    /// can re-run the forensic verification over it. Null until the first successful seal.
+    private WitnessSnapshot? _lastSnapshot;
 
     /// D105: the answer-redirection drift implied by the SAME comparison that was just signed —
     /// <c>null</c> when no redirection was detected, otherwise the <see cref="AnswerDrift"/> derived
@@ -135,15 +154,28 @@ public partial class WitnessViewModel : ObservableObject
     /// Production key source: load the persisted Ed25519 private key, or mint one and persist it via
     /// the shared <see cref="WitnessKeyStore"/> (LinuxSecretStore-backed on Linux). Load-or-create so
     /// the first sign establishes a durable identity and every later launch reuses it.
+    ///
+    /// RG-2: routes through <see cref="WitnessKeyStore.LoadKeyResult"/> so a transient store outage is
+    /// never mistaken for "no key". Present → reuse; Absent → mint-and-persist (first run); Undetermined
+    /// → throw <see cref="WitnessKeyStoreUnavailableException"/> and NEVER mint/overwrite — the identity
+    /// exists and is simply out of reach (keyring locked, headless/SSH). The old code treated
+    /// <c>LoadKey() == null</c> as Absent and silently rotated the identity on any store hiccup.
     private static string LoadOrCreatePersistentSigningKey()
     {
-        var priv = WitnessKeyStore.HasKey ? WitnessKeyStore.LoadKey() : null;
-        if (priv is null)
+        var result = WitnessKeyStore.LoadKeyResult();
+        switch (result.Presence)
         {
-            (priv, _) = WitnessSigner.GenerateKeyPair();
-            WitnessKeyStore.SaveKey(priv);
+            case KeyPresence.Present:
+                return result.Key!;
+            case KeyPresence.Absent:
+                var (priv, _) = WitnessSigner.GenerateKeyPair();
+                WitnessKeyStore.SaveKey(priv);
+                return priv;
+            default: // Undetermined — a key exists but the store is unreachable. Do not touch it.
+                throw new WitnessKeyStoreUnavailableException(
+                    "The witness signing key exists but the secure store could not be reached; "
+                    + "refusing to overwrite the persisted identity.");
         }
-        return priv;
     }
 
     // Forensic-severity brushes shared by self-verify and external verify. 3-tier, parity with the
@@ -154,6 +186,33 @@ public partial class WitnessViewModel : ObservableObject
     private static readonly IBrush ValidBrush = new SolidColorBrush(Color.Parse("#3FD08A"));
     private static readonly IBrush CautionBrush = new SolidColorBrush(Color.Parse("#F2B33D"));
     private static readonly IBrush CriticalBrush = new SolidColorBrush(Color.Parse("#FF4D6D"));
+
+    // ── Proposal-gated user copy (RG-2 store-unreachable, bring-your-own-key, self-verify) ─────────
+    // Distinct from the generic "Could not access the signing key" branch: this reassures the user
+    // their identity is intact and points at the real fix (unlock the keyring / run with a session),
+    // instead of implying the key is lost or must be re-created.
+    internal const string KeyStoreUnavailableMessage =
+        "Your signing key is stored on this machine, but the secure store could not be reached "
+        + "(keyring locked, or unavailable over SSH/headless). Your existing identity is untouched — "
+        + "unlock the keyring and try again.";
+
+    internal const string ImportKeyEmptyMessage =
+        "Paste your base64 Ed25519 signing key above, then choose Save signing key.";
+    internal const string ImportKeyInvalidMessage =
+        "That is not a valid Ed25519 signing key. An Ed25519 private key is exactly 32 bytes, written "
+        + "as base64. Nothing was saved.";
+    internal const string ImportKeySaveFailedMessage = "Could not save the signing key.";
+    internal const string ImportKeySuccessMessage =
+        "Signing key saved. This identity will now sign every testimony on this machine.";
+
+    internal const string SelfVerifyNoSnapshotMessage =
+        "Seal a testimony first — there is no last seal to re-verify yet.";
+
+    /// G-12 Route B: shown when the retained seal belongs to a different domain than the one now
+    /// entered. Deliberately contains no form of the word "Verified" — this line renders beside the
+    /// CURRENT domain, and any positive-sounding word here reads as a claim about it.
+    internal const string SelfVerifyDomainMismatchFormat =
+        "The last seal belongs to {0}, not {1}. Seal {1} first to check it.";
 
     // Canonical snapshot reader options — the SAME contract the CLI verify path and the golden-vector
     // tests use (WitnessCommand.cs / WitnessCrossPlatformGoldenVectorTests.cs). The date/status wire
@@ -208,6 +267,14 @@ public partial class WitnessViewModel : ObservableObject
         // to an unsigned or ephemerally-signed seal.
         string priv;
         try { priv = _loadOrCreateSigningKey(); }
+        // RG-2: a key EXISTS but the store is unreachable. This is caught BEFORE the generic branch so
+        // it renders a DISTINCT message — the identity is intact, not lost — and it is impossible for
+        // this path to have minted/overwritten a key (LoadOrCreatePersistentSigningKey threw instead).
+        catch (WitnessKeyStoreUnavailableException)
+        {
+            SignatureLine = KeyStoreUnavailableMessage;
+            TestimonyState = WitnessTestimonyState.Failed; return;
+        }
         catch (System.Exception ex)
         {
             SignatureLine = ErrorPresenter.Compose(
@@ -225,6 +292,11 @@ public partial class WitnessViewModel : ObservableObject
                 "Signing failed.", ErrorPresenter.UserDetail(ex, "witness.sign"));
             TestimonyState = WitnessTestimonyState.Failed; return;
         }
+
+        // 5(b): retain the last successfully-sealed snapshot so the user can re-verify it on demand
+        // (SelfVerifyCommand) without re-resolving/re-signing. Only a genuine seal updates it, so
+        // "Re-verify last seal" always re-checks the most recent real testimony.
+        _lastSnapshot = snap;
 
         SignatureLine = $"Sealed. Signature: {Truncate(snap.Signature, 44)}";
         // Show the PUBLIC identity only — anyone can verify with it, and it discloses nothing secret.
@@ -249,18 +321,20 @@ public partial class WitnessViewModel : ObservableObject
 
     /// <summary>
     /// #22: verify an externally-supplied testimony (paste the snapshot JSON). Deserializes with the
-    /// canonical reader contract and routes the outcome through the identical severity switch as
-    /// self-verify, so a third party's seal is judged by exactly the same rules and rendered into the
-    /// shared <see cref="VerifyLine"/> / <see cref="VerifyBrush"/>. Synchronous: parsing and Ed25519
-    /// verification are fast and CPU-bound, matching the inline self-verify above (no await work).
+    /// canonical reader contract and routes the outcome through <see cref="ApplyExternalVerification"/>,
+    /// which uses the identical severity switch as self-verify so a third party's seal is judged by
+    /// exactly the same rules, but renders into <see cref="ExternalVerifyLine"/> /
+    /// <see cref="ExternalVerifyBrush"/> so the conclusion is visible without a prior self-sign.
+    /// Synchronous: parsing and Ed25519 verification are fast and CPU-bound, matching the inline
+    /// self-verify above (no await work).
     /// </summary>
     [RelayCommand]
     private void VerifyExternal()
     {
         if (string.IsNullOrWhiteSpace(ExternalSnapshotJson))
         {
-            VerifyLine = "Paste a signed testimony (JSON) above, then verify it.";
-            VerifyBrush = CautionBrush;
+            ExternalVerifyLine = "Paste a signed testimony (JSON) above, then verify it.";
+            ExternalVerifyBrush = CautionBrush;
             return;
         }
 
@@ -273,14 +347,120 @@ public partial class WitnessViewModel : ObservableObject
         catch (JsonException)
         {
             // Unreadable input is a critical-tier outcome, not a cautionary one: we render it as
-            // MalformedInput rather than guessing a verdict for bytes we could not parse.
-            ApplyVerification(SnapshotVerification.MalformedInput);
+            // MalformedInput rather than guessing a result for bytes we could not parse.
+            ApplyExternalVerification(SnapshotVerification.MalformedInput);
             return;
         }
 
-        ApplyVerification(snapshot is null
+        ApplyExternalVerification(snapshot is null
             ? SnapshotVerification.MalformedInput
             : WitnessSigner.VerifySnapshotDetailed(snapshot));
+    }
+
+    /// <summary>
+    /// G-14: external-verify counterpart of <see cref="ApplyVerification"/>. Uses the same severity
+    /// switch and message wording so a third-party seal is judged by identical rules, but writes to
+    /// <see cref="ExternalVerifyLine"/> / <see cref="ExternalVerifyBrush"/> so the conclusion is
+    /// visible in the external-verify panel regardless of whether a self-sign has occurred.
+    /// </summary>
+    internal void ApplyExternalVerification(SnapshotVerification result)
+    {
+        ExternalVerifyLine = result switch
+        {
+            SnapshotVerification.Valid => "Verified: the seal is valid and the testimony is intact.",
+            SnapshotVerification.Expired => "Expired: an honest but out-of-date seal (not forged).",
+            SnapshotVerification.Stale => "Stale: older than the freshness window.",
+            SnapshotVerification.FutureDated => "Future-dated: rejected (clock skew beyond tolerance).",
+            SnapshotVerification.UntrustedSigner => "Signature valid, but the signer is not in the trust set.",
+            SnapshotVerification.DisplayMismatch => "Display mismatch: the shown values do not match the signed bytes.",
+            SnapshotVerification.InvalidSignature => "INVALID signature: the seal does not verify (tampering).",
+            SnapshotVerification.UnsupportedFormat => "Unsupported format: this testimony version cannot be read.",
+            SnapshotVerification.MalformedInput => "Could not read that as a signed testimony (malformed input).",
+            _ => "Could not verify (inconclusive)."
+        };
+        ExternalVerifyBrush = result switch
+        {
+            SnapshotVerification.Valid => ValidBrush,
+            SnapshotVerification.Expired or SnapshotVerification.Stale => CautionBrush,
+            _ => CriticalBrush,
+        };
+    }
+
+    /// <summary>
+    /// 5(c) bring-your-own-key: persist a user-supplied base64 Ed25519 signing key via the shared
+    /// <see cref="WitnessKeyStore.SaveKey"/>, which validates with the SAME
+    /// <see cref="WitnessSigner.ValidatePrivateKey"/> the signer uses before writing anything. On an
+    /// invalid key nothing is persisted and the failure is surfaced on <see cref="ImportStatusLine"/>;
+    /// the method returns without proceeding. On success the input is cleared so the raw secret does
+    /// not linger on screen, and the status line confirms the identity is now saved.
+    /// </summary>
+    [RelayCommand]
+    private void ImportKey()
+    {
+        var trimmed = (ImportKeyText ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            ImportStatusLine = ImportKeyEmptyMessage;
+            ImportStatusBrush = CautionBrush;
+            return;
+        }
+
+        try
+        {
+            // SaveKey validates via WitnessSigner.ValidatePrivateKey and throws on invalid material,
+            // writing nothing in that case — save-time and sign-time acceptance cannot drift apart.
+            WitnessKeyStore.SaveKey(trimmed);
+        }
+        catch (WitnessSignerException)
+        {
+            // Invalid key material — the one failure with an honest, specific cause. Do NOT proceed.
+            ImportStatusLine = ImportKeyInvalidMessage;
+            ImportStatusBrush = CriticalBrush;
+            return;
+        }
+        catch (System.Exception ex)
+        {
+            // Store write failed (keyring/disk). Readable text on screen, raw detail to the sink.
+            ImportStatusLine = ErrorPresenter.Compose(
+                ImportKeySaveFailedMessage, ErrorPresenter.UserDetail(ex, "witness.key.import"));
+            ImportStatusBrush = CriticalBrush;
+            return;
+        }
+
+        ImportKeyText = "";  // clear the pasted secret from the input now that it is persisted
+        ImportStatusLine = ImportKeySuccessMessage;
+        ImportStatusBrush = ValidBrush;
+    }
+
+    /// <summary>
+    /// 5(b) manual self-verify: re-run the full forensic verification over the LAST successfully-sealed
+    /// snapshot and render it through the shared <see cref="ApplyVerification"/> switch. Guarded on a
+    /// non-null <see cref="_lastSnapshot"/> — with no seal yet, it prompts rather than asserting a
+    /// result over nothing.
+    /// </summary>
+    [RelayCommand]
+    private void SelfVerify()
+    {
+        var snap = _lastSnapshot;
+        if (snap is null)
+        {
+            VerifyLine = SelfVerifyNoSnapshotMessage;
+            VerifyBrush = CautionBrush;
+            return;
+        }
+        // G-12 Route B (SelfVerify_StaleSnapshot_DoesNotShowGreen): the retained seal may belong
+        // to a different domain than the one now shown — seal a.com, switch to b.com, fail the
+        // b.com seal, self-verify. Verifying a.com's snapshot here would render a green "Verified"
+        // that the user reads as a claim about b.com: a false-confidence defect. The nullity guard
+        // above is not enough; the seal must also be ABOUT the current domain.
+        var current = Domain?.Trim() ?? "";
+        if (!string.Equals(snap.TargetDomain, current, StringComparison.OrdinalIgnoreCase))
+        {
+            VerifyLine = string.Format(SelfVerifyDomainMismatchFormat, snap.TargetDomain, current);
+            VerifyBrush = CautionBrush;
+            return;
+        }
+        ApplyVerification(WitnessSigner.VerifySnapshotDetailed(snap));
     }
 
     /// The single source of the verification message + severity brush, shared by self-verify and

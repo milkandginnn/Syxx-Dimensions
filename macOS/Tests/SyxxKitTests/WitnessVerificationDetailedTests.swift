@@ -239,7 +239,7 @@ final class WitnessVerificationDetailedTests: XCTestCase {
     // MARK: - Combined states (Phase 0 GV-A/A′/B)
     //
     // Every case above exercises ONE failure in isolation, so a crypto-LAST ordering never shows. A
-    // combined snapshot proves the invariant: a non-crypto verdict (`.expired`/`.untrustedSigner`)
+    // combined snapshot proves the invariant: a non-crypto result (`.expired`/`.untrustedSigner`)
     // must NEVER be returned ahead of the crypto/display failure it would mask. macOS is crypto-first
     // and passes these today; they go RED on a crypto-LAST Kit until Phase 1a lands.
     // See docs/PROPOSAL-witness-crypto-first-2026-08-03.md §4.

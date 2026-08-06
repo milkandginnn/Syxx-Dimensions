@@ -329,14 +329,19 @@ final class GuidedSetupLifecycleTests: XCTestCase {
         XCTAssertTrue(coordinator.settings.notificationsEnabled)
     }
 
-    func testCorruptSettingsStartAsStateUnknownNotReady() {
+    func testCorruptSettingsStartAsStateUnknownNotReady() throws {
         // Failure case: corrupt settings starting services fail.
+        // The arrange writes are `try`, not `try?`: a swallowed write leaves NO settings file, and
+        // an absent file reaches .stateUnknown too — so the test would pass without ever presenting
+        // the corrupt bytes it exists to test.
         let url = temporaryURL()
-        try? FileManager.default.createDirectory(
+        try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        try? "{ not json".write(to: url, atomically: true, encoding: .utf8)
+        try "{ not json".write(to: url, atomically: true, encoding: .utf8)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path),
+                      "the corrupt settings fixture must exist before the coordinator reads it")
 
         let coordinator = FirstRunCoordinator(
             document: document,

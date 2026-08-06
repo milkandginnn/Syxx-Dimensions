@@ -15,8 +15,9 @@ namespace Syxx.Kit
     /// <c>UntrustedSigner</c> (→ INCONCLUSIVE), never a match (the D011 rule already enforced for
     /// Witness/Glutton: valid-but-untrusted must not render green).
     ///
-    /// A pinned entry binds a <c>key_id</c> (the server's <c>leak.collector_key_id()</c> — base64 of
-    /// the raw public key's first 8 bytes) to the raw Ed25519 public-key bytes verified against.
+    /// A pinned entry binds a <c>key_id</c> (lowercase hex of the FULL 32-byte raw Ed25519 public
+    /// key — see <see cref="DeriveKeyId"/>; this matches the corpus and the server) to the raw
+    /// Ed25519 public-key bytes verified against.
     ///
     /// OWNER DELIVERABLE: distribute/bake the pinned manifest key(s) into clients exactly as Witness
     /// keys are. Nothing is hardcoded here.
@@ -78,13 +79,17 @@ namespace Syxx.Kit
             var parts = raw.Split(new[] { ',', ' ', '\n', '\t', '\r' }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var token in parts)
             {
+                // Explicit `keyid=base64` / `keyid:base64` pin. IMPORTANT: base64 of a 32-byte key
+                // always ends in exactly one '=' pad, so a bare-base64 token also CONTAINS '='. Only
+                // treat the separator as an explicit pin when the remainder is non-empty AND parses
+                // as a valid key; otherwise fall through to the bare forms. (The old first-'=' split
+                // consumed the pad, parsed an empty key, and silently emptied every documented
+                // bare-base64 trust set → permanent INCONCLUSIVE.)
                 int sep = token.IndexOfAny(new[] { '=', ':' });
-                if (sep >= 0)
+                if (sep > 0 && sep < token.Length - 1)
                 {
-                    string keyId = token.Substring(0, sep);
                     var pub = ValidPubKeyFromBase64(token.Substring(sep + 1));
-                    if (pub != null) outMap[keyId] = pub;
-                    continue;
+                    if (pub != null) { outMap[token.Substring(0, sep)] = pub; continue; }
                 }
 
                 // Bare 64-char hex key_id (the public key hex-encoded).

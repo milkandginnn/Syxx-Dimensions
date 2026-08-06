@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "prophet-resolution-success",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "resolution": {
+      "status": "success",
+      "records": [
+        {"name": "example.test", "type": 1, "ttl": 300, "rdata": "93.184.216.34"}
+      ],
+      "authorityRecords": [],
+      "ednsMalformed": false,
+      "authorityMalformed": false,
+      "offTypeAnswerCount": 0,
+      "offNameAnswerCount": 0,
+      "offClassAnswerCount": 0,
+      "conflictingCNAMEOwnerCount": 0,
+      "responseCode": 0,
+      "isAuthoritative": false,
+      "isTruncated": false,
+      "recursionAvailable": true,
+      "authenticatedData": false,
+      "responseByteLength": 59,
+      "spoofedPacketCount": 0,
+      "attemptCount": 1
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "id": "cross-platform-parity_20260805",
+  "title": "Cross-Platform Parity Detection",
+  "type": "feature",
+  "status": "in_progress",
+  "created": "2026-08-05T00:00:00Z",
+  "updated": "2026-08-05T22:20:00Z",
+  "scope": {
+    "mode": "detection + remediation (amended 2026-08-05)",
+    "axes": [
+      "engine-conclusions",
+      "cli-input-output",
+      "behavioral-functional",
+      "runtime-matrix"
+    ],
+    "excluded": [
+      "gui-parity",
+      "contract-amendment",
+      "python-server"
+    ],
+    "contract_changes": "proposal-only; owner ratifies"
+  },
+  "phases": {
+    "total": 8,
+    "completed": 0
+  },
+  "tasks": {
+    "total": 42,
+    "completed": 16
+  },
+  "current_phase": 1,
+  "current_task": "1.3",
+  "findings": [
+    {
+      "id": "F-01",
+      "state": "verified-by-real-run",
+      "summary": "resolverSubstituted (B174) macOS-only; Mirror degraded-cap absent on Windows/Linux",
+      "note": "C# gained ResolverSubstituted + Mirror degraded-cap; twin tests both platforms; proven to fail with the cap neutralized"
+    },
+    {
+      "id": "F-02",
+      "state": "verified-by-real-run",
+      "summary": "transportObservation absent from C# SectionInputs though DNSTransportWindow exists",
+      "note": "C# gained TransportObservation for structural parity; CORRECTION: neither platform reads the field, so no conclusion depended on it"
+    },
+    {
+      "id": "F-03",
+      "state": "open",
+      "summary": "matrix golden corpus loaded by C# only; Swift twin quarantined outside both test targets"
+    },
+    {
+      "id": "F-04",
+      "state": "verified-by-real-run",
+      "summary": "Swift defaultSpecJSON() nondeterministic: knownSections/mappableIndicators are Set-derived, different order every run",
+      "note": "deterministic sorted emission on both platforms, asserted by twin tests that pass"
+    },
+    {
+      "id": "F-05",
+      "state": "verified-by-real-run",
+      "summary": "neither platform matches default-spec.frozen.json, and they diverge differently (Swift extra key + order; C# slash escaping)"
+    },
+    {
+      "id": "F-06",
+      "state": "open",
+      "summary": "F042 recorded FIXED on a file that never compiled; first execution fails"
+    },
+    {
+      "id": "F-07",
+      "state": "verified-by-real-run",
+      "summary": "C# MatrixGoldenCorpusTests documents two assertions, implements one; no vector-evaluation test on that side"
+    },
+    {
+      "id": "F-08",
+      "state": "open",
+      "summary": "-v means verbose on macOS and version on Windows/Linux; B240 and E088 contradict; owner decision",
+      "note": "Addendum 2026-08-05: Swift top-level -V is dead code (lowercasing at SyxxCLI.swift:48), verified by execution; subcommand path unaffected. Fix = Task 8.8, owner-gated (B240 vs E088)."
+    },
+    {
+      "id": "F-09",
+      "state": "verified-by-real-run",
+      "summary": "B156 mappableIndicators was Swift-only; coverage denominators differed; ported with discriminating twin tests proven red without the filter"
+    }
+  ]
+}

@@ -224,7 +224,7 @@ public class WitnessCrossPlatformGoldenVectorTests
     // ---- Combined golden vectors (Phase 0) ----
     //
     // These read the checked-in corrupted artifacts — deliberately NOT members of Vectors() (the
-    // "must be Valid" set). Each combines two conditions so this platform's crypto-LAST verdict
+    // "must be Valid" set). Each combines two conditions so this platform's crypto-LAST result
     // (Expired) is caught masking the real one. macOS reads them correctly today; Windows/Linux read
     // Expired until Phase 1a reorders the Kit crypto-first.
     // See docs/PROPOSAL-witness-crypto-first-2026-08-03.md §4.

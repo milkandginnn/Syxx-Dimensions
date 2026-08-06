@@ -85,7 +85,7 @@ namespace Syxx.Kit
             var response = await DNSResolver.QueryUDPDetailedAsync(
                 new DNSQuery(domain, 48, resolver, edns0UDPSize: 1232, edns0DODNSSEC: true));
             if (Failed(response.Status)) return DNSSECStatus.Inconclusive;
-            return Classify(response.Records, now);
+            return Classify(response.Records, now, domain);
         }
 
         /// <summary>
@@ -93,15 +93,52 @@ namespace Syxx.Kit
         /// from the network call so every posture (unsigned / stripped / valid / expired) can be
         /// exercised deterministically and so a DoH or authoritative caller can reuse the same rules.
         /// </summary>
-        internal static DNSSECStatus Classify(IEnumerable<DNSRecord> records, DateTime now)
+        /// <param name="queriedName">
+        /// C059: the zone the answer is supposed to be about. Binding the records to it is what makes
+        /// the signature-stripping canary work at all — without it, an on-path attacker appends a
+        /// DNSKEY+RRSIG pair harvested from ANY signed zone (they are public data) and the verifier
+        /// reports a valid signature window for a zone whose signatures were removed. Pass empty only
+        /// where the zone genuinely is not known; the binding checks are then skipped and the C125
+        /// field checks still apply. Twin of macOS <c>DNSSECVerifier.classify(records:now:queriedName:)</c>.
+        /// </param>
+        internal static DNSSECStatus Classify(IEnumerable<DNSRecord> records, DateTime now, string queriedName = "")
         {
             var recs = records.ToList();
-            bool dnskeyPresent = recs.Any(r => r.Type == 48);
+            string normalizedQuery = NormalizeDomainName(queriedName);
+
+            // C059 + C125: a DNSKEY counts only if it belongs to the queried zone AND its rdata is a
+            // structurally valid zone-signing key. DNSKEY rdata layout: flags(2) protocol(1)
+            // algorithm(1) publicKey(var).
+            bool dnskeyPresent = recs.Any(r =>
+            {
+                if (r.Type != 48) return false;
+                if (normalizedQuery.Length > 0 && NormalizeDomainName(r.Name) != normalizedQuery) return false;
+                var bytes = HexToBytes(r.Rdata);
+                if (bytes == null || bytes.Length < 4) return false;
+                ushort flags = (ushort)((bytes[0] << 8) | bytes[1]);
+                byte protocolField = bytes[2];
+                byte algorithm = bytes[3];
+                if (protocolField != 3) return false;          // RFC 4034 2.1.2: Protocol MUST be 3.
+                if ((flags & 0x0100) == 0) return false;       // RFC 4034 2.1.1: ZONE flag (bit 7) must be set.
+                if (algorithm == 0) return false;              // RFC 4034 2.1.3: algorithm 0 is reserved.
+                return true;
+            });
             // A036: with the DO bit set, genuinely no DNSKEY is an honest "unsigned" observation.
             if (!dnskeyPresent) return DNSSECStatus.Unsigned;
 
+            // RRSIGs must cover the DNSKEY RRset (KDNS-05), own the queried zone, and carry a signer
+            // that is the queried zone or an ancestor of it (C059).
             var windows = recs
                 .Where(r => r.Type == 46)
+                .Where(r => normalizedQuery.Length == 0 || NormalizeDomainName(r.Name) == normalizedQuery)
+                .Where(r =>
+                {
+                    if (normalizedQuery.Length == 0) return true;
+                    var signer = ParseSignerName(r.Rdata);
+                    // An unparseable signer is not evidence against the record; the validity-window
+                    // parse below rejects malformed rdata on its own.
+                    return signer is null || IsSignerValid(normalizedQuery, NormalizeDomainName(signer));
+                })
                 .Select(r => RRSIGValidityWindow(r.Rdata, 48))
                 .Where(w => w.HasValue)
                 .Select(w => w!.Value)
@@ -178,6 +215,56 @@ namespace Syxx.Kit
             // B047: reject an implausibly wide window (clock-spoof / forged validity).
             if (unchecked(expiration - inception) > MaxPlausibleValiditySpanSeconds) return false;
             return SerialLessThanOrEqual(inception, nowEpoch) && SerialLessThanOrEqual(nowEpoch, expiration);
+        }
+
+        // ---- C059: owner / signer binding helpers. Twins of the Swift functions of the same names. ----
+
+        /// <summary>
+        /// Parses the signer name out of RRSIG wire-format rdata (surfaced as hex). Layout:
+        /// typeCovered(2) algorithm(1) labels(1) originalTTL(4) sigExpiration(4) sigInception(4)
+        /// keyTag(2) signerName(var) signature(var) — so the name starts at byte 18 and is a run of
+        /// <c>&lt;length-byte&gt;&lt;label-bytes&gt;</c> terminated by a zero-length (root) label.
+        /// Returns null when the rdata is too short or a length byte runs off the end.
+        /// </summary>
+        internal static string? ParseSignerName(string rdataHex)
+        {
+            var bytes = HexToBytes(rdataHex);
+            if (bytes == null || bytes.Length < 18) return null;
+            var labels = new List<string>();
+            int i = 18;
+            while (i < bytes.Length)
+            {
+                int len = bytes[i];
+                i++;
+                if (len == 0) break;                       // root label terminates the name
+                if (i + len > bytes.Length) return null;
+                labels.Add(System.Text.Encoding.UTF8.GetString(bytes, i, len));
+                i += len;
+            }
+            return labels.Count == 0 ? "." : string.Join(".", labels);
+        }
+
+        /// <summary>
+        /// C059: is <paramref name="signer"/> the queried zone itself, or an ancestor of it?
+        /// "www.example.com" signed by "example.com" is valid (the parent zone signs); "example.com"
+        /// signed by "evil.com" is not. The bare root (".") is rejected — it cannot vouch for a
+        /// specific zone here. Both arguments must already be normalised.
+        /// </summary>
+        internal static bool IsSignerValid(string queriedName, string signer)
+        {
+            if (signer == queriedName) return true;
+            var q = queriedName.EndsWith(".", StringComparison.Ordinal) ? queriedName[..^1] : queriedName;
+            var s = signer.EndsWith(".", StringComparison.Ordinal) ? signer[..^1] : signer;
+            if (s.Length == 0) return false;
+            return q.EndsWith("." + s, StringComparison.Ordinal);
+        }
+
+        /// <summary>Lowercase, trim, strip one trailing dot — so "Example.COM." and "example.com" compare equal.</summary>
+        internal static string NormalizeDomainName(string name)
+        {
+            var n = name.Trim().ToLowerInvariant();
+            if (n.EndsWith(".", StringComparison.Ordinal)) n = n[..^1];
+            return n;
         }
 
         private static uint BeUInt32(byte[] b, int o) =>

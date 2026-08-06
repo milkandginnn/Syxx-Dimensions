@@ -13,16 +13,16 @@ struct CageView: View {
                         Text("\u{16BE}")
                             .font(.custom("Cinzel-SemiBold", size: 28))
                             .frame(width: 54, height: 54)
-                            .background(Color.ioElectric.opacity(0.10))
+                            .background(Color.ioCageCyan.opacity(0.10))
                             .cornerRadius(14)
-                            .foregroundColor(Color.ioElectric)
-                            .shadow(color: Color.ioElectric.opacity(0.35), radius: 22)
+                            .foregroundColor(Color.ioCageCyan)
+                            .shadow(color: Color.ioCageCyan.opacity(0.35), radius: 22)
                             .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text("THE WARDEN \u{00B7} LIVE QUERY CAPTURE")
                                 .font(.ioCaption(.bold))
-                                .foregroundColor(Color.ioElectric)
+                                .foregroundColor(Color.ioCageCyan)
                                 .tracking(0.26)
 
                             Text("Cage")
@@ -98,6 +98,7 @@ struct CageView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
+                            .background(Color.ioCageCyan.opacity(0.05))
                             .background(Color.ioSurfaceElevated)
                             .cornerRadius(999)
                         }
@@ -267,7 +268,7 @@ struct CageView: View {
                         
                         Text("\(model.cageRemain)s")
                             .font(.ioMonoBold(48))
-                            .foregroundColor(.ioElectric)
+                            .foregroundColor(.ioCageCyan)
                         
                         Button(action: {
                             model.cageHidden = false

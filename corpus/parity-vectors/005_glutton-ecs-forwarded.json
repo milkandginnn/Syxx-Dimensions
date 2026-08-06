@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "glutton-ecs-forwarded",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "ecs": {
+      "status": "forwarded",
+      "scopePrefixLength": 24,
+      "detail": "resolver echoed a /24 scope for the test subnet"
+    }
+  }
+}

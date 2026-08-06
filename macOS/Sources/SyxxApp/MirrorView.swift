@@ -5,7 +5,12 @@ struct MirrorView: View {
     @EnvironmentObject var model: AppModel
 
     private var comp: SyxxKit.ComparisonResult? { model.sectionInputs.comparison }
+    // LEGACY proxy-path result — retired, never populated. Kept only until this pane's full
+    // rework (later wave); the live source is `warpManifest` below.
     private var warp: WarpResult? { model.sectionInputs.warp }
+    // UI-PRELUDE: the WARP_MANIFEST_V1 result ProbePlan actually populates. Without reading this,
+    // a completed Mirror run rendered the never-ran / requires-Pro branch.
+    private var warpManifest: WarpManifestResult? { model.sectionInputs.warpManifest }
 
     var body: some View {
         PurpleScrollView(geometry: .fullPanel) {
@@ -15,16 +20,16 @@ struct MirrorView: View {
                 Text("\u{16DE}")
                     .font(.custom("Cinzel-SemiBold", size: 28))
                     .frame(width: 54, height: 54)
-                    .background(Color.ioElectric.opacity(0.10))
+                    .background(Color.ioMirrorYellow.opacity(0.10))
                     .cornerRadius(14)
-                    .foregroundColor(Color.ioElectric)
-                    .shadow(color: Color.ioElectric.opacity(0.35), radius: 22)
+                    .foregroundColor(Color.ioMirrorYellow)
+                    .shadow(color: Color.ioMirrorYellow.opacity(0.35), radius: 22)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("THE REFLECTION \u{00B7} REMOTE VS LOCAL")
                         .font(.ioCaption(.bold))
-                        .foregroundColor(Color.ioElectric)
+                        .foregroundColor(Color.ioMirrorYellow)
                         .tracking(0.26)
 
                     Text("Mirror")
@@ -102,7 +107,7 @@ struct MirrorView: View {
                             .fill(Color.ioMirrorYellow.opacity(0.07))
                     )
             )
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioMirrorYellow.opacity(0.55), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioMirrorYellow.opacity(0.25), lineWidth: 1))
 
             // E110: DNS resolver comparison is always available; hash comparison requires Pro.
             // `.lineLimit(nil)` alone did NOT wrap this: it removes the line cap but does not
@@ -212,7 +217,27 @@ struct MirrorView: View {
                         .foregroundColor(.ioAccentStart)
                         .textCase(.uppercase)
 
-                    if let w = warp {
+                    if let m = warpManifest {
+                        // UI-PRELUDE minimal honesty fix: a manifest result EXISTS, so never
+                        // render the never-ran / requires-Pro branch. Render the fail-closed
+                        // conclusion and its reason; the full banner/table/diff overlay is the
+                        // later Mirror rework wave.
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(manifestLabel(m))
+                                .font(.ioCaption(.bold))
+                                .foregroundColor(manifestColor(m))
+                            Text(manifestDetail(m))
+                                .font(.ioCaption())
+                                .foregroundColor(.ioTextSecondary)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(manifestColor(m).opacity(0.1))
+                        .cornerRadius(8)
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(manifestColor(m).opacity(0.35), lineWidth: 1))
+                    } else if let w = warp {
                         VStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 8) {
@@ -373,6 +398,35 @@ struct MirrorView: View {
             return "Local (\(localIPs.joined(separator: ", "))) differs from: \(disagreements.joined(separator: "; "))"
         }
         return "No DNS-level redirection detected."
+    }
+
+    // UI-PRELUDE: minimal WARP_MANIFEST_V1 conclusion rendering. HONESTY: INCONCLUSIVE renders
+    // amber, never green; only VERIFIED_MATCH is green.
+    private func manifestLabel(_ m: WarpManifestResult) -> String {
+        switch m.conclusion {
+        case .verifiedMatch: return "VERIFIED MATCH"
+        case .inconclusive: return "INCONCLUSIVE"
+        case .tamperingDetected: return "TAMPERING DETECTED"
+        }
+    }
+
+    private func manifestColor(_ m: WarpManifestResult) -> Color {
+        switch m.conclusion {
+        case .verifiedMatch: return .ioSuccessGreen
+        case .inconclusive: return .ioWarningAmber
+        case .tamperingDetected: return .ioCriticalRed
+        }
+    }
+
+    private func manifestDetail(_ m: WarpManifestResult) -> String {
+        switch m.conclusion {
+        case .verifiedMatch:
+            return "Signed manifest verified; local content matches the declared hashes."
+        case .inconclusive:
+            return m.inconclusiveReason ?? "Content check could not be completed."
+        case .tamperingDetected:
+            return "Local content does not match the signed manifest's declared hashes."
+        }
     }
 
     /// E110: name the actual failing predicate(s) instead of always "structures differ".

@@ -250,10 +250,10 @@ Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
     [InlineData(DNSSECStatus.RecordsPresentUnverified)]
     [InlineData(DNSSECStatus.SignatureExpiredOrNotYetValid)]
     [InlineData(DNSSECStatus.Inconclusive)]
-    public void Dnssec_AllStates_NeverEmitBannedVerdictWord(DNSSECStatus status)
+    public void Dnssec_AllStates_NeverEmitBannedWord(DNSSECStatus status)
     {
         var pres = ProphetPresentation.BuildDnssecPresentation(status, "example.com");
-        // AGENTS.md: the word "verdict" is banned in user-facing text.
+        // AGENTS.md: the banned word must never appear in user-facing text.
         Assert.DoesNotContain("verdict", pres.Title, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("verdict", pres.Detail, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("verdict", pres.StatusLabel, StringComparison.OrdinalIgnoreCase);
@@ -278,7 +278,7 @@ Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
     [InlineData(ProphetPresentation.ResolverConsensus.Insufficient, 1)]
     [InlineData(ProphetPresentation.ResolverConsensus.Agree, 3)]
     [InlineData(ProphetPresentation.ResolverConsensus.Disagree, 3)]
-    public void ConsensusLabel_AllStates_NoEmDashes_AndNoBannedVerdictWord(
+    public void ConsensusLabel_AllStates_NoEmDashes_AndNoBannedWord(
         ProphetPresentation.ResolverConsensus state, int activeCount)
     {
         // This is the guard that was missing: the unmeasured-latency fragment previously rendered

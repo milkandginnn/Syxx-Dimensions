@@ -7,6 +7,7 @@ counters exposed at /metrics.
 When OpenTelemetry is available, error-level events are also exported as OTLP
 log records to bugsmasher.syxx.app.
 """
+
 import json
 import re
 import sys
@@ -63,7 +64,7 @@ def _emit(level, event, **fields):
                 severity_text="ERROR",
             )
             _otel_logger.emit(rec_obj)
-        except Exception:
+        except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down
             pass  # telemetry is best-effort
 
 

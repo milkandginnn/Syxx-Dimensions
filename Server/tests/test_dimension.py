@@ -3,6 +3,7 @@
 Pure logic, no network: broadcast reads a temp JSON file; baseline's db query is monkeypatched.
 Run from Server/:  python3 -m unittest tests.test_dimension -v
 """
+
 import json
 import os
 import tempfile
@@ -31,8 +32,17 @@ class BroadcastTests(unittest.TestCase):
             json.dump(obj, f)
 
     def test_active_within_window_returns_whitelisted_fields(self):
-        self._write({"id": "x", "title": "T", "body": "B", "severity": "warning",
-                     "startsAt": 100, "endsAt": 200, "url": "https://a"})
+        self._write(
+            {
+                "id": "x",
+                "title": "T",
+                "body": "B",
+                "severity": "warning",
+                "startsAt": 100,
+                "endsAt": 200,
+                "url": "https://a",
+            }
+        )
         r = broadcast.current(now=150)
         self.assertEqual(r["id"], "x")
         self.assertEqual(r["severity"], "warning")
@@ -85,22 +95,29 @@ class BaselineTests(unittest.TestCase):
             if rtype:
                 return [r for r in recs if r["rtype"] == rtype.upper()]
             return recs
+
         db.passive_query = _mock
 
     @staticmethod
     def _rec(value, rtype, first_days_ago, last_days_ago, hits, now):
-        return {"value": value, "rtype": rtype, "hits": hits,
-                "first_seen": int(now - first_days_ago * DAY),
-                "last_seen": int(now - last_days_ago * DAY)}
+        return {
+            "value": value,
+            "rtype": rtype,
+            "hits": hits,
+            "first_seen": int(now - first_days_ago * DAY),
+            "last_seen": int(now - last_days_ago * DAY),
+        }
 
     def test_drift_when_established_and_new_coexist(self):
         now = 100 * DAY
-        self._records([
-            self._rec("1.1.1.1", "A", 20, 1, 50, now),      # established: age 19d, stale 1d
-            self._rec("9.9.9.9", "A", 0.5, 0.1, 2, now),    # recently new: age <1d, stale <1d
-        ])
+        self._records(
+            [
+                self._rec("1.1.1.1", "A", 20, 1, 50, now),  # established: age 19d, stale 1d
+                self._rec("9.9.9.9", "A", 0.5, 0.1, 2, now),  # recently new: age <1d, stale <1d
+            ]
+        )
         b = passivedns.baseline("Example.com", now=now)
-        self.assertEqual(b["domain"], "example.com")           # lowercased
+        self.assertEqual(b["domain"], "example.com")  # lowercased
         self.assertIn("1.1.1.1", b["established"])
         self.assertIn("9.9.9.9", b["recentlyNew"])
         self.assertEqual(b["drift"], "suspected")
@@ -114,16 +131,18 @@ class BaselineTests(unittest.TestCase):
 
     def test_established_excludes_stale_value(self):
         now = 100 * DAY
-        self._records([self._rec("1.1.1.1", "A", 60, 40, 50, now)])   # last seen 40d ago -> stale
+        self._records([self._rec("1.1.1.1", "A", 60, 40, 50, now)])  # last seen 40d ago -> stale
         b = passivedns.baseline("example.com", now=now)
         self.assertEqual(b["established"], [])
 
     def test_rtype_filter(self):
         now = 100 * DAY
-        self._records([
-            self._rec("1.1.1.1", "A", 20, 1, 5, now),
-            self._rec("2606::1", "AAAA", 20, 1, 5, now),
-        ])
+        self._records(
+            [
+                self._rec("1.1.1.1", "A", 20, 1, 5, now),
+                self._rec("2606::1", "AAAA", 20, 1, 5, now),
+            ]
+        )
         b = passivedns.baseline("example.com", rtype="a", now=now)
         self.assertEqual(b["recordCount"], 1)
         self.assertEqual(b["type"], "A")
@@ -138,8 +157,9 @@ class BaselineTests(unittest.TestCase):
     def test_never_observed_is_insufficient_data_not_no_drift(self):
         self._records([])
         b = passivedns.baseline("example.com", now=100 * DAY)
-        self.assertEqual(b["drift"], "insufficient-data",
-                         "a domain we have never observed cannot be reported drift-free")
+        self.assertEqual(
+            b["drift"], "insufficient-data", "a domain we have never observed cannot be reported drift-free"
+        )
         self.assertNotEqual(b["drift"], "none")
         self.assertEqual(b["recordCount"], 0)
         self.assertEqual(b["observationDays"], 0)
@@ -167,16 +187,14 @@ class BaselineTests(unittest.TestCase):
         cases = {
             "insufficient-data": [],
             "none": [self._rec("1.1.1.1", "A", 20, 1, 50, now)],
-            "suspected": [self._rec("1.1.1.1", "A", 20, 1, 50, now),
-                          self._rec("9.9.9.9", "A", 0.5, 0.1, 2, now)],
+            "suspected": [self._rec("1.1.1.1", "A", 20, 1, 50, now), self._rec("9.9.9.9", "A", 0.5, 0.1, 2, now)],
         }
         for expected, recs in cases.items():
             with self.subTest(expected=expected):
                 self._records(recs)
                 drift = passivedns.baseline("example.com", now=now)["drift"]
                 self.assertEqual(drift, expected)
-                self.assertNotIsInstance(drift, bool,
-                                         "a security-critical result is never a bare bool")
+                self.assertNotIsInstance(drift, bool, "a security-critical result is never a bare bool")
 
 
 # A204: class must be defined BEFORE `if __name__ == "__main__"`, or
@@ -197,8 +215,7 @@ class PassiveDNSPIIBoundaryTests(unittest.TestCase):
         for r in out["records"]:
             self.assertNotIn("resolver", r, "submitter resolver IP must never reach the public index")
         # The PII must not leak via any other field either.
-        self.assertNotIn("198.51.100.77", json.dumps(out),
-                         "the resolver IP must not appear anywhere in the response")
+        self.assertNotIn("198.51.100.77", json.dumps(out), "the resolver IP must not appear anywhere in the response")
 
     def test_query_still_returns_the_useful_fields(self):
         """Mutation guard: stripping EVERYTHING would pass the test above."""
@@ -210,4 +227,3 @@ class PassiveDNSPIIBoundaryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -236,7 +236,7 @@ namespace Syxx.Tests
 
         // [GV-A/A′/B] Combined-state vectors (Phase 0). Every case above exercises ONE failure in
         // isolation, so the crypto-LAST ordering is invisible. These prove the invariant: a
-        // non-crypto verdict (Expired/UntrustedSigner) must NEVER be returned ahead of the
+        // non-crypto result (Expired/UntrustedSigner) must NEVER be returned ahead of the
         // crypto/display failure it would mask. RED on the current crypto-LAST Kit; GREEN after
         // Phase 1a. See docs/PROPOSAL-witness-crypto-first-2026-08-03.md §4.
 

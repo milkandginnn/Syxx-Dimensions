@@ -214,7 +214,7 @@ final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
     //
     // These read the checked-in corrupted artifacts — deliberately NOT members of `vectorNames` (the
     // "must be .valid" set). Each combines two conditions so a crypto-LAST verifier's non-crypto
-    // verdict (`.expired`) is caught masking the real one. macOS is crypto-first and reads them
+    // result (`.expired`) is caught masking the real one. macOS is crypto-first and reads them
     // correctly today; the Windows/Linux Kit reads `.expired` until Phase 1a lands.
     // See docs/PROPOSAL-witness-crypto-first-2026-08-03.md §4.
 
@@ -223,7 +223,7 @@ final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
         let snapshot = try load("witness-forged-expired.json")
         let v = WitnessSigner.verifySnapshotDetailed(snapshot)
         XCTAssertEqual(v, .invalidSignature,
-                       "a forged signature must be reported before the (masking) expiry verdict")
+                       "a forged signature must be reported before the (masking) expiry result")
         XCTAssertNotEqual(v, .expired, "the expiry must never mask the forgery")
     }
 
@@ -232,7 +232,7 @@ final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
         let snapshot = try load("witness-display-tampered-expired.json")
         let v = WitnessSigner.verifySnapshotDetailed(snapshot)
         XCTAssertEqual(v, .displayMismatch,
-                       "an edited display field must be reported before the (masking) expiry verdict")
+                       "an edited display field must be reported before the (masking) expiry result")
         XCTAssertNotEqual(v, .expired, "the expiry must never mask the display tamper")
     }
 }

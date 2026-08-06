@@ -87,6 +87,13 @@ final class SyxxAppDelegate: NSObject, NSApplicationDelegate {
         return report
     }
 
+    // Keep the app alive when the window is closed — the menu bar extra is the
+    // persistent surface. Without this, clicking the traffic-light close button
+    // terminates the process and the menu bar icon disappears.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
     // F014: Bring window to front when clicking the Dock icon.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
@@ -225,6 +232,9 @@ private struct FirstRunWindowConfigurator: NSViewRepresentable {
             window.titleVisibility = .hidden
             window.toolbar = nil
             window.isMovableByWindowBackground = true
+            window.standardWindowButton(.closeButton)?.isHidden = false
+            window.standardWindowButton(.miniaturizeButton)?.isHidden = false
+            window.standardWindowButton(.zoomButton)?.isHidden = false
             window.hasShadow = true
             // Unlock resizing — the ready state allows the user to grow the window
             // beyond 1040×613 (ContentView uses maxWidth/maxHeight .infinity).

@@ -30,13 +30,7 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
         // is the transparent titlebar (traffic lights), which the canvas already paints
         // behind via .ignoresSafeArea().
         window.toolbar = nil
-        // Traffic lights must be explicitly visible. With titleVisibility = .hidden and
-        // no toolbar, the buttons are present but can be occluded by full-bleed content
-        // (the sidebar gradient paints under the titlebar via .ignoresSafeArea()). Force
-        // them on so the user always sees close/minimize/maximize.
-        window.standardWindowButton(.closeButton)?.isHidden = false
-        window.standardWindowButton(.miniaturizeButton)?.isHidden = false
-        window.standardWindowButton(.zoomButton)?.isHidden = false
+        // Traffic light visibility is handled by FirstRunWindowConfigurator (SyxxApp.swift).
         guard let screen = window.screen ?? NSScreen.main else { return }
         let vis = screen.visibleFrame
         var f = window.frame
@@ -427,19 +421,31 @@ struct WardenSidebar: View {
         .padding(.bottom, 16)
         .frame(width: 236)
         .frame(maxHeight: .infinity)
-        // The gradient ignores the safe area so the pane still paints under the traffic
-        // lights and no titlebar band is visible; the CONTENT above keeps its 46pt top
-        // inset so the "Syxx" wordmark clears them instead of being clipped by the
-        // window edge.
+        // The sidebar background uses two layers to keep traffic lights visible while
+        // painting edge-to-edge with no titlebar band:
+        //   1. A solid fill (the gradient's top colour) extended into the safe area
+        //      via .ignoresSafeArea() so the titlebar region is covered — the traffic
+        //      lights render on top of this solid fill at the window-server level.
+        //   2. The gradient itself, which starts at the safe-area top (below the
+        //      traffic-light zone) and fades to the bottom colour.  Because the solid
+        //      fill matches the gradient's top colour, the seam is invisible.
+        // The CONTENT above keeps its 46pt top inset so the "Syxx" wordmark clears
+        // the traffic lights instead of being clipped by the window edge.
         .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 29/255, green: 18/255, blue: 64/255),   // #1d1240
-                    Color(red: 22/255, green: 12/255, blue: 48/255)    // #160c30
-                ],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            ZStack(alignment: .top) {
+                // Solid fill behind the titlebar — traffic lights render on top of this.
+                Color(red: 29/255, green: 18/255, blue: 64/255)   // #1d1240
+                    .ignoresSafeArea()
+                // Gradient starts below the titlebar; its top colour matches the solid
+                // fill so there is no visible seam.
+                LinearGradient(
+                    colors: [
+                        Color(red: 29/255, green: 18/255, blue: 64/255),   // #1d1240
+                        Color(red: 22/255, green: 12/255, blue: 48/255)    // #160c30
+                    ],
+                    startPoint: .top, endPoint: .bottom
+                )
+            }
         )
         .overlay(
             Rectangle()

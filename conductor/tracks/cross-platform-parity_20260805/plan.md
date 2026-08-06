@@ -121,14 +121,21 @@ emitted strings, not symbol names, so renames stay cheap and contract drift stay
       `--version`, and each command's usage text) and capture both builds' output
       (verified-by-real-run 2026-08-05; report + 36 raw captures in cli-capture-report.md,
       five divergence classes D1–D5, worst: Swift firstrun executes on --help)
-- [ ] Task 3.5: Reconcile captured output against `outputs-catalog-{general,story}-mode.csv`,
+- [x] Task 3.5: Reconcile captured output against `outputs-catalog-{general,story}-mode.csv`,
       appending rows where a string is absent — append only, never reorder
+      (all 61 distinct captured CLI strings were absent from both catalogs; appended to both with
+      source file:line where the literal exists on one line — 43 rows — and honest capture-file
+      attribution for the 18 living inside multi-line usage blocks; version strings tagged D1)
 
 ### Verification
 
-- [ ] Gate goes red on a deliberately introduced flag asymmetry
-- [ ] Output capture is byte-identical between builds, or each difference is filed
-- [ ] Catalog reconciliation adds only appended rows; `git diff` shows no reordering
+- [x] Gate goes red on a deliberately introduced flag asymmetry
+      (verified-by-real-run by the cli-gate seat: fake command+flag in a scratch copy → exit 1
+      naming both; real tree untouched)
+- [x] Output capture is byte-identical between builds, or each difference is filed
+      (differences filed: D1–D5 in cli-capture-report.md, F-10..F-13 as findings of record)
+- [x] Catalog reconciliation adds only appended rows; `git diff` shows no reordering
+      (verified: 61+61 insertions, zero deletions, appended at end)
 
 ---
 

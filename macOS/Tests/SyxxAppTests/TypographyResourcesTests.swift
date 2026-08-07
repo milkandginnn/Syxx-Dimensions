@@ -12,8 +12,8 @@ final class TypographyResourcesTests: XCTestCase {
 
     func testEveryDeclaredFontResourceContainsItsDeclaredPostScriptName() throws {
         XCTAssertEqual(
-            SyxxTypography.bundledFonts.count, 23,
-            "Expected Cinzel×3 + Jost×3 + CormorantSC×3 + EBGaramond×1 + JetBrainsMono×3 "
+            SyxxTypography.bundledFonts.count, 24,
+            "Expected Cinzel×3 + Jost×3 + CormorantSC×3 + EBGaramond×2 + JetBrainsMono×3 "
             + "+ Spectral×5 + CormorantGaramond×4 + MarcellusSC×1"
         )
         // Failure case: drop Jost-Light from bundledFonts → count fails or resource missing.

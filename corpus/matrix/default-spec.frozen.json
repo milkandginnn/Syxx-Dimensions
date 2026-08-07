@@ -482,20 +482,6 @@
     "prophet",
     "witness"
   ],
-  "mappableIndicators" : [
-    "authoritativeMismatch",
-    "captivePortalSignal",
-    "dnsLeakDetected",
-    "forcedPlainDnsFallback",
-    "lanDnsRedirect",
-    "liveQueryContentRewrite",
-    "liveQueryTamperPattern",
-    "localEnvironmentCompromised",
-    "protectedTransportBypass",
-    "resolverPathAnomaly",
-    "signedAnswerMismatch",
-    "suspiciousNxDomainPattern"
-  ],
   "thresholds" : {
     "failClosedOnInvalidatedRequiredSections" : true,
     "hardGateOnMissingRequiredSections" : true,

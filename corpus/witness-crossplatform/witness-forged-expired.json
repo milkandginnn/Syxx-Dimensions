@@ -63,7 +63,7 @@
         "93.184.216.34"
       ]
     },
-    "expiresAt" : 1785792760981,
+    "expiresAt" : 1786139359502,
     "formatVersion" : 4,
     "perResolverAnswers" : [
       {
@@ -71,7 +71,7 @@
           {
             "name" : "example.com",
             "rdata" : "93.184.216.34",
-            "ttl" : 60,
+            "ttl" : 0,
             "type" : 1
           }
         ],
@@ -82,7 +82,7 @@
           {
             "name" : "example.com",
             "rdata" : "93.184.216.34",
-            "ttl" : 60,
+            "ttl" : 0,
             "type" : 1
           }
         ],
@@ -100,13 +100,13 @@
         "success" : true
       }
     ],
-    "timestamp" : 1785792820981
+    "timestamp" : 1786139419502
   },
-  "expiresAt" : 807485560.981782,
+  "expiresAt" : 807832159.50277,
   "formatVersion" : 4,
   "keyId" : "4e22f0f074cf2da9",
   "publicKey" : "G5wOwKZitaDQPxI2fh6fA8YC9XgjK+9Uo63jrFDNmhw=",
-  "signature" : "p0r7rkylQ8Mk8Opb9Gcs1vipHUlFAu+A4nQAUWfP7Qk\/Dl6HRrfTfmUPSzTYBw93s5l6oAJysY9XstCOBnNOCA==",
+  "signature" : "F7iAm\/MKhrDnV\/z5rYl7Z\/Z489AJsWRQVi\/CvX9iCsOh+PlJiqDfaKfeW79NP90usKHDxoFhx3JvlRqz\/PxkDg==",
   "targetDomain" : "example.com",
-  "timestamp" : 807485620.981831
+  "timestamp" : 807832219.50282
 }

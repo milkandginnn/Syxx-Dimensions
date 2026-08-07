@@ -10,15 +10,15 @@
 
 ## Phase 2: Fix macOS (Swift) build
 
-- [ ] Task: Resolve Swift compilation errors
-    - [ ] Fix each compilation error identified in Phase 1
-    - [ ] Run `swift build --package-path macOS` until zero errors
-- [ ] Task: Eliminate Swift warnings
-    - [ ] Identify and fix all warnings from the build output
-    - [ ] Run `swift build --package-path macOS` until zero warnings
-- [ ] Task: Run Swift tests
-    - [ ] Execute `swift test --package-path macOS`
-    - [ ] Verify all tests pass
+- [x] Task: Resolve Swift compilation errors
+    - [x] Fix each compilation error identified in Phase 1
+    - [x] Run `swift build --package-path macOS` until zero errors
+- [x] Task: Eliminate Swift warnings
+    - [x] Identify and fix all warnings from the build output
+    - [x] Run `swift build --package-path macOS` until zero warnings
+- [x] Task: Run Swift tests
+    - [x] Execute `swift test --package-path macOS`
+    - [x] Verify all tests pass
 
 ## Phase 3: Fix Windows/Linux (.NET) build
 

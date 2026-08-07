@@ -1,0 +1,22 @@
+{
+  "track_id": "fix-build-errors_20260807",
+  "type": "bug",
+  "status": "in_progress",
+  "created_at": "2026-08-07",
+  "updated_at": "2026-08-07",
+  "current_phase": 3,
+  "current_task": "3.1",
+  "phases": {
+    "total": 6,
+    "completed": 2
+  },
+  "tasks": {
+    "total": 12,
+    "completed": 5
+  },
+  "commits": [
+    "36e2fee: Fix four test failures: update golden files and font count after refactoring (fix-build-errors_20260807)",
+    "93f05f4: Mark Task 2.3 complete: all 889 Swift tests pass, zero failures (fix-build-errors_20260807)"
+  ],
+  "description": "Restore clean builds across all platforms after cross-platform refactoring introduced compilation errors"
+}

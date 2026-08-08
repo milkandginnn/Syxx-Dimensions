@@ -15,6 +15,12 @@ namespace Syxx.Kit
         Multicast,
         Unspecified,
         Reserved,
+        /// B303: RFC 2544 benchmarking range (198.18.0.0/15) — distinct from PrivateUse.
+        Benchmarking,
+        /// B304: Teredo tunnel addresses (2001::/32) — tunneled traffic has unpredictable routing.
+        Teredo,
+        /// B304: 6to4 tunnel addresses (2002::/16) — tunneled traffic has unpredictable routing.
+        SixToFour,
         Invalid
     }
 
@@ -45,6 +51,7 @@ namespace Syxx.Kit
                 IPAddressClass.Multicast => true,
                 IPAddressClass.Unspecified => true,
                 IPAddressClass.Reserved => true,
+                IPAddressClass.Benchmarking => true, // B303: 198.18.0.0/15 is a blocking answer
                 IPAddressClass.Invalid => true,
                 _ => false
             };
@@ -62,7 +69,8 @@ namespace Syxx.Kit
             if (ip[0] == 192 && ip[1] == 0 && ip[2] == 0) return IPAddressClass.Reserved;
             if (ip[0] == 192 && ip[1] == 0 && ip[2] == 2) return IPAddressClass.Documentation;
             if (ip[0] == 192 && ip[1] == 88 && ip[2] == 99) return IPAddressClass.Documentation;
-            if (ip[0] == 198 && (ip[1] == 18 || ip[1] == 19)) return IPAddressClass.PrivateUse;  // 198.18.0.0/15 (benchmarking)
+            // B303: RFC 2544 benchmarking range — semantically distinct from PrivateUse.
+            if (ip[0] == 198 && (ip[1] == 18 || ip[1] == 19)) return IPAddressClass.Benchmarking;
             if (ip[0] == 198 && ip[1] == 51 && ip[2] == 100) return IPAddressClass.Documentation;
             if (ip[0] == 203 && ip[1] == 0 && ip[2] == 113) return IPAddressClass.Documentation;
             if (ip[0] >= 224 && ip[0] <= 239) return IPAddressClass.Multicast;
@@ -104,6 +112,11 @@ namespace Syxx.Kit
             if ((ip[0] & 0xfe) == 0xfc) return IPAddressClass.PrivateUse;
             if (ip[0] == 0xff) return IPAddressClass.Multicast;
             if (ip[0] == 0x20 && ip[1] == 0x01 && ip[2] == 0x0d && ip[3] == 0xb8) return IPAddressClass.Documentation;
+            // B304: Teredo (2001::/32) and 6to4 (2002::/16) tunnel addresses — tunneled traffic
+            // follows unpredictable routing paths, causing false leak signals when classified as
+            // PublicRoutable. These are non-blocking but flagged for diagnostic context.
+            if (ip[0] == 0x20 && ip[1] == 0x01 && ip[2] == 0x00 && ip[3] == 0x00) return IPAddressClass.Teredo;
+            if (ip[0] == 0x20 && ip[1] == 0x02) return IPAddressClass.SixToFour;
             return IPAddressClass.PublicRoutable;
         }
     }

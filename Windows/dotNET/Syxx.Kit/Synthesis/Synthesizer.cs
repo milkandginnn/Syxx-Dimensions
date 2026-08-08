@@ -127,29 +127,22 @@ public static class EvidenceAdapters
     internal const int PortalDatapointCatalog = 4;   // captivePortal, encryptedDNS, encryptedTransport, gateway (C1)
     internal const int GluttonDatapointCatalog = 2;  // leak, ecs
 
-    internal static SectionEvidence Combine(IReadOnlyList<SectionStatus> subs, IReadOnlyList<Advisory> advisories = null, double completeness = 1.0, int? datapointsExpected = null)
-    {
-        advisories ??= Array.Empty<Advisory>();
-        int? dpObserved = datapointsExpected is null ? null
-            : subs.Count(s => s is SectionStatus.Negative or SectionStatus.Positive or SectionStatus.Degraded);
-        if (subs.Contains(SectionStatus.Positive)) return new SectionEvidence(SectionStatus.Positive, Array.Empty<EvidenceItem>(), advisories, completeness, dpObserved, datapointsExpected);
-        var ran = subs.Where(s => s != SectionStatus.Untested).ToList();
-        if (ran.Count == 0) return new SectionEvidence(SectionStatus.Untested, Array.Empty<EvidenceItem>(), advisories, 0.0, dpObserved, datapointsExpected);
-        if (ran.Contains(SectionStatus.Invalidated)) return new SectionEvidence(SectionStatus.Invalidated, Array.Empty<EvidenceItem>(), advisories, completeness, dpObserved, datapointsExpected);
-        if (ran.Contains(SectionStatus.Inconclusive)) return new SectionEvidence(SectionStatus.Inconclusive, Array.Empty<EvidenceItem>(), advisories, completeness, dpObserved, datapointsExpected);
-        if (ran.Contains(SectionStatus.Degraded)) return new SectionEvidence(SectionStatus.Degraded, Array.Empty<EvidenceItem>(), advisories, completeness, dpObserved, datapointsExpected);
-        return new SectionEvidence(SectionStatus.Negative, Array.Empty<EvidenceItem>(), advisories, completeness, dpObserved, datapointsExpected);
-    }
+    // B309: delegate to CombineWithEvidence to eliminate duplicated precedence logic.
+    // A single source of truth prevents silent divergence between the two methods.
+    internal static SectionEvidence Combine(IReadOnlyList<SectionStatus> subs, IReadOnlyList<Advisory>? advisories = null, double completeness = 1.0, int? datapointsExpected = null)
+        => CombineWithEvidence(new List<EvidenceItem>(), subs.ToList(), advisories?.ToList(), completeness, datapointsExpected);
 
-    internal static SectionEvidence CombineWithEvidence(List<EvidenceItem> ev, List<SectionStatus> subs, List<Advisory> advisories = null, double completeness = 1.0, int? datapointsExpected = null)
+    internal static SectionEvidence CombineWithEvidence(List<EvidenceItem> ev, List<SectionStatus> subs, List<Advisory>? advisories = null, double completeness = 1.0, int? datapointsExpected = null)
     {
         advisories ??= new List<Advisory>();
         int? dpObserved = datapointsExpected is null ? null
             : subs.Count(s => s is SectionStatus.Negative or SectionStatus.Positive or SectionStatus.Degraded);
-        if (subs.Contains(SectionStatus.Positive)) return new SectionEvidence(SectionStatus.Positive, ev, advisories, completeness, dpObserved, datapointsExpected);
+        // C198: check Invalidated BEFORE Positive — a forged/invalidated packet must not launder
+        // clean through a coincident Positive (parity with macOS Synthesizer.swift:78-79).
         var ran = subs.Where(s => s != SectionStatus.Untested).ToList();
         if (ran.Count == 0) return new SectionEvidence(SectionStatus.Untested, ev, advisories, 0.0, dpObserved, datapointsExpected);
         if (ran.Contains(SectionStatus.Invalidated)) return new SectionEvidence(SectionStatus.Invalidated, ev, advisories, completeness, dpObserved, datapointsExpected);
+        if (subs.Contains(SectionStatus.Positive)) return new SectionEvidence(SectionStatus.Positive, ev, advisories, completeness, dpObserved, datapointsExpected);
         if (ran.Contains(SectionStatus.Inconclusive)) return new SectionEvidence(SectionStatus.Inconclusive, ev, advisories, completeness, dpObserved, datapointsExpected);
         if (ran.Contains(SectionStatus.Degraded)) return new SectionEvidence(SectionStatus.Degraded, ev, advisories, completeness, dpObserved, datapointsExpected);
         return new SectionEvidence(SectionStatus.Negative, ev, advisories, completeness, dpObserved, datapointsExpected);
@@ -196,7 +189,16 @@ public static class EvidenceAdapters
                         "Stale RRSIGs can indicate replay or a broken / interfering signer."));
                     subs.Add(SectionStatus.Degraded);
                     break;
-                case DNSSECStatus.RecordsPresentUnverified: subs.Add(SectionStatus.Negative); break;
+                // B297: RecordsPresentUnverified must not map to Negative (clean) — an attacker who
+                // strips RRSIGs would produce this state and receive a clean reading. Map to
+                // Inconclusive so unverified DNSSEC records do not fabricate confidence.
+                case DNSSECStatus.RecordsPresentUnverified:
+                    ev.Add(EvidenceItem.Create(Section.Prophet,
+                        EvidenceId.DnssecExpired,
+                        "DNSSEC records present but signatures not verified",
+                        "Unverified DNSSEC records cannot confirm authenticity; an attacker stripping RRSIGs produces the same observable state."));
+                    subs.Add(SectionStatus.Inconclusive);
+                    break;
                 default: subs.Add(SectionStatus.Inconclusive); break;
             }
         }
@@ -978,6 +980,13 @@ public static class Synthesizer
         // Twin of macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:772.
         if (inputs.ResolverSubstituted)
         {
+            // B299: Swift twin uses SyxxDiagnostics.breadcrumb, not an Advisory — there is no
+            // AdvisoryId for resolver-substituted. Match the Swift pattern.
+            SyxxDiagnostics.Breadcrumb(
+                category: "synthesis.resolver",
+                message: "Resolver was substituted — Mirror section capped at degraded",
+                level: DiagnosticSeverity.Warning);
+
             var idx = statuses.FindIndex(s => s.Section == Section.Mirror);
             if (idx >= 0 && statuses[idx].Status == SectionStatus.Negative)
             {

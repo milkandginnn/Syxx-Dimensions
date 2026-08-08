@@ -227,6 +227,12 @@ public partial class WitnessViewModel : ObservableObject
         TestimonyState = WitnessTestimonyState.Running;
         SignatureLine = "Resolving and sealing…"; VerifyLine = ""; IdentityLine = ""; Drift = null;
 
+        // L2-033: track whether we reached a terminal state. If an unexpected exception escapes
+        // between catch branches, the finally block forces Failed so IsRunning doesn't stick true.
+        bool terminalStateReached = false;
+        try
+        {
+
         var servers = NetworkKeyState.GetSystemDNSServers();
         if (servers.Count == 0)
         {
@@ -235,6 +241,7 @@ public partial class WitnessViewModel : ObservableObject
             // testimony — same state discipline as the catch branches below.
             SignatureLine = "System resolver could not be determined. Check your network connection, then retry.";
             TestimonyState = WitnessTestimonyState.Failed;
+            terminalStateReached = true;
             return;
         }
 
@@ -314,9 +321,28 @@ public partial class WitnessViewModel : ObservableObject
 
         // Verify the seal we just made — the full forensic tri-state, through the SAME switch the
         // paste-JSON external verify uses.
-        ApplyVerification(WitnessSigner.VerifySnapshotDetailed(snap));
+        // C211: the state must reflect the verification outcome — a seal that fails its own
+        // post-sign verification must never be reported as Signed.
+        var verifyResult = WitnessSigner.VerifySnapshotDetailed(snap);
+        ApplyVerification(verifyResult);
 
-        TestimonyState = WitnessTestimonyState.Signed;
+        TestimonyState = verifyResult == SnapshotVerification.Valid
+            ? WitnessTestimonyState.Signed
+            : WitnessTestimonyState.Failed;
+        terminalStateReached = true;
+
+        } // end try
+        // L2-033: if an unexpected exception escaped the inner catch branches, force Failed
+        // so IsRunning (derived from TestimonyState == Running) doesn't stick true.
+        finally
+        {
+            if (!terminalStateReached)
+            {
+                TestimonyState = WitnessTestimonyState.Failed;
+                if (string.IsNullOrEmpty(SignatureLine) || SignatureLine == "Resolving and sealing…")
+                    SignatureLine = "An unexpected error occurred. The testimony was not sealed.";
+            }
+        }
     }
 
     /// <summary>

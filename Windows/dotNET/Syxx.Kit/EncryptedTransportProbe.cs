@@ -20,7 +20,7 @@ public static class EncryptedTransportProbe
 
     public static async Task<EncryptedTransport> Probe(string testName = "cloudflare.com",
         ushort qtype = TypeA,
-        string endpoint = null,
+        string? endpoint = null,
         Func<string, ushort, string, Task<DNSResponse>>? query = null,
         Func<string, ushort, Task<DNSResponse>>? control = null)
     {
@@ -56,6 +56,13 @@ public static class EncryptedTransportProbe
             return controlSucceeded
                 ? Make(EncryptedTransportStatus.Blocked, $"DoH endpoint {endpoint} unreachable — encrypted DNS is blocked/filtered on this network (DNS may fall open to plaintext)")
                 : Make(EncryptedTransportStatus.Inconclusive, $"DoH endpoint {endpoint} did not complete and the cleartext control also failed, so blocking cannot be distinguished from an offline network");
+
+        // B313: Refused is a distinct signal — the endpoint actively rejected the query,
+        // which is different from ServFail/NXDomain (server errors vs policy rejection).
+        if (status == DNSResponseStatus.Refused)
+            return controlSucceeded
+                ? Make(EncryptedTransportStatus.Blocked, $"DoH endpoint {endpoint} refused the query — encrypted DNS is policy-blocked on this network")
+                : Make(EncryptedTransportStatus.Inconclusive, $"DoH endpoint {endpoint} refused the query but the cleartext control also failed — cannot attribute the refusal");
 
         return Make(EncryptedTransportStatus.Inconclusive, $"DoH endpoint {endpoint} reached but returned {status} — encrypted path status unclear");
     }

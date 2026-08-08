@@ -49,6 +49,9 @@ public sealed class SyxxSettings
     /// Storybook/Wardens copy or general technical English.
     public string ExperienceMode { get; set; } = "story";
 
+    /// Theme mode: "system" (follow OS), "dark", or "light". Default is system.
+    public string ThemeMode { get; set; } = "system";
+
     public int SettingsSchemaVersion { get; set; } = CurrentSchemaVersion;
     public string? AgreementVersion { get; set; }
     public string? AgreementSha256 { get; set; }

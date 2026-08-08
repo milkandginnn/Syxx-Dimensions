@@ -287,7 +287,7 @@ namespace Syxx.Kit
             // hex string to IsBlockingAnswer fails IPAddress.TryParse ⇒ Invalid ⇒ a false "blocked".
             bool localLooksBlocked = localRdatas.Any(IPClassifier.IsBlockingAnswer);
 
-            bool redirection;
+            bool redirection = false;
             bool inconclusiveFromDivergence = false;  // B281: disjoint answer not confirmable as a redirect
             if (localLooksBlocked)
             {
@@ -319,8 +319,23 @@ namespace Syxx.Kit
             }
             else
             {
-                // B010: check for unanimous UDP tampering via DoH cross-validation.
-                redirection = DetectUnanimousTampering(publicOutcomes, dohOutcomes, localRdatas);
+                // B010/B282: check for unanimous UDP tampering via DoH cross-validation.
+                // Tri-state result: Tampered sets redirection, Undetermined sets inconclusive,
+                // Clean is a no-op (absence of tampering is the default).
+                var unanimous = DetectUnanimousTampering(publicOutcomes, dohOutcomes, localRdatas);
+                switch (unanimous)
+                {
+                    case UnanimousTamperingResult.Tampered:
+                        redirection = true;
+                        break;
+                    case UnanimousTamperingResult.Undetermined:
+                        redirection = false;
+                        inconclusiveFromDivergence = true;
+                        break;
+                    case UnanimousTamperingResult.Clean:
+                        redirection = false;
+                        break;
+                }
             }
 
             // Degraded amplification: when redirection NOT detected but only 1 resolver
@@ -390,17 +405,28 @@ namespace Syxx.Kit
         }
 
         /// <summary>
+        /// B282: tri-state result for the unanimous-tampering check. A bool collapsed
+        /// "insufficient data to determine" into "no tampering," so an undetermined result
+        /// (e.g. too few DoH endpoints responded) was silently treated as clean.
+        /// </summary>
+        public enum UnanimousTamperingResult { Tampered, Clean, Undetermined }
+
+        /// <summary>
         /// Detects the unanimous-tampering pattern (B010): all UDP public resolvers agree on
         /// a single answer set, but ≥2 DoH endpoints transparently return a *different* set.
         /// The DoH answers are also checked for mutual agreement so we don't flag a DoH
         /// transport hiccup as tampering.
+        /// B282: returns a tri-state — Undetermined when there is insufficient data to conclude
+        /// (too few DoH/UDP endpoints, or DoH not provided), so the caller can surface it as
+        /// inconclusive rather than silently collapsing to "no tampering."
         /// </summary>
-        public static bool DetectUnanimousTampering(
+        public static UnanimousTamperingResult DetectUnanimousTampering(
             Dictionary<string, ResolverQueryOutcome> publicOutcomes,
             Dictionary<string, ResolverQueryOutcome>? dohOutcomes,
             HashSet<string> localRdatas)
         {
-            if (dohOutcomes == null || dohOutcomes.Count == 0) return false;
+            // B282: no DoH data means we cannot cross-validate — undetermined, not clean.
+            if (dohOutcomes == null || dohOutcomes.Count == 0) return UnanimousTamperingResult.Undetermined;
 
             // Collect UDP rdata sets from resolvers that returned records.
             // C117: address records only. CNAME/RRSIG rdata differ across resolvers even when the
@@ -410,11 +436,12 @@ namespace Syxx.Kit
                 .Where(o => o.Records.Count > 0)
                 .Select(o => AddressRdatas(o.Records))
                 .ToList();
-            if (udpSets.Count < 2) return false;
+            // B282: too few UDP endpoints to establish unanimity — undetermined.
+            if (udpSets.Count < 2) return UnanimousTamperingResult.Undetermined;
 
             // Check unanimity: all UDP answer sets point to the same destination.
             var firstUdp = udpSets[0];
-            if (!udpSets.All(s => s.SetEquals(firstUdp))) return false;
+            if (!udpSets.All(s => s.SetEquals(firstUdp))) return UnanimousTamperingResult.Clean;
 
             // Collect DoH rdata sets from endpoints that returned records.
             // C117: address records only (same rationale as udpSets above).
@@ -422,20 +449,21 @@ namespace Syxx.Kit
                 .Where(o => o.Records.Count > 0)
                 .Select(o => AddressRdatas(o.Records))
                 .ToList();
-            if (dohSets.Count < 2) return false;
+            // B282: too few DoH endpoints to cross-validate — undetermined.
+            if (dohSets.Count < 2) return UnanimousTamperingResult.Undetermined;
 
             // DoH should also show internal agreement (mutual consistency).
             var firstDoh = dohSets[0];
-            if (!dohSets.All(s => s.SetEquals(firstDoh))) return false;
+            if (!dohSets.All(s => s.SetEquals(firstDoh))) return UnanimousTamperingResult.Undetermined;
 
             // The UDP unanimity answer and the DoH consensus must differ.
-            if (firstUdp.SetEquals(firstDoh)) return false;
+            if (firstUdp.SetEquals(firstDoh)) return UnanimousTamperingResult.Clean;
 
             // Finally, the local answer must match the UDP tampered answer (the local resolver
             // is also being intercepted) — otherwise this is just strange network behavior.
-            if (!localRdatas.SetEquals(firstUdp)) return false;
+            if (!localRdatas.SetEquals(firstUdp)) return UnanimousTamperingResult.Clean;
 
-            return true;
+            return UnanimousTamperingResult.Tampered;
         }
     }
 

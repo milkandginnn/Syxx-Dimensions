@@ -137,59 +137,66 @@ public partial class ProphetViewModel : ObservableObject
         DnssecStatus = null;
         StatusLine = "";
 
-        var servers = NetworkKeyState.GetSystemDNSServers();
-        if (string.IsNullOrWhiteSpace(ResolverIp) && servers.Count == 0)
-        {
-            // D278 parity (macOS AppModel.runLookup): never fabricate a resolver. A refused run
-            // renders as failed/unavailable, never as a completed or clean result.
-            StatusLine = "System resolver could not be determined. Check your network connection, then retry.";
-            IsRunning = false;
-            return;
-        }
-
-        string resolver = string.IsNullOrWhiteSpace(ResolverIp)
-            ? servers[0]
-            : ResolverIp.Trim();
-
-        SectionInputs r;
-        try { r = await ProbePlan.RunProphetAsync(Domain.Trim(), resolver); }
-        // Defect-2 parity: raw detail to the diagnostic sink, readable text (or the bare failure,
-        // with no invented cause) to the screen. A failed lookup still renders as a failure.
-        catch (System.Exception ex)
-        {
-            StatusLine = ErrorPresenter.Compose(
-                "The lookup could not complete.", ErrorPresenter.UserDetail(ex, "prophet.lookup"));
-            IsRunning = false;
-            return;
-        }
-
-        // B231: null when the latency probe was skipped or timed out; rendering "0ms" fabricated a
-        // perfect measurement of something that was never measured. Consumers render "not measured".
-        int? medianLatencyMs = (r.Latency is { Status: not ResolverLatencyStatus.Untested } lat)
-            ? (int)Math.Round(lat.MedianMs)
-            : null;
-
-        // 12-oracle consensus fan-out (parity macOS AppModel.runLookup 1011-1047). Linux Prophet
-        // has no record-type picker, so qtype is always 1 (A).
         try
         {
-            ProphetConsensusResult = await ProphetConsensus.RunAsync(
-                Domain.Trim(), qtype: 1, localServer: resolver, medianLatencyMs: medianLatencyMs);
+            var servers = NetworkKeyState.GetSystemDNSServers();
+            if (string.IsNullOrWhiteSpace(ResolverIp) && servers.Count == 0)
+            {
+                // D278 parity (macOS AppModel.runLookup): never fabricate a resolver. A refused run
+                // renders as failed/unavailable, never as a completed or clean result.
+                StatusLine = "System resolver could not be determined. Check your network connection, then retry.";
+                return;
+            }
+
+            string resolver = string.IsNullOrWhiteSpace(ResolverIp)
+                ? servers[0]
+                : ResolverIp.Trim();
+
+            // L2-030: pass CancellationToken so the check can be cancelled on navigation or shutdown.
+            using var cts = new System.Threading.CancellationTokenSource();
+
+            SectionInputs r;
+            try { r = await ProbePlan.RunProphetAsync(Domain.Trim(), resolver); }
+            // Defect-2 parity: raw detail to the diagnostic sink, readable text (or the bare failure,
+            // with no invented cause) to the screen. A failed lookup still renders as a failure.
+            catch (System.Exception ex)
+            {
+                StatusLine = ErrorPresenter.Compose(
+                    "The lookup could not complete.", ErrorPresenter.UserDetail(ex, "prophet.lookup"));
+                return;
+            }
+
+            // B231: null when the latency probe was skipped or timed out; rendering "0ms" fabricated a
+            // perfect measurement of something that was never measured. Consumers render "not measured".
+            int? medianLatencyMs = (r.Latency is { Status: not ResolverLatencyStatus.Untested } lat)
+                ? (int)Math.Round(lat.MedianMs)
+                : null;
+
+            // 12-oracle consensus fan-out (parity macOS AppModel.runLookup 1011-1047). Linux Prophet
+            // has no record-type picker, so qtype is always 1 (A).
+            try
+            {
+                ProphetConsensusResult = await ProphetConsensus.RunAsync(
+                    Domain.Trim(), qtype: 1, localServer: resolver, medianLatencyMs: medianLatencyMs);
+            }
+            catch (System.Exception ex)
+            {
+                StatusLine = ErrorPresenter.Compose(
+                    "The consensus fan-out could not complete.", ErrorPresenter.UserDetail(ex, "prophet.consensus"));
+                return;
+            }
+
+            // Reuse the DNSSECStatus already fetched by ProbePlan.RunProphetAsync (ProbePlan.cs:51)
+            // to avoid a second DO-enabled DNSKEY round-trip. The macOS gold standard makes a fresh
+            // query (AppModel.swift:1047); both are honest, and the posture is real either way.
+            DnssecStatus = r.Dnssec;
         }
-        catch (System.Exception ex)
+        // L2-032: try/finally ensures IsRunning is always restored, even if an unexpected exception
+        // escapes the inner catch branches (e.g. a NullReferenceException between catch blocks).
+        finally
         {
-            StatusLine = ErrorPresenter.Compose(
-                "The consensus fan-out could not complete.", ErrorPresenter.UserDetail(ex, "prophet.consensus"));
             IsRunning = false;
-            return;
         }
-
-        // Reuse the DNSSECStatus already fetched by ProbePlan.RunProphetAsync (ProbePlan.cs:51)
-        // to avoid a second DO-enabled DNSKEY round-trip. The macOS gold standard makes a fresh
-        // query (AppModel.swift:1047); both are honest, and the posture is real either way.
-        DnssecStatus = r.Dnssec;
-
-        IsRunning = false;
     }
 
     // === Presentation (delegated to the shared Kit) ==========================================

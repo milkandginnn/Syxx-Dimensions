@@ -2,12 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
              xmlns:kit="using:Syxx.Kit"
+             xmlns:ctl="using:SyxxUI.Avalonia.Controls"
              x:Class="SyxxUI.Avalonia.Views.ProphetView"
              x:CompileBindings="True"
              x:DataType="vm:ProphetViewModel">
 
   <!-- Prophet pane: 1:1 translation of macOS ProphetView.swift (the gold standard).
-       Structure top-to-bottom: rune header, domain card, consensus result card, DNSSEC result
+       Structure top-to-bottom: module header, domain card, consensus result card, DNSSEC result
        card (below the resolver card, NOT side-by-side), empty state. HONESTY: the strongest
        DNSSEC posture rendered is "configured: signatures observed" (teal, never "validated" or
        "secure"); a failed DNSSEC query renders as Inconclusive (text-secondary, NEVER red). -->
@@ -15,39 +16,9 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <StackPanel Spacing="22" Margin="24">
 
-      <!-- 1. RUNE HEADER (HStack top-aligned, spacing 15): 54x54 teal rune tile + right VStack -->
-      <StackPanel Orientation="Horizontal" Spacing="15">
-        <!-- Rune tile: "ᚨ" in Cinzel-SemiBold 28, teal on teal-at-10% bg, 14pt corners, teal glow -->
-        <Border Width="54" Height="54" CornerRadius="14" Background="#1A2dd4bf"
-                BoxShadow="0 0 22 #592dd4bf" VerticalAlignment="Top">
-          <TextBlock Text="&#x16A8;" FontFamily="{StaticResource SyxDisplayFont}" FontSize="28"
-                     Foreground="{StaticResource SyxTealBrush}"
-                     HorizontalAlignment="Center" VerticalAlignment="Center" />
-        </Border>
-
-        <!-- Right VStack: eyebrow + title + lore subcaption + body paragraph -->
-        <StackPanel Spacing="4" MaxWidth="560" VerticalAlignment="Top">
-          <!-- Eyebrow: "THE SEER · RESOLVER ACCURACY" (Jost Medium bold, teal, tracking 0.26em) -->
-          <TextBlock Text="THE SEER &#x00B7; RESOLVER ACCURACY"
-                     FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
-                     LetterSpacing="3" Foreground="{StaticResource SyxTealBrush}" />
-
-          <!-- Title: "Prophet" (Cinzel-SemiBold 26) -->
-          <TextBlock Text="Prophet" FontFamily="{StaticResource SyxDisplayFont}" FontSize="26"
-                     Foreground="{StaticResource SyxTextBrush}" />
-
-          <!-- Lore subcaption (EB Garamond Italic 18, text-muted). VERBATIM owner copy,
-               matching the macOS gold standard (ProphetView.swift:53). -->
-          <TextBlock FontFamily="{StaticResource SyxLoreFont}" FontSize="18" TextWrapping="Wrap"
-                     Foreground="{StaticResource SyxTextMutedBrush}"
-                     Text="Thus the voyage began: The Prophet names each domain aright, so no false guise may be borne into view." />
-
-          <!-- Body paragraph (Cormorant Garamond 16, text-secondary). VERBATIM owner copy. -->
-          <TextBlock FontFamily="{StaticResource SyxTypeBody}" FontSize="16" TextWrapping="Wrap"
-                     Foreground="{StaticResource SyxTextSecondaryBrush}"
-                     Text="Prophet compares twelve resolver answers to queries sent for the domain you identify. A match only indicates consistency and does not mean the answers are valid. Resolver answers can be spoofed. Prophet then checks for DNSSEC on the domain, which does communicate trustworthiness." />
-        </StackPanel>
-      </StackPanel>
+      <!-- 1. MODULE HEADER (rune tile + eyebrow + name + lore + body) -->
+      <ctl:ModuleHeader x:Name="Header" Rune="&#x16A8;" Eyebrow="THE SEER &#x00B7; RESOLVER ACCURACY" Name="Prophet"
+                         AccentBrush="{StaticResource SyxProphetBlueBrush}" />
 
       <!-- 2. DOMAIN SELECTION CARD (VStack, padding 20, surface card) -->
       <Border CornerRadius="14" Padding="20" Background="#08FFFFFF"

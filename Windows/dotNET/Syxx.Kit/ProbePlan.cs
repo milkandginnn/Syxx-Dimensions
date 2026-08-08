@@ -94,7 +94,7 @@ public static class ProbePlan
         inputs.Comparison = await ProbeRunner.RunAsync<ComparisonResult>("vantage", budget, async () =>
         {
             try { return await VantageComparer.CompareVantagePointsAsync(domain: domain, localServer: localResolver); }
-            catch { return null; }
+            catch { throw; }
         });
 
         if (inputs.Comparison == null)
@@ -123,8 +123,8 @@ public static class ProbePlan
             if (lic.Unlocked)
             {
                 string? storedKey = LicenseManager.GetStoredLicenseKey();
-                inputs.ServerGroundTruth = await ProbeRunner.RunAsync<GroundTruth>("groundTruth", budget, () =>
-                    DimensionClient.AuthoritativeAsync(SyxxConfig.DimensionBaseURL, domain, "A", storedKey));
+                inputs.ServerGroundTruth = await ProbeRunner.RunAsync<GroundTruth>("groundTruth", budget, async () =>
+                    (await DimensionClient.AuthoritativeAsync(SyxxConfig.DimensionBaseURL, domain, "A", storedKey))!);
             }
         }
 

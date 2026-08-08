@@ -62,6 +62,7 @@ public partial class App : Application
             settings,
             savedSettings =>
             {
+                ThemeManager.ApplyFromSettings(savedSettings);
                 LinuxReadyServices.Start(savedSettings);
                 return new MainWindow();
             });

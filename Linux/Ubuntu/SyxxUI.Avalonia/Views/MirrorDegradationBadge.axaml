@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SyxxUI.Avalonia.Views.MirrorDegradationBadge">
+
+  <Border x:Name="BadgeBorder" CornerRadius="8" Padding="14,10" BorderThickness="1">
+    <StackPanel Orientation="Horizontal" Spacing="10">
+
+      <!-- Score circle (approximated with a circular border) -->
+      <Border x:Name="ScoreCircle" Width="40" Height="40" CornerRadius="20"
+              BorderThickness="3" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock x:Name="ScorePercent" Text="0%"
+                   FontFamily="{StaticResource SyxMonoFont}" FontSize="10" FontWeight="Bold"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Border>
+
+      <!-- Label -->
+      <StackPanel Spacing="2" VerticalAlignment="Center">
+        <TextBlock Text="DEGRADATION"
+                   FontFamily="{StaticResource SyxMonoFont}" FontSize="9" FontWeight="Bold"
+                   LetterSpacing="1.5"
+                   Foreground="{StaticResource SyxTextMutedBrush}" />
+        <TextBlock x:Name="ClassificationLabel" Text="Identical"
+                   FontFamily="{StaticResource SyxMonoFont}" FontSize="13" FontWeight="Bold" />
+      </StackPanel>
+
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -187,7 +187,9 @@ namespace Syxx.Kit
         /// what a spoofed local clock would need to wrap a long-expired signature back into "valid" under
         /// serial arithmetic, so we refuse to treat such a window as currently valid (B047).
         /// </summary>
-        internal const uint MaxPlausibleValiditySpanSeconds = 63_072_000;
+        // B302: increased from 2 years (63_072_000) to 3 years (94_608_000) to accommodate
+        // legitimate ccTLD/enterprise deployments using 3-year RRSIG validity windows.
+        internal const uint MaxPlausibleValiditySpanSeconds = 94_608_000;
 
         private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SyxxUI.Avalonia.Views.MirrorTerminalView"
+             xmlns:mirror="using:SyxxUI.Avalonia.Mirror">
+
+  <Border Background="#FF1e1e2e" CornerRadius="8" BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+    <DockPanel>
+
+      <!-- GNOME Terminal flat header bar -->
+      <Border DockPanel.Dock="Top" Background="#FF2d2d3d" Padding="12,6"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="0,0,0,1">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock x:Name="TitleLabel" Grid.Column="0"
+                     FontFamily="{StaticResource SyxMonoFont}" FontSize="11" FontWeight="Medium"
+                     Foreground="{StaticResource SyxTextMutedBrush}"
+                     VerticalAlignment="Center" />
+          <Button x:Name="CloseButton" Grid.Column="1" Content="×"
+                  FontSize="16" FontWeight="Bold"
+                  Background="Transparent" Foreground="{StaticResource SyxTextMutedBrush}"
+                  Padding="6,0" IsVisible="False" />
+        </Grid>
+      </Border>
+
+      <!-- Scrollable content area -->
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="ContentPanel" Margin="16" Spacing="0">
+          <!-- Warning banner (G-02 fallback) -->
+          <Border x:Name="WarningBanner" Background="#1AF2B33D" CornerRadius="4" Padding="8" Margin="0,0,0,8"
+                  IsVisible="False">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="⚠" Foreground="#FFF2B33D" FontSize="12" />
+              <TextBlock x:Name="WarningText" Foreground="#FFF2B33D"
+                         FontFamily="{StaticResource SyxMonoFont}" FontSize="11"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <!-- Prompt line: user@hostname:~$ in green -->
+          <StackPanel x:Name="PromptPanel" Orientation="Horizontal" Spacing="4" Margin="0,0,0,8">
+            <TextBlock x:Name="PromptUser" Text="user@syxx" Foreground="{StaticResource SyxTealBrush}"
+                       FontFamily="{StaticResource SyxMonoFont}" FontSize="12" FontWeight="Bold" />
+            <TextBlock Text=":~$" Foreground="{StaticResource SyxTealBrush}"
+                       FontFamily="{StaticResource SyxMonoFont}" FontSize="12" FontWeight="Bold" />
+            <TextBlock x:Name="PromptCommand" Foreground="{StaticResource SyxTealBrush}"
+                       FontFamily="{StaticResource SyxMonoFont}" FontSize="12" />
+          </StackPanel>
+
+          <!-- Bundle content placeholder (filled from code-behind) -->
+          <StackPanel x:Name="BundleContent" Spacing="0" />
+
+          <!-- Placeholder for empty state -->
+          <StackPanel x:Name="PlaceholderPanel" Spacing="4" Margin="0,8,0,0">
+            <TextBlock Text="No content captured yet."
+                       FontFamily="{StaticResource SyxMonoFont}" FontSize="12"
+                       Foreground="{StaticResource SyxTextFaintBrush}" />
+            <TextBlock Text="Run a Mirror check to populate this pane."
+                       FontFamily="{StaticResource SyxMonoFont}" FontSize="12"
+                       Foreground="{StaticResource SyxTextFaintBrush}" />
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+
+    </DockPanel>
+  </Border>
+</UserControl>

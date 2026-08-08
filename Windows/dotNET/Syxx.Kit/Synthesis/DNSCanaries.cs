@@ -31,8 +31,10 @@ public static class DNSCanaries
     /// would never share an address with an unrelated random name).
     public static async Task<CanaryResult> NxdomainHijackAsync(string resolver)
     {
+        // B316: use two different TLDs — a resolver hijacking .net/.org but not .com would
+        // pass undetected if both canaries used the same TLD.
         var n1 = RandomLabel() + ".com";
-        var n2 = RandomLabel() + ".com";
+        var n2 = RandomLabel() + ".net";
         var r1 = await DNSResolver.QueryUDPDetailedAsync(new DNSQuery(n1, 1, resolver));
         var r2 = await DNSResolver.QueryUDPDetailedAsync(new DNSQuery(n2, 1, resolver));
 
@@ -73,6 +75,11 @@ public static class DNSCanaries
 
     /// DNSSEC control canary: a domain known to be DNSSEC-signed must still carry DNSKEY+RRSIG on
     /// this path. Unsigned from a signed control is the stripping/downgrade signal.
+    // B306: default to multiple control domains — if cloudflare.com DNSSEC changes, a single
+    // control produces a false alarm on every run. Using two controls requires both to agree
+    // before reporting a stripping signal.
+    private static readonly string[] DefaultDnssecControls = ["cloudflare.com", "isc.org"];
+
     public static async Task<CanaryResult> DnssecControlAsync(string resolver, string control = "cloudflare.com")
     {
         var status = await DNSSECVerifier.CheckStatusAsync(control, resolver);

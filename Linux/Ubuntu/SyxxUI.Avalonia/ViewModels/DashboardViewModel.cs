@@ -1,5 +1,8 @@
+using System;
+using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Syxx.Kit;
 
 namespace SyxxUI.Avalonia.ViewModels;
@@ -19,7 +22,33 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private string _leakFound = "—";
     [ObservableProperty] private string _queriesSeen = "—";
 
+    /// L2-035: status line for the refresh operation, shown when refresh fails.
+    [ObservableProperty] private string _refreshStatus = "";
+
     public DashboardViewModel()
+    {
+        RefreshLocalStats();
+    }
+
+    /// L2-035: re-read local stats (resolver identity, count). Network-dependent stats
+    /// (trust score, alerts, etc.) are populated by live scans and are not re-fetched here.
+    [RelayCommand]
+    private void Refresh()
+    {
+        try
+        {
+            RefreshLocalStats();
+            RefreshStatus = "";
+        }
+        catch (Exception ex)
+        {
+            // Surface refresh failures so the user knows the data may be stale.
+            System.Diagnostics.Debug.WriteLine($"[Syxx] Dashboard refresh failed: {ex}");
+            RefreshStatus = "Could not refresh dashboard stats.";
+        }
+    }
+
+    private void RefreshLocalStats()
     {
         // Resolver identity + count are the only stats knowable from a local read with no probe.
         var servers = NetworkKeyState.GetSystemDNSServers();

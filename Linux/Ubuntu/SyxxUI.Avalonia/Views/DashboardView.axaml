@@ -51,51 +51,62 @@
       </Grid>
     </Border>
 
-    <!-- Primary action -->
-    <Border CornerRadius="12" Padding="16,11" Background="{StaticResource SyxPrimaryButtonBrush}"
-            BoxShadow="{StaticResource SyxActionShadow}">
-      <StackPanel Orientation="Horizontal" Spacing="12">
-        <TextBlock Text="⚔" FontSize="24" Foreground="White" VerticalAlignment="Center" />
-        <StackPanel VerticalAlignment="Center">
-          <TextBlock Text="Conduct All Scans" FontFamily="{StaticResource SyxDisplayFont}"
-                     FontSize="16" FontWeight="SemiBold" Foreground="White" />
-          <TextBlock Text="Summon all six wardens to the roads" FontSize="12" Foreground="#B8FFFFFF" />
+    <!-- D283: Primary action wrapped in a Button (disabled — not yet wired to a scan-all command).
+         The honest "Not yet available" state prevents click-through to nothing. -->
+    <Button IsEnabled="False" HorizontalAlignment="Stretch" Padding="0"
+            Background="Transparent" BorderThickness="0">
+      <Border CornerRadius="12" Padding="16,11" Background="{StaticResource SyxPrimaryButtonBrush}"
+              BoxShadow="{StaticResource SyxActionShadow}" Opacity="0.6">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="⚔" FontSize="24" Foreground="White" VerticalAlignment="Center" />
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Conduct All Scans" FontFamily="{StaticResource SyxDisplayFont}"
+                       FontSize="16" FontWeight="SemiBold" Foreground="White" />
+            <TextBlock Text="Not yet available — run individual wardens from the sidebar" FontSize="12" Foreground="#B8FFFFFF" />
+          </StackPanel>
         </StackPanel>
-      </StackPanel>
-    </Border>
+      </Border>
+    </Button>
 
-    <!-- Secondary action row -->
+    <!-- D283: Secondary actions wrapped in disabled Buttons. Each is honest about its state
+         rather than silently absorbing clicks with no effect. -->
     <Grid ColumnDefinitions="*,*,*">
-      <Border Grid.Column="0" Margin="0,0,5,0" CornerRadius="11" Padding="13,8"
-              Background="{StaticResource SyxSurfaceFillBrush}" BorderThickness="1" BorderBrush="#4C2dd4bf">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <Border Width="28" Height="28" CornerRadius="7" Background="#1F2dd4bf">
-            <TextBlock Text="≈" FontSize="15" Foreground="{StaticResource SyxTealBrush}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
-          <StackPanel VerticalAlignment="Center">
-            <TextBlock Text="Flush DNS Cache" FontSize="13" FontWeight="SemiBold"
-                       Foreground="{StaticResource SyxTextBrush}" />
-            <TextBlock Text="Clear the resolver cache" FontSize="10.5"
-                       Foreground="{StaticResource SyxTextMutedBBrush}" />
+      <Button Grid.Column="0" IsEnabled="False" Margin="0,0,5,0" HorizontalAlignment="Stretch"
+              Padding="0" Background="Transparent" BorderThickness="0">
+        <Border CornerRadius="11" Padding="13,8" Opacity="0.6"
+                Background="{StaticResource SyxSurfaceFillBrush}" BorderThickness="1" BorderBrush="#4C2dd4bf">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Width="28" Height="28" CornerRadius="7" Background="#1F2dd4bf">
+              <TextBlock Text="≈" FontSize="15" Foreground="{StaticResource SyxTealBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="Flush DNS Cache" FontSize="13" FontWeight="SemiBold"
+                         Foreground="{StaticResource SyxTextBrush}" />
+              <TextBlock Text="Not yet available" FontSize="10.5"
+                         Foreground="{StaticResource SyxTextMutedBBrush}" />
+            </StackPanel>
           </StackPanel>
-        </StackPanel>
-      </Border>
-      <Border Grid.Column="1" Margin="5,0" CornerRadius="11" Padding="13,8"
-              Background="{StaticResource SyxSurfaceFillBrush}" BorderThickness="1" BorderBrush="#4C7c5cff">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <Border Width="28" Height="28" CornerRadius="7" Background="#1F7c5cff">
-            <TextBlock Text="◈" FontSize="14" Foreground="{StaticResource SyxVioletBrightBrush}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
-          <StackPanel VerticalAlignment="Center">
-            <TextBlock Text="Enable Unbound DNS" FontSize="13" FontWeight="SemiBold"
-                       Foreground="{StaticResource SyxTextBrush}" />
-            <TextBlock Text="Run a local validating resolver" FontSize="10.5"
-                       Foreground="{StaticResource SyxTextMutedBBrush}" />
+        </Border>
+      </Button>
+      <Button Grid.Column="1" IsEnabled="False" Margin="5,0" HorizontalAlignment="Stretch"
+              Padding="0" Background="Transparent" BorderThickness="0">
+        <Border CornerRadius="11" Padding="13,8" Opacity="0.6"
+                Background="{StaticResource SyxSurfaceFillBrush}" BorderThickness="1" BorderBrush="#4C7c5cff">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Width="28" Height="28" CornerRadius="7" Background="#1F7c5cff">
+              <TextBlock Text="◈" FontSize="14" Foreground="{StaticResource SyxVioletBrightBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="Enable Unbound DNS" FontSize="13" FontWeight="SemiBold"
+                         Foreground="{StaticResource SyxTextBrush}" />
+              <TextBlock Text="Not yet available" FontSize="10.5"
+                         Foreground="{StaticResource SyxTextMutedBBrush}" />
+            </StackPanel>
           </StackPanel>
-        </StackPanel>
-      </Border>
+        </Border>
+      </Button>
       <Border Grid.Column="2" Margin="5,0,0,0" CornerRadius="11" Padding="13,8" Opacity="0.5"
               Background="#05FFFFFF" BorderThickness="1" BorderBrush="{StaticResource SyxNeutralBorderBrush}">
         <StackPanel Orientation="Horizontal" Spacing="10">

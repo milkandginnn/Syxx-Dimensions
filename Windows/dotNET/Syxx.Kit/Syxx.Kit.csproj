@@ -11,7 +11,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NSec.Cryptography" Version="26.4.0" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- D003: expose internal transport-pinning helpers (IsTransportIdentityFailure,

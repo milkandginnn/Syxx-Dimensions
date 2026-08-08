@@ -70,7 +70,7 @@ public static class AuthoritativeVantage
 
     public static async Task<AuthoritativeComparison> Compare(string domain,
         ushort qtype = TypeA,
-        IReadOnlyList<string> resolverAnswers = null,
+        IReadOnlyList<string>? resolverAnswers = null,
         IReadOnlyList<string>? bootstrapResolvers = null,
         int maxNameservers = 6,
         int maxServersProbed = 4,
@@ -187,7 +187,9 @@ public static class AuthoritativeVantage
         Func<DNSQuery, Task<DNSResponse>> query)
     {
         var candidate = domain.EndsWith(".", StringComparison.Ordinal) ? domain[..^1] : domain;
-        for (int i = 0; i < 8; i++)
+        // B314: increased from 8 to 16 label walks — deeply nested names (>8 labels) missed
+        // delegation at the old cap. The labels.Length < 2 guard already terminates early.
+        for (int i = 0; i < 16; i++)
         {
             var labels = candidate.Split('.');
             if (labels.Length < 2) break;

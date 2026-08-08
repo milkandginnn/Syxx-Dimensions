@@ -45,9 +45,11 @@ internal sealed class DpapiSecretStore : ISecretStore
 
     static DpapiSecretStore()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-                      ?? Environment.GetEnvironmentVariable("APPDATA")
-                      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "Roaming");
+        // E187: use LocalApplicationData (not Roaming) — DPAPI blobs are machine-specific
+        // and should not roam across devices via folder redirection or profile sync.
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+                      ?? Environment.GetEnvironmentVariable("LOCALAPPDATA")
+                      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "Local");
         StoreDir = Path.Combine(appData, "Syxx", "keystore");
     }
 
@@ -57,8 +59,33 @@ internal sealed class DpapiSecretStore : ISecretStore
     {
         var path = GetStorePath(keyType, keyId);
         var dir = Path.GetDirectoryName(path);
-        if (dir != null && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
+
+        // WG-042: always apply EnsurePrivateDir — idempotent on existing directories.
+        // On Windows this creates the directory with inherited ACLs; on Linux it sets 0700.
+        // Must run even if the directory already exists, to repair permissions if they drifted.
+        if (dir != null)
+            SyxxPaths.EnsurePrivateDir(dir);
+
+        // E206: on Windows, additionally restrict the keystore directory ACL to the current user.
+        // This prevents other local users from enumerating or reading DPAPI blobs.
+        if (dir != null && OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var dirInfo = new DirectoryInfo(dir);
+                var acl = dirInfo.GetAccessControl();
+                acl.SetAccessRuleProtection(true, false);
+                acl.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
+                    Environment.UserName,
+                    System.Security.AccessControl.FileSystemRights.FullControl,
+                    System.Security.AccessControl.InheritanceFlags.ContainerInherit | System.Security.AccessControl.InheritanceFlags.ObjectInherit,
+                    System.Security.AccessControl.PropagationFlags.None,
+                    System.Security.AccessControl.AccessControlType.Allow));
+                dirInfo.SetAccessControl(acl);
+            }
+            catch (PlatformNotSupportedException) { /* non-Windows or container — skip */ }
+            catch (System.UnauthorizedAccessException) { /* insufficient privilege — skip */ }
+        }
 
         var plaintext = Encoding.UTF8.GetBytes(secret);
         var entropy = GetEntropy(keyType);
@@ -77,7 +104,17 @@ internal sealed class DpapiSecretStore : ISecretStore
 
             var entropy = GetEntropy(keyType);
             var plaintext = Unprotect(ciphertext, entropy);
-            return Encoding.UTF8.GetString(plaintext);
+            try
+            {
+                return Encoding.UTF8.GetString(plaintext);
+            }
+            finally
+            {
+                // E166: zero decrypted plaintext from memory to prevent secret leakage
+                // via GC heap dumps, crash dumps, or memory forensics.
+                Array.Clear(plaintext);
+                Array.Clear(ciphertext);
+            }
         }
         catch
         {
@@ -128,11 +165,44 @@ internal sealed class DpapiSecretStore : ISecretStore
 
     // ── Helpers ───────────────────────────────────────────────────────────────────
 
+    /// WG-042: builds the store path and validates it cannot escape <see cref="StoreDir"/>.
+    /// Even though <see cref="Sanitize"/> rejects ".." and directory separators, a defense-in-depth
+    /// check resolves the full path and confirms it is rooted under the expected directory. This
+    /// catches any encoding or platform-specific bypass that character-level sanitization might miss
+    /// (e.g. Windows short-name aliases, Unicode normalization, or future Sanitize regressions).
     private static string GetStorePath(string keyType, string keyId)
-        => Path.Combine(StoreDir, $"{Sanitize(keyType)}_{Sanitize(keyId)}");
+    {
+        var candidate = Path.Combine(StoreDir, $"{Sanitize(keyType)}_{Sanitize(keyId)}");
+        var fullPath = Path.GetFullPath(candidate);
+        var storeDirFull = Path.GetFullPath(StoreDir);
+
+        // Ensure the resolved path is rooted under the keystore directory.
+        // Path.EndsInDirectorySeparator handles trailing separator differences.
+        if (!fullPath.StartsWith(storeDirFull, StringComparison.OrdinalIgnoreCase)
+            || (fullPath.Length > storeDirFull.Length
+                && fullPath[storeDirFull.Length] != Path.DirectorySeparatorChar
+                && fullPath[storeDirFull.Length] != Path.AltDirectorySeparatorChar))
+        {
+            throw new InvalidOperationException(
+                $"WG-042: resolved keystore path '{fullPath}' escapes the expected directory '{storeDirFull}'");
+        }
+
+        return fullPath;
+    }
 
     private static string Sanitize(string value)
     {
+        // WG-042: reject path traversal attempts before character-level sanitization.
+        // ".." and directory separators could escape the keystore directory even after
+        // invalid-filename-character replacement (none of these are in GetInvalidFileNameChars
+        // on all platforms — '.' and '/' are valid on some filesystems).
+        if (value.Contains("..", StringComparison.Ordinal) ||
+            value.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            value.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Invalid key ID: path traversal characters are not permitted", nameof(value));
+        }
+
         var invalid = Path.GetInvalidFileNameChars();
         return string.Create(value.Length, (value, invalid), static (span, state) =>
         {

@@ -58,11 +58,14 @@ public static class FirstRunScan
         var inputs = new SectionInputs();
 
         var servers = NetworkKeyState.GetSystemDNSServers();
-        string localResolver = servers.FirstOrDefault();
+        string? localResolver = servers.FirstOrDefault();
         if (localResolver == null)
         {
             Console.WriteLine("⚠️ System resolver undetectable — falling back to 8.8.8.8");
             localResolver = "8.8.8.8";
+            // C212: flag the substitution so Synthesizer caps Mirror at Degraded — a local-vs-public
+            // comparison degenerates when local IS public (parity with macOS FirstRunScan.swift).
+            inputs.ResolverSubstituted = true;
         }
 
         // ---- Prophet — is the resolver telling the truth? -------------------------------------

@@ -1,17 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             xmlns:ctl="using:SyxxUI.Avalonia.Controls"
              x:Class="SyxxUI.Avalonia.Views.PortalView"
              x:DataType="vm:PortalViewModel">
   <StackPanel Spacing="20">
-    <StackPanel Spacing="6">
-      <TextBlock Text="PORTAL • LOCAL NETWORK &amp; ROUTE" FontSize="12" FontWeight="Bold"
-                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
-      <TextBlock Text="A Portal carried the traveler to a distant land, tracing the path of a hidden interceptor that had reached into the stream."
-                 FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
-      <TextBlock Text="Portal maps local network interfaces and gateways, and traces the route to a chosen domain to find path anomalies, specifically highlighting where transparent proxies or middleboxes intercept queries."
-                 FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
-    </StackPanel>
+    <ctl:ModuleHeader x:Name="Header" Rune="&#x16DC;" Eyebrow="THE GATEKEEPER &#x00B7; LAN &amp; ROUTE TRACE" Name="Portal"
+                       AccentBrush="{StaticResource SyxTealBrush}" />
 
     <Button Content="Run Portal" Command="{Binding RunCommand}" IsEnabled="{Binding !IsRunning}" HorizontalAlignment="Left" />
 
@@ -24,6 +19,7 @@
                      Foreground="{StaticResource SyxTextBrush}" />
         </StackPanel>
       </Border>
+      <!-- D284: Active Interfaces card — network interfaces only, no VPN status mixed in. -->
       <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
               BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
         <StackPanel Spacing="8">
@@ -36,6 +32,13 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+        </StackPanel>
+      </Border>
+      <!-- D284: VPN status in its own card, separate from interfaces. -->
+      <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+              BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+        <StackPanel Spacing="8">
+          <TextBlock Text="VPN / TUNNEL STATUS" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
           <TextBlock Text="{Binding VpnLine}" FontSize="13" Foreground="{StaticResource SyxTextSecondaryBrush}" />
         </StackPanel>
       </Border>

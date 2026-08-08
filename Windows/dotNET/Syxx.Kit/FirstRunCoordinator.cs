@@ -17,7 +17,8 @@ public sealed record GuidedSetupSelection(
     bool NotificationsEnabled,
     bool TelemetryEnabled,
     bool UpdateCheckEnabled,
-    bool CrashReportingEnabled)
+    bool CrashReportingEnabled,
+    string ThemeMode)
 {
     public static GuidedSetupSelection SafeDefaults { get; } = new(
         ExperienceMode: "story",
@@ -27,7 +28,8 @@ public sealed record GuidedSetupSelection(
         NotificationsEnabled: true,
         TelemetryEnabled: false,
         UpdateCheckEnabled: false,
-        CrashReportingEnabled: false);
+        CrashReportingEnabled: false,
+        ThemeMode: "system");
 }
 
 public sealed class FirstRunCoordinator
@@ -117,6 +119,7 @@ public sealed class FirstRunCoordinator
         candidate.TelemetryEnabled = selection.TelemetryEnabled;
         candidate.UpdateCheckEnabled = selection.UpdateCheckEnabled;
         candidate.CrashReportingEnabled = selection.CrashReportingEnabled;
+        candidate.ThemeMode = selection.ThemeMode;
         candidate.CompletedSetupVersion = CurrentSetupVersion;
         candidate.SetupCompletedAtUtc = UtcString(completedAt ?? DateTimeOffset.UtcNow);
 
@@ -146,6 +149,7 @@ public sealed class FirstRunCoordinator
         TelemetryEnabled = GuidedSetupSelection.SafeDefaults.TelemetryEnabled,
         UpdateCheckEnabled = GuidedSetupSelection.SafeDefaults.UpdateCheckEnabled,
         CrashReportingEnabled = GuidedSetupSelection.SafeDefaults.CrashReportingEnabled,
+        ThemeMode = GuidedSetupSelection.SafeDefaults.ThemeMode,
     };
 
     private static SyxxSettings Clone(SyxxSettings settings) => new()
@@ -160,6 +164,7 @@ public sealed class FirstRunCoordinator
         CrashReportingEnabled = settings.CrashReportingEnabled,
         EulaAccepted = settings.EulaAccepted,
         ExperienceMode = settings.ExperienceMode,
+        ThemeMode = settings.ThemeMode,
         SettingsSchemaVersion = settings.SettingsSchemaVersion,
         AgreementVersion = settings.AgreementVersion,
         AgreementSha256 = settings.AgreementSha256,

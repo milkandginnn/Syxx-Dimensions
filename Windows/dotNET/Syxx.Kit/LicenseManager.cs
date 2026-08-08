@@ -179,8 +179,11 @@ namespace Syxx.Kit
                     return DpapiSecretStore.DecryptLegacy(encrypted, DpapiSecretStore.LegacyLicenseEntropy);
 #pragma warning restore CA1416
                 }
-                catch
+                // E001: surface DPAPI failures to diagnostics instead of silently returning null.
+                // Keystore corruption or OS permission errors must be distinguishable from "no key stored".
+                catch (Exception ex)
                 {
+                    SyxxTracer.Log("license.unprotect.failed", $"DPAPI legacy decryption failed: {ex.GetType().Name}");
                     return null;
                 }
             }
@@ -221,7 +224,9 @@ namespace Syxx.Kit
             /// Previously stored as a separate unsigned DPAPI blob ("trialMaxTime"), which allowed
             /// an attacker to lower it and roll the clock back to extend the trial undetected.
             public long MaxSeenMillis { get; set; }
-            public string Signature { get; set; } = string.Empty;
+            /// E205: nullable — when the machine fingerprint is unavailable, no signature is
+            /// computed and the trial state is treated as unsigned (untrusted).
+            public string? Signature { get; set; }
         }
 
         // E044: fully async — the old GetAwaiter().GetResult() form ran synchronously on the WinUI
@@ -246,18 +251,80 @@ namespace Syxx.Kit
                     return (serverLaunch, serverTime);
                 }
             }
-            catch { }
+            // E002: log network failures instead of silently swallowing them.
+            catch (Exception ex)
+            {
+                SyxxTracer.Log("trial.sync.failed", $"Trial anchor sync failed: {ex.GetType().Name}: {ex.Message}");
+            }
             return null;
         }
 
         /// D054: sign both FirstLaunchEpochMillis and MaxSeenMillis so neither can be
         /// modified independently. The signature covers both fields separated by a pipe.
-        private static string TrialSignature(long firstLaunchMillis, long maxSeenMillis = 0)
+        ///
+        /// E205: refuses to sign when the machine fingerprint is unavailable — an empty-string
+        /// HMAC key is trivially forgeable (any attacker can reproduce it). Returns null so callers
+        /// treat the trial state as unsigned rather than trusting a zero-entropy signature.
+        ///
+        /// E205 (extended): the HMAC key also mixes in installation-specific random bytes
+        /// generated on first install and persisted via the platform secret store. This ensures
+        /// that even if the fingerprint is guessable or shared across VMs, the HMAC key contains
+        /// entropy unique to THIS installation that an attacker cannot reproduce without access
+        /// to the encrypted store.
+        private static string? TrialSignature(long firstLaunchMillis, long maxSeenMillis = 0)
         {
+            var fp = GetMachineFingerprint();
+            if (fp.Quality == FingerprintQuality.Unavailable)
+                return null;
+
+            // E205: mix installation-specific random bytes into the HMAC key so it is never
+            // derived from the fingerprint alone. GetInstallationSalt() generates and persists
+            // 32 random bytes on first call; subsequent calls return the same bytes.
+            var installSalt = GetInstallationSalt();
+            var hmacKey = fp.Value + ":" + installSalt;
+
             return ComputeHmacSHA256(
                 firstLaunchMillis.ToString(CultureInfo.InvariantCulture) + "|" +
                 maxSeenMillis.ToString(CultureInfo.InvariantCulture),
-                GetSystemFingerprint());
+                hmacKey);
+        }
+
+        /// E205: retrieves or creates a 32-byte random salt unique to this installation.
+        /// The salt is persisted via the platform secret store so it survives across sessions
+        /// but cannot be reconstructed by an attacker who only knows the machine fingerprint.
+        /// This prevents HMAC key forgery even when the fingerprint is guessable (e.g. VMs
+        /// sharing a MachineGuid, or an attacker who has enumerated the registry value).
+        private static string GetInstallationSalt()
+        {
+            const string saltKeyType = "trial-salt";
+            const string saltKeyId = "v1";
+
+            try
+            {
+                var existing = SecretStore.Retrieve(saltKeyType, saltKeyId);
+                if (!string.IsNullOrEmpty(existing))
+                    return existing;
+
+                // Generate 32 cryptographically-random bytes, hex-encoded (64 chars).
+                var bytes = new byte[32];
+                using var rng = RandomNumberGenerator.Create();
+                rng.GetBytes(bytes);
+                var salt = Convert.ToHexString(bytes).ToLowerInvariant();
+
+                SecretStore.Store(saltKeyType, saltKeyId, salt);
+                return salt;
+            }
+            catch (Exception ex)
+            {
+                // If the secret store is broken, log and return a fallback that at least
+                // prevents an empty HMAC key. This is not forgeable across installs because
+                // it includes the current timestamp — but trial state signed with it will
+                // not survive a store repair. The alternative (empty key) is worse.
+                SyxxTracer.Log("trial.salt.unavailable",
+                    $"Installation salt store unavailable: {ex.GetType().Name}. " +
+                    "Trial state signed with ephemeral fallback salt.");
+                return $"ephemeral:{DateTimeOffset.UtcNow.Ticks}";
+            }
         }
 
         private static string ComputeHmacSHA256(string message, string key)
@@ -299,12 +366,25 @@ namespace Syxx.Kit
                             // D054: verify signature covers both FirstLaunchEpochMillis and MaxSeenMillis.
                             // Backward compatibility: old records only signed FirstLaunchEpochMillis,
                             // so we accept either signature format during the transition.
-                            var expectedSig = TrialSignature(state.FirstLaunchEpochMillis, state.MaxSeenMillis);
-                            var legacySig = TrialSignature(state.FirstLaunchEpochMillis, 0);
-                            if (state.Signature == expectedSig || state.Signature == legacySig)
+                            // E205: reject unsigned state — a null or empty stored signature with a
+                            // null expected signature (fingerprint unavailable) must NOT pass.
+                            if (!string.IsNullOrEmpty(state.Signature))
                             {
-                                localLaunchMillis = state.FirstLaunchEpochMillis;
-                                localMaxSeenMillis = state.MaxSeenMillis;
+                                var expectedSig = TrialSignature(state.FirstLaunchEpochMillis, state.MaxSeenMillis);
+                                var legacySig = TrialSignature(state.FirstLaunchEpochMillis, 0);
+                                if (state.Signature == expectedSig || state.Signature == legacySig)
+                                {
+                                    localLaunchMillis = state.FirstLaunchEpochMillis;
+                                    localMaxSeenMillis = state.MaxSeenMillis;
+                                }
+                                else
+                                {
+                                    // D369: log fingerprint mismatch — typically caused by Windows
+                                    // reinstall changing MachineGuid, which resets trial without explanation.
+                                    SyxxTracer.Log("trial.signature.mismatch",
+                                        "Trial signature does not match current machine fingerprint. " +
+                                        "This typically occurs after a Windows reinstall or hardware change.");
+                                }
                             }
                         }
                     }
@@ -357,16 +437,24 @@ namespace Syxx.Kit
                 }
             }
 
-            var newState = new TrialState
+            // E205: only persist trial state when we can sign it — a stored unsigned blob
+            // would pass verification on next read when the fingerprint is still unavailable,
+            // making the trial trivially forgeable. When we cannot sign, the trial state lives
+            // only for this session (the caller still gets the correct first-launch date).
+            var signature = TrialSignature(finalLaunchMillis, localMaxSeenMillis);
+            if (signature is not null)
             {
-                FirstLaunchEpochMillis = finalLaunchMillis,
-                // D054: preserve the existing MaxSeenMillis from the old trialMaxTime field
-                // (backward compatibility) or from the deserialized TrialState.
-                MaxSeenMillis = localMaxSeenMillis,
-                Signature = TrialSignature(finalLaunchMillis, localMaxSeenMillis)
-            };
-            dict["trialState"] = Protect(JsonSerializer.Serialize(newState));
-            SaveConfig(dict);
+                var newState = new TrialState
+                {
+                    FirstLaunchEpochMillis = finalLaunchMillis,
+                    // D054: preserve the existing MaxSeenMillis from the old trialMaxTime field
+                    // (backward compatibility) or from the deserialized TrialState.
+                    MaxSeenMillis = localMaxSeenMillis,
+                    Signature = signature
+                };
+                dict["trialState"] = Protect(JsonSerializer.Serialize(newState));
+                SaveConfig(dict);
+            }
 
             return DateTimeOffset.FromUnixTimeMilliseconds(finalLaunchMillis).UtcDateTime;
         }

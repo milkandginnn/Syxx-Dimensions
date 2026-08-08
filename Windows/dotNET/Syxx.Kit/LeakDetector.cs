@@ -530,7 +530,7 @@ namespace Syxx.Kit
                 return LeakSignatureVerification.NoSignature;
             try
             {
-                var sigBytes = Convert.FromBase64String(NormalizeBase64(result.Signature));
+                var sigBytes = Convert.FromBase64String(NormalizeBase64(result.Signature)!);
                 var pubBytes = Convert.FromBase64String(result.PublicKey);
                 var payloadBytes = Convert.FromBase64String(result.SignedPayload);
                 var pubKey = NSec.Cryptography.PublicKey.Import(
@@ -561,7 +561,7 @@ namespace Syxx.Kit
 
         /// D057: normalize url-safe/unpadded base64 to standard padded form so a
         /// collector using either alphabet can be verified without fabricating a fail.
-        private static string NormalizeBase64(string s)
+        private static string? NormalizeBase64(string? s)
         {
             if (s is null) return null;
             var sb = s.Replace('-', '+').Replace('_', '/');
@@ -614,7 +614,7 @@ namespace Syxx.Kit
         {
             try
             {
-                var bytes = Convert.FromBase64String(NormalizeBase64(signedPayloadBase64));
+                var bytes = Convert.FromBase64String(NormalizeBase64(signedPayloadBase64)!);
                 var dto = JsonSerializer.Deserialize<SignedLeakAttestation>(bytes, _jsonOptions);
                 if (dto?.Leaked is null || dto.ObservedResolvers is null) return null;
                 return dto;

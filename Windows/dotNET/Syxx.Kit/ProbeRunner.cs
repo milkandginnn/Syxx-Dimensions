@@ -35,7 +35,7 @@ public static class ProbeRunner
     public static async Task<T?> RunAsync<T>(
         string label,
         ProbeBudget budget,
-        Func<Task<T?>> operation) where T : class
+        Func<Task<T>> operation) where T : class
     {
         return await RunInternalAsync(label, budget, _ => operation(), supportsCancellation: false);
     }
@@ -51,13 +51,13 @@ public static class ProbeRunner
     public static async Task<T?> RunAsync<T>(
         string label,
         ProbeBudget budget,
-        Func<CancellationToken, Task<T?>> operation) where T : class
+        Func<CancellationToken, Task<T>> operation) where T : class
     {
         // The token handed down by RunInternalAsync already carries the deadline (and, per C058,
         // the grace window beyond it). A second linked CTS here would be a duplicate copy of that
         // policy which could silently disagree with it — it previously cancelled at
         // PerProbeTimeout, which would have cut the grace drain off before it could drain.
-        return await RunInternalAsync(label, budget, operation, supportsCancellation: true);
+        return await RunInternalAsync(label, budget, async ct => await operation(ct), supportsCancellation: true);
     }
 
     // ── Shared implementation ──
@@ -75,7 +75,7 @@ public static class ProbeRunner
     private static async Task<T?> RunInternalAsync<T>(
         string label,
         ProbeBudget budget,
-        Func<CancellationToken, Task<T?>> operation,
+        Func<CancellationToken, Task<T>> operation,
         bool supportsCancellation) where T : class
     {
         // 1. Budget gate
@@ -235,7 +235,7 @@ public static class ProbeRunner
     /// re-thrown so the caller's catch arms classify it as <c>transport_error</c> — an operation
     /// that threw during the drain did not time out, and must not borrow the deadline's label.
     /// </returns>
-    private static async Task<(T? Result, string? Reason, bool LateButValid)> DrainAsync<T>(Task<T?> opTask)
+    private static async Task<(T? Result, string? Reason, bool LateButValid)> DrainAsync<T>(Task<T> opTask)
         where T : class
     {
         var drained = await Task.WhenAny(opTask, Task.Delay(GraceDrain)).ConfigureAwait(false);

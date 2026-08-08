@@ -94,14 +94,17 @@ public static class DenialOfExistenceProbe
         // check, so attaching any NSEC/NSEC3 record — which an on-path injector can do freely, since
         // nothing here validates the NSEC interval or its RRSIG — bypassed the only real test and
         // reported an injected denial as an authenticated one.
+        // B312: normalize SOA name for consistent display — IsAncestor normalizes internally
+        // but the detail string must use the same normalized form to avoid casing mismatch.
+        var soaNameNormalized = soa?.Name.ToLowerInvariant() ?? "";
         if (soa is not null && !IsAncestor(soa.Name, name))
-            return Make(DenialStatus.Contradictory, $"SOA owner {soa.Name} is not an ancestor of {name} — denial from the wrong zone, likely injected");
+            return Make(DenialStatus.Contradictory, $"SOA owner {soaNameNormalized} is not an ancestor of {name} — denial from the wrong zone, likely injected");
 
         if (hasNSEC)
             return Make(DenialStatus.NsecProven, "negative accompanied by NSEC/NSEC3 — authenticated denial of existence");
 
         if (soa is not null)
-            return Make(DenialStatus.SoaBacked, $"negative backed by SOA for {soa.Name} — proper authoritative negative");
+            return Make(DenialStatus.SoaBacked, $"negative backed by SOA for {soaNameNormalized} — proper authoritative negative");
 
         // B071: a declared-but-unparseable authority section means the SOA may exist but be
         // unreadable — that is a corrupt response, not evidence of a synthesized bare denial.

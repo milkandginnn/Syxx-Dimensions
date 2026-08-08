@@ -1,17 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             xmlns:ctl="using:SyxxUI.Avalonia.Controls"
+             xmlns:mv="using:SyxxUI.Avalonia.Views"
              x:Class="SyxxUI.Avalonia.Views.MirrorView"
              x:DataType="vm:MirrorViewModel">
   <StackPanel Spacing="20">
-    <StackPanel Spacing="6">
-      <TextBlock Text="MIRROR • CENSORSHIP &amp; TAMPERING" FontSize="12" FontWeight="Bold"
-                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
-      <TextBlock Text="The Mirror answered by showing whether the records born locally matched the ones seen far away, and the witness swore that the same names should not change their faces every time they were asked."
-                 FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
-      <TextBlock Text="Mirror tests your DNS resolver for signs of tampering or censorship by resolving a given domain both locally and remotely, comparing the answers across independent vantages."
-                 FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
-    </StackPanel>
+    <ctl:ModuleHeader x:Name="Header" Rune="&#x16DE;" Eyebrow="THE REFLECTION &#x00B7; REMOTE VS LOCAL" Name="Mirror"
+                       AccentBrush="{StaticResource SyxGoldBrush}" />
 
     <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
             BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
@@ -35,6 +31,46 @@
             BorderBrush="{StaticResource SyxOrangeBrush}" BorderThickness="1">
       <TextBlock Text="{Binding ProNote}" FontSize="13" TextWrapping="Wrap"
                  Foreground="{StaticResource SyxOrangeBrush}" />
+    </Border>
+
+    <!-- View Details — expandable section for content integrity comparison -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="10" Padding="14"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1"
+            IsVisible="{Binding HasResult}">
+      <StackPanel Spacing="12">
+        <!-- Toggle button -->
+        <Button Content="{Binding DetailsToggleLabel}" Command="{Binding ToggleDetailsCommand}"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Left"
+                FontFamily="{StaticResource SyxMonoFont}" FontSize="13" FontWeight="Bold"
+                Foreground="{StaticResource SyxTealBrush}" Padding="0" />
+
+        <!-- Details panel (expandable) -->
+        <StackPanel x:Name="DetailsPanel" Spacing="12" IsVisible="{Binding DetailsExpanded}">
+
+          <!-- Degradation badge -->
+          <mv:MirrorDegradationBadge Score="{Binding DegradationScore}"
+                                      IsVisible="{Binding HasComparisonResult}" />
+
+          <!-- Partial warning -->
+          <Border Background="#1AF2B33D" CornerRadius="4" Padding="8"
+                  IsVisible="{Binding IsPartialResult}">
+            <TextBlock Text="{Binding PartialReason}" FontFamily="{StaticResource SyxMonoFont}" FontSize="11"
+                       Foreground="#FFF2B33D" TextWrapping="Wrap" />
+          </Border>
+
+          <!-- Terminal panes side by side -->
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding HasComparisonResult}">
+            <mv:MirrorTerminalView Grid.Column="0" Title="Remote (Server)" Domain="{Binding Domain}"
+                                    Bundle="{Binding RemoteBundle}" />
+            <mv:MirrorTerminalView Grid.Column="1" Title="Local (Your Device)" Domain="{Binding Domain}"
+                                    Bundle="{Binding LocalBundle}" />
+          </Grid>
+
+          <!-- Diff view -->
+          <mv:MirrorDiffView DiffResult="{Binding ComparisonDiffResult}"
+                              IsVisible="{Binding HasComparisonResult}" />
+        </StackPanel>
+      </StackPanel>
     </Border>
   </StackPanel>
 </UserControl>

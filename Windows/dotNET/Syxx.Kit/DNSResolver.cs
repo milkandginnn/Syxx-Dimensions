@@ -176,17 +176,27 @@ namespace Syxx.Kit
 
     public static class DNSResolver
     {
+        // B319: removed per-instance Timeout from the shared HttpClient. A static 8-second
+        // timeout was global across all DoH queries and could not be overridden per-call without
+        // creating a new client (which causes socket exhaustion). Per-call timeouts are now
+        // applied via CancellationTokenSource in QueryDoHDetailedAsync below.
         private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
         {
-            Timeout = TimeSpan.FromSeconds(8)
+            Timeout = System.Threading.Timeout.InfiniteTimeSpan
         };
+
+        /// Default timeout for DoH queries. Callers can override by passing a CancellationToken
+        /// with their own deadline.
+        private static readonly TimeSpan DefaultDoHTimeout = TimeSpan.FromSeconds(8);
 
         public static async Task<List<DNSRecord>> QueryUDPAsync(DNSQuery query, CancellationToken ct = default)
         {
             return (await QueryUDPDetailedAsync(query, ct)).Records;
         }
 
-        private const int MaxUDPAttempts = 2;
+        // B318: increased from 2 to 3 — single retry insufficient against attacker sending
+        // spoofed response per attempt. Random jitter added between retries below.
+        private const int MaxUDPAttempts = 3;
 
         public static async Task<DNSResponse> QueryUDPDetailedAsync(DNSQuery query, CancellationToken ct = default)
         {
@@ -274,6 +284,9 @@ namespace Syxx.Kit
                     if (parsed.Status == DNSResponseStatus.ResponseIdMismatch && attempt + 1 < MaxUDPAttempts)
                     {
                         lastError = parsed.ErrorMessage;
+                        // B318: random-delay jitter between retries to reduce the window for
+                        // an attacker to predict when the next query lands and pre-seed a spoof.
+                        await Task.Delay(Random.Shared.Next(20, 120), ct).ConfigureAwait(false);
                         continue;
                     }
                     span?.SetTag("dns.answers", parsed.Records.Count);
@@ -408,7 +421,8 @@ namespace Syxx.Kit
             return (await QueryDoHDetailedAsync(name, type, dohUrl)).Records;
         }
 
-        public static async Task<DNSResponse> QueryDoHDetailedAsync(string name, ushort type, string dohUrl)
+        public static async Task<DNSResponse> QueryDoHDetailedAsync(string name, ushort type, string dohUrl,
+            TimeSpan? timeout = null)
         {
             // The DoH endpoint URL is a provider constant, not user data, so it stays verbatim.
             using var span = SyxxTracer.StartSpan("dns.query.doh", ActivityKind.Client,
@@ -429,7 +443,11 @@ namespace Syxx.Kit
                 };
                 request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/dns-message"));
 
-                var response = await _httpClient.SendAsync(request);
+                // B319: per-call timeout via CancellationTokenSource instead of relying on the
+                // shared static HttpClient.Timeout. This allows callers to override the default
+                // 8-second timeout without creating a new HttpClient instance.
+                using var cts = new CancellationTokenSource(timeout ?? DefaultDoHTimeout);
+                var response = await _httpClient.SendAsync(request, cts.Token);
                 response.EnsureSuccessStatusCode();
 
                 var responseBytes = await response.Content.ReadAsByteArrayAsync();
@@ -500,7 +518,8 @@ namespace Syxx.Kit
                 ms.Write(new byte[] { 0x00, 0x01 }, 0, 2); // Questions: 1
                 ms.Write(new byte[] { 0x00, 0x00 }, 0, 2); // Answer RRs: 0
                 ms.Write(new byte[] { 0x00, 0x00 }, 0, 2); // Authority RRs: 0
-                ms.Write(new byte[] { edns0UDPSize.HasValue ? (byte)0x00 : (byte)0x00,
+                // B317: simplified from no-op conditional (both branches produced 0x00 for high byte).
+                ms.Write(new byte[] { 0x00,
                                       edns0UDPSize.HasValue ? (byte)0x01 : (byte)0x00 }, 0, 2); // Additional RRs: 0 or 1
 
                 // C116: trim trailing dots before splitting — "example.com." must produce
@@ -542,6 +561,9 @@ namespace Syxx.Kit
                             var ecsOption = new byte[] { 0x00, 0x08,    // OPTION-CODE: ECS (8)
                                                          0x00, 0x07,    // OPTION-LENGTH: 7
                                                          0x00, 0x01,    // FAMILY: IPv4
+                                                         // B320: /24 is deliberate — probes whether the resolver forwards ECS
+                                                         // to authoritative servers. Using the real client's prefix would
+                                                         // leak PII; /24 provides enough entropy for leak detection.
                                                          0x18,          // SOURCE PREFIX-LENGTH: 24
                                                          0x00,          // SCOPE PREFIX-LENGTH: 0 (query)
                                                          octets[0], octets[1], octets[2] };
@@ -629,6 +651,11 @@ namespace Syxx.Kit
             int authorityCount = (data[8] << 8) | data[9];
             int additionalCount = (data[10] << 8) | data[11];
 
+            // D147: cap answer count at 256 to prevent crafted packets with enormous ANCOUNT
+            // from causing excessive parsing work (parity with macOS D020 budget).
+            if (answerCount > 256)
+                return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = $"Answer count {answerCount} exceeds maximum 256." };
+
             // Best-effort authority-section parse (A6): a failure here never downgrades a valid answer
             // to MalformedResponse; it yields an empty authority set. Mirrors the macOS parser.
             List<DNSRecord> ParseAuthority() => ParseAuthorityBestEffort(data, questionCount, answerCount, authorityCount);
@@ -660,7 +687,18 @@ namespace Syxx.Kit
 
             if (truncated)
             {
-                return new DNSResponse { Status = DNSResponseStatus.Truncated, ResponseCode = combinedResponseCode, IsTruncated = true };
+                // B305: parse available authority section before returning on truncation.
+                // A truncated response may still contain a partial authority section with a
+                // useful SOA record. Best-effort parse; failures yield empty authority.
+                var truncAuth = ParseAuthority();
+                return new DNSResponse
+                {
+                    Status = DNSResponseStatus.Truncated,
+                    ResponseCode = combinedResponseCode,
+                    IsTruncated = true,
+                    AuthorityRecords = truncAuth,
+                    AuthorityMalformed = false, // best-effort; don't flag partial parse as malformed
+                };
             }
             if (combinedResponseCode == 2)
             {

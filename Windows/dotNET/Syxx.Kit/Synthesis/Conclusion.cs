@@ -301,16 +301,19 @@ public sealed class SectionStatusJsonConverter : JsonConverter<SectionStatus>
 public sealed record SectionStatusEntry(
     [property: JsonPropertyName("section")] Section Section,
     [property: JsonPropertyName("status")] SectionStatus Status,
-    [property: JsonPropertyName("completeness")] double Completeness = 1.0,
-    [property: JsonPropertyName("datapointsObserved")]
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    double Completeness = 1.0,
     int? DatapointsObserved = null,
-    [property: JsonPropertyName("datapointsExpected")]
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     int? DatapointsExpected = null)
 {
     // Clamp completeness to [0,1] at construction time, matching macOS Conclusion.swift:164
+    [property: JsonPropertyName("completeness")]
     public double Completeness { get; init; } = Math.Max(0.0, Math.Min(1.0, Completeness));
+
+    [property: JsonPropertyName("datapointsObserved"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DatapointsObserved { get; init; } = DatapointsObserved;
+
+    [property: JsonPropertyName("datapointsExpected"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DatapointsExpected { get; init; } = DatapointsExpected;
 }
 
 /// Colour/urgency buckets, mapped to the Io severity palette in the GUI. Used only by

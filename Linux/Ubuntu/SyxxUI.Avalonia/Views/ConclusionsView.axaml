@@ -1,19 +1,14 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             xmlns:ctl="using:SyxxUI.Avalonia.Controls"
              x:Class="SyxxUI.Avalonia.Views.ConclusionsView"
              x:DataType="vm:ConclusionsViewModel">
 
   <StackPanel Spacing="20">
 
-    <StackPanel Spacing="6">
-      <TextBlock Text="DIAGNOSTICS • SYNTHESIS" FontSize="12" FontWeight="Bold"
-                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
-      <TextBlock Text="Scan my network" FontSize="28" FontWeight="Bold"
-                 Foreground="{StaticResource SyxTextBrush}" />
-      <TextBlock Text="One run of every check that needs no setup, then a graded result."
-                 FontSize="14" Foreground="{StaticResource SyxTextSecondaryBrush}" />
-    </StackPanel>
+    <ctl:ModuleHeader x:Name="Header" Rune="&#x2712;" Eyebrow="THE COUNCIL &#x00B7; SYNTHESIS" Name="Conclusion"
+                       AccentBrush="{StaticResource SyxGoldBrush}" />
 
     <StackPanel Orientation="Horizontal" Spacing="12">
       <Button Content="Scan my network" Command="{Binding ScanCommand}"

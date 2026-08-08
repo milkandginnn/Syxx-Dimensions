@@ -25,21 +25,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             xmlns:ctl="using:SyxxUI.Avalonia.Controls"
              x:Class="SyxxUI.Avalonia.Views.GluttonView"
              x:DataType="vm:GluttonViewModel">
   <ScrollViewer Padding="0">
     <StackPanel Spacing="20" Margin="6">
 
-      <!-- Header: eyebrow + lore + Check for Leaks button (macOS layout parity). -->
+      <!-- Header: module header + Check for Leaks button (macOS layout parity). -->
       <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Grid.Column="0" Spacing="6">
-          <TextBlock Text="GLUTTON • DNS LEAK &amp; ENCRYPTION"
-                     FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
-                     Foreground="{StaticResource SyxRedBrush}" />
-          <TextBlock Text="Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished."
-                     FontFamily="{StaticResource SyxLoreFont}" FontSize="16" FontWeight="Bold"
-                     TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
-        </StackPanel>
+        <ctl:ModuleHeader Grid.Column="0" x:Name="Header" Rune="&#x16A6;" Eyebrow="THE DEVOURER &#x00B7; DNS LEAK TEST" Name="Glutton"
+                           AccentBrush="{StaticResource SyxRedBrush}" />
         <!-- E118: the button is the LOCAL probe dispatch — it does NOT make a leak claim. -->
         <Button Grid.Column="1" Content="Check for Leaks"
                 Command="{Binding CheckForLeaksCommand}"

@@ -1193,6 +1193,17 @@ public sealed class MatrixDeterminativeEngine
         var overhang = suppressed
             .Where(s => s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded && s.RawSupport >= OverhangFloor)
             .ToList();
+        // B298: diagnostic breadcrumb for signals just below the floor (0.20–0.30 range).
+        // These are suppressed but may indicate legitimate below-tier signals worth reviewing.
+        var nearFloor = suppressed
+            .Where(s => s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded
+                        && s.RawSupport >= 0.20 && s.RawSupport < OverhangFloor)
+            .ToList();
+        if (nearFloor.Count > 0)
+        {
+            SyxxTracer.Log("synthesis.overhang.nearfloor",
+                $"{nearFloor.Count} signal(s) in 0.20–0.30 range suppressed by OverhangFloor: {string.Join(", ", nearFloor.Select(s => $"{s.Id}={s.RawSupport:F2}"))}");
+        }
         if (emitted.TryGetValue(CleanId, out var clean) && overhang.Count == 0)
         {
             var cleanEmitted = clean.Score;
@@ -1244,9 +1255,11 @@ public sealed class MatrixDeterminativeEngine
     {
         var basis = raw.HasDecisive ? "a decisive observation"
             : (raw.MajorCount >= 2 ? $"{raw.MajorCount} major observations" : "supporting observations");
+        // B273: use PctSigned for margin — a negative margin (diagnosis scored worse than its
+        // best competitor) is diagnostic information that Math.Abs would hide.
         return $"{Capitalized(tier.RawValue())} support for {d.DisplayName}: {basis} across "
             + $"{raw.IndependentGroups} independent evidence group{(raw.IndependentGroups == 1 ? "" : "s")} "
-            + $"(fit {Pct(raw.Fit)}, coverage {Pct(raw.Coverage)}, margin {Pct(margin)}, "
+            + $"(fit {Pct(raw.Fit)}, coverage {Pct(raw.Coverage)}, margin {PctSigned(margin)}, "
             + $"contradiction {Pct(raw.Contradiction)}).";
     }
 
@@ -1267,8 +1280,20 @@ public sealed class MatrixDeterminativeEngine
     /// Twin of Swift's private `pct`: `Int((clamp01(abs(x)) * 100).rounded())` — Swift's bare
     /// `.rounded()` is schoolbook AWAY-FROM-ZERO, deliberately NOT `Round6`'s to-even. Do not
     /// unify them (plan Step 3.1); explanation strings would fork across platforms.
+    /// Used for coverage, fit, and contradiction — always non-negative quantities.
     private static string Pct(double x)
         => $"{(int)Math.Round(Clamp01(Math.Abs(x)) * 100, MidpointRounding.AwayFromZero)}%";
+
+    /// B273: signed variant for margin display — a negative margin means the diagnosis scored
+    /// WORSE than its best competitor. Using Math.Abs on margin hides this signal (a -0.15
+    /// margin reads as 15% instead of -15%), suppressing evidence that a diagnosis is losing.
+    /// The sign carries diagnostic information that must survive to the explanation string.
+    private static string PctSigned(double x)
+    {
+        var clamped = Math.Max(-1.0, Math.Min(1.0, x));
+        var pct = (int)Math.Round(clamped * 100, MidpointRounding.AwayFromZero);
+        return $"{pct}%";
+    }
 
     /// Twin of Swift's `clamp01` = `min(1.0, max(0.0, x))`. Written branch-wise because C#'s
     /// `Math.Max` PROPAGATES NaN while Swift's `max` returns the other operand for NaN; this form

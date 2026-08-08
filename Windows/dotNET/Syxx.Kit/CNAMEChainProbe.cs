@@ -27,7 +27,7 @@ public static class CNAMEChainProbe
 
     public static async Task<CNAMEChainAudit> Probe(string domain,
         string resolverUnderTest,
-        IReadOnlyList<string> references = null,
+        IReadOnlyList<string>? references = null,
         Func<DNSQuery, Task<DNSResponse>>? query = null)
     {
         query ??= DefaultQuery;
@@ -42,11 +42,23 @@ public static class CNAMEChainProbe
 
         var testChain = await ChainAt(resolverUnderTest);
         var refChains = new List<List<string>>();
+        bool skipped = false;
         foreach (var refServer in references)
         {
-            if (refServer == resolverUnderTest) continue;
+            if (refServer == resolverUnderTest) { skipped = true; continue; }
             var c = await ChainAt(refServer);
             if (c.Count > 0) refChains.Add(c);
+        }
+        // B311: when the resolver under test matched a reference, we lost one reference,
+        // leaving only 2 for consensus. Add a supplementary reference to restore quorum.
+        if (skipped && refChains.Count < 2)
+        {
+            const string supplementary = "208.67.222.222"; // OpenDNS
+            if (!references.Contains(supplementary) && resolverUnderTest != supplementary)
+            {
+                var c = await ChainAt(supplementary);
+                if (c.Count > 0) refChains.Add(c);
+            }
         }
         return Classify(testChain, refChains);
     }

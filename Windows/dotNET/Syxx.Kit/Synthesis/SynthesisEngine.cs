@@ -37,12 +37,9 @@ public static class SynthesisEngine
     /// own `ThresholdProfile`).
     public sealed class Config
     {
-        /// When true (default), the matrix determinative engine runs over the evidence to produce
-        /// a result (`Determination` on the `Conclusion`). When false, no result is computed
-        /// (`Determination` remains null) and the raw section/evidence data is still populated
-        /// regardless. Useful for rollout gating or A/B testing during the matrix-engine cutover.
-        public bool UseMatrixEngine { get; init; } = true;
-
+        // C208: UseMatrixEngine kill-switch removed — the determinative engine always runs,
+        // matching macOS SynthesisEngine.swift which has no such flag. A silent boolean that
+        // could disable the entire result engine is an unacceptable correctness risk.
         public Config() { }
     }
 
@@ -65,9 +62,8 @@ public static class SynthesisEngine
             ActivityKind.Internal,
             ("synthesis.evidence_count", evidence.Count),
             ("synthesis.section_count", sectionStatuses.Count));
-        var determination = config.UseMatrixEngine
-            ? RunDeterminativeEngine(evidence, sectionStatuses, ct)
-            : null;
+        // C208: the engine always runs — no kill-switch.
+        var determination = RunDeterminativeEngine(evidence, sectionStatuses, ct);
         if (determination != null)
         {
             span?.SetTag("syxx.result", determination.State.ToString());
@@ -287,7 +283,10 @@ public static class SynthesisEngine
     private static readonly Dictionary<EvidenceId, (SyxxIndicator Indicator, double Strength)> IndicatorMapping = new()
     {
         // Prophet — answer authenticity
-        [EvidenceId.AuthoritativeDivergesConfirmed] = (SyxxIndicator.AuthoritativeMismatch, 0.95),
+        // C207: aligned with macOS (B092). The Dimension-confirmed variant arrives over ordinary
+        // TLS with no response signature or pinned key. 0.95 overclaims what the transport proves.
+        // 0.80 reflects a corroborating second source (above the local-only 0.70, below cryptographic proof).
+        [EvidenceId.AuthoritativeDivergesConfirmed] = (SyxxIndicator.AuthoritativeMismatch, 0.80),
         [EvidenceId.AuthoritativeDiverges] = (SyxxIndicator.AuthoritativeMismatch, 0.70),
         [EvidenceId.DnssecCanaryStripped] = (SyxxIndicator.SignedAnswerMismatch, 0.80),
 
@@ -315,6 +314,8 @@ public static class SynthesisEngine
 /// Extension to map the shared `Section` enum onto `SyxxSection`.
 internal static class SynthesisSectionExtensions
 {
+    // B300: unknown section must not crash the engine — return Prophet as sentinel and log,
+    // so a future section addition doesn't cause an ArgumentOutOfRangeException mid-synthesis.
     internal static SyxxSection FromSection(Section s) => s switch
     {
         Section.Prophet => SyxxSection.Prophet,
@@ -323,8 +324,14 @@ internal static class SynthesisSectionExtensions
         Section.Glutton => SyxxSection.Glutton,
         Section.Cage => SyxxSection.Cage,
         Section.Witness => SyxxSection.Witness,
-        _ => throw new ArgumentOutOfRangeException(nameof(s)),
+        _ => HandleUnknownSection(s),
     };
+
+    private static SyxxSection HandleUnknownSection(Section s)
+    {
+        SyxxTracer.Log("synthesis.section.unknown", $"Unknown section {s} mapped to Prophet sentinel");
+        return SyxxSection.Prophet;
+    }
 }
 
 /// Extension to map the shared `SectionStatus` onto `EvidenceUsability`.

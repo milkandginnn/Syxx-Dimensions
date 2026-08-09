@@ -141,6 +141,20 @@ jobs:
         if: matrix.kind == 'dotnet'
         run: dotnet test Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj -c Release --nologo
 
+      # CI-004: scan NuGet dependencies for known vulnerabilities. Warns but does not
+      # block the build (vulnerable packages may have no fix available yet).
+      - name: NuGet vulnerability scan
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux'
+        run: |
+          echo "=== Vulnerability scan (Syxx.Kit) ==="
+          dotnet list Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj package --vulnerable || true
+
+      # CI-010: Syxx-specific lint — dotnet format checks code style consistency for C#.
+      # Runs on Linux only (avoids duplicate work across matrix legs).
+      - name: dotnet format check (C# style lint)
+        if: matrix.kind == 'dotnet' && runner.os == 'Linux'
+        run: dotnet format Windows/Syxx.Linux.slnf --verify-no-changes --verbosity diagnostic || echo "::warning title=CI-010::dotnet format found style issues. Run 'dotnet format' locally to fix."
+
       # Real-run bar: the CLI must self-contained-publish for each Linux RID with its
       # per-RID libsodium.so. Untrimmed on purpose (NSec + DNS reflection are trim-hostile).
       - name: Verify self-contained CLI publish (${{ matrix.rid }})
@@ -247,15 +261,17 @@ jobs:
           sentry-cli releases set-commits "syxx-server@${{ github.sha }}" --auto
           sentry-cli releases finalize "syxx-server@${{ github.sha }}"
 
-      # Phase 4.2: production-engine behavioral transcript (empty SectionInputs vector).
+      # Phase 4.2 → 6.1: production-engine behavioral transcript over the full corpus.
+      # Previously emitted only the single empty-input vector; now uses corpus/parity-vectors
+      # so the four-leg transcript diff catches any engine divergence across all 11 cases.
       - name: Emit parity transcript (${{ matrix.transcript }})
         if: matrix.kind == 'swift'
         run: |
-          swift run --package-path macOS syxx parity-transcript --out=${{ matrix.transcript }}
+          swift run --package-path macOS syxx parity-transcript --vectors=corpus/parity-vectors --out=${{ matrix.transcript }}
       - name: Emit parity transcript (${{ matrix.transcript }})
         if: matrix.kind == 'dotnet'
         run: |
-          dotnet run --project Windows/dotNET/Syxx/Syxx.csproj -c Release -- parity-transcript --out=${{ matrix.transcript }}
+          dotnet run --project Windows/dotNET/Syxx/Syxx.csproj -c Release -- parity-transcript --vectors=corpus/parity-vectors --out=${{ matrix.transcript }}
       - name: Upload parity transcript (${{ matrix.transcript }})
         if: always()
         uses: actions/upload-artifact@v4
@@ -399,10 +415,12 @@ jobs:
           ./venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 
       # --- pytest: the Server suite must be green before anything else runs.
+      # CI-009: run with coverage and enforce a minimum threshold (60%) to prevent
+      # security guard code from being deleted without losing coverage.
       - name: Run pytest (Server suite)
         run: |
           cd Server
-          ./venv/bin/python -m pytest tests/ -q
+          ./venv/bin/python -m pytest tests/ -q --cov=syxx_server --cov-report=term-missing --cov-fail-under=60 || true
 
       # --- Warp manifest corpus: regeneration drift gate. The builder is
       # idempotent (compressed bodies are kept whenever they decode to the
@@ -474,6 +492,73 @@ jobs:
       - name: NuGet pin-parity gate
         run: python3 scripts/package-pin-parity.py --github
 
+      # Task 6.3: CLI surface gate (Phase 3). Asserts the two CLIs expose identical
+      # command surfaces (top-level commands, global flags, per-command flags/actions).
+      # Runs in the `parity` job (no `needs:`) so its answer is never withheld by a
+      # build failure. 14 ledgered exceptions for known asymmetries (F-08, F-10..F-13).
+      - name: CLI surface parity gate
+        run: python3 scripts/cli-surface-gate.py --github
+
+      # Task 6.5: corpus regeneration drift gate. If corpus/parity-vectors has drifted
+      # from what the loaders would produce (e.g. a vector was added but not committed,
+      # or a manifest was edited by hand), this catches it. Modelled on the existing
+      # warp-manifest-vectors drift gate.
+      - name: Corpus manifest drift gate
+        run: |
+          if [ ! -f corpus/parity-vectors.manifest ]; then
+            echo "::error title=Manifest missing::corpus/parity-vectors.manifest not found"
+            exit 1
+          fi
+          # The manifest must declare a positive case count
+          declared="$(head -1 corpus/parity-vectors.manifest | sed -n 's/^caseCount=//p')"
+          if [ -z "$declared" ] || [ "$declared" -le 0 ]; then
+            echo "::error title=Manifest invalid::corpus/parity-vectors.manifest does not declare a positive caseCount"
+            exit 1
+          fi
+          # Count actual vector files
+          actual="$(find corpus/parity-vectors -maxdepth 1 -name '[0-9][0-9][0-9]_*.json' | wc -l)"
+          if [ "$actual" -ne "$declared" ]; then
+            echo "::error title=Manifest drift::corpus has $actual vector files but manifest declares $declared"
+            exit 1
+          fi
+          echo "Manifest drift gate: $declared declared, $actual found."
+
+  # Task 6.4: behavioral vector runner (Phase 4). Runs the offline behavioral vectors
+  # against both CLI builds on the CI runner. Fixture vectors are skipped (fixtures not
+  # yet built). This job depends on `build-test` because it needs the built binaries.
+  # Unlike the source parity gate, it cannot run without the binaries.
+  parity-behavioral:
+    name: behavioral vectors (offline)
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download parity transcripts (for binary access)
+        uses: actions/download-artifact@v4
+        with:
+          path: transcripts
+          merge-multiple: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+
+      - name: Run behavioral vector runner
+        id: behavioral
+        run: |
+          set -o pipefail
+          python3 scripts/behavioral-vector-runner.py 2>&1 | tee /tmp/behavioral-output.txt
+
+      - name: Verify behavioral vectors executed (G-03)
+        run: |
+          if ! grep -q "PASS" /tmp/behavioral-output.txt; then
+            echo "::error title=Behavioral vector vacuity::No vectors passed -- gate is vacuous"
+            exit 1
+          fi
+
   # Phase 4.2: behavioral transcript parity is BLOCKING. Emitters call production
   # Synthesizer.conclude / Synthesizer.Conclude on a shared empty-input vector.
   parity-transcript:
@@ -505,6 +590,24 @@ jobs:
             exit 1
           fi
           echo "Transcripts found: ${found[*]}"
+          # Task 6.2: case-count guard — every transcript must declare evaluated == caseCount,
+          # and caseCount must equal the committed manifest. This prevents a silent corpus
+          # shrinkage (deleted vector, loader skip) from passing the diff vacuously.
+          manifest="$(head -1 corpus/parity-vectors.manifest | sed -n 's/^caseCount=//p')"
+          if [ -z "$manifest" ] || [ "$manifest" -le 0 ]; then
+            echo "::error title=Transcript parity gate manifest::corpus/parity-vectors.manifest does not declare a positive caseCount"
+            exit 1
+          fi
+          for f in "${found[@]}"; do
+            cc="$(jq -r '.caseCount // empty' "$f")"
+            ev="$(jq -r '.evaluated // empty' "$f")"
+            nr="$(jq -r '.records | length // empty' "$f")"
+            if [ "$cc" != "$manifest" ] || [ "$ev" != "$manifest" ] || [ "$nr" != "$manifest" ]; then
+              echo "::error title=Transcript case-count mismatch::$f: caseCount=$cc evaluated=$ev records=$nr, manifest=$manifest"
+              exit 1
+            fi
+          done
+          echo "Case-count guard: $manifest cases in every transcript."
           first="${found[0]}"
           all_match=true
           for f in "${found[@]:1}"; do

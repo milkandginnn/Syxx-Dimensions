@@ -372,6 +372,27 @@ LEDGERED_EXCEPTIONS: tuple[Ledgered, ...] = (
         finding="F-13",
         why="Short alias of --local; same divergence.",
     ),
+
+    Ledgered(
+        level="speed",
+        dimension="accepted",
+        token="--help",
+        side=MAC,
+        finding="F-14",
+        why=(
+            "macOS speed dispatcher accepts --help as a recognized flag; Windows speed does not. "
+            "Both platforms reach help through the global-flag handler, so this is a harmless "
+            "surface asymmetry — the flag is silently accepted on macOS and ignored on Windows."
+        ),
+    ),
+    Ledgered(
+        level="speed",
+        dimension="accepted",
+        token="-h",
+        side=MAC,
+        finding="F-14",
+        why="Short alias of --help on speed; same surface asymmetry.",
+    ),
 )
 
 

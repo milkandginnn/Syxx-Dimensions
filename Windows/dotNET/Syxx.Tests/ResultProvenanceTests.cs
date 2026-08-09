@@ -50,7 +50,7 @@ public class ResultProvenanceTests : IDisposable
 
     private static Conclusion Make(IReadOnlyList<SectionStatusEntry> statuses,
                                    DeterminativeResult? determination)
-        => new(DateTimeOffset.UnixEpoch, statuses, Array.Empty<EvidenceItem>(),
+        => new(DateTimeOffset.UnixEpoch.UtcDateTime, statuses, Array.Empty<EvidenceItem>(),
                Array.Empty<Advisory>(), determination);
 
     /// A null determination is "the engine could not run" — categorically NOT Inconclusive.

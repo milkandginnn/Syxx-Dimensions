@@ -109,15 +109,14 @@ def _classify_one(probe, report):
 
     # A probe that could not run measures nothing. Not clean.
     if status in ("timeout", "error", None):
-        return INCONCLUSIVE, "The probe could not be completed (%s) — nothing was measured." % (
-            status or "no status")
+        return INCONCLUSIVE, f"The probe could not be completed ({status or 'no status'}) — nothing was measured."
 
     if probe["kind"] == "nxdomain":
         # We serve NXDOMAIN. Honest = the client also got NXDOMAIN. An address means fabrication.
         if status == "nxdomain":
             return CLEAN, "Your resolver correctly returned NXDOMAIN."
         if status == "ok" and values:
-            return TAMPERED, probe["tampered_means"] + " Fabricated address(es): %s." % ", ".join(values)
+            return TAMPERED, f"{probe['tampered_means']} Fabricated address(es): {', '.join(values)}."
         if status == "servfail":
             return INCONCLUSIVE, "SERVFAIL — the resolver errored rather than answering; inconclusive."
         return INCONCLUSIVE, "Unexpected response shape for an NXDOMAIN probe; inconclusive."
@@ -126,13 +125,12 @@ def _classify_one(probe, report):
     if status == "ok" and values:
         if probe["expect"] in values:
             return CLEAN, "Your resolver returned our answer unchanged."
-        return TAMPERED, probe["tampered_means"] + " We served %s; you received %s." % (
-            probe["expect"], ", ".join(values))
+        return TAMPERED, f"{probe['tampered_means']} We served {probe['expect']}; you received {', '.join(values)}."
     if status in ("nxdomain", "servfail"):
         # For block_detection this IS the finding; for baseline it means the control did not land.
         if probe["id"] == "block_detection":
-            return TAMPERED, probe["tampered_means"] + " (Received: %s.)" % status
-        return INCONCLUSIVE, "The control answer did not arrive (%s) — cannot judge this probe." % status
+            return TAMPERED, f"{probe['tampered_means']} (Received: {status}.)"
+        return INCONCLUSIVE, f"The control answer did not arrive ({status}) — cannot judge this probe."
     return INCONCLUSIVE, "No usable answer for an A probe; inconclusive."
 
 
@@ -168,9 +166,12 @@ def classify(reports):
                    + "; ".join(r["id"] for r in tampered) + ".")
     elif critical_inconclusive:
         overall = INCONCLUSIVE
-        summary = ("Inconclusive — a control probe (%s) did not complete, so we cannot certify your "
-                   "DNS is untampered. This is NOT a clean result; re-run on a stable connection."
-                   % ", ".join(r["id"] for r in critical_inconclusive))
+        summary = (
+            "Inconclusive — a control probe ("
+            + ", ".join(r["id"] for r in critical_inconclusive)
+            + ") did not complete, so we cannot certify your "
+            "DNS is untampered. This is NOT a clean result; re-run on a stable connection."
+        )
     else:
         overall = CLEAN
         summary = "No tampering detected across the probes that completed."

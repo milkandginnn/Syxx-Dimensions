@@ -16,7 +16,7 @@ new2 = """first = labels[0]
 
 count = code.count(old1) + code.count(old2)
 if count == 0:
-    print("Already patched or patterns not found")
+    print("Already patched or patterns not found")  # noqa: T201
     sys.exit(0)
 
 code = code.replace(old1, new1)
@@ -25,4 +25,4 @@ code = code.replace(old2, new2)
 with open(path, "w") as f:
     f.write(code)
 
-print("Patched %d replacement(s)" % count)
+print("Patched %d replacement(s)" % count)  # noqa: T201, UP031

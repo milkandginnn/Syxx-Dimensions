@@ -5,11 +5,23 @@ every 60 s, runs due monitors (investigate / baseline / warp), persists
 results, and emails alerts on changes.
 """
 
+import concurrent.futures
 import json
 import threading
 import time
 
 from . import config, db, investigate, licensing, logging_util, mailer, warp
+
+# A313: graceful shutdown event. When set, the scheduler loop exits after
+# completing the current operation, allowing in-flight monitor checks,
+# API key revocations, and DB backups to finish rather than being killed
+# mid-operation by daemon=True thread termination.
+_shutdown = threading.Event()
+
+# A313: reference to the scheduler thread so shutdown() can join() it.
+# daemon=True remains as a hard safety net — if join() times out, the
+# thread is still killed on process exit rather than blocking forever.
+_thread: threading.Thread | None = None
 
 # A197 Fix 3: sentinel returned by _diff_previous when the stored history is
 # unreadable. Distinct from None (no changes) and from a change list.
@@ -60,8 +72,9 @@ def _run_one(monitor):
     checks = json.loads(monitor.get("checks", "[]"))
     all_changes = []
 
+    # A309: wrap investigate lambda to return 2-tuple (result, err) as expected by unpacking
     runners = {
-        "investigate": ("investigate", lambda: investigate.investigate(domain)),
+        "investigate": ("investigate", lambda: (investigate.investigate(domain), None)),
         "baseline": ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
         "warp": ("warp", lambda: (warp.build_baseline(f"https://{domain}"), None)),
     }
@@ -112,6 +125,14 @@ def _run_one(monitor):
         )
         if changes and changes is not _UNREADABLE_HISTORY:
             all_changes.extend(changes)
+        # A311: when history is unreadable, add a descriptive change so the
+        # alert path fires. Previously, _UNREADABLE_HISTORY was never added
+        # to all_changes, so a monitor with persistently corrupt history
+        # never alerted and never explained why results are "unknown".
+        if changes is _UNREADABLE_HISTORY:
+            all_changes.append(
+                f"history unreadable for {check_type} — cannot diff against previous result"
+            )
     return all_changes
 
 
@@ -136,8 +157,19 @@ def _send_alert(monitor, changes):
 
 
 def _tick():
-    """Process one batch of due monitors."""
-    for monitor in db.monitors_due(int(time.time())):
+    """Process one batch of due monitors.
+
+    A310: process monitors in parallel using a bounded ThreadPoolExecutor so
+    one slow domain does not block all subsequent monitors.
+    A313: check _shutdown event to support graceful termination.
+    """
+    monitors = list(db.monitors_due(int(time.time())))
+    if not monitors:
+        return
+
+    def _process_one(monitor):
+        if _shutdown.is_set():
+            return
         try:
             changes = _run_one(monitor)
             if changes:
@@ -152,6 +184,15 @@ def _tick():
             logging_util.error("monitor_tick_error", monitor_id=monitor["id"], err=str(exc))
         finally:
             db.monitor_advance(monitor["id"])  # always advance to prevent retry loops
+
+    # A310: parallel execution with bounded pool (max 5 concurrent monitors).
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(monitors))) as pool:
+        futures = [pool.submit(_process_one, m) for m in monitors]
+        for fut in concurrent.futures.as_completed(futures):
+            try:
+                fut.result()
+            except Exception as exc:
+                logging_util.error("scheduler_future_error", err=str(exc))
 
 
 # --- API key sync (daily sweep) -------------------------------------------
@@ -175,29 +216,46 @@ def _backup_db():
 def _sync_api_keys():
     """Daily sweep: check Keygen license status for all subjects with active API keys.
     Revokes keys for any subject whose license is no longer ACTIVE in Keygen.
-    Safety net for the webhook — catches missed webhooks or edge cases."""
+    Safety net for the webhook — catches missed webhooks or edge cases.
+
+    A312: uses a wall-clock deadline and parallel execution to prevent the sweep
+    from pinning the scheduler thread for minutes on large subject lists.
+    """
     subjects = db.api_key_subjects_with_active_keys()
     if not subjects:
         return
-    revoked_count = 0
-    for subject in subjects:
+    # A312: wall-clock deadline for the entire sweep.
+    deadline = time.monotonic() + 120  # 2-minute budget for the full sweep
+
+    def _check_one(subject):
+        if time.monotonic() > deadline:
+            return None
         status = licensing.check_keygen_license_status(subject)
         if status is False:
-            # License is revoked/suspended/expired — revoke all API keys
             db.api_key_revoke_all_for_subject(subject)
-            revoked_count += 1
             logging_util.info("api_key_sync_revoked", subject=subject)
+            return True  # revoked
         elif status is None:
-            # Transient error — skip this subject, try again next sweep
             logging_util.warn("api_key_sync_transient", subject=subject)
-        # status is True → license still active, nothing to do
+        return False  # active or transient
+
+    revoked_count = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(subjects))) as pool:
+        futures = {pool.submit(_check_one, s): s for s in subjects}
+        for fut in concurrent.futures.as_completed(futures, timeout=max(0, deadline - time.monotonic())):
+            try:
+                if fut.result() is True:
+                    revoked_count += 1
+            except Exception:  # noqa: S110 — one subject failing must not abort the sweep
+                pass  # one subject failing must not abort the sweep
+
     if revoked_count:
         logging_util.info("api_key_sync_complete", checked=len(subjects), revoked=revoked_count)
 
 
 def start():
     """Launch the scheduler daemon thread.  Called once from app.serve()."""
-    global _last_api_key_sync, _last_db_backup
+    global _last_api_key_sync, _last_db_backup, _thread
     _last_api_key_sync = time.time()  # first sync runs after one full interval
     _last_db_backup = time.time()  # first backup runs after one full interval
 
@@ -206,8 +264,11 @@ def start():
 
     def _loop():
         global _last_api_key_sync, _last_db_backup
-        while True:
-            time.sleep(60)
+        while not _shutdown.is_set():
+            # A313: use Event.wait() instead of time.sleep() so shutdown is
+            # immediate rather than waiting up to 60s after SIGTERM.
+            if _shutdown.wait(timeout=60):
+                break  # shutdown requested
             try:
                 _tick()
             except Exception as exc:
@@ -228,5 +289,26 @@ def start():
                 except Exception as exc:
                     logging_util.error("db_backup_error", err=str(exc))
 
-    threading.Thread(target=_loop, name="syxx-scheduler", daemon=True).start()
+    # A313: daemon=True is retained as a hard safety net — if graceful shutdown
+    # (join with timeout) fails, the thread is still killed on process exit.
+    _thread = threading.Thread(target=_loop, name="syxx-scheduler", daemon=True)
+    _thread.start()
     logging_util.info("scheduler_started", api_key_sync_interval_hours=config.API_KEY_SYNC_INTERVAL_HOURS)
+
+
+def shutdown(timeout=10):
+    """A313: signal the scheduler loop to stop and wait for in-flight work.
+
+    Call this from the SIGTERM/SIGINT handler so monitor checks, API key
+    revocations, and DB backups complete before the process exits.
+    daemon=True still provides a hard stop if the thread does not exit
+    within *timeout* seconds.
+    """
+    _shutdown.set()
+    logging_util.info("scheduler_shutdown_requested")
+    if _thread is not None and _thread.is_alive():
+        _thread.join(timeout=timeout)
+        if _thread.is_alive():
+            logging_util.warn("scheduler_shutdown_timeout", timeout=timeout)
+        else:
+            logging_util.info("scheduler_shutdown_complete")

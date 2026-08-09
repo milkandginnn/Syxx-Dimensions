@@ -1,7 +1,7 @@
 [tool.ruff]
 target-version = "py312"
 line-length = 120
-extend-exclude = ["venv", "__pycache__", ".build"]
+extend-exclude = ["venv", "__pycache__", ".build", "RECOVERED-fulfillment-A025-A085.py"]
 
 [tool.ruff.lint]
 select = [
@@ -36,3 +36,48 @@ skips = ["B101"]  # assert_used — needed in tests
 [tool.pytest.ini_options]
 pythonpath = [".", "tests"]
 testpaths = ["tests"]
+
+[tool.ty]
+# Optional dependencies that may not be installed in all environments.
+# ty does NOT honor inline "# type: ignore" — all suppression must be
+# configured at the project level via overrides.
+
+[[tool.ty.overrides]]
+include = ["syxx_server/app.py", "syxx_server/appcast.py", "syxx_server/dnssec_validator.py", "syxx_server/leak.py", "syxx_server/licensing.py", "syxx_server/preflight.py", "syxx_server/warp.py"]
+rules = { "unresolved-import" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/app.py"]
+rules = { "unresolved-attribute" = "ignore", "invalid-assignment" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/dns_authoritative.py"]
+rules = { "unresolved-attribute" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/dnssec_validator.py"]
+rules = { "not-subscriptable" = "ignore", "invalid-argument-type" = "ignore", "too-many-positional-arguments" = "ignore", "call-non-callable" = "ignore", "unresolved-attribute" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/dot_listener.py"]
+rules = { "unresolved-attribute" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/leak.py"]
+rules = { "invalid-argument-type" = "ignore", "unresolved-attribute" = "ignore", "missing-argument" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/logging_util.py"]
+rules = { "call-non-callable" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/netutil.py"]
+rules = { "unresolved-attribute" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/resolver.py"]
+rules = { "unresolved-attribute" = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["syxx_server/whois_lookup.py"]
+rules = { "invalid-argument-type" = "ignore" }

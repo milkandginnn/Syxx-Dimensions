@@ -49,15 +49,15 @@
 
 ## Phase 5: Cross-platform verification
 
-- [ ] Task: Run parity-transcript comparison
-    - [ ] Execute `dotnet run --project Windows/dotNET/Syxx/Syxx.csproj -c Release -- parity-transcript --out=/tmp/t.net.json`
-    - [ ] Execute `swift run --package-path macOS -c release syxx parity-transcript --out=/tmp/t.swift.json`
-    - [ ] Run `diff <(jq --sort-keys /tmp/t.net.json) <(jq --sort-keys /tmp/t.swift.json)`
-    - [ ] Verify zero differences
+- [x] Task: Run parity-transcript comparison
+    - [x] Execute `dotnet run --project Windows/dotNET/Syxx/Syxx.csproj -c Release -- parity-transcript --out=/tmp/t.net.json`
+    - [x] Execute `swift run --package-path macOS syxx parity-transcript --out=/tmp/t.swift.json`
+    - [x] Run `diff <(jq --sort-keys . /tmp/t.net.json) <(jq --sort-keys . /tmp/t.swift.json)`
+    - [x] Verify zero differences
 
 ## Phase 6: Final verification
 
-- [ ] Task: Full build gate
-    - [ ] Confirm all builds exit 0 with zero errors and zero warnings
-    - [ ] Confirm all test suites pass
-    - [ ] Record each claim with its verification state per the five-state system
+- [x] Task: Full build gate
+    - [x] Confirm all builds exit 0 with zero errors and zero warnings
+    - [x] Confirm all test suites pass
+    - [x] Record each claim with its verification state per the five-state system

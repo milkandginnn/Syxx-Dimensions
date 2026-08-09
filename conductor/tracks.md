@@ -8,6 +8,16 @@
 
 | [x] | [gui-complete-macos_20260805](./tracks/gui-complete-macos_20260805/index.md) | Complete macOS GUI — Mockup-Faithful SwiftUI (31 tasks, 5 phases) | 2026-08-05 | 2026-08-05 |
 
-| [ ] | [macos-window-chrome_20260806](./tracks/macos-window-chrome_20260806/index.md) | macOS Window Chrome: Traffic Lights & Drag Area | 2026-08-06 | 2026-08-06 |
+| [~] | [macos-window-chrome_20260806](./tracks/macos-window-chrome_20260806/index.md) | macOS Window Chrome: Traffic Lights & Drag Area | 2026-08-06 | 2026-08-06 |
+
+| [~] | [eula-crash-loop_20260806](./tracks/eula-crash-loop_20260806/index.md) | Fix EULA Crash Loop — Window Animation Bug and Bundle Path Mismatch | 2026-08-06 | 2026-08-06 |
+
+| [x] | [fix-build-errors_20260807](./tracks/fix-build-errors_20260807/index.md) | Fix Build Errors — restore clean cross-platform builds after refactoring | 2026-08-07 | 2026-08-08 |
+
+| [x] | [check-test-adequacy_20260808](./tracks/check-test-adequacy_20260808/index.md) | Check Test Adequacy — audit all test suites for softened tests, anti-vacuity, dead paths | 2026-08-08 | 2026-08-08 |
+
+| [x] | [fix-test-integrity_20260808](./tracks/fix-test-integrity_20260808/index.md) | Fix Test Integrity Findings — remediate 15 🔴/🟡 findings from test adequacy audit | 2026-08-08 | 2026-08-08 |
+
+| [x] | [reverify-test-integrity_20260808](./tracks/reverify-test-integrity_20260808/index.md) | Re-Verify Test Integrity — verify all 15 findings resolved on clean checkout | 2026-08-08 | 2026-08-08 |
 
 <!-- Tracks registered by /conductor:new-track -->

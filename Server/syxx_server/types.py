@@ -26,6 +26,12 @@ class TriState(StrEnum):
     SUCCESS = "success"
     FAILURE = "failure"
     INCONCLUSIVE = "inconclusive"
+    # C222: "unknown" is persisted by the scheduler when history is unreadable or
+    # a warp diff cannot determine a verdict. Distinct from inconclusive (which
+    # means "measurement could not complete"); unknown means "data exists but
+    # cannot be interpreted". Mapped to inconclusive on the wire for clients
+    # that do not recognise it.
+    UNKNOWN = "unknown"
 
     def __str__(self) -> str:
         return self.value

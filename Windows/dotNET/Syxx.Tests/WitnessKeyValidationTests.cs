@@ -125,7 +125,7 @@ namespace Syxx.Tests
                     $"validator and signer disagree on '{Preview(candidate)}' — this is the deferred-failure defect");
             }
 
-            static bool Try(Action a) { try { a(); return true; } catch { return false; } }
+            static bool Try(Action a) { try { a(); return true; } catch (Exception) { return false; } }
             static string Preview(string s) => s.Length <= 12 ? s : s[..12] + "...";
         }
 
@@ -139,8 +139,12 @@ namespace Syxx.Tests
         public void ValidatePrivateKey_EmbeddedWhitespaceIsSkippedByTheRuntime()
         {
             var wrapped = Base64Of(32).Replace("A", "A\n");
-            WitnessSigner.ValidatePrivateKey(wrapped);                        // must not throw
-            WitnessSigner.CreateSignedSnapshot("example.com", MakeComparison(), wrapped);  // and the signer agrees
+            var ex = Record.Exception(() =>
+            {
+                WitnessSigner.ValidatePrivateKey(wrapped);
+                WitnessSigner.CreateSignedSnapshot("example.com", MakeComparison(), wrapped);
+            });
+            Assert.Null(ex);
         }
 
         // ---- SaveKey rejects at the point of entry --------------------------------------------

@@ -116,7 +116,7 @@ Integrate transcript fingerprint verification into the parity gates.
 
 ### Tasks
 
-- [x] Task 5.1: Add a section to `corpus/parity-vectors/README.md` documenting the fingerprint
+- [x] Task 5.1: Add a section to `corpus/README.md` documenting the fingerprint
       format and regeneration procedure.
 - [x] Task 5.2: Run full Python test suite: `python3 -m pytest Server/tests/ -q` (excluding brotli).
       (420 passed, 38 subtests passed)

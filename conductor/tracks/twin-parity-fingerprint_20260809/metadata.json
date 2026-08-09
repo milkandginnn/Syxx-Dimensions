@@ -1,0 +1,20 @@
+{
+  "track_id": "twin-parity-fingerprint_20260809",
+  "type": "feature",
+  "status": "complete",
+  "created_at": "2026-08-09",
+  "updated_at": "2026-08-09",
+  "current_phase": 5,
+  "current_task": null,
+  "phases": { "total": 5, "completed": 5 },
+  "tasks": { "total": 24, "completed": 24 },
+  "commits": [],
+  "description": "Add cryptographic fingerprinting to the cross-platform parity system: corpus-level SHA-256 for tamper detection, per-transcript fingerprint for provenance.",
+  "verification": {
+    "corpus_fingerprint": "ccee2271c83c3edb7b2a66150024ce7d5024f73d480208860db5663ba31f9380",
+    "transcript_fingerprint": "a7a24aaebee0fa6d86dd2240059915eca13e28568b26ebf5ef1c9cba1919791f",
+    "python_tests": "420 passed, 38 subtests passed",
+    "swift_build": "0 errors",
+    "csharp_build": "0 warnings, 0 errors"
+  }
+}

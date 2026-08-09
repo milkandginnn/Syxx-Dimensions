@@ -2,13 +2,17 @@
 
 | Status | Track ID | Title | Created | Updated |
 | ------ | -------- | ----- | ------- | ------- |
-| [~] | [cross-platform-parity_20260805](./tracks/cross-platform-parity_20260805/index.md) | Cross-Platform Parity Detection | 2026-08-05 | 2026-08-05 |
+| [x] | [cross-platform-parity_20260805](./tracks/cross-platform-parity_20260805/index.md) | Cross-Platform Parity Detection | 2026-08-05 | 2026-08-09 |
 
 | [~] | [ci-green-pr2_20260805](./tracks/ci-green-pr2_20260805/spec.md) | CI Green for PR #2 — no softened tests, only fixed code | 2026-08-05 | 2026-08-05 |
 
 | [~] | [macos-window-chrome_20260806](./tracks/macos-window-chrome_20260806/index.md) | macOS Window Chrome: Traffic Lights & Drag Area | 2026-08-06 | 2026-08-06 |
 
 | [~] | [eula-crash-loop_20260806](./tracks/eula-crash-loop_20260806/index.md) | Fix EULA Crash Loop — Window Animation Bug and Bundle Path Mismatch | 2026-08-06 | 2026-08-06 |
+
+| [x] | [twin-parity-fingerprint_20260809](./tracks/twin-parity-fingerprint_20260809/index.md) | Twin Parity Fingerprint — cryptographic corpus + transcript fingerprinting | 2026-08-09 | 2026-08-09 |
+
+| [x] | [fix-macos-build-warnings_20260809](./tracks/fix-macos-build-warnings_20260809/index.md) | Fix macOS Build Warnings — zero-warning Swift build | 2026-08-09 | 2026-08-09 |
 
 ## Archived
 

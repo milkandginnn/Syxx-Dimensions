@@ -608,6 +608,27 @@ jobs:
             fi
           done
           echo "Case-count guard: $manifest cases in every transcript."
+          # Transcript fingerprint verification (twin-parity-fingerprint Phase 4).
+          # Every transcript must carry a fingerprint, and all four must match.
+          # A missing fingerprint means the emitter was built without fingerprint
+          # support; a mismatch means the platforms produced different output.
+          fingerprints=()
+          for f in "${found[@]}"; do
+            fp="$(jq -r '.fingerprint // empty' "$f")"
+            if [ -z "$fp" ]; then
+              echo "::error title=Transcript fingerprint missing::$f does not contain a fingerprint field"
+              exit 1
+            fi
+            fingerprints+=("$fp")
+          done
+          first_fp="${fingerprints[0]}"
+          for fp in "${fingerprints[@]:1}"; do
+            if [ "$fp" != "$first_fp" ]; then
+              echo "::error title=Transcript fingerprint mismatch::fingerprints are not identical across transcripts"
+              exit 1
+            fi
+          done
+          echo "Transcript fingerprint: $first_fp (all four transcripts match)"
           first="${found[0]}"
           all_match=true
           for f in "${found[@]:1}"; do

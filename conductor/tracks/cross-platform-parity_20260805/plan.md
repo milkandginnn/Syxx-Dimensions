@@ -3,7 +3,7 @@
 **Track ID:** cross-platform-parity_20260805
 **Spec:** [spec.md](./spec.md)
 **Created:** 2026-08-05
-**Status:** [~] In Progress
+**Status:** [x] Complete
 
 ## Overview
 
@@ -307,7 +307,7 @@ finding keeps its filed record; these tasks fix them.
       and the ledger F-06 row were verified present and committed)
 - [x] Task 8.9: F-07 — port the vector-evaluation and classification tests to the C# twin
 - [x] Task 8.10: F-09 — port B156 `mappableIndicators` to C# (spec field, engine filter, builder), with discriminating twin tests
-- [ ] Task 8.8: The `-h` / `-v` CLI asymmetry from Task 3.3 — now fixable in-track
+- [x] Task 8.8: The `-h` / `-v` CLI asymmetry from Task 3.3 — owner decided: `-V` verbose on both platforms, `-v` = version, `-h` = help
 
 ### Verification
 

@@ -37,15 +37,15 @@
 
 ## Phase 4: Fix Server (Python) build
 
-- [ ] Task: Resolve ruff lint errors
-    - [ ] Run `ruff check Server/` and fix all violations
-    - [ ] Verify `ruff check Server/` exits 0
-- [ ] Task: Resolve type-checking errors
-    - [ ] Run `ty` and fix all type errors
-    - [ ] Verify `ty` exits 0
-- [ ] Task: Run Python tests
-    - [ ] Execute server test suite
-    - [ ] Verify all tests pass
+- [x] Task: Resolve ruff lint errors
+    - [x] Run `ruff check Server/` and fix all violations
+    - [x] Verify `ruff check Server/` exits 0
+- [x] Task: Resolve type-checking errors
+    - [x] Run `ty` and fix all type errors
+    - [x] Verify `ty` exits 0
+- [x] Task: Run Python tests
+    - [x] Execute server test suite
+    - [x] Verify all tests pass (420 passed, 0 failed)
 
 ## Phase 5: Cross-platform verification
 

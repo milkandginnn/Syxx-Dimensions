@@ -338,13 +338,11 @@ public sealed class SyxxMatrixBuilder
             mutuallyExclusiveWith: new[] { SyxxDiagnosis.Clean.Id() });
 
         // B156: the set of indicator IDs that have at least one reachable EvidenceId mapping.
-        // Support rules referencing unmapped indicators (e.g. resolverAgreement,
-        // remoteLocalDivergence, trustedWitnessOK) are excluded from the coverage denominator,
-        // preventing unmapped rules from creating permanent dead weight that hard-caps coverage
-        // below the minimum thresholds and makes entire diagnoses unreachable.
-        // Twin of SyxxMatrixIntegration.swift:206; ported 2026-08-05 (F-09).
-        var mappableIndicators = SynthesisEngine.MappableIndicatorIds();
-
+        // Currently passed as null (matching the Swift twin) — all rules count toward the
+        // coverage denominator. The clean-support indicators (resolverAgreement, routeClean,
+        // trustedWitnessOK, localEvidenceSealValid) are not yet wired as EvidenceIds, and
+        // filtering them out would make the clean diagnosis unreachable — a false Inconclusive
+        // from evidence that should affirm Clean.
         return new MatrixSpec(
             diagnoses: new[]
             {
@@ -371,7 +369,7 @@ public sealed class SyxxMatrixBuilder
                 RequireDecisiveOrTwoMajorsForConclusive: true,
                 HardGateOnMissingRequiredSections: true,
                 FailClosedOnInvalidatedRequiredSections: true),
-            mappableIndicators: mappableIndicators);
+            mappableIndicators: null);
     }
 }
 

@@ -172,7 +172,7 @@ public class ParityVectorLoaderTests
 
         var prophet = conclusion.SectionStatuses.Single(s => s.Section == Section.Prophet);
         Assert.NotEqual(SectionStatus.Untested, prophet.Status);
-        Assert.Equal(loaded.PinnedNow, conclusion.GeneratedAt);
+        Assert.Equal(loaded.PinnedNow.UtcDateTime, conclusion.GeneratedAt);
     }
 
     // MARK: - Spec rule 1 — schemaVersion
@@ -554,7 +554,7 @@ public sealed class ParityVectorTranscriptEmitterTests : IDisposable
                      records.Select(r => (string)r!.AsObject()["vectorId"]!));
 
         // Envelope key order is part of the contract with the Swift twin's reader.
-        Assert.Equal(["schemaVersion", "caseCount", "evaluated", "records"],
+        Assert.Equal(["schemaVersion", "caseCount", "evaluated", "fingerprint", "records"],
                      root.Select(kv => kv.Key));
     }
 

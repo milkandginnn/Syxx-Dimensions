@@ -92,11 +92,10 @@ namespace Syxx
                     Environment.ExitCode = ParityTranscriptCommand.Run(args[1..]);
                     break;
                 case "--version":
-                case "-v":
                     Console.WriteLine($"syxx {SyxxConfig.Version}");
                     Environment.ExitCode = 0; // E073: --version is not a security conclusion
                     break;
-                // F-14: -V / --verbose at top level sets the verbose flag. Unlike --version
+                // F-14: -v / --verbose at top level sets the verbose flag. Unlike --version
                 // and --help this does NOT exit — it just enables verbose output for the
                 // subcommand that follows.
                 case "--verbose":

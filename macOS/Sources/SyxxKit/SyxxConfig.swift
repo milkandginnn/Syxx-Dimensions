@@ -41,13 +41,13 @@ public enum SyxxConfig {
         return URL(string: s) ?? URL(string: "https://syxx.app")!
     }
 
-    /// Handles the universal `--version`/`-v` and `--help`/`-h` flags for a CLI. Returns `true`
+    /// Handles the universal `--version`/`-V` and `--help`/`-h` flags for a CLI. Returns `true`
     /// if a flag was handled and the caller should exit immediately. `usage` is the tool-specific
     /// usage text shown for `--help` (pass `nil` to show just the version/name line).
     @discardableResult
     public static func handleGlobalFlags(_ arguments: [String], tool: String, usage: String? = nil) -> Bool {
         let flags = Set(arguments.dropFirst())
-        if flags.contains("--version") || flags.contains("-v") {
+        if flags.contains("--version") || flags.contains("-V") {
             print("\(tool) \(version)")
             return true
         }
@@ -64,7 +64,7 @@ public enum SyxxConfig {
 
     /// Whether the `--verbose` flag is present in the given argument list.
     public static func isVerbose(_ arguments: [String]) -> Bool {
-        arguments.contains("--verbose") || arguments.contains("-V")
+        arguments.contains("--verbose") || arguments.contains("-v")
     }
 
     /// Whether the `--json` output format flag is present in the given argument list.

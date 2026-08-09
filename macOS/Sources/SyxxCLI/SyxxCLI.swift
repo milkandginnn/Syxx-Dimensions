@@ -95,7 +95,7 @@ struct SyxxCLI {
                 exitCode = CLIExitStatus.completed.rawValue
                 return
             }
-            if subArgs.contains("--version") || subArgs.contains("-v") {
+            if subArgs.contains("--version") || subArgs.contains("-V") {
                 printVersion()
                 exitCode = CLIExitStatus.completed.rawValue
                 return
@@ -148,9 +148,9 @@ struct SyxxCLI {
             case "--help", "-h":
                 printHelp()
                 exitCode = CLIExitStatus.completed.rawValue
-            // B240: -v = version, -V = verbose (SyxxConfig.isVerbose). --version is the
+            // B240: -V = version, -v = verbose (SyxxConfig.isVerbose). --version is the
             // canonical long form.
-            case "--version", "-v":
+            case "--version":
                 printVersion()
                 exitCode = CLIExitStatus.completed.rawValue
             default:

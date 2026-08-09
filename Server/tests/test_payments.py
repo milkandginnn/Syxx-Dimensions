@@ -703,7 +703,7 @@ class MachineBindingTests(_Base):
             def __exit__(self, *a):
                 return False
 
-        def fake_urlopen(req, timeout=None, **kwargs):
+        def fake_urlopen(req, timeout=None, context=None):
             sent["body"] = json.loads(req.data.decode())
             return _Resp()
 
@@ -731,7 +731,7 @@ class MachineBindingTests(_Base):
             def __exit__(self, *a):
                 return False
 
-        def fake_urlopen(req, timeout=None, **kwargs):
+        def fake_urlopen(req, timeout=None, context=None):
             sent["body"] = json.loads(req.data.decode())
             return _Resp()
 

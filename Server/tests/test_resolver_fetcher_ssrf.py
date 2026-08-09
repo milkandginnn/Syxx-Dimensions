@@ -183,7 +183,7 @@ class BailiwickTests(unittest.TestCase):
         roots = set(resolver.ROOT_SERVERS)
         attacker_ip = "98.76.54.32"
 
-        def mock(name, qtype, server, timeout=3, do=False, **kwargs):
+        def mock(name, qtype, server, timeout=3, do=False, rd=False, deadline=None):
             self.queried.append(server)
             if server in roots:
                 if name == "example.com":
@@ -208,7 +208,7 @@ class BailiwickTests(unittest.TestCase):
         roots = set(resolver.ROOT_SERVERS)
         attacker_ip = "98.76.54.32"
 
-        def mock(name, qtype, server, timeout=3, do=False, **kwargs):
+        def mock(name, qtype, server, timeout=3, do=False, rd=False, deadline=None):
             self.queried.append(server)
             if server in roots:
                 if name == "example.com":
@@ -234,7 +234,7 @@ class BailiwickTests(unittest.TestCase):
         in-bailiwick glue must still resolve to an authoritative answer."""
         roots = set(resolver.ROOT_SERVERS)
 
-        def mock(name, qtype, server, timeout=3, do=False, **kwargs):
+        def mock(name, qtype, server, timeout=3, do=False, rd=False, deadline=None):
             if server in roots and name == "example.com":
                 return _referral("com", "ns1.com", "ns1.com", "12.34.56.78")
             if server == "12.34.56.78" and name == "example.com":

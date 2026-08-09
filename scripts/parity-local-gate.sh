@@ -98,6 +98,8 @@ if [ -f "$WORK/corpus.swift.json" ] && [ -f "$WORK/corpus.cs.json" ]; then
           <(jq --sort-keys . "$WORK/corpus.cs.json") >"$WORK/transcript.diff"; then
     echo "ok   transcript diff (swift vs cs, jq --sort-keys)"
   else
+
+
     echo "FAIL transcript diff — the two runtimes disagree:" >&2
     cat "$WORK/transcript.diff" >&2
     # Name the diverging cases, since plain diff omits the vectorId context (CI proposal §3.1).
@@ -120,6 +122,19 @@ if [ -f "$WORK/corpus.swift.json" ] && [ -f "$WORK/corpus.cs.json" ]; then
       echo "ok   envelope ($leg): caseCount=$cc evaluated=$ev records=$nr == manifest $declared"
     fi
   done
+
+  # --- Assertion 5a: transcript fingerprints must match (proves both twins produced the same output)
+  swift_fp="$(jq -r '.fingerprint // empty' "$WORK/corpus.swift.json")"
+  cs_fp="$(jq -r '.fingerprint // empty' "$WORK/corpus.cs.json")"
+  if [ -z "$swift_fp" ] || [ -z "$cs_fp" ]; then
+    echo "FAIL transcript fingerprint missing — one or both platforms did not emit a fingerprint" >&2
+    rc=1
+  elif [ "$swift_fp" != "$cs_fp" ]; then
+    echo "FAIL transcript fingerprint mismatch — swift=$swift_fp cs=$cs_fp" >&2
+    rc=1
+  else
+    echo "ok   transcript fingerprint match ($swift_fp)"
+  fi
 fi
 
 if [ "$rc" -eq 0 ]; then

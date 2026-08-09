@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Syxx.Kit;
@@ -194,11 +196,57 @@ internal static class ParityTranscriptCommand
             return 3;
         }
 
+        // ── fingerprint ──────────────────────────────────────────────────────
+        // SHA-256(caseCount || SHA-256(vector[0].sectionInputs) || ... ||
+        //         SHA-256(conclusion[0].json) || ...)
+        // Vector hashes in transcript order; conclusion hashes sorted by caseFile.
+        // Twin of macOS/Sources/SyxxCLI/Commands/ParityTranscript.swift:125-143.
+        var vectorHashes = new List<byte[]>();
+        foreach (var c in cases)
+        {
+            var casePath = Path.Combine(vectorsDir, c.CaseFile);
+            try
+            {
+                var rawBytes = File.ReadAllBytes(casePath);
+                var root = JsonNode.Parse(rawBytes);
+                if (root is JsonObject top
+                    && top.TryGetPropertyValue("sectionInputs", out var sectionInputs)
+                    && sectionInputs is not null)
+                {
+                    vectorHashes.Add(SHA256.HashData(SerializeWithSortedKeys(sectionInputs)));
+                }
+            }
+            catch
+            {
+                // Skip — fingerprint degrades gracefully when a case file is unreadable.
+            }
+        }
+
+        var conclusionPairs = new List<(string CaseFile, byte[] Hash)>();
+        for (int i = 0; i < cases.Count; i++)
+        {
+            conclusionPairs.Add((
+                cases[i].CaseFile,
+                SHA256.HashData(SerializeWithSortedKeys(records[i]))));
+        }
+        conclusionPairs.Sort((a, b) => string.CompareOrdinal(a.CaseFile, b.CaseFile));
+
+        // Build the preimage buffer: caseCount UTF-8 + each vector hash + each conclusion hash.
+        var buf = new List<byte>();
+        buf.AddRange(Encoding.UTF8.GetBytes(
+            cases.Count.ToString(CultureInfo.InvariantCulture)));
+        foreach (var h in vectorHashes) buf.AddRange(h);
+        foreach (var pair in conclusionPairs) buf.AddRange(pair.Hash);
+
+        var fingerprintHex = Convert.ToHexString(SHA256.HashData(buf.ToArray()))
+            .ToLowerInvariant();
+
         var envelope = new JsonObject
         {
             ["schemaVersion"] = 1,
             ["caseCount"] = cases.Count,
             ["evaluated"] = evaluated,
+            ["fingerprint"] = fingerprintHex,
             ["records"] = records,
         };
         return Write(envelope, outPath);
@@ -213,5 +261,128 @@ internal static class ParityTranscriptCommand
         null => "none",
         _ => "none",
     };
+
+    private static readonly JavaScriptEncoder SwiftCompatibleEncoder =
+        JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+
+    /// <summary>
+    /// Serialize a <see cref="JsonNode"/> to UTF-8 bytes with sorted keys, so the fingerprint
+    /// is byte-stable across platforms regardless of insertion order. Twin of the Swift
+    /// <c>JSONSerialization.data(withJSONObject:options: [.sortedKeys])</c> call in
+    /// <c>ParityTranscript.swift</c>.
+    /// </summary>
+    private static byte[] SerializeWithSortedKeys(JsonNode? node)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+        {
+            Encoder = SwiftCompatibleEncoder,
+        });
+        WriteSorted(node, writer);
+        writer.Flush();
+
+        // Swift's NSJSONSerialization escapes "/" as "\/" — Utf8JsonWriter does not.
+        // Post-process: replace "/" with "\/" (but not "\/" that is already escaped).
+        var bytes = stream.ToArray();
+        return EscapeForwardSlashes(bytes);
+    }
+
+    /// <summary>
+    /// Replace every "/" with "\/" in the UTF-8 buffer, matching Swift's
+    /// NSJSONSerialization escaping behaviour. Only "/" inside JSON string values
+    /// are affected, which is all of them since JSON structure never contains "/".
+    /// </summary>
+    private static byte[] EscapeForwardSlashes(byte[] utf8)
+    {
+        // Count how many "/" characters need escaping
+        var slashCount = 0;
+        for (int i = 0; i < utf8.Length; i++)
+        {
+            if (utf8[i] == '/' && !IsAlreadyEscaped(utf8, i))
+                slashCount++;
+        }
+
+        if (slashCount == 0) return utf8;
+
+        var result = new byte[utf8.Length + slashCount];
+        var dst = 0;
+        for (int src = 0; src < utf8.Length; src++)
+        {
+            if (utf8[src] == '/' && !IsAlreadyEscaped(utf8, src))
+            {
+                result[dst++] = (byte)'\\';
+                result[dst++] = (byte)'/';
+            }
+            else
+            {
+                result[dst++] = utf8[src];
+            }
+        }
+        return result;
+    }
+
+    private static bool IsAlreadyEscaped(byte[] utf8, int slashIndex)
+    {
+        return slashIndex > 0 && utf8[slashIndex - 1] == '\\';
+    }
+
+    private static void WriteSorted(JsonNode? node, Utf8JsonWriter writer)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                writer.WriteStartObject();
+                foreach (var kvp in obj.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                {
+                    writer.WritePropertyName(kvp.Key);
+                    WriteSorted(kvp.Value, writer);
+                }
+                writer.WriteEndObject();
+                break;
+            case JsonArray arr:
+                writer.WriteStartArray();
+                foreach (var item in arr)
+                    WriteSorted(item, writer);
+                writer.WriteEndArray();
+                break;
+            case JsonValue val:
+                WriteValue(val, writer);
+                break;
+            case null:
+                writer.WriteNullValue();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Write a <see cref="JsonValue"/> with Swift-compatible number formatting.
+    /// Swift's NSJSONSerialization parses numbers into NSNumber (double) and re-serializes
+    /// them with full IEEE 754 precision (e.g. 0.97 → 0.96999999999999997).
+    /// System.Text.Json preserves the original text, so we round-trip through double
+    /// when the value contains a decimal point or exponent.
+    /// </summary>
+    private static void WriteValue(JsonValue val, Utf8JsonWriter writer)
+    {
+        if (val.TryGetValue<decimal>(out var dec))
+        {
+            // decimal.TryGetValue succeeds for any JSON number.
+            // Check if it's a floating-point value by examining the raw text.
+            var raw = val.ToString();
+            if (raw.Contains('.') || raw.Contains('e') || raw.Contains('E'))
+            {
+                // Floating-point: round-trip through double for Swift-compatible representation.
+                if (val.TryGetValue<double>(out var d))
+                {
+                    writer.WriteRawValue(d.ToString("G17", CultureInfo.InvariantCulture), skipInputValidation: true);
+                    return;
+                }
+            }
+            // Integer: write using the raw JSON text (preserving exact representation).
+            val.WriteTo(writer);
+            return;
+        }
+        // Non-number (string, bool, null): write normally.
+        val.WriteTo(writer);
+    }
 }
 }

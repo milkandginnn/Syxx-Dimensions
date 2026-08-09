@@ -611,3 +611,72 @@ any depth is refused, naming the dotted path. Same corpus, same answer, both eng
   fields (`nxCanary`, `dnssecCanary`, `leak`, `exfil`) cannot be round-tripped because their models
   are not `Encodable`; their nested members remain unchecked on the Swift side and that gap is
   recorded here rather than hidden.
+
+## F-28 · `--version` output differs — product name case, copyright line absent on C#
+
+**State:** `open`
+**Found by:** Task 3.4 (CLI output capture)
+**Severity:** Low — cosmetic, no functional impact
+
+### Evidence
+
+| | |
+|---|---|
+| Swift | `macOS/.build/debug/syxx --version` → `Syxx 2.0.0` + `© J.J. Warne d/b/a MilkandGin. All rights reserved.` |
+| C# | `Windows/dotNET/Syxx/bin/Debug/net10.0/Syxx --version` → `syxx 2.0.0` (lowercase, one line) |
+| Capture | `cli-captures/version.swift.txt` and `cli-captures/version.cs.txt` |
+| Divergence class | D1 in `cli-capture-report.md` |
+
+### What it means
+
+The product name is `Syxx` (capital S) on macOS and `syxx` (lowercase) on C#. The copyright line
+appears only on Swift. Both exit 0. No functional impact — the version string is not parsed by
+any downstream consumer — but the inconsistency is visible in any user-facing log or screenshot.
+
+## F-29 · Top-level `--help` wording differs for `cage` description and example
+
+**State:** `open`
+**Found by:** Task 3.4 (CLI output capture)
+**Severity:** Low — cosmetic, no functional impact
+
+### Evidence
+
+| | |
+|---|---|
+| Swift cage description | `requires sudo` |
+| C# cage description | `requires root/sudo on Linux and macOS, Administrator on Windows` |
+| Swift cage example | `sudo syxx cage …` |
+| C# cage example | `syxx cage …` |
+| Capture | `cli-captures/help.swift.txt` and `cli-captures/help.cs.txt` |
+| Divergence class | D4 in `cli-capture-report.md` |
+
+### What it means
+
+The C# help text is more accurate (names all three platforms) but omits `sudo` from the example.
+The Swift help text is platform-specific but uses `sudo` in the example. Neither is wrong; they
+are inconsistent. Related to F-12 (cage flag surface) but distinct — this is wording, not flags.
+
+## F-30 · Swift `firstrun --help` starts the live scan instead of printing usage
+
+**State:** `open`
+**Found by:** Task 3.4 (CLI output capture)
+**Severity:** High — `--help` must never start a network scan
+
+### Evidence
+
+| | |
+|---|---|
+| Swift | `macOS/.build/debug/syxx firstrun --help` began the live five-minute scan; killed by 8s alarm (exit 142 = SIGALRM) |
+| C# | `Windows/dotNET/Syxx/bin/Debug/net10.0/Syxx firstrun --help` → prints usage, exits 2 |
+| Swift source | `macOS/Sources/SyxxCLI/Synthesis/FirstRunScan.swift` — `--help` is not intercepted before scan launch |
+| C# source | `Windows/dotNET/Syxx/Commands/FirstRunCommand.cs:32-38` — checks for `--help`/`--version` before scan |
+| Capture | `cli-captures/firstrun-help.swift.txt` (alarm-terminated) and `cli-captures/firstrun-help.cs.txt` |
+| Divergence class | D5 in `cli-capture-report.md` |
+
+### What it means
+
+`syxx firstrun --help` on Swift begins a live network scan. This violates the principle that
+`--help` must be a read-only, side-effect-free operation. The C# build correctly intercepts it.
+This is the most severe finding of the capture exercise — a user asking for help gets an
+unwanted five-minute scan. Distinct from F-13 (`firstrun --local` macOS-only), which is about flag
+acceptance, not about `--help` executing the scan.

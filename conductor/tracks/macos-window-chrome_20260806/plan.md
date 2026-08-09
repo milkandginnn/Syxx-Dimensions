@@ -32,15 +32,15 @@
 
 ## Phase 2: Verify and Test
 
-- [ ] Task: Visual verification of the fix
-    - [ ] Build the app bundle and launch
-    - [ ] Complete onboarding → verify `.ready` state shows traffic lights
-    - [ ] Click each traffic light (close, minimize, zoom) and confirm correct behavior
-    - [ ] Drag the window by the background/titlebar area and confirm movement
-    - [ ] Verify no opaque titlebar band is visible
-    - [ ] Verify no content drift on window resize
-    - [ ] Run with `SYXX_GEOM_DEBUG=1` and compare geometry values to baseline
-    - [ ] Record verification state as `verified-by-real-run` in the track ledger
+- [x] Task: Visual verification of the fix
+    - [x] Build the app bundle and launch
+    - [x] Complete onboarding → verify `.ready` state shows traffic lights
+    - [x] Click each traffic light (close, minimize, zoom) and confirm correct behavior
+    - [x] Drag the window by the background/titlebar area and confirm movement
+    - [x] Verify no opaque titlebar band is visible
+    - [x] Verify no content drift on window resize
+    - [x] Run with `SYXX_GEOM_DEBUG=1` and compare geometry values to baseline
+    - [x] Record verification state as `verified-by-real-run` in the track ledger
 
 - [ ] Task: Verify first-run onboarding is unchanged
     - [ ] Reset the app state to trigger onboarding

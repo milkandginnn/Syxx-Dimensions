@@ -1,0 +1,27 @@
+{
+  "track_id": "fix-test-integrity_20260808",
+  "type": "chore",
+  "status": "complete",
+  "created_at": "2026-08-08",
+  "updated_at": "2026-08-08",
+  "current_phase": 5,
+  "current_task": "5.5",
+  "phases": {
+    "total": 5,
+    "completed": 5
+  },
+  "tasks": {
+    "total": 23,
+    "completed": 23
+  },
+  "commits": [
+    "d133a8a: C222: add UNKNOWN member to TriState enum",
+    "984e802: S-01: rename test_three_distinct_members to test_four_distinct_members",
+    "0c50430: S-03: replace **kwargs with explicit params",
+    "d577d9a: G-01: track behavioral-vector-runner.py and corpus",
+    "201c8a2: G-02, G-03: ledger speed asymmetries, add nonzero guard",
+    "3b2e255: A-01, A-02: add evaluated-count to 2 harnesses",
+    "774235c: D-01, D-02: narrow catch, add assertion"
+  ],
+  "description": "Fix all 15 🔴 Critical and 🟡 Should Fix findings from the check-test-adequacy_20260808 audit. Commit uncommitted source changes, harden tests against future drift."
+}

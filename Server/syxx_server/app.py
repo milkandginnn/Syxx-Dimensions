@@ -67,7 +67,7 @@ from . import __version__
 
 # --- Sentry crash/error reporting ---
 try:
-    import sentry_sdk
+    import sentry_sdk  # type: ignore[unresolved-import]
 
     _sentry_dsn = os.environ.get("SENTRY_DSN", "")
     if _sentry_dsn:
@@ -92,14 +92,14 @@ try:
     # never exported a single record, and an empty dashboard was indistinguishable from a healthy
     # server. `opentelemetry.logs` does not exist (the module is `_logs`), and OTLPLogExporter
     # lives in the exporter package, not in sdk._logs.export.
-    from opentelemetry import _logs as otel_logs
-    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry import _logs as otel_logs  # type: ignore[unresolved-import]
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter  # type: ignore[unresolved-import]
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # type: ignore[unresolved-import]
+    from opentelemetry.sdk._logs import LoggerProvider  # type: ignore[unresolved-import]
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor  # type: ignore[unresolved-import]
+    from opentelemetry.sdk.resources import Resource  # type: ignore[unresolved-import]
+    from opentelemetry.sdk.trace import TracerProvider  # type: ignore[unresolved-import]
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor  # type: ignore[unresolved-import]
 
     _resource = Resource.create({"service.name": "syxx-server", "service.version": __version__})
     _endpoint = "https://bugsmasher.syxx.app"
@@ -132,7 +132,7 @@ _WARP_NONCE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _OTEL_TRACER = None
 if _OTEL_STATE.startswith("live"):
     try:
-        import opentelemetry.trace as _otel_trace_mod
+        import opentelemetry.trace as _otel_trace_mod  # type: ignore[unresolved-import]
 
         _OTEL_TRACER = _otel_trace_mod.get_tracer("syxx-server")
     except Exception:
@@ -146,7 +146,7 @@ if _OTEL_LOGGER is not None:
         # _internal. Getting this wrong left logging_util._otel_log_record as None, so the
         # export branch at logging_util.py:34 could never fire even once the imports above
         # succeeded. Failure is recorded, never swallowed.
-        from opentelemetry.sdk._logs._internal import LogRecord as _OTelLogRecord
+        from opentelemetry.sdk._logs._internal import LogRecord as _OTelLogRecord  # type: ignore[unresolved-import]
 
         logging_util._otel_logger = _OTEL_LOGGER
         logging_util._otel_log_record = _OTelLogRecord
@@ -229,15 +229,7 @@ def _valid_email(email):
 
 
 def _env_int(name, default):
-    # A154: log the coercion so the operator is told their value was discarded.
-    raw = os.environ.get(name, "")
-    if not raw.strip():
-        return default
-    try:
-        return int(raw.strip())
-    except (TypeError, ValueError):
-        logging_util.warn("config_invalid_int", name=name, value=raw, using=default)
-        return default
+    return config._i(name, default)
 
 
 # A028/A101/A108: cap concurrent worker threads. A bare ThreadingHTTPServer spawns
@@ -522,7 +514,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = config.SERVER_NAME
 
     # Route the default per-request logging through our structured logger.
-    def log_message(self, fmt, *args):
+    def log_message(self, format, *args):
         return
 
     def setup(self):
@@ -602,24 +594,49 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Syxx-License")
 
+    def _generate_csp_nonce(self):
+        """E212: generate a per-request cryptographic nonce for inline scripts.
+
+        The nonce is base64-encoded and embedded in the CSP header so the browser only
+        allows <script nonce="…"> tags carrying the matching attribute to execute.
+        This eliminates 'unsafe-inline' from script-src, closing the XSS vector that
+        an attacker-controlled inline script would otherwise exploit.
+
+        The nonce is also stored on the handler instance as `_csp_nonce` so route
+        handlers that render HTML can embed it in their <script> tags."""
+        nonce = base64.b64encode(os.urandom(16)).decode("ascii")
+        self._csp_nonce = nonce
+        return nonce
+
     def _security_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         # S3/XFO: prevent clickjacking by denying all framing.
         self.send_header("X-Frame-Options", "DENY")
-        # CSP: restrict script/style sources to self and approved origins.
+        # E212: CSP with per-request nonce instead of 'unsafe-inline' for scripts.
+        # Every inline <script> must carry nonce="<value>" matching the per-request nonce
+        # in the CSP header. External scripts (Stripe, etc.) are still allowlisted by origin.
+        # style-src retains 'unsafe-inline' because CSS nonces are not widely deployed and
+        # the XSS risk from inline styles is substantially lower than inline scripts.
+        # frame-ancestors replaces X-Frame-Options for modern browsers.
+        nonce = getattr(self, "_csp_nonce", None) or self._generate_csp_nonce()
         self.send_header(
             "Content-Security-Policy",
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
+            f"default-src 'self'; "
+            f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
+            "font-src 'self' https://fonts.gstatic.com data:; "
             "img-src 'self' data: https:; "
             "connect-src 'self' https://api.stripe.com; "
             "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
             "form-action 'self' https://checkout.stripe.com; "
-            "base-uri 'self'",
+            "base-uri 'self'; "
+            "frame-ancestors 'none'",
         )
+        # HT-008: Self-host fonts to avoid third-party data leakage.
+        # The CSP above allows fonts.googleapis.com and fonts.gstatic.com for
+        # backward compatibility. Consider downloading fonts to /assets/fonts/
+        # and updating the CSP to only allow 'self' for font-src.
         # Permissions-Policy: restrict browser features.
         self.send_header(
             "Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(self)"
@@ -729,28 +746,59 @@ class Handler(BaseHTTPRequestHandler):
 
         A143: validate the header value is a parseable IP before returning it. An unparseable
         header is not an address — fall back to the socket peer rather than returning attacker-
-        controlled garbage used as a rate-limit key, audit subject, or leak-token subject."""
+        controlled garbage used as a rate-limit key, audit subject, or leak-token subject.
+
+        SEC-020: Only trust XFF/X-Real-IP from trusted proxies (loopback by default, extendable
+        via config). A non-trusted proxy's XFF header is ignored to prevent IP spoofing.
+
+        SEC-035: Reject malformed XFF entirely rather than silently falling back. A malformed
+        XFF indicates either a misconfigured proxy or an attacker probing the parser; silently
+        accepting the fallback masks both issues."""
         peer = self.client_address[0]
         try:
-            if ipaddress.ip_address(peer).is_loopback:
-                xr = self.headers.get("X-Real-IP")
-                if xr:
-                    candidate = xr.strip()[:45]  # cap length (max IPv6 is 45 chars)
-                    try:
-                        ipaddress.ip_address(candidate)
-                        return candidate
-                    except ValueError:
-                        pass  # malformed — fall through to XFF or peer
-                xff = self.headers.get("X-Forwarded-For")
-                if xff:
-                    candidate = xff.split(",")[-1].strip()[:45]
-                    try:
-                        ipaddress.ip_address(candidate)
-                        return candidate
-                    except ValueError:
-                        pass  # malformed — fall through to peer
+            peer_addr = ipaddress.ip_address(peer)
         except ValueError:
-            pass
+            return peer  # unparseable peer — use as-is
+
+        # SEC-020: Only trust proxy headers from trusted sources
+        # Default: only loopback is trusted (nginx on same host)
+        if not peer_addr.is_loopback:
+            # Direct internet client — never trust their XFF headers
+            return peer
+
+        # Peer is loopback (trusted proxy) — parse X-Real-IP / XFF
+        xr = self.headers.get("X-Real-IP")
+        if xr:
+            candidate = xr.strip()[:45]  # cap length (max IPv6 is 45 chars)
+            try:
+                ipaddress.ip_address(candidate)
+                return candidate
+            except ValueError:
+                # SEC-035: malformed X-Real-IP from trusted proxy is suspicious
+                # Log it but fall through to XFF/peer rather than rejecting
+                logging_util.warn("client_ip_malformed_xrealip", value=candidate[:32])
+        xff = self.headers.get("X-Forwarded-For")
+        if xff:
+            # SEC-035: Validate ALL XFF entries, not just the last one.
+            # A malformed entry indicates either a misconfigured upstream proxy
+            # or an attacker injecting garbage into the chain.
+            parts = [p.strip() for p in xff.split(",")]
+            for part in parts:
+                if not part:
+                    continue
+                try:
+                    ipaddress.ip_address(part[:45])
+                except ValueError:
+                    # Malformed entry — log and reject entire XFF chain
+                    logging_util.warn("client_ip_malformed_xff", value=part[:32])
+                    return peer  # fall back to peer
+            # All entries valid — use rightmost (the one our trusted proxy added)
+            candidate = parts[-1][:45]
+            try:
+                ipaddress.ip_address(candidate)
+                return candidate
+            except ValueError:
+                pass  # validated above, but be defensive
         return peer
 
     def _rate_key(self, ent):
@@ -872,6 +920,23 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.close_connection = True
 
+    def _check_csrf(self):
+        """SEC-005: CSRF protection via Origin header verification.
+        State-changing POST requests from browsers must include an Origin header
+        that matches one of the allowed CORS origins. Requests without Origin
+        (from native clients, curl, etc.) are allowed through — CSRF is a
+        browser-only attack vector. Webhook endpoints are excluded because they
+        are called by external services (Stripe, Keygen), not browsers."""
+        origin = self.headers.get("Origin")
+        if not origin:
+            return True  # No Origin = not a browser request; CSRF N/A
+        # Check against CORS allowlist
+        if origin in config.CORS_ALLOWED_ORIGINS:
+            return True
+        logging_util.warn("csrf_origin_rejected", origin=origin[:64])
+        self._json_error(403, "origin not allowed")
+        return False
+
     def do_POST(self):
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
@@ -880,6 +945,11 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/v1/"):
             path = "/api/" + path[len("/api/v1/") :]
         try:
+            # SEC-005: CSRF check on state-changing routes (exclude webhooks)
+            # Webhooks are signed-HMAC verified by their respective handlers
+            if path not in ("/api/webhooks/stripe", "/api/webhooks/keygen"):
+                if not self._check_csrf():
+                    return
             if path == "/api/auth/activate":
                 return self._route_activate()
             if path == "/api/trial/anchor":
@@ -1302,7 +1372,15 @@ class Handler(BaseHTTPRequestHandler):
     def _route_stripe_webhook(self):
         """Stripe webhook (Workstream D4) — PUBLIC but SIGNATURE-VERIFIED. Verifies the Stripe-Signature
         HMAC, then hands the event to fulfillment (mint Keygen license + email on payment). Always 200s a
-        verified event so Stripe doesn't retry a handled one; fulfillment errors are logged, not raised."""
+        verified event so Stripe doesn't retry a handled one; fulfillment errors are logged, not raised.
+
+        SEC-047: Rate limit webhook endpoint to prevent abuse. Even though webhooks are
+        signature-verified, an attacker can flood the endpoint with invalid signatures
+        to consume resources. Apply a per-IP rate limit before signature verification."""
+        # SEC-047: Apply rate limiting before signature verification
+        if not ratelimit.allow("webhook:ip:" + self._client_ip()):
+            logging_util.warn("stripe_webhook_ratelimited", ip=self._client_ip()[:15])
+            return self._json_error(429, "rate limit exceeded")
         raw = self._body()
         if self._body_error(raw):
             return
@@ -1356,7 +1434,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "invalid JSON")
         event_type = event.get("event", "")
         data = event.get("data", {})
-        data.get("attributes", {}) if isinstance(data, dict) else {}
         # Extract the license ID (used as subject in our system)
         lic_id = data.get("id", "") if isinstance(data, dict) else ""
         if not lic_id:
@@ -1377,7 +1454,7 @@ class Handler(BaseHTTPRequestHandler):
                     result = "no_keys_for_subject"
                 logging_util.info(
                     "keygen_webhook_revoked_keys",
-                    event=event_type,
+                    event_type=event_type,
                     license_id=lic_id,
                     subject=local_subject,
                     revoked_count=revoked_count,
@@ -1386,7 +1463,7 @@ class Handler(BaseHTTPRequestHandler):
                 result = "subject_unresolved"
                 logging_util.warn(
                     "keygen_webhook_subject_unresolved",
-                    event=event_type,
+                    event_type=event_type,
                     license_id=lic_id,
                     detail="Keygen revocation received but no local "
                     "subject maps to this license id — API keys "
@@ -1436,7 +1513,11 @@ class Handler(BaseHTTPRequestHandler):
     def _serve_asset(self, path):
         """Serve an image from STATIC_DIR/assets/. normpath collapses any '..' so a
         traversal escapes the assets/ prefix and 404s; the extension allowlist bounds
-        the content types we will emit."""
+        the content types we will emit.
+
+        SEC-037: SVG files can contain embedded <script> tags. Apply a restrictive CSP
+        header to SVG responses to prevent script execution if an SVG is loaded as a
+        document (e.g., via <object> or direct navigation)."""
         rel = posixpath.normpath(path.replace("\\", "/")).lstrip("/")
         if not rel.startswith("assets/") or ".." in rel:
             return self._json_error(404, "not found")
@@ -1450,7 +1531,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(404, "not found")
         with open(full, "rb") as f:
             data = f.read()
-        self._send(200, data, ctype, {"Cache-Control": "public, max-age=86400"})
+        headers = {"Cache-Control": "public, max-age=86400"}
+        # SEC-037: Apply restrictive CSP to SVG files
+        if ctype == "image/svg+xml":
+            headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+            headers["X-Content-Type-Options"] = "nosniff"
+        self._send(200, data, ctype, headers)
 
     # --- public API --------------------------------------------------------
     def _route_readyz(self):
@@ -1495,11 +1581,43 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(401, "authentication required")
         return self._send(200, {"metrics": logging_util.snapshot()})
 
+    # SEC-021: Account lockout tracking for failed activations.
+    # Per-IP failure count with automatic lockout after threshold.
+    _ACTIVATE_FAILURES = {}  # ip -> (count, first_failure_time)
+    _ACTIVATE_LOCKOUT_THRESHOLD = 10  # failures before lockout
+    _ACTIVATE_LOCKOUT_WINDOW = 900  # 15 minutes
+    _ACTIVATE_LOCKOUT_LOCK = threading.Lock()
+
     def _route_activate(self):
+        """SEC-021: Apply account lockout on repeated failed activation attempts.
+        After N failed attempts from an IP within the lockout window, reject further
+        attempts to prevent brute-force license key guessing."""
         if not self._rate_ok(None):
             return
         if not self._require_json():
             return
+
+        # SEC-021: Check lockout status before processing
+        client_ip = self._client_ip()
+        with self._ACTIVATE_LOCKOUT_LOCK:
+            if client_ip in self._ACTIVATE_FAILURES:
+                count, first_time = self._ACTIVATE_FAILURES[client_ip]
+                elapsed = time.time() - first_time
+                if elapsed < self._ACTIVATE_LOCKOUT_WINDOW:
+                    if count >= self._ACTIVATE_LOCKOUT_THRESHOLD:
+                        logging_util.warn(
+                            "activate_lockout",
+                            ip=client_ip[:15],
+                            failures=count,
+                        )
+                        return self._json_error(
+                            429,
+                            "too many failed activation attempts; try again later",
+                        )
+                else:
+                    # Window expired — reset counter
+                    del self._ACTIVATE_FAILURES[client_ip]
+
         raw = self._body()
         if self._body_error(raw):
             return
@@ -1514,18 +1632,71 @@ class Handler(BaseHTTPRequestHandler):
         if err:
             return self._json_error(503, err)
         if not ent:
-            db.audit(None, "/api/auth/activate", 402, self._client_ip())
+            # SEC-021: Track failed activation attempts
+            with self._ACTIVATE_LOCKOUT_LOCK:
+                if client_ip in self._ACTIVATE_FAILURES:
+                    count, first_time = self._ACTIVATE_FAILURES[client_ip]
+                    elapsed = time.time() - first_time
+                    if elapsed >= self._ACTIVATE_LOCKOUT_WINDOW:
+                        count = 0  # reset after window
+                    self._ACTIVATE_FAILURES[client_ip] = (count + 1, first_time)
+                else:
+                    self._ACTIVATE_FAILURES[client_ip] = (1, time.time())
+            db.audit(None, "/api/auth/activate", 402, client_ip)
             return self._json_error(402, "invalid or inactive license key")
+        # Success — clear failure counter
+        with self._ACTIVATE_LOCKOUT_LOCK:
+            self._ACTIVATE_FAILURES.pop(client_ip, None)
         token, exp = licensing.mint_session(ent.subject, ent.plan)
         logging_util.incr("sessions_minted")
-        db.audit(ent.subject, "/api/auth/activate", 200, self._client_ip())
-        self._send(200, {"token": token, "plan": ent.plan, "expiresAt": exp})
+        db.audit(ent.subject, "/api/auth/activate", 200, client_ip)
+        # E213: Session token delivered EXCLUSIVELY as httpOnly cookie — never in JSON body.
+        # A token in the body is readable by any XSS payload; httpOnly cookies are not.
+        # The body returns plan and expiry metadata so the client knows the session state,
+        # but the token itself is opaque to JavaScript. Native clients must read the cookie
+        # from the Set-Cookie header (NSURLSession / HttpClient handle this automatically
+        # with a cookie jar).
+        self._send(
+            200,
+            {"plan": ent.plan, "expiresAt": exp},
+            extra_headers={"Set-Cookie": f"syxx_session={token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age={config.SESSION_TTL}"},
+        )
+
+    # SEC-006: Per-IP daily limit for trial anchor creation.
+    # Prevents a single IP from minting unlimited trial anchors (trial abuse).
+    _TRIAL_ANCHOR_IP_COUNTS = {}  # ip -> (count, day_start_time)
+    _TRIAL_ANCHOR_IP_DAILY_LIMIT = 5  # max anchors per IP per day
+    _TRIAL_ANCHOR_IP_LOCK = threading.Lock()
 
     def _route_trial_anchor(self):
         if not self._rate_ok(None):
             return
         if not self._require_json():
             return
+
+        # SEC-006: Check per-IP daily limit before processing
+        client_ip = self._client_ip()
+        day_start = int(time.time()) // 86400 * 86400  # start of current UTC day
+        with self._TRIAL_ANCHOR_IP_LOCK:
+            if client_ip in self._TRIAL_ANCHOR_IP_COUNTS:
+                count, stored_day = self._TRIAL_ANCHOR_IP_COUNTS[client_ip]
+                if stored_day == day_start:
+                    if count >= self._TRIAL_ANCHOR_IP_DAILY_LIMIT:
+                        logging_util.warn(
+                            "trial_anchor_ip_limit",
+                            ip=client_ip[:15],
+                            count=count,
+                        )
+                        return self._json_error(
+                            429,
+                            "trial anchor daily limit exceeded",
+                        )
+                else:
+                    # New day — reset
+                    self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (0, day_start)
+            else:
+                self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (0, day_start)
+
         raw = self._body()
         if self._body_error(raw):
             return
@@ -1544,6 +1715,17 @@ class Handler(BaseHTTPRequestHandler):
             # fingerprint is new — reject rather than evicting legitimate anchors.
             if first_launch is None:
                 return self._json_error(507, "trial anchor capacity reached; try again later")
+            # SEC-006: Increment IP counter on successful anchor creation
+            if is_new:
+                with self._TRIAL_ANCHOR_IP_LOCK:
+                    if client_ip in self._TRIAL_ANCHOR_IP_COUNTS:
+                        count, stored_day = self._TRIAL_ANCHOR_IP_COUNTS[client_ip]
+                        if stored_day == day_start:
+                            self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (count + 1, day_start)
+                        else:
+                            self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (1, day_start)
+                    else:
+                        self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (1, day_start)
             self._send(200, {"fingerprint": fingerprint, "firstLaunch": first_launch, "serverTime": now})
         except Exception as e:
             logging_util.error("trial_anchor_error", err=str(e))
@@ -1911,7 +2093,7 @@ class Handler(BaseHTTPRequestHandler):
             auth = resolver.resolve_authoritative(domain, qtypes[qtype_str], deadline=deadline)
         except resolver.DNSError:
             auth = {"conclusion": "unreachable"}
-        auth_answers = {a.lower() for a in (auth.get("authoritative") or {}).get("answers", [])}
+        auth_answers = {a.lower() for a in (auth.get("authoritative") or {}).get("answers", [])}  # type: ignore[unresolved-attribute]
         auth_usable = auth.get("conclusion") == "authoritative" and bool(auth_answers)
         try:
             clean_answers = _clean_vantage_answers(domain, qtypes[qtype_str], qtype_str)
@@ -2275,7 +2457,6 @@ class Handler(BaseHTTPRequestHandler):
         if server not in config.PUBLIC_RESOLVERS:
             return self._json_error(400, "server must be in the allowed resolver list")
 
-        rcode_names = {0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN", 4: "NOTIMP", 5: "REFUSED"}
         try:
             result = resolver.query(domain, qtype, server, timeout=config.INVESTIGATE_TIMEOUT)
         except resolver.DNSError as e:
@@ -2289,7 +2470,7 @@ class Handler(BaseHTTPRequestHandler):
                 "type": type_str,
                 "server": server,
                 "rcode": result.get("rcode", -1),
-                "rcodeName": rcode_names.get(result.get("rcode", -1), "UNKNOWN"),
+                "rcodeName": resolver.rcode_name(result.get("rcode", -1)),
                 "ad": result.get("ad", False),
                 "records": result.get("records", []),
                 "truncated": result.get("truncated", False),
@@ -2402,14 +2583,14 @@ class Handler(BaseHTTPRequestHandler):
             # A135: if we broke out of the inner loop due to deadline, mark truncation
             if len(entries) < rounds:
                 truncated = True
-            successes = [e for e in entries if e["rcode"] >= 0]
+            successes = [e for e in entries if int(e["rcode"]) >= 0]  # type: ignore[invalid-argument-type]
             results_by_server[server] = {
                 "server": server,
                 "label": resolver_labels.get(server, server),
                 "results": entries,
-                "avg_ms": round(sum(e["time_ms"] for e in successes) / len(successes), 2) if successes else None,
-                "min_ms": round(min(e["time_ms"] for e in successes), 2) if successes else None,
-                "max_ms": round(max(e["time_ms"] for e in successes), 2) if successes else None,
+                "avg_ms": round(sum(float(e["time_ms"]) for e in successes) / len(successes), 2) if successes else None,
+                "min_ms": round(min(float(e["time_ms"]) for e in successes), 2) if successes else None,
+                "max_ms": round(max(float(e["time_ms"]) for e in successes), 2) if successes else None,
                 "failures": len(entries) - len(successes),
             }
 
@@ -2593,7 +2774,7 @@ class Handler(BaseHTTPRequestHandler):
         resolver_ip = self._client_ip()
         try:
             addr = ipaddress.ip_address(resolver_ip)
-            if not resolver._ip_is_public(str(addr)):
+            if not resolver._ip_is_public(str(addr)):  # type: ignore[unresolved-attribute]
                 return self._json_error(400, "client IP is not a public address")
         except ValueError:
             return self._json_error(400, "invalid client IP address")
@@ -2752,6 +2933,11 @@ class Handler(BaseHTTPRequestHandler):
         deleted = db.monitor_delete(monitor_id, ent.subject)
         self._send(200, {"deleted": bool(deleted), "count": deleted})
 
+    # A280: recognized check names that the scheduler's _run_one() dispatches.
+    # Anything else is silently skipped by the scheduler, so reject at creation
+    # time to give the caller a clear error instead of a monitor that never runs.
+    _VALID_CHECK_NAMES = frozenset({"investigate", "baseline", "warp"})
+
     def _route_create_monitor(self):
         """POST /api/monitors — create a new scheduled monitor."""
         ent, ok = self._require(urllib.parse.parse_qs(""), config.ENFORCE_WEB)
@@ -2767,11 +2953,34 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return self._json_error(400, "invalid JSON")
         domain = (payload.get("domain") or "").strip()
-        checks = payload.get("checks", "prophet")
+        # A280: default to valid JSON array instead of bare string "prophet"
+        # (which caused JSONDecodeError in scheduler every tick — A263).
+        checks_raw = payload.get("checks", '["investigate"]')
         interval_hours = int(payload.get("interval_hours", 24))
         notify_email = (payload.get("notify_email") or "").strip() or None
         if not domain:
             return self._json_error(400, "missing domain")
+        # A273: validate domain to prevent SSRF via localhost or metadata IPs.
+        if not investigate.valid_domain(domain) or len(domain) > 253:
+            return self._json_error(400, "invalid domain")
+        # A280: validate checks is a non-empty JSON array with recognized names.
+        try:
+            checks_list = json.loads(checks_raw) if isinstance(checks_raw, str) else checks_raw
+        except (json.JSONDecodeError, TypeError):
+            return self._json_error(400, "checks must be a valid JSON array")
+        if not isinstance(checks_list, list) or not checks_list:
+            return self._json_error(400, "checks must be a non-empty array")
+        unrecognized = [c for c in checks_list if c not in self._VALID_CHECK_NAMES]
+        if unrecognized:
+            return self._json_error(
+                400, f"unrecognized check(s): {unrecognized}; valid: {sorted(self._VALID_CHECK_NAMES)}"
+            )
+        # Normalize to JSON string for consistent storage.
+        checks = json.dumps(checks_list)
+        # A278: validate notify_email before persisting so invalid emails don't
+        # silently fail to alert forever.
+        if notify_email and not _valid_email(notify_email):
+            return self._json_error(400, "invalid notify_email")
         monitor_id = str(uuid.uuid4())
         db.monitor_create(monitor_id, ent.subject, domain, checks, interval_hours, notify_email)
         logging_util.incr("monitors_created")
@@ -2836,11 +3045,18 @@ class Handler(BaseHTTPRequestHandler):
         return None
 
     def _route_doh_get(self, query):
+        """SEC-041: Enforce query size limit on GET DoH requests. The dns= parameter
+        is base64url-encoded wire format; limit it to prevent abuse via oversized queries."""
         ent, ok = self._doh_gate(query)
         if not ok:
             return
         dns_param = query.get("dns", [""])[0]
         if dns_param:
+            # SEC-041: Limit base64url-encoded DNS query size (512 bytes wire = ~684 base64)
+            # A standard DNS/UDP query is 512 bytes max; EDNS0 extends to ~1232 typical.
+            # Cap at 2048 base64 chars (~1536 wire bytes) for generous EDNS0 headroom.
+            if len(dns_param) > 2048:
+                return self._json_error(413, "DNS query too large")
             # base64url, no padding (RFC 8484). Restore padding before decode.
             try:
                 pad = "=" * (-len(dns_param) % 4)
@@ -2853,17 +3069,31 @@ class Handler(BaseHTTPRequestHandler):
         return self._json_error(400, "provide ?dns= (wireformat) or ?name= (json)")
 
     def _route_doh_post(self, query):
+        """SEC-042: Enforce body size limit on POST DoH requests. DNS wire format
+        over TCP can be up to 65535 bytes, but practical queries are much smaller."""
         ent, ok = self._doh_gate(query)
         if not ok:
             return
         ctype = (self.headers.get("Content-Type", "").split(";")[0]).strip().lower()
         if ctype != "application/dns-message":
             return self._json_error(415, "POST requires Content-Type: application/dns-message")
+        # SEC-042: Check Content-Length before reading body
+        content_length = self.headers.get("Content-Length")
+        if content_length:
+            try:
+                cl = int(content_length)
+                if cl > 4096:  # 4KB max — generous for any practical DNS query
+                    return self._json_error(413, "DNS query body too large")
+            except ValueError:
+                return self._json_error(400, "invalid Content-Length")
         raw = self._body()
         if self._body_error(raw):
             return
         if not raw:
             return self._json_error(400, "empty DNS query body")
+        # SEC-042: Double-check actual size after reading
+        if len(raw) > 4096:
+            return self._json_error(413, "DNS query body too large")
         return self._doh_respond_wire(raw)
 
     def _doh_respond_wire(self, wire):
@@ -3140,6 +3370,8 @@ def _start_beta_digest_thread():
 
 
 def serve():
+    import signal as _signal
+
     db.init()
     # A113: validate the collector signing key BEFORE binding any listeners.
     # A misconfigured key (wrong format, wrong algorithm, missing env var) must
@@ -3170,4 +3402,20 @@ def serve():
     # D-0: the HTTP listener is up by the time we reach serve_forever(). Report it so /readyz
     # reflects reality rather than defaulting to "unknown" for the very server answering the request.
     listeners.set_state("http", "listening", detail=f"port {config.HTTP_PORT}")
+
+    # A313: register signal handlers for graceful shutdown. SIGTERM (kill,
+    # systemd stop, docker stop) and SIGINT (Ctrl-C) both trigger an orderly
+    # shutdown: the scheduler finishes in-flight work, the HTTP server stops
+    # accepting new connections, and serve_forever() returns.
+    def _graceful_stop(signum, frame):
+        sig_name = _signal.Signals(signum).name
+        logging_util.info("server_signal_received", signal=sig_name)
+        # Stop accepting new HTTP requests; serve_forever() returns.
+        threading.Thread(target=httpd.shutdown, name="httpd-shutdown", daemon=True).start()
+        # Give the scheduler time to finish in-flight monitors/backups.
+        scheduler.shutdown(timeout=10)
+
+    _signal.signal(_signal.SIGTERM, _graceful_stop)
+    _signal.signal(_signal.SIGINT, _graceful_stop)
+
     httpd.serve_forever()

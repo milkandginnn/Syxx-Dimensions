@@ -14,6 +14,7 @@ import socket
 import struct
 import time
 
+from .netutil import ip_is_public as _ip_is_public
 from .resolver import (
     ROOT_SERVERS,
     TYPE_DNSKEY,
@@ -21,7 +22,6 @@ from .resolver import (
     _addr_family,
     _build_query,
     _in_bailiwick,
-    _ip_is_public,
     _read_name,
     _recv_exact,
     _rrsig_window_valid,
@@ -46,11 +46,25 @@ _ALGO = {
 _DIG = {1: "SHA-1", 2: "SHA-256", 4: "SHA-384"}
 _MAXD, _MAXS = 16, 4
 _cry = False
+_cry_ed25519 = False
+_cry_ed448 = False
 try:
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import ec, padding
+    from cryptography.hazmat.primitives import hashes, serialization  # type: ignore[unresolved-import]
+    from cryptography.hazmat.primitives.asymmetric import ec, padding  # type: ignore[unresolved-import]
 
     _cry = True
+except ImportError:
+    pass
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey  # type: ignore[unresolved-import]
+
+    _cry_ed25519 = True
+except ImportError:
+    pass
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PublicKey  # type: ignore[unresolved-import]
+
+    _cry_ed448 = True
 except ImportError:
     pass
 
@@ -123,9 +137,12 @@ def _q(name, qtype, srv, to=5, deadline=None):
     A162: accepts an optional monotonic deadline. The per-socket timeout is
     clamped to the remaining budget so the aggregate deadline is honoured
     inside each individual query, not just between phases."""
+    # SM-023: use time.monotonic() for deadline tracking (not time.time(), which
+    # can jump backwards on NTP adjustments, making a deadline appear to have
+    # more budget than it actually does).
     # A162: clamp socket timeout to remaining deadline budget
     if deadline is not None:
-        remaining = deadline - time.time()
+        remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise DNSError("deadline exceeded")
         to = min(to, remaining)
@@ -143,10 +160,12 @@ def _q(name, qtype, srv, to=5, deadline=None):
         s.close()
     p = _parse(d, tid, qn=qn, qt=qt)
     if p["tc"]:
-        # A162: re-clamp for TCP fallback
+        # SM-023: use time.monotonic() for TCP fallback deadline too.
         if deadline is not None:
-            remaining = deadline - time.time()
+            remaining = deadline - time.monotonic()
             if remaining <= 0:
+                # SM-024: socket s is already closed in the finally block above.
+                # No socket leak here.
                 raise DNSError("deadline exceeded")
             to = min(to, remaining)
         fr = struct.pack(">H", len(pk)) + pk
@@ -226,21 +245,77 @@ def _vec(pub, sig, d):
         return False
 
 
-def _vrsa(pub, sig, d):
+def _vrsa(pub, sig, d, hash_algo=None):
+    """Verify RSA signature with the appropriate hash algorithm.
+
+    SM-022: map RSA algorithm numbers to their correct hash functions instead
+    of always using SHA-256. alg 5 = RSASHA1, alg 8 = RSASHA256,
+    alg 10 = RSASHA512."""
     if not _cry:
         return None
+    if hash_algo is None:
+        hash_algo = hashes.SHA256()
     try:
-        serialization.load_der_public_key(pub).verify(sig, d, padding.PKCS1v15(), hashes.SHA256())
+        serialization.load_der_public_key(pub).verify(sig, d, padding.PKCS1v15(), hash_algo)
         return True
     except Exception:
         return False
 
 
+def _ved25519(pub, sig, d):
+    """Verify Ed25519 signature (RFC 8080, DNSSEC algorithm 15).
+
+    A277: Ed25519 DNSKEY RDATA is exactly 32 bytes (the raw public key).
+    The RRSIG signature is exactly 64 bytes. Ed25519 has no hash parameter —
+    the algorithm internally uses SHA-512."""
+    if not _cry_ed25519 or len(pub) != 32:
+        return None
+    try:
+        key = Ed25519PublicKey.from_public_bytes(pub)
+        key.verify(sig, d)
+        return True
+    except Exception:
+        return False
+
+
+def _ved448(pub, sig, d):
+    """Verify Ed448 signature (RFC 8080, DNSSEC algorithm 16).
+
+    A277: Ed448 DNSKEY RDATA is exactly 57 bytes (the raw public key).
+    The RRSIG signature is exactly 114 bytes. Ed448 internally uses SHAKE256."""
+    if not _cry_ed448 or len(pub) != 57:
+        return None
+    try:
+        key = Ed448PublicKey.from_public_bytes(pub)
+        key.verify(sig, d)
+        return True
+    except Exception:
+        return False
+
+
+# SM-022: RSA algorithm → hash algorithm mapping.
+# Lazily populated when cryptography is available (see _cv()).
+_RSA_HASH_MAP: dict[int, object] = {}
+if _cry:
+    _RSA_HASH_MAP = {
+        5: hashes.SHA1,    # RSASHA1
+        7: hashes.SHA1,    # RSASHA1-NSEC3-SHA1
+        8: hashes.SHA256,  # RSASHA256
+        10: hashes.SHA512, # RSASHA512
+    }
+
+
 def _cv(algo, pub, sig, d):
-    if algo == 8:
-        return _vrsa(pub, sig, d)
+    if algo in _RSA_HASH_MAP:
+        # SM-022: use the correct hash for each RSA variant.
+        return _vrsa(pub, sig, d, hash_algo=_RSA_HASH_MAP[algo]())
     if algo == 13:
         return _vec(pub, sig, d)
+    # A277: Ed25519 (RFC 8080, algorithm 15) and Ed448 (RFC 8080, algorithm 16).
+    if algo == 15:
+        return _ved25519(pub, sig, d)
+    if algo == 16:
+        return _ved448(pub, sig, d)
     return None
 
 
@@ -321,8 +396,8 @@ def _find(name, to, deadline=None):
     from validate_chain. Each query and sub-walk checks the deadline."""
     srvs, z = list(ROOT_SERVERS), "."
     for _ in range(_MAXD):
-        # A162: check deadline at each depth level
-        if deadline is not None and time.time() > deadline:
+        # SM-023: use time.monotonic() for deadline checks (consistent with _q).
+        if deadline is not None and time.monotonic() > deadline:
             return None, z
         resp, u = None, None
         for s in srvs[:_MAXS]:
@@ -440,8 +515,13 @@ def validate_chain(domain, qtype=1, timeout=5):
     domain = (domain or "").rstrip(".").lower()
     if not domain:
         return _r(domain, "inconclusive", False, None, [], ["empty domain"])
-    ch, er, now = [], [], time.time()
-    deadline = now + min(timeout * 4, 30.0)  # SD-71: aggregate wall-clock cap
+    ch, er = [], []
+    # SM-023/SM-025: use time.monotonic() for the deadline (wall-clock independent)
+    # and time.time() for RRSIG inception/expiration checks (wall-clock required
+    # since RRSIG timestamps are Unix epoch). Refresh `now` before each RRSIG
+    # check so a long walk doesn't use a stale timestamp.
+    deadline = time.monotonic() + min(timeout * 4, 30.0)  # SD-71: aggregate wall-clock cap
+    now = time.time()  # initial wall-clock for first RRSIG checks
     labels = domain.split(".")
     zones = ["."]
     for i in range(len(labels)):
@@ -449,7 +529,7 @@ def validate_chain(domain, qtype=1, timeout=5):
         if z not in zones:
             zones.append(z)
     # Root DNSKEY
-    if time.time() > deadline:
+    if time.monotonic() > deadline:
         return _r(domain, "inconclusive", False, None, ch, ["exceeded aggregate deadline at root"])
     rv, _ = _find(".", timeout, deadline=deadline)
     if rv is None:
@@ -472,7 +552,7 @@ def validate_chain(domain, qtype=1, timeout=5):
     apex = "."  # A158: track deepest zone with valid ds-match for answer-path verification
     # Walk zones
     for zone in zones[1:]:
-        if time.time() > deadline:
+        if time.monotonic() > deadline:
             _step(ch, zone, "deadline", "inconclusive", detail="exceeded aggregate deadline")
             inc = True
             break
@@ -528,6 +608,10 @@ def validate_chain(domain, qtype=1, timeout=5):
             detail="DS↔DNSKEY verified",
         )
         apex = zone  # A158: deepest zone with valid ds-match
+        # SM-025: refresh wall-clock `now` before each RRSIG validation to
+        # prevent a stale timestamp from incorrectly accepting/rejecting
+        # signatures whose validity window boundary was crossed during the walk.
+        now = time.time()
         vr = _vsig(csig, cdks, mkp, mk, now, zone=zone)
         if vr is True:
             _step(ch, zone, "dnskey-rrsig", "valid", detail="DNSKEY RRSIG verified")
@@ -538,7 +622,7 @@ def validate_chain(domain, qtype=1, timeout=5):
         else:
             _step(ch, zone, "dnskey-rrsig", "inconclusive", detail="DNSKEY RRSIG unverifiable")
             inc = True
-        la = _ALGO.get(mkp[2], f"algorithm-{mkp[2]}")
+        la = _ALGO.get(mkp[2], f"algorithm-{mkp[2]}")  # type: ignore[not-subscriptable]
         pv_s = zv
     # A156: compute signed BEFORE the answer-RRSIG block uses it (the old
     # position at line 381 caused UnboundLocalError when the answer path
@@ -550,7 +634,7 @@ def validate_chain(domain, qtype=1, timeout=5):
     # answer-time DNSKEY RRset against the DS-validated key before using those
     # keys for answer RRSIG verification, and pass zone=apex so SD-94's
     # signer-name check applies to the answer path.
-    if not inv and pv_s and time.time() <= deadline:
+    if not inv and pv_s and time.monotonic() <= deadline:
         ar = _sq(domain, qtype, pv_s, timeout, deadline=deadline)
         if ar:
             arec = [r for r in ar["ans"] if r["rt"] == qtype]
@@ -558,6 +642,12 @@ def validate_chain(domain, qtype=1, timeout=5):
             if arec and asig:
                 tdk = _sq(apex, TYPE_DNSKEY, pv_s, timeout, deadline=deadline)
                 tks = [r for r in tdk["ans"] if r["rt"] == TYPE_DNSKEY] if tdk else []
+                # A301: refresh wall-clock before answer-path RRSIG checks.
+                # The zone-walk `now` may be 20+ seconds stale by this point —
+                # an RRSIG whose validity window boundary was crossed during the
+                # walk+answer queries must be checked against current time, not
+                # the last zone-iteration time.
+                now = time.time()
                 # A158: verify the DNSKEY RRset against the DS-validated key
                 # before trusting it for answer verification. An on-path server
                 # could serve a forged DNSKEY RRset otherwise.
@@ -645,50 +735,25 @@ def _read_nsec_bitmap(rd: bytes, off: int, rdlen: int) -> set:
 def _verify_nsec_denial(rrs: list, name: str, qtype: int) -> str:
     """Verify NSEC denial-of-existence for *name* and *qtype*.
 
-    A157: returns 'inconclusive' until full NSEC validation is implemented.
-    The previous implementation had four independent defects:
-    1. No RRSIG check — any on-path attacker could inject a bare NSEC RR and
-       obtain "valid" without the NSEC RRset being signed by the zone's
-       validated DNSKEY.
-    2. Wrong section — the caller passed ar["ans"] (ANSWER section) but NSEC
-       denial records live in the AUTHORITY section (ar["auth"]).
-    3. str vs bytes — rr["ow"] is a decoded str from _read_name but target
-       was bytes, so equality was always False and ordering raised TypeError.
-    4. Wrong ordering — Python str.__lt__ is not RFC 4034 §6.1 canonical DNS
-       name order (label-reversed, length-then-octet).
-
-    Until closest-encloser + next-hashed NSEC3 proof exists with proper
-    signature verification via _vsig, we return inconclusive — matching
-    _verify_nsec3_denial's honest approach. A result from unauthenticated
-    evidence would be a claim ahead of the evidence.
+    SM-026: always returns 'inconclusive'. Full NSEC closest-encloser proof with
+    RRSIG verification via _vsig is not yet implemented. The previous code
+    extracted NSEC records into a local variable and checked for their presence,
+    but always returned 'inconclusive' regardless — the extraction was dead code.
+    Now returns 'inconclusive' directly, matching the honesty protocol:
+    a result from unauthenticated evidence would be a claim ahead of the evidence.
     """
-    nsec_rrs = [r for r in rrs if r["rt"] == TYPE_NSEC]
-    if not nsec_rrs:
-        return "inconclusive"
-
-    # NSEC records are present but full validation is not yet implemented.
-    # Return inconclusive rather than risk reporting unsigned NSEC as
-    # "authenticated denial of existence."
     return "inconclusive"
 
 
 def _verify_nsec3_denial(rrs: list, name: str, qtype: int) -> str:
     """Verify NSEC3 denial-of-existence for *name* and *qtype*.
 
-    NSEC3 uses hashed owner names to prevent zone walking. Full NSEC3
-    validation requires iterated hashing with the zone's salt and iteration
-    count from NSEC3PARAM — this is a structural check only. Returns
-    'inconclusive' until full closest-encloser + next-hashed proof is
-    implemented.
+    SM-026: always returns 'inconclusive'. Full NSEC3 closest-encloser +
+    next-hashed proof requires iterated hashing with the zone's NSEC3PARAM
+    salt and iteration count. The previous code extracted NSEC3 records and
+    checked for their presence, but always returned 'inconclusive' regardless —
+    dead code. Now returns directly.
     """
-    nsec3_rrs = [r for r in rrs if r["rt"] == TYPE_NSEC3]
-    if not nsec3_rrs:
-        return "inconclusive"
-
-    # Structural check passes — NSEC3 records are present and well-formed,
-    # but without iterated hashing against the zone's NSEC3PARAM we cannot
-    # affirmatively prove denial of existence. Per AGENTS.md §1 (no result
-    # before evidence), we return inconclusive.
     return "inconclusive"
 
 

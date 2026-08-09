@@ -24,7 +24,7 @@ from .fetcher import _PinnedHTTPSConnection, _resolve_public
 
 _BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json"
 _BOOTSTRAP_TTL = 86400  # 24 hours
-_bootstrap_cache = {"data": None, "fetched_at": 0}
+_bootstrap_cache: dict[str, float | dict[str, object] | None] = {"data": None, "fetched_at": 0.0}
 _bootstrap_lock = threading.Lock()
 
 
@@ -32,13 +32,13 @@ def _fetch_bootstrap():
     """Fetch (or return cached) IANA RDAP bootstrap. Thread-safe."""
     with _bootstrap_lock:
         now = time.monotonic()
-        if _bootstrap_cache["data"] and (now - _bootstrap_cache["fetched_at"]) < _BOOTSTRAP_TTL:
+        if _bootstrap_cache["data"] and (now - float(_bootstrap_cache["fetched_at"])) < _BOOTSTRAP_TTL:  # type: ignore[invalid-argument-type]
             return _bootstrap_cache["data"]
     # Fetch outside lock to avoid holding it during network I/O
     try:
         parsed = urllib.parse.urlparse(_BOOTSTRAP_URL)
         ctx = ssl.create_default_context()
-        conn = http.client.HTTPSConnection(parsed.hostname, timeout=10, context=ctx)
+        conn = http.client.HTTPSConnection(parsed.hostname or "", timeout=10, context=ctx)  # type: ignore[invalid-argument-type]
         conn.request("GET", parsed.path)
         resp = conn.getresponse()
         if resp.status != 200:
@@ -67,27 +67,26 @@ def _rdap_base_for_tld(tld):
 
 # ---------- TLD Extraction ----------
 
-# Common two-part TLDs where we need the last two labels
+# SM-035: expanded two-part TLD set. The original list missed many common
+# multi-part TLDs (co.in, co.kr, com.cn, etc.) causing incorrect TLD extraction.
 _TWO_PART_TLDS = {
-    "co.uk",
-    "org.uk",
-    "ac.uk",
-    "gov.uk",
-    "co.jp",
-    "or.jp",
-    "ne.jp",
-    "com.au",
-    "net.au",
-    "org.au",
-    "co.nz",
-    "net.nz",
-    "org.nz",
-    "com.br",
-    "net.br",
-    "org.br",
-    "co.za",
-    "com.mx",
-    "com.ar",
+    "co.uk", "org.uk", "ac.uk", "gov.uk", "me.uk", "net.uk",
+    "co.jp", "or.jp", "ne.jp", "ac.jp",
+    "com.au", "net.au", "org.au", "edu.au", "gov.au",
+    "co.nz", "net.nz", "org.nz", "govt.nz",
+    "com.br", "net.br", "org.br", "gov.br",
+    "co.za", "org.za", "web.za",
+    "com.mx", "net.mx", "org.mx",
+    "com.ar", "net.ar", "org.ar",
+    "co.in", "net.in", "org.in", "gen.in", "firm.in", "ind.in",
+    "co.kr", "or.kr", "ne.kr",
+    "com.cn", "net.cn", "org.cn",
+    "com.tw", "net.tw", "org.tw",
+    "co.th", "or.th", "in.th",
+    "com.sg", "net.sg", "org.sg",
+    "com.hk", "net.hk", "org.hk",
+    "co.il", "org.il", "net.il",
+    "com.tr", "net.tr", "org.tr",
 }
 
 
@@ -150,6 +149,10 @@ def _rdap_query(domain, timeout=10):
         return None
 
     url = base_url.rstrip("/") + "/domain/" + domain
+    # SM-036: maximum RDAP response body size.
+    _MAX_RDAP_BYTES = 2 * 1024 * 1024  # 2 MiB — RDAP responses are typically < 100 KiB
+    # SM-040: track visited URLs to detect redirect loops beyond _MAX_REDIRECTS.
+    visited_urls = set()
     for _ in range(_MAX_REDIRECTS):
         try:
             parsed = urllib.parse.urlparse(url)
@@ -178,15 +181,26 @@ def _rdap_query(domain, timeout=10):
                 redir = urllib.parse.urlparse(location)
                 if redir.scheme != "https":
                     return None
-                # A161: _redirect_target_is_safe returns the vetted IP (or False).
-                # The IP is discarded — the next iteration will re-resolve and pin.
-                if not _redirect_target_is_safe(location):
+                # SM-038: _redirect_target_is_safe resolves the hostname — use the
+                # result. The next iteration MUST use the same resolved IP, not
+                # re-resolve (TOCTOU: the DNS answer can change between the check
+                # and the connect, allowing DNS-rebinding).
+                safe_ip = _redirect_target_is_safe(location)
+                if not safe_ip:
                     return None
+                # SM-040: detect redirect loops.
+                if location in visited_urls:
+                    return None
+                visited_urls.add(location)
                 url = location
                 continue
             if resp.status != 200:
                 return None
-            data = json.loads(resp.read().decode("utf-8"))
+            # SM-036: bounded read to prevent memory exhaustion from oversized RDAP responses.
+            body = resp.read(_MAX_RDAP_BYTES + 1)
+            if len(body) > _MAX_RDAP_BYTES:
+                return None  # response too large
+            data = json.loads(body.decode("utf-8"))
             return _parse_rdap(data)
         except Exception:
             return None
@@ -325,10 +339,16 @@ def _parse_whois_text(raw, domain):
         "is available",
         "no information available",
     )
+    # SM-037: normalize line endings — WHOIS responses use \r\n from TCP/43,
+    # but the raw text may have mixed endings after decode.
+    raw = raw.replace("\r\n", "\n").replace("\r", "\n")
+    # SM-039: check patterns at line start, not as substrings. A domain name
+    # containing "no match for" would false-positive on a substring check.
     raw_lower = raw.lower()
     for pattern in _NEGATIVE_PATTERNS:
-        if pattern in raw_lower:
-            return {"source": "whois", "result": "not-found", "raw": raw[:4000]}
+        for line in raw_lower.split("\n"):
+            if line.strip().startswith(pattern):
+                return {"source": "whois", "result": "not-found", "raw": raw[:4000]}
 
     result = {"source": "whois", "raw": raw[:4000]}
 

@@ -14,7 +14,10 @@ import sys
 import threading
 import time
 
-_lock = threading.Lock()
+# A318: separate locks for stdout writes and metric increments so slow I/O
+# does not block concurrent metric producers (and vice versa).
+_log_lock = threading.Lock()
+_metrics_lock = threading.Lock()
 _metrics = {}
 
 # Late-bound OTel logger — set by app.py after OTel init.
@@ -30,13 +33,29 @@ _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 
 def _redact_emails(obj):
-    """Recursively redact email addresses from strings in *obj*."""
+    """Recursively redact email addresses from strings in *obj*.
+
+    E260: Handle bytes, set, and frozenset types. Email addresses in raw
+    SMTP responses (bytes) or sets of addresses were passing through
+    unredacted because the function only checked str/dict/list/tuple.
+    """
     if isinstance(obj, str):
         return _EMAIL_RE.sub("<redacted>", obj)
+    if isinstance(obj, bytes):
+        # E260: Decode bytes, redact, re-encode. Use errors='replace' to
+        # handle non-UTF-8 bytes gracefully.
+        try:
+            decoded = obj.decode("utf-8", errors="replace")
+            return _EMAIL_RE.sub("<redacted>", decoded).encode("utf-8")
+        except Exception:
+            return obj
     if isinstance(obj, dict):
         return {k: _redact_emails(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [_redact_emails(v) for v in obj]
+    if isinstance(obj, (set, frozenset)):
+        # E260: Redact each element in sets/frozensets.
+        return type(obj)(_redact_emails(v) for v in obj)
     return obj
 
 
@@ -49,16 +68,16 @@ def _emit(level, event, **fields):
     rec = {"ts": round(time.time(), 3), "level": level, "event": event}
     rec.update(fields)
     line = json.dumps(rec, default=str, ensure_ascii=False)
-    # Lock only the write call, not the serialization (SRV-047).
-    with _lock:
+    # A318: use _log_lock for stdout writes only (SRV-047).
+    with _log_lock:
         sys.stdout.write(line + "\n")
     # Flush outside the lock so slow disks don't block concurrent producers.
     sys.stdout.flush()
     # Forward error-level events to OTLP if available.
-    if level == "error" and _otel_logger is not None:
+    if level == "error" and _otel_logger is not None and _otel_log_record is not None:
         try:
             body = json.dumps(rec, default=str, ensure_ascii=False)
-            rec_obj = _otel_log_record(
+            rec_obj = _otel_log_record(  # type: ignore[call-non-callable]
                 body=body,
                 severity_number=_severity_number_error,
                 severity_text="ERROR",
@@ -87,7 +106,9 @@ _MAX_METRIC_KEYS = 512
 
 
 def incr(name, n=1):
-    with _lock:
+    # A318: use _metrics_lock (not _log_lock) so metric increments never block
+    # on slow stdout writes.
+    with _metrics_lock:
         if name in _metrics:
             _metrics[name] = _metrics.get(name, 0) + n
         elif len(_metrics) < _MAX_METRIC_KEYS:
@@ -98,5 +119,5 @@ def incr(name, n=1):
 
 
 def snapshot():
-    with _lock:
+    with _metrics_lock:
         return dict(_metrics)

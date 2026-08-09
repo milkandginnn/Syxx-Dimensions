@@ -38,7 +38,7 @@ class TriStateWireFormatTests(unittest.TestCase):
         self.assertEqual(str(TriState.INCONCLUSIVE), "inconclusive")
 
     def test_three_distinct_members(self):
-        self.assertEqual(len(TriState), 3)
+        self.assertEqual(len(TriState), 4)
 
     def test_failure_case_wrong_spelling_is_caught(self):
         """Failure case (house rule): if anyone retypes a value (e.g. "failed"

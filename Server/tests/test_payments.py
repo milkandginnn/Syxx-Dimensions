@@ -703,7 +703,7 @@ class MachineBindingTests(_Base):
             def __exit__(self, *a):
                 return False
 
-        def fake_urlopen(req, timeout=None):
+        def fake_urlopen(req, timeout=None, **kwargs):
             sent["body"] = json.loads(req.data.decode())
             return _Resp()
 
@@ -731,7 +731,7 @@ class MachineBindingTests(_Base):
             def __exit__(self, *a):
                 return False
 
-        def fake_urlopen(req, timeout=None):
+        def fake_urlopen(req, timeout=None, **kwargs):
             sent["body"] = json.loads(req.data.decode())
             return _Resp()
 
@@ -972,6 +972,20 @@ class WebhookTests(unittest.TestCase):
     def test_malformed_header_rejected(self):
         with self.assertRaises(sc.StripeError):
             sc.verify_webhook(b"{}", "garbage", now=1000)
+
+    def test_no_signature_header_rejected(self):
+        """E223: a webhook arriving with no Stripe-Signature header at all must be rejected.
+        Without this guard, an attacker who knows the endpoint can POST a forged event body
+        and bypass signature verification entirely by simply omitting the header."""
+        with self.assertRaises(sc.StripeError) as ctx:
+            sc.verify_webhook(b'{"id":"evt_1"}', None, now=1000)
+        self.assertIn("malformed", str(ctx.exception))
+
+    def test_empty_signature_header_rejected(self):
+        """E223: an empty string signature header is functionally absent — must also be rejected."""
+        with self.assertRaises(sc.StripeError) as ctx:
+            sc.verify_webhook(b'{"id":"evt_1"}', "", now=1000)
+        self.assertIn("malformed", str(ctx.exception))
 
 
 if __name__ == "__main__":

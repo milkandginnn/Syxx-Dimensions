@@ -5,7 +5,6 @@ uses random transaction IDs, a hard timeout, TCP fallback on truncation, and
 bounds-checked name parsing so hostile responses cannot hang or crash it.
 """
 
-import http.client
 import ipaddress
 import json
 import secrets
@@ -16,6 +15,7 @@ import time
 import urllib.parse
 
 from . import netutil
+from .netutil import PinnedHTTPSConnection as _PinnedHTTPSConnection
 
 TYPE_A = 1
 TYPE_NS = 2
@@ -121,14 +121,6 @@ _TYPE_NAMES = {
 
 class DNSError(Exception):
     pass
-
-
-def _ip_is_public(ip):
-    """True only for publicly-routable unicast IPs. Gates which glue/NS IPs the authoritative
-    walker will query, so an attacker-controlled zone can't point us at internal hosts (A011).
-    Delegates to the shared netutil gate, which also normalizes IPv4-mapped IPv6 before
-    classification (SD-07: the local copy previously read ::ffff:10.0.0.1 as public)."""
-    return netutil.ip_is_public(ip)
 
 
 def _in_bailiwick(name, zone):
@@ -326,7 +318,10 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
             exchange, _ = _read_name(full, rdata_offset + 2)
             return f"{preference} {exchange}"
         except Exception:
-            return rdata.hex()
+            # SM-008: return None (drop the record) on parse failure, consistent
+            # with NS/CNAME/PTR. Returning hex garbage under a parsed type name
+            # would produce a false "divergent" result in cross-vantage comparison.
+            return None
     # --- TXT (one or more character-strings: length-prefixed) ---
     if rtype == TYPE_TXT and len(rdata) >= 1:
         try:
@@ -522,12 +517,12 @@ def query_system(name, qtype):
         raise DNSError(f"system: {e}") from e
     values = set()
     for info in infos:
-        ip = info[4][0].split("%")[0]  # strip any scope id
+        ip = str(info[4][0]).split("%")[0]  # strip any scope id
         if qtype == TYPE_AAAA:
             # getaddrinfo synthesizes ::ffff:x.x.x.x for v4-only names; those are
             # not real AAAA records, so drop them to avoid false divergence.
             addr = ipaddress.ip_address(ip)
-            if addr.ipv4_mapped is not None:
+            if addr.ipv4_mapped is not None:  # type: ignore[unresolved-attribute]
                 continue
         values.add(ip)
     return {
@@ -536,28 +531,6 @@ def query_system(name, qtype):
         "truncated": False,
         "records": [{"type": tname, "value": v} for v in sorted(values)],
     }
-
-
-class _PinnedHTTPSConnection(http.client.HTTPSConnection):
-    """HTTPSConnection that dials a caller-vetted IP literal and NEVER re-resolves
-    the hostname.
-
-    A067: the stock pattern -- HTTPSConnection(ip) then `conn.host = name` -- makes
-    http.client re-run getaddrinfo(name) inside connect() (self.host is both the dial
-    target and the SNI value), discarding the vetted IP and reopening the DNS-rebind
-    SSRF window. Here `pin_ip` is an already-validated numeric address, so
-    socket.create_connection performs no DNS query and cannot be rebound; the real
-    hostname is still used for SNI and certificate validation."""
-
-    def __init__(self, pin_ip, port, server_hostname, timeout, context):
-        super().__init__(pin_ip, port, timeout=timeout, context=context)
-        self._pin_ip = pin_ip
-        self._server_hostname = server_hostname
-
-    def connect(self):
-        # pin_ip is numeric -> create_connection does not query DNS (no rebind).
-        sock = socket.create_connection((self._pin_ip, self.port), self.timeout, self.source_address)
-        self.sock = self._context.wrap_socket(sock, server_hostname=self._server_hostname)
 
 
 def _parse_doh_json(data):
@@ -603,7 +576,7 @@ def query_doh(name, qtype, ip, sni, path, timeout=5):
     # A067: the connection must dial only the vetted IP. Gate it through the same
     # public-IP check as the authoritative walker so a misconfigured/hostile vantage
     # entry cannot point the server at an internal address.
-    if not _ip_is_public(ip):
+    if not netutil.ip_is_public(ip):
         raise DNSError(f"doh: non-public resolver IP {ip}")
     q = urllib.parse.urlencode({"name": name, "type": qtype})
     ctx = ssl.create_default_context()
@@ -617,7 +590,17 @@ def query_doh(name, qtype, ip, sni, path, timeout=5):
         resp = conn.getresponse()
         if resp.status != 200:
             raise DNSError(f"doh http {resp.status}")
-        data = json.loads(resp.read(1 << 20).decode("utf-8", "ignore"))
+        # SM-009: validate Content-Type. A DoH JSON endpoint must return
+        # application/dns-json or application/json. An HTML error page or
+        # redirect page parsed as JSON would produce fabricated records.
+        ctype = resp.getheader("Content-Type", "")
+        if ctype and "json" not in ctype.lower() and "dns" not in ctype.lower():
+            raise DNSError(f"doh: unexpected content-type {ctype!r}")
+        # SM-006: use errors="replace" instead of "ignore" for UTF-8 decoding.
+        # "ignore" silently deletes invalid bytes, which can merge field
+        # boundaries in JSON and produce fabricated records. "replace" preserves
+        # evidence of corruption as U+FFFD.
+        data = json.loads(resp.read(1 << 20).decode("utf-8", "replace"))
     except (OSError, ssl.SSLError, ValueError) as e:
         # ValueError covers json.JSONDecodeError for a non-JSON / error body.
         raise DNSError(f"doh: {e}") from e
@@ -751,14 +734,24 @@ def _parse_sections(data, expected_txid, expected_qname=None, expected_qtype=Non
     }
 
 
-def _query_sections(name, qtype, server, timeout=3, do=False, rd=False):
+def _query_sections(name, qtype, server, timeout=3, do=False, rd=False, deadline=None):
     """One query to `server`, parsed into sections; TCP fallback on truncation.
     Uses connected UDP so the kernel discards off-source spoofed replies (A020). `do=True` sets the
     EDNS DO bit so the server includes covering RRSIG records.
 
     `rd` defaults to False (iterative) because the delegation walker must never hand recursion to an
     upstream. S13: a RECURSIVE vantage (1.1.1.1, 8.8.8.8) answers RD=0 with REFUSED or an empty
-    referral, so asking one about DNSSEC requires rd=True."""
+    referral, so asking one about DNSSEC requires rd=True.
+
+    SM-010: accepts an optional monotonic deadline. The socket timeout is clamped
+    to the remaining budget so the aggregate deadline is honoured inside each
+    individual query, not just between iterations."""
+    # SM-010: clamp timeout to remaining deadline budget.
+    if deadline is not None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise DNSError("deadline exceeded")
+        timeout = min(timeout, remaining)
     txid, packet, qname, qtype_, qclass_ = _build_query(name, qtype, rd=rd, do=do)
     sock = socket.socket(_addr_family(server), socket.SOCK_DGRAM)
     sock.settimeout(timeout)
@@ -929,7 +922,8 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
             try:
                 # B145: set the DO (DNSSEC OK) bit on authoritative queries so resolvers include
                 # DNSSEC records. Without it the server is systematically blind to DNSSEC data.
-                resp, used, used_ip = _query_sections(name, qtype, s["ip"], timeout, do=True), s["label"], s["ip"]
+                # SM-011: propagate the deadline so each query's timeout is clamped.
+                resp, used, used_ip = _query_sections(name, qtype, s["ip"], timeout, do=True, deadline=deadline), s["label"], s["ip"]
                 break
             except DNSError:
                 continue
@@ -1045,7 +1039,7 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
         next_servers = [
             {"ip": glue[n.rstrip(".")], "label": n}
             for n in ns_names
-            if n.rstrip(".") in glue and _ip_is_public(glue[n.rstrip(".")])
+            if n.rstrip(".") in glue and netutil.ip_is_public(glue[n.rstrip(".")])
         ]
         if not next_servers:
             # No glue — resolve a couple of NS names from the root (bounded so it can't loop forever).
@@ -1060,7 +1054,7 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
                     sub = resolve_authoritative(nsname, TYPE_A, timeout, sub_depth, deadline=deadline)
                     if sub.get("authoritative") and sub["authoritative"]["answers"]:
                         ip = sub["authoritative"]["answers"][0]
-                        if _ip_is_public(ip):
+                        if netutil.ip_is_public(ip):
                             next_servers.append({"ip": ip, "label": nsname})
                             break
                 except DNSError:

@@ -453,7 +453,12 @@ internal static class ParityTranscriptCommand
                 // Floating-point: round-trip through double for Swift-compatible representation.
                 if (val.TryGetValue<double>(out var d))
                 {
-                    writer.WriteRawValue(d.ToString("R", CultureInfo.InvariantCulture), skipInputValidation: true);
+                    if (!double.IsFinite(d))
+                        throw new JsonException($"Floating-point value {d} is not finite and cannot be serialized to JSON.");
+                    var formatted = d.ToString("R", CultureInfo.InvariantCulture);
+                    // Swift's JSONSerialization uses lowercase 'e' for exponents
+                    formatted = formatted.Replace('E', 'e');
+                    writer.WriteRawValue(formatted, skipInputValidation: true);
                     return;
                 }
             }

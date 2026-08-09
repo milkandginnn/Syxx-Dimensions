@@ -52,13 +52,13 @@ public enum LookalikeDetector {
     /// The confusable-folded skeleton of a string: every character mapped to its Latin lookalike
     /// (when known) and lowercased. Two names with the same skeleton render alike.
     public static func skeleton(_ s: String) -> String {
-        String(s.lowercased().map { confusables[$0] ?? $0 })
+        String(s.invariantLowercased().map { confusables[$0] ?? $0 })
     }
 
     /// True when `s` contains any character our confusables table maps away from ASCII — i.e. a
     /// non-Latin glyph masquerading as Latin.
     public static func hasHomoglyph(_ s: String) -> Bool {
-        s.lowercased().contains { ch in
+        s.invariantLowercased().contains { ch in
             guard let mapped = confusables[ch] else { return false }
             return ch != mapped && !ch.isASCII
         }
@@ -124,8 +124,8 @@ public enum LookalikeDetector {
     /// (all `brand.tld`); multi-part suffixes (`co.uk`) are a known limitation surfaced honestly
     /// rather than guessed. Returns lowercased.
     public static func registrable(_ domain: String) -> String {
-        let labels = domain.lowercased().split(separator: ".").map(String.init)
-        guard labels.count >= 2 else { return domain.lowercased() }
+        let labels = domain.invariantLowercased().split(separator: ".").map(String.init)
+        guard labels.count >= 2 else { return domain.invariantLowercased() }
         return labels.suffix(2).joined(separator: ".")
     }
 
@@ -182,9 +182,18 @@ public enum LookalikeDetector {
     public static func decoded(_ domain: String) -> String {
         domain.split(separator: ".", omittingEmptySubsequences: false).map { label -> String in
             let l = String(label)
-            guard l.lowercased().hasPrefix("xn--") else { return l }
+            guard l.invariantLowercased().hasPrefix("xn--") else { return l }
             let payload = String(l.dropFirst(4))
-            return DNSResolver.punycodeDecode(payload) ?? l
+            return DNSResolver.punycodeDecode(payload)?.precomposedStringWithCanonicalMapping ?? l
         }.joined(separator: ".")
+    }
+}
+
+private extension String {
+    /// Locale-invariant lowercasing, matching C# `ToLowerInvariant()`.
+    /// `lowercased()` is locale-aware and can produce different results for
+    /// characters like Turkish İ (U+0130) depending on the system locale.
+    func invariantLowercased() -> String {
+        lowercased(with: Locale(identifier: "en_US_POSIX"))
     }
 }

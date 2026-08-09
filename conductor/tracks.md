@@ -16,6 +16,8 @@
 
 | [x] | [fix-parity-discovery-defects_20260809](./tracks/fix-parity-discovery-defects_20260809/index.md) | Fix Parity-Discovery Defects — encoder, decompression, NFC | 2026-08-09 | 2026-08-09 |
 
+| [ ] | [fix-remaining-parity-defects_20260809](./tracks/fix-remaining-parity-defects_20260809/index.md) | Fix Remaining Parity Defects — trust anchor, config, exponent, domain, case-fold, IDNA, sort | 2026-08-09 | 2026-08-09 |
+
 ## Archived
 
 | Track ID | Title | Reason | Archived |

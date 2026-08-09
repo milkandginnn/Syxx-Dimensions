@@ -905,10 +905,33 @@ namespace Syxx.Kit
         /// </summary>
         public static ISet<string> ConfiguredPins()
         {
-            string raw = Environment.GetEnvironmentVariable("SYXX_COLLECTOR_PINS") ?? string.Empty;
+            // Read from persisted file first (Windows equivalent of UserDefaults),
+            // then fall back to the environment variable — matching the Swift twin's
+            // three-tier fallback (UserDefaults → env var).
+            string raw = PersistedCollectorPins() ?? string.Empty;
+            if (string.IsNullOrEmpty(raw))
+                raw = Environment.GetEnvironmentVariable("SYXX_COLLECTOR_PINS") ?? string.Empty;
             var parts = raw.Split(new[] { ',', ' ', '\n', '\t', '\r' },
                                   StringSplitOptions.RemoveEmptyEntries);
             return new HashSet<string>(parts);
+        }
+
+        /// <summary>
+        /// Returns the persisted collector pins file contents, or null if none exists.
+        /// Twin of the Swift UserDefaults-based config read in LeakDetector.swift.
+        /// </summary>
+        private static string? PersistedCollectorPins()
+        {
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var pinFile = System.IO.Path.Combine(appData, "Syxx", "collector_spki_pins.txt");
+                return System.IO.File.Exists(pinFile) ? System.IO.File.ReadAllText(pinFile) : null;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -945,7 +968,7 @@ namespace Syxx.Kit
         {
             try
             {
-                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                using var client = LeakDetector.MakeCollectorClient(CollectorPinning.ConfiguredPins());
                 var pubkeyUrl = new Uri(collectorBaseURL, "api/pubkey");
                 var response = await client.GetAsync(pubkeyUrl);
                 response.EnsureSuccessStatusCode();
@@ -957,6 +980,31 @@ namespace Syxx.Kit
                 
                 if (publicKey == null || keyId == null)
                     return null;
+
+                // B185: Validate the fetched public key is a valid 32-byte Ed25519 key
+                // and that keyId matches SHA-256(key)[0:8] hex prefix.
+                byte[] keyBytes;
+                try
+                {
+                    keyBytes = Convert.FromBase64String(publicKey);
+                }
+                catch (FormatException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Syxx] SyncTrustedSigningKey: public key is not valid base64, discarding");
+                    return null;
+                }
+                if (keyBytes.Length != 32)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Syxx] SyncTrustedSigningKey: public key is {keyBytes.Length} bytes (expected 32), discarding");
+                    return null;
+                }
+                var keyHash = System.Security.Cryptography.SHA256.HashData(keyBytes);
+                var expectedKeyId = Convert.ToHexString(keyHash, 0, 4).ToLowerInvariant(); // first 8 hex chars = 4 bytes
+                if (!string.Equals(keyId, expectedKeyId, StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Syxx] SyncTrustedSigningKey: keyId mismatch — got {keyId}, expected {expectedKeyId}, discarding");
+                    return null;
+                }
                 
                 // Persist to registry for offline use (Windows equivalent of UserDefaults)
                 // For now, we'll use a simple file-based approach since registry access requires more setup
@@ -965,6 +1013,17 @@ namespace Syxx.Kit
                 var configDir = System.IO.Path.Combine(appData, "Syxx");
                 System.IO.Directory.CreateDirectory(configDir);
                 var keyFile = System.IO.Path.Combine(configDir, "collector_trusted_key.txt");
+
+                // M4: Key rotation surfacing — emit a diagnostic breadcrumb if the key changed.
+                if (System.IO.File.Exists(keyFile))
+                {
+                    var previousKey = System.IO.File.ReadAllText(keyFile).Trim();
+                    if (!string.Equals(previousKey, publicKey, StringComparison.Ordinal))
+                    {
+                        var previousPrefix = previousKey.Length > 8 ? previousKey[..8] : previousKey;
+                        System.Diagnostics.Debug.WriteLine($"[Syxx] SyncTrustedSigningKey: trusted key rotated (previous keyId prefix: {previousPrefix}, new keyId: {keyId})");
+                    }
+                }
                 System.IO.File.WriteAllText(keyFile, publicKey);
                 
                 return publicKey;

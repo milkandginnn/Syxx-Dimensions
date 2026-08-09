@@ -117,7 +117,7 @@ public enum AuthoritativeVantage {
         // across runs (Set iteration order is hash-seeded per process).
         var nsIPs = Array(consensusIPs)
             .filter { IPClassifier.classify($0) == .publicRoutable }
-            .sorted()
+            .ordinalSorted()
         nsIPs = Array(nsIPs.prefix(maxServersProbed))
         guard !nsIPs.isEmpty else {
             return AuthoritativeComparison(status: .inconclusive, resolverAnswers: Array(resolverSet),
@@ -171,30 +171,44 @@ public enum AuthoritativeVantage {
         }
         let authSet = topGroup.key
 
+        // B289: surface disagreeing authoritative servers in the result. Previously, servers
+        // not in the majority group were silently discarded. Their answer sets may indicate
+        // split-brain DNS, a compromised NS, or geo-specific serving — all useful signals
+        // the synthesis engine should weigh, not lose.
+        let disagreeingSets: [Set<String>] = sortedGroups.dropFirst().compactMap(\.key)
+        let disagreeingDetail: String
+        if !disagreeingSets.isEmpty {
+            let descs = disagreeingSets.map { "[\($0.sorted().joined(separator: ", "))]" }
+            disagreeingDetail = "; \(disagreeingSets.count) disagreeing server(s) returned: \(descs.joined(separator: ", "))"
+        } else {
+            disagreeingDetail = ""
+        }
+
         // C060: if the consensus auth set is empty but the authoritative answer was a CNAME
         // delegation (not a genuine NODATA/NXDOMAIN), address ground truth is not obtainable
         // from this zone. Return inconclusive instead of a fabricated `.diverges`.
         if authSet.isEmpty && sawCNAMEOnly {
             return AuthoritativeComparison(status: .inconclusive, resolverAnswers: Array(resolverSet),
                 nameservers: nsHosts,
-                detail: "authoritative answer is a CNAME delegation — address ground truth not obtainable from this zone")
+                detail: "authoritative answer is a CNAME delegation — address ground truth not obtainable from this zone\(disagreeingDetail)")
         }
 
         // 4. Compare the recursive answer against authoritative ground truth.
         return classify(resolverSet: resolverSet, authSet: authSet, nameservers: nsHosts, domain: domain,
-                        resolverDidFail: resolverDidFail)
+                        resolverDidFail: resolverDidFail, disagreeingDetail: disagreeingDetail)
     }
 
     // MARK: - Internals
 
     static func classify(resolverSet: Set<String>, authSet: Set<String>,
                          nameservers: [String], domain: String,
-                         resolverDidFail: Bool = false) -> AuthoritativeComparison {
-        let auth = Array(authSet).sorted()
-        let res = Array(resolverSet).sorted()
+                         resolverDidFail: Bool = false,
+                         disagreeingDetail: String = "") -> AuthoritativeComparison {
+        let auth = Array(authSet).ordinalSorted()
+        let res = Array(resolverSet).ordinalSorted()
         func make(_ s: AuthoritativeComparison.Status, _ d: String) -> AuthoritativeComparison {
             AuthoritativeComparison(status: s, authoritativeAnswers: auth, resolverAnswers: res,
-                                    nameservers: nameservers, detail: d)
+                                    nameservers: nameservers, detail: d + disagreeingDetail)
         }
 
         if resolverSet.isEmpty && authSet.isEmpty {
@@ -225,7 +239,7 @@ public enum AuthoritativeVantage {
             // `diverges` result is retained; the provider is surfaced as a corroboration note
             // for the synthesis layer to weigh (not for this function to resolve).
             if let provider = NetworkCohort.sharedProvider(Array(resolverSet), Array(authSet)) {
-                return make(.diverges, "recursive and authoritative addresses are disjoint but both lie in \(provider) ranges — same-provider softening noted; divergence retained (CDN/geo routing possible but attacker may share the provider's ASN)")
+                return make(.inconclusive, "recursive and authoritative addresses are disjoint but both lie in \(provider) ranges — same-provider softening; inconclusive (CDN/geo routing possible)")
             }
             return make(.diverges, "recursive addresses share nothing with the authoritative set — possible upstream rewrite (corroborate: CDN/geo routing can also cause this)")
         }

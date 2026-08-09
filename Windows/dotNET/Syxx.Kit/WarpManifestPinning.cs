@@ -35,11 +35,12 @@ namespace Syxx.Kit
         /// </summary>
         public static IReadOnlyDictionary<string, byte[]> ConfiguredTrustedManifestKeys()
         {
-            string raw = Environment.GetEnvironmentVariable(EnvKey) ?? string.Empty;
+            // Read from persisted file first (Windows equivalent of UserDefaults),
+            // then fall back to the environment variable — matching the Swift twin's
+            // three-tier fallback (UserDefaults → env var).
+            string raw = PersistedTrustedManifestKeys() ?? string.Empty;
             if (string.IsNullOrEmpty(raw))
-            {
-                raw = PersistedTrustedManifestKeys() ?? string.Empty;
-            }
+                raw = Environment.GetEnvironmentVariable(EnvKey) ?? string.Empty;
             return Parse(raw);
         }
 

@@ -119,7 +119,7 @@ public enum WildcardSynthesisProbe {
         let labels = obs.map { $0.label }
         func make(_ s: WildcardSynthesis.Status, _ synthetic: [String], _ d: String) -> WildcardSynthesis {
             WildcardSynthesis(status: s, probedLabels: labels,
-                              syntheticAddresses: Array(Set(synthetic)).sorted(), usableCount: obs.count, detail: d)
+                              syntheticAddresses: Array(Set(synthetic)).ordinalSorted(), usableCount: obs.count, detail: d)
         }
         guard !obs.isEmpty else {
             return make(.inconclusive, [], "no label produced a usable cross-vantage comparison — reference unreachable or all transport-failed")

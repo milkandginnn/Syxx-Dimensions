@@ -100,7 +100,8 @@ namespace Syxx.Kit
         Truncated,
         ResponseIdMismatch,
         MalformedResponse,
-        TransportError
+        TransportError,
+        RcodeOther
     }
 
     public enum SecureResolutionResult
@@ -1154,6 +1155,12 @@ namespace Syxx.Kit
         /// Converts an internationalized (non-ASCII) domain name to its IDNA/punycode ASCII form
         /// so IDN test domains are queried on the wire exactly as a resolver expects, letting
         /// tampering/censorship of non-ASCII domains be detected. ASCII names pass through unchanged.
+        ///
+        /// NOTE: lowercasing is applied at the DomainCanonical.CanonicalizeOrNull boundary, NOT
+        /// inside this method. ToAsciiName returns pure-ASCII input un-lowercased (it only
+        /// transforms non-ASCII labels), so case-sensitive DNS callers (e.g. 0x20 encoding)
+        /// are unaffected. The Swift twin has the same contract — see
+        /// DomainCanonical.swift:54-58.
         public static string ToAsciiName(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
@@ -1163,6 +1170,10 @@ namespace Syxx.Kit
                 if (c > 127) { isAscii = false; break; }
             }
             if (isAscii) return name;
+            // Normalize full IDNA separator set to ASCII dot before encoding.
+            // Swift's hand-rolled RFC 3492 encoder splits on U+3002, U+FF0E, U+FF61
+            // in addition to U+002E; IdnMapping only recognizes ASCII dot.
+            name = name.Replace('\u3002', '.').Replace('\uFF0E', '.').Replace('\uFF61', '.');
             try
             {
                 return new System.Globalization.IdnMapping().GetAscii(name.TrimEnd('.'));

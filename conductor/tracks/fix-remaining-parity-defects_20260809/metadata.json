@@ -1,0 +1,13 @@
+{
+  "track_id": "fix-remaining-parity-defects_20260809",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-08-09",
+  "updated_at": "2026-08-09",
+  "current_phase": null,
+  "current_task": null,
+  "phases": { "total": 8, "completed": 0 },
+  "tasks": { "total": 14, "completed": 0 },
+  "commits": [],
+  "description": "Fix the 7 remaining defects from the 6-dimension parity review: trust anchor unpinned, config source asymmetry, exponent casing, DomainCanonical comparison, LookalikeDetector case-folding, ToAsciiName IDNA divergence, and Swift bare .sorted() vs C# StringComparer.Ordinal."
+}

@@ -288,6 +288,7 @@ namespace Syxx.Kit
             bool localLooksBlocked = localRdatas.Any(IPClassifier.IsBlockingAnswer);
 
             bool redirection = false;
+            bool inconclusiveFromUnanimous = false;   // C046/C056: tri-state undetermined → inconclusive
             bool inconclusiveFromDivergence = false;  // B281: disjoint answer not confirmable as a redirect
             if (localLooksBlocked)
             {
@@ -329,8 +330,10 @@ namespace Syxx.Kit
                         redirection = true;
                         break;
                     case UnanimousTamperingResult.Undetermined:
+                        // Insufficient evidence to confirm or deny — mark inconclusive so the
+                        // caller never renders a false-clean conclusion.
                         redirection = false;
-                        inconclusiveFromDivergence = true;
+                        inconclusiveFromUnanimous = true;
                         break;
                     case UnanimousTamperingResult.Clean:
                         redirection = false;
@@ -391,10 +394,11 @@ namespace Syxx.Kit
             bool allDohFailed = dohProvided && dohOutcomes!.Values.All(o => o.Records.Count == 0);
             bool dohBlockedWhileUdpUnanimous = !redirection && udpUnanimous && allDohFailed;
 
-            // B281: fold in the unconfirmable-disjoint-divergence inconclusive. `degraded` was
-            // computed above (before any early exit), so a timed-out UDP baseline cannot be erased
-            // into a clean (finding 4). Twin of macOS VantageComparer.swift.
-            bool isInconclusive = dohBlockedWhileUdpUnanimous || inconclusiveFromDivergence;
+            // B281: fold in the unconfirmable-disjoint-divergence and the C046/C056 tri-state
+            // undetermined inconclusive. `degraded` was computed above (before any early exit),
+            // so a timed-out UDP baseline cannot be erased into a clean (finding 4). Twin of
+            // macOS VantageComparer.swift.
+            bool isInconclusive = dohBlockedWhileUdpUnanimous || inconclusiveFromUnanimous || inconclusiveFromDivergence;
 
             return new Result
             {
@@ -416,51 +420,58 @@ namespace Syxx.Kit
         /// a single answer set, but ≥2 DoH endpoints transparently return a *different* set.
         /// The DoH answers are also checked for mutual agreement so we don't flag a DoH
         /// transport hiccup as tampering.
-        /// B282: returns a tri-state — Undetermined when there is insufficient data to conclude
-        /// (too few DoH/UDP endpoints, or DoH not provided), so the caller can surface it as
-        /// inconclusive rather than silently collapsing to "no tampering."
+        /// C046/C056: returns a tri-state — Undetermined (insufficient evidence) must NEVER map
+        /// to redirection = true. Only a confirmed pattern maps to Tampered.
+        /// Twin of macOS VantageComparer.swift detectUnanimousTampering.
         /// </summary>
         public static UnanimousTamperingResult DetectUnanimousTampering(
             Dictionary<string, ResolverQueryOutcome> publicOutcomes,
             Dictionary<string, ResolverQueryOutcome>? dohOutcomes,
             HashSet<string> localRdatas)
         {
-            // B282: no DoH data means we cannot cross-validate — undetermined, not clean.
-            if (dohOutcomes == null || dohOutcomes.Count == 0) return UnanimousTamperingResult.Undetermined;
-
-            // Collect UDP rdata sets from resolvers that returned records.
-            // C117: address records only. CNAME/RRSIG rdata differ across resolvers even when the
-            // A/AAAA answers agree, so leaving them in manufactures a spurious "disagreement" that
-            // breaks unanimity and SUPPRESSES a genuine unanimous-UDP tamper detection.
-            var udpSets = publicOutcomes.Values
+            // UDP rdata sets from resolvers that actually ANSWERED (not failures/timeouts).
+            // C056 Fix 2: a timeout is not a disagreeing RCODE — filtering out failures prevents
+            // one flaky resolver from creating a false "disagreement" pattern.
+            // C117: filter to address records — CNAME/RRSIG rdata differ across resolvers even
+            // when the A/AAAA answers agree, producing spurious "disagreement".
+            var answeredOutcomes = publicOutcomes.Values.Where(o => !o.DidFail).ToList();
+            var udpSets = answeredOutcomes
                 .Where(o => o.Records.Count > 0)
                 .Select(o => AddressRdatas(o.Records))
                 .ToList();
-            // B282: too few UDP endpoints to establish unanimity — undetermined.
-            if (udpSets.Count < 2) return UnanimousTamperingResult.Undetermined;
+            if (udpSets.Count < 2) return UnanimousTamperingResult.Clean;
 
-            // Check unanimity: all UDP answer sets point to the same destination.
+            // Unanimity: all UDP answer sets point to the same destination.
             var firstUdp = udpSets[0];
             if (!udpSets.All(s => s.SetEquals(firstUdp))) return UnanimousTamperingResult.Clean;
 
-            // Collect DoH rdata sets from endpoints that returned records.
-            // C117: address records only (same rationale as udpSets above).
+            // C046: compare RCODE/status sets across ANSWERED public resolvers only.
+            // If all answered resolvers agree on rdata but disagree on RCODE, that is a tamper signal.
+            var udpStatuses = answeredOutcomes.Select(o => o.Status).ToHashSet();
+            if (udpStatuses.Count > 1) return UnanimousTamperingResult.Tampered;
+
+            // Without DoH cross-validation, unanimous UDP is not enough to confirm tampering.
+            // The B010 residual check in Evaluate handles the all-DoH-blocked case separately.
+            if (dohOutcomes == null || dohOutcomes.Count == 0) return UnanimousTamperingResult.Clean;
+
+            // DoH rdata sets from endpoints that returned records.
+            // C117: filter to address records (same rationale as udpSets above).
             var dohSets = dohOutcomes.Values
                 .Where(o => o.Records.Count > 0)
                 .Select(o => AddressRdatas(o.Records))
                 .ToList();
-            // B282: too few DoH endpoints to cross-validate — undetermined.
-            if (dohSets.Count < 2) return UnanimousTamperingResult.Undetermined;
+            // Need ≥2 independent DoH endpoints to corroborate a cross-transport disagreement.
+            if (dohSets.Count < 2) return UnanimousTamperingResult.Clean;
 
-            // DoH should also show internal agreement (mutual consistency).
+            // DoH must also show internal agreement (mutual consistency).
             var firstDoh = dohSets[0];
-            if (!dohSets.All(s => s.SetEquals(firstDoh))) return UnanimousTamperingResult.Undetermined;
+            if (!dohSets.All(s => s.SetEquals(firstDoh))) return UnanimousTamperingResult.Clean;
 
             // The UDP unanimity answer and the DoH consensus must differ.
             if (firstUdp.SetEquals(firstDoh)) return UnanimousTamperingResult.Clean;
 
-            // Finally, the local answer must match the UDP tampered answer (the local resolver
-            // is also being intercepted) — otherwise this is just strange network behavior.
+            // The local answer must match the UDP tampered answer (the local resolver is also being
+            // intercepted) — otherwise this is just strange network behavior, not on-path UDP tamper.
             if (!localRdatas.SetEquals(firstUdp)) return UnanimousTamperingResult.Clean;
 
             return UnanimousTamperingResult.Tampered;

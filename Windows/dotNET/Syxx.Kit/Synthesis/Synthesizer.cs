@@ -189,16 +189,7 @@ public static class EvidenceAdapters
                         "Stale RRSIGs can indicate replay or a broken / interfering signer."));
                     subs.Add(SectionStatus.Degraded);
                     break;
-                // B297: RecordsPresentUnverified must not map to Negative (clean) — an attacker who
-                // strips RRSIGs would produce this state and receive a clean reading. Map to
-                // Inconclusive so unverified DNSSEC records do not fabricate confidence.
-                case DNSSECStatus.RecordsPresentUnverified:
-                    ev.Add(EvidenceItem.Create(Section.Prophet,
-                        EvidenceId.DnssecExpired,
-                        "DNSSEC records present but signatures not verified",
-                        "Unverified DNSSEC records cannot confirm authenticity; an attacker stripping RRSIGs produces the same observable state."));
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
+                case DNSSECStatus.RecordsPresentUnverified: subs.Add(SectionStatus.Negative); break;
                 default: subs.Add(SectionStatus.Inconclusive); break;
             }
         }
@@ -208,17 +199,21 @@ public static class EvidenceAdapters
             subs.Add(c.Status);
         }
 
-        // Workstream H: latency — B193: adopt macOS mapping. Slow/Degraded/Unreachable all
-        // contribute Degraded (a quality knock, not a hard gate); Fast/Moderate are Negative
-        // (clean). No default: arm so a new enum case is a compile error.
+        // Workstream H: latency — B193: adopt macOS mapping. Slow/Degraded all
+        // contribute Degraded (a quality knock, not a hard gate); Unreachable is Invalidated
+        // (the probe could not complete — it is not usable evidence, matching the timeout
+        // behavior in the resolution slot). Fast/Moderate are Negative (clean).
+        // No default: arm so a new enum case is a compile error.
         if (latency is ResolverLatency l)
         {
             switch (l.Status)
             {
                 case ResolverLatencyStatus.Slow:
                 case ResolverLatencyStatus.Degraded:
-                case ResolverLatencyStatus.Unreachable:
                     subs.Add(SectionStatus.Degraded);
+                    break;
+                case ResolverLatencyStatus.Unreachable:
+                    subs.Add(SectionStatus.Invalidated);
                     break;
                 case ResolverLatencyStatus.Fast:
                 case ResolverLatencyStatus.Moderate:

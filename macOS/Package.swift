@@ -24,6 +24,9 @@ let package = Package(
             dependencies: [
                 .product(name: "OpenTelemetryApi", package: "opentelemetry-swift-core"),
                 .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift-core")
+            ],
+            linkerSettings: [
+                .linkedFramework("LocalAuthentication")
             ]
         ),
         .testTarget(
@@ -46,6 +49,11 @@ let package = Package(
                 .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
                 .product(name: "ResourceExtension", package: "opentelemetry-swift"),
                 .product(name: "Sentry", package: "sentry-cocoa")
+            ],
+            swiftSettings: [
+                // sentry-cocoa 8.43.0 produces a deprecation warning for v11 platform
+                // versions in its Package.swift — upstream issue, not ours to fix.
+                .unsafeFlags(["-suppress-warnings"])
             ]
         ),
         .executableTarget(
@@ -63,11 +71,13 @@ let package = Package(
                 "SyxxKit",
                 "SyxxTelemetry"
             ],
+            exclude: ["Syxx.entitlements"],
             resources: [.copy("Resources")],
             linkerSettings: [
                 .linkedFramework("NetworkExtension"),
                 .linkedFramework("Security"),
-                .linkedFramework("ServiceManagement")
+                .linkedFramework("ServiceManagement"),
+                .linkedFramework("LocalAuthentication")
             ]
         ),
         .executableTarget(

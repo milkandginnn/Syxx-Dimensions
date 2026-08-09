@@ -18,14 +18,11 @@ import Foundation
 /// A missing or empty fixture fails the test. A vacuously-green parity test is the green that lies.
 final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
 
-    private static let vectorNames = [
-        "witness-macos-degraded.json",
-        "witness-macos-answers.json",
-        // B252: v2 legacy answers snapshot — a verbatim copy of the pre-v4 file. Both platforms'
-        // verifiers must keep accepting it (v2 = errorMessage inside signed bytes, no canonical
-        // DoH) while v4 fixtures carry the new canonical fields.
-        "witness-macos-answers-v2legacy.json",
-    ]
+    private static func vectorNames() throws -> [String] {
+        let dir = corpusDir()
+        let names = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        return names.filter { $0.hasSuffix(".json") }.sorted()
+    }
 
     private static func corpusDir() -> URL {
         URL(fileURLWithPath: #filePath)
@@ -58,40 +55,58 @@ final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
     }
 
     func testEveryVectorVerifies() throws {
-        for name in Self.vectorNames {
+        let names = try Self.vectorNames()
+        var evaluated = 0
+        for name in names {
             let snapshot = try load(name)
             XCTAssertEqual(WitnessSigner.verifySnapshotDetailed(snapshot), .valid,
                            "\(name) must verify on the platform that produced it")
+            evaluated += 1
         }
+        print("[witness crossplatform] evaluated \(evaluated) of \(names.count) vectors")
+        XCTAssertGreaterThan(evaluated, 0, "no witness vector was evaluated")
+        XCTAssertEqual(evaluated, names.count, "every witness vector must be evaluated; \(evaluated) of \(names.count) ran")
     }
 
     func testDisplayTimestampProjectsOntoTheSignedMillisecond() throws {
         // This equality IS the D083 guard. It is asserted here as well so a future change to the
         // date encoding cannot satisfy `verifySnapshotDetailed` for some other reason.
-        for name in Self.vectorNames {
+        let names = try Self.vectorNames()
+        var evaluated = 0
+        for name in names {
             let snapshot = try load(name)
             XCTAssertEqual(UInt64(snapshot.timestamp.timeIntervalSince1970 * 1000),
                            snapshot.evidence.timestamp, "\(name)")
             XCTAssertEqual(snapshot.formatVersion, snapshot.evidence.formatVersion, "\(name)")
             XCTAssertEqual(snapshot.targetDomain, snapshot.evidence.queryId, "\(name)")
+            evaluated += 1
         }
+        print("[witness crossplatform] evaluated \(evaluated) of \(names.count) vectors")
+        XCTAssertGreaterThan(evaluated, 0, "no witness vector was evaluated")
+        XCTAssertEqual(evaluated, names.count, "every witness vector must be evaluated; \(evaluated) of \(names.count) ran")
     }
 
     func testVectorSetCoversEveryStatusWireSpelling() throws {
         // Guards the fixtures: if a later edit narrows them to the handful of statuses a lucky
         // capture contained, a reader that mishandles the rest would sail through on both platforms.
+        let names = try Self.vectorNames()
+        var evaluated = 0
         var seen = Set<DNSResponseStatus>()
-        for name in Self.vectorNames {
+        for name in names {
             let s = try load(name)
             seen.insert(s.comparison.localOutcome.status)
             s.comparison.publicResolverOutcomes.values.forEach { seen.insert($0.status) }
             (s.comparison.dohOutcomes ?? [:]).values.forEach { seen.insert($0.status) }
+            evaluated += 1
         }
         let all: Set<DNSResponseStatus> = [
             .success, .noData, .nxDomain, .servFail, .refused,
             .timeout, .truncated, .responseIdMismatch, .malformedResponse, .transportError
         ]
         XCTAssertEqual(all.subtracting(seen), [], "golden vectors no longer exercise these statuses")
+        print("[witness crossplatform] evaluated \(evaluated) of \(names.count) vectors")
+        XCTAssertGreaterThan(evaluated, 0, "no witness vector was evaluated")
+        XCTAssertEqual(evaluated, names.count, "every witness vector must be evaluated; \(evaluated) of \(names.count) ran")
     }
 
     func testStatusesAreOnTheWireAsSwiftRawValues() throws {
@@ -115,7 +130,9 @@ final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
 
     func testTamperingTheDisplayedAnswerIsRejected() throws {
         // The answer set is signed evidence; rewriting any displayed rdata must be caught.
-        for name in Self.vectorNames {
+        let names = try Self.vectorNames()
+        var evaluated = 0
+        for name in names {
             let snapshot = try load(name)
             var outcomes = snapshot.comparison.publicResolverOutcomes
             let key = try XCTUnwrap(outcomes.keys.sorted().first)
@@ -143,11 +160,17 @@ final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
                 publicKey: snapshot.publicKey,
                 keyId: snapshot.keyId)
             XCTAssertNotEqual(WitnessSigner.verifySnapshotDetailed(tampered), .valid, name)
+            evaluated += 1
         }
+        print("[witness crossplatform] evaluated \(evaluated) of \(names.count) vectors")
+        XCTAssertGreaterThan(evaluated, 0, "no witness vector was evaluated")
+        XCTAssertEqual(evaluated, names.count, "every witness vector must be evaluated; \(evaluated) of \(names.count) ran")
     }
 
     func testTamperingTheDisplayTimestampIsRejected() throws {
-        for name in Self.vectorNames {
+        let names = try Self.vectorNames()
+        var evaluated = 0
+        for name in names {
             let snapshot = try load(name)
             let tampered = WitnessSnapshot(
                 formatVersion: snapshot.formatVersion,
@@ -160,7 +183,11 @@ final class WitnessCrossPlatformGoldenVectorTests: XCTestCase {
                 publicKey: snapshot.publicKey,
                 keyId: snapshot.keyId)
             XCTAssertEqual(WitnessSigner.verifySnapshotDetailed(tampered), .displayMismatch, name)
+            evaluated += 1
         }
+        print("[witness crossplatform] evaluated \(evaluated) of \(names.count) vectors")
+        XCTAssertGreaterThan(evaluated, 0, "no witness vector was evaluated")
+        XCTAssertEqual(evaluated, names.count, "every witness vector must be evaluated; \(evaluated) of \(names.count) ran")
     }
 
     func testUnknownStatusIsRejectedRatherThanDefaulted() throws {

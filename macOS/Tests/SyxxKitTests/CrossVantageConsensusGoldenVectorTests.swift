@@ -43,6 +43,7 @@ final class CrossVantageConsensusGoldenVectorTests: XCTestCase {
         let corpus = try JSONDecoder().decode(Corpus.self, from: data)
         XCTAssertGreaterThanOrEqual(corpus.cases.count, 10, "golden vector must carry the full decision table")
 
+        var evaluated = 0
         for c in corpus.cases {
             let vantages = c.vantages.map { Set($0) }
             let ref = Set(c.trustedReference)
@@ -51,6 +52,10 @@ final class CrossVantageConsensusGoldenVectorTests: XCTestCase {
                 return XCTFail("unknown expected outcome '\(c.expected)' in case \(c.name)")
             }
             XCTAssertEqual(got, expected, "B281 golden row '\(c.name)': expected \(expected), got \(got)")
+            evaluated += 1
         }
+        print("[b281 consensus] evaluated \(evaluated) of \(corpus.cases.count) golden rows")
+        XCTAssertGreaterThan(evaluated, 0, "no golden row was evaluated — an empty run must not read as coverage")
+        XCTAssertEqual(evaluated, corpus.cases.count, "every golden row must be evaluated; \(evaluated) of \(corpus.cases.count) ran")
     }
 }

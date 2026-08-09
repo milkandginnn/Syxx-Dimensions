@@ -1,0 +1,199 @@
+{
+  "label": "cs",
+  "totalVectors": 20,
+  "records": [
+    {
+      "vectorId": "forensics-lists",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 0,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-classify-clean",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 0,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-classify-flagged",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 1,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-beacon-regular",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 1,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-beacon-insufficient",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-exfil-short-label",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 0,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "route-unsafe-target",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "unbound-unknown-action",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 2,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitCodeNote": "C# seeded-2 treated as known divergence",
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "witness-usage",
+      "label": "cs",
+      "group": "offline",
+      "exitCode": 3,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "nslook-basic-a",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/nslook/example-test-a.json",
+      "label": "cs"
+    },
+    {
+      "vectorId": "nslook-dnssec",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/nslook/example-test-dnssec.json",
+      "label": "cs"
+    },
+    {
+      "vectorId": "mirror-authoritative-match",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/mirror/example-test-authoritative.json",
+      "label": "cs"
+    },
+    {
+      "vectorId": "forensics-analyze-clean",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/forensics/cage-log-clean.ndjson",
+      "label": "cs"
+    },
+    {
+      "vectorId": "forensics-analyze-empty",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/forensics/cage-log-empty.ndjson",
+      "label": "cs"
+    },
+    {
+      "vectorId": "witness-gen-keypair-new",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/test-key-new/",
+      "label": "cs"
+    },
+    {
+      "vectorId": "witness-gen-keypair-exists",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/test-key-existing/",
+      "label": "cs"
+    },
+    {
+      "vectorId": "witness-verify-valid",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/valid-witness.json",
+      "label": "cs"
+    },
+    {
+      "vectorId": "witness-verify-invalid-sig",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/invalid-sig-witness.json",
+      "label": "cs"
+    },
+    {
+      "vectorId": "witness-report-valid",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/valid-witness.json",
+      "label": "cs"
+    },
+    {
+      "vectorId": "sentinel-forget",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/sentinel/seeded-state/",
+      "label": "cs"
+    }
+  ]
+}

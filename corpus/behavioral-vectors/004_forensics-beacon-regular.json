@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-beacon-regular",
+  "command": "forensics",
+  "args": ["--beacon", "1000,1060,1120,1180"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 1,
+  "expectedOutputPhrases": ["Beacon classification", "mean interval", "coefficient of variation"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode — exits 0 instead of 1 when a beacon is detected. macOS returns 1 (threat) when classification contains 'beacon'/'regular'/'likely'."
+  ]
+}

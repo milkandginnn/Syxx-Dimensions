@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-analyze-empty",
+  "command": "forensics",
+  "args": ["--analyze", "fixtures/forensics/cage-log-empty.ndjson"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Zero-record NDJSON file to pin the 'no records parsed' inconclusive path",
+    "artifactPath": "fixtures/forensics/cage-log-empty.ndjson",
+    "artifactFormat": "cage-ndjson"
+  },
+  "expectedExitCode": 2,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode — exits 0 instead of 2 for inconclusive result. macOS returns 2 (inconclusive) correctly."
+  ]
+}

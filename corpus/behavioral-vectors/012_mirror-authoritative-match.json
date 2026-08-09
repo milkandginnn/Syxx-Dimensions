@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "mirror-authoritative-match",
+  "command": "mirror",
+  "args": ["example.test", "--local"],
+  "group": "fixture",
+  "timeoutSeconds": 10,
+  "fixtureRequirements": {
+    "description": "A-record responses from local resolver and every VantageComparer.publicResolvers entry, plus a stubbed system-resolver list",
+    "artifactPath": "fixtures/mirror/example-test-authoritative.json",
+    "artifactFormat": "dns-comparison-json"
+  },
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": ["example.test"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "mirror with no detectable system resolver: Swift refuses (inconclusive), C# silently defaults to 127.0.0.1 and queries it. Swift's system read precedes --local parsing, so --local alone cannot make it hermetic."
+  ]
+}

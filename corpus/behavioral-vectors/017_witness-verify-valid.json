@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "witness-verify-valid",
+  "command": "witness",
+  "args": ["verify", "fixtures/witness/valid-witness.json", "--pubkey", "FIXTURE_PUBKEY"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Pinned witness.json with valid Ed25519 signature, plus a pinned trust anchor public key and a pinned 'now' timestamp",
+    "artifactPath": "fixtures/witness/valid-witness.json",
+    "artifactFormat": "witness-json"
+  },
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "CRITICAL: Swift verifySnapshotDetailed takes an injectable now: parameter; C# VerifySnapshotDetailed does NOT. Fixture-driven witness verify tests can be made hermetic on macOS but NOT on Windows without a code change. This is a blocking gap for deterministic fixture testing on Windows."
+  ]
+}

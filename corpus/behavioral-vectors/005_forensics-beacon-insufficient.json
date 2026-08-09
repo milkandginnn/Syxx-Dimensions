@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-beacon-insufficient",
+  "command": "forensics",
+  "args": ["--beacon", "1000"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 3,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode — exits 0 instead of 3 when fewer than 2 timestamps are provided. macOS returns 3 (failure) correctly."
+  ],
+  "notes": "With fewer than 2 timestamps, the beacon analyzer cannot compute intervals. macOS exits 3 (failure)."
+}

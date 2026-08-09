@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-lists",
+  "command": "forensics",
+  "args": ["--lists"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": ["Bundled", "blocklists"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode — exits 0 on all paths (inherits seeded 2)."
+  ]
+}

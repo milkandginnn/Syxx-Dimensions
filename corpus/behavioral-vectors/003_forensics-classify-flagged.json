@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-classify-flagged",
+  "command": "forensics",
+  "args": ["--classify", "doubleclick.net"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 1,
+  "expectedOutputPhrases": ["flagged by"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode — exits 0 instead of 1 when a domain is flagged. macOS returns 1 (threat) correctly."
+  ],
+  "notes": "doubleclick.net is in the nextdns-default, nextdns-strict, and dns-layer bundled lists on both platforms (confirmed in SieveBlocklistLoader.swift and Forensics.cs)."
+}

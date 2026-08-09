@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "witness-report-valid",
+  "command": "witness",
+  "args": ["report", "fixtures/witness/valid-witness.json"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Pinned witness.json with valid signature, plus a pinned 'now' timestamp. Same valid-witness.json as 017.",
+    "artifactPath": "fixtures/witness/valid-witness.json",
+    "artifactFormat": "witness-json"
+  },
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "Same clock-seam gap as 017: C# reads wall-clock time for staleness check.",
+    "witness trust-anchor sources differ: Swift uses CollectorPinning.configuredTrustedSigningKeys(); C# uses WitnessPinning.ConfiguredTrustedWitnessKeys(). The same fixture can verify 'valid' on one platform and 'untrustedSigner' on the other."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "witness-verify-invalid-sig",
+  "command": "witness",
+  "args": ["verify", "fixtures/witness/invalid-sig-witness.json", "--pubkey", "FIXTURE_PUBKEY"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Pinned witness.json with an invalid Ed25519 signature (tampered payload), plus the same trust anchor public key",
+    "artifactPath": "fixtures/witness/invalid-sig-witness.json",
+    "artifactFormat": "witness-json"
+  },
+  "expectedExitCode": 1,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "Same clock-seam gap as 017: C# reads wall-clock time for staleness check, which cannot be injected for hermetic testing."
+  ]
+}

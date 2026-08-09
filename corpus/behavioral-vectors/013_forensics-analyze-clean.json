@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-analyze-clean",
+  "command": "forensics",
+  "args": ["--analyze", "fixtures/forensics/cage-log-clean.ndjson"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Cage-format NDJSON query log with at least one DNSCaptureRecord per line",
+    "artifactPath": "fixtures/forensics/cage-log-clean.ndjson",
+    "artifactFormat": "cage-ndjson"
+  },
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode — exits 0 on all paths."
+  ]
+}

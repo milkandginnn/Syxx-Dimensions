@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-classify-clean",
+  "command": "forensics",
+  "args": ["--classify", "clean-domain.example.test"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": ["Domain classification", "clean-domain.example.test", "not on any bundled list"],
+  "expectedOutputAbsent": ["flagged"],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode (void return) — exits 0 on all paths. macOS returns 0/1/2/3 correctly."
+  ]
+}

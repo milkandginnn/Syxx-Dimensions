@@ -1,0 +1,191 @@
+{
+  "label": "swift",
+  "totalVectors": 20,
+  "records": [
+    {
+      "vectorId": "forensics-lists",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-classify-clean",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-classify-flagged",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-beacon-regular",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-beacon-insufficient",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 3,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "forensics-exfil-short-label",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "route-unsafe-target",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 3,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "unbound-unknown-action",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 3,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "witness-usage",
+      "label": "swift",
+      "group": "offline",
+      "exitCode": 3,
+      "expectedExitCode": 3,
+      "timedOut": false,
+      "exitMatch": true,
+      "phrasesMatch": true,
+      "absentMatch": true,
+      "status": "PASS"
+    },
+    {
+      "vectorId": "nslook-basic-a",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/nslook/example-test-a.json",
+      "label": "swift"
+    },
+    {
+      "vectorId": "nslook-dnssec",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/nslook/example-test-dnssec.json",
+      "label": "swift"
+    },
+    {
+      "vectorId": "mirror-authoritative-match",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/mirror/example-test-authoritative.json",
+      "label": "swift"
+    },
+    {
+      "vectorId": "forensics-analyze-clean",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/forensics/cage-log-clean.ndjson",
+      "label": "swift"
+    },
+    {
+      "vectorId": "forensics-analyze-empty",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/forensics/cage-log-empty.ndjson",
+      "label": "swift"
+    },
+    {
+      "vectorId": "witness-gen-keypair-new",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/test-key-new/",
+      "label": "swift"
+    },
+    {
+      "vectorId": "witness-gen-keypair-exists",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/test-key-existing/",
+      "label": "swift"
+    },
+    {
+      "vectorId": "witness-verify-valid",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/valid-witness.json",
+      "label": "swift"
+    },
+    {
+      "vectorId": "witness-verify-invalid-sig",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/invalid-sig-witness.json",
+      "label": "swift"
+    },
+    {
+      "vectorId": "witness-report-valid",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/witness/valid-witness.json",
+      "label": "swift"
+    },
+    {
+      "vectorId": "sentinel-forget",
+      "group": "fixture",
+      "status": "SKIP",
+      "reason": "fixture missing: fixtures/sentinel/seeded-state/",
+      "label": "swift"
+    }
+  ]
+}

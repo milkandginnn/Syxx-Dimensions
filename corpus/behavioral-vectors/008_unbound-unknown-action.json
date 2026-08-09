@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "unbound-unknown-action",
+  "command": "unbound",
+  "args": ["bogus-action"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 3,
+  "expectedOutputPhrases": ["Unknown 'unbound' action 'bogus-action'"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# UnboundCommand never sets Environment.ExitCode — exits 0 instead of 3 on unknown action. macOS returns 3 (failure) correctly.",
+    "Usage text differs: macOS includes 'verify-dnscrypt' (Swift-only subcommand); Windows omits it."
+  ]
+}

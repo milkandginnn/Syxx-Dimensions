@@ -1,10 +1,10 @@
 """Phase 0 — canonical TriState result enum.
 
-The three strings "success"/"failure"/"inconclusive" are the ONLY wire-format
-values the client kits accept from the server; any other spelling silently
-breaks cross-platform JSON parity. These tests pin the exact strings AND the
-str-subclass behaviour that lets the enum serialise without a custom encoder.
-"""
+The four strings "success"/"failure"/"inconclusive"/"unknown" are the ONLY
+wire-format values the client kits accept from the server; any other spelling
+silently breaks cross-platform JSON parity. These tests pin the exact strings
+AND the str-subclass behaviour that lets the enum serialise without a custom
+encoder."""
 
 import json
 import os
@@ -37,7 +37,7 @@ class TriStateWireFormatTests(unittest.TestCase):
         self.assertEqual(str(TriState.FAILURE), "failure")
         self.assertEqual(str(TriState.INCONCLUSIVE), "inconclusive")
 
-    def test_three_distinct_members(self):
+    def test_four_distinct_members(self):
         self.assertEqual(len(TriState), 4)
 
     def test_failure_case_wrong_spelling_is_caught(self):

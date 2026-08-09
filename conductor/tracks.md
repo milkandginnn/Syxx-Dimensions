@@ -18,6 +18,8 @@
 
 | [x] | [fix-remaining-parity-defects_20260809](./tracks/fix-remaining-parity-defects_20260809/index.md) | Fix Remaining Parity Defects — trust anchor, config, exponent, domain, case-fold, IDNA, sort | 2026-08-09 | 2026-08-09 |
 
+| [x] | [fix-fingerprint-mismatch_20260809](./tracks/fix-fingerprint-mismatch_20260809/index.md) | Fix Fingerprint Mismatch — R→G17, C# test build errors | 2026-08-09 | 2026-08-09 |
+
 ## Archived
 
 | Track ID | Title | Reason | Archived |

@@ -183,6 +183,10 @@ public struct SynthesisReport: Sendable {
             out.append("EXPOSURE FINDINGS")
             for a in conclusion.advisories { out.append("  • \(a.title): \(a.detail)") }
         }
+        out.append("")
+        out.append("NEXT STEPS")
+        out.append("  • Review the findings above and verify with a second vantage point if any section is inconclusive.")
+        out.append("  • Re-run Syxx after changing network conditions (VPN, different Wi-Fi) if threats are detected.")
         return out.joined(separator: "\n")
     }
 }

@@ -264,7 +264,7 @@ internal static class ParityTranscriptCommand
     };
 
     private static readonly JavaScriptEncoder SwiftCompatibleEncoder =
-        JavaScriptEncoder.Default;
+        JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
 
     /// <summary>
     /// Serialize a <see cref="JsonNode"/> to UTF-8 bytes with sorted keys, so the fingerprint
@@ -285,7 +285,10 @@ internal static class ParityTranscriptCommand
         // Swift's NSJSONSerialization escapes "/" as "\/" — Utf8JsonWriter does not.
         // Post-process: replace "/" with "\/" (but not "\/" that is already escaped).
         var bytes = stream.ToArray();
-        return EscapeForwardSlashes(bytes);
+        bytes = EscapeForwardSlashes(bytes);
+        // Swift's JSONSerialization escapes non-ASCII as \uXXXX — UnsafeRelaxedJsonEscaping does not.
+        bytes = EscapeNonAscii(bytes);
+        return bytes;
     }
 
     /// <summary>
@@ -329,6 +332,79 @@ internal static class ParityTranscriptCommand
             backslashCount++;
         return (backslashCount % 2) == 1;
     }
+
+    /// <summary>
+    /// Escape non-ASCII bytes (≥ 0x80) as \uXXXX hex sequences, matching Swift's
+    /// JSONSerialization behaviour. UnsafeRelaxedJsonEscaping passes non-ASCII
+    /// through as raw UTF-8 bytes; Swift always escapes them.
+    /// </summary>
+    private static byte[] EscapeNonAscii(byte[] utf8)
+    {
+        // Count how many non-ASCII characters need escaping
+        var extraBytes = 0;
+        var i = 0;
+        while (i < utf8.Length)
+        {
+            if (utf8[i] < 0x80)
+            {
+                i++;
+                continue;
+            }
+            // Multi-byte UTF-8 sequence — will expand to 6 bytes (\uXXXX)
+            var cp = DecodeUtf8(utf8, i, out var len);
+            i += len;
+            extraBytes += cp <= 0xFFFF ? 6 - len : 12 - len; // surrogate pair for supplementary
+        }
+
+        if (extraBytes == 0) return utf8;
+
+        var result = new byte[utf8.Length + extraBytes];
+        var dst = 0;
+        var src = 0;
+        while (src < utf8.Length)
+        {
+            if (utf8[src] < 0x80)
+            {
+                result[dst++] = utf8[src++];
+                continue;
+            }
+            var cp = DecodeUtf8(utf8, src, out var len);
+            src += len;
+            if (cp <= 0xFFFF)
+            {
+                WriteHexEscape(result, ref dst, cp);
+            }
+            else
+            {
+                // Supplementary character → surrogate pair
+                cp -= 0x10000;
+                WriteHexEscape(result, ref dst, 0xD800 | (cp >> 10));
+                WriteHexEscape(result, ref dst, 0xDC00 | (cp & 0x3FF));
+            }
+        }
+        return result;
+    }
+
+    private static int DecodeUtf8(byte[] utf8, int start, out int len)
+    {
+        var b0 = utf8[start];
+        if ((b0 & 0xE0) == 0xC0) { len = 2; return ((b0 & 0x1F) << 6) | (utf8[start + 1] & 0x3F); }
+        if ((b0 & 0xF0) == 0xE0) { len = 3; return ((b0 & 0x0F) << 12) | ((utf8[start + 1] & 0x3F) << 6) | (utf8[start + 2] & 0x3F); }
+        len = 4;
+        return ((b0 & 0x07) << 18) | ((utf8[start + 1] & 0x3F) << 12) | ((utf8[start + 2] & 0x3F) << 6) | (utf8[start + 3] & 0x3F);
+    }
+
+    private static void WriteHexEscape(byte[] result, ref int dst, int cp)
+    {
+        result[dst++] = (byte)'\\';
+        result[dst++] = (byte)'u';
+        result[dst++] = HexDigit(cp >> 12);
+        result[dst++] = HexDigit((cp >> 8) & 0xF);
+        result[dst++] = HexDigit((cp >> 4) & 0xF);
+        result[dst++] = HexDigit(cp & 0xF);
+    }
+
+    private static byte HexDigit(int v) => (byte)(v < 10 ? '0' + v : 'a' + v - 10);
 
     private static void WriteSorted(JsonNode? node, Utf8JsonWriter writer)
     {

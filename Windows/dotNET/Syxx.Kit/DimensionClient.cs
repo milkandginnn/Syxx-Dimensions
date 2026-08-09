@@ -61,7 +61,11 @@ namespace Syxx.Kit
 
     public static class DimensionClient
     {
-        private static readonly HttpClient _http = new HttpClient
+        private static readonly HttpClient _http = new HttpClient(new SocketsHttpHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                | DecompressionMethods.Brotli
+        })
         {
             Timeout = TimeSpan.FromSeconds(12)
         };
@@ -161,6 +165,8 @@ namespace Syxx.Kit
             var handler = new SocketsHttpHandler
             {
                 AllowAutoRedirect = false,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                    | DecompressionMethods.Brotli,
                 ConnectCallback = async (ctx, ct) =>
                 {
                     string host = ctx.DnsEndPoint.Host;

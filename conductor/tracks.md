@@ -14,6 +14,8 @@
 
 | [x] | [fix-macos-build-warnings_20260809](./tracks/fix-macos-build-warnings_20260809/index.md) | Fix macOS Build Warnings — zero-warning Swift build | 2026-08-09 | 2026-08-09 |
 
+| [~] | [fix-parity-discovery-defects_20260809](./tracks/fix-parity-discovery-defects_20260809/index.md) | Fix Parity-Discovery Defects — encoder, decompression, NFC | 2026-08-09 | 2026-08-09 |
+
 ## Archived
 
 | Track ID | Title | Reason | Archived |

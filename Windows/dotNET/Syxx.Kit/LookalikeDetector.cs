@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 namespace Syxx.Kit;
 
@@ -107,7 +108,7 @@ public static class LookalikeDetector
         return string.Join('.', domain.Split('.').Select(label =>
         {
             if (!label.ToLowerInvariant().StartsWith("xn--", StringComparison.Ordinal)) return label;
-            try { return idn.GetUnicode(label); }
+            try { return idn.GetUnicode(label).Normalize(NormalizationForm.FormC); }
             catch (ArgumentException) { return label; }   // malformed A-label — surface it verbatim
         }));
     }

@@ -54,6 +54,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -495,7 +496,6 @@ def main() -> int:
     repo = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent.parent
 
     # Verify corpus fingerprint before running
-    import subprocess
     result = subprocess.run(
         ["bash", str(repo / "scripts/verify-parity-fingerprint.sh")],
         capture_output=True, text=True

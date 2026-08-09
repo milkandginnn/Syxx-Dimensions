@@ -113,7 +113,8 @@ internal static class ParityTranscriptCommand
 
         try
         {
-            File.WriteAllText(outPath, json + "\n");
+            var escaped = EscapeForwardSlashes(Encoding.UTF8.GetBytes(json + "\n"));
+            File.WriteAllBytes(outPath, escaped);
         }
         catch (Exception ex)
         {
@@ -263,7 +264,7 @@ internal static class ParityTranscriptCommand
     };
 
     private static readonly JavaScriptEncoder SwiftCompatibleEncoder =
-        JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        JavaScriptEncoder.Default;
 
     /// <summary>
     /// Serialize a <see cref="JsonNode"/> to UTF-8 bytes with sorted keys, so the fingerprint
@@ -323,7 +324,10 @@ internal static class ParityTranscriptCommand
 
     private static bool IsAlreadyEscaped(byte[] utf8, int slashIndex)
     {
-        return slashIndex > 0 && utf8[slashIndex - 1] == '\\';
+        var backslashCount = 0;
+        for (var i = slashIndex - 1; i >= 0 && utf8[i] == '\\'; i--)
+            backslashCount++;
+        return (backslashCount % 2) == 1;
     }
 
     private static void WriteSorted(JsonNode? node, Utf8JsonWriter writer)
@@ -373,7 +377,7 @@ internal static class ParityTranscriptCommand
                 // Floating-point: round-trip through double for Swift-compatible representation.
                 if (val.TryGetValue<double>(out var d))
                 {
-                    writer.WriteRawValue(d.ToString("G17", CultureInfo.InvariantCulture), skipInputValidation: true);
+                    writer.WriteRawValue(d.ToString("R", CultureInfo.InvariantCulture), skipInputValidation: true);
                     return;
                 }
             }

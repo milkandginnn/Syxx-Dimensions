@@ -14,6 +14,8 @@
 
 | [x] | [fix-macos-build-warnings_20260809](./tracks/fix-macos-build-warnings_20260809/index.md) | Fix macOS Build Warnings — zero-warning Swift build | 2026-08-09 | 2026-08-09 |
 
+| [~] | [fix-fingerprint-defects_20260809](./tracks/fix-fingerprint-defects_20260809/index.md) | Fix Twin Parity Fingerprint Defects — 4 review findings + 1 uncommitted improvement | 2026-08-09 | 2026-08-09 |
+
 ## Archived
 
 | Track ID | Title | Reason | Archived |

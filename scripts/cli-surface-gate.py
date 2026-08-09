@@ -167,69 +167,6 @@ class Ledgered:
 
 LEDGERED_EXCEPTIONS: tuple[Ledgered, ...] = (
     Ledgered(
-        level="top",
-        dimension="topflag",
-        token="-v",
-        side=WIN,
-        finding="F-08",
-        why=(
-            "`syxx -v` prints a version on Windows/Linux (E088) and is the verbose flag on "
-            "macOS (B240). Two documented decisions in direct conflict; resolving it changes a "
-            "shipped flag's meaning on at least one platform, so it is owner-gated "
-            "(plan Task 8.8), not agent-fixable."
-        ),
-    ),
-    Ledgered(
-        level="top",
-        dimension="deadcase",
-        token="-V",
-        side=MAC,
-        finding="F-08 addendum (2026-08-05)",
-        why=(
-            "SyxxCLI.swift lowercases args[1] before the switch, so the `-V` arm cannot fire. "
-            "Proven by execution: `syxx -V` exits 3 'Unknown subcommand'. macOS therefore has NO "
-            "working short version flag at top level. Fix is part of Task 8.8."
-        ),
-    ),
-    Ledgered(
-        level="top",
-        dimension="deadcase",
-        token="-V",
-        side=WIN,
-        finding="F-08 addendum (2026-08-05)",
-        why=(
-            "Program.cs lowercases args[0] the same way, so the `-V` arm is equally dead here. It "
-            "is harmless on this platform only because the `-v` arm above it accepts the "
-            "lowercased token. Removing `-v` without removing `-V` would silently drop both."
-        ),
-    ),
-    Ledgered(
-        level=GLOBAL_LEVEL,
-        dimension="globalflag",
-        token="--verbose",
-        side=MAC,
-        finding="F-08",
-        why=(
-            "C# has no verbose flag at all, which is what makes E088's cost invisible today: "
-            "handing `-v` to --version costs nothing until Windows gains a verbose flag and "
-            "cannot spell it the way macOS does."
-        ),
-    ),
-    Ledgered(
-        level=GLOBAL_LEVEL,
-        dimension="alias",
-        token="--version,-V,-v",
-        side=BOTH,
-        finding="F-08",
-        why=(
-            "All three flags are accepted by both handlers, so a flat comparison calls them "
-            "identical. They are not: `-v` is the flag that moved. macOS groups it with --verbose "
-            "and keeps the version group to {--version, -V}; Windows folds it into the version "
-            "group. `syxx nslook -v` prints a version string on one platform and enables verbose "
-            "output on the other."
-        ),
-    ),
-    Ledgered(
         level="witness",
         dimension="advertised",
         token="--force",
@@ -374,24 +311,17 @@ LEDGERED_EXCEPTIONS: tuple[Ledgered, ...] = (
     ),
 
     Ledgered(
-        level="speed",
-        dimension="accepted",
-        token="--help",
-        side=MAC,
-        finding="F-14",
+        level="top",
+        dimension="topflag",
+        token="--verbose",
+        side=WIN,
+        finding="F-15",
         why=(
-            "macOS speed dispatcher accepts --help as a recognized flag; Windows speed does not. "
-            "Both platforms reach help through the global-flag handler, so this is a harmless "
-            "surface asymmetry — the flag is silently accepted on macOS and ignored on Windows."
+            "Windows dispatches --verbose at the top-level switch (Program.cs:102), setting "
+            "IsVerbose and re-dispatching the subcommand. macOS has no top-level --verbose; "
+            "verbose mode is handled solely through the shared global-flag handler. "
+            "Harmless surface asymmetry — both paths reach the same IsVerbose flag."
         ),
-    ),
-    Ledgered(
-        level="speed",
-        dimension="accepted",
-        token="-h",
-        side=MAC,
-        finding="F-14",
-        why="Short alias of --help on speed; same surface asymmetry.",
     ),
 )
 

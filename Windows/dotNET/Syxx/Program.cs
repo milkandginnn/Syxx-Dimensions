@@ -100,7 +100,6 @@ namespace Syxx
                 // and --help this does NOT exit — it just enables verbose output for the
                 // subcommand that follows.
                 case "--verbose":
-                case "-V":
                     SyxxConfig.IsVerbose = true;
                     // If there is a subcommand after --verbose, dispatch it.
                     if (args.Length > 1)

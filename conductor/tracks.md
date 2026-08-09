@@ -10,10 +10,6 @@
 
 | [~] | [eula-crash-loop_20260806](./tracks/eula-crash-loop_20260806/index.md) | Fix EULA Crash Loop — Window Animation Bug and Bundle Path Mismatch | 2026-08-06 | 2026-08-06 |
 
-| [x] | [fix-test-integrity_20260808](./tracks/fix-test-integrity_20260808/index.md) | Fix Test Integrity Findings — remediate 15 🔴/🟡 findings from test adequacy audit | 2026-08-08 | 2026-08-08 |
-
-| [x] | [reverify-test-integrity_20260808](./tracks/reverify-test-integrity_20260808/index.md) | Re-Verify Test Integrity — verify all 15 findings resolved on clean checkout | 2026-08-08 | 2026-08-08 |
-
 ## Archived
 
 | Track ID | Title | Reason | Archived |
@@ -21,5 +17,7 @@
 | [fix-build-errors_20260807](./tracks/_archive/fix-build-errors_20260807/index.md) | Fix Build Errors | Completed | 2026-08-08 |
 | [gui-complete-macos_20260805](./tracks/_archive/gui-complete-macos_20260805/index.md) | Complete macOS GUI | Abandoned | 2026-08-08 |
 | [check-test-adequacy_20260808](./tracks/_archive/check-test-adequacy_20260808/index.md) | Check Test Adequacy | Completed | 2026-08-08 |
+| [fix-test-integrity_20260808](./tracks/_archive/fix-test-integrity_20260808/index.md) | Fix Test Integrity | Completed | 2026-08-09 |
+| [reverify-test-integrity_20260808](./tracks/_archive/reverify-test-integrity_20260808/index.md) | Re-Verify Test Integrity | Completed | 2026-08-09 |
 
 <!-- Tracks registered by /conductor:new-track -->

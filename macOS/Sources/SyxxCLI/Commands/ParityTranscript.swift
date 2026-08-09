@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SyxxKit
 
@@ -118,10 +119,43 @@ enum ParityTranscriptCommand {
             return CLIExitStatus.failure.rawValue
         }
 
+        // ── fingerprint ──────────────────────────────────────────────────────
+        // SHA-256(caseCount || SHA-256(vector[0].json) || ... || SHA-256(conclusion[0].json) || ...)
+        // Vector hashes in transcript order; conclusion hashes sorted by caseFile.
+        let dirURL = URL(fileURLWithPath: directory)
+        var vectorHashes: [Data] = []
+        for c in cases {
+            let caseURL = dirURL.appendingPathComponent(c.caseFile)
+            if let rawData = try? Data(contentsOf: caseURL),
+               let rawJSON = try? JSONSerialization.jsonObject(with: rawData) as? [String: Any],
+               let sectionInputs = rawJSON["sectionInputs"],
+               JSONSerialization.isValidJSONObject(sectionInputs),
+               let canonical = try? JSONSerialization.data(withJSONObject: sectionInputs, options: [.sortedKeys]) {
+                vectorHashes.append(Data(SHA256.hash(data: canonical)))
+            }
+        }
+
+        var conclusionPairs: [(caseFile: String, hash: Data)] = []
+        for (idx, c) in cases.enumerated() {
+            let rec = records[idx]
+            if JSONSerialization.isValidJSONObject(rec),
+               let recJSON = try? JSONSerialization.data(withJSONObject: rec, options: [.sortedKeys]) {
+                conclusionPairs.append((c.caseFile, Data(SHA256.hash(data: recJSON))))
+            }
+        }
+        conclusionPairs.sort { $0.caseFile.utf8.lexicographicallyPrecedes($1.caseFile.utf8) }
+
+        var buf = Data()
+        buf.append(Data(String(cases.count).utf8))
+        for h in vectorHashes { buf.append(h) }
+        for pair in conclusionPairs { buf.append(pair.hash) }
+        let fingerprintHex = SHA256.hash(data: buf).compactMap { String(format: "%02x", $0) }.joined()
+
         let envelope: [String: Any] = [
             "schemaVersion": 1,
             "caseCount": cases.count,
             "evaluated": evaluated,
+            "fingerprint": fingerprintHex,
             "records": records,
         ]
         return write(envelope, to: outPath)

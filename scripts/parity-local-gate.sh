@@ -12,12 +12,32 @@
 # (settled integration contract, CI proposal §5).
 set -uo pipefail
 
-REPO="$(cd "$(dirname "$0")/.." && pwd)"
+resolve_script_dir() {
+  local source="${BASH_SOURCE[0]}"
+  while [ -h "$source" ]; do
+    local dir
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+    source="$(readlink "$source")"
+    case "$source" in
+      /*) ;;
+      *) source="$dir/$source" ;;
+    esac
+  done
+  cd -P "$(dirname "$source")" && pwd
+}
+
+REPO="$(cd "$(resolve_script_dir)/.." && pwd)"
 CORPUS="$REPO/corpus/parity-vectors"
 MANIFEST="$REPO/corpus/parity-vectors.manifest"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 rc=0
+
+# Verify corpus fingerprint
+if ! bash "$REPO/scripts/verify-parity-fingerprint.sh"; then
+    echo "FATAL: corpus fingerprint mismatch — refusing to run on a tampered corpus"
+    exit 2
+fi
 
 # --- Assertion 1: stray sweep. Every entry in the corpus directory must BE a case file.
 # Deliberately NOT a *.json glob: both loaders skip a non-.json entry silently

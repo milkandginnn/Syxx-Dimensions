@@ -493,6 +493,21 @@ def main() -> int:
     args = ap.parse_args()
 
     repo = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent.parent
+
+    # Verify corpus fingerprint before running
+    import subprocess
+    result = subprocess.run(
+        ["bash", str(repo / "scripts/verify-parity-fingerprint.sh")],
+        capture_output=True, text=True
+    )
+    if result.returncode == 2:
+        print("gate error: corpus fingerprint mismatch — corpus has been modified since fingerprint was generated", file=sys.stderr)
+        print("Run scripts/regenerate-parity-fingerprint.sh to update the fingerprint if the changes are intentional.", file=sys.stderr)
+        raise SystemExit(2)
+    elif result.returncode != 0:
+        print("gate error: fingerprint verification failed", file=sys.stderr)
+        raise SystemExit(2)
+
     swift_root = repo / SWIFT_ROOT
     cs_root = repo / CSHARP_ROOT
 

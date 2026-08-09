@@ -93,9 +93,53 @@ namespace Syxx
                     break;
                 case "--version":
                 case "-v":
-                case "-V":  // E088: accept both -v and -V for --version at top level
                     Console.WriteLine($"syxx {SyxxConfig.Version}");
                     Environment.ExitCode = 0; // E073: --version is not a security conclusion
+                    break;
+                // F-14: -V / --verbose at top level sets the verbose flag. Unlike --version
+                // and --help this does NOT exit — it just enables verbose output for the
+                // subcommand that follows.
+                case "--verbose":
+                case "-V":
+                    SyxxConfig.IsVerbose = true;
+                    // If there is a subcommand after --verbose, dispatch it.
+                    if (args.Length > 1)
+                    {
+                        var rest = args[1..];
+                        // Recurse-like: re-dispatch the subcommand from rest[0].
+                        switch (rest[0].ToLowerInvariant())
+                        {
+                            case "nslook":    await NslookCommand.RunAsync(rest[1..]); break;
+                            case "mirror":    await MirrorCommand.RunAsync(rest[1..]); break;
+                            case "leak":      await LeakCommand.RunAsync(rest[1..]); break;
+                            case "witness":   await WitnessCommand.RunAsync(rest[1..]); break;
+                            case "key":       await KeyCommand.RunAsync(rest[1..]); break;
+                            case "route":     await RouteCommand.RunAsync(rest[1..]); break;
+                            case "lan":       await LanCommand.RunAsync(rest[1..]); break;
+                            case "forensics": await ForensicsCommand.RunAsync(rest[1..]); break;
+                            case "sentinel":  await SentinelCommand.RunAsync(rest[1..]); break;
+                            case "cage":      await CageCommand.RunAsync(rest[1..]); break;
+                            case "warp":      await WarpCommand.RunAsync(rest[1..]); break;
+                            case "speed":     await SpeedCommand.RunAsync(rest[1..]); break;
+                            case "unbound":   await UnboundCommand.RunAsync(rest[1..]); break;
+                            case "filter":    await FilterCommand.RunAsync(rest[1..]); break;
+                            case "firstrun":  await FirstRunCommand.RunAsync(rest[1..]); break;
+                            case "parity-transcript":
+                                Environment.ExitCode = ParityTranscriptCommand.Run(rest[1..]);
+                                break;
+                            default:
+                                Console.WriteLine($"Unknown command: {rest[0]}");
+                                Console.WriteLine("Run 'syxx --help' for a list of commands.");
+                                Environment.ExitCode = 3;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // --verbose with no subcommand — enter interactive mode with verbose.
+                        await RunInteractiveAsync();
+                        Environment.ExitCode = 0;
+                    }
                     break;
                 case "--help":
                 case "-h":
@@ -452,7 +496,7 @@ namespace Syxx
             Console.WriteLine("----------------------------------------------------------------------------------");
 
             var servers = NetworkKeyState.GetSystemDNSServers();
-            string localResolver = servers.FirstOrDefault();
+            string? localResolver = servers.FirstOrDefault();
             if (localResolver == null)
             {
                 // E079: refuse to substitute a public resolver — measuring 8.8.8.8 and labelling
@@ -551,7 +595,7 @@ namespace Syxx
             Console.WriteLine("----------------------------------------------------------------------------------");
 
             var servers = NetworkKeyState.GetSystemDNSServers();
-            string localResolver = servers.FirstOrDefault();
+            string? localResolver = servers.FirstOrDefault();
             if (localResolver == null)
             {
                 // E079: refuse to substitute a public resolver — a vantage comparison against
@@ -566,7 +610,7 @@ namespace Syxx
             var result = await ProbeRunner.RunAsync<ComparisonResult>("vantage", budget, async () =>
             {
                 try { return await VantageComparer.CompareVantagePointsAsync(domain, localServer: localResolver); }
-                catch { return null; }
+                catch { throw; }
             });
             inputs.Comparison = result;
             inputs.TargetDomain = domain;   // Stage-5 answer-matrix query context (type defaults to A)
@@ -590,8 +634,8 @@ namespace Syxx
                 if (lic.Unlocked)
                 {
                     string? storedKey = LicenseManager.GetStoredLicenseKey();
-                    inputs.ServerGroundTruth = await ProbeRunner.RunAsync<GroundTruth>("groundTruth", budget, () =>
-                        DimensionClient.AuthoritativeAsync(SyxxConfig.DimensionBaseURL, domain, "A", storedKey));
+                    inputs.ServerGroundTruth = await ProbeRunner.RunAsync<GroundTruth>("groundTruth", budget, async () =>
+                        (await DimensionClient.AuthoritativeAsync(SyxxConfig.DimensionBaseURL, domain, "A", storedKey))!);
                     if (inputs.ServerGroundTruth != null)
                         Console.WriteLine("• Dimension ground truth : server-confirmed reference obtained ✅");
                 }

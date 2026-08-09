@@ -13,8 +13,16 @@ namespace Syxx.Kit
         public const string Version = "2.0.0";
 
         /// <summary>
-        /// Handles the universal --version/-V/-v and --help/-h flags. Returns true if a flag was
-        /// handled and the caller should exit immediately.
+        /// Set to true when -V / --verbose is present in the arguments. Commands can check this
+        /// to enable detailed diagnostic output.
+        /// </summary>
+        public static bool IsVerbose { get; set; }
+
+        /// <summary>
+        /// Handles the universal --version/-v, --verbose/-V, and --help/-h flags.
+        /// Returns true if a terminal flag (--version, --help) was handled and the caller should
+        /// exit immediately. --verbose/-V sets <see cref="IsVerbose"/> and returns false so the
+        /// command continues with verbose output enabled.
         /// </summary>
         public static bool HandleGlobalFlags(string[] args, string tool, string? usage = null)
         {
@@ -29,8 +37,16 @@ namespace Syxx.Kit
             }
 
             var flags = new HashSet<string>(args);
-            // E088: accept both -v and -V for --version to match the top-level dispatcher.
-            if (flags.Contains("--version") || flags.Contains("-V") || flags.Contains("-v"))
+
+            // F-14: -V / --verbose = verbose output (does NOT exit — sets IsVerbose and continues).
+            if (flags.Contains("--verbose") || flags.Contains("-V"))
+            {
+                IsVerbose = true;
+                return false;
+            }
+
+            // -v / --version = print version and exit.
+            if (flags.Contains("--version") || flags.Contains("-v"))
             {
                 Console.WriteLine($"{tool} {Version}");
                 return true;

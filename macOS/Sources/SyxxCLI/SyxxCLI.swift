@@ -21,10 +21,32 @@ enum CLIExitStatus: Int32 {
     case failure = 3
 }
 
+/// D322: lock-protected box for the CLI exit code. Static stored properties of value types
+/// cannot be actor-isolated in Swift 6, and the SIGINT signal handler writes this value
+/// concurrently with main(). NSLock provides language-level concurrency safety that
+/// `nonisolated(unsafe)` cannot.
+private final class _ExitCodeBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value: Int32 = CLIExitStatus.inconclusive.rawValue
+    var value: Int32 {
+        get { lock.lock(); defer { lock.unlock() }; return _value }
+        set { lock.lock(); defer { lock.unlock() }; _value = newValue }
+    }
+}
+
 @main
 struct SyxxCLI {
     // B253: standardized exit codes — 0=completed non-threat, 1=threat, 2=inconclusive, 3=failure
-    nonisolated(unsafe) static var exitCode: Int32 = CLIExitStatus.inconclusive.rawValue
+    // D322: exitCode is protected by an unfair lock for proper concurrency isolation.
+    // Previously used nonisolated(unsafe) with a comment-only safety argument. While Int32
+    // writes are hardware-atomic on 64-bit platforms, the SIGINT signal handler can fire
+    // concurrently with main() writes — a lock ensures Swift 6 strict concurrency is
+    // satisfied by language-level guarantees, not hardware assumptions.
+    private static let _exitCodeBox = _ExitCodeBox()
+    static var exitCode: Int32 {
+        get { _exitCodeBox.value }
+        set { _exitCodeBox.value = newValue }
+    }
 
     static func main() async {
         // DEFER ORDERING IS LOAD-BEARING. Defers run LIFO, so this exit defer — registered FIRST —
@@ -37,15 +59,48 @@ struct SyxxCLI {
         // has reported crashes all along. A CLI crash on a user's machine produced no signal at all.
         // Bootstrap must be the first statement: SyxxTracer memoises its tracer on first use, so a
         // span created before registration would pin the process to a no-op tracer permanently.
+        // D331 + D367: use unified TelemetryBootstrap so Sentry and OTel always share
+        // the same consent decision. Surface is "cli" (not hardcoded "gui").
         SentryBootstrap.setup()
-        SentryDiagnosticSink.install()
+        SentryDiagnosticSink.install(surface: "cli")
         OTelBootstrap.setup(serviceName: "syxx-cli-macos")
         defer { OTelBootstrap.flush() }
+
+        // D323: install SIGINT handler so Ctrl+C during readLine() triggers clean shutdown.
+        // Without this, SIGINT during the blocking readLine() call kills the process immediately,
+        // skipping the OTel flush defer and losing all telemetry spans for the session.
+        let sigintSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+        signal(SIGINT, SIG_IGN)  // prevent default SIGINT disposition (immediate termination)
+        sigintSource.setEventHandler {
+            // Clean shutdown: set exit code to completed (user-initiated quit is not inconclusive)
+            SyxxCLI.exitCode = CLIExitStatus.completed.rawValue
+            OTelBootstrap.flush()
+            Darwin.exit(SyxxCLI.exitCode)
+        }
+        sigintSource.resume()
 
         // Unified binary: parse subcommand or fall through to interactive mode
         let args = CommandLine.arguments
         if args.count > 1 {
             let subcommand = args[1].lowercased()
+
+            // D324: check for --help/-h/--version/-V anywhere in subcommand args BEFORE
+            // dispatching. Previously `syxx mirror --help` passed ["--help"] to the mirror
+            // subcommand, which either skipped it as an unknown flag (leaving no positional
+            // args) or treated it as a domain argument — producing "Usage:" or
+            // "Invalid domain '--help'" instead of the help text.
+            let subArgs = Array(args.dropFirst(2))
+            if subArgs.contains("--help") || subArgs.contains("-h") {
+                printHelp()
+                exitCode = CLIExitStatus.completed.rawValue
+                return
+            }
+            if subArgs.contains("--version") || subArgs.contains("-v") {
+                printVersion()
+                exitCode = CLIExitStatus.completed.rawValue
+                return
+            }
+
             switch subcommand {
             // B253: every adjudicating subcommand returns a typed process result. Unconditional
             // `exitCode = 0` after a void run is forbidden wherever a typed result exists — that
@@ -81,16 +136,21 @@ struct SyxxCLI {
             case "firstrun":
                 exitCode = await FirstRunCommand.run(args: Array(args.dropFirst(2)))
             // Phase 4.2: CI-only behavioral transcript emitter (production Synthesizer path).
+            // D361: wrap synchronous run in Task.detached so it does not block the cooperative
+            // executor thread pool. The transcript emitter performs file I/O that could stall
+            // other cooperative tasks if run on the shared pool.
             case "parity-transcript":
-                exitCode = ParityTranscriptCommand.run(args: Array(args.dropFirst(2)))
+                exitCode = await Task.detached {
+                    ParityTranscriptCommand.run(args: Array(args.dropFirst(2)))
+                }.value
             // B253: every adjudicating subcommand returns a typed process result. Unconditional
             // exiting 2 made `syxx --help` indistinguishable from a scan that measured nothing.
             case "--help", "-h":
                 printHelp()
                 exitCode = CLIExitStatus.completed.rawValue
-            // B240: reserve -V for version (not -v) to avoid collision with -v = verbose in
-            // SyxxConfig.isVerbose. --version is the canonical long form.
-            case "--version", "-V":
+            // B240: -v = version, -V = verbose (SyxxConfig.isVerbose). --version is the
+            // canonical long form.
+            case "--version", "-v":
                 printVersion()
                 exitCode = CLIExitStatus.completed.rawValue
             default:
@@ -105,8 +165,15 @@ struct SyxxCLI {
         // when args.count <= 1 (binary name only) — guaranteed false for both flags. The global-flag
         // accessors are available to subcommands that parse their own argv; the dead locals are removed.
         // --json output for conclusion-bearing subcommands remains unimplemented (B137 Fix 3).
+        // D303: set exitCode to completed before early return — handleGlobalFlags prints
+        // help/usage/version and returns true, which is a successful non-threat interaction.
+        // Without this, exitCode stays at the default inconclusive(2), making `syxx --help`
+        // (when it reaches this path) indistinguishable from an incomplete scan.
         if SyxxConfig.handleGlobalFlags(CommandLine.arguments, tool: "syxx",
-            usage: "Interactive launcher. Six checks: Prophet, Mirror, Portal, Glutton, Cage, Witness (+ License).") { return }
+            usage: "Interactive launcher. Six checks: Prophet, Mirror, Portal, Glutton, Cage, Witness (+ License).") {
+            exitCode = CLIExitStatus.completed.rawValue
+            return
+        }
         print("""
 
                                          kmOQO
@@ -180,8 +247,22 @@ struct SyxxCLI {
             }
         }
 
+        // B307: isPro is computed once at startup and can become stale if the user activates
+        // a license in another terminal or the license server state changes mid-session.
+        // The interactive menu's [L] activation path updates isPro inline, but external
+        // activations (e.g. SyxxGUI) are not detected. Re-validate before each Pro-gated
+        // subcommand call to pick up mid-session changes.
         var inputs = SectionInputs()
         var running = true
+        /// Re-validate isPro from the stored key. Called before each Pro-gated subcommand.
+        func refreshIsPro() async {
+            if let storedKey = LicenseManager.getStoredLicenseKey() {
+                let check = await LicenseManager.isFeatureUnlocked()
+                isPro = check.unlocked
+                if isPro { licenseStatusLine = "🟢 PRO ACTIVATED" }
+                _ = storedKey // suppress unused warning
+            }
+        }
         // ANSI color codes matching app warden colors
         let teal = "\u{001B}[38;2;45;212;191m"      // Prophet, Portal (#2dd4bf)
         let violet = "\u{001B}[38;2;167;139;255m"    // Mirror, Witness (#a78bff)
@@ -208,27 +289,35 @@ struct SyxxCLI {
             print("==================================================================================")
             print("Your choice (1-6 / C / L / Q): ", terminator: "")
 
-            guard let raw = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() else { break }
+            // D323: use async stdin read so the main executor stays responsive to SIGINT
+            guard let raw = (await readLineAsync())?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() else { break }
 
             switch raw {
             case "1", "PROPHET":
-                await runProphet(domain: promptDomain(why: "What is domain of your choosing? (Ex. github.com, reddit.com, or syxx.app) The Prophet asks your resolver for its answer and weighs whether that answer is true. (Choose a domain. The Prophet holds your resolver's answer up against what the domain's own authorities attest, and against names that ought not exist, to judge whether it may be believed.)"), inputs: &inputs)
+                // D323: promptDomain is now async — separate the await from the run call
+                let prophetDomain = await promptDomain(why: "What is domain of your choosing? (Ex. github.com, reddit.com, or syxx.app) The Prophet asks your resolver for its answer and weighs whether that answer is true. (Choose a domain. The Prophet holds your resolver's answer up against what the domain's own authorities attest, and against names that ought not exist, to judge whether it may be believed.)")
+                await runProphet(domain: prophetDomain, inputs: &inputs)
             case "2", "MIRROR":
-                await runMirror(target: promptDomain(why: "In the mirror you shall see the domain or site of web for which you are endeared: The light of the mirror breaks the bonds of deception, revealing whether the site you receive is the same one shown to all. (The Mirror compares cryptographic hashes of the page as your network delivers it against a copy fetched through a clean, independent path, confirming that what you receive is the content served to everyone else.)", prompt: "Enter the website/URL to mirror-check (e.g. example.com): "), isPro: isPro, inputs: &inputs)
+                await refreshIsPro()  // B307: re-validate before Pro-gated check
+                let mirrorTarget = await promptDomain(why: "In the mirror you shall see the domain or site of web for which you are endeared: The light of the mirror breaks the bonds of deception, revealing whether the site you receive is the same one shown to all. (The Mirror compares cryptographic hashes of the page as your network delivers it against a copy fetched through a clean, independent path, confirming that what you receive is the content served to everyone else.)", prompt: "Enter the website/URL to mirror-check (e.g. example.com): ")
+                await runMirror(target: mirrorTarget, isPro: isPro, inputs: &inputs)
             case "3", "PORTAL":
-                await runPortal(domain: promptDomain(why: "Of all domains, to which shall the Portal deliver you today? The Portal traces the course your traffic must follow to reach that far host. Bearing you all the way, it delivers you along the traced route in less than a blink. (A traceroute follows the packets sent from your device to the domain or IP you chose, mapping the nodes, or hops, they pass through. If traffic is being redirected, it can help reveal where. If the last hop falls short of your domain, it may have been blocked by a firewall or swept into a web proxy.)"), inputs: &inputs)
+                let portalDomain = await promptDomain(why: "Of all domains, to which shall the Portal deliver you today? The Portal traces the course your traffic must follow to reach that far host. Bearing you all the way, it delivers you along the traced route in less than a blink. (A traceroute follows the packets sent from your device to the domain or IP you chose, mapping the nodes, or hops, they pass through. If traffic is being redirected, it can help reveal where. If the last hop falls short of your domain, it may have been blocked by a firewall or swept into a web proxy.)")
+                await runPortal(domain: portalDomain, inputs: &inputs)
             case "4", "GLUTTON":
+                await refreshIsPro()  // B307: re-validate before Pro-gated check
                 await runGlutton(isPro: isPro, inputs: &inputs)
             case "5", "CAGE":
                 await runCage(inputs: &inputs)
             case "6", "WITNESS":
                 runWitness(isPro: isPro, inputs: &inputs)
             case "C", "CONCLUSIONS", "CONCLUSION":
-                showConclusions(inputs: inputs)
+                await showConclusions(inputs: inputs)
             case "L":
                 print("\nEnter, ye, your key of license, and allow the good fortunes of the realm to draw you in: (Your license key unlocks the app's Pro checks and the features anchored to the Dimension. It is validated with the licensing service and then kept on this machine, and it never travels alongside your DNS data.) By this separation, your network findings remain unbound from your identity.")
                 print("Enter your Keygen.sh License Key: ", terminator: "")
-                guard let key = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty else {
+                // D323: use async stdin read so the main executor stays responsive to SIGINT
+                guard let key = (await readLineAsync())?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty else {
                     print("Error: Key cannot be empty."); continue
                 }
                 print("Verifying license with Keygen...")
@@ -253,11 +342,17 @@ struct SyxxCLI {
                         licenseStatusLine = "🟢 PRO ACTIVATED (Keychain save failed — re-enter next launch)"
                     }
                 case .invalid:
+                    // D362: set exitCode to failure on rejected key. Previously exitCode stayed
+                    // at default inconclusive(2), making a definitive rejection look the same
+                    // as "could not determine" to automation reading $?.
                     print("FAILED! The licensing service rejected this key (it is not recognised, revoked, or otherwise not valid for this account).")
+                    exitCode = CLIExitStatus.failure.rawValue
                 case .timeout:
                     print("FAILED! Could not reach the licensing service (request timed out). Your key was NOT rejected — retry when the network is available.")
+                    exitCode = CLIExitStatus.failure.rawValue
                 case .networkError(let detail):
                     print("FAILED! Could not reach the licensing service — \(detail). Your key was NOT rejected — retry when the network is available.")
+                    exitCode = CLIExitStatus.failure.rawValue
                 }
             case "Q", "QUIT", "EXIT":
                 print("\nThank you for using Syxx. Goodbye!")
@@ -276,7 +371,7 @@ struct SyxxCLI {
 
     /// Synthesizes a result from all completed checks and displays it — only when the
     /// user explicitly asks. No auto-result between runs.
-    private static func showConclusions(inputs: SectionInputs) {
+    private static func showConclusions(inputs: SectionInputs) async {
         print("")
         print("==================================================================================")
         print("CONCLUSIONS — SYNTHESIS CONCLUSION")
@@ -329,15 +424,29 @@ struct SyxxCLI {
         }
         print("----------------------------------------------------------------------------------")
         print("Press Enter to return to the menu.", terminator: "")
-        _ = readLine()
+        // D323: use async stdin read so the main executor stays responsive to SIGINT
+        _ = await readLineAsync()
+    }
+
+    // MARK: - Non-blocking stdin
+
+    /// D323: async wrapper for readLine() that dispatches the blocking read to a background
+    /// thread via Task.detached. Without this, readLine() blocks the cooperative thread pool's
+    /// main executor, preventing the SIGINT handler (installed at top of main()) from firing
+    /// until input arrives. With detached I/O, the main executor remains responsive to dispatch
+    /// events — including the SIGINT handler — while the background thread blocks on stdin.
+    private static func readLineAsync() async -> String? {
+        await Task.detached(priority: .userInitiated) {
+            readLine()
+        }.value
     }
 
     // MARK: - Prompt helpers
 
-    static func promptDomain(why: String, prompt: String = "Enter the domain to check (e.g. google.com): ") -> String {
+    static func promptDomain(why: String, prompt: String = "Enter the domain to check (e.g. google.com): ") async -> String {
         print("\n\(why)")
         print(prompt, terminator: "")
-        guard let raw = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return "" }
+        guard let raw = (await readLineAsync())?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return "" }
         // F007: canonicalize at the CLI boundary so DNS queries always receive a valid A-label.
         guard let canonical = DomainCanonical.canonicalizeOrNil(raw) else {
             print("Error: Invalid domain name '\(raw)'.")
@@ -724,7 +833,7 @@ struct SyxxCLI {
         // The chief purpose of Cage is a live DNS-query capture. Ask how long to capture FIRST, then run
         // the real port-53 capture via the privileged syxx-cage tool and feed its NDJSON into the engine,
         // so the guided result actually reflects the capture — exactly what the standalone does.
-        let duration = promptCaptureDuration()
+        let duration = await promptCaptureDuration()
 
         // Run the capture (elevating with sudo when we are not already root). The child prints its own
         // live readout + forensic report. On any failure it returns nil and has already explained why —
@@ -741,11 +850,12 @@ struct SyxxCLI {
 
     /// Prompt for a packet-capture duration in seconds. Enter alone defaults to 60; an optional trailing
     /// "s" is accepted; values below 1 or above 9000 re-prompt.
-    static func promptCaptureDuration() -> Int {
+    // D323: async — uses readLineAsync() so the blocking stdin read does not stall the main executor
+    static func promptCaptureDuration() async -> Int {
         print("\nAnd you are nonetheless asked before closing the cage for how long you wish it sealed. (Enter the duration of the packet capture in seconds, e.g. 15s, up to 9000s (2.5 hours). While closed, surf the web and use your apps as normal. You must produce DNS queries in order to capture and analyze them.)")
         while true {
             print("> ", terminator: "")
-            guard let raw = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines) else { return 60 }
+            guard let raw = (await readLineAsync())?.trimmingCharacters(in: .whitespacesAndNewlines) else { return 60 }
             if raw.isEmpty { return 60 }
             var s = raw.lowercased()
             if s.hasSuffix("s") { s = String(s.dropLast()) }

@@ -306,7 +306,7 @@ namespace Syxx.Commands
                     return;
                 }
 
-                string systemResolver = NetworkKeyState.GetSystemDNSServers().Count > 0 ? NetworkKeyState.GetSystemDNSServers()[0] : null;
+                string? systemResolver = NetworkKeyState.GetSystemDNSServers().Count > 0 ? NetworkKeyState.GetSystemDNSServers()[0] : null;
                 if (systemResolver == null)
                 {
                     // E079: refuse to sign a snapshot measured against a substituted resolver —

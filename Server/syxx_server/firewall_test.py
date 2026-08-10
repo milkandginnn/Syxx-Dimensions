@@ -18,15 +18,66 @@ Usage:
 """
 
 import logging
+import random
 
 from . import resolver
 
 log = logging.getLogger(__name__)
 
 # Clean vantages assumed to be unfiltered.
-_CLEAN_VANTAGES = ("1.1.1.1", "8.8.8.8")
-# Sinkhole addresses that signal local filtering.
-_SINKHOLE_IPS = frozenset({"0.0.0.0", "127.0.0.1", "::1", "10.0.0.1"})
+# B322: expanded beyond the original two (1.1.1.1, 8.8.8.8) — both are commonly blocked by
+# enterprise/ISP DNS filters. Adding Quad9, OpenDNS, and AdGuard provides independent paths
+# that are less likely to all be blocked simultaneously.
+_CLEAN_VANTAGES = ("1.1.1.1", "8.8.8.8", "9.9.9.9", "208.67.222.222", "94.140.14.14")
+# SM-042 + B321: expanded sinkhole addresses. The original 4 missed common filtering
+# addresses — 0.0.0.0/8, common router addresses, RFC 5737 documentation ranges,
+# IPv4-mapped IPv6 loopback, and 198.18.0.0/15 (used by some DNS filters).
+# B321: added ISP-specific private ranges (10.0.0.0/8, 172.16.0.0/12) and RFC 5737
+# documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) that ISPs use
+# for sinkholing blocked domains.
+_SINKHOLE_IPS = frozenset({
+    "0.0.0.0", "127.0.0.1", "::1", "10.0.0.1",
+    # Additional common sinkhole addresses
+    "127.0.0.53",  # systemd-resolved stub
+    "192.168.1.1",  # common router
+    "198.18.0.1", "198.18.0.2",  # some DNS filter appliances
+    "::ffff:0:0", "::ffff:127.0.0.1",  # IPv4-mapped IPv6 loopback
+    "10.0.0.2",  # some Pi-hole configs
+    "10.10.10.1",  # some corporate DNS appliances
+    # B321: ISP sinkhole addresses in common private ranges
+    "10.0.0.0", "10.255.255.255",  # 10.0.0.0/8 boundary markers
+    "172.16.0.0", "172.16.0.1", "172.31.255.255",  # 172.16.0.0/12 ISP sinkholes
+    "192.0.2.0", "192.0.2.1",  # RFC 5737 TEST-NET-1 (used by some ISP filters)
+    "198.51.100.0", "198.51.100.1",  # RFC 5737 TEST-NET-2
+    "203.0.113.0", "203.0.113.1",  # RFC 5737 TEST-NET-3
+})
+
+
+def _ip_is_sinkhole(ip):
+    """Check if *ip* is a known sinkhole address. SM-042: also matches the
+    full 0.0.0.0/8 block (any 0.x.y.z is a sinkhole signal).
+    B321: also matches 10.0.0.0/8, 172.16.0.0/12, 192.0.2.0/24, 198.51.100.0/24,
+    and 203.0.113.0/24 — ISP and RFC 5737 ranges used for DNS sinkholing."""
+    if ip in _SINKHOLE_IPS:
+        return True
+    # 0.0.0.0/8 — any address in this block is a sinkhole signal
+    if ip.startswith("0."):
+        return True
+    # B321: 10.0.0.0/8 — ISP private range commonly used for sinkholing
+    if ip.startswith("10."):
+        return True
+    # B321: 172.16.0.0/12 — ISP private range (172.16.x.x through 172.31.x.x)
+    if ip.startswith("172."):
+        try:
+            second_octet = int(ip.split(".")[1])
+            if 16 <= second_octet <= 31:
+                return True
+        except (IndexError, ValueError):
+            pass
+    # B321: 192.0.2.0/24 (TEST-NET-1), 198.51.100.0/24 (TEST-NET-2), 203.0.113.0/24 (TEST-NET-3)
+    if ip.startswith("192.0.2.") or ip.startswith("198.51.100.") or ip.startswith("203.0.113."):
+        return True
+    return False
 
 _TEST_DOMAINS = [
     # Malware test domains (blocked by security filters)
@@ -56,30 +107,48 @@ def _ip_is_public(ip):
 
 
 def _query_resolver(domain, server, timeout):
-    """Query A record for domain via server. Returns (status, addresses).
+    """Query A+AAAA records for domain via server. Returns (status, addresses).
 
-    status is one of: "resolved", "nxdomain", "refused", "error".
+    SM-044: query both A and AAAA — a resolver that filters only IPv4 or only
+    IPv6 would escape detection with A-only queries.
+
+    status is one of: "resolved", "nxdomain", "refused", "error", "nodata".
     addresses is a list of IP strings (empty when not resolved).
     """
-    try:
-        resp = resolver.query(domain, resolver.TYPE_A, server, timeout=timeout)
-    except Exception as exc:
-        log.debug("query %s via %s failed: %s", domain, server, exc)
-        return "error", []
+    all_addrs = []
+    last_status = "error"
+    for qtype in (resolver.TYPE_A, resolver.TYPE_AAAA):
+        try:
+            resp = resolver.query(domain, qtype, server, timeout=timeout)
+        except Exception as exc:
+            log.debug("query %s/%s via %s failed: %s", domain, "A" if qtype == resolver.TYPE_A else "AAAA", server, exc)
+            continue
 
-    rcode = resp.get("rcode", -1)
-    if rcode == 3:
+        rcode = resp.get("rcode", -1)
+        if rcode == 3:
+            last_status = "nxdomain"
+            continue
+        if rcode == 5:
+            last_status = "refused"
+            continue
+        if rcode != 0:
+            last_status = "error"
+            continue
+        type_name = "A" if qtype == resolver.TYPE_A else "AAAA"
+        addrs = [r["value"] for r in resp.get("records", []) if r.get("type") == type_name and isinstance(r.get("value"), str)]
+        if addrs:
+            all_addrs.extend(addrs)
+
+    if all_addrs:
+        return "resolved", all_addrs
+    if last_status == "nxdomain":
         return "nxdomain", []
-    if rcode == 5:
+    if last_status == "refused":
         return "refused", []
-    if rcode != 0:
+    if last_status == "error":
         return "error", []
-    addrs = [r["value"] for r in resp.get("records", []) if r.get("type") == "A" and isinstance(r.get("value"), str)]
-    if not addrs:
-        # A159: NOERROR with no A records is "nodata" — a filtering signal
-        # (e.g. Pi-hole/AdGuard NODATA mode), not a generic error.
-        return "nodata", []
-    return "resolved", addrs
+    # NOERROR with no records — A159 nodata signal.
+    return "nodata", []
 
 
 def _is_filtered(user_status, user_addrs, clean_status, clean_addrs):
@@ -105,9 +174,9 @@ def _is_filtered(user_status, user_addrs, clean_status, clean_addrs):
     if user_status == "nodata":
         return True
 
-    # Resolved on user side — check for sinkhole IPs.
+    # Resolved on user side — check for sinkhole IPs (SM-042: expanded check).
     if user_status == "resolved" and user_addrs:
-        if all(a in _SINKHOLE_IPS for a in user_addrs):
+        if all(_ip_is_sinkhole(a) for a in user_addrs):
             return True
 
     return False
@@ -157,7 +226,13 @@ def test(resolver_ip, timeout=5):
     # A162: aggregate wall-clock deadline for the entire test
     deadline = _time.monotonic() + _TEST_DEADLINE_SECONDS
 
-    for entry in _TEST_DOMAINS:
+    # E262: Randomize test domain order to reduce fingerprint. A fixed query
+    # order (eicar.org, doubleclick.net, etc.) is a recognizable pattern that
+    # reveals the user is running Syxx's firewall test to any observer.
+    test_domains = list(_TEST_DOMAINS)
+    random.shuffle(test_domains)
+
+    for entry in test_domains:
         # A162: check deadline before each domain to prevent unbounded runtime
         if _time.monotonic() > deadline:
             break
@@ -202,7 +277,10 @@ def test(resolver_ip, timeout=5):
             }
         )
 
-    tested = len(_TEST_DOMAINS)
+    # SM-041: tested count reflects actual domains queried, not the total
+    # domain list. When the deadline fires mid-run, tested must not claim
+    # more domains were checked than actually were.
+    tested = len(results)
 
     # Assessment logic.
     if filtered_count >= tested * 0.3:
@@ -226,6 +304,8 @@ def test(resolver_ip, timeout=5):
             "filtered": filtered_count,
             "clean": clean_count,
             "inconclusive": inconclusive_count,
+            # SM-041: report whether the deadline truncated the test run.
+            "deadline_truncated": _time.monotonic() > deadline,
         },
         "assessment": assessment,
     }

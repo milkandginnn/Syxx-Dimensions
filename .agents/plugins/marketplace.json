@@ -405,6 +405,19 @@
       "category": "Coding"
     },
     {
+      "name": "delta-remediation",
+      "description": "Delta Remediation Command Suite \u2014 seven commands forming a complete defect lifecycle from discovery through remediation to verification",
+      "source": {
+        "source": "local",
+        "path": "./plugins/delta-remediation"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Coding"
+    },
+    {
       "name": "dependency-management",
       "description": "Dependency auditing, version management, and security vulnerability scanning",
       "source": {
@@ -1112,6 +1125,19 @@
       "source": {
         "source": "local",
         "path": "./plugins/systems-programming"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Coding"
+    },
+    {
+      "name": "syxx-desktop-gui",
+      "description": "Cross-platform desktop GUI development \u2014 SwiftUI (macOS), WinUI 3 (Windows), Avalonia UI (Linux), Qt 6 (C++), Swift 6, C# 15, .NET 10.0. Pixel-perfect mockup translation, platform-native idioms, responsive desktop layouts, dark/light theming, and accessibility across all desktop targets.",
+      "source": {
+        "source": "local",
+        "path": "./plugins/syxx-desktop-gui"
       },
       "policy": {
         "installation": "AVAILABLE",

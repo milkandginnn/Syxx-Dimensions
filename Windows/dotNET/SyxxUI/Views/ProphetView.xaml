@@ -2,61 +2,25 @@
     x:Class="SyxxUI.Views.ProphetView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pres="using:SyxxUI.Presentation"
     Background="Transparent">
 
     <!-- Parity twin of macOS ProphetView.swift (gold standard). Structure top-to-bottom:
-         1. Rune header (54x54 teal tile + eyebrow + title + lore subcaption + body paragraph)
+         1. Module header (rune tile + eyebrow + name + lore + body)
          2. Domain selection card (lore + body + domain TextBox + "Divine the Domain" button)
          3. Resolver consensus result card (only when ProphetConsensusResult != null)
          4. DNSSEC result card (only when DnssecStatus != null, BELOW resolver card, not side-by-side)
-         5. Empty state (when ProphetConsensusResult == null)
-         Removed per parity: top-right Resolver line, DNSSEC-scope warning banner, LOCAL DNS
-         ENCRYPTION card, side-by-side records+DNSSEC grid. Kept: Resolver IP (optional) TextBox,
-         E146 record-type-picker note, ProgressRing (inert until .cs wires it). -->
+         5. Empty state (when ProphetConsensusResult == null) -->
     <ScrollViewer>
         <StackPanel Spacing="22" Padding="32">
 
-            <!-- 1. Rune header: 54x54 teal rune tile + eyebrow + title + lore + body -->
-            <StackPanel Orientation="Horizontal" Spacing="15">
-                <!-- Teal rune tile (macOS: ioSuccessGreen.opacity(0.10) bg, r14, ioSuccessGreen glow) -->
-                <Border Width="54" Height="54" CornerRadius="14">
-                    <Border.Background>
-                        <SolidColorBrush Color="{StaticResource IoSuccessGreenColor}" Opacity="0.10" />
-                    </Border.Background>
-                    <TextBlock Text="&#x16A8;" FontFamily="{StaticResource IoFontDisplay}" FontSize="28"
-                               Foreground="{StaticResource IoSuccessGreenBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               AutomationProperties.Name="Prophet rune" />
-                </Border>
-
-                <!-- Right column: eyebrow + title + lore subcaption + body paragraph -->
-                <StackPanel Spacing="4" MaxWidth="560">
-                    <TextBlock Text="THE SEER &#xB7; RESOLVER ACCURACY"
-                               FontFamily="{StaticResource IoTypeEyebrow}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoSuccessGreenBrush}"
-                               CharacterSpacing="260"
-                               AutomationProperties.Name="The Seer, Resolver Accuracy" />
-                    <TextBlock Text="Prophet"
-                               FontFamily="{StaticResource IoFontDisplay}" FontSize="26"
-                               Foreground="{StaticResource IoTextBrush}"
-                               AutomationProperties.Name="Prophet" />
-                    <!-- Subcaption. Parity with macOS ProphetView.swift:45-46: bodyAlternate
-                         (Cormorant SC) at 17, owner copy, and NO wrapping quotation marks
-                         (MEMORY.md:1795). The prior text carried a "begans" typo and a longer
-                         ending, both superseded by the owner's 2026-08-02 revision. -->
-                    <TextBlock Text="Thus the voyage began: The Prophet names each domain aright, so no false guise may be borne into view."
-                               FontFamily="{StaticResource IoTypeBodyAlternate}" FontSize="17"
-                               Foreground="{StaticResource IoTextMutedBrush}" TextWrapping="Wrap" />
-                    <!-- Body paragraph beneath subcaption (owner copy). -->
-                    <TextBlock Text="Prophet compares twelve resolver answers to queries sent for the domain you identify. A match only indicates consistency and does not mean the answers are valid. Resolver answers can be spoofed. Prophet then checks for DNSSEC on the domain, which does communicate trustworthiness."
-                               FontFamily="{StaticResource IoTypeBody}" FontSize="13"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
-                </StackPanel>
-            </StackPanel>
+            <!-- 1. Module header: rune tile + eyebrow + name + lore + body -->
+            <pres:ModuleHeader x:Name="Header" Rune="&#x16A8;" Eyebrow="THE SEER &#xB7; RESOLVER ACCURACY" Name="Prophet"
+                               AccentBrush="{StaticResource IoProphetBlueBrush}" />
 
             <!-- 2. Domain selection card -->
             <Border CornerRadius="14" Padding="20"
-                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                 <Border.Background>
                     <SolidColorBrush Color="White" Opacity="0.03" />
                 </Border.Background>
@@ -65,11 +29,11 @@
                          (ProphetView.swift:71). No wrapping quotation marks (MEMORY.md:1795). -->
                     <TextBlock Text="In what domain do voices agree, their truth brought forth in dawn, and by the sacred seal, their truth preserved."
                                FontFamily="{StaticResource IoFontLore}" FontSize="18"
-                               Foreground="{StaticResource IoTextMutedBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextMutedBrush}" TextWrapping="Wrap" />
                     <!-- Body text beneath the lore line (owner copy). -->
                     <TextBlock Text="Choose the domain you wish to check."
                                FontFamily="{StaticResource IoTypeBody}" FontSize="16"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
 
                     <Grid ColumnSpacing="12" VerticalAlignment="Center">
                         <Grid.ColumnDefinitions>
@@ -82,9 +46,9 @@
                         <TextBox Grid.Column="0" x:Name="DomainBox" PlaceholderText="a domain to divine&#x2026;"
                                  HorizontalAlignment="Stretch"
                                  FontFamily="{StaticResource IoFontMono}" FontSize="14"
-                                 Foreground="{StaticResource IoTextBrush}"
-                                 Background="{StaticResource IoBackgroundDarkBrush}"
-                                 BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1"
+                                 Foreground="{DynamicResource IoTextBrush}"
+                                 Background="{DynamicResource IoBackgroundDarkBrush}"
+                                 BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1"
                                  CornerRadius="10" Padding="12"
                                  TextChanged="DomainBox_TextChanged"
                                  AutomationProperties.Name="Domain to test"
@@ -95,9 +59,9 @@
                              Restoring it requires threading a type through ProbePlan -> DNSResolver first. -->
                         <TextBox Grid.Column="1" x:Name="ResolverBox" PlaceholderText="Resolver IP (optional)" Width="150"
                                  FontFamily="{StaticResource IoFontMono}" FontSize="13"
-                                 Foreground="{StaticResource IoTextBrush}"
-                                 Background="{StaticResource IoBackgroundDarkBrush}"
-                                 BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1"
+                                 Foreground="{DynamicResource IoTextBrush}"
+                                 Background="{DynamicResource IoBackgroundDarkBrush}"
+                                 BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1"
                                  CornerRadius="10" Padding="12"
                                  AutomationProperties.Name="Resolver IP (optional)"
                                  AutomationProperties.HelpText="Query a specific resolver by address instead of the system default. Leave blank to use the system resolver." />
@@ -105,7 +69,7 @@
                         <Button Grid.Column="2" x:Name="CheckBtn" Content="Divine the Domain"
                                 Click="CheckBtn_Click"
                                 Background="{StaticResource IoTealButtonBrush}"
-                                Foreground="#FF062B26"
+                                Foreground="{DynamicResource IoTealButtonTextBrush}"
                                 FontFamily="{StaticResource IoTypeUiLabel}" FontSize="14"
                                 Padding="22,12,22,12"
                                 CornerRadius="10"
@@ -134,24 +98,24 @@
                          and never borrow either voice. -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Ellipse x:Name="ConsensusDot" Width="9" Height="9"
-                                 Fill="{StaticResource IoTextSecondaryBrush}"
+                                 Fill="{DynamicResource IoTextSecondaryBrush}"
                                  VerticalAlignment="Center" />
                         <TextBlock x:Name="ConsensusHeadlinePrimary" Text=""
                                    FontFamily="{StaticResource IoTypeNavLabel}" FontSize="20"
                                    TextWrapping="Wrap"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}"
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}"
                                    AutomationProperties.LiveSetting="Polite" />
                         <TextBlock x:Name="ConsensusHeadlineSecondary" Text=""
                                    Visibility="Collapsed"
                                    FontFamily="{StaticResource IoTypeNavLabel}" FontSize="17"
                                    TextWrapping="Wrap" VerticalAlignment="Bottom"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     </StackPanel>
 
                     <!-- Consensus detail (lore 14) -->
                     <TextBlock x:Name="ConsensusDetail" Text=""
                                FontFamily="{StaticResource IoFontLore}" FontSize="14"
-                               Foreground="{StaticResource IoTextMutedBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextMutedBrush}" TextWrapping="Wrap" />
 
                     <!-- Scrollable resolver list (12 rows: resolver name left / IP right) -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="180">
@@ -169,7 +133,7 @@
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Padding="0,9,0,9"
-                                          BorderBrush="{StaticResource IoBorderSubtleBrush}"
+                                          BorderBrush="{DynamicResource IoBorderSubtleBrush}"
                                           BorderThickness="0,0,0,1">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -177,10 +141,10 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Resolver}"
                                                    FontFamily="{StaticResource IoTypeBody}" FontSize="15"
-                                                   Foreground="#FF8F83B8" />
+                                                   Foreground="{DynamicResource IoProphetAccentBrush}" />
                                         <TextBlock Grid.Column="1" Text="{Binding Ip}"
                                                    FontFamily="{StaticResource IoFontMono}" FontSize="13"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
@@ -195,10 +159,10 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Consensus"
                                    FontFamily="{StaticResource IoTypeBody}" FontSize="15"
-                                   Foreground="#FF8F83B8" />
+                                   Foreground="{DynamicResource IoProphetAccentBrush}" />
                         <TextBlock Grid.Column="1" x:Name="AgreementFraction" Text=""
                                    FontFamily="{StaticResource IoFontMono}" FontSize="13"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     </Grid>
                 </StackPanel>
             </Border>
@@ -213,29 +177,29 @@
                     <!-- Coloured dot + DNSSEC title -->
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Ellipse x:Name="DnssecDot" Width="9" Height="9"
-                                 Fill="{StaticResource IoTextSecondaryBrush}"
+                                 Fill="{DynamicResource IoTextSecondaryBrush}"
                                  VerticalAlignment="Center" />
                         <TextBlock x:Name="DnssecTitle" Text=""
                                    FontFamily="{StaticResource IoFontDisplay}" FontSize="16" FontWeight="SemiBold"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}"
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}"
                                    AutomationProperties.LiveSetting="Polite" />
                     </StackPanel>
 
                     <!-- DNSSEC detail (lore 14) -->
                     <TextBlock x:Name="DnssecDetail" Text=""
                                FontFamily="{StaticResource IoFontLore}" FontSize="14"
-                               Foreground="{StaticResource IoTextMutedBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextMutedBrush}" TextWrapping="Wrap" />
 
                     <!-- DNSSEC posture body: the typed status description (mono 13), never a
                          fabricated "secure". Sourced from DNSSECVerifier.Describe(status). -->
                     <Border CornerRadius="10" Padding="12"
-                            BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                            BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                         <Border.Background>
                             <SolidColorBrush Color="White" Opacity="0.02" />
                         </Border.Background>
                         <TextBlock x:Name="DnssecDescription" Text=""
                                    FontFamily="{StaticResource IoFontMono}" FontSize="13"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                     </Border>
 
                     <!-- DNSSEC footer row (left label / right short status tag) -->
@@ -246,10 +210,10 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="DNSSEC"
                                    FontFamily="{StaticResource IoTypeBody}" FontSize="15"
-                                   Foreground="#FF8F83B8" />
+                                   Foreground="{DynamicResource IoProphetAccentBrush}" />
                         <TextBlock Grid.Column="1" x:Name="DnssecStatusLabel" Text=""
                                    FontFamily="{StaticResource IoFontMono}" FontSize="13"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     </Grid>
                 </StackPanel>
             </Border>
@@ -257,11 +221,11 @@
             <!-- 5. Empty state (when ProphetConsensusResult == null).
                  Dashed-border placeholder with lore 15 text. -->
             <Grid x:Name="EmptyState" Visibility="Visible">
-                <Rectangle Stroke="{StaticResource IoBorderSubtleBrush}" StrokeThickness="1"
+                <Rectangle Stroke="{DynamicResource IoBorderSubtleBrush}" StrokeThickness="1"
                            StrokeDashArray="6,4" RadiusX="14" RadiusY="14" />
                 <TextBlock x:Name="EmptyStateText" Text="The Prophet waits in silence. Name a city, and it shall divine."
                            FontFamily="{StaticResource IoFontLore}" FontSize="15"
-                           Foreground="#FF7D7399"
+                           Foreground="{DynamicResource IoTextMutedBrush}"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Padding="34" TextWrapping="Wrap" />
             </Grid>

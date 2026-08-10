@@ -10,6 +10,7 @@ Deploy a team of specialized agents to audit the codebase for defects across pre
 ## Pre-flight Checks
 
 1. Parse `$ARGUMENTS`:
+   - `--help`: Display help information and exit without executing
    - `--target-number N`: Stop after N deltas found (default: unlimited)
    - `--deep`: Deeper analysis with cross-file tracing
    - `--deepest`: Line-by-line analysis of the entire codebase
@@ -19,9 +20,58 @@ Deploy a team of specialized agents to audit the codebase for defects across pre
    - `--schedule YYYY-MM-DD HH-MM-SS`: Run at specified time
    - `--repeat`: Recurring schedule (requires --schedule)
 
-2. If `--schedule` is set, register a cron job and exit. Otherwise proceed.
+2. If `--help` is set, display the following and exit:
 
-3. Check if `DELTAS.md` exists. If not, initialize with header.
+---
+
+### `/delta-remediation` — Delta Remediation Suite
+
+A thorough, multi-agent debugging and defect remediation workflow for large codebases. The suite discovers defects through parallel specialized agents, scores them by severity and impact, records human decisions about what to fix, generates phased implementation plans, executes fixes with strict file ownership, verifies the fixes through independent review, and archives completed work.
+
+### Command Pipeline (intended order)
+
+```
+1. /delta-analysis    — Discover defects (reads code, writes DELTAS.md)
+2. /delta-evaluation  — Score and classify deltas (reads DELTAS.md, writes .deltas/evaluation.json)
+3. /delta-decide      — Human decides what to fix (reads evaluation, writes .deltas/decisions.json)
+4. /delta-plan        — Generate implementation plan (reads decisions, writes .deltas/plan.md)
+5. /delta-implement   — Execute fixes phase by phase (reads plan, modifies code, updates DELTAS.md)
+6. /delta-review      — Verify fixes through independent review (reads code + DELTAS.md, writes .deltas/review-report.md)
+7. /delta-clean       — Archive verified deltas (rewrites DELTAS.md, archives to .deltas/archive/)
+```
+
+### `/delta-analysis` — Discover Defects
+
+Deploy a team of specialized agents to audit the codebase for defects across five dimensions: Security, Correctness, Parity, Performance, and Observability. Each agent produces structured findings with file:line citations, severity ratings, and concrete failure scenarios. Findings are deduplicated and merged into a consolidated delta catalog (`DELTAS.md`).
+
+**Flags and arguments:**
+
+| Flag | Description | Default | Example |
+|---|---|---|---|
+| `--help` | Display this help and exit | — | `/delta-analysis --help` |
+| `--target-number N` | Stop after finding N deltas | Unlimited | `/delta-analysis --target-number 50` |
+| `--deep` | Deeper analysis with cross-file tracing | Off | `/delta-analysis --deep` |
+| `--deepest` | Line-by-line analysis of every file | Off | `/delta-analysis --deepest` |
+| `--domain <letter>` | Scan only one domain | All domains | `/delta-analysis --domain S` |
+| `--platform <name>` | Scan only one platform | All platforms | `/delta-analysis --platform macOS` |
+| `--branch <name>` | Diff against a specific branch | Working tree | `/delta-analysis --branch main` |
+| `--schedule <datetime>` | Run at a future time | Now | `/delta-analysis --schedule 2026-08-15 09-00-00` |
+| `--repeat` | Recurring schedule | Once | `/delta-analysis --schedule 2026-08-15 09-00-00 --repeat` |
+
+**Domains:** A=Server, B=Detection Efficacy, C=Verdict & Evidence Integrity, D=Platform Integration & Parity, E=Security & Hardening, F=Miscellaneous
+
+**Depth levels:**
+- *(none)* — Standard scan: one agent per dimension, focused on high-impact areas
+- `--deep` — Cross-file tracing: agents trace data flows across module boundaries
+- `--deepest` — Exhaustive: every source file read line-by-line
+
+**Output:** `DELTAS.md` (created if missing, appended if exists)
+
+---
+
+3. If `--schedule` is set, register a cron job and exit. Otherwise proceed.
+
+4. Check if `DELTAS.md` exists. If not, initialize with header.
 
 ## Phase 1: Scope Resolution
 

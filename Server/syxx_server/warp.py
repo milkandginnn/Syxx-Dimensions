@@ -42,6 +42,11 @@ class _AssetExtractor(html.parser.HTMLParser):
         self._script_body = []
 
     def handle_starttag(self, tag, attrs):
+        # A308: markupbase.ParserBase already lowercases attribute names before
+        # passing them here. The explicit .lower() is a defensive measure against
+        # parser implementation differences or future HTMLParser changes — it is
+        # redundant with current CPython but harmless and protects against
+        # case-sensitive attribute lookups if the parser contract ever changes.
         a = {k.lower(): v or "" for k, v in attrs}
         if tag == "script":
             self._in_script = True
@@ -101,7 +106,7 @@ def parse_assets(html, base_url):
     # byte-for-byte in sync with the client or false mismatches occur.
     html = _COMMENT.sub("", html)
     extractor.feed(html)
-    return extractor.scripts, extractor.stylesheets, extractor.iframes
+    return extractor.scripts, extractor.stylesheets, extractor.iframes, extractor.inline_bodies
 
 
 def inline_scripts(html):
@@ -115,7 +120,7 @@ def inline_scripts(html):
     return extractor.inline_bodies
 
 
-def build_baseline(target_url):
+def build_baseline(target_url, deadline=None):
     """Fetch + analyze a target, returning the client-compatible dict.
 
     DEPRECATED (superseded by build_manifest / WARP_MANIFEST_V1). Retained ONLY because
@@ -123,7 +128,11 @@ def build_baseline(target_url):
     (app._diff_content) still consume this shape; those consumers live in another lane and
     are migrated separately. The `/warp` route that exposes it is documented deprecated.
     Do NOT build new callers on this — use build_manifest, which is signed and covers the
-    full CSS/@import closure."""
+    full CSS/@import closure.
+
+    SM-016: accepts an optional monotonic deadline. When set, script fetches are
+    skipped if the deadline has passed, preventing the function from pinning a
+    scheduler thread for minutes on slow fetches."""
     # A092: the cache is keyed on the RESOLVED final_url, not the pre-redirect
     # target_url. The old code read/wrote the cache under target_url but parsed and
     # hashed assets relative to final_url; if target_url's redirect destination
@@ -145,7 +154,7 @@ def build_baseline(target_url):
     # can merge or erase tag/attribute boundaries, changing the asset inventory
     # without marking the fetch inconclusive.
     html = html_bytes.decode("utf-8", errors="replace")
-    scripts, stylesheets, iframes = parse_assets(html, final_url)
+    scripts, stylesheets, iframes, inlines = parse_assets(html, final_url)
 
     script_hashes = {}
     # A049: track per-script fetch success/failure so the client can distinguish
@@ -155,6 +164,10 @@ def build_baseline(target_url):
     # inconclusive.
     script_fetch_status = {}
     for script_url in scripts[: config.FETCH_MAX_SCRIPTS]:
+        # SM-016: check deadline before each script fetch to prevent unbounded runtime.
+        if deadline is not None and time.monotonic() > deadline:
+            script_fetch_status[script_url] = "deadline_exceeded"
+            continue
         try:
             data, _c, _f = fetcher.fetch(script_url, timeout=config.FETCH_SCRIPT_TIMEOUT)
             script_hashes[script_url] = hashlib.sha256(data).hexdigest()
@@ -162,7 +175,6 @@ def build_baseline(target_url):
         except fetcher.FetchError:
             script_fetch_status[script_url] = "fetch_failed"
 
-    inlines = inline_scripts(html)
     inline_hashes = [hashlib.sha256(b.encode("utf-8")).hexdigest() for b in inlines]
     result = {
         "html": html,
@@ -217,7 +229,12 @@ FETCH_STATUS_FAILED = "fetch_failed"
 #   @import "sheet.css";        @import 'sheet.css' screen;
 #   @import url("sheet.css");   @import url(sheet.css);
 # Comments are stripped first so an @import commented out is not (wrongly) followed.
+# SM-013: also strip // single-line comments from CSS before scanning @import.
+# While // is not valid CSS comment syntax, some preprocessors and malformed
+# stylesheets use it. An @import inside a // comment would be erroneously
+# followed without this stripping.
 _CSS_COMMENT = re.compile(rb"/\*.*?\*/", re.DOTALL)
+_CSS_LINE_COMMENT = re.compile(rb"//[^\n]*")
 _CSS_IMPORT = re.compile(
     r"""@import\s+(?:url\(\s*(?P<q1>['"]?)(?P<u1>[^'")]+)(?P=q1)\s*\)"""
     r"""|(?P<q2>['"])(?P<u2>[^'"]+)(?P=q2))""",
@@ -254,21 +271,40 @@ def _brotli_decompress(body, max_bytes):
     the asset is recorded fetch_failed (never hashed while still compressed). A body that
     inflates past the cap raises TruncatedError for the same honest-inconclusive reason."""
     try:
-        import brotli as _brotli
+        import brotli as _brotli  # type: ignore[unresolved-import]
     except ImportError:
         try:
-            import brotlicffi as _brotli
+            import brotlicffi as _brotli  # type: ignore[unresolved-import]
         except ImportError as e:
             raise fetcher.FetchError(
                 "brotli transfer-encoding cannot be decoded: no brotli/brotlicffi decoder installed"
             ) from e
+    # A282: incremental decompression to prevent brotli bomb — decompress in chunks
+    # and check accumulated size after each chunk, rather than decompressing entire
+    # body into memory before checking size cap.
     try:
-        out = _brotli.decompress(body)
+        decompressor = _brotli.Decompressor()
+        out = bytearray()
+        chunk_size = 65536  # 64KB chunks
+        offset = 0
+        while offset < len(body):
+            chunk = body[offset:offset + chunk_size]
+            decompressed = decompressor.process(chunk)
+            out.extend(decompressed)
+            if len(out) > max_bytes:
+                raise fetcher.TruncatedError("decompressed body exceeds cap; asset is inconclusive")
+            offset += chunk_size
+        # Process any remaining data
+        if not decompressor.is_finished():
+            decompressed = decompressor.process(b'')
+            out.extend(decompressed)
+            if len(out) > max_bytes:
+                raise fetcher.TruncatedError("decompressed body exceeds cap; asset is inconclusive")
+        return bytes(out)
+    except fetcher.TruncatedError:
+        raise
     except Exception as e:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
         raise fetcher.FetchError(f"brotli decode failed: {e}") from e
-    if len(out) > max_bytes:
-        raise fetcher.TruncatedError("decompressed body exceeds cap; asset is inconclusive")
-    return out
 
 
 def _envelope_decode(body, encoding, max_bytes):
@@ -366,7 +402,9 @@ def _scan_css_imports(css_bytes, css_final_url):
     FINAL (post-redirect) URL, in source order. CSS comments are stripped first so a
     commented-out @import is not followed. Parsing view is utf-8/replace — never the
     source of any hashed byte."""
+    # SM-013: strip both /* */ block comments and // line comments.
     stripped = _CSS_COMMENT.sub(b" ", css_bytes)
+    stripped = _CSS_LINE_COMMENT.sub(b" ", stripped)
     text = stripped.decode("utf-8", errors="replace")
     out = []
     for m in _CSS_IMPORT.finditer(text):
@@ -418,10 +456,13 @@ def build_manifest(target_url, nonce=None):
     visited = set()
     assets = []
 
+    # SM-015: track whether the manifest was truncated by the asset count cap.
+    truncated = False
     while queue:
         if len(assets) >= max_assets:
             # Count cap reached — stop enumerating. A declared boundary (like the host cap),
             # never a silent drop: the manifest simply does not claim to cover beyond it.
+            truncated = True
             break
         url, cls, depth = queue.pop(0)
         if url in visited:
@@ -457,6 +498,9 @@ def build_manifest(target_url, nonce=None):
         "html_sha256": html_sha,
         "asset_classes_in_scope": list(ASSET_CLASSES_IN_SCOPE),
         "assets": assets,
+        # SM-015: flag when the manifest was truncated by the asset count cap,
+        # so the client knows the closure is incomplete.
+        "truncated": truncated,
         # Spec §3: integer milliseconds since epoch, truncated (WitnessSigner convention).
         "timestamp": int(time.time() * 1000),
         "freshness_seconds": config.WARP_MANIFEST_FRESHNESS,

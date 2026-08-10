@@ -75,10 +75,10 @@ class _Handler(socketserver.BaseRequestHandler):
         # been acquired. The listening socket is plain TCP, so the accept loop
         # is never blocked by a slow/idle TLS client. Apply an absolute timeout
         # so a client that sends no TLS bytes cannot pin this thread.
-        if self.server._ssl_context is not None:
+        if self.server._ssl_context is not None:  # type: ignore[unresolved-attribute]
             self.request.settimeout(self._HANDSHAKE_TIMEOUT)
             try:
-                self.request = self.server._ssl_context.wrap_socket(self.request, server_side=True)
+                self.request = self.server._ssl_context.wrap_socket(self.request, server_side=True)  # type: ignore[unresolved-attribute]
             except (TimeoutError, ssl.SSLError, OSError) as e:
                 logging_util.incr("dot_handshake_failed")
                 logging_util.warn("dot_handshake_error", err=str(e), peer=self.client_address[0])

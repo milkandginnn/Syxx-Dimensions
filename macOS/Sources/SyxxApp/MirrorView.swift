@@ -12,47 +12,34 @@ struct MirrorView: View {
     // a completed Mirror run rendered the never-ran / requires-Pro branch.
     private var warpManifest: WarpManifestResult? { model.sectionInputs.warpManifest }
 
+    // Mirror terminal-style expanded view state — default visible (the double terminal
+    // IS the Mirror display; summary cards are supplementary).
+    @State private var showTerminalDetails: Bool = true
+    @State private var remoteBundle: MirrorBundle? = nil
+    @State private var localBundle: MirrorBundle? = nil
+    @State private var mirrorDiffResult: DiffResult? = nil
+    @State private var mirrorDegradation: DegradationScore? = nil
+
     var body: some View {
         PurpleScrollView(geometry: .fullPanel) {
         VStack(alignment: .leading, spacing: 20) {
-            // Warden header: rune tile + eyebrow + name + lore
-            HStack(alignment: .top, spacing: 15) {
-                Text("\u{16DE}")
-                    .font(.custom("Cinzel-SemiBold", size: 28))
-                    .frame(width: 54, height: 54)
-                    .background(Color.ioMirrorYellow.opacity(0.10))
-                    .cornerRadius(14)
-                    .foregroundColor(Color.ioMirrorYellow)
-                    .shadow(color: Color.ioMirrorYellow.opacity(0.35), radius: 22)
-                    .accessibilityHidden(true)
+            ModuleHeader(rune: "\u{16DE}", eyebrow: "THE REFLECTION \u{00B7} REMOTE VS LOCAL", name: "Mirror", accent: .ioMirrorYellow) {
+                // Owner copy (Untitled 11.rtf:48, 2026-08-02). Cormorant SC Regular 17pt
+                // per the owner directive. Full pane width: the prior maxWidth: 560 clamp
+                // clipped this line, same defect Prophet's subcaption had.
+                Text("Grasped fast in the Prophet's hand, the Mirror did answer, and shewed the records born locally in accord with those discerned afar, proving that the true names shifted not their visages at each summoning.")
+                    .font(.bodyAlternate(17))
+                    .foregroundColor(.ioTextMuted)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("THE REFLECTION \u{00B7} REMOTE VS LOCAL")
-                        .font(.ioCaption(.bold))
-                        .foregroundColor(Color.ioMirrorYellow)
-                        .tracking(0.26)
-
-                    Text("Mirror")
-                        .font(.custom("Cinzel-SemiBold", size: 26))
-                        .foregroundColor(.ioText)
-
-                    // Owner copy (Untitled 11.rtf:48, 2026-08-02). Cormorant SC Regular 17pt
-                    // per the owner directive. Full pane width: the prior maxWidth: 560 clamp
-                    // clipped this line, same defect Prophet's subcaption had.
-                    Text("Grasped fast in the Prophet's hand, the Mirror did answer, and shewed the records born locally in accord with those discerned afar, proving that the true names shifted not their visages at each summoning.")
-                        .font(.bodyAlternate(17))
-                        .foregroundColor(.ioTextMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    // Body text beneath the subcaption (owner copy, Untitled 11.rtf:50,
-                    // 2026-08-02). Cormorant Garamond Regular 13pt, full pane width.
-                    // Describes the Content Warp hash comparison only; the DNS resolver
-                    // comparison and its Pro gating stay described below (E110).
-                    Text("Mirror pulls the static web contents as seen from your device, as well as the static web contents as seen from the remote server, and then compares their hashes. A match of the static web content hashes pulled from your device and the remote server generally means that the content you're being served is what the world is being served.")
-                        .font(.body(13))
-                        .foregroundColor(.ioTextSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                // Body text beneath the subcaption (owner copy, Untitled 11.rtf:50,
+                // 2026-08-02). Cormorant Garamond Regular 13pt, full pane width.
+                // Describes the Content Warp hash comparison only; the DNS resolver
+                // comparison and its Pro gating stay described below (E110).
+                Text("Mirror pulls the static web contents as seen from your device, as well as the static web contents as seen from the remote server, and then compares their hashes. A match of the static web content hashes pulled from your device and the remote server generally means that the content you're being served is what the world is being served.")
+                    .font(.body(13))
+                    .foregroundColor(.ioTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             // Domain picker container. Owner directive 2026-08-02: the Mirror module highlight
@@ -69,7 +56,7 @@ struct MirrorView: View {
                 // the literal double hyphen that follows. Do not "clean up" this punctuation
                 // and do not treat this line as precedent for any other string.
                 Text("Yourself looking into the mirror, you see a place\u{2014}a domain\u{2026}--very far away but seeming so close. What domain is it that you see?")
-                    .font(.cardTitle(14))
+                    .font(.deck(14))
                     .foregroundColor(.ioMirrorYellow)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -353,10 +340,132 @@ struct MirrorView: View {
                 .cornerRadius(12)
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
             }
+
+            // Terminal-style details section — the primary Mirror display.
+            // Always visible; populated with real data after a check runs,
+            // placeholder panes shown before the first run.
+            if showTerminalDetails {
+                terminalDetailsSection
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // Toggle + degradation badge row
+            HStack(spacing: 12) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showTerminalDetails.toggle()
+                        if showTerminalDetails && mirrorDiffResult == nil {
+                            buildTerminalData()
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: showTerminalDetails ? "chevron.up" : "chevron.down")
+                        Text(showTerminalDetails ? "Hide Terminals" : "Show Terminals")
+                    }
+                    .font(.ioCaption(.bold))
+                }
+                .buttonStyle(IoFilledButtonStyle(color: .ioElectric))
+
+                if let degradation = mirrorDegradation {
+                    MirrorDegradationBadge(score: degradation)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    // MARK: - Terminal Details Section
+
+    @ViewBuilder
+    private var terminalDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Side-by-side terminal panes
+            HStack(alignment: .top, spacing: 12) {
+                MirrorTerminalView(
+                    title: "Remote (Server)",
+                    domain: model.domain,
+                    bundle: remoteBundle,
+                    warning: remoteBundle?.isEmpty == true
+                        ? "No static content extracted. Content may be dynamically loaded."
+                        : nil
+                )
+                .frame(maxWidth: .infinity)
+
+                MirrorTerminalView(
+                    title: "Local (Your Mac)",
+                    domain: model.domain,
+                    bundle: localBundle,
+                    warning: localBundle?.isEmpty == true
+                        ? "No static content extracted. Content may be dynamically loaded."
+                        : nil
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .frame(minHeight: 320)
+
+            // Unified diff view
+            if let diff = mirrorDiffResult {
+                MirrorDiffView(diffResult: diff)
+                    .frame(minHeight: 200)
+            }
+        }
+    }
+
+    // MARK: - Build Terminal Data
+
+    /// Constructs MirrorBundle instances and diff from existing WarpResult/WarpManifest data.
+    /// This populates the terminal panes from whatever data the Mirror check produced.
+    private func buildTerminalData() {
+        let domain = model.domain.isEmpty ? "unknown" : model.domain
+
+        // Build from WarpResult if available (has raw HTML)
+        if let w = warp {
+            let remoteHTML = w.remoteHTML
+            let localHTML = w.localHTML
+
+            remoteBundle = StaticContentParser.makeBundle(
+                source: .remote, domain: domain, html: remoteHTML
+            )
+            localBundle = StaticContentParser.makeBundle(
+                source: .local, domain: domain, html: localHTML
+            )
+
+            if let remote = remoteBundle, let local = localBundle {
+                let diff = DiffEngine.compare(remote: remote, local: local)
+                mirrorDiffResult = diff
+                mirrorDegradation = DegradationCalculator.calculate(diff: diff)
+            }
+            return
+        }
+
+        // WarpManifest doesn't carry raw HTML; show placeholder bundles with hash info
+        if let m = warpManifest {
+            let detail = manifestDetail(m)
+            let placeholderHTML = "<!-- Content Warp: \(detail) -->"
+
+            remoteBundle = StaticContentParser.makeBundle(
+                source: .remote, domain: domain, html: placeholderHTML
+            )
+            localBundle = StaticContentParser.makeBundle(
+                source: .local, domain: domain, html: placeholderHTML
+            )
+            mirrorDiffResult = DiffResult(htmlDiff: [], cssDiff: [], jsDiff: [])
+            mirrorDegradation = DegradationScore(score: 0.0)
+            return
+        }
+
+        // No warp data at all — empty bundles
+        remoteBundle = StaticContentParser.makeBundle(
+            source: .remote, domain: domain, html: "<!-- No remote data available -->"
+        )
+        localBundle = StaticContentParser.makeBundle(
+            source: .local, domain: domain, html: "<!-- No local data available -->"
+        )
+        mirrorDiffResult = DiffResult(htmlDiff: [], cssDiff: [], jsDiff: [])
+        mirrorDegradation = DegradationScore(score: 0.0)
     }
 
     private func displayIPs(_ o: ResolverQueryOutcome) -> String {

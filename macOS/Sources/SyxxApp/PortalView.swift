@@ -20,33 +20,12 @@ struct PortalView: View {
     var body: some View {
         PurpleScrollView(geometry: .fullPanel) {
         VStack(alignment: .leading, spacing: 20) {
-            // Warden header: rune tile + eyebrow + name + lore
-            HStack(alignment: .top, spacing: 15) {
-                Text("\u{16DC}")
-                    .font(.custom("Cinzel-SemiBold", size: 28))
-                    .frame(width: 54, height: 54)
-                    .background(Color.ioSuccessGreen.opacity(0.10))
-                    .cornerRadius(14)
-                    .foregroundColor(Color.ioSuccessGreen)
-                    .shadow(color: Color.ioSuccessGreen.opacity(0.35), radius: 22)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("THE GATEKEEPER \u{00B7} LAN & ROUTE TRACE")
-                        .font(.ioCaption(.bold))
-                        .foregroundColor(Color.ioSuccessGreen)
-                        .tracking(0.26)
-
-                    Text("Portal")
-                        .font(.custom("Cinzel-SemiBold", size: 26))
-                        .foregroundColor(.ioText)
-
-                    Text("A Portal carried the traveler to a distant land, tracing the path of a hidden interceptor that had reached into the stream.")
-                        .font(.ioLore(16))
-                        .foregroundColor(.ioTextMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: 560)
-                }
+            ModuleHeader(rune: "\u{16DC}", eyebrow: "THE GATEKEEPER \u{00B7} LAN & ROUTE TRACE", name: "Portal", accent: .ioSuccessGreen) {
+                Text("A Portal carried the traveler to a distant land, tracing the path of a hidden interceptor that had reached into the stream.")
+                    .font(.ioLore(16))
+                    .foregroundColor(.ioTextMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 560)
             }
             
             // Form input
@@ -78,10 +57,10 @@ struct PortalView: View {
                 }
             }
             .padding(14)
-            .background(Color.ioSuccessGreen.opacity(0.05))
             .background(Color.ioSurfaceDark)
+            .background(Color.ioSuccessGreen.opacity(0.08))
             .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ioSuccessGreen.opacity(0.18), lineWidth: 1))
             
             // Resolvers & Interfaces Row
             HStack(spacing: 16) {
@@ -122,10 +101,10 @@ struct PortalView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, maxHeight: 140, alignment: .leading)
-                .background(Color.ioSuccessGreen.opacity(0.05))
+                .background(Color.ioSuccessGreen.opacity(0.08))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.18), lineWidth: 1))
                 
                 // Active Interfaces — real data from portalReport
                 VStack(alignment: .leading, spacing: 8) {
@@ -173,10 +152,10 @@ struct PortalView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, maxHeight: 140, alignment: .leading)
-                .background(Color.ioSuccessGreen.opacity(0.05))
+                .background(Color.ioSuccessGreen.opacity(0.08))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.18), lineWidth: 1))
             }
             
             // Side-by-side section: LAN Devices & Traceroute Hop Path
@@ -195,10 +174,10 @@ struct PortalView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(Color.ioSuccessGreen.opacity(0.05))
+                .background(Color.ioSuccessGreen.opacity(0.08))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.18), lineWidth: 1))
 
                 // Right side: Traceroute — real system traceroute, honest tri-state rendering.
                 VStack(alignment: .leading, spacing: 10) {
@@ -247,10 +226,10 @@ struct PortalView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(Color.ioSuccessGreen.opacity(0.05))
+                .background(Color.ioSuccessGreen.opacity(0.08))
                 .background(Color.ioSurfaceDark)
                 .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.15), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioSuccessGreen.opacity(0.18), lineWidth: 1))
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)

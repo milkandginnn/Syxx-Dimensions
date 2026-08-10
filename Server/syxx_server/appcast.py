@@ -78,8 +78,8 @@ def _ensure_key():
         return
 
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from cryptography.hazmat.primitives.serialization import (
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # type: ignore[unresolved-import]
+        from cryptography.hazmat.primitives.serialization import (  # type: ignore[unresolved-import]
             Encoding,
             PublicFormat,
             load_der_private_key,

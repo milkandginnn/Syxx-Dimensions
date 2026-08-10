@@ -140,6 +140,12 @@
 <script>
 const NUM_STANDARD = 6, NUM_EXTENDED = 20, TRIGGER_DELAY_MS = 300;
 
+// E210/E211: HTML entity escape function to prevent XSS via innerHTML
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function addStep(text, cls) {
   const el = document.getElementById('steps');
   const s = document.createElement('div');
@@ -275,7 +281,7 @@ function displayResults(data, probeCount) {
     resultClass = 'safe';
     resultText = '1 resolver observed your DNS queries';
     explainHTML = '<p>All ' + obs.length + ' DNS queries were forwarded by a single resolver:</p>' +
-      '<p style="margin-top:4px;font-family:ui-monospace,monospace;color:#2dd4bf">' + resolverList[0][0] + '</p>' +
+      '<p style="margin-top:4px;font-family:ui-monospace,monospace;color:#2dd4bf">' + esc(resolverList[0][0]) + '</p>' +
       '<p style="margin-top:8px"><strong>Verify this resolver matches your VPN or encrypted DNS provider.</strong> This test cannot confirm whether your DNS traffic is encrypted or whether this resolver is the one you intended to use.</p>';
   } else {
     resultClass = uniqueCount <= 2 ? 'warn' : 'leak';
@@ -296,20 +302,20 @@ function displayResults(data, probeCount) {
   }
   explainHTML += osGuidance;
 
-  document.getElementById('result-box').innerHTML = '<div class="result ' + resultClass + '">' + resultText + '</div>' +
-    '<p style="font-size:13px;color:#8f83b8">' + obs.length + ' observations from ' + probeCount + ' probes</p>';
+  document.getElementById('result-box').innerHTML = '<div class="result ' + esc(resultClass) + '">' + esc(resultText) + '</div>' +
+    '<p style="font-size:13px;color:#8f83b8">' + esc(obs.length) + ' observations from ' + esc(probeCount) + ' probes</p>';
 
   // Resolver table
   let tableHTML = '<table><thead><tr><th>Resolver IP</th><th>Hostname</th><th>Queries</th></tr></thead><tbody>';
   resolverList.forEach(([ip, info]) => {
-    tableHTML += '<tr><td>' + ip + '</td><td>' + (info.hostname || '—') + '</td><td>' + info.count + '</td></tr>';
+    tableHTML += '<tr><td>' + esc(ip) + '</td><td>' + esc(info.hostname || '—') + '</td><td>' + esc(info.count) + '</td></tr>';
   });
   tableHTML += '</tbody></table>';
   document.getElementById('resolvers-table').innerHTML = tableHTML;
 
   // Attestation
   if (data.attestation) {
-    document.getElementById('attestation').innerHTML = '<p style="font-size:12px;color:#6f6597">Attestation signed by collector key <code>' + (data.keyId || '') + '</code>. Verifiable with the public key at <a href="/api/pubkey">/api/pubkey</a>.</p>';
+    document.getElementById('attestation').innerHTML = '<p style="font-size:12px;color:#6f6597">Attestation signed by collector key <code>' + esc(data.keyId || '') + '</code>. Verifiable with the public key at <a href="/api/pubkey">/api/pubkey</a>.</p>';
   }
 
   document.getElementById('explain-text').innerHTML = explainHTML;

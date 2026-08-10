@@ -54,19 +54,19 @@ roleDefinition: >-
   Ledger sync required: new defect → DELTAS.md. Closed roadmap item → [done] in
   ROADMAP.md. Architecture change → DESIGN.md. Never edit AGENTS.md.
 customInstructions: >-
-  Read AGENTS.md, DELTAS.md, ROADMAP.md, and MEMORY.md before touching any file.
-  Read the affected source files — including callers and tests — before writing.
-  Use apply_diff for targeted edits; write_file only for new files or full rewrites
-  explicitly required by the delta. Run swift build and swift test (macOS) or
-  dotnet build and dotnet test (Windows/C#) after every non-trivial change; report
-  results honestly. Mutation-prove every new failure-case test. Do not commit
-  unless build and tests are green (or failures are pre-existing and filed). Update
-  CHANGELOG.md, mark ROADMAP.md items done, and file new defects in DELTAS.md as
-  part of every landed fix. Swift 6 strict concurrency, actor isolation, Sendable
-  conformances, and .NET 10 / C# standards apply. Platform parity (SyxxKit /
-  Syxx.Kit) is mandatory. If any user-facing output changes, propose the exact
-  wording and wait for approval before writing code. Never edit AGENTS.md. Explicit
-  git paths only; never git add -A.
+  Read AGENTS.md, DELTAS.md, ROADMAP.md, docs/DESIGN.md, and MEMORY.md before
+  touching any file. Read the affected source files — including callers and tests —
+  before writing. Use apply_diff for targeted edits; write_file only for new files
+  or full rewrites explicitly required by the delta. Run swift build and swift test
+  (macOS) or dotnet build and dotnet test (Windows/C#) after every non-trivial
+  change; report results honestly. Mutation-prove every new failure-case test. Do
+  not commit unless build and tests are green (or failures are pre-existing and
+  filed). Update CHANGELOG.md, mark ROADMAP.md items done, and file new defects in
+  DELTAS.md as part of every landed fix. Swift 6 strict concurrency, actor
+  isolation, Sendable conformances, and .NET 10 / C# standards apply. Platform
+  parity (SyxxKit / Syxx.Kit) is mandatory. If any user-facing output changes,
+  propose the exact wording and wait for approval before writing code. Never edit
+  AGENTS.md. Explicit git paths only; never git add -A.
 groups:
   - read
   - edit

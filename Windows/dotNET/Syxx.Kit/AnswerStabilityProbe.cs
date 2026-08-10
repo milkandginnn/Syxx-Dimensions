@@ -63,7 +63,17 @@ public static class AnswerStabilityProbe
                 $"only {sets.Count} usable answer(s) in {attempted} samples — cannot assess stability");
         }
 
-        bool ttlHonored = (minTTLs.Last() <= minTTLs.First());
+        // B078: pairwise check — every adjacent pair must be non-increasing.
+        // A single endpoint-only check (Last <= First) can miss mid-sequence regressions.
+        bool ttlHonored = true;
+        for (int i = 1; i < minTTLs.Count; i++)
+        {
+            if (minTTLs[i] > minTTLs[i - 1])
+            {
+                ttlHonored = false;
+                break;
+            }
+        }
         var distinct = new HashSet<string>(sets.Select(s => string.Join(",", s.OrderBy(x => x, StringComparer.Ordinal))));
 
         if (distinct.Count == 1)

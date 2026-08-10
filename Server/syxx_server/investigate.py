@@ -10,32 +10,27 @@ DNSSEC is reported as *observed* (DNSKEY/RRSIG presence + AD bit), not
 cryptographically validated — labeled honestly, matching the project's stance.
 """
 
-import os
 import re
 import time
 
 from . import config, passivedns, resolver
 
-_HOSTNAME = re.compile(r"^(?=.{1,253}$)([a-zA-Z0-9_-]{1,63}\.)+[a-zA-Z]{2,63}\.?$")
+# SM-001: support internationalized domain names (IDN). The previous regex
+# only matched ASCII labels — any IDN (e.g. "münchen.de") was rejected as
+# invalid. Accept non-ASCII Unicode labels; the resolver's _encode_name
+# handles IDNA encoding to Punycode before wire transmission.
+# A291: accept Punycode TLDs (xn--...) in addition to Unicode/ASCII TLDs.
+# The previous TLD segment [a-zA-Z\u00C0-\uFFFF]{2,63} rejected Punycode TLDs
+# like xn--fiqs8s (.中国) because they contain digits. Add an xn-- alternative.
+_HOSTNAME = re.compile(
+    r"^(?=.{1,253}$)"
+    r"([a-zA-Z0-9_\u00C0-\uFFFF-]{1,63}\.)+"
+    r"(?:xn--[a-zA-Z0-9-]{1,59}|[a-zA-Z\u00C0-\uFFFF]{2,63})\.?$"
+)
 
 
 def _env_int(name, default):
-    # A154: log the coercion so the operator is told their value was discarded.
-    raw = os.environ.get(name, "")
-    if not raw.strip():
-        return default
-    try:
-        return int(raw.strip())
-    except (TypeError, ValueError):
-        import logging
-
-        logging.getLogger("syxx-server").warning(
-            "config_invalid_int: %s=%r is not a valid integer; using default %r",
-            name,
-            raw,
-            default,
-        )
-        return default
+    return config._i(name, default)
 
 
 # A096: aggregate wall-clock budget for one investigation. Each vantage query is
@@ -73,9 +68,10 @@ def _query_vantage(kind, target, domain, qtype):
     return resolver.query_doh(domain, qtype, target["ip"], target["sni"], target["path"], timeout=config.DOH_TIMEOUT)
 
 
-def _resolve_all(domain, qtype, deadline=None):
+def _resolve_all(domain, qtype, deadline=None, vantages=None):
     per_resolver = {}
-    for kind, label, target in _vantages():
+    vantage_list = vantages if vantages is not None else _vantages()
+    for kind, label, target in vantage_list:
         if deadline is not None and time.monotonic() > deadline:
             # A096: aggregate budget spent. Leave the rest of the vantages unqueried
             # and absent — consensus is computed only over vantages that actually
@@ -147,6 +143,18 @@ def _consensus_one(by_vantage):
     # evidence, not absent evidence. The old filter kept only status=="ok" AND
     # non-empty values, so a selectively-censored vantage silently vanished and the
     # remaining two agreeing vantages produced "consistent".
+    # A279: when >50% of vantages are unreachable (errors, not just empty),
+    # consensus among the remaining few masks selective censorship. Escalate
+    # to 'inconclusive' with a failure rate note before computing agreement.
+    total_vantages = len(by_vantage)
+    unreachable = sum(1 for d in by_vantage.values() if d.get("status") == "error")
+    if total_vantages > 0 and unreachable > total_vantages / 2:
+        return (
+            "inconclusive",
+            f"majority of vantages unreachable ({unreachable}/{total_vantages} failed); "
+            "cannot form a reliable consensus — possible selective censorship",
+        )
+
     answered = {k: d for k, d in by_vantage.items() if d.get("status") in ("ok", "nxdomain")}
     if not answered:
         # A045: distinguish all-rcode-failure from all-transport-error, so the user
@@ -203,14 +211,22 @@ def _consensus_one(by_vantage):
         any_non_ok = any(d.get("status") != "ok" for d in by_vantage.values())
         if any_non_ok:
             return "consistent-degraded", f"majority of vantages agree ({best_count}/{total_with_vals}); some vantages unreachable"
+        # A290: single-vantage result — cannot cross-check.
         if total_with_vals == 1:
             return "single-vantage", (
                 "only one vantage was reachable (this network blocks the others); cannot cross-check for tampering"
             )
         return "consistent", f"vantages agree ({best_count}/{total_with_vals})"
     else:
-        # No majority — genuine disagreement. Could be tampering, or could be
-        # geo-split / CDN with equal distribution.
+        # A292: when only 2 vantages answered with values and they disagree,
+        # this is likely geo/CDN split rather than tampering. With so few
+        # data points, "divergent" overstates confidence in the divergence.
+        if total_with_vals <= 2:
+            return "consistent-degraded", (
+                f"only {total_with_vals} vantage(s) returned values and they disagree; "
+                "insufficient data to declare divergence — likely geo/CDN split"
+            )
+        # No majority with 3+ vantages — genuine disagreement.
         return "divergent", f"vantages disagree — no majority ({best_count}/{total_with_vals} agree); possible geo/CDN split or tampering"
 
 
@@ -231,7 +247,7 @@ def _consensus(a_by_vantage, aaaa_by_vantage):
 _DNSSEC_NOTE = "presence-only; not cryptographically validated"
 
 
-def _dnssec_observed(domain, deadline=None):
+def _dnssec_observed(domain, deadline=None, vantages=None):
     """DNSSEC posture as OBSERVED across vantages — never cryptographically validated.
 
     S13: the previous revision issued a SECOND query with QTYPE=RRSIG (46). That does
@@ -255,13 +271,57 @@ def _dnssec_observed(domain, deadline=None):
     way to see an RRSIG, so its silence is absence of evidence, not evidence of absence.
     """
     per_vantage = []
-    for kind, label, target in _vantages():
+    vantage_list = vantages if vantages is not None else _vantages()
+    for kind, label, target in vantage_list:
         if deadline is not None and time.monotonic() > deadline:
             break
+        if kind == "doh":
+            # A293: DoH DNSSEC probe — query DNSKEY via DoH with DO bit.
+            # The DoH JSON API may not carry the DO bit directly, but we can
+            # still query for DNSKEY records and check for RRSIG presence.
+            try:
+                res = resolver.query_doh(
+                    domain, resolver.TYPE_DNSKEY if hasattr(resolver, "TYPE_DNSKEY") else 48,
+                    target["ip"], target["sni"], target["path"],
+                    timeout=config.DOH_TIMEOUT,
+                )
+                records = res.get("records", [])
+                dnskey_records = [r for r in records if r.get("type") in ("DNSKEY", 48)]
+                rrsig_records = [r for r in records if r.get("type") in ("RRSIG", 46)]
+                if dnskey_records and rrsig_records:
+                    signed = "yes"
+                    observed = True
+                    note = "DNSKEY+RRSIG observed via DoH (presence-only)"
+                elif dnskey_records:
+                    signed = "no"
+                    observed = False
+                    note = "DNSKEY present but no RRSIG via DoH"
+                else:
+                    signed = "no"
+                    observed = False
+                    note = "no DNSKEY records via DoH"
+                per_vantage.append({
+                    "signed": signed,
+                    "observed": observed,
+                    "adBit": res.get("ad", False),
+                    "note": note,
+                    "rrsigStatuses": [],
+                    "transport": kind,
+                    "vantage": label,
+                })
+            except Exception:
+                per_vantage.append({
+                    "signed": "unknown",
+                    "observed": False,
+                    "adBit": False,
+                    "note": "DoH DNSSEC probe failed",
+                    "rrsigStatuses": [],
+                    "transport": kind,
+                    "vantage": label,
+                })
+            continue
         if kind != "udp":
-            # No DO bit on this transport -> this vantage cannot answer the question.
-            # Record it as unknown rather than dropping it, so the caller can see how
-            # many vantages were consulted and why they had nothing to say.
+            # System resolver: no DO bit -> this vantage cannot answer.
             per_vantage.append(
                 {
                     "signed": "unknown",
@@ -340,9 +400,23 @@ def investigate(domain):
     if not valid_domain(domain) or len(domain) > 253:
         return None, "invalid domain"
     deadline = time.monotonic() + _INVESTIGATE_DEADLINE
-    a = _resolve_all(domain, resolver.TYPE_A, deadline)
-    aaaa = _resolve_all(domain, resolver.TYPE_AAAA, deadline)
+    t0 = time.monotonic()
+    vantages = _vantages()
+    a = _resolve_all(domain, resolver.TYPE_A, deadline, vantages=vantages)
+    aaaa = _resolve_all(domain, resolver.TYPE_AAAA, deadline, vantages=vantages)
     result, reason, (va, va_reason), (v6, v6_reason) = _consensus(a, aaaa)
+    # SM-004: include deadline metadata so the caller can see how much budget
+    # remained and whether the investigation was truncated.
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+    remaining_ms = max(0, int((_INVESTIGATE_DEADLINE - (time.monotonic() - t0)) * 1000))
+    # A294: count vantages that were skipped due to deadline exhaustion.
+    # These are invisible in the per-vantage dicts — the caller needs to know
+    # how many vantages were never queried so they can gauge result completeness.
+    all_vantage_count = len(vantages)
+    a_queried = len(a)
+    aaaa_queried = len(aaaa)
+    deadline_skipped_a = max(0, all_vantage_count - a_queried)
+    deadline_skipped_aaaa = max(0, all_vantage_count - aaaa_queried)
     return {
         "domain": domain,
         "ipv4": a,
@@ -351,5 +425,13 @@ def investigate(domain):
         "consensusReason": reason,
         "ipv4Consensus": va,
         "ipv6Consensus": v6,
-        "dnssec": _dnssec_observed(domain, deadline),
+        "dnssec": _dnssec_observed(domain, deadline, vantages=vantages),
+        "timing": {
+            "elapsed_ms": elapsed_ms,
+            "deadline_ms": _INVESTIGATE_DEADLINE * 1000,
+            "remaining_ms": remaining_ms,
+            # A294: how many vantages were skipped per record type due to deadline.
+            "deadline_skipped_ipv4": deadline_skipped_a,
+            "deadline_skipped_ipv6": deadline_skipped_aaaa,
+        },
     }, None

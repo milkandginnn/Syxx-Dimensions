@@ -246,16 +246,22 @@ public enum ResolverConsensusEngine {
             for r in publicResolvers {
                 group.addTask { (r.name, await queryOutcome(DNSQuery(name: domain, type: qtype, server: r.ip))) }
             }
+            var results: [(String, ResolverQueryOutcome)] = []
+            for await (name, outcome) in group { results.append((name, outcome)) }
+            results.sort { $0.0 < $1.0 }
             var out: [String: ResolverQueryOutcome] = [:]
-            for await (name, outcome) in group { out[name] = outcome }
+            for (name, outcome) in results { out[name] = outcome }
             return out
         }
         let doh = await withTaskGroup(of: (String, ResolverQueryOutcome).self) { group -> [String: ResolverQueryOutcome] in
             for name in mirrorPrimaryResolvers {
                 group.addTask { (name, await dohOutcome(domain: domain, type: qtype, endpoint: dohEndpoints[name]!)) }
             }
+            var results: [(String, ResolverQueryOutcome)] = []
+            for await (name, outcome) in group { results.append((name, outcome)) }
+            results.sort { $0.0 < $1.0 }
             var out: [String: ResolverQueryOutcome] = [:]
-            for await (name, outcome) in group { out[name] = outcome }
+            for (name, outcome) in results { out[name] = outcome }
             return out
         }
         let localOutcome = await localTask

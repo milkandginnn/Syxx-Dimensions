@@ -54,3 +54,38 @@ public enum OTelBootstrap {
         SyxxTracer.enable()
     }
 }
+
+// D367: unified telemetry bootstrap that ensures Sentry and OTel always receive the SAME
+// consent value. Previously, callers could pass different `ifAllowed` to each bootstrap,
+// producing a state where Sentry reported crashes but OTel recorded no traces (or vice versa),
+// making Sentry issues uncorrelatable with trace data.
+//
+// Usage: call TelemetryBootstrap.setup(allowed:) ONCE at app/CLI startup instead of calling
+// SentryBootstrap.setup(), SentryDiagnosticSink.install(), and OTelBootstrap.setup() separately.
+public enum TelemetryBootstrap {
+    /// Install all telemetry (Sentry crash reporting, Sentry diagnostic sink, OTel tracing)
+    /// with a single consent decision. `surface` is forwarded to SentryDiagnosticSink (D331).
+    @discardableResult
+    public static func setup(
+        allowed: Bool = TelemetryGate.isAllowed,
+        serviceName: String = "syxx-macos",
+        surface: String = "gui"
+    ) -> Bool {
+        SentryBootstrap.setup(ifAllowed: allowed)
+        let installed = SentryDiagnosticSink.install(ifAllowed: allowed, surface: surface)
+        OTelBootstrap.setup(serviceName: serviceName, ifAllowed: allowed)
+        return installed
+    }
+
+    /// Withdraw consent: disable tracing, close Sentry, discard buffered data.
+    public static func withdrawConsent() {
+        OTelBootstrap.discardOnConsentWithdrawal()
+        SentryDiagnosticSink.remove()
+    }
+
+    /// Re-grant consent mid-session.
+    public static func grantConsent(serviceName: String = "syxx-macos", surface: String = "gui") {
+        OTelBootstrap.resumeOnConsentGranted()
+        SentryDiagnosticSink.install(ifAllowed: true, surface: surface)
+    }
+}

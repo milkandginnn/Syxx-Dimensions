@@ -35,5 +35,43 @@
 			<integer>4</integer>
 		</dict>
 	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>DeepSyxx</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>SyxxApp</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>SyxxAppTests</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>SyxxKit</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>SyxxKitTests</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>syxx</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>syxx-gui</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+	</dict>
 </dict>
 </plist>

@@ -20,12 +20,24 @@ import SyxxKit
 /// here: the cost of a redundant check is nothing; the cost of a leak is the product's premise.
 public struct SentryDiagnosticSink: DiagnosticSink {
 
+    // D331: the surface this sink was installed for — "gui", "cli", or "server".
+    // Tagged on every event so Sentry queries can filter by surface.
+    private let surface: String
+
+    public init(surface: String = "gui") {
+        self.surface = surface
+    }
+
     /// Install if and only if consent allows. Returns whether reporting is now live, so callers
     /// can surface the OBSERVED state rather than the toggle position.
+    ///
+    /// D331: `surface` parameter tags every event with the actual surface (gui, cli, server)
+    /// instead of hardcoding "gui". CLI diagnostics tagged as GUI made it impossible to filter
+    /// CLI-specific crash rates in Sentry.
     @discardableResult
-    public static func install(ifAllowed: Bool = TelemetryGate.isAllowed) -> Bool {
+    public static func install(ifAllowed: Bool = TelemetryGate.isAllowed, surface: String = "gui") -> Bool {
         guard ifAllowed else { return false }
-        SyxxDiagnostics.install(SentryDiagnosticSink())
+        SyxxDiagnostics.install(SentryDiagnosticSink(surface: surface))
         return true
     }
 
@@ -46,7 +58,7 @@ public struct SentryDiagnosticSink: DiagnosticSink {
         tags["syxx.component"]   = event.component
         tags["syxx.impact"]      = event.impact.rawValue
         tags["syxx.section"]     = event.section?.rawValue ?? "none"
-        tags["syxx.surface"]     = "gui"
+        tags["syxx.surface"]     = surface  // D331: use the configured surface, not hardcoded "gui"
         tags["syxx.platform"]    = "macos"
         // Join key to the result-provenance event and to the OTel span, so one query returns the
         // whole causal chain: which failure, which section, which result.

@@ -82,7 +82,10 @@ public final class DimensionService {
         }
         guard let url = URL(string: "\(baseURL)/api/startup?platform=\(platform)&version=\(version)") else { return nil }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            // E221: use ephemeral session to prevent shared URLCache from persisting
+            // Dimension API responses. A MITM window could poison the cache.
+            let ephemeralSession = URLSession(configuration: .ephemeral)
+            let (data, _) = try await ephemeralSession.data(from: url)
             let decoded = try JSONDecoder().decode(StartupResponse.self, from: data)
             cacheResponse(decoded)
             return decoded
@@ -120,7 +123,10 @@ public final class DimensionService {
         }
         guard let url = URL(string: "\(baseURL)/api/broadcast") else { return nil }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            // E221: use ephemeral session to prevent shared URLCache from persisting
+            // Dimension API responses. A MITM window could poison the cache.
+            let ephemeralSession = URLSession(configuration: .ephemeral)
+            let (data, _) = try await ephemeralSession.data(from: url)
             let wrapper = try JSONDecoder().decode([String: Broadcast?].self, from: data)
             return wrapper["broadcast"] ?? nil
         } catch {

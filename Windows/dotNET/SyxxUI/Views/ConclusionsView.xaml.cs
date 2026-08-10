@@ -12,11 +12,25 @@ namespace SyxxUI.Views;
 
 public sealed partial class ConclusionsView : Page
 {
+    private static readonly HashSet<string> _conclusionsProps = new()
+    {
+        nameof(AppViewModel.Conclusion), nameof(AppViewModel.SectionInputs), nameof(AppViewModel.IsPro),
+    };
+
     private AppViewModel? _vm;
 
     public ConclusionsView()
     {
         InitializeComponent();
+
+        Header.AddContent(new TextBlock
+        {
+            Text = "Unified synthesis of network evidence across all six wardens.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoFontLore"],
+            FontSize = 16,
+            Foreground = (Brush)Application.Current.Resources["IoTextMutedBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
     }
 
     // E155: subscribe to PropertyChanged so the pane refreshes when data changes while visible.
@@ -28,7 +42,11 @@ public sealed partial class ConclusionsView : Page
         _vm = e.Parameter as AppViewModel;
         if (_vm is not null)
         {
-            _pcHandler = (_, _) => Refresh();
+            _pcHandler = (_, e) =>
+            {
+                if (string.IsNullOrEmpty(e.PropertyName) || _conclusionsProps.Contains(e.PropertyName))
+                    Refresh();
+            };
             _vm.PropertyChanged += _pcHandler;
         }
         Refresh();

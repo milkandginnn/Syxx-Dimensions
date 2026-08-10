@@ -34,6 +34,21 @@
     <Color x:Key="IoAccentStartColor">#FFD9A441</Color>
     <Color x:Key="IoAccentEndColor">#FF5B3FD6</Color>
 
+    <!-- ═══ Module accent colors ═══ -->
+    <Color x:Key="IoMirrorYellowColor">#FFFFD400</Color>
+    <Color x:Key="IoGluttonPinkColor">#FFFF6EB4</Color>
+    <Color x:Key="IoCageCyanColor">#FF00E5FF</Color>
+    <Color x:Key="IoWitnessRedColor">#FFFF3355</Color>
+
+    <!-- D306/D309: dark teal text on teal-gradient buttons (white-on-dark parity with macOS). -->
+    <Color x:Key="IoTealButtonTextColor">#FF0A2E2A</Color>
+    <!-- D310: muted lavender for decorative nav runes (Elder Futhark glyphs). -->
+    <Color x:Key="IoRuneMutedColor">#FF9B8AC9</Color>
+    <!-- D310: muted violet for sidebar subtitle text (e.g. "DNS Investigation"). -->
+    <Color x:Key="IoSidebarSubtitleColor">#FF8F83B8</Color>
+    <!-- D310: warm gold for terminal prompt text (PS C:\Users\user>). -->
+    <Color x:Key="IoTerminalPromptColor">#FFE5C07B</Color>
+
     <!-- ═══ Semantic / severity ═══ -->
     <Color x:Key="IoSuccessGreenColor">#FF2DD4BF</Color>
     <!-- Prophet module highlight (owner directive 2026-08-02): rgba(0, 180, 255) = #00b4ff.
@@ -78,6 +93,21 @@
     <SolidColorBrush x:Key="IoInfoPurpleBrush" Color="{StaticResource IoInfoPurpleColor}" />
     <SolidColorBrush x:Key="IoGoldBrush" Color="{StaticResource IoGoldColor}" />
     <SolidColorBrush x:Key="IoGoldDarkBrush" Color="{StaticResource IoGoldDarkColor}" />
+
+    <!-- Module accent brushes -->
+    <SolidColorBrush x:Key="IoMirrorYellowBrush" Color="{StaticResource IoMirrorYellowColor}" />
+    <SolidColorBrush x:Key="IoGluttonPinkBrush" Color="{StaticResource IoGluttonPinkColor}" />
+    <SolidColorBrush x:Key="IoCageCyanBrush" Color="{StaticResource IoCageCyanColor}" />
+    <SolidColorBrush x:Key="IoWitnessRedBrush" Color="{StaticResource IoWitnessRedColor}" />
+
+    <!-- D306/D309: dark teal text for teal-gradient buttons -->
+    <SolidColorBrush x:Key="IoTealButtonTextBrush" Color="{StaticResource IoTealButtonTextColor}" />
+    <!-- D310: decorative nav rune foreground -->
+    <SolidColorBrush x:Key="IoRuneMutedBrush" Color="{StaticResource IoRuneMutedColor}" />
+    <!-- D310: sidebar subtitle foreground -->
+    <SolidColorBrush x:Key="IoSidebarSubtitleBrush" Color="{StaticResource IoSidebarSubtitleColor}" />
+    <!-- D310: terminal prompt foreground -->
+    <SolidColorBrush x:Key="IoTerminalPromptBrush" Color="{StaticResource IoTerminalPromptColor}" />
 
     <!-- ═══ Typography (Syxx Dimensions type system; Phase A owner-approved role map) ═══
          Semantic roles mirror macOS IoDesignSystem.swift:172-195 (SyxxTypeRole).

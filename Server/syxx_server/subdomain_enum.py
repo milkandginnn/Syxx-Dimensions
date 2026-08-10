@@ -16,7 +16,7 @@ import ssl
 import time
 import urllib.parse
 
-from . import config, resolver
+from . import config, investigate, resolver
 
 _CRTSH_HOST = "crt.sh"
 _CRTSH_PATH_TPL = "/?q=%.{domain}&output=json"
@@ -110,6 +110,10 @@ def _query_crtsh(domain, timeout):
     path = _CRTSH_PATH_TPL.format(domain=urllib.parse.quote(domain, safe=""))
     ctx = ssl.create_default_context()
     conn = http.client.HTTPSConnection(_CRTSH_HOST, timeout=timeout, context=ctx)
+    # A304: monotonic deadline for the entire query including read.
+    # The socket-level timeout protects individual reads, but a server
+    # dripping data at just under the timeout can still pin the thread.
+    query_deadline = time.monotonic() + timeout
     try:
         conn.request("GET", path, headers={"Accept": "application/json", "User-Agent": "syxx-server/1.0"})
         resp = conn.getresponse()
@@ -121,10 +125,26 @@ def _query_crtsh(domain, timeout):
         if resp.status != 200:
             raise _CrtshError(f"unexpected status {resp.status}")
 
-        # A165: read body BEFORE closing, with an explicit byte cap
-        body = resp.read(_CRTSH_MAX_BODY + 1)
-        if len(body) > _CRTSH_MAX_BODY:
-            raise _CrtshError(f"response body exceeds {_CRTSH_MAX_BODY} bytes")
+        # A304: chunked read with monotonic deadline. Read in chunks and
+        # enforce the deadline between reads so a slow server cannot pin
+        # the thread beyond the timeout even if individual reads succeed.
+        chunks = []
+        total = 0
+        _READ_CHUNK_SIZE = 65536  # 64 KiB chunks
+        while True:
+            if time.monotonic() > query_deadline:
+                raise _CrtshError(f"query deadline exceeded ({timeout}s)")
+            # Adjust socket timeout to remaining deadline for this read.
+            remaining = query_deadline - time.monotonic()
+            conn.sock.settimeout(min(remaining, timeout))
+            chunk = resp.read(_READ_CHUNK_SIZE)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > _CRTSH_MAX_BODY:
+                raise _CrtshError(f"response body exceeds {_CRTSH_MAX_BODY} bytes")
+            chunks.append(chunk)
+        body = b"".join(chunks)
     except _CrtshError:
         raise
     except Exception as exc:
@@ -150,6 +170,10 @@ def _extract_subdomains(entries, domain):
     """
     seen = set()
     suffix = "." + domain
+    # SM-028: validate extracted names before including them. crt.sh can return
+    # names with invalid characters, excessively long labels, or other malformed
+    # data that would crash downstream DNS resolution.
+    _VALID_NAME_RE = re.compile(r"^(?=.{1,253}$)([a-zA-Z0-9*_-]{1,63}\.)+[a-zA-Z]{2,63}\.?$")
     for entry in entries:
         names = []
         cn = entry.get("common_name") or ""
@@ -164,6 +188,11 @@ def _extract_subdomains(entries, domain):
                 continue
             name = _WILDCARD_RE.sub("", name)
             if not name:
+                continue
+            # SM-028: reject names with invalid characters or excessive length.
+            if len(name) > 253:
+                continue
+            if not _VALID_NAME_RE.match(name + "."):
                 continue
             if name == domain or name.endswith(suffix):
                 seen.add(name)
@@ -210,10 +239,20 @@ def _resolve_subdomains(names, deadline):
 
 
 def _resolve_one_sequential(name, resolvers):
-    """Try to resolve *name* to A/AAAA records. Returns list of IP strings or [].
+    """Try to resolve *name* to A+AAAA records. Returns list of IP strings or [].
 
-    (SD-109: this is the inner sequential resolver; the outer
-    _resolve_subdomains fans out across names in parallel.)"""
+    SM-027: collect IPs from BOTH A and AAAA across all resolvers, not just the
+    first successful response. The previous code returned on the first resolver
+    that answered, missing AAAA records when A succeeded first (and vice versa).
+    A289: collect records from ALL resolvers, not just the first that succeeds.
+    The previous early-return on first resolver success missed records visible
+    only to other resolvers (e.g. geo-split DNS, anycast differences).
+    """
+    # A303: validate the domain name before querying DNS.
+    if not investigate.valid_domain(name):
+        return []
+
+    all_ips = []
     for server in resolvers:
         for qtype in (resolver.TYPE_A, resolver.TYPE_AAAA):
             try:
@@ -221,5 +260,10 @@ def _resolve_one_sequential(name, resolvers):
             except Exception:  # noqa: S112 — one enumeration candidate failing must not abort the sweep
                 continue
             if resp.get("rcode") == 0 and resp.get("records"):
-                return [a["value"] for a in resp["records"] if a.get("type") in ("A", "AAAA")]
-    return []
+                for a in resp["records"]:
+                    if a.get("type") in ("A", "AAAA"):
+                        ip = a["value"]
+                        if ip not in all_ips:
+                            all_ips.append(ip)
+    # A289: return all collected IPs from all resolvers (removed early return).
+    return all_ips

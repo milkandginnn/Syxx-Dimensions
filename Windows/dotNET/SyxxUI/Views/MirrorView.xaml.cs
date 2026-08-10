@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.UI.Xaml;
@@ -11,6 +12,11 @@ namespace SyxxUI.Views;
 
 public sealed partial class MirrorView : Page
 {
+    private static readonly HashSet<string> _mirrorProps = new()
+    {
+        nameof(AppViewModel.SectionInputs), nameof(AppViewModel.MirrorRunState), nameof(AppViewModel.MirrorRunMessage),
+    };
+
     public ObservableCollection<ResolverRow> ResolverRows { get; } = [];
 
     private AppViewModel? _vm;
@@ -19,6 +25,23 @@ public sealed partial class MirrorView : Page
     {
         InitializeComponent();
         ResolverRowsList.ItemsSource = ResolverRows;
+
+        Header.AddContent(new TextBlock
+        {
+            Text = "Grasped fast in the Prophet's hand, the Mirror did answer, and shewed the records born locally in accord with those discerned afar, proving that the true names shifted not their visages at each summoning.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoFontLore"],
+            FontSize = 17,
+            Foreground = (Brush)Application.Current.Resources["IoTextMutedBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
+        Header.AddContent(new TextBlock
+        {
+            Text = "Mirror pulls the static web contents as seen from your device, as well as the static web contents as seen from the remote server, and then compares their hashes. A match of the static web content hashes pulled from your device and the remote server generally means that the content you're being served is what the world is being served.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoTypeBody"],
+            FontSize = 13,
+            Foreground = (Brush)Application.Current.Resources["IoTextSecondaryBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
     }
 
     // E155: subscribe to PropertyChanged so the pane refreshes when data changes while visible.
@@ -30,7 +53,11 @@ public sealed partial class MirrorView : Page
         _vm = e.Parameter as AppViewModel;
         if (_vm is not null)
         {
-            _pcHandler = (_, _) => Refresh();
+            _pcHandler = (_, e) =>
+            {
+                if (string.IsNullOrEmpty(e.PropertyName) || _mirrorProps.Contains(e.PropertyName))
+                    Refresh();
+            };
             _vm.PropertyChanged += _pcHandler;
         }
         Refresh();
@@ -210,6 +237,10 @@ public sealed partial class MirrorView : Page
             WarpResultDetail.Text = detail;
             WarpResultBox.Background = Faint(color, 0.10);
             WarpResultBox.BorderBrush = Faint(color, 0.35);
+
+            // Show the details toggle button when warp data is available
+            ToggleDetailsBtn.Visibility = Visibility.Visible;
+            RefreshDetails(warp);
         }
         else if (comp is not null)
         {
@@ -217,13 +248,61 @@ public sealed partial class MirrorView : Page
             WarpEmptyText.Visibility = Visibility.Collapsed;
             WarpContent.Visibility = Visibility.Collapsed;
             WarpProGate.Visibility = Visibility.Visible;
+            ToggleDetailsBtn.Visibility = Visibility.Collapsed;
+            DetailsSection.Visibility = Visibility.Collapsed;
         }
         else
         {
             WarpEmptyText.Visibility = Visibility.Visible;
             WarpContent.Visibility = Visibility.Collapsed;
             WarpProGate.Visibility = Visibility.Collapsed;
+            ToggleDetailsBtn.Visibility = Visibility.Collapsed;
+            DetailsSection.Visibility = Visibility.Collapsed;
         }
+    }
+
+    // MARK: - Details section
+
+    private bool _detailsExpanded;
+
+    private void ToggleDetails_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        _detailsExpanded = !_detailsExpanded;
+        DetailsSection.Visibility = _detailsExpanded ? Visibility.Visible : Visibility.Collapsed;
+        ToggleDetailsBtn.Content = _detailsExpanded ? "▲ Hide Details" : "▼ View Details";
+    }
+
+    /// <summary>
+    /// Populate the terminal panes, diff view, and degradation badge from warp data.
+    /// </summary>
+    private void RefreshDetails(Syxx.Kit.WarpResult warp)
+    {
+        // Use the actual raw HTML from warp if available, otherwise reconstruct from URL lists
+        string remoteHtml = !string.IsNullOrEmpty(warp.RemoteHtml)
+            ? warp.RemoteHtml
+            : string.Join("\n", warp.RemoteScriptURLs.Select(u => $"<script src=\"{u}\"></script>")
+                .Concat(warp.RemoteStylesheetURLs.Select(u => $"<link rel=\"stylesheet\" href=\"{u}\">")));
+        string localHtml = !string.IsNullOrEmpty(warp.LocalHtml)
+            ? warp.LocalHtml
+            : string.Join("\n", warp.LocalScriptURLs.Select(u => $"<script src=\"{u}\"></script>")
+                .Concat(warp.LocalStylesheetURLs.Select(u => $"<link rel=\"stylesheet\" href=\"{u}\">")));
+
+        string domain = _vm?.Domain ?? "";
+        var remoteBundle = SyxxUI.Mirror.StaticContentParser.MakeBundle(
+            SyxxUI.Mirror.BundleSource.Remote, domain, remoteHtml);
+        var localBundle = SyxxUI.Mirror.StaticContentParser.MakeBundle(
+            SyxxUI.Mirror.BundleSource.Local, domain, localHtml);
+
+        // Populate terminal panes
+        RemoteTerminal.Populate("Remote (Server)", domain, remoteBundle);
+        LocalTerminal.Populate("Local (Your PC)", domain, localBundle);
+
+        // Compute diff and degradation
+        var diffResult = SyxxUI.Mirror.DiffEngine.Compare(remoteBundle, localBundle);
+        var score = SyxxUI.Mirror.DegradationCalculator.Calculate(diffResult);
+
+        DiffView.Populate(diffResult);
+        DegradationBadge.Populate(score);
     }
 }
 

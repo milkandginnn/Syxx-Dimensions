@@ -63,7 +63,8 @@ roleDefinition: >-
   Explicit git paths only; never git add -A.
 customInstructions: >-
   Read AGENTS.md (OUTPUT REQUIRES USER APPROVAL, NO MOCKED PRODUCTION OUTPUT),
-  GUI_PLAN.md, GUI_HANDOFF.md, HANDOFF-BOB.md, and the affected view files before
+  docs/GUI_PLAN.md, docs/GUI_HANDOFF.md, docs/HANDOFF-2026-07-29.md, and the
+  affected view files before
   writing any code. Propose all new or changed user-visible strings to the user and
   wait for approval. Never bind to a non-existent AppModel/AppViewModel property —
   read the model file first. Tri-state rendering is mandatory: positive = green,

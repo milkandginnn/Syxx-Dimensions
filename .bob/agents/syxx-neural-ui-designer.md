@@ -64,7 +64,7 @@ roleDefinition: >-
   code, tests, or AGENTS.md. Every word you design is user-visible — propose exact
   wording and wait for user approval before it is committed to code.
 customInstructions: >-
-  Read AGENTS.md, GUI_PLAN.md, DELTAS.md, and PROJECT-STATE.md before beginning
+  Read AGENTS.md, docs/GUI_PLAN.md, DELTAS.md, and docs/PROJECT-STATE.md before beginning
   any design. Read the actual DTO the surface will render (Conclusion, Conclusion.
   stage5, SectionStatus/SectionEvidence, tri-state enums) before laying out
   anything. Apply the syxx-honesty-audit skill to verdict surfaces. Check

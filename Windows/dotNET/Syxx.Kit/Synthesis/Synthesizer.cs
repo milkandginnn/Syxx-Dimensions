@@ -18,48 +18,48 @@ public sealed record SectionEvidence(SectionStatus Status, IReadOnlyList<Evidenc
 /// Optional per-section results; a null field means the section was not run (-> Untested).
 public sealed class SectionInputs
 {
-    public DNSResponse? Resolution;
-    public DNSSECStatus? Dnssec;
-    public DNSCanaries.CanaryResult? NxCanary;
-    public DNSCanaries.CanaryResult? DnssecCanary;
-    public ComparisonResult? Comparison;
+    public DNSResponse? Resolution { get; set; }
+    public DNSSECStatus? Dnssec { get; set; }
+    public DNSCanaries.CanaryResult? NxCanary { get; set; }
+    public DNSCanaries.CanaryResult? DnssecCanary { get; set; }
+    public ComparisonResult? Comparison { get; set; }
     /// The authoritative query context for the Stage-5 answer matrix — the domain/type Mirror
     /// actually queried; when null, Conclude() falls back to deriving from the first observed record.
-    public string? TargetDomain;
-    public ushort? TargetQueryType;
+    public string? TargetDomain { get; set; }
+    public ushort? TargetQueryType { get; set; }
     /// LEGACY warp result (retired proxy path) — kept as a compile shim for the Mirror View surface
     /// (owned by the UI stream). No longer populated; read <see cref="WarpManifest"/>.
-    public WarpResult? Warp;
+    public WarpResult? Warp { get; set; }
     /// WARP_MANIFEST_V1 signed-manifest content-integrity result (the live warp result).
-    public WarpManifestResult? WarpManifest;
-    public NetworkStateReport? Network;
-    public LeakTestResult? Leak;
-    public IReadOnlyList<ExfilAssessment>? Exfil;
+    public WarpManifestResult? WarpManifest { get; set; }
+    public NetworkStateReport? Network { get; set; }
+    public LeakTestResult? Leak { get; set; }
+    public IReadOnlyList<ExfilAssessment>? Exfil { get; set; }
     /// C058 — fraction (0..1) of Cage capture records that carried a real process identity, or null
     /// when this was not a capture-sourced run. Threaded to EvidenceAdapters.Cage(attributionRate:)
     /// by Conclude so a mostly-unattributed capture is Degraded, never a silent clean.
-    public double? CageAttributionRate;
-    public IReadOnlyList<AnswerDrift>? Drifts;
-    public IReadOnlyList<ConfigChange>? ConfigChanges;
+    public double? CageAttributionRate { get; set; }
+    public IReadOnlyList<AnswerDrift>? Drifts { get; set; }
+    public IReadOnlyList<ConfigChange>? ConfigChanges { get; set; }
     // Workstream H datapoints
-    public ResolverLatency? Latency;
-    public AnswerStability? Stability;
-    public WildcardSynthesis? WildcardSynthesis;
-    public DenialOfExistence? Denial;
-    public DualStackAudit? DualStack;
-    public EDNS0Capability? Edns0;
-    public VersionBindResult? VersionBind;
-    public StubEntropyAudit? StubEntropy;
-    public AuthoritativeComparison? Authoritative;
-    public SVCBFinding? Svcb;
-    public TTLAnomaly? TtlAnomaly;
-    public CNAMEChainAudit? CnameChain;
-    public EncryptedTransport? EncryptedTransport;
-    public OpenResolverFinding? OpenResolver;
-    public ECSLeak? Ecs;
-    public ResponseSizeAudit? ResponseSize;
+    public ResolverLatency? Latency { get; set; }
+    public AnswerStability? Stability { get; set; }
+    public WildcardSynthesis? WildcardSynthesis { get; set; }
+    public DenialOfExistence? Denial { get; set; }
+    public DualStackAudit? DualStack { get; set; }
+    public EDNS0Capability? Edns0 { get; set; }
+    public VersionBindResult? VersionBind { get; set; }
+    public StubEntropyAudit? StubEntropy { get; set; }
+    public AuthoritativeComparison? Authoritative { get; set; }
+    public SVCBFinding? Svcb { get; set; }
+    public TTLAnomaly? TtlAnomaly { get; set; }
+    public CNAMEChainAudit? CnameChain { get; set; }
+    public EncryptedTransport? EncryptedTransport { get; set; }
+    public OpenResolverFinding? OpenResolver { get; set; }
+    public ECSLeak? Ecs { get; set; }
+    public ResponseSizeAudit? ResponseSize { get; set; }
     /// Mirror · A2 server corroboration (Pro, additive).
-    public GroundTruth? ServerGroundTruth;
+    public GroundTruth? ServerGroundTruth { get; set; }
     /// B174: true when the system resolver was undetectable and a public substitute (e.g. 8.8.8.8)
     /// was used instead. Under substitution Mirror's local-versus-public comparison degenerates —
     /// local IS public — so `Conclude` caps the Mirror section at Degraded and the outcome can
@@ -69,7 +69,7 @@ public sealed class SectionInputs
     /// had no substituted-resolver input and therefore no cap, so the same run could return a clean
     /// Mirror section from evidence macOS treats as too degenerate to conclude from. Twin of
     /// `macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:82`.
-    public bool ResolverSubstituted;
+    public bool ResolverSubstituted { get; set; }
     /// The OBSERVED DNS-transport state during this section's own query window — the third
     /// transport question, distinct from the configured one (`Network.EncryptedDNS`) and the
     /// reachability one (`EncryptedTransport`). The three can legitimately disagree and a
@@ -81,7 +81,7 @@ public sealed class SectionInputs
     /// it is carried, not consumed, on macOS too, so no conclusion depends on it today. The field
     /// is mirrored now precisely because the first code that starts reading it on one side would
     /// otherwise create a silent behavioral divergence.
-    public DNSTransportWindow? TransportObservation;
+    public DNSTransportWindow? TransportObservation { get; set; }
 }
 
 public static class EvidenceAdapters

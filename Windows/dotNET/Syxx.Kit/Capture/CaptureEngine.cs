@@ -209,7 +209,7 @@ public sealed class CaptureSession : IDisposable
         return new DNSCaptureRecord
         {
             Process = proc,
-            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture),
+            Timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture),
             Packet = dns,
             Network = new NetworkContextReport
             {

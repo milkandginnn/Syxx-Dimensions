@@ -3,31 +3,26 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:SyxxUI.Views"
+    xmlns:pres="using:SyxxUI.Presentation"
     Background="Transparent">
 
     <ScrollViewer>
     <Grid Padding="32,18,32,32">
         <StackPanel Spacing="24">
 
-            <!-- Header: eyebrow + ornate line + Check button (parity with macOS GluttonView). -->
+            <!-- Header: module header + Check button (parity with macOS GluttonView). -->
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Spacing="8">
-                    <TextBlock Text="GLUTTON • DNS LEAK &amp; ENCRYPTION"
-                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoBlueBrush}" />
-                    <TextBlock Text="Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished."
-                               FontFamily="{StaticResource IoFontLore}" FontSize="18" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
-                </StackPanel>
+                <pres:ModuleHeader Grid.Column="0" x:Name="Header" Rune="&#x16A6;" Eyebrow="THE DEVOURER &#xB7; DNS LEAK TEST" Name="Glutton"
+                                   AccentBrush="{StaticResource IoRedBrush}" />
                 <Button Grid.Column="1" x:Name="CheckBtn" Content="Check for Leaks"
                         VerticalAlignment="Bottom" Margin="16,0,0,0"
                         Click="CheckBtn_Click"
                         Background="{StaticResource IoBlueBrush}"
-                        Foreground="{StaticResource IoTextBrush}"
+                        Foreground="{DynamicResource IoTextBrush}"
                         AutomationProperties.Name="Check for DNS leaks"
                         AutomationProperties.HelpText="Probes whether unencrypted DNS queries leak outside your VPN tunnel" />
             </Grid>
@@ -35,7 +30,7 @@
             <!-- Plain-language description (macOS full text). -->
             <TextBlock Text="Glutton probes whether unencrypted DNS queries leak outside encrypted VPN tunnels (syxx leak), catching when queries bypass configured tunnels and making them visible. This test is only meaningful if you're connected to the internet via a VPN or using DNS encryption profile. It will be skipped if no VPN or DNS encryption is detected."
                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                       Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                       Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
 
             <!-- Status cards -->
             <Grid>
@@ -45,45 +40,47 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Background="{StaticResource IoSurfaceDarkBrush}"
+                <Border Grid.Column="0" Background="{DynamicResource IoSurfaceDarkBrush}"
                         CornerRadius="12" Padding="18"
-                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                     <StackPanel Spacing="8">
                         <TextBlock Text="FEATURE STATUS:"
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock x:Name="FeatureStatusIcon" Text="✗"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="14" FontWeight="Bold"
-                                       Foreground="{StaticResource IoCriticalRedBrush}" />
+                                       Foreground="{DynamicResource IoCriticalRedBrush}" />
                             <TextBlock x:Name="FeatureStatusText" Text="Loading…"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="14" FontWeight="Bold"
-                                       Foreground="{StaticResource IoCriticalRedBrush}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource IoCriticalRedBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="2" Background="{StaticResource IoSurfaceDarkBrush}"
+                <Border Grid.Column="2" Background="{DynamicResource IoSurfaceDarkBrush}"
                         CornerRadius="12" Padding="18"
-                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                     <StackPanel Spacing="8">
                         <TextBlock Text="VPN / DNS ENCRYPTION STATUS:"
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" />
                         <TextBlock x:Name="VpnEmptyText" Text="Run Portal first or check the CLI for VPN status."
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                         <StackPanel x:Name="VpnContent" Spacing="8" Visibility="Collapsed">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <!-- D315: screen readers cannot convey color; add text alternative -->
                                 <Ellipse x:Name="VpnDot" Width="8" Height="8"
-                                         Fill="{StaticResource IoTextSecondaryBrush}" VerticalAlignment="Center" />
+                                         Fill="{DynamicResource IoTextSecondaryBrush}" VerticalAlignment="Center"
+                                         AutomationProperties.Name="VPN status indicator" />
                                 <TextBlock x:Name="VpnStatusText" Text="—"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="14" FontWeight="Bold"
-                                           Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                           Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                             <TextBlock x:Name="VpnDetailText" Text=""
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                       Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -93,13 +90,13 @@
             <StackPanel Spacing="10">
                 <TextBlock Text="TEST LABEL:"
                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                           Foreground="{StaticResource IoTextSecondaryBrush}" />
+                           Foreground="{DynamicResource IoTextSecondaryBrush}" />
                 <TextBlock x:Name="SubdomainText" Text="Run a leak check to generate a probe subdomain."
                            FontFamily="{StaticResource IoFontMono}" FontSize="14"
-                           Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                           Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                 <TextBlock x:Name="NoProbesText" Text="No probes dispatched."
                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                           Foreground="{StaticResource IoTextSecondaryBrush}" Visibility="Collapsed" />
+                           Foreground="{DynamicResource IoTextSecondaryBrush}" Visibility="Collapsed" />
                 <ListView x:Name="ProbesList" Background="Transparent" SelectionMode="None"
                           ItemsSource="{x:Bind ProbeRows}"
                           AutomationProperties.Name="DNS probe results"
@@ -114,9 +111,9 @@
                     </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="views:GluttonProbeRow">
-                            <Border Background="{StaticResource IoBackgroundDarkBrush}"
+                            <Border Background="{DynamicResource IoBackgroundDarkBrush}"
                                     CornerRadius="8" Padding="12,10"
-                                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -125,11 +122,11 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Probe via"
                                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                               Foreground="{StaticResource IoTextSecondaryBrush}"
+                                               Foreground="{DynamicResource IoTextSecondaryBrush}"
                                                VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="{x:Bind Server}" Margin="12,0"
                                                FontFamily="{StaticResource IoFontMono}" FontSize="13"
-                                               Foreground="{StaticResource IoTextBrush}"
+                                               Foreground="{DynamicResource IoTextBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="2" Text="{x:Bind SentLabel}"
                                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
@@ -144,28 +141,28 @@
 
             <!-- Collector verification. D044/D004: the conclusion is rendered from the REAL LeakTestResult
                  and honesty-gated on the signed attestation — never a hardcoded pass. -->
-            <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
-                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+            <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                 <StackPanel Spacing="14">
                     <TextBlock Text="COLLECTOR VERIFICATION:"
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     <TextBlock Text="A leak collector confirms which upstream resolver actually forwarded your probes. The collector produces a signed attestation usable as evidence."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                     <TextBlock x:Name="LeakResultText" Text="No leak check has run yet."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="16" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                     <TextBlock x:Name="LeakResultDetailText"
                                Text="Run a leak check; the collector's signed attestation decides the conclusion shown here."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
-                    <Border Background="{StaticResource IoBackgroundDarkBrush}"
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                    <Border Background="{DynamicResource IoBackgroundDarkBrush}"
                             CornerRadius="8" Padding="12"
-                            BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                            BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                         <TextBlock Text="&gt; syxx leak --collector https://syxx.app --key &lt;license-key&gt;   (CLI equivalent)"
                                    FontFamily="{StaticResource IoFontMono}" FontSize="12"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                     </Border>
                 </StackPanel>
             </Border>

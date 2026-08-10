@@ -16,6 +16,8 @@ struct SettingsView: View {
     @State private var encryptState = "Checking…"
     @State private var encryptBusy = false
     @State private var dataNote = ""
+    @AppStorage("concealQueriedDomains") private var concealQueriedDomains = false
+    @AppStorage("concealClientIdentifiers") private var concealClientIdentifiers = false
 
     private let resolvers = EncryptedDNSConfig.catalog
 
@@ -23,6 +25,25 @@ struct SettingsView: View {
         PurpleScrollView(geometry: .fullPanel) {
             VStack(alignment: .leading, spacing: 24) {
                 header
+
+                // MARK: Appearance
+                card(title: "APPEARANCE", subtitle: "Choose how Syxx looks. System follows your macOS appearance setting.") {
+                    Picker("Theme", selection: Binding(
+                        get: { SyxxThemeMode(rawValueOrSystem: settings.themeMode) },
+                        set: { settings.themeMode = $0.rawValue; persist() }
+                    )) {
+                        ForEach(SyxxThemeMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("Appearance theme")
+                    .accessibilityHint("Choose between System, Dark, or Light appearance. System follows your macOS setting.")
+
+                    Text(settings.themeMode == "system" ? "Following your macOS appearance setting." : "Using \(SyxxThemeMode(rawValueOrSystem: settings.themeMode).displayName.lowercased()) appearance.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.ioTextSecondary)
+                }
 
                 // MARK: Experience Mode (Guided Setup)
                 card(title: "EXPERIENCE MODE · GUIDED SETUP", subtitle: "Choose between Storybook narrative or General technical interface.") {
@@ -49,6 +70,7 @@ struct SettingsView: View {
                             // revert on failure.
                             Task { await applyEncryption(on, priorValue: oldValue) }
                         }
+                        .toggleStyle(IoToggleStyle())
                         .accessibilityLabel("Encrypt all DNS queries")
                         .accessibilityHint("Configures your system to send all DNS queries over encrypted DoH or DoT transport")
                     Picker("Resolver", selection: $settings.encryptedDNSResolverID) {
@@ -89,9 +111,20 @@ struct SettingsView: View {
                 }
 
                 // MARK: Privacy
-                card(title: "PRIVACY", subtitle: "What leaves your machine.") {
+                card(title: "PRIVACY & WORD FROM AFAR", subtitle: "What leaves your machine.") {
+                    Toggle("Conceal queried domains", isOn: $concealQueriedDomains)
+                        .toggleStyle(IoToggleStyle())
+                        .accessibilityLabel("Conceal queried domains")
+                        .accessibilityHint("Hides the domain names you look up from reports and telemetry")
+
+                    Toggle("Conceal client identifiers", isOn: $concealClientIdentifiers)
+                        .toggleStyle(IoToggleStyle())
+                        .accessibilityLabel("Conceal client identifiers")
+                        .accessibilityHint("Hides your IP address and other client identifiers from reports")
+
                     Toggle("Check for updates automatically", isOn: $settings.updateCheckEnabled)
                         .onChange(of: settings.updateCheckEnabled) { _, _ in persist() }
+                        .toggleStyle(IoToggleStyle())
                         .accessibilityLabel("Check for updates automatically")
                         .accessibilityHint("Syxx contacts syxx.app once per launch to check for updates and news")
 
@@ -104,6 +137,7 @@ struct SettingsView: View {
                                 SyxxDiagnostics.uninstall()
                             }
                         }
+                        .toggleStyle(IoToggleStyle())
                         .accessibilityLabel("Send crash reports")
                         .accessibilityHint("If Syxx crashes, a diagnostic report will be sent to help fix bugs — never your identity or DNS data")
 
@@ -116,6 +150,7 @@ struct SettingsView: View {
                                 OTelBootstrap.discardOnConsentWithdrawal()
                             }
                         }
+                        .toggleStyle(IoToggleStyle())
                         .accessibilityLabel("Send anonymous usage statistics")
                         .accessibilityHint("Sends only your OS and app version to syxx.app, never your identity or DNS data")
 
@@ -134,6 +169,7 @@ struct SettingsView: View {
                 card(title: "NOTIFICATIONS", subtitle: "Alerts for network changes.") {
                     Toggle("Notify me when the network's trust changes", isOn: $settings.notificationsEnabled)
                         .onChange(of: settings.notificationsEnabled) { _, _ in persist() }
+                        .toggleStyle(IoToggleStyle())
                         .accessibilityLabel("Notify on network trust changes")
                         .accessibilityHint("Alerts you when the trustworthiness of your network changes, once continuous monitoring is available")
                     Text("Preference saved. Delivery arrives with continuous monitoring; this switch has no effect until then.")
@@ -175,7 +211,7 @@ struct SettingsView: View {
             Text("THE SANCTUM")
                 .font(.system(size: 10.5, weight: .bold))
                 .tracking(2.8)
-                .foregroundStyle(Color(red: 138/255, green: 110/255, blue: 240/255)) // #8a6ef0
+                .foregroundStyle(Color.ioElectric)
             Text("Settings")
                 .font(.custom("Cinzel-Bold", size: 28))
                 .foregroundStyle(Color.ioText)
@@ -185,14 +221,18 @@ struct SettingsView: View {
     @ViewBuilder
     private func card<Content: View>(title: String, subtitle: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.caption).bold().foregroundStyle(Color.ioTextSecondary)
+            Text(title)
+                .font(.system(size: 10, weight: .bold))
+                .tracking(2)
+                .foregroundColor(Color.ioEyebrowMuted)
+                .textCase(.uppercase)
             Text(subtitle).font(.footnote).foregroundStyle(Color.ioTextSecondary)
             content()
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.ioSurfaceDark))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.ioSurfaceDark))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.ioBorderSubtle, lineWidth: 1))
     }
 
     private func persist() {

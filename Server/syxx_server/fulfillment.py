@@ -7,10 +7,17 @@ env-configured — with none set, the sale is recorded as PENDING (audit), never
 """
 
 import json
+import ssl
 import urllib.error
 import urllib.request
 
 from . import config, db, logging_util, mailer
+
+# SEC-008: Pinned TLS context for Keygen API calls.
+_KEYGEN_SSL_CONTEXT = ssl.create_default_context()
+_KEYGEN_SSL_CONTEXT.check_hostname = True
+_KEYGEN_SSL_CONTEXT.verify_mode = ssl.CERT_REQUIRED
+_KEYGEN_SSL_CONTEXT.minimum_version = ssl.TLSVersion.TLSv1_2
 
 # A181: lease duration for the "processing" idempotency lock. If the handler that
 # claimed the event crashes (OOM, restart, exception) before writing a terminal
@@ -61,7 +68,8 @@ def _keygen_create_license(policy_id, email):
     req.add_header("Content-Type", "application/vnd.api+json")
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
+        # SEC-008: Use pinned SSL context for Keygen API calls
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT, context=_KEYGEN_SSL_CONTEXT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             data = json.loads(r.read()).get("data", {})
         return data.get("attributes", {}).get("key"), data.get("id")
     except (urllib.error.HTTPError, OSError, ValueError) as e:
@@ -79,7 +87,8 @@ def _keygen_suspend_license(license_id):
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
+        # SEC-008: Use pinned SSL context for Keygen API calls
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT, context=_KEYGEN_SSL_CONTEXT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             r.read()
         return True
     except (urllib.error.HTTPError, OSError, ValueError) as e:
@@ -102,7 +111,8 @@ def _keygen_reinstate_license(license_id):
     req.add_header("Authorization", "Bearer " + config.KEYGEN_ADMIN_TOKEN)
     req.add_header("Accept", "application/vnd.api+json")
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
+        # SEC-008: Use pinned SSL context for Keygen API calls
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT, context=_KEYGEN_SSL_CONTEXT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             r.read()
         return True
     except (urllib.error.HTTPError, OSError, ValueError) as e:

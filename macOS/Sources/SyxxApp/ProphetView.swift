@@ -13,39 +13,10 @@ struct ProphetView: View {
         // card, resolver consensus card with its 4-line inner scroller) take their natural
         // height; the DNSSEC card flexes to fill the remainder down to 20px from the bottom.
         VStack(alignment: .leading, spacing: 10) {
-            // Warden header. Owner directive 2026-08-02 (superseding the stacked variant):
-            // the rune tile sits to the LEFT of the eyebrow + module name, matching the
-            // `HStack(alignment: .top, spacing: 15)` header every other pane uses
-            // (ConclusionsView.swift:54, MirrorView.swift:14, PortalView.swift:24,
-            // GluttonView.swift:13, CageView.swift:12, WitnessView.swift:59). The two prose
-            // paragraphs stay OUTSIDE that HStack so they keep the single 35px left origin
-            // shared with the cards below, which the earlier directive established.
+            // The two prose paragraphs stay OUTSIDE ModuleHeader so they keep the single
+            // 35px left origin shared with the cards below.
             VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top, spacing: 15) {
-                    // Module highlight (owner directive 2026-08-02): Prophet's highlight is the
-                    // pastel near-neon blue #00b4ff, not the violet ioBlue. The rune tile carries
-                    // it at low alpha for the fill and full strength for the glyph — the same
-                    // variable-alpha treatment as the result containers and the primary button.
-                    Text("\u{16A8}") // ᚨ
-                        .font(.custom("Cinzel-SemiBold", size: 28))
-                        .frame(width: 54, height: 54)
-                        .background(Color.ioProphetBlue.opacity(0.10))
-                        .cornerRadius(14)
-                        .foregroundColor(.ioProphetBlue)
-                        .shadow(color: Color.ioProphetBlue.opacity(0.35), radius: 22)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("THE SEER · RESOLVER ACCURACY")
-                            .font(.ioCaption(.bold))
-                            .foregroundColor(.ioProphetBlue)
-                            .tracking(0.26)
-
-                        Text("Prophet")
-                            .font(.custom("Cinzel-SemiBold", size: 26))
-                            .foregroundColor(.ioText)
-                    }
-                }
+                ModuleHeader(rune: "\u{16A8}", eyebrow: "THE SEER \u{00B7} RESOLVER ACCURACY", name: "Prophet", accent: .ioProphetBlue)
 
                 // Owner copy (MEMORY.md:1819). Cormorant SC Regular 17pt (owner directive
                 // 2026-08-02). Full pane width (the prior maxWidth: 560 clipped it).
@@ -70,7 +41,7 @@ struct ProphetView: View {
                 // Owner copy (MEMORY.md:1823). Marcellus SC 14pt (owner directive 2026-08-02).
                 // No wrapping quotation marks (MEMORY.md:1795).
                 Text("In what domain do voices agree, their truth brought forth in dawn, and by the sacred seal, their truth preserved.")
-                    .font(.cardTitle(14))
+                    .font(.deck(14))
                     .foregroundColor(.ioTextMuted)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -451,12 +422,10 @@ struct ProphetView: View {
                 .font(.ioMono(13))
                 .foregroundColor(.ioTextMuted)
         case .notQueried:
-            // Wordless neutral pending marker (U+2026 ellipsis; not an em-dash). Not green, not
-            // blank-as-clean. A spoken/visible pending LABEL is deliberately not invented here —
-            // it needs owner-approved wording (flagged in the handoff), so only this typographic
-            // placeholder ships for now.
-            Text("\u{2026}")
-                .font(.ioMono(13))
+            // C219: explicit "Not queried" label — the ellipsis was ambiguous (users read it as
+            // truncated data, not "this oracle was never asked"). "Not queried" is unambiguous.
+            Text("Not queried")
+                .font(.ioMono(11))
                 .foregroundColor(.ioTextFaint)
         }
     }

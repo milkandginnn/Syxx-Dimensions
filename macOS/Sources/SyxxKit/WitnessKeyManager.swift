@@ -13,6 +13,12 @@ import Security
 /// caller's control — Keychain storage is the primary defence.
 public enum WitnessKeyManager {
 
+    /// When `true`, Keychain queries include `kSecUseDataProtectionKeychain` so the
+    /// accessibility class (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`) is enforced.
+    /// This requires the `keychain-access-groups` entitlement, which `.xctest` bundles
+    /// do not have. Set to `false` in test `setUp()` to avoid `errSecMissingEntitlement`.
+    nonisolated(unsafe) public static var useDataProtectionKeychain = true
+
     private static let bundleIdentifier = "com.milkandgin.syxx"
     private static let account = "witness-key"
 
@@ -52,14 +58,16 @@ public enum WitnessKeyManager {
     /// "could not read the Keychain" so the UI can surface an honest message rather than
     /// a fabricated "no key".
     public static func checkKeyPresence() -> KeyPresence {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: bundleIdentifier,
             kSecAttrAccount as String: account,
             kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecReturnData as String: false,
-            kSecUseDataProtectionKeychain as String: true
+            kSecReturnData as String: false
         ]
+        if useDataProtectionKeychain {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         if status == errSecSuccess { return .present }
         if status == errSecItemNotFound { return .absent }
@@ -85,14 +93,19 @@ public enum WitnessKeyManager {
         }
         _keyLock.unlock()
 
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: bundleIdentifier,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecUseDataProtectionKeychain as String: true
-        ]
+        let query: [String: Any] = {
+            var q: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: bundleIdentifier,
+                kSecAttrAccount as String: account,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
+            if useDataProtectionKeychain {
+                q[kSecUseDataProtectionKeychain as String] = true
+            }
+            return q
+        }()
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         let key = (status == errSecSuccess) ? (result as? Data).flatMap { String(data: $0, encoding: .utf8) } : nil
@@ -150,12 +163,14 @@ public enum WitnessKeyManager {
     /// while the app behaved as if it were destroyed.
     @discardableResult
     public static func deleteKey() -> Bool {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: bundleIdentifier,
-            kSecAttrAccount as String: account,
-            kSecUseDataProtectionKeychain as String: true
+            kSecAttrAccount as String: account
         ]
+        if useDataProtectionKeychain {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
         let status = SecItemDelete(query as CFDictionary)
         // Only clear the cache when the delete actually succeeded or the item was already gone.
         if status == errSecSuccess || status == errSecItemNotFound {
@@ -179,14 +194,16 @@ public enum WitnessKeyManager {
     // MARK: - Keychain plumbing
 
     private static func keychainQuery(account: String) -> [String: Any] {
-        [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: bundleIdentifier,
             kSecAttrAccount as String: account,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            // B188: use the data-protection keychain so the accessibility class is enforced.
-            kSecUseDataProtectionKeychain as String: true
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         ]
+        if useDataProtectionKeychain {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
+        return query
     }
 
     private static func writeKeychainData(_ data: Data, account: String) throws {

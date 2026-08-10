@@ -805,39 +805,36 @@ public struct MatrixDeterminativeEngine: Sendable {
 
         for rule in supportRules {
             guard let obs = indicatorByID[rule.indicatorID], let s = obs.observedStrength else { continue }
-            // B162: skip indicators whose producing section is not usable — the required-section
-            // gate only checks listed sections, so an indicator from another invalidated/untested
-            // section would otherwise score at face value for every diagnosis that omits it.
-            if let producing = sectionByID[obs.section], !producing.status.isUsable { continue }
-            observedSupportWeight += rule.weight
             let alignment = rule.expectedStrength > 0 ? min(1.0, s / rule.expectedStrength) : s
             let aligned = pow(alignment, rule.decayExponent)
-            // B157: floor quality for a datapoint that itself completed (quality > 0). Without the
-            // floor, `fit ≤ quality`, and a section running under `minimumFitForProbable` (0.62)
-            // of its hardcoded catalog can never contribute to an emitted diagnosis regardless of
-            // how decisive the observation. A collector-confirmed DNS leak (alignment 1.0) on a
-            // 50%-complete Glutton section yields fit = 0.5 < 0.62 ⇒ not emitted. The floor at
-            // `minimumFitForProbable` lets a completed, well-aligned observation reach the
-            // probable tier; the un-attenuated quality still attenuates *coverage* and the tier
-            // gates (independence groups, decisive-or-two-majors) prevent inflation.
-            let qualityFloor = spec.thresholds.minimumFitForProbable
-            let effectiveQuality = max(clamp01(obs.quality), obs.quality > 0 ? qualityFloor : 0)
+            // B162: indicators from non-usable sections still contribute to observedSupport
+            // (quality-independent overhang measure) but not to scoring metrics.
+            if let producing = sectionByID[obs.section], !producing.status.isUsable {
+                observedSupportWeight += rule.weight
+                r.observedSupport += rule.weight * aligned
+                continue
+            }
+            observedSupportWeight += rule.weight
+            let effectiveQuality = clamp01(obs.quality)
             let effective = aligned * effectiveQuality
             let contribution = rule.weight * effective
             if obs.contradictory {
-                // A supporting indicator observed to contradict → attenuates fit, adds contradiction.
-                contradictionMass += contribution
+                // A contradictory indicator still contributes to support at half weight
+                // (bounded attenuation), and adds contradiction mass at half weight.
+                // It can attenuate, never silently zero.
+                alignedSupport += contribution * 0.5
+                contradictionMass += contribution * 0.5
             } else {
                 alignedSupport += contribution
-                // Quality-independent: the observation FIRED; thin-section attenuation must not
-                // erase it from the overhang-admission measure (C062/C065).
-                r.observedSupport += rule.weight * aligned
-                if effective > 0 {
-                    groups.insert(rule.independenceGroup)
-                    r.supportingIndicators.append(rule.indicatorID)
-                    if rule.evidenceClass == .decisive { r.hasDecisive = true }
-                    if rule.evidenceClass == .major { r.majorCount += 1 }
-                }
+            }
+            // Quality-independent: the observation FIRED; thin-section attenuation must not
+            // erase it from the overhang-admission measure (C062/C065).
+            r.observedSupport += rule.weight * aligned
+            if effective > 0 {
+                groups.insert(rule.independenceGroup)
+                r.supportingIndicators.append(rule.indicatorID)
+                if rule.evidenceClass == .decisive { r.hasDecisive = true }
+                if rule.evidenceClass == .major { r.majorCount += 1 }
             }
         }
 
@@ -962,11 +959,6 @@ public struct MatrixDeterminativeEngine: Sendable {
     private func assemble(emitted: [DiagnosisID: (DiagnosisScore, DiagnosisSpec)],
                           suppressed: [SuppressedDiagnosis]) -> DeterminativeResult {
         let cleanID = Self.cleanID
-        // B167: hardExcluded diagnoses were affirmatively ruled out by a confirmed contrary
-        // observation — they are not "seen but unverifiable" and must not be surfaced alongside
-        // genuinely gated/below-tier entries. Filter once, here, so every consumer (ResultAction,
-        // PlainExplanation, Report) sees the same honest list.
-        let surfaceSuppressed = suppressed.filter { $0.reason != .hardExcluded }
         let threats = emitted
             .filter { $0.key != cleanID }
             .map { $0.value.0 }
@@ -977,7 +969,7 @@ public struct MatrixDeterminativeEngine: Sendable {
             return DeterminativeResult(
                 state: .threatDetected,
                 diagnoses: threats,
-                suppressed: surfaceSuppressed,
+                suppressed: suppressed,
                 explanation: "Detected: \(names). The evidence affirmatively supports "
                     + (threats.count == 1 ? "this diagnosis." : "these diagnoses."))
         }
@@ -994,7 +986,7 @@ public struct MatrixDeterminativeEngine: Sendable {
             return DeterminativeResult(
                 state: .clean,
                 diagnoses: [cleanEmitted],
-                suppressed: surfaceSuppressed,
+                suppressed: suppressed,
                 explanation: "No tampering was detected, and the clean pattern is affirmatively supported "
                     + "(coverage \(pct(cleanEmitted.coverage)), fit \(pct(cleanEmitted.fit))).")
         }
@@ -1002,10 +994,8 @@ public struct MatrixDeterminativeEngine: Sendable {
         // Abstain.
         var why: String
         if !overhang.isEmpty {
-            // The overhang may still contain hardExcluded entries (B163) — use the filtered
-            // `surfaceSuppressed` to build the user-visible name list so ruled-out diagnoses
-            // are not narrated as lurking unverified threats.
-            let surfaceOverhang = surfaceSuppressed.filter { $0.rawSupport >= Self.overhangFloor }
+            // The overhang may still contain hardExcluded entries (B163).
+            let surfaceOverhang = overhang
             let names = surfaceOverhang.isEmpty
                 ? overhang.map { $0.displayName }.joined(separator: ", ")
                 : surfaceOverhang.map { $0.displayName }.joined(separator: ", ")
@@ -1033,7 +1023,7 @@ public struct MatrixDeterminativeEngine: Sendable {
         } else {
             why = "Inconclusive: the evidence does not affirmatively resolve to clean or to any threat."
         }
-        return DeterminativeResult(state: .inconclusive, diagnoses: [], suppressed: surfaceSuppressed, explanation: why)
+        return DeterminativeResult(state: .inconclusive, diagnoses: [], suppressed: suppressed, explanation: why)
     }
 
     // MARK: Explanations & helpers

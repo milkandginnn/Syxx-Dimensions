@@ -17,6 +17,8 @@ opt_in_rules:
   - operator_usage_whitespace
   - sorted_first_last
   - toggle_bool
+  # CI-030: prevent mega-files that are hard to review and maintain.
+  - file_length
 
 disabled_rules:
   - trailing_whitespace
@@ -39,6 +41,11 @@ type_body_length:
 function_body_length:
   warning: 100
   error: 200
+# CI-030: per-file line limit to prevent mega-files.
+file_length:
+  warning: 800
+  error: 1500
+  ignore_comment_only_lines: true
 cyclomatic_complexity:
   warning: 20
   error: 35

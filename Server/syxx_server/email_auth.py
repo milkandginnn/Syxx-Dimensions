@@ -17,11 +17,46 @@ def check(domain, dkim_selector=None, timeout=10):
     dmarc: {record, policy, pct, conclusion},
     dkim: {selector, record, conclusion},
     overall: "pass" | "fail" | "partial"}``.
+
+    E261: Try each PUBLIC_RESOLVERS entry on failure instead of only the first.
+    A single resolver outage should not produce "inconclusive" for all checks.
     """
-    server = config.PUBLIC_RESOLVERS[0]
-    spf = _check_spf(domain, server, timeout)
-    dmarc = _check_dmarc(domain, server, timeout)
-    dkim = _check_dkim(domain, dkim_selector, server, timeout)
+    spf = None
+    dmarc = None
+    dkim = None
+
+    # E261: Iterate through resolvers, using the first one that succeeds
+    for server in config.PUBLIC_RESOLVERS:
+        if spf is None:
+            spf = _check_spf(domain, server, timeout)
+            # If the check returned inconclusive due to DNS failure, try next resolver
+            if spf["conclusion"] == "inconclusive":
+                spf = None
+                continue
+        if dmarc is None:
+            dmarc = _check_dmarc(domain, server, timeout)
+            if dmarc["conclusion"] == "inconclusive":
+                dmarc = None
+                continue
+        if dkim is None:
+            dkim = _check_dkim(domain, dkim_selector, server, timeout)
+            if dkim["conclusion"] == "missing" and not dkim_selector:
+                # Only retry DKIM if we're using fallback selectors
+                dkim = None
+                continue
+        # All checks completed successfully
+        break
+
+    # Fallback: use first resolver for any checks that still failed
+    if spf is None or dmarc is None or dkim is None:
+        fallback_server = config.PUBLIC_RESOLVERS[0] if config.PUBLIC_RESOLVERS else "1.1.1.1"
+        if spf is None:
+            spf = _check_spf(domain, fallback_server, timeout)
+        if dmarc is None:
+            dmarc = _check_dmarc(domain, fallback_server, timeout)
+        if dkim is None:
+            dkim = _check_dkim(domain, dkim_selector, fallback_server, timeout)
+
     overall = _overall(spf["conclusion"], dmarc["conclusion"], dkim["conclusion"])
     return {"domain": domain, "spf": spf, "dmarc": dmarc, "dkim": dkim, "overall": overall}
 
@@ -68,9 +103,12 @@ def _spf_result(policy):
         return "softfail"
     if prefix == "?":
         return "neutral"
-    # Bare "all" with no qualifier is equivalent to +all (RFC 7208 §4.7).
+    # C225: bare "all" with no qualifier is equivalent to +all (RFC 7208 §4.7).
+    # The conclusion is "permissive" (not "fail") so downstream consumers do not
+    # interpret "fail" as "the check itself failed" (inconclusive). The SPF
+    # mechanism IS +all, which is a security problem — "permissive" conveys that.
     if policy.lower() == "all":
-        return "fail"
+        return "permissive"
     return "neutral"
 
 
@@ -160,12 +198,20 @@ def _dkim_result(record):
 def _overall(spf_v, dmarc_v, dkim_v):
     """Combine per-protocol results.
 
+    A270: when ALL inputs are non-determinate (inconclusive/missing), return
+    "inconclusive" rather than "partial" — a total measurement failure must
+    not render as a determinate posture.
+
     "fail" if any hard fail; "pass" if all are pass/softfail/neutral/partial;
-    otherwise "partial".
+    "inconclusive" if nothing could be measured; otherwise "partial".
     """
     results = [spf_v, dmarc_v, dkim_v]
     if any(v == "fail" for v in results):
         return "fail"
-    if all(v in ("pass", "softfail", "neutral", "partial") for v in results):
+    # C225: "permissive" is a valid determinate result (bare "all" = +all).
+    if all(v in ("pass", "softfail", "neutral", "partial", "permissive") for v in results):
         return "pass"
+    # A270: every input is non-determinate — total measurement failure.
+    if all(v in ("inconclusive", "missing") for v in results):
+        return "inconclusive"
     return "partial"

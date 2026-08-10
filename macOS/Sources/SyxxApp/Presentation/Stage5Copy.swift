@@ -11,7 +11,7 @@ enum Stage5Copy {
 
     // Fail-closed generic. Approved inconclusive headline (proposals item 1h, Option A). Any unknown
     // token or an absent/invalid Stage-5 object resolves here — honest, never green.
-    static let genericInconclusive = "Inconclusive — not enough evidence to decide"
+    static let genericInconclusive = "There is insufficient evidence to render a decision. The result is inconclusive. "
     // Approved shipped honesty tail (mirrors the live CLI "(this is NOT a clean result)" pattern).
     static let notACleanResult = "This is not a clean result."
 

@@ -46,7 +46,7 @@ enum DashboardWardenState {
     /// Map an existing chip label to a tone. Unknown labels stay idle (muted), never success.
     static func chipTone(for label: String) -> ChipTone {
         switch label {
-        case "PASSED", "CLEAR", "SIGNED", "CAPTURED":
+        case "PASSED", "CLEAR", "SIGNED", "CAPTURED", "MAPPED":
             return .success
         case "TAMPERING DETECTED", "LEAK FOUND", "INVALID", "ERROR", "EXPIRED":
             return .threat

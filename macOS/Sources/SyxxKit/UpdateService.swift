@@ -47,7 +47,11 @@ public final class UpdateService: ObservableObject {
 
     private init() {
         baseURL = SyxxConfig.dimensionBaseURL
-        let config = URLSessionConfiguration.default
+        // E220: use ephemeral session configuration to prevent persistent caching of
+        // update manifests. A cached stale manifest from a shared URLCache could delay
+        // update notifications for days. Ephemeral sessions use an in-memory cache that
+        // is discarded when the session is deallocated.
+        let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 300
         self.session = URLSession(configuration: config)

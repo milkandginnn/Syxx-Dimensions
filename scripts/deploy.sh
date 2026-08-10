@@ -16,13 +16,25 @@ set -euo pipefail
 #   SERVER_IP=1.2.3.4 DOMAIN=syxx.app LETSENCRYPT_EMAIL=you@example.com ./deploy.sh
 # ==============================================================================
 
+# CI-020: no hardcoded default — require SERVER_IP to be explicitly set via environment
+# to prevent accidental deployments to stale/wrong hosts.
 # Dedicated server as of 2026-07-16 (was the IONOS VPS 74.208.237.162).
-SERVER_IP="${SERVER_IP:-198.71.60.193}"
+if [ -z "${SERVER_IP:-}" ]; then
+  echo "❌ SERVER_IP is not set. Set it via environment: SERVER_IP=<ip> ./deploy.sh" >&2
+  exit 1
+fi
+SERVER_IP="${SERVER_IP}"
 REMOTE_USER="${REMOTE_USER:-root}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/SyxxServer}"
 DOMAIN="${DOMAIN:-syxx.app}"
 LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-jjwarne@icloud.com}"
 SETUP_TLS="${SETUP_TLS:-1}"
+
+# F079: Rollback configuration.
+# SYXX_BACKUP_DIR: where pre-deploy tarballs are stored (default: alongside REMOTE_DIR).
+# SYXX_BACKUP_KEEP: number of recent backups to retain (older ones are pruned).
+SYXX_BACKUP_DIR="${SYXX_BACKUP_DIR:-${REMOTE_DIR}.backups}"
+SYXX_BACKUP_KEEP="${SYXX_BACKUP_KEEP:-3}"
 
 # Secrets / entitlement config pushed into the systemd unit environment.
 SYXX_SESSION_SECRET="${SYXX_SESSION_SECRET:-}"
@@ -53,6 +65,7 @@ echo "Target : ${REMOTE_USER}@${SERVER_IP}"
 echo "Domain : ${DOMAIN}"
 echo "Dir    : ${REMOTE_DIR}"
 echo "TLS    : ${SETUP_TLS}"
+echo "Backup : ${SYXX_BACKUP_DIR} (keep ${SYXX_BACKUP_KEEP})"
 echo "--------------------------------------------------"
 
 # ---------------------------------------------------------------------------
@@ -90,6 +103,32 @@ LOCAL_IMG_COUNT="$(find "${PROJECT_ROOT}/Server" -type f \
     \( -iname '*.svg' -o -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.gif' -o -iname '*.webp' -o -iname '*.ico' \) \
     | wc -l | tr -d ' ')"
 echo "Local website assets: index.html + ${LOCAL_IMG_COUNT} image file(s)."
+
+# F079: Create backup before deploy for rollback capability.
+# Backups live in SYXX_BACKUP_DIR (configurable, defaults to ${REMOTE_DIR}.backups).
+# Only the SYXX_BACKUP_KEEP most recent backups are retained.
+BACKUP_TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP_NAME="syxx-deploy-${BACKUP_TIMESTAMP}.tar.gz"
+BACKUP_PATH="${SYXX_BACKUP_DIR}/${BACKUP_NAME}"
+echo "📦 F079: Creating pre-deploy backup…"
+remote "bash -s" <<BACKUP_EOF
+set -eu
+mkdir -p "${SYXX_BACKUP_DIR}"
+if [ -d "${REMOTE_DIR}" ] && [ "\$(ls -A "${REMOTE_DIR}" 2>/dev/null | head -1)" ]; then
+  tar czf "${BACKUP_PATH}" -C "${REMOTE_DIR}" .
+  echo "✅ Backup created: ${BACKUP_PATH} (\$(du -h "${BACKUP_PATH}" | cut -f1))"
+  # Rotate: keep only the ${SYXX_BACKUP_KEEP} most recent backups.
+  cd "${SYXX_BACKUP_DIR}"
+  ls -1t syxx-deploy-*.tar.gz 2>/dev/null | tail -n +$(( SYXX_BACKUP_KEEP + 1 )) | while IFS= read -r old; do
+    rm -f -- "\$old"
+    echo "🗑️  Pruned old backup: \$old"
+  done
+  REMAINING=\$(ls -1 syxx-deploy-*.tar.gz 2>/dev/null | wc -l | tr -d ' ')
+  echo "   Backups on disk: \${REMAINING} (keeping last ${SYXX_BACKUP_KEEP})"
+else
+  echo "ℹ️  No existing deployment to back up (first deploy)."
+fi
+BACKUP_EOF
 
 echo "Uploading server files (full tree: package + website)…"
 remote "mkdir -p ${REMOTE_DIR}"
@@ -400,6 +439,46 @@ UNIT
 systemctl daemon-reload
 systemctl enable syxx-server.service
 systemctl restart syxx-server.service
+
+# ---------------------------------------------------------------------------
+# F079: rollback function — restore from backup and restart the service.
+# Called when post-deploy health checks detect a broken deployment.
+# ---------------------------------------------------------------------------
+ROLLBACK_BACKUP="${BACKUP_PATH}"
+rollback() {
+  local reason="\$1"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🔄 F079 ROLLBACK: \${reason}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  if [ ! -f "\${ROLLBACK_BACKUP}" ]; then
+    echo "❌ No backup found at \${ROLLBACK_BACKUP} — cannot roll back."
+    echo "   Manual intervention required: ssh ${REMOTE_USER}@${SERVER_IP}"
+    return 1
+  fi
+  echo "  1/4 Stopping syxx-server.service…"
+  systemctl stop syxx-server.service 2>/dev/null || true
+  echo "  2/4 Clearing deployment directory ${REMOTE_DIR}…"
+  # Use find to remove ALL files including dotfiles (rm -rf * misses .hidden).
+  find "${REMOTE_DIR}" -mindepth 1 -delete 2>/dev/null || true
+  echo "  3/4 Restoring from backup \${ROLLBACK_BACKUP}…"
+  tar xzf "\${ROLLBACK_BACKUP}" -C "${REMOTE_DIR}"
+  chown -R "\${SVC_USER:-syxx}" "${REMOTE_DIR}" 2>/dev/null || true
+  echo "  4/4 Restarting syxx-server.service…"
+  systemctl restart syxx-server.service
+  sleep 3
+  if systemctl is-active --quiet syxx-server.service \
+     && curl -fsS http://127.0.0.1:8080/api/pubkey >/dev/null 2>&1; then
+    echo "✅ F079 Rollback SUCCEEDED — previous version restored and serving."
+    return 0
+  else
+    echo "❌ F079 Rollback FAILED — service did not recover."
+    echo "   Manual intervention required: ssh ${REMOTE_USER}@${SERVER_IP}"
+    echo "   Backup used: \${ROLLBACK_BACKUP}"
+    journalctl -u syxx-server -n 30 --no-pager
+    return 1
+  fi
+}
+
 # E063: Type=simple returns 0 as soon as systemd forks the process — before Python
 # has imported a single module. Verify the daemon is actually alive and serving.
 sleep 3
@@ -408,13 +487,15 @@ if systemctl is-active --quiet syxx-server.service; then
 else
   echo "❌ syxx-server.service is not active after restart." >&2
   journalctl -u syxx-server -n 50 --no-pager
+  rollback "systemd unit failed to start" || true
   exit 1
 fi
 if curl -fsS http://127.0.0.1:8080/api/pubkey >/dev/null 2>&1; then
   echo "✅ Daemon running — /api/pubkey responds."
 else
-  echo "❌ Daemon is active but /api/pubkey does not respond. Check journalctl -u syxx-server." >&2
+  echo "❌ Daemon is active but /api/pubkey does not respond." >&2
   journalctl -u syxx-server -n 50 --no-pager
+  rollback "/api/pubkey not responding (daemon alive but broken)" || true
   exit 1
 fi
 EOF
@@ -877,6 +958,79 @@ fi
 echo ""
 echo "=== Sentry telemetry check complete ==="
 SENTRY_CHECK
+
+# CI-023: post-deployment health check — verify the server is responding before declaring success.
+echo ""
+echo "=== Post-deployment health check ==="
+HEALTH_URL="https://${DOMAIN}/api/health"
+HEALTH_RETRIES=5
+HEALTH_OK=0
+for i in $(seq 1 $HEALTH_RETRIES); do
+  if curl -sf --max-time 10 "$HEALTH_URL" >/dev/null 2>&1; then
+    echo "✅ Health check passed: $HEALTH_URL returned 200"
+    HEALTH_OK=1
+    break
+  fi
+  echo "  Attempt $i/$HEALTH_RETRIES: $HEALTH_URL not yet responding…"
+  sleep 3
+done
+if [ "$HEALTH_OK" -eq 0 ]; then
+  echo "❌ CI-023: Health check failed after $HEALTH_RETRIES attempts."
+  echo "   Check: ssh ${REMOTE_USER}@${SERVER_IP} 'journalctl -u syxx-server --no-pager -n 50'"
+  # F079: External health check failed — attempt rollback via SSH.
+  echo "🔄 F079: Attempting rollback from post-deploy health check…"
+  remote "bash -s" <<ROLLBACK_EOF
+set -eu
+BACKUP_FILE="${BACKUP_PATH}"
+if [ -f "\${BACKUP_FILE}" ]; then
+  echo "  1/4 Stopping syxx-server.service…"
+  systemctl stop syxx-server.service 2>/dev/null || true
+  echo "  2/4 Clearing deployment directory ${REMOTE_DIR}…"
+  find "${REMOTE_DIR}" -mindepth 1 -delete 2>/dev/null || true
+  echo "  3/4 Restoring from backup \${BACKUP_FILE}…"
+  tar xzf "\${BACKUP_FILE}" -C "${REMOTE_DIR}"
+  SVC_USER="\$(stat -c '%U' "${REMOTE_DIR}" 2>/dev/null || echo syxx)"
+  chown -R "\${SVC_USER}" "${REMOTE_DIR}" 2>/dev/null || true
+  echo "  4/4 Restarting syxx-server.service…"
+  systemctl restart syxx-server.service
+  sleep 3
+  if systemctl is-active --quiet syxx-server.service \
+     && curl -fsS http://127.0.0.1:8080/api/pubkey >/dev/null 2>&1; then
+    echo "✅ F079 Rollback SUCCEEDED — previous version restored."
+  else
+    echo "❌ F079 Rollback FAILED — manual intervention required."
+    echo "   ssh ${REMOTE_USER}@${SERVER_IP}"
+    journalctl -u syxx-server -n 30 --no-pager
+  fi
+else
+  echo "❌ No backup at \${BACKUP_FILE} — cannot roll back."
+  echo "   Manual intervention required: ssh ${REMOTE_USER}@${SERVER_IP}"
+fi
+ROLLBACK_EOF
+fi
+
+# CI-024: verify firewall allows only necessary ports (22, 80, 443).
+echo ""
+echo "=== Firewall verification ==="
+remote "if command -v ufw >/dev/null 2>&1; then \
+  ufw status | head -5; \
+  echo 'Ports 22,80,443 should be allowed; all others denied.'; \
+else \
+  echo 'ufw not installed — verify firewall rules manually (iptables -L -n)'; \
+fi"
+
+# CI-025: nginx rate limiting — ensure the reverse proxy limits API request rates.
+echo ""
+echo "=== Nginx rate limiting ==="
+remote "if [ -f /etc/nginx/conf.d/syxx.conf ]; then \
+  if grep -q 'limit_req_zone' /etc/nginx/nginx.conf /etc/nginx/conf.d/syxx.conf 2>/dev/null; then \
+    echo '✅ Rate limiting configured in nginx'; \
+  else \
+    echo '⚠️  No rate limiting found in nginx config. Add limit_req_zone to prevent API abuse.'; \
+  fi; \
+else \
+  echo 'ℹ️  No nginx config found (nginx may not be set up yet).'; \
+fi"
 
 echo "=================================================="
 echo "🎉 Deployed. Monitor: ssh ${REMOTE_USER}@${SERVER_IP} 'journalctl -u syxx-server -f'"

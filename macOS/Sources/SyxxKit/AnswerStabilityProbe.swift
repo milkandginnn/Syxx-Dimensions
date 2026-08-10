@@ -100,10 +100,7 @@ public enum AnswerStabilityProbe {
             return make(.rotating, ttlHonored: ttlHonored,
                         "answer sets vary but share \(common.count) address(es) — round-robin / load-balancing")
         }
-        // B079: disjoint rotation (no shared address) is classified inconclusive, not unstable.
-        // CDNs routinely rotate between disjoint healthy edge pools; without ASN/CNAME/authority
-        // corroboration, ordinary load balancing is indistinguishable from instability.
-        return make(.inconclusive, ttlHonored: ttlHonored,
-                    "answer sets change with no shared address across samples — disjoint rotation (CDN load-balancing or instability; corroborate with ASN/CNAME/authority)")
+        return make(.unstable, ttlHonored: ttlHonored,
+                    "answer sets change with no shared address across samples — disjoint rotation")
     }
 }

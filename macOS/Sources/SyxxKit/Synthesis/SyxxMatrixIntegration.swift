@@ -198,15 +198,6 @@ public struct SyxxMatrixBuilder {
             mutuallyExclusiveWith: [SyxxDiagnosis.clean.id]
         )
 
-        // B156: the set of indicator IDs that have at least one reachable EvidenceId mapping.
-        // Support rules referencing unmapped indicators (e.g. resolverAgreement,
-        // remoteLocalDivergence, trustedWitnessOK) are excluded from the coverage denominator,
-        // preventing unmapped rules from creating permanent dead weight that hard-caps coverage
-        // below the minimum thresholds and makes entire diagnoses unreachable.
-        let mappableIndicators = Set(
-            SynthesisEngine.indicatorMapping.values.map { $0.0.id }
-        )
-
         return MatrixSpec(
             diagnoses: [
                 clean,
@@ -233,7 +224,7 @@ public struct SyxxMatrixBuilder {
                 hardGateOnMissingRequiredSections: true,
                 failClosedOnInvalidatedRequiredSections: true
             ),
-            mappableIndicators: mappableIndicators
+            mappableIndicators: nil
         )
     }
 }

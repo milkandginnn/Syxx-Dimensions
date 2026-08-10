@@ -72,24 +72,11 @@ namespace Syxx
 
             switch (args[0].ToLowerInvariant())
             {
-                case "nslook":    await NslookCommand.RunAsync(args[1..]); break;
-                case "mirror":    await MirrorCommand.RunAsync(args[1..]); break;
-                case "leak":      await LeakCommand.RunAsync(args[1..]); break;
-                case "witness":   await WitnessCommand.RunAsync(args[1..]); break;
-                case "key":       await KeyCommand.RunAsync(args[1..]); break;
-                case "route":     await RouteCommand.RunAsync(args[1..]); break;
-                case "lan":       await LanCommand.RunAsync(args[1..]); break;
-                case "forensics": await ForensicsCommand.RunAsync(args[1..]); break;
-                case "sentinel":  await SentinelCommand.RunAsync(args[1..]); break;
-                case "cage":      await CageCommand.RunAsync(args[1..]); break;
-                case "warp":      await WarpCommand.RunAsync(args[1..]); break;
-                case "speed":     await SpeedCommand.RunAsync(args[1..]); break;
-                case "unbound":   await UnboundCommand.RunAsync(args[1..]); break;
-                case "filter":    await FilterCommand.RunAsync(args[1..]); break;
-                case "firstrun":  await FirstRunCommand.RunAsync(args[1..]); break;
-                // Phase 4.2: CI-only behavioral transcript emitter (production Synthesizer path).
-                case "parity-transcript":
-                    Environment.ExitCode = ParityTranscriptCommand.Run(args[1..]);
+                case "nslook":    case "mirror":   case "leak":     case "witness":
+                case "key":       case "route":    case "lan":      case "forensics":
+                case "sentinel":  case "cage":     case "warp":     case "speed":
+                case "unbound":   case "filter":   case "firstrun": case "parity-transcript":
+                    await DispatchSubcommand(args);
                     break;
                 case "--version":
                     Console.WriteLine($"syxx {SyxxConfig.Version}");
@@ -103,34 +90,7 @@ namespace Syxx
                     // If there is a subcommand after --verbose, dispatch it.
                     if (args.Length > 1)
                     {
-                        var rest = args[1..];
-                        // Recurse-like: re-dispatch the subcommand from rest[0].
-                        switch (rest[0].ToLowerInvariant())
-                        {
-                            case "nslook":    await NslookCommand.RunAsync(rest[1..]); break;
-                            case "mirror":    await MirrorCommand.RunAsync(rest[1..]); break;
-                            case "leak":      await LeakCommand.RunAsync(rest[1..]); break;
-                            case "witness":   await WitnessCommand.RunAsync(rest[1..]); break;
-                            case "key":       await KeyCommand.RunAsync(rest[1..]); break;
-                            case "route":     await RouteCommand.RunAsync(rest[1..]); break;
-                            case "lan":       await LanCommand.RunAsync(rest[1..]); break;
-                            case "forensics": await ForensicsCommand.RunAsync(rest[1..]); break;
-                            case "sentinel":  await SentinelCommand.RunAsync(rest[1..]); break;
-                            case "cage":      await CageCommand.RunAsync(rest[1..]); break;
-                            case "warp":      await WarpCommand.RunAsync(rest[1..]); break;
-                            case "speed":     await SpeedCommand.RunAsync(rest[1..]); break;
-                            case "unbound":   await UnboundCommand.RunAsync(rest[1..]); break;
-                            case "filter":    await FilterCommand.RunAsync(rest[1..]); break;
-                            case "firstrun":  await FirstRunCommand.RunAsync(rest[1..]); break;
-                            case "parity-transcript":
-                                Environment.ExitCode = ParityTranscriptCommand.Run(rest[1..]);
-                                break;
-                            default:
-                                Console.WriteLine($"Unknown command: {rest[0]}");
-                                Console.WriteLine("Run 'syxx --help' for a list of commands.");
-                                Environment.ExitCode = 3;
-                                break;
-                        }
+                        await DispatchSubcommand(args[1..]);
                     }
                     else
                     {
@@ -150,6 +110,38 @@ namespace Syxx
                     // DETECTED. A typo'd subcommand is an operational error, not a finding about
                     // the network. macOS already used 3 here (SyxxCLI.swift:52); this is the parity
                     // half.
+                    Console.WriteLine($"Unknown command: {args[0]}");
+                    Console.WriteLine("Run 'syxx --help' for a list of commands.");
+                    Environment.ExitCode = 3;
+                    break;
+            }
+        }
+
+        /// Dispatches the subcommand at <c>args[0]</c>, passing <c>args[1..]</c> as arguments.
+        /// Extracted to avoid duplicating the 17-case switch in the <c>--verbose</c> path.
+        static async Task DispatchSubcommand(string[] args)
+        {
+            switch (args[0].ToLowerInvariant())
+            {
+                case "nslook":    await NslookCommand.RunAsync(args[1..]); break;
+                case "mirror":    await MirrorCommand.RunAsync(args[1..]); break;
+                case "leak":      await LeakCommand.RunAsync(args[1..]); break;
+                case "witness":   await WitnessCommand.RunAsync(args[1..]); break;
+                case "key":       await KeyCommand.RunAsync(args[1..]); break;
+                case "route":     await RouteCommand.RunAsync(args[1..]); break;
+                case "lan":       await LanCommand.RunAsync(args[1..]); break;
+                case "forensics": await ForensicsCommand.RunAsync(args[1..]); break;
+                case "sentinel":  await SentinelCommand.RunAsync(args[1..]); break;
+                case "cage":      await CageCommand.RunAsync(args[1..]); break;
+                case "warp":      await WarpCommand.RunAsync(args[1..]); break;
+                case "speed":     await SpeedCommand.RunAsync(args[1..]); break;
+                case "unbound":   await UnboundCommand.RunAsync(args[1..]); break;
+                case "filter":    await FilterCommand.RunAsync(args[1..]); break;
+                case "firstrun":  await FirstRunCommand.RunAsync(args[1..]); break;
+                case "parity-transcript":
+                    Environment.ExitCode = ParityTranscriptCommand.Run(args[1..]);
+                    break;
+                default:
                     Console.WriteLine($"Unknown command: {args[0]}");
                     Console.WriteLine("Run 'syxx --help' for a list of commands.");
                     Environment.ExitCode = 3;
@@ -1096,8 +1088,9 @@ namespace Syxx
             try
             {
                 if (!System.IO.Directory.Exists(dir)) return null;
-                return System.IO.Directory.EnumerateFiles(dir, "Syxx Cage Capture *.txt")
-                    .Where(f => !System.IO.Path.GetFileName(f).Contains("Report"))
+                return System.IO.Directory.EnumerateFiles(dir, "*.txt")
+                    .Where(f => System.IO.Path.GetFileName(f).StartsWith("Syxx Cage Capture ", StringComparison.OrdinalIgnoreCase))
+                    .Where(f => !System.IO.Path.GetFileName(f).Contains("Report", StringComparison.OrdinalIgnoreCase))
                     .Select(f => new System.IO.FileInfo(f))
                     .Where(fi => fi.LastWriteTime >= start.AddSeconds(-2)) // small clock-skew tolerance
                     .OrderByDescending(fi => fi.LastWriteTime)

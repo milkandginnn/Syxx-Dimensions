@@ -21,8 +21,8 @@ import time
 from . import config, db, logging_util, resolver
 
 try:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography.hazmat.primitives.serialization import (
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # type: ignore[unresolved-import]
+    from cryptography.hazmat.primitives.serialization import (  # type: ignore[unresolved-import]
         Encoding,
         PublicFormat,
         load_der_private_key,
@@ -152,7 +152,7 @@ def _canon(obj):
 
 def collector_public_key():
     _ensure_collector_key()
-    return base64.b64encode(_COLLECTOR_PUB_KEY_RAW).decode("ascii")
+    return base64.b64encode(_COLLECTOR_PUB_KEY_RAW).decode("ascii")  # type: ignore[invalid-argument-type]
 
 
 def collector_key_id():
@@ -173,7 +173,7 @@ def sign_content(content):
     _ensure_collector_key()
     if isinstance(content, str):
         content = content.encode("utf-8")
-    signature = _COLLECTOR_PRIV_KEY.sign(content)
+    signature = _COLLECTOR_PRIV_KEY.sign(content)  # type: ignore[unresolved-attribute]
     return base64.b64encode(signature).decode("ascii")
 
 
@@ -363,7 +363,7 @@ def verify(token, subject, allow_any_subject=False):
     # AttributeError that made /api/leak/verify never return an attestation.
     _ensure_collector_key()
     signed_payload = _canon(signed)
-    result["signature"] = base64.b64encode(_COLLECTOR_PRIV_KEY.sign(signed_payload)).decode("ascii")
+    result["signature"] = base64.b64encode(_COLLECTOR_PRIV_KEY.sign(signed_payload)).decode("ascii")  # type: ignore[unresolved-attribute]
     result["publicKey"] = collector_public_key()
     result["keyId"] = collector_key_id()
     result["signedPayload"] = base64.b64encode(signed_payload).decode("ascii")

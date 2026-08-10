@@ -33,15 +33,16 @@ def _b(name, default=False):
     # A131: unrecognised value — return the default, never silently coerce.
     # A careful operator writing "enabled" or "TRUE!" must not get False on
     # a flag whose secure default is True (that would disable enforcement).
-    import logging
-
-    logging.getLogger("syxx-server").warning(
-        "config_invalid_bool: %s=%r is not a recognised boolean value "
-        "(accepted: 1/true/yes/on, 0/false/no/off); using default %r",
-        name,
-        v,
-        default,
-    )
+    # C223: route through logging_util for structured JSON logging (lazy import
+    # to avoid circular dependency since logging_util imports config).
+    try:
+        from . import logging_util
+        logging_util.warn("config_invalid_bool", var=name, value=v, default=default)
+    except ImportError:
+        import logging
+        logging.getLogger("syxx-server").warning(
+            "config_invalid_bool: %s=%r; using default %r", name, v, default,
+        )
     return default
 
 
@@ -56,14 +57,15 @@ def _i(name, default):
     try:
         return int(raw.strip())
     except (TypeError, ValueError):
-        import logging
-
-        logging.getLogger("syxx-server").warning(
-            "config_invalid_int: %s=%r is not a valid integer; using default %r",
-            name,
-            raw,
-            default,
-        )
+        # C223: route through logging_util for structured JSON logging.
+        try:
+            from . import logging_util
+            logging_util.warn("config_invalid_int", var=name, value=raw, default=default)
+        except ImportError:
+            import logging
+            logging.getLogger("syxx-server").warning(
+                "config_invalid_int: %s=%r; using default %r", name, raw, default,
+            )
         return default
 
 
@@ -152,6 +154,17 @@ UPDATE_PACKAGE_DIR = _s(
 # secret disables the checkout/webhook routes.
 STRIPE_SECRET_KEY = _s("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = _s("STRIPE_WEBHOOK_SECRET", "")
+# SEC-048: Validate webhook secret length. Stripe webhook secrets are at least
+# 24 characters (whsec_ prefix + 24+ chars). A shorter value indicates a typo
+# or truncation that would silently accept forged events.
+if STRIPE_WEBHOOK_SECRET and len(STRIPE_WEBHOOK_SECRET) < 24:
+    import logging
+    logging.getLogger("syxx-server").warning(
+        "config_stripe_webhook_too_short: STRIPE_WEBHOOK_SECRET is %d chars "
+        "(expected >=24); webhook verification will likely fail or accept "
+        "forged events. Check your environment configuration.",
+        len(STRIPE_WEBHOOK_SECRET),
+    )
 # A128: configurable webhook timestamp tolerance (seconds). Default 300 matches
 # Stripe's own recommendation. Increase if the server's clock source has known
 # skew; decrease for tighter replay protection. A clock-skewed server rejects
@@ -195,6 +208,16 @@ ADMIN_TOKEN = _s("SYXX_ADMIN_TOKEN", "")
 
 # Keygen webhook + API key sync
 KEYGEN_WEBHOOK_SECRET = _s("SYXX_KEYGEN_WEBHOOK_SECRET", "")  # HMAC secret for license webhooks
+# SEC-048: Validate Keygen webhook secret length. HMAC secrets should be at
+# least 16 characters to provide adequate entropy against brute-force attacks.
+if KEYGEN_WEBHOOK_SECRET and len(KEYGEN_WEBHOOK_SECRET) < 16:
+    import logging
+    logging.getLogger("syxx-server").warning(
+        "config_keygen_webhook_too_short: SYXX_KEYGEN_WEBHOOK_SECRET is %d chars "
+        "(expected >=16); HMAC verification may accept forged events. "
+        "Check your environment configuration.",
+        len(KEYGEN_WEBHOOK_SECRET),
+    )
 API_KEY_SYNC_INTERVAL_HOURS = _i("SYXX_API_KEY_SYNC_INTERVAL_HOURS", 24)  # daily sweep
 
 # How many machines one purchased license may be activated on. Stamped onto every minted
@@ -370,7 +393,10 @@ def perm_policy_for(platform):
 
 
 # --- HTTP / DNS listeners --------------------------------------------------
-HTTP_HOST = _s("SYXX_HTTP_HOST", "0.0.0.0")
+# SEC-014: Default to loopback — production MUST set SYXX_HTTP_HOST explicitly
+# (typically via systemd unit or deploy.sh). Binding 0.0.0.0 by default exposes
+# the server to the network before the reverse proxy is configured.
+HTTP_HOST = _s("SYXX_HTTP_HOST", "127.0.0.1")
 HTTP_PORT = _i("SYXX_HTTP_PORT", 8080)
 HTTP_REQUEST_TIMEOUT = _i("SYXX_HTTP_REQUEST_TIMEOUT", 30)
 DNS_HOST = _s("SYXX_DNS_HOST", "0.0.0.0")
@@ -438,7 +464,11 @@ FETCH_SCRIPT_TIMEOUT = _i("SYXX_FETCH_SCRIPT_TIMEOUT", 3)
 FETCH_MAX_BYTES = _i("SYXX_FETCH_MAX_BYTES", 5 * 1024 * 1024)
 FETCH_MAX_SCRIPTS = _i("SYXX_FETCH_MAX_SCRIPTS", 40)
 FETCH_MAX_REDIRECTS = _i("SYXX_FETCH_MAX_REDIRECTS", 3)
-FETCH_ALLOW_PRIVATE = _b("SYXX_FETCH_ALLOW_PRIVATE")  # test escape hatch
+# SEC-013: SYXX_FETCH_ALLOW_PRIVATE is gated on SYXX_DEV_MODE. Private-network
+# fetches (127.0.0.1, 10.0.0.0/8, etc.) are an SSRF escalation path; they are
+# only permitted when the operator has explicitly opted into dev mode.
+DEV_MODE = _b("SYXX_DEV_MODE", False)
+FETCH_ALLOW_PRIVATE = _b("SYXX_FETCH_ALLOW_PRIVATE") and DEV_MODE  # test escape hatch
 WARP_CACHE_TTL = _i("SYXX_WARP_CACHE_TTL", 300)
 # Per-run unique-host cap for the Warp raw-concatenation assembler. Discovery pulls
 # a page's declared JS/CSS subresources, which can point at arbitrary hosts; this

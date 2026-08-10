@@ -109,11 +109,16 @@ public enum ProbeRunner {
                     defer { group.cancelAll() }
 
                     let first = try await group.next()
-                    // C058 Fix 2: when the deadline fires first, the transport may still
+                    // C058 Fix 2 + D403: when the deadline fires first, the transport may still
                     // complete moments later (a UDP retry at 2s arrives at 2.6s, a DoH request
                     // at 5.1s). Instead of discarding the late-but-valid result, add a grace
                     // deadline and wait for the operation to finish. A real (late) answer is
                     // preferred over a fabricated absence; the span records `late_but_valid`.
+                    //
+                    // D403: this grace period resolves the nondeterministic race at the exact
+                    // deadline — when timeout and operation complete simultaneously, the
+                    // TaskGroup picks arbitrarily. The 1.5s grace window gives the operation
+                    // a fair chance to deliver its result before the deadline wins.
                     if case .deadline = first {
                         let gracePeriod: TimeInterval = 1.5
                         group.addTask {

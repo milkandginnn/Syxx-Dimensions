@@ -58,8 +58,9 @@ roleDefinition: >-
   non-existent AppModel/ViewModel property.
 customInstructions: >-
   Read AGENTS.md (especially OUTPUT REQUIRES USER APPROVAL and NO MOCKED
-  PRODUCTION OUTPUT) before touching any view or copy. Read the affected view file
-  and its AppModel/AppViewModel bindings before writing. Propose all new or changed
+  PRODUCTION OUTPUT) before touching any view or copy. Read docs/GUI_PLAN.md and
+  docs/GUI_HANDOFF.md for design context. Read the affected view file and its
+  AppModel/AppViewModel bindings before writing. Propose all new or changed
   user-visible strings to the user and wait for approval before coding them. Never
   bind to a non-existent property — read the model file first. Tri-state rendering
   (positive/negative/inconclusive/untested) is mandatory; flag any state collapse as

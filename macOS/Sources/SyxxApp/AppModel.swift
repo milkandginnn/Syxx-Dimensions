@@ -415,6 +415,14 @@ final class AppModel: ObservableObject {
     // Task.isCancelled before writing final state back). Same discipline as runTask/F010.
     private var witnessTask: Task<Void, Never>?
 
+    // Serialized launch-time license validation. `validationTask` is the single in-flight task;
+    // concurrent callers (checkStartup, ProbePlan scans, activateLicense recovery paths) await
+    // the same task instead of spawning parallel Keychain prompts. `hasAttemptedValidation`
+    // prevents re-entry after the first validation completes within the same process lifetime —
+    // subsequent callers see the already-populated license state and return immediately.
+    private var validationTask: Task<Void, Never>?
+    private var hasAttemptedValidation = false
+
     // Cage states
     @Published var cageDuration: Int = 60
     @Published var cageCapturing: Bool = false
@@ -610,6 +618,9 @@ final class AppModel: ObservableObject {
         prophetResult = nil
         mirrorResult = nil
         leakResult = nil
+        // C218: clear the activity terminal so stale entries from a prior session do not
+        // persist into a fresh one. A reset IS a new session boundary.
+        dashboardLog.removeAll()
     }
 
     /// Runs all six wardens in sequence. Each tool is run with its normal timeout.
@@ -862,22 +873,49 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Validates the stored license key / trial state on launch. Called from checkStartup().
+    /// Validates the stored license key / trial state on launch. Serialized: concurrent callers
+    /// (checkStartup, ProbePlan, activateLicense recovery) share a single in-flight Task instead
+    /// of each spawning independent Keychain prompts. After the first validation completes within
+    /// the same process lifetime, subsequent calls return immediately — the license state is
+    /// already populated and the Keychain cache serves the answer without a new prompt.
     func validateLicenseOnLaunch() async {
-        let result = await LicenseManager.isFeatureUnlocked()
-        await MainActor.run {
-            if result.unlocked {
-                if result.message.contains("Pro Subscription") {
-                    updateLicenseState(.pro, message: result.message)
-                } else if result.message.contains("Free Trial"),
-                          let hours = extractTrialHours(from: result.message) {
-                    updateLicenseState(.trial(hoursRemaining: hours), message: result.message)
-                } else {
-                    updateLicenseState(.pro, message: result.message)
-                }
-            } else {
-                updateLicenseState(.lite, message: result.message)
+        // If validation already completed this process, skip — the cached state is authoritative.
+        if hasAttemptedValidation { return }
+
+        // If a validation Task is already in flight, await it rather than starting another.
+        if let existing = validationTask {
+            await existing.value
+            return
+        }
+
+        let task = Task { [weak self] in
+            guard let self = self else { return }
+            let result = await LicenseManager.isFeatureUnlocked()
+            await MainActor.run {
+                self.hasAttemptedValidation = true
+                self.applyLicenseResult(result)
             }
+        }
+        validationTask = task
+        await task.value
+    }
+
+    /// Apply a license-check result to the UI state. Extracted so the activateLicense recovery
+    /// paths can re-check state after a failed activation (timeout / network error) without going
+    /// through the `hasAttemptedValidation` guard — those paths need to restore prior entitlement,
+    /// which is a distinct operation from the launch-time validation the guard protects.
+    private func applyLicenseResult(_ result: (unlocked: Bool, message: String)) {
+        if result.unlocked {
+            if result.message.contains("Pro Subscription") {
+                updateLicenseState(.pro, message: result.message)
+            } else if result.message.contains("Free Trial"),
+                      let hours = extractTrialHours(from: result.message) {
+                updateLicenseState(.trial(hoursRemaining: hours), message: result.message)
+            } else {
+                updateLicenseState(.pro, message: result.message)
+            }
+        } else {
+            updateLicenseState(.lite, message: result.message)
         }
     }
 
@@ -928,14 +966,22 @@ final class AppModel: ObservableObject {
             case .timeout:
                 // Do NOT overwrite the stored key — network may be blocked.
                 // Re-check full state (trial, stored key, etc.) to restore any prior entitlement.
+                // Bypasses the hasAttemptedValidation guard — this is recovery, not a launch-time check.
                 self.updateLicenseState(.activationFailed("License check timed out. Check your internet connection."),
                                         message: "")
-                Task { await self.validateLicenseOnLaunch() }
+                Task {
+                    let result = await LicenseManager.isFeatureUnlocked()
+                    await MainActor.run { self.applyLicenseResult(result) }
+                }
             case .networkError(let msg):
                 // Do NOT overwrite the stored key — server unreachable.
+                // Bypasses the hasAttemptedValidation guard — this is recovery, not a launch-time check.
                 self.updateLicenseState(.activationFailed("Could not reach the license server: \(msg)"),
                                         message: "")
-                Task { await self.validateLicenseOnLaunch() }
+                Task {
+                    let result = await LicenseManager.isFeatureUnlocked()
+                    await MainActor.run { self.applyLicenseResult(result) }
+                }
             }
         }
     }
@@ -958,6 +1004,20 @@ final class AppModel: ObservableObject {
             }
         }
         Task {
+            // Evaluate biometric authentication ONCE before any Keychain access. This converts
+            // N per-item Keychain prompts into ONE Touch ID prompt per session. The authenticated
+            // LAContext is stored in LicenseManager and reused for all subsequent Keychain operations.
+            // Graceful degradation: if biometry is unavailable (no hardware, no enrolled fingers),
+            // the app falls back to password-only access without error.
+            let biometricResult = await BiometricAuth.evaluate()
+            switch biometricResult {
+            case .authenticated(let context):
+                LicenseManager.setBiometricContext(context)
+            case .unavailable, .denied:
+                // No biometric context — Keychain operations fall back to password-only access.
+                break
+            }
+
             // Validate license state from Keychain / trial
             await self.validateLicenseOnLaunch()
 
@@ -1442,10 +1502,26 @@ final class AppModel: ObservableObject {
             selfVerifyLine = "could not verify — self-verification did not return a result."
         }
 
-        // The snapshot is signed regardless of the self-verify outcome; surface it to the tab.
+        // C211: Only promote to .signed if self-verification passed. A failed self-verify
+        // (invalid signature, malformed input) must never be elevated to signed testimony —
+        // the snapshot is still surfaced for forensic inspection, but the state is honest.
         witnessSnapshot = snap
         witnessSignature = snap.signature
-        witnessTestimonyState = .signed
+        if let verification = verifyResult {
+            switch verification {
+            case .valid:
+                witnessTestimonyState = .signed
+            case .invalidSignature, .malformedInput, .unsupportedFormat:
+                witnessTestimonyState = .failed("Self-verification failed: \(selfVerifyLine)")
+            default:
+                // Warnings (expired, stale, futureDated, untrustedSigner, displayMismatch):
+                // the snapshot is still structurally valid — surface it as signed with
+                // the warning visible in the output. These are informational, not failures.
+                witnessTestimonyState = .signed
+            }
+        } else {
+            witnessTestimonyState = .failed("Self-verification did not return a result")
+        }
 
         // Same drift-population step as witnessTestify(), single-sourced in the Kit planner (D093):
         // signing here stays ProbeRunner-wrapped above for budget accounting, so only steps 6-7 are
@@ -1853,9 +1929,12 @@ final class AppModel: ObservableObject {
     private nonisolated static func locateCageBinary() -> URL? {
         let fm = FileManager.default
         var candidates: [URL] = []
-        // Bundled app: `syxx` in Resources/ or next to the executable.
-        if let res = Bundle.main.resourceURL { candidates.append(res.appendingPathComponent("syxx")) }
-        if let exe = Bundle.main.executableURL { candidates.append(exe.deletingLastPathComponent().appendingPathComponent("syxx")) }
+        // Case-variant fallback: try lowercase then capitalized (the C# twin searches
+        // both "syxx.exe" and "Syxx.exe" — see CageView.xaml.cs:130-131).
+        for name in ["syxx", "Syxx"] {
+            if let res = Bundle.main.resourceURL { candidates.append(res.appendingPathComponent(name)) }
+            if let exe = Bundle.main.executableURL { candidates.append(exe.deletingLastPathComponent().appendingPathComponent(name)) }
+        }
         // SwiftPM dev build: walk up from the exe dir into .build/debug or .build/release.
         if let exe = Bundle.main.executableURL {
             var dir = exe.deletingLastPathComponent()

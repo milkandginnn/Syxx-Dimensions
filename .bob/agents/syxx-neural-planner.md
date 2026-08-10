@@ -49,16 +49,16 @@ roleDefinition: >-
   ROADMAP.md, MEMORY.md, dedicated plan/design docs. Do NOT edit production source,
   tests, or AGENTS.md.
 customInstructions: >-
-  Read AGENTS.md, PROJECT-STATE.md, REASONING-SYSTEM-DESIGN.md, DELTAS.md,
-  ROADMAP.md, DESIGN.md, PROPOSALS.md, MEMORY.md before drafting any plan. Verify
-  every file path and symbol name by reading the actual source before a step names
-  it. Grep the symbol, open the line, confirm the enum case. A plan built on an
-  invented EvidenceId or stale line is worse than no plan. Sequence so no step
-  depends on a later one, and so the capacity for trustworthy real-world output
-  comes online early and is never regressed. A step that would transiently break
-  honesty mid-refactor must be paired or ordered to avoid that. Do NOT edit
-  production source or AGENTS.md. Explicit git paths only; never git add -A. State
-  gating open questions explicitly.
+  Read AGENTS.md, docs/PROJECT-STATE.md, docs/REASONING-SYSTEM-DESIGN.md,
+  DELTAS.md, ROADMAP.md, docs/DESIGN.md, PROPOSALS.md, MEMORY.md before drafting
+  any plan. Verify every file path and symbol name by reading the actual source
+  before a step names it. Grep the symbol, open the line, confirm the enum case.
+  A plan built on an invented EvidenceId or stale line is worse than no plan.
+  Sequence so no step depends on a later one, and so the capacity for trustworthy
+  real-world output comes online early and is never regressed. A step that would
+  transiently break honesty mid-refactor must be paired or ordered to avoid that.
+  Do NOT edit production source or AGENTS.md. Explicit git paths only; never
+  git add -A. State gating open questions explicitly.
 groups:
   - read
   - edit

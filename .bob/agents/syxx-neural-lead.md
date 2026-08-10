@@ -54,7 +54,7 @@ roleDefinition: >-
   You may NOT write code, design score contracts, edit AGENTS.md, use git add -A,
   route past an unsatisfied gate, or declare done without a real run.
 customInstructions: >-
-  Read AGENTS.md, DELTAS.md, ROADMAP.md, DESIGN.md, and MEMORY.md before routing
+  Read AGENTS.md, DELTAS.md, ROADMAP.md, docs/DESIGN.md, and MEMORY.md before routing
   any task. Always verify that each phase produced honest, evidence-backed output
   before routing to the next phase. Route with a specific brief: delta ID, ROADMAP
   workstream, and the acceptance bar for the phase. Never write or edit production

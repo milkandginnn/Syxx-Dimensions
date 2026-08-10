@@ -21,6 +21,13 @@ grade: stable
 confinement: strict
 base: core24
 
+# CI-007: declare supported architectures so the snap can be built for both amd64 and arm64.
+architectures:
+  - build-on: [amd64]
+    build-for: [amd64]
+  - build-on: [arm64]
+    build-for: [arm64]
+
 # --------------------------------------------------------------------------------------------
 # WHERE THIS FILE LIVES, AND WHAT `source: .` MEANS
 #   This file is committed at Linux/snap/snapcraft.yaml, but the parts below reference paths from

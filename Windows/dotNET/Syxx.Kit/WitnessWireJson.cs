@@ -70,6 +70,7 @@ namespace Syxx.Kit
                 [DNSResponseStatus.ResponseIdMismatch] = "responseIdMismatch",
                 [DNSResponseStatus.MalformedResponse] = "malformedResponse",
                 [DNSResponseStatus.TransportError] = "transportError",
+                [DNSResponseStatus.RcodeOther] = "rcodeOther",
             };
 
         private static readonly Dictionary<string, DNSResponseStatus> ByWireName = BuildReverse();

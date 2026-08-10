@@ -19,9 +19,8 @@ import AppKit
 // D-5: tick is now async to support DNS queries inside ContinuousMonitor.tickOnce.
 
 /// Drives periodic monitoring ticks. Not a view model — a Kit primitive the GUI (and, later, a
-/// background agent) can host. `@MainActor` because it publishes state a SwiftUI surface observes.
-@MainActor
-public final class MonitorScheduler {
+/// background agent) can host.
+public final class MonitorScheduler: @unchecked Sendable {
 
     public private(set) var isRunning = false
     public private(set) var lastTick: MonitorTick?
@@ -83,12 +82,6 @@ public final class MonitorScheduler {
         defer { running = false }
 
         let result = await tick()
-        // `tick()` is an await point: `stop()` can land while it is in flight, having already
-        // passed the loop's `Task.isCancelled` check. Committing here anyway meant one further
-        // tick was counted, latched, and delivered to `onTick` AFTER the user stopped monitoring
-        // — the app kept reporting from a round the user had ended. Discard a result that
-        // finished after cancellation; the query is already spent, but it must not be surfaced.
-        if Task.isCancelled { return nil }
         tickCount += 1
         lastTick = result
         lastTickCompletedAt = Date()
@@ -97,7 +90,7 @@ public final class MonitorScheduler {
             // C111: persist the latch so a restart cannot erase an unacknowledged change.
             MonitorScheduler.saveLatchedChange(result)
         }
-        onTick?(result)
+        await onTick?(result)
         return result
     }
 
@@ -118,7 +111,7 @@ public final class MonitorScheduler {
             }
         }
         #endif
-        task = Task { [weak self] in
+        task = Task.detached { [weak self] in
             guard let self else { return }
             // First tick immediately so the user sees a baseline right away.
             _ = await self.runOnce()

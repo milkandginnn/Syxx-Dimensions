@@ -348,8 +348,10 @@ public enum EvidenceAdapters {
                     rationale: "A verified, fresh signed manifest disagrees byte-for-byte with what your vantage fetched (or the manifest signature failed) — evidence of on-path content interference. Benign per-request/dynamic content is possible; see the diff before concluding."))
                 subs.append(.positive)
             case .inconclusive:
+                // C199: distinct EvidenceId from confirmed tampering — inconclusive warp must not
+                // carry the same weight as a verified content mismatch in the indicator mapping.
                 ev.append(EvidenceItem(section: .mirror,
-                    evidenceId: .scriptMismatch,
+                    evidenceId: .scriptMismatchInconclusive,
                     observation: "Content warp check was inconclusive" + (w.inconclusiveReason.map { ": \($0)" } ?? ""),
                     rationale: "An inconclusive warp (untrusted/unpinned signer, stale/forged freshness, or unfetchable content) could not determine whether content was modified — not a clean result; requires corroboration."))
                 subs.append(.inconclusive)

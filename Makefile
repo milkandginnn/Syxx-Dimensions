@@ -248,3 +248,38 @@ generate-all-commands:
 clean-commands:
 	-rm -rf commands/
 	@echo "Cleaned up commands/ (top-level Gemini TOMLs)"
+
+# ============================================================================
+# CI-016: Syxx application build/test/package/lint targets
+# ============================================================================
+# These targets build and test the Syxx application (not the plugin marketplace).
+# The .NET solution is at Windows/Syxx.Linux.slnf (Linux, no WinUI) and
+# Windows/Syxx.sln (Windows, with WinUI 3). macOS uses swift build.
+
+.PHONY: syxx-build syxx-test syxx-clean syxx-package syxx-lint
+
+syxx-build:
+	@echo "Building Syxx Linux solution..."
+	dotnet build Windows/Syxx.Linux.slnf -c Release --nologo
+
+syxx-test:
+	@echo "Running Syxx tests..."
+	dotnet test Linux/Ubuntu/SyxxUI.Avalonia.Tests/SyxxUI.Avalonia.Tests.csproj -c Release --nologo
+	dotnet test Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj -c Release --nologo
+
+syxx-clean:
+	@echo "Cleaning Syxx build artifacts..."
+	dotnet clean Windows/Syxx.Linux.slnf -c Release --nologo 2>/dev/null || true
+	rm -rf Linux/Ubuntu/SyxxUI.Avalonia/bin Linux/Ubuntu/SyxxUI.Avalonia/obj
+	rm -rf Linux/Ubuntu/SyxxUI.Avalonia.Tests/bin Linux/Ubuntu/SyxxUI.Avalonia.Tests/obj
+	@echo "Syxx build artifacts cleaned."
+
+syxx-package:
+	@echo "Building Syxx .deb package..."
+	bash Linux/Ubuntu/build_deb.sh release
+
+syxx-lint:
+	@echo "Running Syxx C# format check..."
+	dotnet format Windows/Syxx.Linux.slnf --verify-no-changes || true
+	@echo "Running SwiftLint..."
+	swiftlint lint --config .swiftlint.yml --strict 2>/dev/null || true

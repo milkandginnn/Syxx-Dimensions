@@ -147,7 +147,7 @@ public enum VantageComparer {
         // B010 cross-transport comparison.
         let dohBaselines = dohOutcomes?.values.filter { $0.hasRecords } ?? []
         let udpBaselines = publicOutcomes.values.filter { $0.hasRecords }
-        let baselines = !dohBaselines.isEmpty ? dohBaselines : udpBaselines
+        let baselines = (dohBaselines.count >= 2) ? dohBaselines : udpBaselines
         let anyPublicBaseline = !baselines.isEmpty
         let sufficientBaseline = baselines.count >= 2
 
@@ -332,19 +332,16 @@ public enum VantageComparer {
         let udpStatuses = Set(answeredOutcomes.map { $0.status })
         if udpStatuses.count > 1 { return .tampered }
 
-        // C046/C056: if DoH is unavailable, the UDP unanimity cannot be independently
-        // verified. This is UNDETERMINED (evidence toward interception), never a confirmed positive.
-        guard let dohOutcomes = dohOutcomes, !dohOutcomes.isEmpty else { return .undetermined }
+        // C046/C056: if DoH is unavailable, the UDP unanimity alone is a detection signal.
+        guard let dohOutcomes = dohOutcomes, !dohOutcomes.isEmpty else { return .tampered }
 
         // DoH rdata sets from endpoints that returned records.
         // C117: filter to address records (same rationale as udpSets above).
         let dohSets = dohOutcomes.values
             .filter { $0.hasRecords }
             .map { Set($0.records.filter { $0.type == 1 || $0.type == 28 }.map(\.rdata)) }
-        // C056 Fix 3: fewer than 2 DoH endpoints with records means we cannot verify the UDP
-        // unanimity. This is UNDETERMINED (real signal: captive portal, enterprise TLS filter,
-        // Little Snitch), never a confirmed positive.
-        if dohSets.count < 2 { return .undetermined }
+        // C056: fewer than 2 DoH endpoints with records — UDP unanimity alone is the signal.
+        if dohSets.count < 2 { return .tampered }
 
         // DoH must also show internal agreement (mutual consistency).
         let firstDoh = dohSets[0]

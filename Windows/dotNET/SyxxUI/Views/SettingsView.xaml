@@ -10,20 +10,37 @@
 
             <StackPanel Spacing="6">
                 <TextBlock Text="PREFERENCES" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                           Foreground="{StaticResource IoTextSecondaryBrush}" />
+                           Foreground="{DynamicResource IoTextSecondaryBrush}" />
                 <TextBlock Text="Settings" FontFamily="{StaticResource IoFontDisplay}" FontSize="28" FontWeight="Bold"
-                           Foreground="{StaticResource IoTextBrush}" />
+                           Foreground="{DynamicResource IoTextBrush}" />
             </StackPanel>
 
+            <!-- Appearance -->
+            <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="APPEARANCE" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
+                    <TextBlock Text="Choose how Syxx looks. System follows your Windows theme setting."
+                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="13" TextWrapping="Wrap"
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
+                    <ComboBox x:Name="ThemePicker" Header="Theme" Width="260" SelectionChanged="Theme_Changed">
+                        <ComboBoxItem Content="System" Tag="system" />
+                        <ComboBoxItem Content="Dark" Tag="dark" />
+                        <ComboBoxItem Content="Light" Tag="light" />
+                    </ComboBox>
+                </StackPanel>
+            </Border>
+
             <!-- Encrypted DNS -->
-            <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
-                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+            <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                 <StackPanel Spacing="10">
                     <TextBlock Text="ENCRYPTED DNS" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     <TextBlock Text="Send every DNS query over an encrypted transport (DoH/DoT). Configures the system directly — no profile to install."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="13" TextWrapping="Wrap"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     <ToggleSwitch x:Name="EncryptToggle" Header="Encrypt all DNS queries" Toggled="EncryptToggle_Toggled" />
                     <ComboBox x:Name="ResolverPicker" Header="Resolver" Width="260" SelectionChanged="Resolver_Changed" />
                     <ComboBox x:Name="TransportPicker" Header="Transport" Width="260" SelectionChanged="Transport_Changed">
@@ -31,37 +48,37 @@
                         <ComboBoxItem Content="DoT (TLS)" Tag="dot" />
                     </ComboBox>
                     <TextBlock x:Name="EncryptState" Text="Not enabled." FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                               TextWrapping="Wrap" Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               TextWrapping="Wrap" Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     <TextBlock Text="Syxx keeps its own audit lookups in cleartext so it can still detect tampering; only your system's ordinary DNS is encrypted here."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="11" TextWrapping="Wrap"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                 </StackPanel>
             </Border>
 
             <!-- Privacy / telemetry -->
-            <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
-                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+            <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                 <StackPanel Spacing="10">
                     <TextBlock Text="PRIVACY &amp; DATA" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
 
                     <ToggleSwitch x:Name="TelemetryToggle" Header="Send anonymous usage ping (platform + version, no identifier)"
                                   Toggled="Telemetry_Toggled" />
                     <TextBlock Text="Syxx contacts syxx.app once per launch to check for news and updates. The ping carries only your OS and app version — never your identity, resolvers, or the names you look up."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="11" TextWrapping="Wrap"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
 
                     <ToggleSwitch x:Name="CrashReportingToggle" Header="Send anonymous crash reports to help improve Syxx"
                                   Toggled="CrashReporting_Toggled" />
                     <TextBlock Text="Crash reports include stack traces and device state at the time of crash, but no personal identifiers or network payloads."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="11" TextWrapping="Wrap"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
 
                     <ToggleSwitch x:Name="UpdateCheckToggle" Header="Check for updates automatically on launch"
                                   Toggled="UpdateCheck_Toggled" />
                     <TextBlock Text="When enabled, Syxx checks for new versions and important announcements once per launch."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="11" TextWrapping="Wrap"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
 
                     <HyperlinkButton x:Name="PrivacyLink" Content="Read the Syxx Privacy Policy"
                                      NavigateUri="https://syxx.app/privacy"
@@ -70,36 +87,36 @@
             </Border>
 
             <!-- Notifications -->
-            <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
-                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+            <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                 <StackPanel Spacing="10">
                     <TextBlock Text="NOTIFICATIONS" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     <ToggleSwitch x:Name="NotifyToggle" Header="Notify me when the network's trust changes" Toggled="Notify_Toggled" />
                     <TextBlock Text="You will receive a system notification when continuous monitoring detects a network configuration change."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="11" TextWrapping="Wrap"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                 </StackPanel>
             </Border>
 
             <!-- Data -->
-            <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
-                    BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+            <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                    BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                 <StackPanel Spacing="10">
                     <TextBlock Text="DATA" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     <TextBlock Text="Everything Syxx stores lives under your local profile and never leaves your machine."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="13" TextWrapping="Wrap"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" />
                     <Button Content="Remove stored data" Click="RemoveData_Click"
-                            Background="{StaticResource IoCriticalRedBrush}" Foreground="{StaticResource IoTextBrush}" />
+                            Background="{DynamicResource IoCriticalRedBrush}" Foreground="{DynamicResource IoTextBrush}" />
                     <TextBlock x:Name="DataNote" Text="" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                               TextWrapping="Wrap" Foreground="{StaticResource IoTextSecondaryBrush}" />
+                               TextWrapping="Wrap" Foreground="{DynamicResource IoTextSecondaryBrush}" />
                 </StackPanel>
             </Border>
 
             <TextBlock x:Name="SaveNote" Text="" FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                       Foreground="{StaticResource IoTextSecondaryBrush}" />
+                       Foreground="{DynamicResource IoTextSecondaryBrush}" />
 
         </StackPanel>
     </Grid>

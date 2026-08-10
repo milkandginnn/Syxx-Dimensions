@@ -53,6 +53,61 @@ def _dns_rate_ok(source_ip):
         return True
 
 
+# SEC-024: DNS Response Rate Limiting (RRL).
+# Limits identical responses per (source_ip, qname, qtype) to prevent DNS
+# amplification attacks. A legitimate client may query the same name a few
+# times, but an attacker reflecting queries through the server should be
+# rate-limited on the response side.
+_rrl_lock = _threading.Lock()
+_rrl_buckets = {}  # (source_ip, qname, qtype) -> [count, window_start]
+_RRL_LIMIT = 5  # max identical responses per window
+_RRL_WINDOW = 60  # seconds
+
+
+def _rrl_ok(source_ip, qname, qtype):
+    """Return True if this (source_ip, qname, qtype) tuple is within RRL limits."""
+    key = (source_ip, qname.lower(), qtype)
+    now = int(time.time())
+    with _rrl_lock:
+        entry = _rrl_buckets.get(key)
+        if entry is None:
+            _rrl_buckets[key] = [1, now]
+            return True
+        count, window_start = entry
+        if now - window_start >= _RRL_WINDOW:
+            _rrl_buckets[key] = [1, now]
+            return True
+        if count >= _RRL_LIMIT:
+            return False
+        entry[0] = count + 1
+        return True
+    # Prune old entries periodically (every ~1000 calls)
+    if len(_rrl_buckets) > 1000:
+        with _rrl_lock:
+            cutoff = now - _RRL_WINDOW * 2
+            expired = [k for k, v in _rrl_buckets.items() if v[1] < cutoff]
+            for k in expired:
+                del _rrl_buckets[k]
+
+
+# SEC-050: Per-token observation limit.
+# Prevents a single leak token from generating unbounded observations.
+# Once a token has been observed N times, further observations are dropped.
+_token_obs_lock = _threading.Lock()
+_token_obs_counts = {}  # token -> count
+_TOKEN_OBS_LIMIT = 100  # max observations per token
+
+
+def _token_obs_ok(token):
+    """Return True if this token has not exceeded its observation limit."""
+    with _token_obs_lock:
+        count = _token_obs_counts.get(token, 0)
+        if count >= _TOKEN_OBS_LIMIT:
+            return False
+        _token_obs_counts[token] = count + 1
+        return True
+
+
 def _encode_name(name):
     out = b""
     for label in name.rstrip(".").split("."):
@@ -176,11 +231,34 @@ def _rr_ns(nsname, name_offs=12):
     return ptr + struct.pack(">HHIH", TYPE_NS, 1, 3600, len(rdata)) + rdata
 
 
+def _soa_serial():
+    """A275: date-based SOA serial in YYYYMMDDnn format.
+
+    The previous implementation used Unix epoch (int(time.time())) which is
+    monotonically increasing but non-standard. RFC 1912 recommends YYYYMMDDnn
+    so zone administrators can read the serial at a glance. The nn counter
+    handles multiple updates within the same UTC day.
+    """
+    import datetime
+
+    today = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
+    serial_base = int(today) * 100  # YYYYMMDD00
+    # If the cached serial is already today's, increment the revision counter.
+    if _soa_serial._cached >= serial_base:  # type: ignore[unresolved-attribute]
+        _soa_serial._cached += 1  # type: ignore[unresolved-attribute]
+    else:
+        _soa_serial._cached = serial_base  # type: ignore[unresolved-attribute]
+    return _soa_serial._cached  # type: ignore[unresolved-attribute]
+
+
+_soa_serial._cached = 0  # type: ignore[unresolved-attribute]
+
+
 def _rr_soa(name_offs=12):
     rdata = (
         _encode_name(config.DNS_SOA_MNAME)
         + _encode_name(config.DNS_SOA_RNAME)
-        + struct.pack(">IIIII", int(time.time()), 3600, 600, 604800, 60)
+        + struct.pack(">IIIII", _soa_serial(), 3600, 600, 604800, 60)
     )
     ptr = bytes([0xC0 | (name_offs >> 8), name_offs & 0xFF])
     return ptr + struct.pack(">HHIH", TYPE_SOA, 1, 3600, len(rdata)) + rdata
@@ -339,12 +417,19 @@ def _serve_dns(socks):
             try:
                 response, leak_hit = _build_response(data)
                 if leak_hit is not None:
+                    token, qtype = leak_hit
                     # A034: per-source rate limit on observation recording. The DNS
                     # response is always sent (the client gets a valid answer), but
                     # the DB write is skipped when the source IP has exceeded its
                     # quota, preventing unbounded INSERTs from a single resolver.
-                    if _dns_rate_ok(addr[0]):
-                        leak.observe(leak_hit[0], addr[0], leak_hit[1])
+                    # SEC-024: Also apply RRL to prevent amplification
+                    # SEC-050: Also apply per-token observation limit
+                    if (
+                        _dns_rate_ok(addr[0])
+                        and _rrl_ok(addr[0], token, qtype)
+                        and _token_obs_ok(token)
+                    ):
+                        leak.observe(token, addr[0], qtype)
                     else:
                         logging_util.incr("dns_rate_limited")
                 if response:

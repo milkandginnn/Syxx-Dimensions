@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using SyxxUI.ViewModels;
 using Syxx.Kit;
 
@@ -13,14 +14,26 @@ namespace SyxxUI.Views;
 
 public sealed partial class PortalView : Page
 {
+    private static readonly HashSet<string> _portalProps = new()
+    {
+        nameof(AppViewModel.PortalReport), nameof(AppViewModel.PortalRunState), nameof(AppViewModel.PortalRunMessage),
+    };
+
     private AppViewModel? _vm;
 
     public PortalView()
     {
         InitializeComponent();
-        var servers = NetworkKeyState.GetSystemDNSServers();
-        ResolversList.ItemsSource = servers;
-        ResolversEmptyText.Visibility = servers.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        Header.AddContent(new TextBlock
+        {
+            Text = "A Portal carried the traveler to a distant land, tracing the path of a hidden interceptor that had reached into the stream.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoFontLore"],
+            FontSize = 16,
+            Foreground = (Brush)Application.Current.Resources["IoTextMutedBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
+
     }
 
     // E155: subscribe to PropertyChanged so the pane refreshes when data changes while visible.
@@ -32,9 +45,21 @@ public sealed partial class PortalView : Page
         _vm = e.Parameter as AppViewModel;
         if (_vm is not null)
         {
-            _pcHandler = (_, _) => Refresh();
+            _pcHandler = (_, e) =>
+            {
+                if (string.IsNullOrEmpty(e.PropertyName) || _portalProps.Contains(e.PropertyName))
+                    Refresh();
+            };
             _vm.PropertyChanged += _pcHandler;
         }
+
+        // Populate the resolvers list after navigation (not in the constructor) so the
+        // synchronous NetworkKeyState call does not block the UI thread during page creation.
+        // macOS parity: macOS reads from cached model data; this is the closest WinUI equivalent.
+        var servers = NetworkKeyState.GetSystemDNSServers();
+        ResolversList.ItemsSource = servers;
+        ResolversEmptyText.Visibility = servers.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
         Refresh();
     }
 

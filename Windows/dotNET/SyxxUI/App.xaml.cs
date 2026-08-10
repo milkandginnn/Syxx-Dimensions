@@ -5,6 +5,7 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Exporter;
 using Sentry;
 using Syxx.Kit;
+using SyxxUI.Services;
 
 namespace SyxxUI;
 
@@ -14,6 +15,9 @@ public partial class App : Application
     private TracerProvider? _tracerProvider;
     private IDisposable? _sentry;
     private bool _readyServicesStarted;
+
+    /// Theme manager for dark/light mode switching. Accessible from views via Application.Current.
+    internal ThemeManager? ThemeManager { get; private set; }
 
     public App()
     {
@@ -30,6 +34,12 @@ public partial class App : Application
         // URIs. Register bundled Jost/Cinzel/etc. from Content-deployed .ttf so IoFont*
         // resolves at runtime. This is safe to call even if the file doesn't exist (no-op).
         RegisterAppFonts();
+
+        // Initialize theme manager and apply stored preference before showing the window
+        ThemeManager = new ThemeManager(this);
+        var settings = SyxxSettingsStore.Load();
+        ThemeManager.ApplyTheme(settings.ThemeMode);
+        ThemeManager.SubscribeToSystemThemeChanges(settings);
 
         _window = new MainWindow();
         _window.Activate();

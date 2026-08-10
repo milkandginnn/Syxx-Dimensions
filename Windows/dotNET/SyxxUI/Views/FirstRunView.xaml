@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid x:Name="Root"
-          Background="{StaticResource IoBgBrush}"
+          Background="{DynamicResource IoBgBrush}"
           Padding="30">
 
         <ProgressRing x:Name="LoadingIndicator"
@@ -16,12 +16,12 @@
                       AutomationProperties.Name="Loading setup" />
 
         <Border x:Name="AgreementPanel"
-                Width="600"
+                MinWidth="400" MaxWidth="700"
                 MaxHeight="570"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Background="{StaticResource IoSurfaceDarkBrush}"
-                BorderBrush="{StaticResource IoBorderSubtleBrush}"
+                Background="{DynamicResource IoSurfaceDarkBrush}"
+                BorderBrush="{DynamicResource IoBorderSubtleBrush}"
                 BorderThickness="1"
                 CornerRadius="18"
                 Visibility="Collapsed">
@@ -45,26 +45,26 @@
                                FontFamily="{StaticResource IoFontDisplay}"
                                FontSize="22"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource IoTextBrush}"
+                               Foreground="{DynamicResource IoTextBrush}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Please read these terms before continuing."
                                FontFamily="{StaticResource IoFontLore}"
                                FontSize="14"
-                               Foreground="{StaticResource IoTextSecondaryBrush}"
+                               Foreground="{DynamicResource IoTextSecondaryBrush}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
 
                 <ScrollViewer Grid.Row="1"
                               MaxHeight="300"
                               Padding="30,20"
-                              BorderBrush="{StaticResource IoBorderSubtleBrush}"
+                              BorderBrush="{DynamicResource IoBorderSubtleBrush}"
                               BorderThickness="0,1,0,1"
                               VerticalScrollBarVisibility="Auto">
                     <TextBlock x:Name="AgreementText"
                                FontFamily="{StaticResource IoFontUI}"
                                FontSize="14"
                                LineHeight="22"
-                               Foreground="{StaticResource IoTextBrush}"
+                               Foreground="{DynamicResource IoTextBrush}"
                                TextWrapping="Wrap"
                                IsTextSelectionEnabled="True" />
                 </ScrollViewer>
@@ -74,7 +74,7 @@
                           Content="I have read and agree to the terms above."
                           FontFamily="{StaticResource IoFontUI}"
                           FontSize="14"
-                          Foreground="{StaticResource IoTextBrush}"
+                          Foreground="{DynamicResource IoTextBrush}"
                           Margin="30,14,30,12"
                           AutomationProperties.HelpText="Required before Syxx can continue" />
 
@@ -84,14 +84,14 @@
                             Click="DeclineButton_Click"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource IoTextSecondaryBrush}"
+                            Foreground="{DynamicResource IoTextSecondaryBrush}"
                             FontFamily="{StaticResource IoFontUI}"
                             HorizontalAlignment="Left"
                             AutomationProperties.HelpText="Quits Syxx without saving acceptance" />
                     <Button Content="Agree &amp; Continue →"
                             Click="AcceptButton_Click"
                             Background="{StaticResource IoTealButtonBrush}"
-                            Foreground="{StaticResource IoBackgroundDarkBrush}"
+                            Foreground="{DynamicResource IoBackgroundDarkBrush}"
                             BorderThickness="0"
                             CornerRadius="11"
                             Padding="20,10"
@@ -104,12 +104,12 @@
         </Border>
 
         <Border x:Name="SetupPanel"
-                Width="960"
+                MinWidth="600" MaxWidth="1060"
                 MaxHeight="585"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Background="{StaticResource IoSurfaceDarkBrush}"
-                BorderBrush="{StaticResource IoBorderSubtleBrush}"
+                Background="{DynamicResource IoSurfaceDarkBrush}"
+                BorderBrush="{DynamicResource IoBorderSubtleBrush}"
                 BorderThickness="1"
                 CornerRadius="18"
                 Visibility="Collapsed">
@@ -133,18 +133,18 @@
                                FontFamily="{StaticResource IoFontDisplay}"
                                FontSize="26"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource IoTextBrush}"
+                               Foreground="{DynamicResource IoTextBrush}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="A first-run setup takes about a minute. You can change anything later."
                                FontFamily="{StaticResource IoFontLore}"
                                FontSize="15"
-                               Foreground="{StaticResource IoTextSecondaryBrush}"
+                               Foreground="{DynamicResource IoTextSecondaryBrush}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
 
                 <ScrollViewer Grid.Row="1"
                               Padding="30,14"
-                              BorderBrush="{StaticResource IoBorderSubtleBrush}"
+                              BorderBrush="{DynamicResource IoBorderSubtleBrush}"
                               BorderThickness="0,1,0,1"
                               VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="14">
@@ -167,7 +167,7 @@
                                     Padding="14"
                                     HorizontalContentAlignment="Stretch"
                                     VerticalContentAlignment="Stretch"
-                                    Background="{StaticResource IoBackgroundDarkBrush}"
+                                    Background="{DynamicResource IoBackgroundDarkBrush}"
                                     CornerRadius="12">
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -178,7 +178,7 @@
                                                FontFamily="{StaticResource IoFontDisplay}"
                                                FontSize="17"
                                                FontWeight="SemiBold"
-                                               Foreground="{StaticResource IoTextBrush}" />
+                                               Foreground="{DynamicResource IoTextBrush}" />
                                     <FontIcon x:Name="StorySelectedIcon"
                                               Glyph="&#xE73E;"
                                               Grid.Row="0"
@@ -189,7 +189,7 @@
                                                Text="Six wardens, lore, and quest framing guide every check."
                                                FontFamily="{StaticResource IoFontUI}"
                                                FontSize="13"
-                                               Foreground="{StaticResource IoTextSecondaryBrush}"
+                                               Foreground="{DynamicResource IoTextSecondaryBrush}"
                                                TextWrapping="Wrap" />
                                 </Grid>
                             </Button>
@@ -200,7 +200,7 @@
                                     Padding="14"
                                     HorizontalContentAlignment="Stretch"
                                     VerticalContentAlignment="Stretch"
-                                    Background="{StaticResource IoBackgroundDarkBrush}"
+                                    Background="{DynamicResource IoBackgroundDarkBrush}"
                                     CornerRadius="12">
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -211,25 +211,108 @@
                                                FontFamily="{StaticResource IoFontDisplay}"
                                                FontSize="17"
                                                FontWeight="SemiBold"
-                                               Foreground="{StaticResource IoTextBrush}" />
+                                               Foreground="{DynamicResource IoTextBrush}" />
                                     <FontIcon x:Name="GeneralSelectedIcon"
                                               Glyph="&#xE73E;"
                                               Grid.Row="0"
                                               HorizontalAlignment="Right"
-                                              Foreground="{StaticResource IoSuccessGreenBrush}"
+                                              Foreground="{DynamicResource IoSuccessGreenBrush}"
                                               Visibility="Collapsed" />
                                     <TextBlock Grid.Row="1"
                                                Margin="0,8,0,0"
                                                Text="Standard technical English, with plain labels and no storybook framing."
                                                FontFamily="{StaticResource IoFontUI}"
                                                FontSize="13"
-                                               Foreground="{StaticResource IoTextSecondaryBrush}"
+                                               Foreground="{DynamicResource IoTextSecondaryBrush}"
                                                TextWrapping="Wrap" />
                                 </Grid>
                             </Button>
                         </Grid>
 
-                        <TextBlock Text="STEP 2 · CONFIRM YOUR DEFAULTS"
+                        <TextBlock Text="STEP 2 · CHOOSE YOUR THEME"
+                                   FontFamily="{StaticResource IoFontUI}"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   CharacterSpacing="220"
+                                   Foreground="{StaticResource IoBlueBrush}" />
+
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Button x:Name="ThemeSystemButton"
+                                    Grid.Column="0"
+                                    Click="ThemeSystemButton_Click"
+                                    Padding="14"
+                                    HorizontalContentAlignment="Center"
+                                    Background="{DynamicResource IoBackgroundDarkBrush}"
+                                    CornerRadius="12">
+                                <StackPanel Spacing="4" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE770;" FontSize="20"
+                                              Foreground="{DynamicResource IoTextBrush}"
+                                              HorizontalAlignment="Center" />
+                                    <TextBlock Text="System"
+                                               FontFamily="{StaticResource IoFontDisplay}"
+                                               FontSize="15" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource IoTextBrush}"
+                                               HorizontalAlignment="Center" />
+                                    <FontIcon x:Name="ThemeSystemSelectedIcon" Glyph="&#xE73E;"
+                                              Foreground="{StaticResource IoBlueBrush}"
+                                              HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button x:Name="ThemeDarkButton"
+                                    Grid.Column="1"
+                                    Click="ThemeDarkButton_Click"
+                                    Padding="14"
+                                    HorizontalContentAlignment="Center"
+                                    Background="{DynamicResource IoBackgroundDarkBrush}"
+                                    CornerRadius="12">
+                                <StackPanel Spacing="4" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE708;" FontSize="20"
+                                              Foreground="{DynamicResource IoTextBrush}"
+                                              HorizontalAlignment="Center" />
+                                    <TextBlock Text="Dark"
+                                               FontFamily="{StaticResource IoFontDisplay}"
+                                               FontSize="15" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource IoTextBrush}"
+                                               HorizontalAlignment="Center" />
+                                    <FontIcon x:Name="ThemeDarkSelectedIcon" Glyph="&#xE73E;"
+                                              Foreground="{StaticResource IoBlueBrush}"
+                                              HorizontalAlignment="Center"
+                                              Visibility="Collapsed" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button x:Name="ThemeLightButton"
+                                    Grid.Column="2"
+                                    Click="ThemeLightButton_Click"
+                                    Padding="14"
+                                    HorizontalContentAlignment="Center"
+                                    Background="{DynamicResource IoBackgroundDarkBrush}"
+                                    CornerRadius="12">
+                                <StackPanel Spacing="4" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE706;" FontSize="20"
+                                              Foreground="{DynamicResource IoTextBrush}"
+                                              HorizontalAlignment="Center" />
+                                    <TextBlock Text="Light"
+                                               FontFamily="{StaticResource IoFontDisplay}"
+                                               FontSize="15" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource IoTextBrush}"
+                                               HorizontalAlignment="Center" />
+                                    <FontIcon x:Name="ThemeLightSelectedIcon" Glyph="&#xE73E;"
+                                              Foreground="{StaticResource IoBlueBrush}"
+                                              HorizontalAlignment="Center"
+                                              Visibility="Collapsed" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <TextBlock Text="STEP 3 · CONFIRM YOUR DEFAULTS"
                                    FontFamily="{StaticResource IoFontUI}"
                                    FontSize="10"
                                    FontWeight="Bold"
@@ -248,11 +331,11 @@
                                         <TextBlock Text="Resolver"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="14"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                         <TextBlock Text="Where lookups are sent"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="11"
-                                                   Foreground="{StaticResource IoTextMutedBrush}" />
+                                                   Foreground="{DynamicResource IoTextMutedBrush}" />
                                     </StackPanel>
                                     <ComboBox x:Name="ResolverCombo"
                                               MinWidth="210"
@@ -266,11 +349,11 @@
                                         <TextBlock Text="Encrypted transport"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="14"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                         <TextBlock Text="Protocol used when encryption is enabled"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="11"
-                                                   Foreground="{StaticResource IoTextMutedBrush}" />
+                                                   Foreground="{DynamicResource IoTextMutedBrush}" />
                                     </StackPanel>
                                     <ComboBox x:Name="TransportCombo"
                                               MinWidth="150"
@@ -287,11 +370,11 @@
                                         <TextBlock Text="Encrypt all DNS queries"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="14"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                         <TextBlock Text="Recommended when DNS is cleartext"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="11"
-                                                   Foreground="{StaticResource IoTextMutedBrush}" />
+                                                   Foreground="{DynamicResource IoTextMutedBrush}" />
                                     </StackPanel>
                                     <ToggleSwitch x:Name="EncryptDnsToggle"
                                                   OnContent="On"
@@ -306,11 +389,11 @@
                                         <TextBlock Text="Notify me on trust changes"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="14"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                         <TextBlock Text="Alerts when the network's trust changes"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="11"
-                                                   Foreground="{StaticResource IoTextMutedBrush}" />
+                                                   Foreground="{DynamicResource IoTextMutedBrush}" />
                                     </StackPanel>
                                     <ToggleSwitch x:Name="NotificationsToggle"
                                                   OnContent="On"
@@ -327,11 +410,11 @@
                                         <TextBlock Text="Check for updates automatically"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="14"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                         <TextBlock Text="Contacts syxx.app after setup to check for updates and news"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="11"
-                                                   Foreground="{StaticResource IoTextMutedBrush}"
+                                                   Foreground="{DynamicResource IoTextMutedBrush}"
                                                    TextWrapping="Wrap"
                                                    MaxWidth="260" />
                                     </StackPanel>
@@ -347,11 +430,11 @@
                                         <TextBlock Text="Send crash reports"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="14"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                         <TextBlock Text="Shares diagnostics after setup when enabled"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="11"
-                                                   Foreground="{StaticResource IoTextMutedBrush}" />
+                                                   Foreground="{DynamicResource IoTextMutedBrush}" />
                                     </StackPanel>
                                     <ToggleSwitch x:Name="CrashReportingToggle"
                                                   OnContent="On"
@@ -365,11 +448,11 @@
                                         <TextBlock Text="Send anonymous usage statistics"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="14"
-                                                   Foreground="{StaticResource IoTextBrush}" />
+                                                   Foreground="{DynamicResource IoTextBrush}" />
                                         <TextBlock Text="Shares app operation telemetry after setup when enabled"
                                                    FontFamily="{StaticResource IoFontUI}"
                                                    FontSize="11"
-                                                   Foreground="{StaticResource IoTextMutedBrush}"
+                                                   Foreground="{DynamicResource IoTextMutedBrush}"
                                                    TextWrapping="Wrap"
                                                    MaxWidth="260" />
                                     </StackPanel>
@@ -389,7 +472,7 @@
                             Click="SkipButton_Click"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource IoTextSecondaryBrush}"
+                            Foreground="{DynamicResource IoTextSecondaryBrush}"
                             FontFamily="{StaticResource IoFontUI}"
                             HorizontalAlignment="Left" />
                     <Button Content="Begin →"
@@ -412,21 +495,21 @@
                 Padding="30"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Background="{StaticResource IoSurfaceDarkBrush}"
-                BorderBrush="{StaticResource IoBorderSubtleBrush}"
+                Background="{DynamicResource IoSurfaceDarkBrush}"
+                BorderBrush="{DynamicResource IoBorderSubtleBrush}"
                 BorderThickness="1"
                 CornerRadius="16"
                 Visibility="Collapsed">
             <StackPanel Spacing="18">
                 <FontIcon Glyph="&#xE814;"
                           FontSize="32"
-                          Foreground="{StaticResource IoWarningAmberBrush}"
+                          Foreground="{DynamicResource IoWarningAmberBrush}"
                           HorizontalAlignment="Center"
                           AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock x:Name="FailureText"
                            FontFamily="{StaticResource IoFontUI}"
                            FontSize="14"
-                           Foreground="{StaticResource IoTextBrush}"
+                           Foreground="{DynamicResource IoTextBrush}"
                            TextWrapping="Wrap"
                            TextAlignment="Center" />
                 <StackPanel Orientation="Horizontal"
@@ -435,8 +518,8 @@
                     <Button Content="Quit Syxx"
                             Click="QuitButton_Click"
                             Background="Transparent"
-                            BorderBrush="{StaticResource IoBorderSubtleBrush}"
-                            Foreground="{StaticResource IoTextBrush}"
+                            BorderBrush="{DynamicResource IoBorderSubtleBrush}"
+                            Foreground="{DynamicResource IoTextBrush}"
                             CornerRadius="9"
                             Padding="16,9" />
                     <Button Content="Try Again"

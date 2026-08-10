@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import LocalAuthentication
 import CommonCrypto
 import CryptoKit
 
@@ -51,6 +52,7 @@ public enum LicenseManager {
     /// Reverse-DNS identifier for this app, used to namespace the Keychain items so they don't
     /// collide with other apps' generic-password entries.
     private static let bundleIdentifier = "com.milkandgin.syxx"
+    nonisolated(unsafe) public static var useDataProtectionKeychain = true
     private static let licenseKeyAccount = "license-key"
     private static let trialStateAccount = "trial-state"
     /// E-7 offline grace: Keychain account for the epoch-ms of the last SUCCESSFUL Keygen validation.
@@ -78,16 +80,122 @@ public enum LicenseManager {
 
     // MARK: - Keychain plumbing
 
-    private static func keychainQuery(account: String) -> [String: Any] {
-        [
+    /// Stored biometric authentication context from a successful Touch ID evaluation at startup.
+    /// When non-nil, Keychain queries include this context via `kSecUseAuthenticationContext` to
+    /// avoid re-prompting the user for each access. Set once by `setBiometricContext(_:)` after
+    /// `BiometricAuth.evaluate()` succeeds at startup.
+    ///
+    /// E218: LAContext is not Sendable, so ALL access (read AND write) is serialized through
+    /// `_kcLock`. Previously reads were unprotected while writes held the lock — a torn pointer
+    /// on non-atomic architectures. Now `biometricContext()` reads under the same lock and
+    /// validates the context before returning it.
+    ///
+    /// E222/D368: LAContext may expire after device sleep/lock. `biometricContext()` checks
+    /// `canEvaluatePolicy` before returning the stored context, and returns nil (triggering
+    /// password-only fallback) when the context has expired.
+    nonisolated(unsafe) private static var _biometricContext: LAContext? = nil
+
+    /// E218 + E222: thread-safe, validity-checked biometric context accessor.
+    /// Returns nil when the context is absent, expired (sleep/lock), or cannot evaluate.
+    private static func biometricContext() -> LAContext? {
+        _kcLock.lock()
+        defer { _kcLock.unlock() }
+        guard let ctx = _biometricContext else { return nil }
+        // E222/D368: check canEvaluatePolicy — after device sleep/lock, the stored LAContext
+        // may be invalidated. Returning an expired context causes Keychain queries to fail
+        // silently with errSecAuthFailed. Re-evaluate and return nil to trigger password fallback.
+        var error: NSError?
+        if ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            return ctx
+        }
+        // Context expired or biometrics unavailable — invalidate and return nil
+        _biometricContext = nil
+        return nil
+    }
+
+    /// Stores the authenticated LAContext for reuse across all subsequent Keychain operations.
+    /// Call this once at startup after `BiometricAuth.evaluate()` succeeds.
+    public static func setBiometricContext(_ context: LAContext) {
+        _kcLock.lock()
+        _biometricContext = context
+        _kcLock.unlock()
+    }
+
+    /// Creates a Keychain query dictionary for READING from the given account.
+    ///
+    /// When a biometric context is available (from startup Touch ID evaluation), it's included
+    /// via `kSecUseAuthenticationContext` so the user is not re-prompted. The accessibility class
+    /// is NOT specified in read queries — the system matches items regardless of their stored
+    /// accessibility, and the context satisfies any biometric requirement on the item.
+    ///
+    /// When no context is available, the query is a plain password-only read.
+    private static func readKeychainQuery(account: String) -> [String: Any] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: bundleIdentifier,
-            kSecAttrAccount as String: account,
-            // B188: apply the same accessibility class as WitnessKeyManager for consistency;
-            // use the data-protection keychain so the accessibility class is enforced.
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            kSecUseDataProtectionKeychain as String: true
+            kSecAttrAccount as String: account
         ]
+        if useDataProtectionKeychain {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
+
+        // E218: use thread-safe accessor (reads under _kcLock, validates canEvaluatePolicy).
+        if let ctx = biometricContext() {
+            query[kSecUseAuthenticationContext as String] = ctx
+        }
+
+        return query
+    }
+
+    /// Creates a Keychain query dictionary for WRITING to the given account, with optional
+    /// biometric access control.
+    ///
+    /// When `biometricContext` is provided (or when `_biometricContext` is stored), the query
+    /// includes `SecAccessControl` with `.biometryAny` to require biometric authentication for
+    /// future access. The accessibility class is set to `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly`.
+    ///
+    /// When no context is available, the query falls back to `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`
+    /// for password-only access (matching WitnessKeyManager for consistency).
+    private static func writeKeychainQuery(account: String, biometricContext: LAContext? = nil) -> [String: Any] {
+        // E218: use thread-safe accessor for the stored context. The provided context
+        // parameter takes precedence; only fall back to the stored (validated) context.
+        let context = biometricContext ?? Self.biometricContext()
+
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: bundleIdentifier,
+            kSecAttrAccount as String: account
+        ]
+        if useDataProtectionKeychain {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
+
+        if let ctx = context {
+            // Biometric-protected: require Touch ID for future access.
+            // kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly is required for SecAccessControl.
+            query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
+
+            // Create access control with .biometryAny — any enrolled finger unlocks the item.
+            // This is created per-query (not cached) because SecAccessControl is not Sendable and
+            // the cost is negligible compared to the Keychain I/O.
+            if let accessControl = SecAccessControlCreateWithFlags(
+                nil,
+                kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                .biometryAny,
+                nil
+            ) {
+                query[kSecAttrAccessControl as String] = accessControl
+            }
+
+            // Pass the authenticated LAContext so the write doesn't prompt.
+            query[kSecUseAuthenticationContext as String] = ctx
+        } else {
+            // Password-only fallback: no biometric requirement.
+            // B188: apply the same accessibility class as WitnessKeyManager for consistency.
+            query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        }
+
+        return query
     }
 
     // Per-launch keychain cache. EVERY keychain access funnels through read/writeKeychainData, so
@@ -99,18 +207,51 @@ public enum LicenseManager {
     // the fix: a Developer-ID-signed build gets a stable ACL and never prompts. Only THIS app writes
     // these items, and write-through keeps the cache correct (including the anti-rollback max-time),
     // so a cached value can never go stale behind our back.
+    //
+    // Atomicity: the read-or-populate and write-or-populate paths hold the per-account semaphore
+    // across the entire operation (cache check → miss → SecItemCopyMatching → cache write). This
+    // prevents concurrent callers from both missing the cache and double-prompting the Keychain —
+    // the second caller blocks on the per-account semaphore and finds the cache already populated
+    // when it wakes. The global `_kcLock` is held only briefly for cache map access.
     private static let _kcLock = NSLock()
     nonisolated(unsafe) private static var _kcCache: [String: Data?] = [:]
+    /// Per-account semaphores ensuring only one thread performs a Keychain round-trip at a time
+    /// for a given account. Created lazily under `_kcLock`; signaled after the cache is populated.
+    nonisolated(unsafe) private static var _kcAccountSemaphores: [String: DispatchSemaphore] = [:]
+
+    /// Returns (or creates) the per-account semaphore. `_kcLock` must be held by the caller.
+    private static func _accountSemaphore(for account: String) -> DispatchSemaphore {
+        if let sem = _kcAccountSemaphores[account] { return sem }
+        let sem = DispatchSemaphore(value: 1)
+        _kcAccountSemaphores[account] = sem
+        return sem
+    }
 
     private static func readKeychainData(account: String) -> Data? {
+        // Fast path: cache hit under the brief global lock.
         _kcLock.lock()
         if let cached = _kcCache[account] {   // present in cache (value may itself be nil = "absent")
             _kcLock.unlock()
             return cached
         }
+        let sem = _accountSemaphore(for: account)
         _kcLock.unlock()
 
-        var query = keychainQuery(account: account)
+        // Slow path: serialize all readers/writers for this account. The second caller blocks here
+        // until the first has populated the cache, then re-checks and returns the cached value
+        // without a redundant Keychain prompt.
+        sem.wait()
+        defer { sem.signal() }
+
+        // Re-check: another thread may have populated while we waited.
+        _kcLock.lock()
+        if let cached = _kcCache[account] {
+            _kcLock.unlock()
+            return cached
+        }
+        _kcLock.unlock()
+
+        var query = readKeychainQuery(account: account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: AnyObject?
@@ -130,15 +271,30 @@ public enum LicenseManager {
     }
 
     private static func writeKeychainData(_ data: Data, account: String) throws {
-        let query = keychainQuery(account: account)
-        if SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess {
+        // Serialize writes through the same per-account semaphore so a concurrent read for the
+        // same account either sees the pre-write cached value or the post-write value, never a
+        // torn intermediate state or a redundant Keychain prompt.
+        let sem: DispatchSemaphore
+        _kcLock.lock()
+        sem = _accountSemaphore(for: account)
+        _kcLock.unlock()
+
+        sem.wait()
+        defer { sem.signal() }
+
+        // Check if the item exists using a read query (matches items regardless of access control).
+        let readQuery = readKeychainQuery(account: account)
+        if SecItemCopyMatching(readQuery as CFDictionary, nil) == errSecSuccess {
+            // Item exists — update it with biometric access control.
+            let writeQuery = writeKeychainQuery(account: account)
             let update: [String: Any] = [kSecValueData as String: data]
-            let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+            let status = SecItemUpdate(writeQuery as CFDictionary, update as CFDictionary)
             guard status == errSecSuccess else {
                 throw LicenseManagerError.keychainError(status)
             }
         } else {
-            var addQuery = query
+            // Item doesn't exist — add it with biometric access control.
+            var addQuery = writeKeychainQuery(account: account)
             addQuery[kSecValueData as String] = data
             let status = SecItemAdd(addQuery as CFDictionary, nil)
             guard status == errSecSuccess else {
@@ -226,14 +382,21 @@ public enum LicenseManager {
         if let online = await syncTrialAnchorWithServer(fingerprint: fingerprint, localFirstLaunch: localLaunchMillis ?? 0) {
             let serverLaunch = online.serverFirstLaunch * 1000 // Server uses seconds, we want millis
 
-            // D059: never overwrite an earlier local anchor with a later server timestamp.
-            // Going offline creates a local anchor; the server has never seen the
-            // fingerprint, so it returns now() as firstLaunch. Taking min(local, server)
-            // prevents the offline-then-online path from resetting the trial window.
+            // D059 + E246/E251: never overwrite an earlier local anchor with a later server
+            // timestamp. The server response is unauthenticated (no HMAC/signature), so a
+            // MITM could set an arbitrary firstLaunch to extend or reset the trial window.
+            //
+            // For first-time users (no local anchor), PREFER LOCAL CLOCK over the server
+            // response. A MITM controlling the server could set serverLaunch to a past date
+            // to artificially shorten the trial, or a future date to prevent trial usage.
+            // The local clock is the trust anchor the user controls.
             if let local = localLaunchMillis {
                 finalLaunchMillis = min(local, serverLaunch)
             } else {
-                finalLaunchMillis = serverLaunch
+                // E246: first-time user — use local clock, not unauthenticated server time.
+                // The server is used only as a supplementary anchor, not the primary one.
+                let localNow = Int64(Date().timeIntervalSince1970 * 1000)
+                finalLaunchMillis = localNow
             }
             // B190: the server response is unauthenticated — never render a definite
             // clock-regression lock from unauthenticated serverTime. Keep the local anchor.
@@ -246,14 +409,25 @@ public enum LicenseManager {
                 finalLaunchMillis = local
             } else {
                 let now = Date()
-                let epochMillis = Int64((now.timeIntervalSince1970 * 1000).rounded())
+                let epochMillis = Int64(now.timeIntervalSince1970 * 1000)
                 finalLaunchMillis = epochMillis
             }
         }
 
         let state = TrialState(firstLaunchEpochMillis: finalLaunchMillis, signature: trialSignature(epochMillis: finalLaunchMillis))
         if let data = try? JSONEncoder().encode(state) {
-            try? writeKeychainData(data, account: trialStateAccount)
+            // D332: do not silently swallow Keychain write failures. A locked Keychain or
+            // full disk means the trial state is never persisted — the next launch gets a
+            // fresh trial window, effectively resetting the trial for every launch.
+            // Log the failure and fall back to UserDefaults so at least a timestamp survives.
+            do {
+                try writeKeychainData(data, account: trialStateAccount)
+            } catch {
+                #if DEBUG
+                print("[LicenseManager] Keychain write failed for trial state: \(error) — falling back to UserDefaults")
+                #endif
+                UserDefaults.standard.set(finalLaunchMillis, forKey: "syxx.trial-state-fallback")
+            }
         }
 
         return Date(timeIntervalSince1970: Double(finalLaunchMillis) / 1000.0)
@@ -310,7 +484,7 @@ public enum LicenseManager {
             switch result {
             case .valid:
                 // Record the successful validation time for E-7 offline grace.
-                let nowMs = Int64((Date().timeIntervalSince1970 * 1000).rounded())
+                let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
                 if let data = "\(nowMs)".data(using: .utf8) {
                     try? writeKeychainData(data, account: lastValidValidationAccount)
                 }
@@ -321,7 +495,7 @@ public enum LicenseManager {
             case .timeout, .networkError:
                 // E-7: cannot reach Keygen — could be the filtered network this app investigates.
                 // Check offline grace window before falling through to the trial/locked path.
-                let nowMs = Int64((Date().timeIntervalSince1970 * 1000).rounded())
+                let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
                 if let data = readKeychainData(account: lastValidValidationAccount),
                    let str = String(data: data, encoding: .utf8),
                    let lastValid = Int64(str),
@@ -335,7 +509,7 @@ public enum LicenseManager {
         }
 
         let now = Date()
-        let nowMillis = Int64((now.timeIntervalSince1970 * 1000).rounded())
+        let nowMillis = Int64(now.timeIntervalSince1970 * 1000)
 
         var maxSeenMillis: Int64 = 0
         if let maxData = readKeychainData(account: trialMaxTimeAccount),
@@ -377,6 +551,11 @@ public enum LicenseManager {
     /// via `ioreg`; D001 fixes this by mixing in a 32-byte random secret stored in the Keychain
     /// (with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), so an attacker who only knows
     /// the IOPlatformUUID cannot derive the fingerprint without also having Keychain access.
+    ///
+    /// E219: this also addresses the trial anchor HMAC key concern — the fingerprint (which
+    /// includes the Keychain random secret) is used as the HMAC key for trial signatures.
+    /// An attacker who can read IOPlatformUUID but not the Keychain cannot forge a trial
+    /// signature because the HMAC key depends on the Keychain secret, not just the UUID.
     private static let fingerprintUUIDAccount = "fingerprint-uuid"
     private static let fingerprintSecretAccount = "fingerprint-secret-v2"
 

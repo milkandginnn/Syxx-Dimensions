@@ -26,8 +26,11 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         ExtendsContentIntoTitleBar = true;
 
-        // Match the macOS launch size and hidden-titlebar presentation.
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1050, 700));
+        // D311: increased from 1050×700 to 1280×800 to accommodate all module views at default DPI.
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 800));
+        // D380: show version in title bar for bug reports.
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        Title = $"Syxx {version?.Major}.{version?.Minor}.{version?.Build}";
         Closed += (_, _) =>
         {
             _tray?.Dispose();

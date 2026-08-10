@@ -19,14 +19,18 @@ from . import config, logging_util
 _init_lock = threading.Lock()
 _initialized = False
 
+# Thread-local connection pool: each thread gets one reusable connection,
+# eliminating per-operation open/close overhead. SQLite WAL mode supports
+# concurrent readers across threads, so thread-local connections are safe.
+# The pool is limited to 4 connections per thread; excess operations
+# create a fresh connection that is closed immediately after use.
+_thread_local = threading.local()
+_MAX_POOLED = 4
+
 
 def _env_int(name, default):
-    """Small env-int reader. config.py is owned by another lane, so these
-    retention/cap knobs are read here directly. Empty/invalid falls back."""
-    try:
-        return int(os.environ.get(name, "") or default)
-    except (TypeError, ValueError):
-        return default
+    """Small env-int reader. Delegates to config._i() for consistent logging."""
+    return config._i(name, default)
 
 
 # A052: stripe_evt/stripe_cust kv rows are kept this many days for webhook
@@ -179,11 +183,60 @@ CREATE INDEX IF NOT EXISTS idx_monitor_results_monitor ON monitor_results(monito
 
 
 def connect():
+    """Return a SQLite connection primed with row_factory, busy_timeout, and
+    foreign_keys. Uses a thread-local pool of up to _MAX_POOLED connections;
+    excess operations create a fresh connection that is closed after use."""
+    pool = getattr(_thread_local, "pool", None)
+    if pool is None:
+        pool = []
+        _thread_local.pool = pool
+    if pool:
+        conn = pool.pop()
+        # Verify the connection is still alive with a cheap pragma probe.
+        try:
+            conn.execute("PRAGMA user_version")
+            return conn
+        except sqlite3.Error:
+            # Stale connection (e.g., after fork). Close and create a fresh one.
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
     conn = sqlite3.connect(config.DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=5000")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+
+def _return_conn(conn):
+    """Return a connection to the thread-local pool, or close it if the pool is full."""
+    pool = getattr(_thread_local, "pool", None)
+    if pool is not None and len(pool) < _MAX_POOLED:
+        try:
+            # Reset any transaction state before pooling.
+            conn.execute("ROLLBACK")
+            pool.append(conn)
+            return
+        except sqlite3.Error:
+            pass
+    try:
+        conn.close()
+    except sqlite3.Error:
+        pass
+
+
+def clear_pool():
+    """Close all pooled connections in the current thread. Call between tests
+    or when the database path changes. Safe to call on a thread with no pool."""
+    pool = getattr(_thread_local, "pool", None)
+    if pool is not None:
+        for conn in pool:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
+        pool.clear()
 
 
 def _write_conn():
@@ -206,7 +259,7 @@ def _write_probe():
         conn.execute("DELETE FROM _write_probe WHERE k=1")
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def _migrate(conn):
@@ -237,6 +290,10 @@ def _migrate(conn):
     # derives a purpose-bound sub-key and covers note+created_at in the HMAC message.
     if "hmac_version" not in lic_cols:
         conn.execute("ALTER TABLE licenses ADD COLUMN hmac_version INTEGER NOT NULL DEFAULT 1")
+    # SEC-049: Migrate v1 HMAC rows to v2. This ensures all license rows use the
+    # purpose-bound sub-key and cover all mutable fields (note, created_at) in the
+    # HMAC message. Rows that fail v1 verification are left for manual review.
+    _migrate_license_hmac_v1_to_v2(conn)
     # A133: add origin column to leak_tokens so the free route cannot serve paid
     # tokens. Existing rows default to 'ip' (the free route's origin).
     lt_cols = {r["name"] for r in conn.execute("PRAGMA table_info(leak_tokens)").fetchall()}
@@ -264,7 +321,7 @@ def init():
             conn.commit()
             _migrate(conn)
         finally:
-            conn.close()
+            _return_conn(conn)
         # S2: the SQLite DB file must be owner-only readable/writable.
         # Re-chmod after writes in case SQLite or a migration reset the mode.
         # A world-readable DB leaks license keys, session tokens, and passive-DNS
@@ -296,7 +353,7 @@ def kv_get(key, default=None):
         row = conn.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
         return row["value"] if row else default
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def kv_get_with_created_at(key):
@@ -314,7 +371,7 @@ def kv_get_with_created_at(key):
             return None, None
         return row["value"], row["created_at"]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def kv_set(key, value):
@@ -328,7 +385,7 @@ def kv_set(key, value):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def kv_insert_once(key, value):
@@ -346,7 +403,7 @@ def kv_insert_once(key, value):
         conn.commit()
         return cur.rowcount == 1
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def kv_find_by_value_prefix(key_prefix, value, limit=100):
@@ -383,7 +440,7 @@ def kv_find_by_value_prefix(key_prefix, value, limit=100):
                 return row["key"][len(key_prefix) :]
         return None
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def _validate_env_secret(env):
@@ -467,6 +524,62 @@ def _license_row_hmac_v2(key, plan, status, expires_at, note, created_at):
     return _hmac.new(_license_hmac_key_v2(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
+def _migrate_license_hmac_v1_to_v2(conn):
+    """SEC-049: Migrate v1 HMAC rows to v2 during schema migration.
+
+    This runs once at startup. For each v1 row, verify the v1 HMAC is valid,
+    then recompute with the v2 algorithm (purpose-bound sub-key, covering
+    note and created_at fields) and update the row.
+
+    Rows that fail v1 verification are logged but left unchanged — they may
+    have been inserted by an older server version with a different secret.
+    The operator should review and re-provision these manually.
+    """
+    try:
+        rows = conn.execute(
+            "SELECT key, plan, status, expires_at, note, created_at, row_hmac, hmac_version "
+            "FROM licenses WHERE hmac_version = 1 AND row_hmac IS NOT NULL"
+        ).fetchall()
+    except Exception:
+        # Table may not exist yet on fresh installs
+        return
+
+    migrated = 0
+    failed = 0
+    for row in rows:
+        d = dict(row)
+        key = d["key"]
+        # Verify v1 HMAC
+        expected_v1 = _license_row_hmac_v1(key, d["plan"], d["status"], d.get("expires_at"))
+        if not _hmac.compare_digest(d["row_hmac"] or "", expected_v1):
+            # v1 HMAC doesn't match — log and skip
+            logging_util.warn(
+                "license_hmac_v1_migration_failed",
+                key_prefix=(key or "")[:8],
+                detail="v1 HMAC mismatch during migration; row left unchanged",
+            )
+            failed += 1
+            continue
+        # Recompute with v2 algorithm
+        new_hmac = _license_row_hmac_v2(
+            key, d["plan"], d["status"], d.get("expires_at"), d.get("note"), d.get("created_at")
+        )
+        conn.execute(
+            "UPDATE licenses SET row_hmac=?, hmac_version=2 WHERE key=?",
+            (new_hmac, key),
+        )
+        migrated += 1
+
+    if migrated > 0 or failed > 0:
+        conn.commit()
+        logging_util.info(
+            "license_hmac_v1_to_v2_migration",
+            migrated=migrated,
+            failed=failed,
+            total=len(rows),
+        )
+
+
 def license_lookup(key):
     conn = connect()
     try:
@@ -497,7 +610,7 @@ def license_lookup(key):
             return None
         return d
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def license_upsert(key, plan="pro", status="active", expires_at=None, note=None):
@@ -517,7 +630,7 @@ def license_upsert(key, plan="pro", status="active", expires_at=None, note=None)
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # --- keygen license ids (S12) -----------------------------------------------
@@ -538,7 +651,7 @@ def keygen_license_id_set(subject, license_id):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def keygen_license_id_get(subject):
@@ -549,7 +662,7 @@ def keygen_license_id_get(subject):
         row = conn.execute("SELECT license_id FROM keygen_licenses WHERE subject=?", (subject,)).fetchone()
         return row["license_id"] if row else None
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def keygen_subject_for_license_id(license_id):
@@ -572,7 +685,7 @@ def keygen_subject_for_license_id(license_id):
         row = conn.execute("SELECT subject FROM keygen_licenses WHERE license_id=?", (license_id,)).fetchone()
         return row["subject"] if row else None
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # --- leak tokens / observations --------------------------------------------
@@ -592,7 +705,7 @@ def leak_token_create(token, subject, zone, ttl, origin="ip"):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def leak_token_get(token, now=None):
@@ -608,7 +721,7 @@ def leak_token_get(token, now=None):
             return None
         return dict(row)
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def leak_token_claim(token):
@@ -633,7 +746,7 @@ def leak_token_release_claim(token):
         conn.execute("DELETE FROM kv WHERE key=?", ("leak_claim:" + token,))
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def leak_token_consume(token):
@@ -647,7 +760,7 @@ def leak_token_consume(token):
         conn.execute("DELETE FROM kv WHERE key=?", ("leak_claim:" + token,))
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def leak_observation_add(token, resolver_ip, qtype):
@@ -664,7 +777,7 @@ def leak_observation_add(token, resolver_ip, qtype):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def leak_observations(token):
@@ -676,7 +789,7 @@ def leak_observations(token):
         ).fetchall()
         return [dict(r) for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # --- passive DNS -----------------------------------------------------------
@@ -700,7 +813,7 @@ def passive_record(domain, rtype, value, source, resolver=None):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def passive_query(domain, limit=200, rtype=None):
@@ -729,7 +842,7 @@ def passive_query(domain, limit=200, rtype=None):
             ).fetchall()
         return [dict(r) for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def passive_count():
@@ -738,7 +851,7 @@ def passive_count():
         row = conn.execute("SELECT COUNT(*) c FROM passive_dns").fetchone()
         return row["c"] if row else 0
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # --- warp cache ------------------------------------------------------------
@@ -754,7 +867,7 @@ def warp_cache_get(url, ttl):
             return None
         return row["payload"]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def warp_cache_put(url, payload):
@@ -767,7 +880,7 @@ def warp_cache_put(url, payload):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # --- audit -----------------------------------------------------------------
@@ -782,7 +895,7 @@ def audit(subject, route, status, ip):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # --- beta signups ----------------------------------------------------------
@@ -808,7 +921,7 @@ def beta_reserve(email, interests, ip=None):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def beta_all():
@@ -820,7 +933,7 @@ def beta_all():
         ).fetchall()
         return [dict(r) for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # --- retention / purge -----------------------------------------------------
@@ -930,7 +1043,7 @@ def api_key_create(subject, label=None, scopes="*", ttl_days=90):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
     return raw
 
 
@@ -945,7 +1058,7 @@ def api_key_lookup(key_hash):
             return None
         return dict(row)
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def api_key_touch(key_id):
@@ -958,7 +1071,7 @@ def api_key_touch(key_id):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def api_key_list(subject):
@@ -977,7 +1090,7 @@ def api_key_list(subject):
         ).fetchall()
         return [dict(r) for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def api_key_revoke(key_id, subject):
@@ -992,7 +1105,7 @@ def api_key_revoke(key_id, subject):
         conn.commit()
         return revoked
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def api_key_revoke_all_for_subject(subject):
@@ -1009,7 +1122,7 @@ def api_key_revoke_all_for_subject(subject):
         conn.commit()
         return cur.rowcount
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def api_key_subjects_with_active_keys():
@@ -1023,7 +1136,7 @@ def api_key_subjects_with_active_keys():
         ).fetchall()
         return [r["subject"] for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 # ---------- Monitor CRUD ----------
@@ -1041,7 +1154,7 @@ def monitor_create(monitor_id, subject, domain, checks, interval_hours=24, notif
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def monitor_list(subject):
@@ -1051,7 +1164,7 @@ def monitor_list(subject):
         rows = conn.execute("SELECT * FROM monitors WHERE subject=? ORDER BY created_at DESC", (subject,)).fetchall()
         return [dict(r) for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def monitors_due(now=None):
@@ -1062,7 +1175,7 @@ def monitors_due(now=None):
         rows = conn.execute("SELECT * FROM monitors WHERE active=1 AND next_run<=?", (now,)).fetchall()
         return [dict(r) for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def monitor_advance(monitor_id, now=None):
@@ -1083,7 +1196,7 @@ def monitor_advance(monitor_id, now=None):
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def monitor_result_save(monitor_id, check_type, result, changes=None, raw_json=None):
@@ -1096,7 +1209,7 @@ def monitor_result_save(monitor_id, check_type, result, changes=None, raw_json=N
         )
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def monitor_results_for(monitor_id, check_type=None, limit=10):
@@ -1114,7 +1227,7 @@ def monitor_results_for(monitor_id, check_type=None, limit=10):
             ).fetchall()
         return [dict(r) for r in rows]
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def monitor_delete(monitor_id, subject):
@@ -1134,7 +1247,7 @@ def monitor_delete(monitor_id, subject):
         conn.commit()
         return deleted
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def purge_expired(now=None):
@@ -1201,7 +1314,7 @@ def purge_expired(now=None):
             conn.execute("DELETE FROM beta_signups WHERE created_at < ?", (now - _BETA_RETENTION_DAYS * 86400,))
         conn.commit()
     finally:
-        conn.close()
+        _return_conn(conn)
 
 
 def get_or_create_trial_anchor(fingerprint, current_time):
@@ -1235,4 +1348,4 @@ def get_or_create_trial_anchor(fingerprint, current_time):
         conn.rollback()
         raise
     finally:
-        conn.close()
+        _return_conn(conn)

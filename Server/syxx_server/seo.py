@@ -236,8 +236,19 @@ def _link_canonical(href: str) -> str:
 
 
 def _esc(s: str) -> str:
-    """Escape attribute value for safe HTML embedding."""
-    return s.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+    """Escape attribute value for safe HTML embedding.
+
+    SM-046: also escape single quotes — attribute values may be delimited by
+    single quotes in some HTML parsers, and an unescaped ' in an attribute
+    value can break out of the attribute context.
+    """
+    return (
+        s.replace("&", "&amp;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
 
 def _build_tags(meta: dict) -> str:
@@ -292,12 +303,18 @@ def _build_tags(meta: dict) -> str:
 # ---------------------------------------------------------------------------
 
 # Regex to find an existing tag by (name|property) + content.
+# SM-047 + E264: match <meta> tags regardless of attribute order or quoting style.
+# The regex uses lookaheads to check for (name|property) and content attributes
+# in any order. E264: also handle single-quoted attributes and attributes with
+# extra whitespace, which the previous regex missed.
 _TAG_RE = re.compile(
-    r'<meta\s+(?:name|property)\s*=\s*"[^"]*"\s+content\s*=\s*"[^"]*"\s*/?>',
+    r'<meta\s+(?=[^>]*(?:name|property)\s*=\s*["\'][^"\']*["\'])'
+    r'(?=[^>]*content\s*=\s*["\'][^"\']*["\'])[^>]*/?\s*>',
     re.IGNORECASE,
 )
 _CANONICAL_RE = re.compile(
-    r'<link\s+rel\s*=\s*"canonical"\s+href\s*=\s*"[^"]*"\s*/?>',
+    r'<link\s+[^>]*rel\s*=\s*["\']canonical["\'][^>]*href\s*=\s*["\'][^"\']*["\'][^>]*/?>|'
+    r'<link\s+[^>]*href\s*=\s*["\'][^"\']*["\'][^>]*rel\s*=\s*["\']canonical["\'][^>]*/?>',
     re.IGNORECASE,
 )
 _JSONLD_RE = re.compile(
@@ -308,8 +325,11 @@ _JSONLD_RE = re.compile(
 
 # Individual matchers for dedup.
 def _tag_identity(tag: str) -> str | None:
-    """Return a dedup key for a <meta> tag, e.g. 'description' or 'og:title'."""
-    m = re.search(r'(?:name|property)\s*=\s*"([^"]*)"', tag, re.IGNORECASE)
+    """Return a dedup key for a <meta> tag, e.g. 'description' or 'og:title'.
+
+    E264: Handle both single and double quoted attributes.
+    """
+    m = re.search(r'(?:name|property)\s*=\s*["\']([^"\']*)["\']', tag, re.IGNORECASE)
     return m.group(1).lower() if m else None
 
 

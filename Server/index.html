@@ -458,6 +458,12 @@
   const PD = '<span style="color:#2dd4bf">syxx@dimensions</span><span style="color:#6f6597">:~$</span> ';
   const PD_UNIX = PD, PD_PS = '<span style="color:#f4f4f4">PS</span> <span style="color:#4ec9b0">C:\\Users\\syxx</span><span style="color:#f4f4f4">&gt;</span> ', PD_UBU = '<span style="color:#8ae234;font-weight:600">syxx@dimensions</span><span style="color:#eeeeec">:</span><span style="color:#729fcf;font-weight:600">~</span><span style="color:#eeeeec">$</span> ';
 
+  // E210/E211: HTML entity escape function to prevent XSS via innerHTML
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   function hasSession(){ try{return !!localStorage.getItem('syxx_session');}catch(e){return false;} }
   function termDomain(){ return (document.getElementById('term-domain')||{}).value||''; }
   function termAppend(html){ term.innerHTML += html + '\n'; term.scrollTop = term.scrollHeight; }
@@ -479,15 +485,15 @@
     }
     // Paywall gate for Pro commands
     if(PRO_COMMANDS.has(k) && !hasSession()){
-      termAppend(PD + 'syxx ' + k + ' ' + d + ' <span style="color:#e0b45a">[Pro]</span>\n<span style="color:#ff4d6d">✗ Pro subscription required.</span> <a href="#create" data-action="show" data-arg="create" style="color:#a78bff">Subscribe →</a> or <a href="#signin" data-action="show" data-arg="signin" style="color:#a78bff">activate a license key →</a>');
+      termAppend(PD + 'syxx ' + esc(k) + ' ' + esc(d) + ' <span style="color:#e0b45a">[Pro]</span>\n<span style="color:#ff4d6d">✗ Pro subscription required.</span> <a href="#create" data-action="show" data-arg="create" style="color:#a78bff">Subscribe →</a> or <a href="#signin" data-action="show" data-arg="signin" style="color:#a78bff">activate a license key →</a>');
       return;
     }
     // Execute command
     const fn = DEMO_OUTPUTS[k];
     if(fn){
-      termAppend(PD + 'syxx ' + k + (d ? ' ' + d : '') + '\n' + fn(d));
+      termAppend(PD + 'syxx ' + esc(k) + (d ? ' ' + esc(d) : '') + '\n' + fn(d));
     } else {
-      termAppend(PD + 'syxx ' + k + '\n<span style="color:#f7931e">command not available in this shell</span>');
+      termAppend(PD + 'syxx ' + esc(k) + '\n<span style="color:#f7931e">command not available in this shell</span>');
     }
   }
 
@@ -674,7 +680,8 @@
       });
   }
   function afterLogin(){renderMembers();document.getElementById('nav-account').style.display='inline-flex';}
-  function signOut(){document.getElementById('nav-account').style.display='none';acct={email:'',plan:'yearly'};mtermInit=false;show('cover');}
+  // HT-014: Clear session token from localStorage on sign out
+  function signOut(){try{localStorage.removeItem('syxx_session');}catch(e){}document.getElementById('nav-account').style.display='none';acct={email:'',plan:'yearly'};mtermInit=false;show('cover');}
 
   // ---------- members governed DNS terminal ----------
   const MP='<span style="color:#2dd4bf">syxx@dimensions</span><span style="color:#6f6597">:~$</span> ';
@@ -683,21 +690,33 @@
   function mel(){return document.getElementById('mterm');}
   function minit(){mel().innerHTML=MP+'<span style="color:#8f83b8">Governed DNS shell · button-only mode · set a domain, then pick a command. Session: '+(hasSession()?'<span style="color:#2dd4bf">active</span>':'<span style="color:#ff4d6d">not activated</span>')+'</span>\n';}
   function mclear(){minit();}
-  function mrun(typed,out){const t=mel();t.innerHTML+=MP+typed+'\n'+out+'\n\n';t.scrollTop=t.scrollHeight;}
-  const G=s=>'<span style="color:#2dd4bf">'+s+'</span>',R=s=>'<span style="color:#ff4d6d">'+s+'</span>',Y=s=>'<span style="color:#f7931e">'+s+'</span>',M=s=>'<span style="color:#8f83b8">'+s+'</span>',D=s=>'<span style="color:#6f6597">'+s+'</span>';
+  // E210/E211: esc() function already defined above in cover terminal section
+  function mrun(typed,out){const t=mel();t.innerHTML+=MP+esc(typed)+'\n'+out+'\n\n';t.scrollTop=t.scrollHeight;}
+  const G=s=>'<span style="color:#2dd4bf">'+esc(s)+'</span>',R=s=>'<span style="color:#ff4d6d">'+esc(s)+'</span>',Y=s=>'<span style="color:#f7931e">'+esc(s)+'</span>',M=s=>'<span style="color:#8f83b8">'+esc(s)+'</span>',D=s=>'<span style="color:#6f6597">'+esc(s)+'</span>';
   const MEMBERS_PRO = new Set(['mirror','warp']);
+
+  // HT-015: Redact sensitive information from error messages before display.
+  // Server error messages may contain internal paths, stack traces, or PII.
+  function redactError(msg){
+    if(!msg) return 'unknown error';
+    msg = String(msg).substring(0, 200);
+    msg = msg.replace(/\/[a-zA-Z0-9_\-\.\/]+/g, '[path]');
+    msg = msg.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[ip]');
+    msg = msg.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[email]');
+    return msg;
+  }
 
   // Free-tier API helper (no auth, rate-limited per IP)
   async function freeAPI(path, params){
     const qs = new URLSearchParams(params).toString();
     const url = qs ? path+'?'+qs : path;
     const r = await fetch(url);
-    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.error||r.statusText); }
+    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(redactError(e.error||r.statusText)); }
     return r.json();
   }
   function fmtRecords(records){
     if(!records||!records.length) return D('  (no records)');
-    return records.map(r=>{ const v = typeof r.value==='object' ? JSON.stringify(r.value) : r.value; return '  '+(r.ttl||300)+'\t'+(r.type||'?')+'\t'+v; }).join('\n');
+    return records.map(r=>{ const v = typeof r.value==='object' ? esc(JSON.stringify(r.value)) : esc(r.value); return '  '+(r.ttl||300)+'\t'+(r.type||'?')+'\t'+v; }).join('\n');
   }
 
   async function runCmd(name){
@@ -717,7 +736,7 @@
         mrun('mirror '+d+' [Pro]', M('Calling /api/diff for '+d+'…'));
         fetch('/api/diff',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('syxx_session')},body:JSON.stringify({domain:d,type:ty})})
           .then(r=>{if(!r.ok)throw r;return r.json();})
-          .then(data=>{mrun('',G('✓ '+data.conclusion+' — '+(data.match?'remote matches origin':'content differs'))+'\n  sha256: '+(data.cleanVantage||'…')+'\n  assessment: '+(data.assessment||'…'));})
+          .then(data=>{mrun('',G('✓ '+esc(data.conclusion)+' — '+(data.match?'remote matches origin':'content differs'))+'\n  sha256: '+esc(data.cleanVantage||'…')+'\n  assessment: '+esc(data.assessment||'…'));})
           .catch(()=>{mrun('',R('API error — check your session and try again.'));});
         return;
       }
@@ -725,7 +744,7 @@
         mrun('warp https://'+d+' [Pro]', M('Calling /api/warp/raw for '+d+'…'));
         fetch('/api/warp/raw?url='+encodeURIComponent('https://'+d),{headers:{'Authorization':'Bearer '+localStorage.getItem('syxx_session')}})
           .then(r=>{if(!r.ok)throw r;return r.json();})
-          .then(data=>{mrun('',G('✓ fetched '+data.content?.length||0+' bytes')+'\n  sha256: '+((data.sha256||'').substring(0,16))+'…\n  vantage: '+(data.vantage||'server'));})
+          .then(data=>{mrun('',G('✓ fetched '+esc(data.content?.length||0)+' bytes')+'\n  sha256: '+esc((data.sha256||'').substring(0,16))+'…\n  vantage: '+esc(data.vantage||'server'));})
           .catch(()=>{mrun('',R('API error — check your session and try again.'));});
         return;
       }
@@ -733,14 +752,14 @@
     // Free commands: call real APIs
     const tok = localStorage.getItem('syxx_session');
     if(name==='prophet'){
-      mrun('prophet '+d, M('Querying resolvers from the syxx.app vantage…'));
+      mrun('prophet '+esc(d), M('Querying resolvers from the syxx.app vantage…'));
       fetch('/api/investigate?domain='+encodeURIComponent(d),{headers:{'Authorization':'Bearer '+tok}})
         .then(r=>{if(!r.ok)throw r;return r.json();})
         .then(data=>{
           const ips = (data.ipv4||[]).map(r=>r.ip).filter(Boolean);
           const unique = [...new Set(ips)];
           const agree = unique.length<=1;
-          mrun('',G((agree?'✓':'⚠')+' '+unique.length+' unique answer(s) from '+(data.ipv4||[]).length+' resolvers')+'\n  consensus: '+(data.consensus||'…')+'\n  '+(data.dnssec?.valid?G('DNSSEC validated'):Y('DNSSEC not validated')));
+          mrun('',G((agree?'✓':'⚠')+' '+esc(unique.length)+' unique answer(s) from '+esc((data.ipv4||[]).length)+' resolvers')+'\n  consensus: '+esc(data.consensus||'…')+'\n  '+(data.dnssec?.valid?G('DNSSEC validated'):Y('DNSSEC not validated')));
         })
         .catch(err=>{
           if(err.status===402) mrun('',R('payment required — your session may have expired.')+' <a href="#signin" data-action="show" data-arg="signin" style="color:#a78bff">Re-activate →</a>');
@@ -757,36 +776,36 @@
         mrun('conclude',M('Combined conclusions require the desktop investigation pipeline. Run individual tools above for server-vantage results.'));
         break;
       case 'nslookup':
-        mrun('nslookup -type='+ty+' '+d, M('Querying via /api/lookup…'));
-        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',data.server+'#53\n\n'+(data.rcodeName==='NOERROR'?G(';; '+data.rcodeName):Y(';; '+data.rcodeName))+'\n'+fmtRecords(data.records)); }catch(e){ mrun('',R('lookup failed: '+e.message)); }
+        mrun('nslookup -type='+esc(ty)+' '+esc(d), M('Querying via /api/lookup…'));
+        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',esc(data.server)+'#53\n\n'+(data.rcodeName==='NOERROR'?G(';; '+data.rcodeName):Y(';; '+data.rcodeName))+'\n'+fmtRecords(data.records)); }catch(e){ mrun('',R('lookup failed: '+redactError(e.message))); }
         break;
       case 'dig':
-        mrun('dig '+d+' '+ty, M('Querying via /api/lookup…'));
-        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',G(';; ANSWER SECTION:')+'\n'+fmtRecords(data.records)+'\n\n;; SERVER: '+data.server+'\n;; RCODE: '+data.rcodeName+(data.ad?' ;; '+G('AD flag set'):'')); }catch(e){ mrun('',R('dig failed: '+e.message)); }
+        mrun('dig '+esc(d)+' '+esc(ty), M('Querying via /api/lookup…'));
+        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',G(';; ANSWER SECTION:')+'\n'+fmtRecords(data.records)+'\n\n;; SERVER: '+esc(data.server)+'\n;; RCODE: '+esc(data.rcodeName)+(data.ad?' ;; '+G('AD flag set'):'')); }catch(e){ mrun('',R('dig failed: '+redactError(e.message))); }
         break;
       case 'whois':
-        mrun('whois '+d, M('Querying via /api/whois…'));
-        try{ const data=await freeAPI('/api/whois',{domain:d}); const lines=[]; if(data.registrar) lines.push('Registrar: '+data.registrar); if(data.created) lines.push('Created:   '+data.created); if(data.expires) lines.push('Expires:   '+data.expires); if(data.status?.length) lines.push('Status:    '+data.status.join(', ')); if(data.nameservers?.length) lines.push('NS:        '+data.nameservers.slice(0,4).join(', ')); lines.push(D('Source: '+data.source)); mrun('',lines.join('\n')); }catch(e){ mrun('',R('whois failed: '+e.message)); }
+        mrun('whois '+esc(d), M('Querying via /api/whois…'));
+        try{ const data=await freeAPI('/api/whois',{domain:d}); const lines=[]; if(data.registrar) lines.push('Registrar: '+esc(data.registrar)); if(data.created) lines.push('Created:   '+esc(data.created)); if(data.expires) lines.push('Expires:   '+esc(data.expires)); if(data.status?.length) lines.push('Status:    '+esc(data.status.join(', '))); if(data.nameservers?.length) lines.push('NS:        '+esc(data.nameservers.slice(0,4).join(', '))); lines.push(D('Source: '+data.source)); mrun('',lines.join('\n')); }catch(e){ mrun('',R('whois failed: '+redactError(e.message))); }
         break;
       case 'email':
-        mrun('email-auth '+d, M('Checking SPF/DMARC/DKIM…'));
-        try{ const data=await freeAPI('/api/email-auth',{domain:d}); const lines=[]; if(data.spf) lines.push('SPF:   '+(data.spf.conclusion==='pass'?G('✓'):R('✗'))+' '+(data.spf.policy||'none')); if(data.dmarc) lines.push('DMARC: '+(data.dmarc.conclusion==='pass'?G('✓'):R('✗'))+' '+(data.dmarc.policy||'none')+' pct='+(data.dmarc.pct||'?')); if(data.dkim) lines.push('DKIM:  '+(data.dkim.conclusion==='pass'?G('✓'):Y('?'))+' selector='+(data.dkim.selector||'none')); lines.push('Overall: '+(data.overall==='pass'?G(data.overall):R(data.overall||'unknown'))); mrun('',lines.join('\n')); }catch(e){ mrun('',R('email-auth failed: '+e.message)); }
+        mrun('email-auth '+esc(d), M('Checking SPF/DMARC/DKIM…'));
+        try{ const data=await freeAPI('/api/email-auth',{domain:d}); const lines=[]; if(data.spf) lines.push('SPF:   '+(data.spf.conclusion==='pass'?G('✓'):R('✗'))+' '+esc(data.spf.policy||'none')); if(data.dmarc) lines.push('DMARC: '+(data.dmarc.conclusion==='pass'?G('✓'):R('✗'))+' '+esc(data.dmarc.policy||'none')+' pct='+esc(data.dmarc.pct||'?')); if(data.dkim) lines.push('DKIM:  '+(data.dkim.conclusion==='pass'?G('✓'):Y('?'))+' selector='+esc(data.dkim.selector||'none')); lines.push('Overall: '+(data.overall==='pass'?G(data.overall):R(data.overall||'unknown'))); mrun('',lines.join('\n')); }catch(e){ mrun('',R('email-auth failed: '+redactError(e.message))); }
         break;
       case 'subdomains':
-        mrun('subdomains '+d, M('Enumerating via CT logs…'));
-        try{ const data=await freeAPI('/api/subdomains',{domain:d}); const subs=(data.subdomains||[]).slice(0,20); mrun('',G(data.total+' subdomains found')+'\n'+subs.map(s=>'  '+(typeof s==='string'?s:(s.name||s))).join('\n')+(data.truncated?'\n'+Y('(truncated)'):'')); }catch(e){ mrun('',R('enumeration failed: '+e.message)); }
+        mrun('subdomains '+esc(d), M('Enumerating via CT logs…'));
+        try{ const data=await freeAPI('/api/subdomains',{domain:d}); const subs=(data.subdomains||[]).slice(0,20); mrun('',G(data.total+' subdomains found')+'\n'+subs.map(s=>'  '+esc(typeof s==='string'?s:(s.name||s))).join('\n')+(data.truncated?'\n'+Y('(truncated)'):'')); }catch(e){ mrun('',R('enumeration failed: '+redactError(e.message))); }
         break;
       case 'propagation':
-        mrun('propagation '+d, M('Checking 17 global resolvers…'));
-        try{ const data=await freeAPI('/api/propagation',{domain:d,type:ty}); const ok=data.resolvers?.filter(r=>r.status==='ok')||[]; mrun('',G(data.successCount+'/'+data.totalResolvers+' responded')+' · '+data.consensus+' · '+data.propagationPct+'%\n'+ok.slice(0,8).map(r=>'  '+r.label.padEnd(16)+' '+(r.records?.[0]?.value||'—')+' ('+r.time_ms+'ms)').join('\n')); }catch(e){ mrun('',R('propagation failed: '+e.message)); }
+        mrun('propagation '+esc(d), M('Checking 17 global resolvers…'));
+        try{ const data=await freeAPI('/api/propagation',{domain:d,type:ty}); const ok=data.resolvers?.filter(r=>r.status==='ok')||[]; mrun('',G(data.successCount+'/'+data.totalResolvers+' responded')+' · '+esc(data.consensus)+' · '+esc(data.propagationPct)+'%\n'+ok.slice(0,8).map(r=>'  '+esc(r.label.padEnd(16))+' '+esc(r.records?.[0]?.value||'—')+' ('+esc(r.time_ms)+'ms)').join('\n')); }catch(e){ mrun('',R('propagation failed: '+redactError(e.message))); }
         break;
       case 'firewall':
         mrun('firewall-test', M('Testing DNS filtering…'));
-        try{ const data=await freeAPI('/api/firewall-test',{}); const filtered=(data.results||[]).filter(r=>r.filtered); mrun('',(data.assessment==='filtered'?R('FILTERED'):G('OPEN'))+' — '+filtered.length+'/'+(data.results||[]).length+' blocked\n'+(data.results||[]).slice(0,10).map(r=>'  '+(r.filtered?R('✗'):G('✓'))+' '+(r.domain||'').padEnd(28)+' '+(r.category||'')).join('\n')); }catch(e){ mrun('',R('firewall test failed: '+e.message)); }
+        try{ const data=await freeAPI('/api/firewall-test',{}); const filtered=(data.results||[]).filter(r=>r.filtered); mrun('',(data.assessment==='filtered'?R('FILTERED'):G('OPEN'))+' — '+esc(filtered.length)+'/'+esc((data.results||[]).length)+' blocked\n'+(data.results||[]).slice(0,10).map(r=>'  '+(r.filtered?R('✗'):G('✓'))+' '+esc((r.domain||'').padEnd(28))+' '+esc(r.category||'')).join('\n')); }catch(e){ mrun('',R('firewall test failed: '+redactError(e.message))); }
         break;
       case 'dnssec':
-        mrun('dnssec '+d, M('Validating DNSSEC chain of trust…'));
-        try{ const data=await freeAPI('/api/dnssec',{domain:d}); const steps=(data.chain||[]).map(s=>'  '+s.zone.padEnd(20)+' '+s.step.padEnd(16)+' '+(s.status==='valid'?G('✓ valid'):s.status==='invalid'?R('✗ invalid'):Y('? '+s.status))); mrun('',(data.conclusion==='valid'?G('✓ DNSSEC VALID'):data.conclusion==='invalid'?R('✗ DNSSEC INVALID'):data.conclusion==='unsigned'?Y('UNSIGNED'):Y('INCONCLUSIVE'))+'\n  Algorithm: '+(data.algorithm||'none')+'\n'+steps.join('\n')); }catch(e){ mrun('',R('dnssec failed: '+e.message)); }
+        mrun('dnssec '+esc(d), M('Validating DNSSEC chain of trust…'));
+        try{ const data=await freeAPI('/api/dnssec',{domain:d}); const steps=(data.chain||[]).map(s=>'  '+esc(s.zone.padEnd(20))+' '+esc(s.step.padEnd(16))+' '+(s.status==='valid'?G('✓ valid'):s.status==='invalid'?R('✗ invalid'):Y('? '+s.status))); mrun('',(data.conclusion==='valid'?G('✓ DNSSEC VALID'):data.conclusion==='invalid'?R('✗ DNSSEC INVALID'):data.conclusion==='unsigned'?Y('UNSIGNED'):Y('INCONCLUSIVE'))+'\n  Algorithm: '+esc(data.algorithm||'none')+'\n'+steps.join('\n')); }catch(e){ mrun('',R('dnssec failed: '+redactError(e.message))); }
         break;
       default:
         mrun(name, R('command not available in this governed shell'));

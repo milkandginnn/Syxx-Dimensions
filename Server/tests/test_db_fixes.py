@@ -36,6 +36,7 @@ class _TempDbMixin:
         self.tmp = tempfile.mkdtemp()
         self._orig_path = config.DB_PATH
         config.DB_PATH = os.path.join(self.tmp, "syxx-server.db")
+        db.clear_pool()
         conn = db.connect()
         try:
             conn.executescript(db.SCHEMA)
@@ -45,6 +46,7 @@ class _TempDbMixin:
 
     def tearDown(self):
         config.DB_PATH = self._orig_path
+        db.clear_pool()
 
 
 class _AliasRejectingConn:
@@ -183,10 +185,13 @@ class S15MonitorAdvanceTests(_TempDbMixin, unittest.TestCase):
         finally:
             counter.uninstall()
         self.assertGreater(counter.opened, 0)
-        self.assertEqual(
-            counter.opened,
-            counter.closed,
-            f"monitor_advance leaked {counter.opened - counter.closed} connection(s)",
+        # With the connection pool, connections are returned to the pool via
+        # _return_conn() rather than closed immediately. The pool holds up to
+        # _MAX_POOLED (4) connections per thread. Verify no leaks beyond the pool cap.
+        leaked = counter.opened - counter.closed
+        self.assertLessEqual(
+            leaked, 4,
+            f"monitor_advance leaked {leaked} connection(s) — pool cap is 4",
         )
 
     def test_monitor_advance_still_advances_next_run(self):

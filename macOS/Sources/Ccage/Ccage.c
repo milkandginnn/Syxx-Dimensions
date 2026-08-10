@@ -56,6 +56,11 @@ PcapHandle *cage_pcap_open_pktap(const char *device, int snaplen,
 }
 
 int cage_pcap_next_ex(PcapHandle *p, const uint8_t **data, int *len) {
+    // D329: initialize output pointers before calling pcap_next_ex. When pcap_next_ex
+    // returns non-1 (timeout, error, or savefile EOF), *data and *len would otherwise
+    // remain uninitialized, risking reads of stale pointer values in the Swift caller.
+    *data = NULL;
+    *len = 0;
     struct pcap_pkthdr *header;
     const uint8_t *pkt;
     int ret = pcap_next_ex(p, &header, &pkt);
@@ -70,6 +75,11 @@ int cage_pcap_next_ex(PcapHandle *p, const uint8_t **data, int *len) {
     return ret;
 }
 
+// D364: POINTER LIFETIME CONTRACT — the returned pointer is valid only until the next
+// pcap_* call on the same handle (pcap_next_ex, pcap_compile, pcap_close, etc.).
+// Callers MUST copy or use the string BEFORE making any subsequent pcap call on `p`.
+// The Swift bridge (SyxxCage.swift) converts immediately via String(cString:), which
+// satisfies this contract. Do NOT cache the returned pointer across pcap calls.
 const char *cage_pcap_geterr(PcapHandle *p) {
     return pcap_geterr(p);
 }
@@ -102,15 +112,25 @@ char *cage_pcap_lookupdev(char *errbuf) {
             if (!(d->flags & PCAP_IF_LOOPBACK)) { name = strdup(d->name); break; }
         }
     }
-    if (name == NULL) {                          // last resort: the first device
-        name = strdup(alldevs->name);
-    }
+    // D365: refuse to fall back to a loopback-only device. Loopback captures no real DNS
+    // traffic (queries to 127.0.0.1:53 are local-only and do not represent network DNS).
+    // Returning a loopback device would produce an empty capture that reads as "no DNS
+    // activity" when in fact the system has no usable capture interface. Return NULL so the
+    // Swift caller reports "no capture device available" instead of silently capturing nothing.
     pcap_freealldevs(alldevs);
     return name;
 }
 
 int cage_pcap_compile_filter(PcapHandle *p, const char *expr,
                               int optimize, uint32_t netmask, char *errbuf) {
+    // D366: validate inputs before passing to pcap_compile. A NULL expr would segfault
+    // inside pcap_compile. The Swift caller always passes a non-null literal, but the C API
+    // must be defensive — a future caller or FFI bridge could pass NULL.
+    if (p == NULL || expr == NULL) {
+        snprintf(errbuf, PCAP_ERRBUF_SIZE, "cage_pcap_compile_filter: NULL %s",
+                 p == NULL ? "handle" : "expression");
+        return -1;
+    }
     struct bpf_program fp;
     if (pcap_compile(p, &fp, expr, optimize, netmask) == -1) {
         snprintf(errbuf, PCAP_ERRBUF_SIZE, "pcap_compile: %s", pcap_geterr(p));

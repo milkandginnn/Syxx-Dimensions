@@ -10,14 +10,70 @@ Deploy a multi-reviewer team to audit implemented fixes. Verify correctness, che
 ## Pre-flight Checks
 
 1. Parse `$ARGUMENTS`:
+   - `--help`: Display help information and exit without executing
    - `--schedule YYYY-MM-DD HH-MM-SS`: Run at specified time
    - `--repeat`: Recurring schedule
 
-2. Verify `DELTAS.md` exists and contains `fixed-unverified` deltas. If none, error: "No unverified fixes to review."
+2. If `--help` is set, display the following and exit:
 
-3. Verify `.deltas/implementation-log.json` exists. If missing, error: "No implementation log. Run /delta-implement first."
+---
 
-4. If `--schedule` is set, register a cron job and exit. Otherwise proceed.
+### `/delta-remediation` — Delta Remediation Suite
+
+A thorough, multi-agent debugging and defect remediation workflow for large codebases. The suite discovers defects through parallel specialized agents, scores them by severity and impact, records human decisions about what to fix, generates phased implementation plans, executes fixes with strict file ownership, verifies the fixes through independent review, and archives completed work.
+
+### Command Pipeline (intended order)
+
+```
+1. /delta-analysis    — Discover defects (reads code, writes DELTAS.md)
+2. /delta-evaluation  — Score and classify deltas (reads DELTAS.md, writes .deltas/evaluation.json)
+3. /delta-decide      — Human decides what to fix (reads evaluation, writes .deltas/decisions.json)
+4. /delta-plan        — Generate implementation plan (reads decisions, writes .deltas/plan.md)
+5. /delta-implement   — Execute fixes phase by phase (reads plan, modifies code, updates DELTAS.md)
+6. /delta-review      — Verify fixes through independent review (reads code + DELTAS.md, writes .deltas/review-report.md)
+7. /delta-clean       — Archive verified deltas (rewrites DELTAS.md, archives to .deltas/archive/)
+```
+
+### `/delta-review` — Verify Fixes
+
+Deploy a multi-reviewer team to independently audit every `fixed-unverified` delta. Reviewers have NOT seen the implementation plan — they form independent judgments from the code diff and delta descriptions. Each delta receives a verdict: PASS (promote to verified), PASS-WITH-NOTES (promote with concerns), FAIL (revert to open), or INCONCLUSIVE (needs manual review).
+
+**Prerequisite:** `DELTAS.md` must contain `fixed-unverified` deltas, and `.deltas/implementation-log.json` must exist (run `/delta-implement` first).
+
+**Flags and arguments:**
+
+| Flag | Description | Default | Example |
+|---|---|---|---|
+| `--help` | Display this help and exit | — | `/delta-review --help` |
+| `--schedule <datetime>` | Run at a future time | Now | `/delta-review --schedule 2026-08-15 09-00-00` |
+| `--repeat` | Recurring schedule | Once | `/delta-review --schedule 2026-08-15 09-00-00 --repeat` |
+
+**Reviewers (3 agents, deployed in parallel):**
+
+| Reviewer | Dimension | Checks |
+|---|---|---|
+| Code Reviewer | Correctness | Does the fix close the defect? Is the logic sound? |
+| Code Reviewer | Regression | Did the fix break anything? Are tests still passing? |
+| Code Reviewer | Completeness | Are all selected deltas genuinely fixed? Any partial fixes? |
+
+**Verdicts:**
+
+| Verdict | Condition | Promotion |
+|---|---|---|
+| PASS | All reviewers agree: closed, no regressions, minimal fix | → `verified-by-CI` or `verified-by-real-run` |
+| PASS-WITH-NOTES | Closed but fix not minimal or minor concerns | → `verified-by-CI` with notes |
+| FAIL | Not closed, or fix introduced regression | → Revert to `open` |
+| INCONCLUSIVE | Reviewers disagree | → Stay `fixed-unverified` |
+
+**Output:** `.deltas/review-report.md`
+
+---
+
+3. Verify `DELTAS.md` exists and contains `fixed-unverified` deltas. If none, error: "No unverified fixes to review."
+
+4. Verify `.deltas/implementation-log.json` exists. If missing, error: "No implementation log. Run /delta-implement first."
+
+5. If `--schedule` is set, register a cron job and exit. Otherwise proceed.
 
 ## Phase 1: Scope Resolution
 

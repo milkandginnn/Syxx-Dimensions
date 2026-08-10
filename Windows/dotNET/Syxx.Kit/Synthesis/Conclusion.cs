@@ -20,7 +20,9 @@ namespace Syxx.Kit;
 /// ValidatedDecisiveActs, Stage5, HypothesisProbability, WeightRubric, BenignExplanation.
 /// Replaced by `Determination: DeterminativeResult?` — the matrix engine's tri-state result.
 public sealed record Conclusion(
-    [property: JsonPropertyName("generatedAt")] DateTimeOffset GeneratedAt,
+    [property: JsonPropertyName("generatedAt")]
+    [property: JsonConverter(typeof(AppleReferenceDateJsonConverter))]
+    DateTime GeneratedAt,
     [property: JsonPropertyName("sectionStatuses")] IReadOnlyList<SectionStatusEntry> SectionStatuses,
     [property: JsonPropertyName("evidence")] IReadOnlyList<EvidenceItem> Evidence,
     [property: JsonPropertyName("advisories")] IReadOnlyList<Advisory> Advisories,

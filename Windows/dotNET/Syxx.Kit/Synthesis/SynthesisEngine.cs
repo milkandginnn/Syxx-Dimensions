@@ -83,7 +83,7 @@ public static class SynthesisEngine
             SyxxTracer.SetOutcome(span, SyxxTracer.Outcome.Inconclusive, reason: "engine_did_not_run", evidence: false);
         }
         var conclusion = new Conclusion(
-            GeneratedAt: when,
+            GeneratedAt: when.UtcDateTime,
             SectionStatuses: sectionStatuses,
             Evidence: evidence,
             Advisories: advisories ?? Array.Empty<Advisory>(),

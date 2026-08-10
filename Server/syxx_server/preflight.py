@@ -45,7 +45,7 @@ def _keygen_key_error():
     if len(key_bytes) != 32:
         return f"32 bytes of hex expected, got {len(key_bytes)} bytes"
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey  # type: ignore[unresolved-import]
 
         Ed25519PublicKey.from_public_bytes(key_bytes)
     except Exception as e:
@@ -156,6 +156,19 @@ def commerce_findings():
     collector = _collector_finding()
     if collector:
         findings.append(collector)
+
+    # A317: an empty STRIPE_SKUS catalog means nothing is sellable even if all
+    # Stripe keys are configured. Without this check, an operator with valid
+    # keys but no catalog entries gets "commerce_ready" — a false positive.
+    if not config.STRIPE_SKUS:
+        findings.append(
+            (
+                "degraded",
+                "STRIPE_SKUS",
+                "no SKUs configured — the catalog is empty, so no buy button can work "
+                "even though Stripe keys may be present",
+            )
+        )
 
     # A policy id per SKU. Blank is NOT a blocker: that SKU's sale is recorded pending rather
     # than dropped, so a missing id delays a key — it never loses a payment.

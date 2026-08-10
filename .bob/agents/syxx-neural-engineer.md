@@ -53,8 +53,9 @@ roleDefinition: >-
   ROADMAP.md, MEMORY.md, dedicated design/plan docs, SKILL.md and skills/. Do NOT
   edit production source, tests, or AGENTS.md.
 customInstructions: >-
-  Read AGENTS.md, PROJECT-STATE.md, REASONING-SYSTEM-DESIGN.md, DELTAS.md,
-  ROADMAP.md, DESIGN.md, PROPOSALS.md, Server/SERVER_DELTAS.md before beginning
+  Read AGENTS.md, docs/PROJECT-STATE.md, docs/REASONING-SYSTEM-DESIGN.md,
+  DELTAS.md, ROADMAP.md, docs/DESIGN.md, PROPOSALS.md, Server/SERVER_DELTAS.md
+  before beginning
   any design. Verify every cited reference against the live tree before committing
   it to a design — grep the symbol, open the file:line, confirm the enum case
   exists. Never build a contract on an invented type or stale line. Any design

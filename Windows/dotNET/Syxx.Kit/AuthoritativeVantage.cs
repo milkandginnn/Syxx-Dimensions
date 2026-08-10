@@ -68,6 +68,19 @@ public static class AuthoritativeVantage
     public static Func<DNSQuery, Task<DNSResponse>> DefaultQuery =>
         async q => await DNSResolver.QueryUDPDetailedAsync(q);
 
+    /// <summary>Configuration for <see cref="Compare(string, AuthoritativeVantageOptions)"/>.
+    /// Bundles the 8 optional parameters into a single struct.</summary>
+    public sealed record AuthoritativeVantageOptions
+    {
+        public ushort Qtype { get; init; } = TypeA;
+        public IReadOnlyList<string>? ResolverAnswers { get; init; }
+        public IReadOnlyList<string>? BootstrapResolvers { get; init; }
+        public int MaxNameservers { get; init; } = 6;
+        public int MaxServersProbed { get; init; } = 4;
+        public Func<DNSQuery, Task<DNSResponse>>? Query { get; init; }
+        public bool ResolverDidFail { get; init; }
+    }
+
     public static async Task<AuthoritativeComparison> Compare(string domain,
         ushort qtype = TypeA,
         IReadOnlyList<string>? resolverAnswers = null,
@@ -77,11 +90,25 @@ public static class AuthoritativeVantage
         Func<DNSQuery, Task<DNSResponse>>? query = null,
         bool resolverDidFail = false)
     {
-        query ??= DefaultQuery;
-        var bootstraps = bootstrapResolvers ?? DefaultBootstrapResolvers;
-        var resolverSet = new HashSet<string>((resolverAnswers ?? []).Select(NormalizeAddress));
+        return await Compare(domain, new AuthoritativeVantageOptions
+        {
+            Qtype = qtype,
+            ResolverAnswers = resolverAnswers,
+            BootstrapResolvers = bootstrapResolvers,
+            MaxNameservers = maxNameservers,
+            MaxServersProbed = maxServersProbed,
+            Query = query,
+            ResolverDidFail = resolverDidFail,
+        });
+    }
 
-        var nsHosts = await DiscoverNameservers(domain, bootstraps, maxNameservers, query);
+    public static async Task<AuthoritativeComparison> Compare(string domain, AuthoritativeVantageOptions options)
+    {
+        var query = options.Query ?? DefaultQuery;
+        var bootstraps = options.BootstrapResolvers ?? DefaultBootstrapResolvers;
+        var resolverSet = new HashSet<string>((options.ResolverAnswers ?? []).Select(NormalizeAddress));
+
+        var nsHosts = await DiscoverNameservers(domain, bootstraps, options.MaxNameservers, query);
         if (nsHosts.Count == 0)
         {
             return new AuthoritativeComparison(AuthComparisonStatus.Inconclusive,
@@ -97,13 +124,13 @@ public static class AuthoritativeVantage
                 var resp = await query(new DNSQuery(name: host, type: TypeA, server: bs, port: 53));
                 nsIPs.AddRange(resp.Records.Where(r => r.Type == TypeA).Select(r => r.Rdata));
             }
-            if (nsIPs.Count >= maxServersProbed) break;
+            if (nsIPs.Count >= options.MaxServersProbed) break;
         }
         // D018: reject NS IPs that are not public-routable to prevent SSRF to internal hosts
         // via hostile delegation glue (127.0.0.1, 10.x, 169.254.169.254, etc.).
         nsIPs = [.. new HashSet<string>(nsIPs)
             .Where(ip => IPClassifier.Classify(ip) == IPAddressClass.PublicRoutable)
-            .Take(maxServersProbed)];
+            .Take(options.MaxServersProbed)];
         if (nsIPs.Count == 0)
         {
             return new AuthoritativeComparison(AuthComparisonStatus.Inconclusive,
@@ -114,12 +141,12 @@ public static class AuthoritativeVantage
         var authSets = new List<HashSet<string>>();
         foreach (var ip in nsIPs)
         {
-            var resp = await query(new DNSQuery(name: domain, type: qtype, server: ip, port: 53));
+            var resp = await query(new DNSQuery(name: domain, type: options.Qtype, server: ip, port: 53));
             if (!resp.IsAuthoritative) continue;
             if (resp.Status is not (DNSResponseStatus.Success or DNSResponseStatus.NoData or DNSResponseStatus.NXDomain))
                 continue;
             var addrs = new HashSet<string>(resp.Records
-                .Where(r => r.Type == qtype)
+                .Where(r => r.Type == options.Qtype)
                 .Select(r => NormalizeAddress(r.Rdata)));
             authSets.Add(addrs);
         }
@@ -135,7 +162,7 @@ public static class AuthoritativeVantage
         var authSet = authSets.GroupBy(x => x, HashSet<string>.CreateSetComparer())
             .MaxBy(g => g.Count())?.Key ?? authSets[0];
 
-        return Classify(resolverSet, authSet, nsHosts, domain, resolverDidFail);
+        return Classify(resolverSet, authSet, nsHosts, domain, options.ResolverDidFail);
     }
 
     public static AuthoritativeComparison Classify(HashSet<string> resolverSet, HashSet<string> authSet,

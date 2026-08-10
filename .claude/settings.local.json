@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"=== exit $? \\(1=no matches\\) ===\")",
+      "Bash(echo \"--- exit=$?  \\(1 = no matches, i.e. compiled bindings never disabled\\) ---\")",
+      "Bash(dotnet build *)",
+      "Bash(python3 scripts/package-pin-parity.py)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(python3 scripts/package-pin-parity.py --github)",
+      "Bash(echo \"EXIT_WITH_GITHUB=$?\")",
+      "Bash(dotnet test *)"
+    ]
+  }
+}

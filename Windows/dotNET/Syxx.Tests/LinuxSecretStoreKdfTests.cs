@@ -83,7 +83,7 @@ public sealed class LinuxSecretStoreKdfTests : IDisposable
     [Fact]
     public void StoredEntry_IsOwnerReadWriteOnly()
     {
-        if (OperatingSystem.IsWindows()) return;
+        if (OperatingSystem.IsWindows()) return;   // Unix modes only
 
         NewStore().Store(KeyType, "filemode", "x");
 
@@ -96,7 +96,7 @@ public sealed class LinuxSecretStoreKdfTests : IDisposable
     [Fact]
     public void SaltFile_IsOwnerReadWriteOnly()
     {
-        if (OperatingSystem.IsWindows()) return;
+        if (OperatingSystem.IsWindows()) return;   // Unix modes only
 
         NewStore().Store(KeyType, "saltmode", "x");
 

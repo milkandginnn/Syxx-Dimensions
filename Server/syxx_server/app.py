@@ -94,7 +94,9 @@ try:
     # lives in the exporter package, not in sdk._logs.export.
     from opentelemetry import _logs as otel_logs  # type: ignore[unresolved-import]
     from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter  # type: ignore[unresolved-import]
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # type: ignore[unresolved-import]
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+        OTLPSpanExporter,  # type: ignore[unresolved-import]
+    )
     from opentelemetry.sdk._logs import LoggerProvider  # type: ignore[unresolved-import]
     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor  # type: ignore[unresolved-import]
     from opentelemetry.sdk.resources import Resource  # type: ignore[unresolved-import]
@@ -282,9 +284,9 @@ def _diff_content(url, local_html, local_scripts, local_inline_hashes):
     clean_inline = set(base.get("inlineScriptHashes", []))
 
     if local_html:
-        parsed_scripts, _ss, _if = warp.parse_assets(local_html, url)
+        parsed_scripts, _ss, _if, parsed_inlines = warp.parse_assets(local_html, url)
         local_script_set = set(parsed_scripts)
-        local_inline = {hashlib.sha256(b.encode("utf-8")).hexdigest() for b in warp.inline_scripts(local_html)}
+        local_inline = {hashlib.sha256(b.encode("utf-8")).hexdigest() for b in parsed_inlines}
         have_inline = True
     else:
         local_script_set = set(local_scripts or [])
@@ -608,7 +610,7 @@ class Handler(BaseHTTPRequestHandler):
         self._csp_nonce = nonce
         return nonce
 
-    def _security_headers(self):
+    def _security_headers(self, content_type="application/json"):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         # S3/XFO: prevent clickjacking by denying all framing.
@@ -619,20 +621,22 @@ class Handler(BaseHTTPRequestHandler):
         # style-src retains 'unsafe-inline' because CSS nonces are not widely deployed and
         # the XSS risk from inline styles is substantially lower than inline scripts.
         # frame-ancestors replaces X-Frame-Options for modern browsers.
-        nonce = getattr(self, "_csp_nonce", None) or self._generate_csp_nonce()
-        self.send_header(
-            "Content-Security-Policy",
-            f"default-src 'self'; "
-            f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com data:; "
-            "img-src 'self' data: https:; "
-            "connect-src 'self' https://api.stripe.com; "
-            "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
-            "form-action 'self' https://checkout.stripe.com; "
-            "base-uri 'self'; "
-            "frame-ancestors 'none'",
-        )
+        is_html = content_type.startswith("text/html")
+        if is_html:
+            nonce = getattr(self, "_csp_nonce", None) or self._generate_csp_nonce()
+            self.send_header(
+                "Content-Security-Policy",
+                f"default-src 'self'; "
+                f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                "font-src 'self' https://fonts.gstatic.com data:; "
+                "img-src 'self' data: https:; "
+                "connect-src 'self' https://api.stripe.com; "
+                "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
+                "form-action 'self' https://checkout.stripe.com; "
+                "base-uri 'self'; "
+                "frame-ancestors 'none'",
+            )
         # HT-008: Self-host fonts to avoid third-party data leakage.
         # The CSP above allows fonts.googleapis.com and fonts.gstatic.com for
         # backward compatibility. Consider downloading fonts to /assets/fonts/
@@ -692,7 +696,7 @@ class Handler(BaseHTTPRequestHandler):
         # headers that extra_headers will override.
         buf_start = len(self._headers_buffer) if hasattr(self, "_headers_buffer") else 0
         self._cors()
-        self._security_headers()
+        self._security_headers(content_type)
         if extra_keys and hasattr(self, "_headers_buffer"):
             # Remove headers that extra_headers will replace
             new_buf = self._headers_buffer[:buf_start]

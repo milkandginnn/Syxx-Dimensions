@@ -30,7 +30,9 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
         // is the transparent titlebar (traffic lights), which the canvas already paints
         // behind via .ignoresSafeArea().
         window.toolbar = nil
-        // Traffic light visibility is handled by FirstRunWindowConfigurator (SyxxApp.swift).
+        window.standardWindowButton(.closeButton)?.isHidden = false
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = false
+        window.standardWindowButton(.zoomButton)?.isHidden = false
         guard let screen = window.screen ?? NSScreen.main else { return }
         let vis = screen.visibleFrame
         var f = window.frame
@@ -108,14 +110,35 @@ private struct PaneGeometryProbe: NSViewRepresentable {
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
-    @State private var localDarkMode = true
+    @State private var settings = SyxxSettingsStore.load()
+
+    /// Resolves the stored theme mode string to a SwiftUI ColorScheme override.
+    /// "system" returns nil so the OS appearance takes effect; "dark" and "light"
+    /// override it explicitly.
+    var resolvedScheme: ColorScheme? {
+        switch SyxxThemeMode(rawValueOrSystem: settings.themeMode) {
+        case .dark: return .dark
+        case .light: return .light
+        case .system: return nil
+        }
+    }
+
+    /// Whether the sidebar should render in dark mode. The sidebar's own gradient
+    /// is always dark, so this stays true unless the user explicitly chose light.
+    private var sidebarDarkMode: Bool {
+        switch SyxxThemeMode(rawValueOrSystem: settings.themeMode) {
+        case .light: return false
+        case .dark: return true
+        case .system: return colorScheme == .dark
+        }
+    }
 
     /// The shell owns the pane origin. Child panes must not add another outer inset.
     private static let paneOrigin: CGFloat = 35
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            WardenSidebar(localDarkMode: $localDarkMode)
+            WardenSidebar(localDarkMode: .constant(sidebarDarkMode))
                 .frame(width: 236)
                 .frame(maxHeight: .infinity)
 
@@ -173,7 +196,7 @@ struct ContentView: View {
         // The canvas fill (line ~100), the MOTD pane, and the sidebar gradient each ignore
         // the safe area individually, so the window still paints edge to edge with no
         // titlebar band — while the CONTENT stays clear of the traffic lights.
-        .preferredColorScheme(localDarkMode ? .dark : .light)
+        .preferredColorScheme(resolvedScheme)
         .background(WindowChromeConfigurator())
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
@@ -181,6 +204,9 @@ struct ContentView: View {
             guard !ProcessInfo.processInfo.isSyxxXcodePreview else { return }
             #endif
             model.checkStartup()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: SyxxSettingsStore.didSaveNotification)) { _ in
+            settings = SyxxSettingsStore.load()
         }
         .onChange(of: model.pendingBroadcast) { _, newValue in
             guard let b = newValue else { return }
@@ -211,10 +237,18 @@ struct ContentView: View {
 }
 
 #if DEBUG
-#Preview {
+#Preview("Dark") {
     ContentView()
         .environmentObject(SyxxPreviewSupport.appModel(selection: .dashboard))
         .syxxPreviewCanvas()
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light") {
+    ContentView()
+        .environmentObject(SyxxPreviewSupport.appModel(selection: .dashboard))
+        .syxxPreviewCanvas()
+        .preferredColorScheme(.light)
 }
 
 #Preview {
@@ -250,18 +284,17 @@ struct WardenSidebar: View {
             //  • the group's leftmost point is the mark's INK, not the transparent canvas the
             //    PNG ships on (`trimmedLogo` crops it), and the 13pt leading inset puts that
             //    ink on the rune column of the rows below: sidebar 15 + row 13 = 28pt.
-            HStack(alignment: .lastTextBaseline, spacing: 9) {
+            HStack(alignment: .center, spacing: 5) {
                 logoMark()
-                    .alignmentGuide(.lastTextBaseline) { $0[.bottom] }
+                    .frame(width: 130, height: 65, alignment: .topLeading)
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Syxx")
                         .font(.custom("Cinzel-Bold", size: Self.wordmarkTitleSize))
                         .foregroundStyle(LinearGradient.ioWordmark)
 
-                    // Mockup: subtitle = "The Six Wardens" (Story) / "DNS Investigation" (General)
-                    // system-ui 9.5px, .22em tracking, #8f83b8, weight 600
-                    Text(SyxxSettingsStore.load().experienceMode == "general" ? "DNS INVESTIGATION" : "THE SIX WARDENS")
+                    // Subtitle line
+                    Text("DNS INVESTIGATION")
                         .font(.system(size: 9.5, weight: .semibold))
                         .tracking(2.1)
                         .foregroundColor(Color.ioEyebrowMuted)
@@ -374,18 +407,15 @@ struct WardenSidebar: View {
                 WardenGoldDivider()
 
                 // Dimensions (gold, external)
-                SidebarItem(
-                    label: "Dimensions",
-                    rune: "⊕",
-                    selected: false,
-                    onClick: {
-                        if let url = URL(string: "https://syxx.app") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    },
-                    isGold: true,
-                    showExternal: true
-                )
+                Button(action: {
+                    if let url = URL(string: "https://syxx.app") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }) {
+                    Text("Dimensions")
+                        .foregroundColor(.white)
+                }
+                .buttonStyle(.plain)
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)

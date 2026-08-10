@@ -66769,3 +66769,185 @@ passing" and green; the measured baseline was 229 total with 1 failure.
 **Criticality:** Critical
 **Location:** macOS/Tests/_quarantine/ (19 files, 209 func test)
 **FIXED 2026-07-30 (qwen-code).** Moved all 19 quarantined files to active test targets (SyxxKitTests/SyxxAppTests); removed `_quarantine/` directory; 5 files superseded by existing active versions.
+
+---
+
+# Deltas Moved from DELTAS-fixed.mdd (2026-08-07)
+
+The following 25 deltas were verified as already fixed in the current codebase.
+Originally moved from DELTAS.md on 2026-08-07.
+
+---
+
+
+- **[A001]**            Server passivedns.py leaks SQLite database connection on query exception
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[A264]**            Signed appcast manifest ships with empty package SHA-256 and size
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[A271]**            Unresolved merge-conflict markers make the production server
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[B271]**            Disjoint CDN Rotation Still Classified Unstable on Windows (macOS Fixed by
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[B272]**            Windows Synthesizer.Prophet Has No Rotating Case; Benign Round-Robin
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[B273]**            Windows MatrixDeterminativeEngine.Pct Still Takes Math.Abs — Negative Margin
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[B277]**            Windows DNS response parser discards authority-section, EDNS, and byte-
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[B279]**            Windows DenialOfExistenceProbe Checks hasNSEC Before SOA Ancestry (C126
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+- **[C003]**            Empty KeygenPublicKeyHex causes valid license signatures to fail and return
+                        NetworkError
+- **Status:**           **ALREADY FIXED** — KeygenPublicKeyDerHex is now populated with a 91-byte
+                        P-256 ECDSA SubjectPublicKeyInfo DER key (182 hex chars) at
+                        LicenseManager.cs:420. The key was migrated from Ed25519 to P-256 ECDSA
+                        and populated. VerifyKeygenSignature now performs full ECDSA-SHA256
+                        verification with Date header freshness check. macOS twin
+                        (LicenseManager.swift:72) has the same key. Note: E185 in the crypto audit
+                        appears stale — it cites an empty Ed25519 key that no longer exists.
+- **Criticality:**      Critical; user was made aware. Hardcoded empty public key string causes
+                        signature verification to always fail, rejecting valid subscriptions.
+- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:420-430, 526-535
+- **Issue:**            KeygenPublicKeyHex is hardcoded to an empty string (""). When a valid
+                        license is checked (meta.valid == true), it triggers VerifyKeygenSignature,
+                        which returns false due to the empty key string, causing the application to
+                        return LicenseValidationResult.NetworkError for valid licenses.
+- **Cross-ref. Delta:** E185 (crypto audit) cites same empty-key issue but appears stale.
+- **Fix(es):**          [Fix 1] Populate KeygenPublicKeyHex with the production Keygen Ed25519
+                        public key.
+                        [Fix 2] Handle unconfigured key state explicitly without misclassifying signature failure as a network error.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:420-430
+                        private static readonly string KeygenPublicKeyHex = "";
+                        private static bool VerifyKeygenSignature(...) {
+                            if (string.IsNullOrEmpty(KeygenPublicKeyHex)) return false;
+
+                        ]
+
+---
+
+
+- **[C161]**            Windows default matrix spec omits mappableIndicators
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C162]**            Windows raw scoring ignores producing-section usability for indicators
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C163]**            Windows raw scoring omits completed-observation quality floor
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C167]**            Windows Mirror warp adapter ignores most content-warp mismatch signals
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C171]**            Windows Prophet treats a Truncated response as a clean Negative; macOS
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C174]**            MergedDatapoint.isConflicting false-fires a cross-vantage DISCREPANCY on
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C175]**            Windows WitnessSigner runs time/trust/display checks BEFORE Ed25519
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C176]**            Windows SignedEvidencePayload lacks perResolverAnswers — macOS-signed
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C185]**            Linux Witness silently substitutes the public resolver 8.8.8.8 as the user's
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C186]**            Linux Mirror substitutes the public resolver 8.8.8.8 as "local" and then
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[C195]**            Linux Prophet overwrites its own 8.8.8.8 substitution warning with the
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[D001]**            Windows retains orphaned VerdictAction.cs symbol contradicting macOS
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[D277]**            Unresolved merge-conflict markers break the macOS app, determinative core,
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[D278]**            macOS app deadlocks on launch: runProcess waits on a semaphore only the
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[D279]**            Bundled typography silently fell back to the system font: faces moved into
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.
+
+---
+
+
+- **[E201]**            Windows WitnessSigner never recomputes/validates KeyId at verify — B099 fix
+- **Status:**           **ALREADY FIXED** — verified by audit agents. See git history.

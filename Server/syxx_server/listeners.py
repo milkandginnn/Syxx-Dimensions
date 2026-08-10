@@ -26,7 +26,9 @@ _VALID = {"listening", "degraded-fallback", "down", "unknown"}
 # Every listener the server KNOWS about, defaulted to unknown at import. Listing them here (rather
 # than letting set_state create keys) means a listener that never starts still appears in the
 # snapshot as "unknown" — a silent omission cannot masquerade as "not a problem".
-_KNOWN = ("http", "dns", "doh", "dot", "doq")
+# A316: "dot" and "doq" removed — planned but unimplemented listeners must not
+# appear as perpetually "unknown" in /readyz. Re-add when the listeners land.
+_KNOWN = ("http", "dns", "doh")
 
 _lock = threading.Lock()
 _state = {name: {"state": "unknown", "detail": None} for name in _KNOWN}

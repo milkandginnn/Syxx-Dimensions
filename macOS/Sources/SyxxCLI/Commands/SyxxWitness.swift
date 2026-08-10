@@ -66,6 +66,16 @@ struct SyxxWitnessCLI {
             let syxxDir = homeDir.appendingPathComponent(".syxx")
             let keyFile = keyFilePath.map { URL(fileURLWithPath: $0) }
                 ?? syxxDir.appendingPathComponent("witness.key")
+            // B308: validate --key-file path is within allowed directories.
+            // Without this, --key-file /etc/passwd with --force would attempt to write
+            // to an arbitrary system path. Restrict to ~/.syxx/ or the user's home directory.
+            let resolvedPath = keyFile.standardizedFileURL.path
+            let homePath = homeDir.standardizedFileURL.path
+            if !resolvedPath.hasPrefix(homePath) {
+                print("[ERROR] --key-file path must be within your home directory (\(homePath))")
+                print("[ERROR] Got: \(resolvedPath)")
+                return .error
+            }
             // B249: refuse to overwrite an existing key — silently destroying the user's
             // signing identity makes previously signed snapshots orphaned from their signer.
             let forceOverwrite = args.contains("--force")

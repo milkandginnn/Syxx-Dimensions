@@ -4,31 +4,31 @@ import SyxxKit
 struct DashboardView: View {
     @EnvironmentObject var model: AppModel
 
-    private let wardens: [(name: String, rune: String, role: String, color: Color, tint: Color, glow: Color)] = [
+    private static let wardens: [(name: String, rune: String, role: String, color: Color, tint: Color, glow: Color)] = [
         ("Prophet", "\u{16A8}", "Resolver accuracy",
-         Color(red: 45/255, green: 212/255, blue: 191/255),
-         Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.10),
-         Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.35)),
+         Color.ioProphetBlue,
+         Color.ioProphetBlue.opacity(0.10),
+         Color.ioProphetBlue.opacity(0.35)),
         ("Mirror", "\u{16DE}", "Remote vs local",
-         Color(red: 167/255, green: 139/255, blue: 255/255),
-         Color(red: 167/255, green: 139/255, blue: 255/255).opacity(0.12),
-         Color(red: 167/255, green: 139/255, blue: 255/255).opacity(0.35)),
+         Color.ioMirrorYellow,
+         Color.ioMirrorYellow.opacity(0.12),
+         Color.ioMirrorYellow.opacity(0.35)),
         ("Portal", "\u{16DC}", "LAN & route trace",
-         Color(red: 45/255, green: 212/255, blue: 191/255),
-         Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.10),
-         Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.35)),
+         Color.ioSuccessGreen,
+         Color.ioSuccessGreen.opacity(0.10),
+         Color.ioSuccessGreen.opacity(0.35)),
         ("Glutton", "\u{16A6}", "DNS leak test",
-         Color(red: 255/255, green: 77/255, blue: 109/255),
-         Color(red: 255/255, green: 77/255, blue: 109/255).opacity(0.10),
-         Color(red: 255/255, green: 77/255, blue: 109/255).opacity(0.35)),
+         Color.ioGluttonPink,
+         Color.ioGluttonPink.opacity(0.10),
+         Color.ioGluttonPink.opacity(0.35)),
         ("Cage", "\u{16BE}", "Live query capture",
-          Color(red: 167/255, green: 139/255, blue: 255/255),
-          Color(red: 148/255, green: 120/255, blue: 246/255).opacity(0.12),
-          Color(red: 167/255, green: 139/255, blue: 255/255).opacity(0.30)),
+         Color.ioCageCyan,
+         Color.ioCageCyan.opacity(0.12),
+         Color.ioCageCyan.opacity(0.30)),
         ("Witness", "\u{16C9}", "Environment trust",
-         Color(red: 167/255, green: 139/255, blue: 255/255),
-         Color(red: 167/255, green: 139/255, blue: 255/255).opacity(0.12),
-         Color(red: 167/255, green: 139/255, blue: 255/255).opacity(0.35))
+         Color.ioWitnessRed,
+         Color.ioWitnessRed.opacity(0.12),
+         Color.ioWitnessRed.opacity(0.35))
     ]
 
     var body: some View {
@@ -37,7 +37,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text("THE WATCHTOWER · REALM OVERVIEW")
                     .font(.ioCaption(.bold))
-                    .foregroundColor(Color(red: 138/255, green: 110/255, blue: 240/255)) // #8a6ef0
+                    .foregroundColor(Color.ioElectric)
                     .tracking(0.26)
                 Text(isCleanResult ? "The Vigil Holds" : "Watchtower Idle")
                     .font(.custom("Cinzel-SemiBold", size: 27))
@@ -123,15 +123,9 @@ struct DashboardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 124/255, green: 92/255, blue: 255/255),
-                                     Color(red: 91/255, green: 63/255, blue: 214/255)],
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
+                    .background(LinearGradient.ioPrimaryButton)
                     .cornerRadius(12)
-                    .shadow(color: Color(red: 124/255, green: 92/255, blue: 255/255).opacity(0.4), radius: 12, y: 8)
+                    .shadow(color: Color.ioBlue.opacity(0.4), radius: 12, y: 8)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Run all scans")
@@ -139,19 +133,16 @@ struct DashboardView: View {
 
                 // Secondary row
                 HStack(spacing: 10) {
-                    // Flush DNS Cache
+                    // Flush DNS Cache — ghost/outline button per mockup
                     Button(action: { model.flushDNSCache() }) {
                         HStack(spacing: 10) {
                             Text("≈")
                                 .font(.system(size: 15))
-                                .frame(width: 28, height: 28)
-                                .background(Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.12))
-                                .cornerRadius(7)
-                                .foregroundColor(Color(red: 45/255, green: 212/255, blue: 191/255))
+                                .foregroundColor(Color.ioSuccessGreen)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("Flush DNS Cache")
                                     .font(.uiLabel(13))
-                                    .foregroundColor(.ioText)
+                                    .foregroundColor(.ioSuccessGreen)
                                 Text("Clear the resolver cache")
                                     .font(.body(11))
                                     .foregroundColor(.ioTextMuted)
@@ -159,9 +150,8 @@ struct DashboardView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(10)
-                        .background(Color(white: 1, opacity: 0.03))
                         .cornerRadius(11)
-                        .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.30), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.ioSuccessGreen.opacity(0.30), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Flush DNS cache")
@@ -173,7 +163,7 @@ struct DashboardView: View {
                             Text("◈")
                                 .font(.system(size: 14))
                                 .frame(width: 28, height: 28)
-                                .background(Color(red: 124/255, green: 92/255, blue: 255/255).opacity(0.12))
+                                .background(Color.ioBlue.opacity(0.12))
                                 .cornerRadius(7)
                                 .foregroundColor(Color(red: 167/255, green: 139/255, blue: 255/255))
                             VStack(alignment: .leading, spacing: 1) {
@@ -237,11 +227,11 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("THE SIX WARDENS")
                         .font(.eyebrow(10))
-                        .foregroundColor(Color(red: 143/255, green: 131/255, blue: 184/255))
+                        .foregroundColor(Color.ioEyebrowMuted)
                         .tracking(0.20)
 
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                        ForEach(wardens, id: \.name) { w in
+                        ForEach(Self.wardens, id: \.name) { w in
                             wardenTile(w)
                         }
                     }
@@ -256,7 +246,7 @@ struct DashboardView: View {
                     // WORDING PROPOSAL (pending owner approval): "ACTIVITY LOG" eyebrow.
                     Text("ACTIVITY LOG")
                         .font(.eyebrow(10))
-                        .foregroundColor(Color(red: 143/255, green: 131/255, blue: 184/255))
+                        .foregroundColor(Color.ioEyebrowMuted)
                         .tracking(0.20)
 
                     terminalPane
@@ -271,7 +261,7 @@ struct DashboardView: View {
             HStack(spacing: 12) {
                 Text("✧")
                     .font(.system(size: 18))
-                    .foregroundColor(Color(red: 124/255, green: 92/255, blue: 255/255))
+                    .foregroundColor(Color.ioBlue)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("The Pro Covenant")
                         .font(.bodyAlternate(14))
@@ -285,22 +275,15 @@ struct DashboardView: View {
                 Text("UNLOCK")
                     .font(.uiLabel(11))
                     .tracking(1.5)
-                    .foregroundColor(Color(red: 124/255, green: 92/255, blue: 255/255))
+                    .foregroundColor(Color.ioBlue)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(red: 124/255, green: 92/255, blue: 255/255).opacity(0.4), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ioBlue.opacity(0.4), lineWidth: 1))
             }
             .padding(14)
-            .background(
-                LinearGradient(
-                    colors: [Color(red: 124/255, green: 92/255, blue: 255/255).opacity(0.16),
-                             Color(red: 45/255, green: 212/255, blue: 191/255).opacity(0.06)],
-                    startPoint: UnitPoint(x: 0.25, y: 0.933),
-                    endPoint: UnitPoint(x: 0.75, y: 0.067)
-                )
-            )
+            .background(LinearGradient.ioProCovenant)
             .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(red: 148/255, green: 120/255, blue: 246/255).opacity(0.14), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.ioVioletDivider.opacity(0.14), lineWidth: 1))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -332,11 +315,16 @@ struct DashboardView: View {
                     }
                 }
 
-                Text(wardenState(for: w.name))
+                // C214: derive the state text colour from the chip-tone system so inconclusive
+                // states are amber, threats are red, and idle/locked states are muted — the warden
+                // accent colour is reserved for the rune icon, never spent on a "NOT RUN" label.
+                let stateLabel = wardenState(for: w.name)
+                let tone = DashboardWardenState.chipTone(for: stateLabel)
+                Text(stateLabel)
                     .font(.ioMicro(.bold))
                     .tracking(0.05)
                     .textCase(.uppercase)
-                    .foregroundColor(w.color)
+                    .foregroundColor(DashboardWardenState.chipColor(tone: tone, wardenAccent: w.color))
 
                 // Live capture ticker (owner-approved copy "Captures: {n}", 2026-07-23):
                 // {n} is the REAL published cageEventsCount — the same property CageView
@@ -391,10 +379,10 @@ struct DashboardView: View {
             return DashboardWardenState.mirror(isPro: model.isPro, result: model.mirrorResult)
         case "Portal":
             guard let r = model.portalReport else { return "NOT RUN" }
-            // A valid report must have at least detected the active interfaces
-            // or DNS servers — otherwise it's inconclusive.
+            // C213: Portal maps the network — it does not pass or fail it. "MAPPED" is honest;
+            // "PASSED" implied a clean determination the portal section never makes.
             if r.dnsServers.isEmpty && r.activeInterfaces.isEmpty { return "NO DATA" }
-            return "PASSED"
+            return "MAPPED"
         case "Glutton":
             guard model.isPro else { return "LOCKED · PRO" }
             guard let r = model.leakResult else { return "NOT RUN" }
@@ -501,7 +489,7 @@ struct DashboardView: View {
         switch state {
         case .clean:
             return [Color(red: 45/255, green: 212/255, blue: 191/255),
-                    Color(red: 124/255, green: 92/255, blue: 255/255)]
+                    Color.ioBlue]
         case .threatDetected:
             return [.ioCriticalRed, .ioHighOrange]
         case .inconclusive, .untested:

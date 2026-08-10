@@ -136,8 +136,12 @@ public enum CNAMEChainProbe {
             return make(.noCNAME, "no CNAME chain for this name (direct A/AAAA) at any vantage")
         }
         let refCanons = Set(referenceChains.map(canon))
-        if refCanons.contains(canon(testChain)) {
-            return make(.consistent, "the resolver's CNAME chain matches a trusted reference — consistent")
+        // B285: only return .consistent when references AGREE unanimously and test matches.
+        // If references disagree among themselves (refCanons.count > 1), the test matching
+        // one of them is not "consistent" — it's coincidental alignment with one of several
+        // disputed chains. There's no consensus to validate against, so this is inconclusive.
+        if refCanons.count == 1 && refCanons.contains(canon(testChain)) {
+            return make(.consistent, "the resolver's CNAME chain matches the unanimous trusted reference — consistent")
         }
         if refCanons.count == 1 {
             return make(.divergent, "trusted resolvers agree on the CNAME chain but this resolver returns a different one (\(canon(testChain))) — outlier; corroborate (a split-horizon/geo edge case can also cause this)")

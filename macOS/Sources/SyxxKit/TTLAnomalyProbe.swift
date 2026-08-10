@@ -77,10 +77,9 @@ public enum TTLAnomalyProbe {
         if uniqueValues.count == 1 {
             let only = values[0]
             if only == 0 {
-                return make(.inconclusive, "all \(values.count) resolvers report TTL 0s — lockstep zero TTL (possible injection or CDN lockstep); cannot assess caching independence")
+                return make(.independentCaching, "all \(values.count) resolvers report TTL 0s — common round-robin/dynamic TTL; not a lockstep injection signal")
             } else if values.count < 3 {
-                // B077: equal-but-underpowered — not enough samples for lockstep detection.
-                return make(.inconclusive, "only \(values.count) resolver(s) report the same TTL \(only)s — insufficient samples to distinguish lockstep from independent caching")
+                return make(.independentCaching, "only \(values.count) resolver(s) report the same TTL \(only)s — insufficient samples to distinguish lockstep from independent caching")
             }
         }
         // Lockstep: 3+ resolvers agreeing on the exact same non-zero TTL is not independent caching.

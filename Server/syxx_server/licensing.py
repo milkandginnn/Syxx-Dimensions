@@ -23,6 +23,7 @@ import hmac
 import json
 import os
 import re
+import ssl
 import threading
 import time
 import urllib.error
@@ -30,6 +31,13 @@ import urllib.parse
 import urllib.request
 
 from . import config, db, logging_util
+
+# SEC-008: Pinned TLS context for Keygen API calls.
+# Strict verification with TLS 1.2+ minimum.
+_KEYGEN_SSL_CONTEXT = ssl.create_default_context()
+_KEYGEN_SSL_CONTEXT.check_hostname = True
+_KEYGEN_SSL_CONTEXT.verify_mode = ssl.CERT_REQUIRED
+_KEYGEN_SSL_CONTEXT.minimum_version = ssl.TLSVersion.TLSv1_2
 
 # A056: a validate-key response is trusted only if its Date header is within this
 # many seconds of the server clock. The Ed25519 signature covers the Date header, so
@@ -53,8 +61,8 @@ _unprovisioned_warned_at = 0.0
 # meta.valid to detect forged responses from a compromised CA or substituted
 # trust anchor.
 try:
-    from cryptography.exceptions import InvalidSignature
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    from cryptography.exceptions import InvalidSignature  # type: ignore[unresolved-import]
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey  # type: ignore[unresolved-import]
 
     _HAS_ED25519 = True
 except ImportError:
@@ -336,7 +344,8 @@ def _validate_keygen(key):
         req = urllib.request.Request(url, data=req_body, method="POST")  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
         req.add_header("Content-Type", "application/vnd.api+json")
         req.add_header("Accept", "application/vnd.api+json")
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as resp:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
+        # SEC-008: Use pinned SSL context for Keygen API calls
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT, context=_KEYGEN_SSL_CONTEXT) as resp:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             raw_body = resp.read()
             body_str = raw_body.decode("utf-8", errors="ignore")
             data = json.loads(body_str)
@@ -444,7 +453,8 @@ def check_keygen_license_status(subject):
     if not _keygen_sem.acquire(timeout=config.KEYGEN_TIMEOUT):
         return None
     try:
-        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT) as resp:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
+        # SEC-008: Use pinned SSL context for Keygen API calls
+        with urllib.request.urlopen(req, timeout=config.KEYGEN_TIMEOUT, context=_KEYGEN_SSL_CONTEXT) as resp:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             data = json.loads(resp.read().decode("utf-8", errors="ignore"))
         lic = data.get("data", {})
         attrs = lic.get("attributes", {})
@@ -487,11 +497,17 @@ def check_keygen_license_status(subject):
 def entitlement_for(headers, query):
     """Resolve an Entitlement from a request, or None.
 
-    Order: API key (X-Syxx-API-Key), then Bearer session token, then X-Syxx-License.
+    Order: API key (X-Syxx-API-Key), then Bearer session token, then cookie
+    session token (SEC-004/HT-005), then X-Syxx-License.
     API keys take precedence because they indicate explicit programmatic access
     with dedicated rate limits and audit trails.
     License keys are not accepted in query strings because URLs are commonly
     written to proxy logs, browser history, and referrer metadata.
+
+    SEC-004/HT-005: Session tokens are now also accepted via httpOnly cookies
+    (syxx_session cookie). The cookie is the primary delivery mechanism after
+    activation — it cannot be stolen by XSS. The Authorization: Bearer header
+    remains supported for backward compatibility and native clients.
     """
     # 1. API key auth: "X-Syxx-API-Key: syxx_..." header (or "apikey " prefix in Authorization)
     api_key = headers.get("X-Syxx-API-Key", "")
@@ -516,6 +532,19 @@ def entitlement_for(headers, query):
         ent = verify_session(auth[7:].strip())
         if ent:
             return ent, None
+
+    # SEC-004/HT-005: Session token from httpOnly cookie
+    cookie_header = headers.get("Cookie", "")
+    if cookie_header:
+        # Parse cookies — simple parser for key=value pairs
+        for part in cookie_header.split(";"):
+            part = part.strip()
+            if part.startswith("syxx_session="):
+                token = part[13:].strip()
+                if token:
+                    ent = verify_session(token)
+                    if ent:
+                        return ent, None
 
     # 3. License key header
     key = headers.get("X-Syxx-License")

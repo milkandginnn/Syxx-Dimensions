@@ -137,6 +137,9 @@ public enum FirstRunScan {
         if let v = from.openResolver       { into.openResolver = v }
         if let v = from.targetDomain       { into.targetDomain = v }
         if let v = from.targetQueryType    { into.targetQueryType = v }
+        // C200: transportObservation is populated by Prophet/Mirror probes and must survive
+        // the fold — without it, synthesis loses the transport-path context for the run.
+        if let v = from.transportObservation { into.transportObservation = v }
     }
 
     /// The PURE half of a first run: given whatever evidence the probes actually produced, decide

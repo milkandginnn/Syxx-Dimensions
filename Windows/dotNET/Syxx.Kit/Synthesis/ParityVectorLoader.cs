@@ -1186,6 +1186,7 @@ public static class ParityVectorLoader
         new Dictionary<string, DnsProtocol>(StringComparer.Ordinal)
         {
             ["DoH"] = DnsProtocol.Doh, ["DoT"] = DnsProtocol.Dot,
+            ["DoQ"] = DnsProtocol.Doq, ["DNSCrypt"] = DnsProtocol.DnsCrypt,
         };
 
     private static readonly IReadOnlyDictionary<string, LeakResult> LeakResultWire =

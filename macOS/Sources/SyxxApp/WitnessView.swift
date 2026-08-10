@@ -69,33 +69,12 @@ struct WitnessView: View {
     var body: some View {
         PurpleScrollView(geometry: .fullPanel) {
             VStack(alignment: .leading, spacing: 24) {
-                // Warden header: rune tile + eyebrow + name + lore
-                HStack(alignment: .top, spacing: 15) {
-                    Text("\u{16C9}")
-                        .font(.custom("Cinzel-SemiBold", size: 28))
-                        .frame(width: 54, height: 54)
-                        .background(Color.ioWitnessRed.opacity(0.10))
-                        .cornerRadius(14)
-                        .foregroundColor(Color.ioWitnessRed)
-                        .shadow(color: Color.ioWitnessRed.opacity(0.35), radius: 22)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("THE SEALBEARER \u{00B7} ENVIRONMENT TRUST")
-                            .font(.ioCaption(.bold))
-                            .foregroundColor(Color.ioWitnessRed)
-                            .tracking(0.26)
-
-                        Text("Witness")
-                            .font(.custom("Cinzel-SemiBold", size: 26))
-                            .foregroundColor(.ioText)
-
-                        Text("And the Witness testified: when local and remote records matched, when they held steady over time, and when no leak betrayed the encrypted path, the DNS was healthy. When they did not, the network, and its eyes, were lying indeed.")
-                            .font(.ioLore(16))
-                            .foregroundColor(.ioTextMuted)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: 560)
-                    }
+                ModuleHeader(rune: "\u{16C9}", eyebrow: "THE SEALBEARER \u{00B7} ENVIRONMENT TRUST", name: "Witness", accent: .ioWitnessRed) {
+                    Text("And the Witness testified: when local and remote records matched, when they held steady over time, and when no leak betrayed the encrypted path, the DNS was healthy. When they did not, the network, and its eyes, were lying indeed.")
+                        .font(.ioLore(16))
+                        .foregroundColor(.ioTextMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: 560)
                 }
                 
                 // Form Fields

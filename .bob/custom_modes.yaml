@@ -36,7 +36,7 @@ customModes:
       a technical spec, or evaluating architectural tradeoffs across Nnyx, Zzyn,
       or Syxx before writing code.
     customInstructions: >-
-      Read AGENTS.md first, then DESIGN.md, ROADMAP.md, DELTAS.md, and
+      Read AGENTS.md first, then docs/DESIGN.md, ROADMAP.md, DELTAS.md, and
       CHANGELOG.md before drafting any plan. Every plan must include: acceptance
       criteria, test plan (in-memory stubs; no real Keychain/biometrics/network
       in tests), regression risks, rollback behavior, and a CHANGELOG.md update
@@ -88,7 +88,7 @@ customModes:
       and Syxx.Kit, reviewing DELTAS.md findings, or answering a specific
       "how does X work?" question about Nnyx, Zzyn, or Syxx.
     customInstructions: >-
-      Read AGENTS.md, DESIGN.md, ROADMAP.md, and DELTAS.md before drawing
+      Read AGENTS.md, docs/DESIGN.md, ROADMAP.md, and DELTAS.md before drawing
       conclusions. Always label findings as one of: VERIFIED | INFERRED |
       UNKNOWN. Cite file path and line number for every internal claim. Never
       modify files. If you find a codebase issue while researching, report it as
@@ -140,7 +140,8 @@ customModes:
       failure, or behavioral regression in Nnyx, Zzyn, or Syxx. Diagnoses root
       cause before touching code. Updates CHANGELOG.md for every landed fix.
     customInstructions: >-
-      Read AGENTS.md, DELTAS.md, and ROADMAP.md first. Verify relevant source
+      Read AGENTS.md, DELTAS.md, and ROADMAP.md first. Read docs/DESIGN.md
+      for architectural context. Verify relevant source
       before proposing any fix. Produce the minimal change that solves the
       problem. Use apply_diff for all edits. Never revert user changes unless
       explicitly asked. Add or update tests for changed behavior. Run swift test
@@ -193,7 +194,7 @@ customModes:
       from scoping and design through implementation, tests, and ROADMAP.md
       update.
     customInstructions: >-
-      Read AGENTS.md first, then DESIGN.md, PROPOSALS.md, ROADMAP.md, and
+      Read AGENTS.md first, then docs/DESIGN.md, PROPOSALS.md, ROADMAP.md, and
       CHANGELOG.md. Define acceptance criteria before writing code. Check
       cross-platform parity (SyxxKit / Syxx.Kit) for every Syxx feature.
       Run swift build and swift test (macOS) or dotnet build and dotnet test
@@ -327,8 +328,9 @@ customModes:
       implementation plan -- layout specs, component breakdowns, data bindings,
       state machines, and scroll/browser policy decisions for macOS Tahoe.
     customInstructions: >-
-      Read AGENTS.md, GUI_HANDOFF.md, and HANDOFF-BOB.md before planning any
-      screen. Read the existing view files in macOS/Sources/SyxxApp/ and
+      Read AGENTS.md, docs/GUI_HANDOFF.md, and docs/HANDOFF-2026-07-29.md
+      before planning any screen. Read the existing view files in
+      macOS/Sources/SyxxApp/ and
       IoDesignSystem.swift to understand what already exists. Never plan a
       component that duplicates an existing Io component. Never plan fabricated
       or hardcoded data -- every dynamic value must bind to a real AppModel or
@@ -410,7 +412,7 @@ customModes:
       breakdowns, MVVM data bindings, VisualStateManager specs, and
       browser/scroll policy decisions.
     customInstructions: >-
-      Read AGENTS.md and HANDOFF-BOB.md before planning any screen. Read the
+      Read AGENTS.md and docs/HANDOFF-2026-07-29.md before planning any screen. Read the
       existing Windows C# source in Windows/Syxx.Kit/ and Windows/Syxx/ to
       understand what data contracts already exist. Mirror the macOS feature set
       exactly -- every screen that exists in SyxxApp must have a counterpart plan.
@@ -427,10 +429,15 @@ customModes:
       - todo
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # UIUX DESIGN — precise non-visual code implementation
+  # UIUX DESIGN — interaction design, wireframes, screen flows, HTML mockups
   # ─────────────────────────────────────────────────────────────────────────────
   - slug: uiux-design
     name: UI/UX Design
+    description: >-
+      Interaction design, wireframes, screen flows, SwiftUI layout specs,
+      accessibility review, UX writing, and HTML mockup files for Nnyx, Zzyn,
+      and Syxx. Produces design artifacts and mockups; does not write Swift or
+      C# source.
     whenToUse: >-
       Use for interaction design, wireframes, screen flows, SwiftUI layout
       specs, accessibility review, UX writing, and HTML mockup files for
@@ -440,11 +447,12 @@ customModes:
       security utilities. You produce interaction designs, wireframes, screen
       flows, SwiftUI layout specs, accessibility reviews, UX writing, and
       self-contained HTML mockup prototypes. You do not touch Swift or C# source
-      code beyond UI layer files.
+      code beyond UI layer files (macOS/Sources/SyxxApp/ views, Windows/SyxxUI/
+      views) and design documents. Read docs/GUI_PLAN.md and docs/GUI_HANDOFF.md
+      before designing any screen.
     groups:
       - read
-      - - edit
-        - fileRegex: ".*\\.(md|svg|MD|html|HTML|htm|HTM)$"
+      - edit
       - skill
       - subagent
       - mode
@@ -524,7 +532,7 @@ customModes:
       render a false secure verdict under partial failure?"; "Audit macOS versus
       Windows synthesis for divergent verdicts an attacker could exploit."
     customInstructions: >-
-      Read AGENTS.md, DELTAS.md, DESIGN.md, and MEMORY.md before beginning any
+      Read AGENTS.md, DELTAS.md, docs/DESIGN.md, and MEMORY.md before beginning any
       investigation. Check DELTAS.md for prior findings before drafting a new
       delta -- do not duplicate. Label every finding VERIFIED | INFERRED |
       UNKNOWN with file:line citations. Draft deltas in the exact DELTAS.md
@@ -611,7 +619,7 @@ customModes:
       calibration into steps that never render a false-secure result
       mid-refactor."
     customInstructions: >-
-      Read AGENTS.md, DELTAS.md, ROADMAP.md, DESIGN.md, and MEMORY.md before
+      Read AGENTS.md, DELTAS.md, ROADMAP.md, docs/DESIGN.md, and MEMORY.md before
       drafting any plan. Verify every file path and symbol name by reading the
       actual source -- a plan with a hallucinated symbol is rejected. Every plan
       must include: ordered steps (build-green after each), parity notes
@@ -705,7 +713,7 @@ customModes:
       return inconclusive, and confirm the real run reports inconclusive
       rather than a false clean."
     customInstructions: >-
-      Read AGENTS.md, DELTAS.md, ROADMAP.md, and MEMORY.md before touching any
+      Read AGENTS.md, DELTAS.md, ROADMAP.md, docs/DESIGN.md, and MEMORY.md before touching any
       file. Read the affected source files -- including callers and tests --
       before writing. Use apply_diff for targeted edits; write_file only for
       new files or full rewrites explicitly required by the delta. Run swift
@@ -812,7 +820,8 @@ customModes:
     customInstructions: >-
       Read AGENTS.md (especially OUTPUT REQUIRES USER APPROVAL and NO MOCKED
       PRODUCTION OUTPUT) before touching any view or copy. Read the affected
-      view file and its AppModel / AppViewModel bindings before writing. Propose
+      view file and its AppModel / AppViewModel bindings before writing. Read
+      docs/GUI_PLAN.md and docs/GUI_HANDOFF.md for design context. Propose
       all new or changed user-visible strings to the user and wait for approval
       before coding them. Never bind to a non-existent property -- read the
       model file first. Tri-state rendering (positive/negative/inconclusive/

@@ -242,6 +242,12 @@ Swift-vs-C# engine parity. Full evidence in
 | F-25 | `open` | `route` timeout 20s vs 1s and different target validation |
 | F-26 | `open` | `firstrun` license state not threaded on Windows; CONCLUSIONS/RESULTS banner and suppressed-line format differ |
 
+| F-28 | `open` | `--version` output differs: Swift prints `Syxx 2.0.0` + copyright; C# prints `syxx 2.0.0` (lowercase, one line). D1 in cli-capture-report.md |
+| F-29 | `open` | Top-level `--help` wording differs for `cage`: Swift says `requires sudo` + `sudo syxx cage …`; C# says `requires root/sudo on Linux and macOS, Administrator on Windows` + `syxx cage …`. D4 in cli-capture-report.md |
+| F-30 | `open` | Swift `firstrun --help` starts the live scan instead of printing usage — `--help` must never start a network scan. C# correctly intercepts. D5 in cli-capture-report.md. Most severe capture finding |
+
+Capture divergence cross-reference: D2 (`--help` exit-code regime) is a manifestation of F-18 (ten C# commands never set exit code). D3 (flag surface) is covered by F-12 (`witness --force`, `cage --output`) and F-15 (`unbound verify-dnscrypt`).
+
 | F-08 | `open` | `-v` means verbose on macOS and version on Windows/Linux. B240 and E088 are both documented and contradict each other. Owner decision — it changes a shipped CLI flag |
 | F-27 | `verified-by-real-run` | The two vector loaders disagreed on unknown NESTED members: Swift silently dropped them, C# refused. Same corpus, different answer. Swift made strict 2026-08-05; reproduced before and after |
 

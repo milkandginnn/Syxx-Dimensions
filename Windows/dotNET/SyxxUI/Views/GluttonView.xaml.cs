@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -9,12 +10,28 @@ namespace SyxxUI.Views;
 
 public sealed partial class GluttonView : Page
 {
+    private static readonly HashSet<string> _gluttonProps = new()
+    {
+        nameof(AppViewModel.PortalReport), nameof(AppViewModel.LeakTestSubdomain),
+        nameof(AppViewModel.SectionInputs), nameof(AppViewModel.GluttonRunState),
+        nameof(AppViewModel.GluttonRunMessage),
+    };
+
     public AppViewModel? ViewModel { get; private set; }
     public ObservableCollection<GluttonProbeRow> ProbeRows { get; } = [];
 
     public GluttonView()
     {
         InitializeComponent();
+
+        Header.AddContent(new TextBlock
+        {
+            Text = "Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoFontLore"],
+            FontSize = 16,
+            Foreground = (Brush)Application.Current.Resources["IoTextMutedBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
     }
 
     private static Brush Brush(string key) => (Brush)Application.Current.Resources[key];
@@ -28,10 +45,13 @@ public sealed partial class GluttonView : Page
         ViewModel = e.Parameter as AppViewModel;
         if (ViewModel is not null)
         {
-            _pcHandler = async (_, _) =>
+            _pcHandler = async (_, e) =>
             {
-                try { await RefreshAsync(); }
-                catch { /* best-effort refresh */ }
+                if (string.IsNullOrEmpty(e.PropertyName) || _gluttonProps.Contains(e.PropertyName))
+                {
+                    try { await RefreshAsync(); }
+                    catch { /* best-effort refresh */ }
+                }
             };
             ViewModel.PropertyChanged += _pcHandler;
         }

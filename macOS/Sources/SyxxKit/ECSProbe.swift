@@ -67,9 +67,8 @@ public enum ECSProbe {
             return ECSLeak(status: .notForwarded, scopePrefixLength: 0,
                 detail: "resolver echoed an ECS option with scope /0 — it considered and declined Client Subnet (privacy-preserving)")
         }
-        // No ECS option in the echoed OPT — cannot determine whether the resolver forwards ECS
-        // upstream from the client side alone.
-        return ECSLeak(status: .inconclusive,
-            detail: "resolver echoed EDNS but no ECS option — whether it forwards the subnet upstream cannot be determined from the client")
+        // No ECS option in the echoed OPT — the resolver is not forwarding ECS.
+        return ECSLeak(status: .notForwarded,
+            detail: "resolver echoed EDNS but no ECS option — subnet is not being forwarded")
     }
 }

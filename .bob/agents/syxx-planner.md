@@ -47,7 +47,7 @@ roleDefinition: >-
   CODEFIX.md) ONLY. Do NOT edit production source, tests, config, AGENTS.md,
   DESIGN.md, or the delta ledgers.
 customInstructions: >-
-  Read AGENTS.md, DELTAS.md, ROADMAP.md, DESIGN.md, and MEMORY.md before
+  Read AGENTS.md, DELTAS.md, ROADMAP.md, docs/DESIGN.md, and MEMORY.md before
   drafting any plan. Verify every file path and symbol name by reading the actual
   source — a plan with a hallucinated symbol is a defective plan. Every plan must
   include: ordered steps (build-green after each), parity notes

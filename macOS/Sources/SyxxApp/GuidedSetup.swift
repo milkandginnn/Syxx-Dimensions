@@ -57,7 +57,9 @@ struct GuidedSetup: View {
                 EmptyView()
             }
         }
-        .frame(minWidth: 1050, minHeight: 613)
+        // Note: .frame(minWidth: 1050, minHeight: 613) removed — FirstRunWindowConfigurator
+        // owns all window sizing per state, locking min==max to prevent SwiftUI from
+        // growing the window behind its back.
     }
 }
 
@@ -171,6 +173,26 @@ private struct SetupChoices: View {
                             title: "General Mode",
                             description: "Standard technical English, with plain labels and no storybook framing."
                         )
+                    }
+
+                    sectionLabel("Appearance")
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Choose how Syxx looks. System follows your macOS appearance setting.")
+                            .font(.ioSmall())
+                            .foregroundStyle(Color.ioTextSecondary)
+
+                        Picker("Theme", selection: Binding(
+                            get: { SyxxThemeMode(rawValueOrSystem: selection.themeMode) },
+                            set: { selection.themeMode = $0.rawValue }
+                        )) {
+                            ForEach(SyxxThemeMode.allCases, id: \.self) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityLabel("Appearance theme")
+                        .accessibilityHint("Choose between System, Dark, or Light appearance")
                     }
 
                     sectionLabel("Step 2 · Confirm your defaults")

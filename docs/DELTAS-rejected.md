@@ -8159,3 +8159,478 @@ the Windows silent miss, and the macOS runtime trap. **Platform divergence:** th
 - **Adjudicated by / date:** multi-tool consensus / 2026-07-30
 
 ---
+
+---
+
+- **[A031] (duplicate of A229)**
+- **[A031]**            licensing.py HMAC column name mismatch makes DB-backed offline licenses
+                        permanently fail
+- **Status:**           **OPEN** — Verified in source. licensing.py:289 still reads
+                        `row.get("hmac")`, but db.license_lookup() pops `row_hmac` from the dict
+                        before returning (db.py:465). The key "hmac" never exists in the returned
+                        dict, so stored_hmac is always None and every DB-backed offline license is
+                        rejected. This is the identical issue to A229 — A031 and A229 are the same
+                        delta filed under different audit streams.
+- **Criticality:**      Critical; DB license row lookup returns row_hmac while_validate_offline
+                        reads row.get("hmac"), causing false rejection of valid offline licenses.
+- **Location:**         Server/syxx_server/licensing.py:289-291; Server/syxx_server/db.py:466
+- **Issue:**            db.license_lookup() pops row_hmac before returning the dictionary, and the
+                        column is named row_hmac in the schema. However,_validate_offline()
+                        attempts to read row.get("hmac"), which always returns None, triggering an
+                        invalid HMAC error and rejecting valid offline licenses.
+- **Cross-ref. Delta:** **Same issue as A229.** Remove one to avoid duplicate tracking.
+- **Fix(es):**          [Fix 1] Remove redundant HMAC check in _validate_offline() as
+                        db.license_lookup() already verifies the HMAC and returns None on failure.
+- **Code Sample:**      [
+
+                        // Server/syxx_server/licensing.py:289-291
+                        stored_hmac = row.get("hmac")
+                        if not stored_hmac:
+                            logging_util.warn("offline_license_missing_hmac", msg="DB license row has no HMAC signature — rejecting as untrusted")
+                            return None
+
+                        ]
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "Same issue as A229. Remove one to avoid duplicate tracking"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[A239] (duplicate of A237)**
+**[A239]** HIGH — Same as A237 (duplicate page leak-test.html:315)
+
+---
+- **Rejection reason:**  "Same as A237 (duplicate page leak-test.html:315)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[A240] (duplicate of A238)**
+**[A240]** HIGH — Same as A238 (duplicate page leak-test.html:322)
+
+---
+- **Rejection reason:**  "Same as A238 (duplicate page leak-test.html:322)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[A248] (duplicate of A247)**
+**[A248]** MEDIUM — Same as A247 (duplicate page)
+
+---
+- **Rejection reason:**  "Same as A247 (duplicate page)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[A250] (duplicate of A249)**
+**[A250]** MEDIUM — Same as A249 (duplicate page)
+
+---
+- **Rejection reason:**  "Same as A249 (duplicate page)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[A273] (duplicate of A267)**
+- **[A273]**            Monitor create route never calls valid_domain()
+- **Criticality:**      Critical; SSRF via monitor domain
+- **Location:**         app.py:2760-2763
+- **Issue:**            Monitor create accepts arbitrary domain strings without valid_domain()
+                        validation, allowing SSRF via localhost or metadata
+                        IPs
+- **Cross-ref. Delta:** Extends A267 (interval/cap) with missing validation gate
+- **Fix(es):**          [Fix 1] Add valid_domain() check after empty check
+
+
+
+
+---
+- **Rejection reason:**  "Extends A267" — A267 Fix 2 already covers valid_domain()
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[B306] (duplicate of B287)**
+- **[B306]**            Windows DNSCanaries hardcoded cloudflare.com DNSSEC control
+- **Criticality:**      Non-critical; single point of failure
+- **Location:**         DNSCanaries.cs:79
+- **Issue:**            Single control domain — if cloudflare.com DNSSEC changes, false alarm on
+                        every run
+- **Cross-ref. Delta:** B287 (same finding)
+- **Fix(es):**          [Fix 1] Use multiple control domains
+
+
+
+### Additional — Server Security Extended
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "B287 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[B315] (duplicate of D297)**
+- **[B315]**            Windows DNSCapture ParseIPUDPHeader IPv6 extension headers not walked
+- **Criticality:**      Non-critical; missed captures
+- **Location:**         DNSCapture.cs:274-285
+- **Issue:**            IPv6 packets with extension headers silently dropped — nextHeader check
+                        misses Hop-by-Hop, Routing, Fragment
+- **Cross-ref. Delta:** D297 (same finding)
+- **Fix(es):**          [Fix 1] Walk extension header chain to find UDP
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D297 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[B316] (duplicate of B286)**
+- **[B316]**            Windows DNSCanaries NxdomainHijack uses only .com TLD
+- **Criticality:**      Non-critical; TLD blind spot
+- **Location:**         DNSCanaries.cs:33-42
+- **Issue:**            Resolver hijacking .net/.org but not .com passes undetected
+- **Cross-ref. Delta:** B286 (same finding)
+- **Fix(es):**          [Fix 1] Use at least two TLDs for canary pair
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "B286 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[C213] (duplicate of C192)**
+- **[C213]**            macOS Dashboard reports PASSED for Portal warden without clean determination
+- **Criticality:**      Non-critical; false pass
+- **Location:**         DashboardView.swift:381-383
+- **Issue:**            Returns 'PASSED' for any non-empty Portal report with no clean/tamper
+                        determination
+- **Cross-ref. Delta:** C002 (same class for Mirror)
+- **Fix(es):**          [Fix 1] Add clean/tamper determination before returning PASSED
+
+
+
+### New ## D. Platform Integration & Resource Safety — Audit Round 2 (Aug 2026)
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "C192 (same class)" — Portal warden PASSED
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D143] (duplicate of D001)**
+**[D143]** MEDIUM — Windows has duplicate ResultAction.cs AND VerdictAction.cs
+
+---
+- **Rejection reason:**  D001 cross-ref: "D143 is the duplicate compact finding"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D283] (duplicate of B274)**
+- **[D283]**            Linux Dashboard five action controls have no click handlers
+- **Criticality:**      Non-critical; dead UI
+- **Location:**         DashboardView.axaml:55-283
+- **Issue:**            Conduct All Scans, Flush DNS, Enable Unbound, Enable Encrypted DNS, Begin
+                        Trial all appear clickable but do nothing
+- **Cross-ref. Delta:** B274 (same root cause)
+- **Fix(es):**          [Fix 1] Add command bindings or mark as visually disabled with 'Coming soon'
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "B274 (same root cause)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D316] (duplicate of D282)**
+- **[D316]**            Windows CageView shows only CLI instructions, no capture display
+- **Criticality:**      Non-critical; dead feature
+- **Location:**         SyxxUI/Views/CageView.xaml
+- **Issue:**            Cage warden in sidebar but GUI cannot display captured DNS data — identical
+                        to Linux D282
+- **Cross-ref. Delta:** D282 (Linux same issue)
+- **Fix(es):**          [Fix 1] Create CageViewModel reading captured data from shared format
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D282 (Linux same issue)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D339] (duplicate of D287)**
+- **[D339]**            Linux ShellViewModel constructs all 11 views eagerly at startup
+- **Criticality:**      Non-critical; startup latency
+- **Location:**         ShellViewModel.cs:30-41
+- **Issue:**            Each ViewModel constructor triggers network calls — all fire before first
+                        screen shown
+- **Cross-ref. Delta:** D287 (same finding)
+- **Fix(es):**          [Fix 1] Lazy-initialize views on first navigation
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D287 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D359] (duplicate of D286)**
+- **[D359]**            Linux Mirror engine is Linux-local, not in shared Syxx.Kit
+- **Criticality:**      Non-critical; drift vector
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/ (all 7 files)
+- **Issue:**            Independent implementations can silently drift — no CI gate asserts
+                        agreement
+- **Cross-ref. Delta:** D286 (same finding)
+- **Fix(es):**          [Fix 1] Move to shared Syxx.Kit project
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D286 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D360] (duplicate of C202)**
+- **[D360]**            Linux MirrorViewModel CheckAsync never computes degradation or diff
+- **Criticality:**      Non-critical; dead details
+- **Location:**         MirrorViewModel.cs:63-102
+- **Issue:**            DegradationScore, DiffResult, bundles all remain null — 'View Details'
+                        section dead UI
+- **Cross-ref. Delta:** C202 (same finding)
+- **Fix(es):**          [Fix 1] Populate detail properties from SectionInputs after comparison
+
+
+
+### Additional — macOS CLI & DeepSyxx Extended
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "C202 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D378] (duplicate of D316)**
+- **[D378]**            Windows CageView no elevation prompt for packet capture
+- **Criticality:**      Non-critical; dead feature
+- **Location:**         SyxxUI/Views/CageView.xaml
+- **Issue:**            No code to request elevation or start capture — only shows CLI instructions
+- **Cross-ref. Delta:** D316 (same finding)
+- **Fix(es):**          [Fix 1] Add elevation prompt and capture start via shared Kit Cage module
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D316 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[D379] (duplicate of D308)**
+- **[D379]**            Windows FirstRunView EULA panel uses fixed width 600px
+- **Criticality:**      Non-critical; scaling
+- **Location:**         SyxxUI/Views/FirstRunView.xaml:22
+- **Issue:**            EULA panel fixed at 600px — too narrow on HiDPI or too wide on small screens
+- **Cross-ref. Delta:** D308 (same finding)
+- **Fix(es):**          [Fix 1] Use proportional sizing with MinWidth
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D308 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[E247] (duplicate of D304)**
+- **[E247]**            macOS SyxxCage --owner-uid validation only checks SUDO_UID
+- **Criticality:**      Non-critical; XPC bypass
+- **Location:**         SyxxCage.swift:~87-96
+- **Issue:**            XPC path passes arbitrary ownerUID — CLI running as root will chown to any
+                        UID
+- **Cross-ref. Delta:** D304 (same finding)
+- **Fix(es):**          [Fix 1] When SUDO_UID not set, validate ownerUID matches XPC caller UID
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D304 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[E250] (duplicate of D326)**
+- **[E250]**            macOS DeepSyxx code signature doesn't pin to specific version
+- **Criticality:**      Non-critical; weak pinning
+- **Location:**         DeepSyxx/main.swift:~38-47
+- **Issue:**            Checks bundle ID and OU but not cdhash — compromised build with same team
+                        passes validation
+- **Cross-ref. Delta:** D326 (same finding)
+- **Fix(es):**          [Fix 1] Pin cdhash for known-good CLI binaries
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "D326 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[E251] (duplicate of E246)**
+- **[E251]**            macOS LicenseManager syncTrialAnchorWithServer unauthenticated
+- **Criticality:**      Non-critical; MITM risk
+- **Location:**         LicenseManager.swift:~292
+- **Issue:**            Server response used as finalLaunchMillis for new users — MITM sets
+                        arbitrary trial start
+- **Cross-ref. Delta:** E246 (same finding)
+- **Fix(es):**          [Fix 1] Prefer local clock for first-time users
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "E246 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[E253] (duplicate of E229)**
+- **[E253]**            Server /api/leaktest/check free tier uses allow_any_subject
+- **Criticality:**      Non-critical; token reuse
+- **Location:**         app.py:2213
+- **Issue:**            Anyone with free-tier token can check results — token visible in DNS queries
+                        to observers
+- **Cross-ref. Delta:** E229 (same finding)
+- **Fix(es):**          [Fix 1] Document as intentional; token entropy prevents guessing
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "E229 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[F067] (duplicate of F066)**
+**[F067]** LOW — Degraded fixture predates B098 fields (stale shape, optional so non-breaking). Subsumed by F066 fix.
+
+
+---
+- **Rejection reason:**  "Subsumed by F066 fix"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[F129] (duplicate of F095)**
+- **[F129]**            Linux GUI smoke test captures no screenshot
+- **Criticality:**      Non-critical; blank window passes
+- **Location:**         .github/workflows/ci.yml:935-951
+- **Issue:**            Process survival check doesn't verify rendering — blank window passes test
+- **Cross-ref. Delta:** F095 (same finding)
+- **Fix(es):**          [Fix 1] Add screenshot capture and non-background pixel assertion
+
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "F095 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---
+
+---
+
+- **[F130] (duplicate of F104)**
+- **[F130]**            deploy.sh no firewall configuration in deployment
+- **Criticality:**      Non-critical; open ports
+- **Location:**         scripts/deploy.sh
+- **Issue:**            Port 8080 plaintext backend may be externally accessible — should be blocked
+- **Cross-ref. Delta:** F104 (same finding)
+- **Fix(es):**          [Fix 1] Add ufw configuration blocking 8080
+
+
+
+### Additional — Security Extended Final
+
+
+
+---
+- **Rejection reason:**  Cross-ref: "F104 (same finding)"
+- **Adjudicated by / date:** cross-reference audit / 2026-08-07
+
+---

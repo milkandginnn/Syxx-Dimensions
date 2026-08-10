@@ -12,7 +12,7 @@ Run from Server/:  python3 -m unittest tests.test_netutil -v
 import ipaddress
 import unittest
 
-from syxx_server import fetcher, firewall_test, netutil, resolver  # noqa: E402
+from syxx_server import fetcher, firewall_test, netutil  # noqa: E402
 
 
 class PublicRangesTests(unittest.TestCase):
@@ -118,8 +118,8 @@ class CallerDelegationTests(unittest.TestCase):
     missing the normalization)."""
 
     def test_resolver_gate_blocks_mapped_private(self):
-        self.assertFalse(resolver._ip_is_public("::ffff:10.0.0.1"))
-        self.assertTrue(resolver._ip_is_public("8.8.8.8"))
+        self.assertFalse(netutil.ip_is_public("::ffff:10.0.0.1"))
+        self.assertTrue(netutil.ip_is_public("8.8.8.8"))
 
     def test_firewall_gate_blocks_mapped_private(self):
         self.assertFalse(firewall_test._ip_is_public("::ffff:192.168.1.1"))

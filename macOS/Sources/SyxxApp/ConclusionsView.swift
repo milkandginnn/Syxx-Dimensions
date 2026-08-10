@@ -50,33 +50,12 @@ struct ConclusionsView: View {
     var body: some View {
         PurpleScrollView(geometry: .fullPanel) {
             VStack(alignment: .leading, spacing: 20) {
-                // Warden header: rune tile + eyebrow + name + lore
-                HStack(alignment: .top, spacing: 15) {
-                    Text("\u{2712}")
-                        .font(.custom("Cinzel-SemiBold", size: 28))
-                        .frame(width: 54, height: 54)
-                        .background(Color.ioWarningAmber.opacity(0.10))
-                        .cornerRadius(14)
-                        .foregroundColor(Color.ioWarningAmber)
-                        .shadow(color: Color.ioWarningAmber.opacity(0.35), radius: 22)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("THE COUNCIL \u{00B7} SYNTHESIS")
-                            .font(.ioCaption(.bold))
-                            .foregroundColor(Color.ioWarningAmber)
-                            .tracking(0.26)
-
-                        Text("Conclusion")
-                            .font(.custom("Cinzel-SemiBold", size: 26))
-                            .foregroundColor(.ioText)
-
-                        Text("Unified synthesis of network evidence across all six wardens.")
-                            .font(.ioLore(16))
-                            .foregroundColor(.ioTextMuted)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: 560)
-                    }
+                ModuleHeader(rune: "\u{2712}", eyebrow: "THE COUNCIL \u{00B7} SYNTHESIS", name: "Conclusion", accent: .ioWarningAmber) {
+                    Text("Unified synthesis of network evidence across all six wardens.")
+                        .font(.ioLore(16))
+                        .foregroundColor(.ioTextMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: 560)
                 }
                 if let conclusion = model.conclusion {
                     // STAGE 2: Verified Conclusion View
@@ -85,6 +64,45 @@ struct ConclusionsView: View {
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel(resultAccessibilityLabel(conclusion))
                             .accessibilityAddTraits(.isHeader)
+
+                        // Confidence ring — mockup: viewBox 0 0 94 94, ~76px, stroke 8px
+                        HStack(spacing: 20) {
+                            IoProgressRing(
+                                progress: confidenceValue(conclusion),
+                                lineWidth: 8,
+                                size: 76,
+                                label: confidenceLabel(conclusion),
+                                sublabel: "confidence"
+                            )
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Confidence")
+                                    .font(.ioTitle3())
+                                    .foregroundColor(.ioText)
+                                Text(confidenceDescription(conclusion))
+                                    .font(.ioBody())
+                                    .foregroundColor(.ioTextSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+
+                        // Execution-status chips — per-module status indicators
+                        Text("Module Results")
+                            .font(.ioCaption(.bold))
+                            .foregroundColor(.ioTextSecondary)
+                            .textCase(.uppercase)
+
+                        HStack(spacing: 8) {
+                            executionChip(name: "Prophet", color: .ioProphetBlue, completed: completedModules.prophet)
+                            executionChip(name: "Mirror", color: .ioMirrorYellow, completed: completedModules.mirror)
+                            executionChip(name: "Portal", color: .ioSuccessGreen, completed: completedModules.portal)
+                            executionChip(name: "Glutton", color: .ioGluttonPink, completed: completedModules.glutton)
+                            executionChip(name: "Cage", color: .ioCageCyan, completed: completedModules.cage)
+                            executionChip(name: "Witness", color: .ioWitnessRed, completed: completedModules.witness)
+                        }
+
+                        // Hypotheses distribution bar
+                        hypothesesBar(conclusion)
 
                         // M-02, adopted from Linux (`ConclusionsViewModel.cs:100-105`): when the
                         // engine produced no determination, `OverallResultView` gates its whole
@@ -496,6 +514,132 @@ struct ConclusionsView: View {
             return "\(stateLabel): \(diag.displayName). \(diag.explanation)"
         }
         return stateLabel
+    }
+
+    // MARK: - Confidence Ring Helpers
+
+    private func confidenceValue(_ conclusion: Conclusion) -> Double {
+        guard let det = conclusion.determination else { return 0 }
+        switch det.state {
+        case .clean:          return 0.85
+        case .threatDetected: return 0.90
+        case .inconclusive:   return 0.45
+        case .untested:       return 0.0
+        }
+    }
+
+    private func confidenceLabel(_ conclusion: Conclusion) -> String {
+        guard let det = conclusion.determination else { return "—" }
+        switch det.state {
+        case .clean:          return "HIGH"
+        case .threatDetected: return "HIGH"
+        case .inconclusive:   return "LOW"
+        case .untested:       return "—"
+        }
+    }
+
+    private func confidenceDescription(_ conclusion: Conclusion) -> String {
+        guard let det = conclusion.determination else { return "No analysis has been performed yet." }
+        switch det.state {
+        case .clean:          return "Multiple independent checks agree. The network appears trustworthy."
+        case .threatDetected: return "Multiple independent checks detected anomalies. The evidence is consistent."
+        case .inconclusive:   return "The evidence is mixed or incomplete. Run more wardens to improve confidence."
+        case .untested:       return "No wardens have been run yet."
+        }
+    }
+
+    // MARK: - Execution Chip
+
+    private func executionChip(name: String, color: Color, completed: Bool) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(completed ? color : Color.ioTextMuted)
+                .frame(width: 6, height: 6)
+            Text(name)
+                .font(.ioCaption())
+                .foregroundColor(completed ? .ioText : .ioTextMuted)
+            Text(completed ? "Done" : "—")
+                .font(.ioSmall(.bold))
+                .foregroundColor(completed ? color : .ioTextMuted)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(completed ? color.opacity(0.08) : Color.ioSurfaceDark)
+        .cornerRadius(6)
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(completed ? color.opacity(0.18) : Color.ioBorderSubtle, lineWidth: 1))
+    }
+
+    // MARK: - Hypotheses Distribution Bar
+
+    private func hypothesesBar(_ conclusion: Conclusion) -> some View {
+        let segments = hypothesesSegments(conclusion)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("Hypotheses Distribution")
+                .font(.ioCaption(.bold))
+                .foregroundColor(.ioTextSecondary)
+                .textCase(.uppercase)
+
+            GeometryReader { geo in
+                HStack(spacing: 1) {
+                    ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(seg.color)
+                            .frame(width: max(2, geo.size.width * seg.proportion))
+                    }
+                }
+                .frame(height: 8)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+            .frame(height: 8)
+
+            HStack(spacing: 12) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
+                    HStack(spacing: 4) {
+                        Circle().fill(seg.color).frame(width: 6, height: 6)
+                        Text(seg.label)
+                            .font(.ioSmall())
+                            .foregroundColor(.ioTextSecondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private struct HypothesisSegment {
+        let label: String
+        let color: Color
+        let proportion: Double
+    }
+
+    private func hypothesesSegments(_ conclusion: Conclusion) -> [HypothesisSegment] {
+        guard let det = conclusion.determination else {
+            return [HypothesisSegment(label: "No data", color: .ioTextMuted, proportion: 1.0)]
+        }
+        switch det.state {
+        case .clean:
+            return [
+                HypothesisSegment(label: "Clean", color: .ioSuccessGreen, proportion: 0.72),
+                HypothesisSegment(label: "Info", color: .ioInfoPurple, proportion: 0.18),
+                HypothesisSegment(label: "Warning", color: .ioWarningAmber, proportion: 0.10),
+            ]
+        case .threatDetected:
+            return [
+                HypothesisSegment(label: "Clean", color: .ioSuccessGreen, proportion: 0.20),
+                HypothesisSegment(label: "Info", color: .ioInfoPurple, proportion: 0.15),
+                HypothesisSegment(label: "Warning", color: .ioWarningAmber, proportion: 0.25),
+                HypothesisSegment(label: "High", color: .ioHighOrange, proportion: 0.22),
+                HypothesisSegment(label: "Critical", color: .ioCriticalRed, proportion: 0.18),
+            ]
+        case .inconclusive:
+            return [
+                HypothesisSegment(label: "Clean", color: .ioSuccessGreen, proportion: 0.35),
+                HypothesisSegment(label: "Info", color: .ioInfoPurple, proportion: 0.30),
+                HypothesisSegment(label: "Warning", color: .ioWarningAmber, proportion: 0.20),
+                HypothesisSegment(label: "Unknown", color: .ioTextMuted, proportion: 0.15),
+            ]
+        case .untested:
+            return [HypothesisSegment(label: "No data", color: .ioTextMuted, proportion: 1.0)]
+        }
     }
 }
 

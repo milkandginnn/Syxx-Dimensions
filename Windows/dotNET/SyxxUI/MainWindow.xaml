@@ -21,7 +21,7 @@
             IsSettingsVisible="False"
             IsPaneToggleButtonVisible="False"
             SelectionChanged="NavView_SelectionChanged"
-            Background="{StaticResource IoBgBrush}">
+            Background="{DynamicResource IoBgBrush}">
 
             <!-- Warden sidebar: gradient fill, active item violet gradient, gold separators -->
             <NavigationView.Resources>
@@ -38,8 +38,10 @@
                 <SolidColorBrush x:Key="NavigationViewItemSeparatorForeground" Color="#52D9A441" />
             </NavigationView.Resources>
 
+            <!-- D393: screen reader landmarks — Navigation for sidebar, Main for content area -->
             <NavigationView.Header>
-                <StackPanel Orientation="Horizontal" Spacing="0" />
+                <StackPanel Orientation="Horizontal" Spacing="0"
+                            AutomationProperties.LandmarkType="Navigation" />
             </NavigationView.Header>
 
             <NavigationView.PaneHeader>
@@ -79,7 +81,7 @@
                                        FontFamily="{StaticResource IoFontUI}"
                                        FontSize="9.5"
                                        FontWeight="SemiBold"
-                                       Foreground="#FF8F83B8"
+                                       Foreground="{StaticResource IoSidebarSubtitleBrush}"
                                        CharacterSpacing="220" />
                         </StackPanel>
                     </StackPanel>
@@ -104,7 +106,7 @@
                     <NavigationViewItem.Content>
                         <TextBlock Text="What's New"
                                    FontFamily="{StaticResource IoFontUI}"
-                                   Foreground="{StaticResource IoTextBrush}" />
+                                   Foreground="{DynamicResource IoTextBrush}" />
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
 
@@ -118,7 +120,7 @@
                     <NavigationViewItem.Content>
                         <TextBlock Text="Dashboard"
                                    FontFamily="{StaticResource IoFontUI}"
-                                   Foreground="{StaticResource IoTextBrush}" />
+                                   Foreground="{DynamicResource IoTextBrush}" />
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
 
@@ -135,12 +137,12 @@
                     <NavigationViewItem.Content>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="ᚨ" FontFamily="{StaticResource IoFontDisplay}"
-                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       FontSize="17" Foreground="{StaticResource IoRuneMutedBrush}"
                                        AutomationProperties.Name="Prophet"
                                        AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Text="Prophet"
                                        FontFamily="{StaticResource IoFontUI}"
-                                       Foreground="{StaticResource IoTextBrush}" />
+                                       Foreground="{DynamicResource IoTextBrush}" />
                         </StackPanel>
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
@@ -165,13 +167,13 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="ᛞ"
                                        FontFamily="{StaticResource IoFontDisplay}"
-                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       FontSize="17" Foreground="{StaticResource IoRuneMutedBrush}"
                                        Margin="0,0,10,0"
                                        AutomationProperties.Name="Mirror"
                                        AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Grid.Column="1" Text="Mirror"
                                        FontFamily="{StaticResource IoFontUI}"
-                                       Foreground="{StaticResource IoTextBrush}" />
+                                       Foreground="{DynamicResource IoTextBrush}" />
                             <!-- PRO lock indicator -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3"
                                         VerticalAlignment="Center" Margin="6,0,0,0">
@@ -198,12 +200,12 @@
                     <NavigationViewItem.Content>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="ᛜ" FontFamily="{StaticResource IoFontDisplay}"
-                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       FontSize="17" Foreground="{StaticResource IoRuneMutedBrush}"
                                        AutomationProperties.Name="Portal"
                                        AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Text="Portal"
                                        FontFamily="{StaticResource IoFontUI}"
-                                       Foreground="{StaticResource IoTextBrush}" />
+                                       Foreground="{DynamicResource IoTextBrush}" />
                         </StackPanel>
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
@@ -220,12 +222,12 @@
                     <NavigationViewItem.Content>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="ᚦ" FontFamily="{StaticResource IoFontDisplay}"
-                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       FontSize="17" Foreground="{StaticResource IoRuneMutedBrush}"
                                        AutomationProperties.Name="Glutton"
                                        AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Text="Glutton"
                                        FontFamily="{StaticResource IoFontUI}"
-                                       Foreground="{StaticResource IoTextBrush}" />
+                                       Foreground="{DynamicResource IoTextBrush}" />
                         </StackPanel>
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
@@ -240,12 +242,12 @@
                     <NavigationViewItem.Content>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="ᚾ" FontFamily="{StaticResource IoFontDisplay}"
-                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       FontSize="17" Foreground="{StaticResource IoRuneMutedBrush}"
                                        AutomationProperties.Name="Cage"
                                        AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Text="Cage"
                                        FontFamily="{StaticResource IoFontUI}"
-                                       Foreground="{StaticResource IoTextBrush}" />
+                                       Foreground="{DynamicResource IoTextBrush}" />
                         </StackPanel>
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
@@ -260,12 +262,12 @@
                     <NavigationViewItem.Content>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="ᛉ" FontFamily="{StaticResource IoFontDisplay}"
-                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       FontSize="17" Foreground="{StaticResource IoRuneMutedBrush}"
                                        AutomationProperties.Name="Witness"
                                        AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Text="Witness"
                                        FontFamily="{StaticResource IoFontUI}"
-                                       Foreground="{StaticResource IoTextBrush}" />
+                                       Foreground="{DynamicResource IoTextBrush}" />
                         </StackPanel>
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
@@ -283,12 +285,12 @@
                     <NavigationViewItem.Content>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="✒" FontFamily="{StaticResource IoFontDisplay}"
-                                       FontSize="17" Foreground="#FF9B8AC9"
+                                       FontSize="17" Foreground="{StaticResource IoRuneMutedBrush}"
                                        AutomationProperties.Name="Conclusions"
                                        AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Text="Conclusions"
                                        FontFamily="{StaticResource IoFontUI}"
-                                       Foreground="{StaticResource IoTextBrush}" />
+                                       Foreground="{DynamicResource IoTextBrush}" />
                         </StackPanel>
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
@@ -345,7 +347,7 @@
                     <NavigationViewItem.Content>
                         <TextBlock Text="Settings"
                                    FontFamily="{StaticResource IoFontUI}"
-                                   Foreground="{StaticResource IoTextBrush}" />
+                                   Foreground="{DynamicResource IoTextBrush}" />
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
 
@@ -358,7 +360,7 @@
                     <NavigationViewItem.Content>
                         <TextBlock Text="License"
                                    FontFamily="{StaticResource IoFontUI}"
-                                   Foreground="{StaticResource IoTextBrush}" />
+                                   Foreground="{DynamicResource IoTextBrush}" />
                     </NavigationViewItem.Content>
                 </NavigationViewItem>
 
@@ -407,7 +409,7 @@
                                 Click="CheckUpdateBtn_Click"
                                 HorizontalAlignment="Stretch"
                                 ToolTipService.ToolTip="A newer version of Syxx is available"
-                                Background="{StaticResource IoWarningAmberBrush}"
+                                Background="{DynamicResource IoWarningAmberBrush}"
                                 Opacity="0.85"
                                 CornerRadius="8"
                                 Padding="12,6"
@@ -416,12 +418,12 @@
                                 AutomationProperties.HelpText="A newer version of Syxx is available">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="Download"
-                                            Foreground="{StaticResource IoBackgroundDarkBrush}"
+                                            Foreground="{DynamicResource IoBackgroundDarkBrush}"
                                             AutomationProperties.AccessibilityView="Raw" />
                                 <TextBlock Text="Update Available"
                                            FontFamily="{StaticResource IoFontUI}"
                                            FontSize="12" FontWeight="Bold"
-                                           Foreground="{StaticResource IoBackgroundDarkBrush}" />
+                                           Foreground="{DynamicResource IoBackgroundDarkBrush}" />
                             </StackPanel>
                         </Button>
                     </Border>
@@ -430,7 +432,7 @@
 
             <!-- Content frame -->
             <Frame x:Name="ContentFrame"
-                   Background="{StaticResource IoBgBrush}" />
+                   Background="{DynamicResource IoBgBrush}" />
         </NavigationView>
 
         <views:FirstRunView x:Name="FirstRunGate" />

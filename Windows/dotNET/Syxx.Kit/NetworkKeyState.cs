@@ -111,7 +111,9 @@ namespace Syxx.Kit
     public enum DnsProtocol
     {
         Doh,
-        Dot
+        Dot,
+        Doq,
+        DnsCrypt
     }
 
     /// A DNS resolver together with the interface it was discovered on.
@@ -1177,6 +1179,8 @@ namespace Syxx.Kit
         {
             DnsProtocol.Doh => "DoH",
             DnsProtocol.Dot => "DoT",
+            DnsProtocol.Doq => "DoQ",
+            DnsProtocol.DnsCrypt => "DNSCrypt",
             _ => protocol.ToString()
         };
 

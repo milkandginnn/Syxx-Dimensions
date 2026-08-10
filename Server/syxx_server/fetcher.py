@@ -19,6 +19,7 @@ import ssl
 import urllib.parse
 
 from . import config, logging_util, netutil
+from .netutil import PinnedHTTPSConnection as _PinnedHTTPSConnection
 
 if config.FETCH_ALLOW_PRIVATE:
     logging_util.warn(
@@ -44,29 +45,6 @@ class TruncatedError(FetchError):
 # fetch an arbitrary public IP:port, turning the server into a blind port scanner /
 # cross-protocol probe. Only the standard web ports are permitted.
 _ALLOWED_PORTS = frozenset({80, 443})
-
-
-class _PinnedHTTPSConnection(http.client.HTTPSConnection):
-    """HTTPSConnection that dials a caller-vetted IP literal and NEVER re-resolves
-    the hostname.
-
-    A067/A088/A090/A100: the stock pattern -- HTTPSConnection(ip) then `conn.host = host`
-    -- makes http.client re-run getaddrinfo(host) inside connect() (self.host is both the
-    dial target and the SNI value), discarding the vetted IP and reopening the DNS-rebind
-    SSRF window (public IP at validation, private IP at connect). Here `pin_ip` is the
-    already-validated numeric address from _resolve_public, so socket.create_connection
-    performs no DNS query and cannot be rebound; the real hostname is still used for SNI
-    and certificate validation."""
-
-    def __init__(self, pin_ip, port, server_hostname, timeout, context):
-        super().__init__(pin_ip, port, timeout=timeout, context=context)
-        self._pin_ip = pin_ip
-        self._server_hostname = server_hostname
-
-    def connect(self):
-        # pin_ip is numeric -> create_connection does not query DNS (no rebind).
-        sock = socket.create_connection((self._pin_ip, self.port), self.timeout, self.source_address)
-        self.sock = self._context.wrap_socket(sock, server_hostname=self._server_hostname)
 
 
 def _ip_is_public(ip):

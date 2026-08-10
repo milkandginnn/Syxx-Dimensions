@@ -9,6 +9,11 @@ import SyxxTelemetry
 /// is wrapped into `Syxx.app` (see `bundle-app.sh`), `CFBundleIconFile` already supplies the
 /// Finder icon; this makes the icon appear even when running the bare SwiftPM binary in dev.
 final class SyxxAppDelegate: NSObject, NSApplicationDelegate {
+    /// Provides the current first-run state. Set by SyxxApp after the coordinator is created.
+    /// The delegate uses this to avoid overriding the FirstRunWindowConfigurator's chrome
+    /// transitions for returning users (state already .ready).
+    var firstRunStateProvider: (() -> OnboardingState)?
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Run as a proper foreground app even when launched unbundled (the dev binary has no Info.plist):
         // .regular gives a Dock icon, normal window layering, AND a window that can become KEY — which is
@@ -33,7 +38,17 @@ final class SyxxAppDelegate: NSObject, NSApplicationDelegate {
         // window shows only the EULA or Setup card with no macOS chrome.
         DispatchQueue.main.async {
             if let window = NSApplication.shared.windows.first {
+                // Only set borderless for first-run states. For .ready, the
+                // FirstRunWindowConfigurator handles chrome transitions — setting
+                // borderless here would override the configurator's work (FIFO race).
+                if let stateProvider = self.firstRunStateProvider,
+                   stateProvider() == .ready {
+                    // Still set the background color to match the canvas.
+                    window.backgroundColor = NSColor(red: 11/255, green: 5/255, blue: 24/255, alpha: 1)
+                    return
+                }
                 window.styleMask = .borderless
+                window.backgroundColor = NSColor(red: 11/255, green: 5/255, blue: 24/255, alpha: 1)
                 window.setFrame(NSRect(x: 0, y: 0, width: 640, height: 660),
                                 display: true, animate: false)
                 window.center()
@@ -142,6 +157,13 @@ public struct SyxxApp: App {
                 }
             }
             .background(FirstRunWindowConfigurator(state: firstRun.state))
+            .onAppear {
+                // Bridge the coordinator's state to the delegate so the async borderless
+                // guard can check it. Set here (view appearance) before the delegate's
+                // async block is processed on the next run-loop pass.
+                let coordinator = firstRun
+                appDelegate.firstRunStateProvider = { coordinator.state }
+            }
         }
         .commands {
             CommandGroup(replacing: .appInfo) {
@@ -180,7 +202,8 @@ public struct SyxxApp: App {
                 .disabled(firstRun.state != .ready)
             }
         }
-        .windowStyle(.hiddenTitleBar)
+        // Note: .windowStyle(.hiddenTitleBar) removed — FirstRunWindowConfigurator
+        // owns all chrome state exclusively, adding .titled back for .ready state.
 
         MenuBarExtra(isInserted: Binding(
             get: { firstRun.state == .ready },
@@ -221,17 +244,28 @@ private struct FirstRunWindowConfigurator: NSViewRepresentable {
     static func configure(_ window: NSWindow?, state: OnboardingState) {
         guard let window else { return }
 
+        // Set the window's background color to match the canvas (#0b0518). The AppKit
+        // default (windowBackgroundColor) in dark mode is ~#2e2e2e, which shows as a
+        // gray flash before SwiftUI renders. Setting it here ensures the window color
+        // matches the app's near-black canvas in all states.
+        window.backgroundColor = NSColor(red: 11/255, green: 5/255, blue: 24/255, alpha: 1)
+
         switch state {
         case .ready:
-            // Transition from borderless to standard chrome. Guard on .borderless to
-            // avoid re-applying chrome on every SwiftUI invalidation (the ready path
-            // is hot — ContentView redraws frequently).
-            guard window.styleMask.contains(.borderless) else { return }
+            // Ensure standard chrome with traffic lights. The delegate's async block
+            // skips setting .borderless for returning users (state already .ready),
+            // so we can't guard on .borderless here — the window may already have
+            // .titled but still need explicit traffic-light visibility.
+            //
+            // These operations are idempotent and cheap; SwiftUI may call configure()
+            // multiple times during layout invalidation.
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.toolbar = nil
             window.isMovableByWindowBackground = true
+            // Explicitly show traffic lights — required even when styleMask is correct,
+            // as the buttons may be hidden from a previous state or AppKit default.
             window.standardWindowButton(.closeButton)?.isHidden = false
             window.standardWindowButton(.miniaturizeButton)?.isHidden = false
             window.standardWindowButton(.zoomButton)?.isHidden = false
@@ -243,7 +277,7 @@ private struct FirstRunWindowConfigurator: NSViewRepresentable {
                                            height: CGFloat.greatestFiniteMagnitude)
             var f = window.frame
             f.size = NSSize(width: 1040, height: 613)
-            window.setFrame(f, display: true, animate: true)
+            window.setFrame(f, display: true, animate: false)
             window.center()
 
         default:
@@ -266,7 +300,7 @@ private struct FirstRunWindowConfigurator: NSViewRepresentable {
             if abs(window.frame.width - cardSize.width) > 1
                 || abs(window.frame.height - cardSize.height) > 1 {
                 window.setFrame(NSRect(origin: .zero, size: cardSize),
-                                display: true, animate: true)
+                                display: true, animate: false)
                 window.center()
             }
         }

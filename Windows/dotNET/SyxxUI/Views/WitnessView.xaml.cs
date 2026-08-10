@@ -24,6 +24,15 @@ public sealed partial class WitnessView : Page
     public WitnessView()
     {
         InitializeComponent();
+
+        Header.AddContent(new TextBlock
+        {
+            Text = "And the Witness testified: when local and remote records matched, when they held steady over time, and when no leak betrayed the encrypted path, the DNS was healthy. When they did not, the network, and its eyes, were lying indeed.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoFontLore"],
+            FontSize = 16,
+            Foreground = (Brush)Application.Current.Resources["IoTextMutedBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
     }
 
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)

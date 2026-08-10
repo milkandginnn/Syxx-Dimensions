@@ -34,7 +34,7 @@ struct EULAView: View {
             .padding(.horizontal, 30)
             .frame(maxWidth: .infinity)
 
-            Divider().overlay(Color(white: 1, opacity: 0.06))
+            Divider().overlay(Color.ioVioletDivider.opacity(0.14))
 
             // Agreement body: EB Garamond 14.5px per mockup, scrollable
             PurpleScrollView(geometry: .compact) {
@@ -49,7 +49,7 @@ struct EULAView: View {
             }
             .frame(maxHeight: 320)
 
-            Divider().overlay(Color(white: 1, opacity: 0.06))
+            Divider().overlay(Color.ioVioletDivider.opacity(0.14))
 
             // Footer: Decline text link + Agree & Continue gradient button
             HStack {
@@ -65,8 +65,10 @@ struct EULAView: View {
             }
             .padding(.horizontal, 30)
             .padding(.vertical, 16)
+            .background(Color(red: 10/255, green: 6/255, blue: 20/255).opacity(0.35))
         }
         .frame(width: 600)
+        .background(.ultraThinMaterial)
         .background(Color(red: 28/255, green: 17/255, blue: 52/255).opacity(0.85))
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color(red: 160/255, green: 140/255, blue: 255/255).opacity(0.24), lineWidth: 1))

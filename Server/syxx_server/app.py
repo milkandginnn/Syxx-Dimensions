@@ -18,6 +18,7 @@ import concurrent.futures
 import gzip
 import hashlib
 import hmac
+import html as _html
 import ipaddress
 import json
 import os
@@ -27,6 +28,7 @@ import socket
 import threading
 import time
 import urllib.parse
+import unicodedata
 import uuid
 from email.utils import parseaddr
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -65,7 +67,61 @@ except ImportError:
     dnssec_validator = None  # cryptography library not installed
 from . import __version__
 
+
+# E037: Fingerprint validation patterns — compiled once at module level rather than per-request.
+# UUIDs: "550e8400-e29b-41d4-a716-446655440000"; hex strings: 32–128 lowercase hex chars.
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+_HEX_RE = re.compile(r"^[0-9a-f]{32,128}$", re.IGNORECASE)
+
+
+def _nfc_normalize_strings(obj):
+    """Recursively NFC-normalize all string values in a dict/list tree.
+
+    Ensures that signed bytes from ``json.dumps(..., ensure_ascii=False)``
+    are deterministic regardless of whether upstream data carried NFD
+    (macOS/IDN) or NFC (typical Linux input) codepoints.
+    """
+    if isinstance(obj, str):
+        return unicodedata.normalize("NFC", obj)
+    if isinstance(obj, dict):
+        return {k: _nfc_normalize_strings(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_nfc_normalize_strings(v) for v in obj]
+    return obj
+
+
+def _redact_domain(domain: str) -> str:
+    """E053: Redact domain name for telemetry — hash the registrable part, keep TLD visible.
+
+    This prevents raw domain names (which may identify users or reveal what they are
+    investigating) from landing verbatim in OTel spans and structured log entries.
+    The registrable part is one-way hashed (SHA-256, 8 hex chars) so repeated queries
+    for the same domain produce a consistent but non-reversible identifier; only the
+    TLD is kept in cleartext to preserve coarse classification usefulness.
+
+    Examples:
+        "example.com"        -> "a6edc906.com"
+        "sub.example.com"    -> "...a6edc906.com"
+        "example"            -> "a379a6f6.?"
+        ""                   -> ""
+    """
+    if not domain:
+        return ""
+    parts = domain.rstrip(".").split(".")
+    if len(parts) <= 1:
+        return hashlib.sha256(domain.encode()).hexdigest()[:8] + ".?"
+    tld = parts[-1]
+    registrable = ".".join(parts[-2:])
+    redacted = hashlib.sha256(registrable.encode()).hexdigest()[:8]
+    prefix = "..." if len(parts) > 2 else ""
+    return f"{prefix}{redacted}.{tld}"
+
+
 # --- Sentry crash/error reporting ---
+_sentry_healthy = False
 try:
     import sentry_sdk  # type: ignore[unresolved-import]
 
@@ -79,6 +135,7 @@ try:
             send_default_pii=False,
             enable_tracing=True,
         )
+        _sentry_healthy = True
 except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down
     pass  # Sentry is best-effort; never crash the server for it
 
@@ -104,7 +161,8 @@ try:
     from opentelemetry.sdk.trace.export import BatchSpanProcessor  # type: ignore[unresolved-import]
 
     _resource = Resource.create({"service.name": "syxx-server", "service.version": __version__})
-    _endpoint = "https://bugsmasher.syxx.app"
+    # E051: OTLP endpoint is now configurable via config.OTLP_ENDPOINT (env: SYXX_OTLP_ENDPOINT).
+    _endpoint = config.OTLP_ENDPOINT
 
     _trace_exporter = OTLPSpanExporter(endpoint=f"{_endpoint}/v1/traces")
     _tracer_provider = TracerProvider(resource=_resource)
@@ -132,11 +190,13 @@ _WARP_NONCE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 # Tracer for endpoint-level OTel spans. Created once so every request handler can create spans
 # without resolving the tracer on every call. Thread-safe: OTel Context is thread-local.
 _OTEL_TRACER = None
+_OTEL_STATUS_ERROR = None
 if _OTEL_STATE.startswith("live"):
     try:
         import opentelemetry.trace as _otel_trace_mod  # type: ignore[unresolved-import]
 
         _OTEL_TRACER = _otel_trace_mod.get_tracer("syxx-server")
+        _OTEL_STATUS_ERROR = _otel_trace_mod.StatusCode.ERROR
     except Exception:
         _OTEL_STATE = "failed: tracer unavailable"
 
@@ -176,10 +236,7 @@ _STATIC_FILES = {
     "/.well-known/security.txt": (".well-known/security.txt", "text/plain; charset=utf-8"),
 }
 
-# E-10: SEO prices are read from env so they stay in sync with Stripe.
-# The defaults match the $3.95/month and $19.95/year catalog.
-_SEO_PRICE_MONTHLY = os.environ.get("SYXX_SEO_PRICE_MONTHLY", "3.95")
-_SEO_PRICE_YEARLY = os.environ.get("SYXX_SEO_PRICE_YEARLY", "19.95")
+# A025: SEO pricing constants live in config.py — single source of truth.
 
 # Image assets served from STATIC_DIR/assets/ (logos, screenshots, favicon).
 # Extension allowlist doubles as the content-type map — anything else is 404.
@@ -230,104 +287,28 @@ def _valid_email(email):
     return parsed == email
 
 
-def _env_int(name, default):
-    return config._i(name, default)
-
+# A023: _env_int removed — use config._i() directly (canonical definition lives in config.py).
 
 # A028/A101/A108: cap concurrent worker threads. A bare ThreadingHTTPServer spawns
 # one unbounded thread per connection, so parallel hostile requests exhaust the
 # process and down the server. This bounds how many requests run at once.
-_MAX_WORKERS = max(1, _env_int("SYXX_HTTP_MAX_WORKERS", 64))
+_MAX_WORKERS = max(1, config._i("SYXX_HTTP_MAX_WORKERS", 64))
 # A005/A102/A108: absolute per-request wall-clock deadline. connection.settimeout()
 # is a PER-OPERATION timeout, so a slow-drip client that trickles one byte just
 # under the timeout keeps resetting it and pins a worker forever. This hard cap
 # force-closes the socket after a fixed total request lifetime regardless of drip.
-_REQUEST_DEADLINE = max(config.HTTP_REQUEST_TIMEOUT, _env_int("SYXX_HTTP_REQUEST_DEADLINE", 60))
-# A027/A096: aggregate wall-clock budget for the clean-vantage recursive fan-out so
-# /api/diff cannot be held open across many slow resolver queries.
-_CLEAN_VANTAGE_DEADLINE = max(1, _env_int("SYXX_CLEAN_VANTAGE_DEADLINE", 6))
+_REQUEST_DEADLINE = max(config.HTTP_REQUEST_TIMEOUT, config._i("SYXX_HTTP_REQUEST_DEADLINE", 60))
 
-# A136: module-level shared bounded thread pools for DNS fan-out. Replaces the
+# A136: module-level shared bounded thread pool for DNS fan-out. Replaces the
 # per-request ThreadPoolExecutor instances that escaped the _MAX_WORKERS semaphore
 # accounting (64 concurrent handlers × 12 threads = 768 untracked threads).
 # Bounded to a fixed size; shared across all concurrent requests.
-_CLEAN_VANTAGE_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=6, thread_name_prefix="clean-vantage")
+# A028: _CLEAN_VANTAGE_POOL moved to diff.py alongside _clean_vantage_answers.
 _PROPAGATION_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=24, thread_name_prefix="propagation")
 
-
-def _host(u):
-    try:
-        return (urllib.parse.urlsplit(u).hostname or "").lower()
-    except ValueError:
-        return ""
-
-
-def _diff_content(url, local_html, local_scripts, local_inline_hashes):
-    """Content half of /api/diff (Workstream S #2). Fetch the target from the server's clean vantage
-    and compare its script structure to what the client saw. HONESTY: a script loaded from a host the
-    clean page never referenced is the strong injection signal; same-host asset churn or inline-script
-    differences are treated as soft ("divergent") because dynamic pages legitimately vary between
-    vantages (A/B tests, personalization, per-request nonces). SSRF-safe via warp/fetcher (public IPs
-    only). Returns a dict; never raises."""
-    try:
-        base = warp.build_baseline(url)
-    except fetcher.TruncatedError:
-        return {"url": url, "assessment": "inconclusive", "note": "baseline truncated; diff is inconclusive"}
-    except fetcher.FetchError as e:
-        # A053: log the full error server-side for diagnostics but return a generic
-        # note to the client — str(e) can disclose destination IPs, socket errors,
-        # and TLS failure modes that reveal the server's outbound fetch topology.
-        logging_util.error("diff_clean_fetch_failed", url=url, err=str(e))
-        return {"url": url, "assessment": "inconclusive", "note": "clean vantage unreachable"}
-
-    clean_scripts = set(base.get("scripts", []))
-    clean_inline = set(base.get("inlineScriptHashes", []))
-
-    if local_html:
-        parsed_scripts, _ss, _if, parsed_inlines = warp.parse_assets(local_html, url)
-        local_script_set = set(parsed_scripts)
-        local_inline = {hashlib.sha256(b.encode("utf-8")).hexdigest() for b in parsed_inlines}
-        have_inline = True
-    else:
-        local_script_set = set(local_scripts or [])
-        local_inline = set(local_inline_hashes or [])
-        have_inline = bool(local_inline_hashes)
-
-    if not local_script_set and not local_inline and not local_html:
-        return {"url": url, "assessment": "inconclusive", "note": "no local content supplied"}
-
-    injected = sorted(local_script_set - clean_scripts)
-    missing = sorted(clean_scripts - local_script_set)
-    clean_hosts = {_host(u) for u in clean_scripts}
-    injected_hosts = sorted({_host(u) for u in injected} - clean_hosts - {""})
-    injected_inline = len(local_inline - clean_inline)
-
-    if injected_hosts:
-        assessment = "injected"
-    elif injected or injected_inline:
-        assessment = "divergent"
-    elif local_script_set == clean_scripts and (not have_inline or local_inline == clean_inline):
-        assessment = "match"
-    else:
-        assessment = "divergent"
-
-    note = {
-        "injected": "script(s) from a host the clean page never served — strong on-path injection signal",
-        "divergent": "asset/inline differences; can be legitimate on dynamic pages — not conclusive",
-        "match": "clean-vantage script structure matches what the client saw",
-    }[assessment]
-    return {
-        "url": url,
-        "cleanScripts": sorted(clean_scripts),
-        "localScripts": sorted(local_script_set),
-        "injectedScripts": injected,
-        "injectedScriptHosts": injected_hosts,
-        "missingScripts": missing,
-        "injectedInlineCount": injected_inline,
-        "match": assessment == "match",
-        "assessment": assessment,
-        "note": note,
-    }
+# A028: diff helpers re-exported from diff.py for backward-compatible access
+# (tests reference app._diff_content, app._diff_result, app._clean_vantage_answers).
+from .diff import _clean_vantage_answers, _diff_content, _diff_result  # noqa: E402
 
 
 def _paginate(query, items, default_limit=50, max_limit=200):
@@ -351,86 +332,20 @@ def _paginate(query, items, default_limit=50, max_limit=200):
     return paged, {"page": page, "limit": limit, "total": total, "hasMore": has_more}
 
 
-def _diff_result(dns_assessment, content, clean_answers=None, local_set=None):
-    """Fold the DNS and content assessments into one clean|tampered|inconclusive result.
-
-    Only a DNS answer the authority doesn't serve AND the clean vantage confirms, or a
-    cross-host script injection, is decisive ('tampered').
-
-    S1: round-robin / geo DNS can make the authoritative answer differ from the local
-    answer even when no tampering is occurring. Cross-reference with the clean vantage:
-    if the clean vantage ALSO disagrees with the authoritative in the same way, it's
-    legitimate round-robin, not tampering. Only when the clean vantage matches the
-    authoritative (and the local answer diverges from both) is it 'tampered'.
-    """
-    c = content.get("assessment") if content else None
-
-    # Cross-host script injection is decisive: the clean vantage never served a
-    # script from that host. Same-host churn stays divergent/inconclusive above.
-    if c == "injected":
-        return "tampered"
-
-    if dns_assessment == "divergent":
-        # S1: cross-reference with clean vantage. If the clean vantage also disagrees
-        # with the authoritative (i.e. the clean vantage matches the local answer),
-        # it's legitimate round-robin / geo DNS, not tampering.
-        # NOTE (open spec question, do not "fix" without an owner decision): when
-        # `clean_answers` is EMPTY the corroborating vantage was unreachable, not disagreeing,
-        # and this falls through to a hard "tampered" on one view. That is deliberate —
-        # `test_authoritative_disjoint_answers_remain_tampered` pins it — because the
-        # AUTHORITATIVE nameserver is itself the ground truth here and a disjoint local answer
-        # contradicts it directly. The residual risk is genuine round-robin/geo rotation, which
-        # S1 can only rule out via a reachable clean vantage. Downgrading to inconclusive would
-        # trade a false-accusation risk for a missed-detection risk; that is a determinative-core
-        # policy call for the owner, not an implementation detail.
-        if clean_answers is not None and local_set is not None:
-            if local_set.issubset(clean_answers) and not local_set.isdisjoint(clean_answers):
-                return "inconclusive"  # clean vantage sees same as local → round-robin/geo
-        return "tampered"
-
-    if dns_assessment == "match" and c in ("match", None):
-        return "clean"
-    return "inconclusive"
+def _prometheus_exposition(metrics):
+    """A058: render the metrics snapshot as Prometheus text exposition format
+    (text/plain; version=0.0.4). Each counter becomes a # HELP/# TYPE pair plus
+    one sample line; keys are sanitized to the [a-zA-Z_:] exposition alphabet."""
+    lines = []
+    for name in sorted(metrics):
+        safe = re.sub(r"[^a-zA-Z0-9_:]", "_", name)
+        lines.append(f"# HELP {safe} {name}")
+        lines.append(f"# TYPE {safe} counter")
+        lines.append(f"{safe} {int(metrics[name])}")
+    return "\n".join(lines) + "\n"
 
 
-def _clean_vantage_answers(domain, qtype, qtype_str):
-    """Query several public recursive resolvers and return an answer set ONLY when at
-    least two INDEPENDENT vantages agree on exactly that set.
-
-    A027: the old code returned the FIRST race-winning resolver's answer. Under a
-    shared-upstream poisoning, the poisoned resolver can win the race, so a single
-    race-winner could certify 'clean' — a false-secure result. A clean reference now
-    requires corroboration: two vantages returning the same non-empty set. If the
-    vantages disagree (CDN/geo split) or only one is reachable, there is no usable
-    clean reference and the diff stays inconclusive rather than falsely clean.
-    The whole fan-out is bounded by a wall-clock deadline (A096)."""
-    servers = list(config.PUBLIC_RESOLVERS[:3])
-    if len(servers) < 2:
-        return set()
-
-    def query_one(server):
-        clean = resolver.query(domain, qtype, server)
-        return frozenset(str(r["value"]).lower() for r in clean["records"] if r["type"] == qtype_str)
-
-    # A136: use the module-level shared pool instead of per-request creation.
-    futures = [_CLEAN_VANTAGE_POOL.submit(query_one, srv) for srv in servers]
-    counts = {}
-    try:
-        for fut in concurrent.futures.as_completed(futures, timeout=_CLEAN_VANTAGE_DEADLINE):
-            try:
-                answers = fut.result()
-            except resolver.DNSError:
-                continue
-            if answers:
-                counts[answers] = counts.get(answers, 0) + 1
-                if counts[answers] >= 2:  # corroborated by >=2 independent vantages
-                    return set(answers)
-    except concurrent.futures.TimeoutError:
-        pass  # budget exhausted; use whatever corroborated so far
-    for answer_set, seen in counts.items():
-        if seen >= 2:
-            return set(answer_set)
-    return set()
+# A028: _diff_result and _clean_vantage_answers moved to diff.py (re-exported above).
 
 
 def _version_key(v):
@@ -475,6 +390,18 @@ def _update_available(client_ver, latest):
     return ck < lk
 
 
+# E039: ThreadingHTTPServer is a development/testing server — NOT production-grade on its own.
+# Production deployments MUST run behind a reverse proxy (nginx, caddy, or equivalent) that
+# enforces:
+#   - Connection limits and accept-queue depth
+#   - Per-client request-rate limiting at the network layer
+#   - Read/write/idle timeouts at the socket layer
+#   - TLS termination (this process is plaintext; TLS is the proxy's responsibility)
+#   - DDoS mitigation and IP-level blocking
+# BoundedThreadingHTTPServer adds a semaphore-bounded worker cap (A028) on top of the stdlib
+# base, but it is NOT a replacement for a hardened production HTTP stack.
+# TODO E039: migrate to gunicorn or uvicorn (WSGI/ASGI) for the production HTTP layer;
+# BoundedThreadingHTTPServer should become the development/test runner only.
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
     """A028/A101/A108: ThreadingHTTPServer spawns one unbounded thread per connection,
     so concurrent hostile requests exhaust the process and down the server. This bounds
@@ -624,12 +551,17 @@ class Handler(BaseHTTPRequestHandler):
         is_html = content_type.startswith("text/html")
         if is_html:
             nonce = getattr(self, "_csp_nonce", None) or self._generate_csp_nonce()
+            # E020: 'strict-dynamic' tells supporting browsers to trust scripts loaded
+            # by a nonce-bearing script, ignoring host allowlists and 'unsafe-inline'.
+            # 'self' is retained as a fallback for browsers that don't support nonces.
             self.send_header(
                 "Content-Security-Policy",
                 f"default-src 'self'; "
-                f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com; "
+                f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' https://js.stripe.com; "
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                "font-src 'self' https://fonts.gstatic.com data:; "
+                # E019: Self-host fonts to prevent leaking user IPs to Google.
+                # Removed https://fonts.gstatic.com from font-src.
+                "font-src 'self' data:; "
                 "img-src 'self' data: https:; "
                 "connect-src 'self' https://api.stripe.com; "
                 "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
@@ -665,10 +597,24 @@ class Handler(BaseHTTPRequestHandler):
             body = json.dumps(body).encode("utf-8")
         elif isinstance(body, str):
             body = body.encode("utf-8")
+        # A052: ETag from the uncompressed body hash; a matching If-None-Match
+        # answers 304 with no body so unchanged content is not retransmitted.
+        etag = f'"{hashlib.sha256(body).hexdigest()[:32]}"'
+        if self.headers.get("If-None-Match", "").strip() == etag:
+            self._response_code = 304  # track for metrics
+            self._responded = True  # A134: mark that we've sent a response
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.send_header("Content-Length", "0")
+            self._cors()
+            self._security_headers(content_type)
+            self.end_headers()
+            return
         self._response_code = status  # track for metrics
         self._responded = True  # A134: mark that we've sent a response
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        self.send_header("ETag", etag)
         # gzip compression: check if the client accepts it and the body is large
         # enough to benefit (skip tiny responses).
         accept_encoding = self.headers.get("Accept-Encoding", "")
@@ -716,7 +662,23 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
+    # E032: audit complete — all 500 sites use sanitized generic messages.
+    # Contract: 5xx messages must never include raw exception text, file paths,
+    # or stack traces. The guard below enforces this at runtime as a last line
+    # of defence in case a future caller accidentally passes unsafe content.
     def _json_error(self, status, message, extra=None):
+        # E032: 5xx messages must never leak internal paths or stack traces.
+        if status >= 500 and (
+            "/" in message
+            or "\\" in message
+            or "Traceback" in message
+            or 'File "' in message
+        ):
+            logging_util.warn(
+                "e032_unsafe_error_message",
+                msg=f"Unsafe 5xx message suppressed (status={status})",
+            )
+            message = "internal error"
         payload = {"error": message}
         if extra:
             payload.update(extra)
@@ -913,16 +875,44 @@ class Handler(BaseHTTPRequestHandler):
         # without breaking existing clients.
         if path.startswith("/api/v1/"):
             path = "/api/" + path[len("/api/v1/") :]
+        # A044: middleware OTel span covering all GET routes — catches the 34
+        # un-instrumented endpoints that per-route spans miss.
+        span = _OTEL_TRACER.start_span("http.GET") if _OTEL_TRACER else None
+        if span:
+            span.set_attribute("http.method", "GET")
+            span.set_attribute("http.route", path)
+        # A045: expose span to handlers so /healthz and /readyz can attach dependency attributes.
+        self._current_otel_span = span
         try:
-            self._dispatch_get(path, query)
-        except Exception as e:  # last-resort guard; never leak a stack trace
-            logging_util.error("handler_exception", route=path, err=str(e))
-            # A134: if a response was already sent, close the connection instead of
-            # writing a second response that would desync the keep-alive pipeline.
-            if not self._responded:
-                self._json_error(500, "internal error")
-            else:
-                self.close_connection = True
+            try:
+                self._dispatch_get(path, query)
+            except Exception as e:  # last-resort guard; never leak a stack trace
+                logging_util.error("handler_exception", route=path, err=str(e))
+                # A056: mark the middleware span as errored so the collector
+                # does not see exception-path spans as successful.
+                if span and _OTEL_STATUS_ERROR is not None:
+                    span.set_status(_OTEL_STATUS_ERROR)
+                    span.set_attribute("error.type", type(e).__name__)
+                try:
+                    # A043: attach route context so Sentry events are groupable/filterable.
+                    sentry_sdk.set_tag("route", path or "unknown")
+                    sentry_sdk.set_tag("method", "GET")
+                    sentry_sdk.capture_exception(e)
+                except Exception:
+                    pass  # Sentry failure must not break error handling
+                # A134: if a response was already sent, close the connection instead of
+                # writing a second response that would desync the keep-alive pipeline.
+                if not self._responded:
+                    self._json_error(500, "internal error")
+                else:
+                    self.close_connection = True
+        finally:
+            if span:
+                status = getattr(self, "_response_code", None)
+                if status:
+                    span.set_attribute("http.status_code", status)
+                span.end()
+            self._current_otel_span = None
 
     def _check_csrf(self):
         """SEC-005: CSRF protection via Origin header verification.
@@ -941,6 +931,19 @@ class Handler(BaseHTTPRequestHandler):
         self._json_error(403, "origin not allowed")
         return False
 
+    def _check_sec_fetch(self) -> bool:
+        """E027: Return False (reject) when a browser signals this is a cross-site request.
+
+        Sec-Fetch-Site is sent by all modern browsers. Its absence (API clients,
+        curl, old browsers) is treated as trusted — this is defence-in-depth on top
+        of CSRF tokens, not a replacement.
+        """
+        sec_fetch_site = self.headers.get("Sec-Fetch-Site", "")
+        if sec_fetch_site == "cross-site":
+            self._json_error(403, "cross-site request rejected")
+            return False
+        return True
+
     def do_POST(self):
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
@@ -948,50 +951,74 @@ class Handler(BaseHTTPRequestHandler):
         # API versioning: /api/v1/* is an alias for /api/*.
         if path.startswith("/api/v1/"):
             path = "/api/" + path[len("/api/v1/") :]
+        # A044: middleware OTel span covering all POST routes.
+        span = _OTEL_TRACER.start_span("http.POST") if _OTEL_TRACER else None
+        if span:
+            span.set_attribute("http.method", "POST")
+            span.set_attribute("http.route", path)
         try:
-            # SEC-005: CSRF check on state-changing routes (exclude webhooks)
-            # Webhooks are signed-HMAC verified by their respective handlers
-            if path not in ("/api/webhooks/stripe", "/api/webhooks/keygen"):
-                if not self._check_csrf():
-                    return
-            if path == "/api/auth/activate":
-                return self._route_activate()
-            if path == "/api/trial/anchor":
-                return self._route_trial_anchor()
-            if path == "/api/beta/reserve":
-                return self._route_beta_reserve()
-            if path == "/api/leak/token":
-                return self._route_leak_token(urllib.parse.parse_qs(parsed.query))
-            if path == "/api/leaktest/start":
-                return self._route_leaktest_start(urllib.parse.parse_qs(parsed.query))
-            if path == "/api/diff":
-                return self._route_diff(urllib.parse.parse_qs(parsed.query))
-            if path == "/api/webhooks/stripe":
-                return self._route_stripe_webhook()
-            if path == "/api/webhooks/keygen":
-                return self._route_keygen_webhook()
-            if path == "/dns-query":
-                return self._route_doh_post(urllib.parse.parse_qs(parsed.query))
-            if path == "/api/keys":
-                return self._route_create_api_key()
-            if path == "/api/bulk-investigate":
-                return self._route_bulk_investigate()
-            if path == "/api/lookalike":
-                return self._route_lookalike()
-            # C1: Stripe Customer Portal — POST with session token to get portal URL
-            if path == "/api/billing/portal":
-                return self._route_billing_portal()
-            if path == "/api/monitors":
-                return self._route_create_monitor()  # 6.4a: POST to create a new monitor
-            self._json_error(404, "not found")
-        except Exception as e:
-            logging_util.error("handler_exception", route=path, err=str(e))
-            # A134: if a response was already sent, close the connection instead of
-            # writing a second response that would desync the keep-alive pipeline.
-            if not self._responded:
-                self._json_error(500, "internal error")
-            else:
-                self.close_connection = True
+            try:
+                # SEC-005: CSRF check on state-changing routes (exclude webhooks)
+                # Webhooks are signed-HMAC verified by their respective handlers
+                if path not in ("/api/webhooks/stripe", "/api/webhooks/keygen"):
+                    if not self._check_csrf():
+                        return
+                if path == "/api/auth/activate":
+                    return self._route_activate()
+                if path == "/api/trial/anchor":
+                    return self._route_trial_anchor()
+                if path == "/api/beta/reserve":
+                    return self._route_beta_reserve()
+                if path == "/api/leak/token":
+                    return self._route_leak_token(urllib.parse.parse_qs(parsed.query))
+                if path == "/api/leaktest/start":
+                    return self._route_leaktest_start(urllib.parse.parse_qs(parsed.query))
+                if path == "/api/diff":
+                    return self._route_diff(urllib.parse.parse_qs(parsed.query))
+                if path == "/api/webhooks/stripe":
+                    return self._route_stripe_webhook()
+                if path == "/api/webhooks/keygen":
+                    return self._route_keygen_webhook()
+                if path == "/dns-query":
+                    return self._route_doh_post(urllib.parse.parse_qs(parsed.query))
+                if path == "/api/keys":
+                    return self._route_create_api_key()
+                if path == "/api/bulk-investigate":
+                    return self._route_bulk_investigate()
+                if path == "/api/lookalike":
+                    return self._route_lookalike()
+                # C1: Stripe Customer Portal — POST with session token to get portal URL
+                if path == "/api/billing/portal":
+                    return self._route_billing_portal()
+                if path == "/api/monitors":
+                    return self._route_create_monitor()  # 6.4a: POST to create a new monitor
+                self._json_error(404, "not found")
+            except Exception as e:
+                logging_util.error("handler_exception", route=path, err=str(e))
+                # A056: mark the middleware span as errored so the collector
+                # does not see exception-path spans as successful.
+                if span and _OTEL_STATUS_ERROR is not None:
+                    span.set_status(_OTEL_STATUS_ERROR)
+                    span.set_attribute("error.type", type(e).__name__)
+                try:
+                    # A043: attach route context so Sentry events are groupable/filterable.
+                    sentry_sdk.set_tag("route", path or "unknown")
+                    sentry_sdk.set_tag("method", "POST")
+                    sentry_sdk.capture_exception(e)
+                except Exception:
+                    pass  # Sentry failure must not break error handling
+                # A134: if a response was already sent, close the connection instead of
+                # writing a second response that would desync the keep-alive pipeline.
+                if not self._responded:
+                    self._json_error(500, "internal error")
+                else:
+                    self.close_connection = True
+        finally:
+            if span:
+                status = getattr(self, "_response_code", None)
+                if status:
+                    span.set_attribute("http.status_code", status)
+                span.end()
 
     def do_DELETE(self):
         parsed = urllib.parse.urlsplit(self.path)
@@ -1000,20 +1027,49 @@ class Handler(BaseHTTPRequestHandler):
         # API versioning: /api/v1/* is an alias for /api/*.
         if path.startswith("/api/v1/"):
             path = "/api/" + path[len("/api/v1/") :]
+        # A044: middleware OTel span covering all DELETE routes.
+        span = _OTEL_TRACER.start_span("http.DELETE") if _OTEL_TRACER else None
+        if span:
+            span.set_attribute("http.method", "DELETE")
+            span.set_attribute("http.route", path)
         try:
-            if path.startswith("/api/keys/"):
-                return self._route_revoke_api_key(path)
-            if path.startswith("/api/monitors/"):
-                return self._route_delete_monitor(path)
-            self._json_error(404, "not found")
-        except Exception as e:
-            logging_util.error("handler_exception", route=path, method="DELETE", err=str(e))
-            # A134: if a response was already sent, close the connection instead of
-            # writing a second response that would desync the keep-alive pipeline.
-            if not self._responded:
-                self._json_error(500, "internal error")
-            else:
-                self.close_connection = True
+            try:
+                # A037: CSRF check on state-changing DELETE routes (exclude webhooks)
+                # Webhooks are signed-HMAC verified by their respective handlers
+                if path not in ("/api/webhooks/stripe", "/api/webhooks/keygen"):
+                    if not self._check_csrf():
+                        return
+                if path.startswith("/api/keys/"):
+                    return self._route_revoke_api_key(path)
+                if path.startswith("/api/monitors/"):
+                    return self._route_delete_monitor(path)
+                self._json_error(404, "not found")
+            except Exception as e:
+                logging_util.error("handler_exception", route=path, method="DELETE", err=str(e))
+                # A056: mark the middleware span as errored so the collector
+                # does not see exception-path spans as successful.
+                if span and _OTEL_STATUS_ERROR is not None:
+                    span.set_status(_OTEL_STATUS_ERROR)
+                    span.set_attribute("error.type", type(e).__name__)
+                try:
+                    # A043: attach route context so Sentry events are groupable/filterable.
+                    sentry_sdk.set_tag("route", path or "unknown")
+                    sentry_sdk.set_tag("method", "DELETE")
+                    sentry_sdk.capture_exception(e)
+                except Exception:
+                    pass  # Sentry failure must not break error handling
+                # A134: if a response was already sent, close the connection instead of
+                # writing a second response that would desync the keep-alive pipeline.
+                if not self._responded:
+                    self._json_error(500, "internal error")
+                else:
+                    self.close_connection = True
+        finally:
+            if span:
+                status = getattr(self, "_response_code", None)
+                if status:
+                    span.set_attribute("http.status_code", status)
+                span.end()
 
     # --- GET routing -------------------------------------------------------
     def _dispatch_get(self, path, query):
@@ -1042,6 +1098,13 @@ class Handler(BaseHTTPRequestHandler):
         # A196: /healthz is explicitly process-liveness-only — it does NOT check
         # listener health. Operators/monitors who want readiness must probe /readyz.
         if path == "/healthz":
+            # A045: attach health scope attribute to the middleware OTel span.
+            # No DB/DNS checks here — A196 design and A148 flood protection both
+            # require /healthz to remain lightweight and dependency-free.
+            _span = getattr(self, "_current_otel_span", None)
+            if _span:
+                _span.set_attribute("health.scope", "process-liveness-only")
+                _span.set_attribute("health.check_endpoint", "/readyz")
             return self._send(200, {"ok": True, "scope": "process-liveness-only", "readiness": "/readyz"})
         # A148: rate-limit /readyz to prevent unauthenticated DB connection floods.
         # The previous implementation opened and closed a SQLite connection on every
@@ -1201,6 +1264,10 @@ class Handler(BaseHTTPRequestHandler):
         sig_b64 = _leak.sign_content(html) if hasattr(_leak, "sign_content") else ""
         key_id = _leak.collector_key_id() if hasattr(_leak, "collector_key_id") else ""
 
+        # E033: Content-Digest header (RFC 9530) — SHA-256 hash of the response body,
+        # allowing clients to verify the HTML bytes were not modified in transit even
+        # without a full Ed25519 signature verification path.
+        digest = "sha-256=:" + base64.b64encode(hashlib.sha256(html).digest()).decode() + ":"
         self._send(
             200,
             html,
@@ -1211,6 +1278,7 @@ class Handler(BaseHTTPRequestHandler):
                 "X-Content-Type-Options": "nosniff",
                 "X-Syxx-Signature": sig_b64,
                 "X-Syxx-KeyId": key_id,
+                "Content-Digest": digest,
             },
         )
 
@@ -1228,6 +1296,10 @@ class Handler(BaseHTTPRequestHandler):
             {
                 "publicKey": _leak.collector_public_key(),
                 "keyId": _leak.collector_key_id(),
+                # A005: warpKeyId is the WARP_MANIFEST_V1 key id format (lowercase hex of the
+                # full key), distinct from keyId (leak-attestation scheme: base64 of the first
+                # 8 pubkey bytes). Both derive from the same collector key.
+                "warpKeyId": _leak.collector_warp_key_id(),
                 # A114: the actual key activation time (when this key instance was loaded/generated),
                 # NOT the current fetch time. Previously returned int(time.time()) which was the
                 # request time, making it impossible to detect key rotation or pin a key epoch.
@@ -1288,6 +1360,9 @@ class Handler(BaseHTTPRequestHandler):
         each product had a single price — so an old client keeps working and never lands on a tier it
         did not choose. New clients send ?sku=.
         """
+        # E027: reject cross-site requests to this mutation endpoint
+        if not self._check_sec_fetch():
+            return
         if not self._rate_ok(None):
             return
         sku = (query.get("sku", [""])[0]).strip()
@@ -1371,7 +1446,7 @@ class Handler(BaseHTTPRequestHandler):
         except stripe_checkout.StripeError as e:
             logging_util.error("billing_portal_failed", err=str(e))
             return self._json_error(503, "billing portal unavailable")
-        self._send(200, {"url": session.get("url", "")})
+        self._send(200, {"url": session.get("url", "")}, extra_headers={"Cache-Control": "no-store"})
 
     def _route_stripe_webhook(self):
         """Stripe webhook (Workstream D4) — PUBLIC but SIGNATURE-VERIFIED. Verifies the Stripe-Signature
@@ -1402,7 +1477,7 @@ class Handler(BaseHTTPRequestHandler):
             # told Stripe the delivery succeeded — a charged customer with no license
             # and no retry path. A 500 triggers Stripe's exponential backoff.
             return self._json_error(500, "internal fulfillment error")
-        self._send(200, {"received": True, "conclusion": result})
+        self._send(200, {"received": True, "conclusion": result}, extra_headers={"Cache-Control": "no-store"})
 
     def _route_keygen_webhook(self):
         """Keygen webhook — PUBLIC but SIGNATURE-VERIFIED. When a license is revoked or
@@ -1413,6 +1488,12 @@ class Handler(BaseHTTPRequestHandler):
 
         if not config.KEYGEN_WEBHOOK_SECRET:
             return self._json_error(501, "webhook not configured")
+        # A063: per-IP rate limit before signature verification (mirrors the Stripe
+        # webhook at _route_stripe_webhook) so forged payload floods cannot burn CPU
+        # on HMAC verification and JSON parsing.
+        if not ratelimit.allow("webhook:ip:" + self._client_ip()):
+            logging_util.warn("keygen_webhook_ratelimited", ip=self._client_ip()[:15])
+            return self._json_error(429, "rate limit exceeded")
         raw = self._body()
         if self._body_error(raw):
             return
@@ -1437,6 +1518,16 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return self._json_error(400, "invalid JSON")
         event_type = event.get("event", "")
+        # A061: replay fence — deduplicate verified event ids so a captured signed
+        # payload cannot be replayed to re-run revocation. The HMAC scheme is
+        # unchanged (Keygen signs the raw body); the event id is the dedup key.
+        # A duplicate within the 1h window is a no-op before revocation logic runs.
+        event_id = event.get("id") or hashlib.sha256(raw or b"").hexdigest()[:32]
+        dedup_key = "keygen_webhook:" + str(event_id)
+        seen, created_at = db.kv_get_with_created_at(dedup_key)
+        if seen is not None and (time.time() - created_at) < 3600:
+            return self._send(200, {"received": True, "conclusion": "duplicate", "event": event_type})
+        db.kv_set(dedup_key, "1")
         data = event.get("data", {})
         # Extract the license ID (used as subject in our system)
         lic_id = data.get("id", "") if isinstance(data, dict) else ""
@@ -1475,7 +1566,11 @@ class Handler(BaseHTTPRequestHandler):
                 )
         elif event_type in ("license.created", "license.activated", "license.renewed"):
             result = "noted"
-        self._send(200, {"received": True, "conclusion": result, "event": event_type})
+        self._send(
+            200,
+            {"received": True, "conclusion": result, "event": event_type},
+            extra_headers={"Cache-Control": "no-store"},
+        )
 
     # --- static ------------------------------------------------------------
     def _serve_static(self, path):
@@ -1502,8 +1597,8 @@ class Handler(BaseHTTPRequestHandler):
                 # set, every hardcoded $3.95 / $19.95 in the page is replaced with the
                 # env values — the JSON-LD structured data is already driven by these
                 # same vars via seo.py.
-                html = html.replace("$3.95", f"${_SEO_PRICE_MONTHLY}")
-                html = html.replace("$19.95", f"${_SEO_PRICE_YEARLY}")
+                html = html.replace("$3.95", f"${_html.escape(config.SEO_PRICE_MONTHLY, quote=True)}")
+                html = html.replace("$19.95", f"${_html.escape(config.SEO_PRICE_YEARLY, quote=True)}")
                 data = html.encode("utf-8")
             except UnicodeDecodeError:
                 pass  # serve as-if if decoding fails
@@ -1550,21 +1645,51 @@ class Handler(BaseHTTPRequestHandler):
         # and the operator sees the exact state to act on. Only `down` (failed to serve at
         # all) or `unknown` (never reported — absence of evidence is not evidence of health,
         # A196) are hard not-ready conditions.
+        _span = getattr(self, "_current_otel_span", None)  # A045: middleware span for attributes
+
+        # --- DB health check ---
         try:
             db.connect().close()
         except Exception as e:
             # A105: never echo the raw exception (it carries the sqlite path / driver detail) in the
             # public 503 body. Log it internally, return a generic readiness failure.
             logging_util.error("readyz_db_unavailable", err=str(e))
+            # A045: record DB failure on the OTel span before returning.
+            if _span:
+                _span.set_attribute("health.db", "error")
+                _span.set_attribute("health.ready", False)
             return self._json_error(503, "not ready")
+        if _span:
+            _span.set_attribute("health.db", "ok")
 
+        # --- Listener / DNS health check ---
         snap = listeners.snapshot()
         down = listeners.down_listeners()
         unknown = listeners.unknown_listeners()  # A196: unknown != healthy
+        # A045: record DNS/listener health on the OTel span.
+        if _span:
+            _span.set_attribute("health.dns_listener", "error" if (down or unknown) else "ok")
+            if down:
+                _span.set_attribute("health.listeners_down", ",".join(down))
+            if unknown:
+                _span.set_attribute("health.listeners_unknown", ",".join(unknown))
+            _span.set_attribute("health.ready", not bool(down or unknown))
         if down or unknown:
             # Name the offending listeners so an operator does not have to guess which one fell over.
             return self._send(503, {"ready": False, "down": down, "unknown": unknown, "listeners": snap})
-        self._send(200, {"ready": True, "listeners": snap})
+        self._send(
+            200,
+            {
+                "ready": True,
+                "listeners": snap,
+                # A057: surface telemetry health so a server exporting zero telemetry is
+                # distinguishable from a healthy one. _OTEL_STATE is set at import time
+                # ("live" or "failed: ..."); sentry is healthy only when a DSN was
+                # configured AND init succeeded.
+                "otel": _OTEL_STATE,
+                "sentry": _sentry_healthy,
+            },
+        )
 
     def _route_metrics(self):
         """S4: /metrics requires bearer token auth when configured.
@@ -1579,48 +1704,121 @@ class Handler(BaseHTTPRequestHandler):
             # in licensing.py (SYXX_DEV_MODE gate).
             if os.environ.get("SYXX_DEV_MODE") != "1":
                 return self._json_error(503, "metrics endpoint not configured")
-            return self._send(200, {"metrics": logging_util.snapshot()})
+            return self._send(
+                200,
+                _prometheus_exposition(logging_util.snapshot()),
+                "text/plain; version=0.0.4; charset=utf-8",
+            )
         auth = self.headers.get("Authorization", "")
         if not auth.lower().startswith("bearer ") or not hmac.compare_digest(auth[7:].strip(), token):
             return self._json_error(401, "authentication required")
-        return self._send(200, {"metrics": logging_util.snapshot()})
+        return self._send(
+            200,
+            _prometheus_exposition(logging_util.snapshot()),
+            "text/plain; version=0.0.4; charset=utf-8",
+        )
 
-    # SEC-021: Account lockout tracking for failed activations.
-    # Per-IP failure count with automatic lockout after threshold.
-    _ACTIVATE_FAILURES = {}  # ip -> (count, first_failure_time)
+    # SEC-021 / A012: Account lockout tracking persisted to the SQLite kv table
+    # so failure counters survive server restarts.  The kv row's created_at
+    # tracks when the first failure in the current window occurred; the JSON
+    # value carries the running count.  purge_expired already reaps stale kv
+    # rows, so no additional cleanup is needed.
+    #
+    # IMPORTANT: kv_set preserves created_at on UPDATE (ON CONFLICT … DO UPDATE
+    # SET value=excluded.value).  When the window expires we must DELETE the row
+    # before re-inserting, otherwise created_at stays stale and the counter can
+    # never accumulate past the first window.
+    #
+    # E022: Exponential backoff starts at _ACTIVATE_BACKOFF_START failures and
+    # caps at _ACTIVATE_BACKOFF_CAP seconds.  Delay = min(2**(count-3), 30).
+    # This slows brute-force attempts before the hard lockout threshold is hit.
     _ACTIVATE_LOCKOUT_THRESHOLD = 10  # failures before lockout
     _ACTIVATE_LOCKOUT_WINDOW = 900  # 15 minutes
-    _ACTIVATE_LOCKOUT_LOCK = threading.Lock()
+    _ACTIVATE_BACKOFF_START = 3    # exponential backoff begins after this many failures
+    _ACTIVATE_BACKOFF_CAP = 30     # seconds
+
+    @staticmethod
+    def _activate_fail_key(ip: str) -> str:
+        return f"activate_fail:{ip}"
+
+    def _get_activate_failures(self, ip: str) -> int:
+        """Return the current failure count for *ip*, or 0 if absent/expired."""
+        val, created_at = db.kv_get_with_created_at(self._activate_fail_key(ip))
+        if val is None:
+            return 0
+        if time.time() - created_at >= self._ACTIVATE_LOCKOUT_WINDOW:
+            # Window expired — delete so the next insert gets a fresh created_at.
+            self._delete_activate_fail(ip)
+            return 0
+        try:
+            return json.loads(val)["count"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            return 0
+
+    def _record_activate_failure(self, ip: str) -> None:
+        """Increment the failure counter, resetting if the window has expired."""
+        key = self._activate_fail_key(ip)
+        val, created_at = db.kv_get_with_created_at(key)
+        if val is not None and (time.time() - created_at >= self._ACTIVATE_LOCKOUT_WINDOW):
+            # Window expired — delete so kv_set gets a fresh created_at.
+            self._delete_activate_fail(ip)
+            val = None
+
+        if val is None:
+            count = 1
+        else:
+            try:
+                count = json.loads(val)["count"] + 1
+            except (json.JSONDecodeError, KeyError, TypeError):
+                count = 1
+
+        db.kv_set(key, json.dumps({"count": count}))
+
+    def _clear_activate_failures(self, ip: str) -> None:
+        """Clear failure tracking on successful activation."""
+        self._delete_activate_fail(ip)
+
+    def _delete_activate_fail(self, ip: str) -> None:
+        key = self._activate_fail_key(ip)
+        conn = db._write_conn()
+        try:
+            conn.execute("DELETE FROM kv WHERE key=?", (key,))
+            conn.commit()
+        finally:
+            db._return_conn(conn)
 
     def _route_activate(self):
         """SEC-021: Apply account lockout on repeated failed activation attempts.
         After N failed attempts from an IP within the lockout window, reject further
         attempts to prevent brute-force license key guessing."""
+        # E027: reject cross-site requests to this mutation endpoint
+        if not self._check_sec_fetch():
+            return
         if not self._rate_ok(None):
             return
         if not self._require_json():
             return
 
-        # SEC-021: Check lockout status before processing
+        # SEC-021 + A012: Check lockout status before processing (kv-persisted)
         client_ip = self._client_ip()
-        with self._ACTIVATE_LOCKOUT_LOCK:
-            if client_ip in self._ACTIVATE_FAILURES:
-                count, first_time = self._ACTIVATE_FAILURES[client_ip]
-                elapsed = time.time() - first_time
-                if elapsed < self._ACTIVATE_LOCKOUT_WINDOW:
-                    if count >= self._ACTIVATE_LOCKOUT_THRESHOLD:
-                        logging_util.warn(
-                            "activate_lockout",
-                            ip=client_ip[:15],
-                            failures=count,
-                        )
-                        return self._json_error(
-                            429,
-                            "too many failed activation attempts; try again later",
-                        )
-                else:
-                    # Window expired — reset counter
-                    del self._ACTIVATE_FAILURES[client_ip]
+        count = self._get_activate_failures(client_ip)
+        # E022: Check lockout before applying the backoff delay — a locked-out IP should
+        # receive 429 immediately without blocking a worker thread for the full delay.
+        if count >= self._ACTIVATE_LOCKOUT_THRESHOLD:
+            logging_util.warn(
+                "activate_lockout",
+                ip=client_ip[:15],
+                failures=count,
+            )
+            return self._json_error(
+                429,
+                "too many failed activation attempts; try again later",
+            )
+        # E022: Progressive delay after lockout check (exponential backoff).
+        # Skipped in dev/test mode (SYXX_DEV_MODE=1) to keep test suites fast.
+        if count >= self._ACTIVATE_BACKOFF_START and not os.environ.get("SYXX_DEV_MODE"):
+            delay = min(2 ** (count - self._ACTIVATE_BACKOFF_START), self._ACTIVATE_BACKOFF_CAP)
+            time.sleep(delay)
 
         raw = self._body()
         if self._body_error(raw):
@@ -1632,25 +1830,20 @@ class Handler(BaseHTTPRequestHandler):
         key = (payload.get("key") or "").strip()
         if not key:
             return self._json_error(400, "missing license key")
+        # A068: upper length bound — a very long key (up to the 1MB body cap) would
+        # otherwise be constructed into the Keygen API POST verbatim.
+        if len(key) > 256:
+            return self._json_error(400, "license key too long")
         ent, err = licensing.validate_license(key)
         if err:
             return self._json_error(503, err)
         if not ent:
-            # SEC-021: Track failed activation attempts
-            with self._ACTIVATE_LOCKOUT_LOCK:
-                if client_ip in self._ACTIVATE_FAILURES:
-                    count, first_time = self._ACTIVATE_FAILURES[client_ip]
-                    elapsed = time.time() - first_time
-                    if elapsed >= self._ACTIVATE_LOCKOUT_WINDOW:
-                        count = 0  # reset after window
-                    self._ACTIVATE_FAILURES[client_ip] = (count + 1, first_time)
-                else:
-                    self._ACTIVATE_FAILURES[client_ip] = (1, time.time())
+            # SEC-021 + A012: Track failed activation attempts (kv-persisted)
+            self._record_activate_failure(client_ip)
             db.audit(None, "/api/auth/activate", 402, client_ip)
             return self._json_error(402, "invalid or inactive license key")
-        # Success — clear failure counter
-        with self._ACTIVATE_LOCKOUT_LOCK:
-            self._ACTIVATE_FAILURES.pop(client_ip, None)
+        # Success — clear failure counter (A012: delete kv entry)
+        self._clear_activate_failures(client_ip)
         token, exp = licensing.mint_session(ent.subject, ent.plan)
         logging_util.incr("sessions_minted")
         db.audit(ent.subject, "/api/auth/activate", 200, client_ip)
@@ -1663,7 +1856,10 @@ class Handler(BaseHTTPRequestHandler):
         self._send(
             200,
             {"plan": ent.plan, "expiresAt": exp},
-            extra_headers={"Set-Cookie": f"syxx_session={token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age={config.SESSION_TTL}"},
+            extra_headers={
+                "Set-Cookie": f"syxx_session={token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age={config.SESSION_TTL}",
+                "Cache-Control": "no-store",
+            },
         )
 
     # SEC-006: Per-IP daily limit for trial anchor creation.
@@ -1671,6 +1867,39 @@ class Handler(BaseHTTPRequestHandler):
     _TRIAL_ANCHOR_IP_COUNTS = {}  # ip -> (count, day_start_time)
     _TRIAL_ANCHOR_IP_DAILY_LIMIT = 5  # max anchors per IP per day
     _TRIAL_ANCHOR_IP_LOCK = threading.Lock()
+    # A040: cap the IP tracker size to prevent unbounded memory growth.
+    # When the dict exceeds this cap, stale entries from prior days are evicted.
+    _TRIAL_ANCHOR_IP_MAX_ENTRIES = 10_000
+
+    @classmethod
+    def _prune_trial_anchor_ips(cls, day_start: int) -> None:
+        """A040: Evict stale entries when the IP tracker exceeds its cap.
+
+        Called inside _TRIAL_ANCHOR_IP_LOCK — must not re-acquire the lock.
+        First pass removes entries from a prior day (they can never match again).
+        If still over cap, removes the oldest remaining entries until under cap.
+        """
+        if len(cls._TRIAL_ANCHOR_IP_COUNTS) <= cls._TRIAL_ANCHOR_IP_MAX_ENTRIES:
+            return
+        # Pass 1: drop entries whose day_start is stale (before today).
+        stale_keys = [
+            ip
+            for ip, (_, stored_day) in cls._TRIAL_ANCHOR_IP_COUNTS.items()
+            if stored_day < day_start
+        ]
+        for ip in stale_keys:
+            del cls._TRIAL_ANCHOR_IP_COUNTS[ip]
+        # Pass 2: if still over cap, evict oldest entries (by stored day_start,
+        # then by insertion order — dict ordering in Python 3.7+ is insertion order).
+        if len(cls._TRIAL_ANCHOR_IP_COUNTS) > cls._TRIAL_ANCHOR_IP_MAX_ENTRIES:
+            excess = len(cls._TRIAL_ANCHOR_IP_COUNTS) - cls._TRIAL_ANCHOR_IP_MAX_ENTRIES
+            # Sort by stored day ascending so oldest days are removed first.
+            to_remove = sorted(
+                cls._TRIAL_ANCHOR_IP_COUNTS,
+                key=lambda ip: cls._TRIAL_ANCHOR_IP_COUNTS[ip][1],
+            )[:excess]
+            for ip in to_remove:
+                del cls._TRIAL_ANCHOR_IP_COUNTS[ip]
 
     def _route_trial_anchor(self):
         if not self._rate_ok(None):
@@ -1682,6 +1911,8 @@ class Handler(BaseHTTPRequestHandler):
         client_ip = self._client_ip()
         day_start = int(time.time()) // 86400 * 86400  # start of current UTC day
         with self._TRIAL_ANCHOR_IP_LOCK:
+            # A040: prune stale entries before lookup to bound memory.
+            self._prune_trial_anchor_ips(day_start)
             if client_ip in self._TRIAL_ANCHOR_IP_COUNTS:
                 count, stored_day = self._TRIAL_ANCHOR_IP_COUNTS[client_ip]
                 if stored_day == day_start:
@@ -1711,6 +1942,14 @@ class Handler(BaseHTTPRequestHandler):
         fingerprint = (payload.get("fingerprint") or "").strip()
         if not fingerprint:
             return self._json_error(400, "missing fingerprint")
+        # E037: Validate fingerprint format. Fingerprints from the clients are either
+        # UUIDs (e.g. "550e8400-e29b-41d4-a716-446655440000") or hex strings (64 chars
+        # of [0-9a-f]).  Reject anything that does not match these shapes so that
+        # attacker-controlled arbitrary strings cannot pollute the trial-anchor table.
+        # E037-TODO: Add a proof-of-work (PoW) challenge–response to this endpoint to
+        # raise the cost of bulk anchor submissions beyond the per-IP daily rate limit.
+        if not (_UUID_RE.match(fingerprint) or _HEX_RE.match(fingerprint)):
+            return self._json_error(400, "invalid fingerprint format")
 
         now = int(time.time())
         try:
@@ -1780,6 +2019,9 @@ class Handler(BaseHTTPRequestHandler):
         target = (query.get("url", [""])[0]).strip()
         if not target:
             return self._json_error(400, "missing url")
+        # A064: bound the URL length so a 10KB query string cannot pass unchecked.
+        if len(target) > 2048:
+            return self._json_error(400, "url too long")
         try:
             span = _OTEL_TRACER.start_span("server.warp") if _OTEL_TRACER else None
             result = warp.build_baseline(target)
@@ -1788,9 +2030,13 @@ class Handler(BaseHTTPRequestHandler):
             if span:
                 span.end()
         except fetcher.BlockedError as e:
-            return self._json_error(400, f"target blocked: {e}")
+            # A078: log the full error server-side; never echo it (it carries resolved
+            # IPs / internal hostnames) to the API client.
+            logging_util.error("warp_blocked", url=target, err=str(e))
+            return self._json_error(400, "target blocked")
         except fetcher.FetchError as e:
-            return self._json_error(502, f"proxy fetch failed: {e}")
+            logging_util.error("warp_fetch_failed", url=target, err=str(e))
+            return self._json_error(502, "proxy fetch failed")
         db.audit(ent.subject if ent else None, "/warp", 200, self._client_ip())
         self._send(200, result)
 
@@ -1806,6 +2052,9 @@ class Handler(BaseHTTPRequestHandler):
         target = (query.get("url", [""])[0]).strip()
         if not target:
             return self._json_error(400, "missing url")
+        # A064: bound the URL length so a 10KB query string cannot pass unchecked.
+        if len(target) > 2048:
+            return self._json_error(400, "url too long")
 
         # WARP_MANIFEST_V1 §9 diff overlay: ?raw=1 returns the envelope-decoded RAW bytes as
         # application/octet-stream + X-Syxx-Warp-Sha256, bypassing the utf-8-replace text path
@@ -1820,11 +2069,14 @@ class Handler(BaseHTTPRequestHandler):
             except fetcher.BlockedError as e:
                 if span:
                     span.end()
-                return self._json_error(400, f"target blocked: {e}")
+                # A078: log full error server-side; redact from the client body.
+                logging_util.error("warp_raw_blocked", url=target, err=str(e))
+                return self._json_error(400, "target blocked")
             except fetcher.FetchError as e:
                 if span:
                     span.end()
-                return self._json_error(502, f"fetch failed: {e}")
+                logging_util.error("warp_raw_fetch_failed", url=target, err=str(e))
+                return self._json_error(502, "fetch failed")
             sha = hashlib.sha256(raw).hexdigest()
             if span:
                 span.set_attribute("warp.bytes", len(raw))
@@ -1843,9 +2095,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             data, ctype, final = fetcher.fetch(target)
         except fetcher.BlockedError as e:
-            return self._json_error(400, f"target blocked: {e}")
+            # A078: log full error server-side; redact from the client body.
+            logging_util.error("warp_raw_blocked", url=target, err=str(e))
+            return self._json_error(400, "target blocked")
         except fetcher.FetchError as e:
-            return self._json_error(502, f"fetch failed: {e}")
+            logging_util.error("warp_raw_fetch_failed", url=target, err=str(e))
+            return self._json_error(502, "fetch failed")
 
         low = (ctype or "").lower()
         is_text = (
@@ -1915,17 +2170,24 @@ class Handler(BaseHTTPRequestHandler):
         except warp.WarpInconclusive as e:
             if span:
                 span.end()
-            return self._json_error(502, f"manifest inconclusive: {e}")
+            # A078: log full error server-side; redact from the client body.
+            logging_util.error("warp_manifest_inconclusive", url=target, err=str(e))
+            return self._json_error(502, "manifest inconclusive")
         except fetcher.BlockedError as e:
             if span:
                 span.end()
-            return self._json_error(400, f"target blocked: {e}")
+            logging_util.error("warp_manifest_blocked", url=target, err=str(e))
+            return self._json_error(400, "target blocked")
         except fetcher.FetchError as e:
             if span:
                 span.end()
-            return self._json_error(502, f"manifest fetch failed: {e}")
+            logging_util.error("warp_manifest_fetch_failed", url=target, err=str(e))
+            return self._json_error(502, "manifest fetch failed")
         # Serialize the inner manifest ONCE; sign the EXACT transmitted bytes (spec §2). NO JCS,
         # NO re-serialization: json.dumps → UTF-8 → base64 into manifest_b64, sign the decoded bytes.
+        # NFC-normalize all string values (A011) so that NFD/NFC differences in URLs
+        # do not produce different signed bytes across platforms.
+        manifest = _nfc_normalize_strings(manifest)
         manifest_bytes = json.dumps(manifest, separators=(",", ":"), sort_keys=True, ensure_ascii=False).encode("utf-8")
         manifest_b64 = base64.b64encode(manifest_bytes).decode("ascii")
         signature = leak.sign_content(manifest_bytes)
@@ -1934,7 +2196,7 @@ class Handler(BaseHTTPRequestHandler):
         # verifier all use — so server + corpus + pinning agree. It deliberately does NOT reuse
         # leak.collector_key_id() (base64 of the first 8 pubkey bytes), whose scheme is fixed by
         # the leak-attestation protocol and must not change. Derived from the SAME collector key.
-        key_id = base64.b64decode(leak.collector_public_key()).hex()
+        key_id = leak.collector_warp_key_id()
         if span:
             span.set_attribute("warp.assets", len(manifest["assets"]))
             span.end()
@@ -2014,16 +2276,22 @@ class Handler(BaseHTTPRequestHandler):
         if not ok or not self._rate_ok(ent):
             return
         domain = (query.get("domain", [""])[0]).strip()
+        # A066: validate at route level (mirrors _route_authoritative) so the error
+        # message is consistent and garbage never reaches investigate().
+        if not investigate.valid_domain(domain) or len(domain) > 253:
+            return self._json_error(400, "invalid or missing domain")
         span = _OTEL_TRACER.start_span("server.investigate") if _OTEL_TRACER else None
         if span:
-            span.set_attribute("investigate.domain", domain)
+            # A050: only record the domain on the span AFTER validation passes, so
+            # attacker-controlled garbage never lands in the span attribute.
+            span.set_attribute("investigate.domain", _redact_domain(domain))
         result, err = investigate.investigate(domain)
         if span:
             span.end()
         if err:
             return self._json_error(400, err)
         logging_util.incr("investigations")
-        self._send(200, result)
+        self._send(200, result, extra_headers={"Cache-Control": "public, max-age=60"})
 
     def _route_authoritative(self, query):
         """Ground-truth oracle (Workstream S #1): walk root -> TLD -> authoritative for a name and
@@ -2041,7 +2309,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "unsupported type (A, AAAA, NS)")
         span = _OTEL_TRACER.start_span("server.authoritative") if _OTEL_TRACER else None
         if span:
-            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.domain", _redact_domain(domain))
             span.set_attribute("dns.type", qtype_str)
         try:
             # A066: bound the walk with a shared wall-clock deadline.
@@ -2050,18 +2318,28 @@ class Handler(BaseHTTPRequestHandler):
         except resolver.DNSError as e:
             if span:
                 span.set_attribute("error", str(e))
+                # A056: mark the span as errored so the collector does not see
+                # error-path spans as successful.
+                if _OTEL_STATUS_ERROR is not None:
+                    span.set_status(_OTEL_STATUS_ERROR)
                 span.end()
             return self._json_error(502, f"resolution failed: {e}")
         if span:
             span.end()
         result["type"] = qtype_str
         logging_util.incr("authoritative_queries")
-        self._send(200, result)
+        self._send(200, result, extra_headers={"Cache-Control": "public, max-age=60"})
 
     def _route_diff(self, query):
         """Inside/outside diff (Workstream S #2): the app POSTs what IT saw for a name; the server
         returns the authoritative ground truth plus its own clean-vantage recursive answer and an
-        assessment. A divergence the authority does not serve is on-path interception / tampering."""
+        assessment. A divergence the authority does not serve is on-path interception / tampering.
+
+        A024 NOTE: The DNS-answer comparison below (subset → match, disjoint → divergent,
+        intersection → partial) operates on IP address sets.  The content half
+        (_diff_content, called further down) compares script URLs and inline hashes
+        with foreign-host detection.  Different data types, different semantics —
+        intentionally not unified."""
         ent, ok = self._require(query, config.ENFORCE_WEB)
         if not ok or not self._rate_ok(ent):
             return
@@ -2088,22 +2366,38 @@ class Handler(BaseHTTPRequestHandler):
 
         span = _OTEL_TRACER.start_span("server.diff") if _OTEL_TRACER else None
         if span:
-            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.domain", _redact_domain(domain))
             span.set_attribute("dns.type", qtype_str)
         # A038: a resolution failure must surface as inconclusive, not propagate as a crash/500.
-        try:
-            # A066: bound the walk with a shared wall-clock deadline.
-            deadline = time.monotonic() + config.AUTH_WALK_DEADLINE_SECONDS
-            auth = resolver.resolve_authoritative(domain, qtypes[qtype_str], deadline=deadline)
-        except resolver.DNSError:
-            auth = {"conclusion": "unreachable"}
+        # A046: run the authoritative walk and clean-vantage query concurrently
+        # instead of sequentially — they are independent DNS resolutions.
+        deadline = time.monotonic() + config.AUTH_WALK_DEADLINE_SECONDS
+
+        def _auth_walk():
+            return resolver.resolve_authoritative(domain, qtypes[qtype_str], deadline=deadline)
+
+        def _clean_query():
+            return _clean_vantage_answers(domain, qtypes[qtype_str], qtype_str)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            auth_future = pool.submit(_auth_walk)
+            clean_future = pool.submit(_clean_query)
+            deadline_remaining = max(deadline - time.monotonic(), 0.1)
+            try:
+                auth = auth_future.result(timeout=deadline_remaining)
+            except resolver.DNSError:
+                auth = {"conclusion": "unreachable"}
+            except (concurrent.futures.TimeoutError, Exception):
+                auth = {"conclusion": "unreachable"}
+            try:
+                clean_answers = clean_future.result(timeout=deadline_remaining)
+            except resolver.DNSError:
+                # A142 Fix 3: type must match every other path (set, not dict).
+                clean_answers = set()
+            except (concurrent.futures.TimeoutError, Exception):
+                clean_answers = set()
         auth_answers = {a.lower() for a in (auth.get("authoritative") or {}).get("answers", [])}  # type: ignore[unresolved-attribute]
         auth_usable = auth.get("conclusion") == "authoritative" and bool(auth_answers)
-        try:
-            clean_answers = _clean_vantage_answers(domain, qtypes[qtype_str], qtype_str)
-        except resolver.DNSError:
-            # A142 Fix 3: type must match every other path (set, not dict).
-            clean_answers = set()
 
         reference = auth_answers if auth_usable else clean_answers
         if not reference or not local_set:
@@ -2156,7 +2450,7 @@ class Handler(BaseHTTPRequestHandler):
         }
         if content is not None:
             response["content"] = content
-        self._send(200, response)
+        self._send(200, response, extra_headers={"Cache-Control": "no-store"})
 
     def _route_trace(self, query):
         """DNS trace / hierarchy diagnostics (Workstream S #3): surfaces the root->TLD->authoritative
@@ -2173,7 +2467,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "unsupported type (A, AAAA, NS)")
         span = _OTEL_TRACER.start_span("server.trace") if _OTEL_TRACER else None
         if span:
-            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.domain", _redact_domain(domain))
             span.set_attribute("dns.type", qtype_str)
         # A066: bound the walk with a shared wall-clock deadline.
         deadline = time.monotonic() + config.AUTH_WALK_DEADLINE_SECONDS
@@ -2188,6 +2482,10 @@ class Handler(BaseHTTPRequestHandler):
         except resolver.DNSError as e:
             if span:
                 span.set_attribute("error", str(e))
+                # A056: mark the span as errored so the collector does not see
+                # error-path spans as successful.
+                if _OTEL_STATUS_ERROR is not None:
+                    span.set_status(_OTEL_STATUS_ERROR)
                 span.end()
             logging_util.incr("traces")
             return self._send(
@@ -2234,13 +2532,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "unsupported type")
         span = _OTEL_TRACER.start_span("server.baseline") if _OTEL_TRACER else None
         if span:
-            span.set_attribute("dns.domain", domain)
+            span.set_attribute("dns.domain", _redact_domain(domain))
             span.set_attribute("dns.type", rtype or "any")
         result = passivedns.baseline(domain, rtype)
         if span:
             span.end()
         logging_util.incr("baselines")
-        self._send(200, result)
+        self._send(200, result, extra_headers={"Cache-Control": "public, max-age=60"})
 
     def _route_exposure(self, query):
         """Outside-in resolver exposure check (Workstream S #5): tests whether the REQUESTER's own
@@ -2346,7 +2644,7 @@ class Handler(BaseHTTPRequestHandler):
         result = leak.issue_token(ent.subject, zone, origin="license")
         if span:
             span.end()
-        self._send(200, result)
+        self._send(200, result, extra_headers={"Cache-Control": "no-store"})
 
     def _route_leak_verify(self, query):
         ent, ok = self._require(query, config.ENFORCE_WEB)
@@ -2355,6 +2653,10 @@ class Handler(BaseHTTPRequestHandler):
         token = (query.get("token", [""])[0]).strip()
         if not token:
             return self._json_error(400, "missing token")
+        # A067: upper length bound so a very long token cannot traverse the string
+        # ops and DB query path unchecked.
+        if len(token) > 128:
+            return self._json_error(400, "token too long")
         span = _OTEL_TRACER.start_span("server.leak_verify") if _OTEL_TRACER else None
         if span:
             span.set_attribute("leak.token_prefix", token[:8] if len(token) > 8 else token)
@@ -2400,6 +2702,10 @@ class Handler(BaseHTTPRequestHandler):
         token = (query.get("token", [""])[0]).strip()
         if not token:
             return self._json_error(400, "missing token")
+        # A067: upper length bound so a very long token cannot traverse the string
+        # ops and DB query path unchecked.
+        if len(token) > 128:
+            return self._json_error(400, "token too long")
         # A133: check the token's origin BEFORE verifying. The free route must
         # refuse to serve tokens minted by the paid route (origin='license'),
         # which carry PII (resolver IPs) and are one-time. An attacker who sees
@@ -2479,6 +2785,7 @@ class Handler(BaseHTTPRequestHandler):
                 "records": result.get("records", []),
                 "truncated": result.get("truncated", False),
             },
+            extra_headers={"Cache-Control": "public, max-age=60"},
         )
 
     def _route_reverse_dns(self, query):
@@ -2517,7 +2824,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._rate_ok(None):
             return
         domain = (query.get("domain", [""])[0]).strip()
-        if not domain or not investigate.valid_domain(domain):
+        if not domain or not investigate.valid_domain(domain) or len(domain) > 253:
             return self._json_error(400, "missing or invalid domain")
 
         type_str = (query.get("type", ["A"])[0]).strip().upper()
@@ -2629,10 +2936,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             result = whois_lookup.lookup(domain)
         except Exception as e:
-            logging_util.error("whois_failed", domain=domain, err=str(e))
+            logging_util.error("whois_failed", domain=_redact_domain(domain), err=str(e))
             return self._json_error(502, f"WHOIS lookup failed: {e}")
         logging_util.incr("whois_lookups")
-        self._send(200, result)
+        self._send(200, result, extra_headers={"Cache-Control": "public, max-age=60"})
 
     def _route_propagation(self, query):
         """Free-tier DNS propagation checker: query many global resolvers concurrently.
@@ -2747,7 +3054,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             result = email_auth.check(domain, dkim_selector=dkim_selector)
         except Exception as e:
-            logging_util.error("email_auth_failed", domain=domain, err=str(e))
+            logging_util.error("email_auth_failed", domain=_redact_domain(domain), err=str(e))
             return self._json_error(502, f"email auth check failed: {e}")
         logging_util.incr("email_auth_checks")
         self._send(200, result)
@@ -2762,7 +3069,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             result = subdomain_enum.enumerate(domain)
         except Exception as e:
-            logging_util.error("subdomain_enum_failed", domain=domain, err=str(e))
+            logging_util.error("subdomain_enum_failed", domain=_redact_domain(domain), err=str(e))
             return self._json_error(502, f"subdomain enumeration failed: {e}")
         logging_util.incr("subdomain_enumerations")
         self._send(200, result)
@@ -2913,7 +3220,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             result = lookalike.scan(domain, max_permutations=max_perm)
         except Exception as e:
-            logging_util.error("lookalike_failed", domain=domain, err=str(e))
+            logging_util.error("lookalike_failed", domain=_redact_domain(domain), err=str(e))
             return self._json_error(502, f"lookalike scan failed: {e}")
         logging_util.incr("lookalike_scans")
         self._send(200, result)
@@ -3011,7 +3318,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             result = dnssec_validator.validate_chain(domain)
         except Exception as e:
-            logging_util.error("dnssec_validation_failed", domain=domain, err=str(e))
+            logging_util.error("dnssec_validation_failed", domain=_redact_domain(domain), err=str(e))
             return self._json_error(502, f"DNSSEC validation failed: {e}")
         logging_util.incr("dnssec_validations")
         self._send(200, result)
@@ -3348,8 +3655,7 @@ def _start_beta_digest_thread():
         ok = mailer.send(
             config.BETA_DIGEST_TO,
             f"Syxx beta signups — weekly digest ({stamp})",
-            f"Attached: {len(rows)} beta signup(s) as of {stamp} UTC.\n\n"
-            "Automated weekly export from the Syxx server.",
+            f"Attached: {len(rows)} beta signup(s) as of {stamp} UTC.\n\nAutomated weekly export from the Syxx server.",
             attachments=[(f"syxx-beta-signups-{stamp}.csv", "text/csv", _beta_digest_csv(rows))],
         )
         if ok:

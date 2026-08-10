@@ -536,10 +536,21 @@ public enum WarpEngine {
     /// validated — a policy-permitted redirect could bounce the fetch into RFC1918/loopback space).
     /// Fail closed: any non-2xx, any disallowed redirect, or any non-public host → `.failed`.
     static let vantageFetch: @Sendable (WarpAssetRequest) async -> WarpFetchOutcome = { req in
+        // E002: DNS-rebinding defense — enforce HTTPS-only for client-vantage fetches. With TLS,
+        // URLSession's default server-trust validation binds the certificate to the URL hostname
+        // (SNI), so a DNS rebinding that resolves to a private IP on the second lookup fails TLS
+        // (no valid certificate for the original hostname on a private IP). HTTP is forbidden
+        // because it provides no TLS binding and is trivially vulnerable to DNS rebinding.
+        // Combined with the pre-fetch `validatePublicHost` SSRF gate (which resolves DNS and
+        // classifies the initial address as public-routable), this provides defense-in-depth:
+        // the first resolution is checked explicitly, and the TLS certificate prevents the second
+        // resolution from being redirected to a hostile target.
         guard let url = URL(string: req.url), let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https", url.host != nil else {
+              scheme == "https", url.host != nil else {
             return .failed
         }
+        // E006: warn on mixed-script homograph domains (informational, never blocks)
+        if let host = url.host { warnHomograph(host) }
         guard await validatePublicHost(url) else { return .failed }
 
         let delegate = WarpRedirectController(policy: req.redirectPolicy, allowed: Set(req.allowedRedirects))
@@ -578,6 +589,30 @@ public enum WarpEngine {
             return true
         } catch {
             return false
+        }
+    }
+
+    // MARK: - E006 Homograph detection
+
+    /// Cyrillic characters that visually resemble ASCII letters (U+0430–U+0445 range).
+    private static let confusableCyrillic: Set<Character> = Set("асеорхуАСЕОРХУ")
+
+    /// Log a warning if `domain` mixes ASCII and confusable Cyrillic characters.
+    /// E006: informational only — never rejects or blocks the fetch.
+    static func warnHomograph(_ domain: String) {
+        var hasASCII = false
+        var hasNonASCII = false
+        var hasCyrillicConfusable = false
+        for ch in domain {
+            if ch.isASCII {
+                hasASCII = true
+            } else {
+                hasNonASCII = true
+                if confusableCyrillic.contains(ch) { hasCyrillicConfusable = true }
+            }
+        }
+        if hasASCII && hasNonASCII && hasCyrillicConfusable {
+            print("[WarpEngine] E006: possible Unicode homograph domain: \(domain) — mixed ASCII and confusable Cyrillic characters")
         }
     }
 }

@@ -573,17 +573,22 @@ public sealed class LinuxSecretStore : ISecretStore
         bool havePassphrase = !string.IsNullOrEmpty(passphrase);
         if (!havePassphrase)
         {
-            SyxxDiagnostics.Breadcrumb(
-                category: "keystore.kdf",
-                message: "Keystore key derived WITHOUT a user passphrase — machine material only. "
-                       + "Anyone who obtains the keystore file and can read this machine's identifiers "
-                       + "can reproduce the key.",
-                level: DiagnosticSeverity.Warning,
-                data: new Dictionary<string, string>
-                {
-                    ["machineSources"] = machineSources.ToString(CultureInfo.InvariantCulture),
-                    ["kdf"] = "argon2id",
-                });
+            // E016: breadcrumb wrapped in try/catch — must not replace the original exception path.
+            try
+            {
+                SyxxDiagnostics.Breadcrumb(
+                    category: "keystore.kdf",
+                    message: "Keystore key derived WITHOUT a user passphrase — machine material only. "
+                           + "Anyone who obtains the keystore file and can read this machine's identifiers "
+                           + "can reproduce the key.",
+                    level: DiagnosticSeverity.Warning,
+                    data: new Dictionary<string, string>
+                    {
+                        ["machineSources"] = machineSources.ToString(CultureInfo.InvariantCulture),
+                        ["kdf"] = "argon2id",
+                    });
+            }
+            catch { /* E016: breadcrumb infrastructure must not mask the KDF path */ }
         }
         else if (machineSources == 0)
         {
@@ -593,12 +598,17 @@ public sealed class LinuxSecretStore : ISecretStore
 
         if (!havePassphrase && machineSources == 0)
         {
-            SyxxDiagnostics.Breadcrumb(
-                category: "keystore.kdf",
-                message: "Keystore key derived from the hostname alone — no passphrase and no machine "
-                       + "identifier was readable. This is the weakest state this store has.",
-                level: DiagnosticSeverity.Error,
-                data: new Dictionary<string, string> { ["kdf"] = "argon2id" });
+            // E016: breadcrumb wrapped in try/catch — must not replace the original exception path.
+            try
+            {
+                SyxxDiagnostics.Breadcrumb(
+                    category: "keystore.kdf",
+                    message: "Keystore key derived from the hostname alone — no passphrase and no machine "
+                           + "identifier was readable. This is the weakest state this store has.",
+                    level: DiagnosticSeverity.Error,
+                    data: new Dictionary<string, string> { ["kdf"] = "argon2id" });
+            }
+            catch { /* E016: breadcrumb infrastructure must not mask the KDF path */ }
         }
 
         // The passphrase leads, so it dominates the first block of the derivation; the machine
@@ -958,15 +968,24 @@ public sealed class LinuxSecretStore : ISecretStore
     /// <summary>Records a degradation without ever carrying the material that degraded. Exception
     /// TYPE only — an exception message on this path can hold a path under the user's home
     /// directory, which SyxxDiagnostics forbids.</summary>
+    /// <remarks>E016: wrapped in try/catch — a breadcrumb failure must never replace the original
+    /// exception that triggered the breadcrumb call.</remarks>
     private static void Breadcrumb(string message, Exception? ex = null)
     {
-        var data = new Dictionary<string, string>();
-        if (ex is not null) data["error"] = ex.GetType().Name;
-        SyxxDiagnostics.Breadcrumb(
-            category: "keystore",
-            message: message,
-            level: DiagnosticSeverity.Warning,
-            data: data);
+        try
+        {
+            var data = new Dictionary<string, string>();
+            if (ex is not null) data["error"] = ex.GetType().Name;
+            SyxxDiagnostics.Breadcrumb(
+                category: "keystore",
+                message: message,
+                level: DiagnosticSeverity.Warning,
+                data: data);
+        }
+        catch
+        {
+            // E016: breadcrumb infrastructure must not mask the original error path.
+        }
     }
 
     // ── libsecret P/Invoke backend (primary) ──────────────────────────────────────
@@ -1434,12 +1453,17 @@ public sealed class LinuxSecretStore : ISecretStore
             _searchUsable = outcome == RawSearchOutcome.Empty;
             if (_searchUsable == false)
             {
-                SyxxDiagnostics.Breadcrumb(
-                    category: "keystore.libsecret",
-                    message: "libsecret search binding failed its control probe and will not be used "
-                           + "to answer key presence; this backend reports Unknown instead.",
-                    level: DiagnosticSeverity.Warning,
-                    data: new Dictionary<string, string> { ["outcome"] = outcome.ToString() });
+                // E016: breadcrumb wrapped in try/catch — must not mask the search-capability result.
+                try
+                {
+                    SyxxDiagnostics.Breadcrumb(
+                        category: "keystore.libsecret",
+                        message: "libsecret search binding failed its control probe and will not be used "
+                               + "to answer key presence; this backend reports Unknown instead.",
+                        level: DiagnosticSeverity.Warning,
+                        data: new Dictionary<string, string> { ["outcome"] = outcome.ToString() });
+                }
+                catch { /* E016: breadcrumb infrastructure must not replace the capability probe result */ }
             }
             return _searchUsable.Value;
         }

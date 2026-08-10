@@ -12,6 +12,7 @@ Nothing here activates until the STRIPE_* env vars are set (see config.py).
 import base64
 import hashlib
 import hmac
+import http.client
 import json
 import os
 import ssl
@@ -81,73 +82,65 @@ def _verify_spki_pin(sock: ssl.SSLSocket, host: str) -> None:
 
 
 def _extract_spki_sha256_b64(der_cert: bytes) -> str:
-    """Extract the SubjectPublicKeyInfo from a DER-encoded X.509 certificate
+    """E036: Extract the SubjectPublicKeyInfo from a DER-encoded X.509 certificate
     and return its SHA-256 hash, base64-encoded.
 
-    Parses the minimal ASN.1 structure needed: Certificate → TBSCertificate →
-    subjectPublicKeyInfo (field index 6, zero-based)."""
+    Uses the ``cryptography`` library (declared dependency — see requirements.txt)
+    instead of a hand-rolled ASN.1 DER parser. The previous custom parser was
+    fragile: any unexpected tag or encoding variant silently returned '', causing
+    pin checks to fail-closed without a useful diagnostic. The library handles
+    the full X.509 grammar and raises typed exceptions on malformed input.
+    """
     try:
-        # Certificate is SEQUENCE { tbsCertificate, signatureAlgorithm, signature }
-        # TBSCertificate is SEQUENCE { version, serialNumber, signature, issuer,
-        #                              validity, subject, subjectPublicKeyInfo, ... }
-        # We need to navigate the DER structure to find subjectPublicKeyInfo.
-        offset = 0
+        from cryptography.hazmat.primitives.serialization import (  # type: ignore[unresolved-import]
+            Encoding,
+            PublicFormat,
+        )
+        from cryptography.x509 import load_der_x509_certificate  # type: ignore[unresolved-import]
 
-        def _read_tag_length(data: bytes, pos: int) -> tuple[int, int, int]:
-            """Read DER tag and length. Returns (tag, content_offset, content_length)."""
-            tag = data[pos]
-            pos += 1
-            if data[pos] & 0x80:
-                num_len_bytes = data[pos] & 0x7F
-                pos += 1
-                length = int.from_bytes(data[pos : pos + num_len_bytes], "big")
-                pos += num_len_bytes
-            else:
-                length = data[pos]
-                pos += 1
-            return tag, pos, length
-
-        # Certificate SEQUENCE
-        _, cert_start, _ = _read_tag_length(der_cert, offset)
-        # TBSCertificate SEQUENCE
-        _, tbs_start, _ = _read_tag_length(der_cert, cert_start)
-
-        # Walk through TBSCertificate fields to reach subjectPublicKeyInfo (index 6)
-        pos = tbs_start
-        # version [0] EXPLICIT (optional)
-        if der_cert[pos] == 0xA0:
-            _, pos, ver_len = _read_tag_length(der_cert, pos)
-            pos += ver_len
-        # serialNumber INTEGER
-        _, pos, serial_len = _read_tag_length(der_cert, pos)
-        pos += serial_len
-        # signature AlgorithmIdentifier
-        _, pos, sig_len = _read_tag_length(der_cert, pos)
-        pos += sig_len
-        # issuer Name
-        _, pos, issuer_len = _read_tag_length(der_cert, pos)
-        pos += issuer_len
-        # validity SEQUENCE
-        _, pos, validity_len = _read_tag_length(der_cert, pos)
-        pos += validity_len
-        # subject Name
-        _, pos, subject_len = _read_tag_length(der_cert, pos)
-        pos += subject_len
-        # subjectPublicKeyInfo SEQUENCE — this is what we want
-        _ = der_cert[pos]
-        spki_start, spki_content_start, spki_len = _read_tag_length(der_cert, pos)
-        # Include the tag+length bytes in the hash (standard SPKI pinning practice)
-        spki_bytes = der_cert[spki_start : spki_content_start + spki_len]
-
+        cert = load_der_x509_certificate(der_cert)
+        # public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo) produces
+        # exactly the subjectPublicKeyInfo DER blob (tag + length + value) that
+        # SPKI pinning hashes — identical to what the old manual parser extracted.
+        spki_bytes = cert.public_key().public_bytes(
+            Encoding.DER, PublicFormat.SubjectPublicKeyInfo
+        )
         return base64.b64encode(hashlib.sha256(spki_bytes).digest()).decode("ascii")
     except Exception:
-        # If DER parsing fails, return a value that won't match any pin.
-        # This causes the pin check to fail, which is the safe default.
+        # If parsing fails, return a value that won't match any pin.
+        # This causes the pin check to fail closed, which is the safe default.
         return ""
 
 
 class StripeError(Exception):
     pass
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """E226: after the TLS handshake succeeds, verify Stripe's SPKI pin on the
+    established SSLSocket BEFORE any request bytes are sent. No-op when
+    SYXX_STRIPE_PIN_SPKI is unset (_verify_spki_pin returns immediately)."""
+
+    def connect(self):
+        super().connect()
+        _verify_spki_pin(self.sock, self.host)
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    """E226: HTTPS handler wired to _PinnedHTTPSConnection so the SPKI pin check
+    runs on every Stripe API request."""
+
+    def https_open(self, req):
+        return self.do_open(
+            _PinnedHTTPSConnection,
+            req,
+            context=self._context,
+            check_hostname=self._check_hostname,
+        )
+
+
+# SEC-008: pinned TLS context + E226 SPKI pin check for all Stripe API calls.
+_STRIPE_OPENER = urllib.request.build_opener(_PinnedHTTPSHandler(context=_STRIPE_SSL_CONTEXT))
 
 
 def _request(path, method, params=None, idempotency_key=None):
@@ -171,8 +164,11 @@ def _request(path, method, params=None, idempotency_key=None):
     if idempotency_key:
         req.add_header("Idempotency-Key", idempotency_key)  # safe retries (Stripe API reference)
     try:
-        # SEC-008: Use pinned SSL context for Stripe API calls
-        with urllib.request.urlopen(req, timeout=15, context=_STRIPE_SSL_CONTEXT) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
+        # SEC-008: Use pinned SSL context for Stripe API calls. E226: the SPKI pin
+        # check runs inside _PinnedHTTPSConnection.connect(), right after the TLS
+        # handshake and before the request is sent; a mismatch raises StripeError,
+        # failing closed (aborting the request). No-op when no pins are configured.
+        with _STRIPE_OPENER.open(req, timeout=15) as r:  # noqa: S310 — URL is operator config (KEYGEN_BASE_URL / Stripe), never user input
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         detail = ""

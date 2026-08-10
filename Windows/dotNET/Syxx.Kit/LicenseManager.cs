@@ -1,3 +1,15 @@
+// E018 — Key algorithm used by this file:
+//   Windows/Linux client uses P-256 (NIST secp256r1) ECDSA for Keygen.sh
+//   response signature verification, via .NET's ECDsa with
+//   DSASignatureFormat.Rfc3279DerSequence.  The pinned public key is a 91-byte
+//   SubjectPublicKeyInfo DER blob (hex-encoded).
+//
+//   Cross-platform note: the Server (licensing.py) uses Ed25519 for the same
+//   purpose — Keygen.sh offers both Ed25519 (server-to-server, higher perf)
+//   and P-256 (client SDKs with platform-native crypto).  Both provide
+//   equivalent forgery protection.  See licensing.py module docstring for the
+//   full algorithm summary.
+
 using System.Globalization;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -609,8 +621,9 @@ namespace Syxx.Kit
                     byte[] resBytes = await response.Content.ReadAsByteArrayAsync();
                     string resJson = Encoding.UTF8.GetString(resBytes);
                     var validation = JsonSerializer.Deserialize<KeygenValidationResponse>(resJson);
-                    // D066: verify the Ed25519 response signature before trusting meta.valid.
-                    // An unverified meta.valid is indistinguishable from a forged body.
+                    // D066 (E018): verify the P-256 ECDSA response signature before
+                    // trusting meta.valid. An unverified meta.valid is indistinguishable
+                    // from a forged body.
                     if (validation?.Meta.Valid == true)
                     {
                         string requestPath = $"/v1/accounts/{accountID}/licenses/actions/validate-key";

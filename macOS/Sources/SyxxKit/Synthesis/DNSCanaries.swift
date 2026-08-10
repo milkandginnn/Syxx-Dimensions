@@ -56,7 +56,7 @@ public enum DNSCanaries {
         let r1 = await DNSResolver.queryUDPDetailed(DNSQuery(name: n1, type: 1, server: resolver))
         let r2 = await DNSResolver.queryUDPDetailed(DNSQuery(name: n2, type: 1, server: resolver))
 
-        if r1.didFail && r2.didFail {
+        if r1.didNotSucceed && r2.didNotSucceed {
             return CanaryResult(section: .prophet, status: .invalidated, evidence: nil,
                 detail: "NXDOMAIN canary could not reach the resolver (\(r1.status.rawValue)/\(r2.status.rawValue)).")
         }

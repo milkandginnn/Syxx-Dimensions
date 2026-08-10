@@ -812,6 +812,9 @@ public sealed class MatrixDeterminativeEngine
     /// The exclusionary strength at or above which an exclusionary/`Excludes` observation is
     /// treated as "firing" (hard exclusion / strong contradiction).
     private const double ExclusionFiringThreshold = 0.5;
+    /// Minimum quality an observation must have to trigger hard exclusion (Swift parity: B028).
+    /// A low-quality observation cannot fire a hard exclusion.
+    private const double ExclusionQualityFloor = 0.5;
     /// Raw-support floor above which a gated / below-tier threat diagnosis is considered an
     /// "honesty overhang" that must forbid a `Clean` result and force `Inconclusive`. Compared
     /// against `RawScore.ObservedSupport` (quality-independent) at BOTH the admission gate and the
@@ -867,15 +870,28 @@ public sealed class MatrixDeterminativeEngine
             raws[d.Id] = ComputeRawScore(d, indicatorById, sectionById);
         }
 
-        // Pass 2: margins (need cross-diagnosis strengths). Competitors exclude self and any
-        // explicitly-allowed co-occurrence.
+        // B030 (B159): pre-compute emittable diagnosis IDs before Pass 2.
+        // A gated or hard-excluded diagnosis must not suppress its competitors —
+        // it cannot itself win, so including it inflates CompetitorBestStrength
+        // and unfairly caps the margin of legitimate diagnoses.
+        var emittableIds = new HashSet<DiagnosisId>(
+            Spec.Diagnoses
+                .Where(d => raws.TryGetValue(d.Id, out var r) && r.Gate is null && r.HardExclusion is null)
+                .Select(d => d.Id)
+        );
+
+        // Pass 2: margins (need cross-diagnosis strengths). Competitors exclude self, CleanId,
+        // any explicitly-allowed co-occurrence, and any non-emittable (gated/hard-excluded) diagnosis.
         double CompetitorBestStrength(DiagnosisSpec d)
         {
             var allowed = new HashSet<DiagnosisId>(d.AllowedCooccurrenceWith);
             var best = 0.0;
             foreach (var other in Spec.Diagnoses)
             {
-                if (other.Id == d.Id || allowed.Contains(other.Id)) { continue; }
+                // B031: skip CleanId — it is a sentinel, not a threat.
+                // B030: skip non-emittable diagnoses — gated/excluded entries cannot win,
+                //       so they must not suppress legitimate competitors' margins.
+                if (other.Id == d.Id || other.Id == CleanId || allowed.Contains(other.Id) || !emittableIds.Contains(other.Id)) { continue; }
                 best = Math.Max(best, raws.TryGetValue(other.Id, out var r) ? r.Strength : 0);
             }
             return best;
@@ -990,10 +1006,30 @@ public sealed class MatrixDeterminativeEngine
                                      IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
                                      IReadOnlyDictionary<SectionId, SectionResult> sectionById)
     {
-        var r = new RawScore();
-
         var supportRules = d.Rules.Where(x => x.Polarity == IndicatorPolarity.Supports).ToList();
         var excludeRules = d.Rules.Where(x => x.Polarity == IndicatorPolarity.Excludes).ToList();
+
+        var (r, observedSupportWeight, alignedSupport, contradictionMass) =
+            CalculateCoverageAndFit(d, supportRules, indicatorById, sectionById);
+        
+        contradictionMass += CalculateExclusionContradiction(excludeRules, indicatorById, sectionById);
+        
+        ApplyThresholds(r, observedSupportWeight, alignedSupport, contradictionMass);
+        
+        CheckHardExclusion(d, r, indicatorById, sectionById);
+        
+        CheckRequiredSectionGates(d, r, sectionById);
+
+        return r;
+    }
+
+    private (RawScore r, double observedSupportWeight, double alignedSupport, double contradictionMass)
+        CalculateCoverageAndFit(DiagnosisSpec d,
+                                List<DiagnosisIndicatorRule> supportRules,
+                                IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
+                                IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
+        var r = new RawScore();
 
         // B156: normalise coverage over *mappable* indicator weight only. Rules referencing
         // unmappable indicators (those with no EvidenceId mapping) are permanent dead weight in
@@ -1012,22 +1048,32 @@ public sealed class MatrixDeterminativeEngine
         foreach (var rule in supportRules)
         {
             if (!indicatorById.TryGetValue(rule.IndicatorId, out var obs) || obs.ObservedStrength is not { } s) { continue; }
-            observedSupportWeight += rule.Weight;
             var alignment = rule.ExpectedStrength > 0 ? Math.Min(1.0, s / rule.ExpectedStrength) : s;
             var aligned = Math.Pow(alignment, rule.DecayExponent);
+
+            // B026: non-usable sections contribute to observedSupport only (overhang measure),
+            // not to scoring metrics. Twin of MatrixDeterminativeEngine.swift:840-843.
+            if (sectionById.TryGetValue(obs.Section, out var producing) && !producing.Status.IsUsable())
+            {
+                observedSupportWeight += rule.Weight;
+                r.ObservedSupport += rule.Weight * aligned;
+                continue;
+            }
+
+            observedSupportWeight += rule.Weight;
             var effective = aligned * Clamp01(obs.Quality);
             var contribution = rule.Weight * effective;
             if (obs.Contradictory)
             {
-                // A supporting indicator observed to contradict → attenuates fit, adds contradiction.
-                contradictionMass += contribution;
+                // A contradictory indicator still contributes to support at half weight
+                // (bounded attenuation), and adds contradiction mass at half weight.
+                // It can attenuate, never silently zero. Twin of MatrixDeterminativeEngine.swift:850-858.
+                alignedSupport += contribution * 0.5;
+                contradictionMass += contribution * 0.5;
             }
             else
             {
                 alignedSupport += contribution;
-                // Quality-independent: the observation FIRED; thin-section attenuation must not
-                // erase it from the overhang-admission measure (C062/C065).
-                r.ObservedSupport += rule.Weight * aligned;
                 if (effective > 0)
                 {
                     groups.Add(rule.IndependenceGroup);
@@ -1036,38 +1082,71 @@ public sealed class MatrixDeterminativeEngine
                     if (rule.EvidenceClass == EvidenceClass.Major) { r.MajorCount += 1; }
                 }
             }
+            // Quality-independent: the observation FIRED; thin-section attenuation must not
+            // erase it from the overhang-admission measure (C062/C065). Twin of swift:860-862.
+            r.ObservedSupport += rule.Weight * aligned;
         }
 
+        r.Coverage = totalSupportWeight > 0 ? Clamp01(observedSupportWeight / totalSupportWeight) : 0;
+        r.Fit = observedSupportWeight > 0 ? Clamp01(alignedSupport / observedSupportWeight) : 0;
+        r.IndependentGroups = groups.Count;
+
+        return (r, observedSupportWeight, alignedSupport, contradictionMass);
+    }
+
+    private double CalculateExclusionContradiction(List<DiagnosisIndicatorRule> excludeRules,
+                                                    IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
+                                                    IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
+        var contradictionMass = 0.0;
+        
         // Exclude-polarity rules: firing observations add strong contradiction.
         foreach (var rule in excludeRules)
         {
             if (!indicatorById.TryGetValue(rule.IndicatorId, out var obs) || obs.ObservedStrength is not { } s
                 || obs.Contradictory) { continue; }
+            if (!sectionById.TryGetValue(obs.Section, out var producingExcl) || !producingExcl.Status.IsUsable()) { continue; }
             var alignment = rule.ExpectedStrength > 0 ? Math.Min(1.0, s / rule.ExpectedStrength) : s;
             var effective = Math.Pow(alignment, rule.DecayExponent) * Clamp01(obs.Quality);
             contradictionMass += rule.Weight * effective;
         }
 
+        return contradictionMass;
+    }
+
+    private void ApplyThresholds(RawScore r, double observedSupportWeight, double alignedSupport, double contradictionMass)
+    {
         r.RawSupport = alignedSupport;
-        r.Coverage = totalSupportWeight > 0 ? Clamp01(observedSupportWeight / totalSupportWeight) : 0;
-        r.Fit = observedSupportWeight > 0 ? Clamp01(alignedSupport / observedSupportWeight) : 0;
         // Contradiction normalised against the support it competes with (bounded, never > 1).
         r.Contradiction = Clamp01(contradictionMass / (contradictionMass + observedSupportWeight + 1e-9));
         r.Strength = r.Fit * r.Coverage;
-        r.IndependentGroups = groups.Count;
+    }
 
+    private void CheckHardExclusion(DiagnosisSpec d, RawScore r,
+                                     IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
+                                     IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
         // Hard exclusion: a listed exclusionary indicator observed as firing and non-contradictory.
         foreach (var exId in d.ExclusionaryIndicators)
         {
             if (indicatorById.TryGetValue(exId, out var obs) && obs.ObservedStrength is { } s
-                && !obs.Contradictory && s >= ExclusionFiringThreshold)
+                && !obs.Contradictory && s >= ExclusionFiringThreshold
+                && Clamp01(obs.Quality) >= ExclusionQualityFloor
+                && sectionById.TryGetValue(obs.Section, out var exSection) && exSection.Status.IsUsable())
             {
                 r.HardExclusion = exId;
                 break;
             }
         }
+    }
 
+    private void CheckRequiredSectionGates(DiagnosisSpec d, RawScore r,
+                                            IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
         // Required-section hard gate (fail-closed).
+        // B166: when hardGateOnMissingRequiredSections is false, continue checking remaining
+        // required sections rather than stopping — the invalidated/unusable checks below are
+        // governed by independent flags. Twin of MatrixDeterminativeEngine.swift:938-958.
         foreach (var reqSection in d.RequiredSections)
         {
             if (!sectionById.TryGetValue(reqSection, out var section))
@@ -1076,8 +1155,9 @@ public sealed class MatrixDeterminativeEngine
                 {
                     r.Gate = new GateInfo(SuppressedDiagnosis.SuppressionReason.MissingRequiredSection,
                                           $"Required section '{reqSection.Value}' did not run.");
+                    break;
                 }
-                break;
+                continue;
             }
             if (section.Status == EvidenceUsability.Invalidated && Spec.Thresholds.FailClosedOnInvalidatedRequiredSections)
             {
@@ -1087,13 +1167,15 @@ public sealed class MatrixDeterminativeEngine
             }
             if (!section.Status.IsUsable())
             {
-                r.Gate = new GateInfo(SuppressedDiagnosis.SuppressionReason.MissingRequiredSection,
-                                      $"Required section '{reqSection.Value}' produced no usable output ({section.Status.RawValue()}).");
-                break;
+                if (Spec.Thresholds.HardGateOnMissingRequiredSections)
+                {
+                    r.Gate = new GateInfo(SuppressedDiagnosis.SuppressionReason.MissingRequiredSection,
+                                          $"Required section '{reqSection.Value}' produced no usable output ({section.Status.RawValue()}).");
+                    break;
+                }
+                continue;
             }
         }
-
-        return r;
     }
 
     // MARK: Tiering
@@ -1190,8 +1272,11 @@ public sealed class MatrixDeterminativeEngine
         // (`RawSupport` = un-attenuated observed support), never `RawStrength` (fit·coverage) —
         // the hard gate that suppressed the threat is precisely what crushes coverage, so a
         // strength-based floor here would let `Clean` ride over an unverified threat signal.
+        // B163 parity (C006): hardExcluded entries stay in the overhang — a degraded exclusion
+        // must not license a clean result. Mirrors the Swift overhang over the full `suppressed`;
+        // only the display-side nearFloor breadcrumb below keeps them out.
         var overhang = suppressed
-            .Where(s => s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded && s.RawSupport >= OverhangFloor)
+            .Where(s => s.RawSupport >= OverhangFloor)
             .ToList();
         // B298: diagnostic breadcrumb for signals just below the floor (0.20–0.30 range).
         // These are suppressed but may indicate legitimate below-tier signals worth reviewing.

@@ -34,11 +34,18 @@ enum ProbeRace<Output: Sendable>: Sendable {
 /// `deadline` = the per-probe timeout fired.
 /// `transportError` = the operation threw.
 /// `produced` = the operation returned a value (which may itself be nil for Optional outputs).
+/// `noResult` = the operation ran to completion and deliberately returned nil (B046) — a
+/// legitimate "not applicable" answer, NOT a network failure. Downstream consumers that retry
+/// on `.transportError` must not retry a deliberate nil.
 public enum ProbeOutcome<Output: Sendable>: Sendable {
     case produced(Output)
     case untested(reason: String)
     case deadline
     case transportError(String?)
+    /// B046: the operation completed and returned nil on purpose (e.g. a probe that chose not
+    /// to run for a given vantage). Distinct from `.transportError` so "not applicable" is
+    /// never conflated with "network failure".
+    case noResult(String?)
 
     /// Extracts the produced value, or nil for any non-produced outcome.
     public var value: Output? {
@@ -274,14 +281,14 @@ public enum ProbeRunner {
                 if let value {
                     return .produced(value)
                 } else {
-                    // C066: the operation returned nil. For Optional Output types this is a
+                    // B046: the operation returned nil. For Optional Output types this is a
                     // valid result (the probe chose to return nil); for non-Optional types
                     // this shouldn't happen. Either way, the span records the observation
-                    // and the outcome is transportError so callers can distinguish it from
-                    // a produced non-nil value.
+                    // and the outcome is noResult — a deliberate "not applicable", never a
+                    // transportError that downstream retry logic would act on.
                     span.setAttribute(key: "probe.result", value: "operation_returned_nil")
                     SyxxTracer.setOutcome(span, .unclassified, reason: "operation_returned_nil")
-                    return .transportError("operation_returned_nil")
+                    return .noResult("operation_returned_nil")
                 }
             case .deadline:
                 span.setAttribute(key: "probe.result", value: "probe_deadline")

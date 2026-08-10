@@ -80,7 +80,7 @@ public enum VersionBindProbe {
 
     /// Pure classification over an already-fetched response (offline-testable).
     public static func classify(response: DNSResponse, server: String, expectedPublicResolver: Bool) -> VersionBindResult {
-        if response.didFail {
+        if response.didNotSucceed {
             return VersionBindResult(status: .untested, server: server,
                 detail: "the CHAOS version.bind query got no usable response (\(response.status.rawValue)) — resolver/path unreachable; no fingerprint obtained")
         }

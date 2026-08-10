@@ -1,0 +1,2978 @@
+{
+  "timestamp": "2026-08-10T06:15:00.888944+00:00",
+  "mode": "auto",
+  "auto_mapping": {
+    "A": "FIX NOW",
+    "B": "FIX NEXT",
+    "C": "FIX NOW",
+    "D": "DEFER",
+    "E": "FIX NEXT",
+    "F": "DEFER"
+  },
+  "merges_applied": [
+    {
+      "merge_into": "A003",
+      "merge_from": [
+        "A006"
+      ],
+      "reason": "A006 description incorrect; actual issue covered by A003"
+    },
+    {
+      "merge_into": "D009",
+      "merge_from": [
+        "D052"
+      ],
+      "reason": "D052 is duplicate of D009"
+    },
+    {
+      "merge_into": "D023",
+      "merge_from": [
+        "D037"
+      ],
+      "reason": "D037 near-duplicate of D023"
+    },
+    {
+      "merge_into": "D054",
+      "merge_from": [
+        "D072"
+      ],
+      "reason": "Same root cause"
+    },
+    {
+      "merge_into": "D120",
+      "merge_from": [
+        "D144"
+      ],
+      "reason": "Duplicate"
+    },
+    {
+      "merge_into": "B002",
+      "merge_from": [
+        "B020"
+      ],
+      "reason": "B020 overlaps B002 significantly"
+    }
+  ],
+  "decisions": [
+    {
+      "delta_id": "A001",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A002",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A003",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A004",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A005",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A006",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority (description needs revision: Python 3 str.lower() is NOT locale-sensitive. Description incorrect \u2014 actual issue is IDN normalization, covered by A002/A003. Consider merging.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A007",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A008",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A009",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A010",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A011",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A012",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A013",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A014",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority (description needs revision: Line numbers moved from 986-998 to 956-998. backup() has try/finally but tmp file cleanup only on success path.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A015",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A016",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A017",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A018",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A019",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A020",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A021",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A022",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A023",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A024",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A025",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A026",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A027",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A028",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A029",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A030",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A031",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A032",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A033",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A034",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A035",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A036",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A037",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A038",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A039",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A040",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A041",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A042",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A043",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A044",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A045",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A046",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A047",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A048",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A049",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A050",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A051",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A052",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A053",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A054",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A055",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A056",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A057",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A058",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A059",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A060",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A061",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A062",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A063",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A064",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A065",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A066",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A067",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A068",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A069",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A070",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A071",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A072",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A073",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A074",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A075",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A076",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A077",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A078",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A079",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A080",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A081",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A082",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A083",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "A084",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B001",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B002",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: Quarantine has 42 files not 44. Method count 208 not independently verified. Overlaps B020.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B003",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B004",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B005",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B006",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B007",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B008",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B009",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: ThresholdProfile init has 13 parameters not 14.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B010",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B011",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B012",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B013",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B014",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B015",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B016",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B017",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B018",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B019",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B020",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: File count is 42 not 44. Overlaps B002 significantly.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B021",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B022",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B023",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B024",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B025",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: O(n\u00b2) at current scale (6 diagnoses) is negligible. Performance optimization, not detection defect. Consider reclassifying to F-domain.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B026",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B027",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B028",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B029",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B030",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B031",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B032",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B033",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: Fix needs refinement: consider splitting into didFail (transport) and didNotResolve (includes RCODE errors).)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B034",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B035",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B036",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B037",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B038",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B039",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B040",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B041",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B042",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B043",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B044",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B045",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B046",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B047",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "B048",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C001",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority (description needs revision: Line number 121 is stale \u2014 actual code at line 136.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C002",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C003",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C004",
+      "decision": "CLOSE",
+      "reason": "Explicitly marked as DUPLICATE to B010.",
+      "rationale": "Duplicate or invalid delta",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C005",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C006",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C007",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C008",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C009",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C010",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C011",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C012",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "C013",
+      "decision": "FIX NOW",
+      "rationale": "Critical domain \u2014 auto-assigned highest priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D001",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Backward-compat boolean \u2014 add deprecation notice before removing.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D002",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D003",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D004",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D005",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D006",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D007",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Latent inconsistency, not a bug. Very low priority.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D008",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Count is 14 files, not 23. Fix description needs correction.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D009",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D010",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D011",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D012",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D013",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D014",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D015",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D016",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D017",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D018",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D019",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D020",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D021",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D022",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D023",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D024",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: global.json exists at Windows/ level. Fix should acknowledge.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D025",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D026",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D027",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D028",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D029",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D030",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D031",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D032",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D033",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D034",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D035",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D036",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D037",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Near-duplicate of D023. Should be merged.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D038",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D039",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D040",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D041",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D042",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D043",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D044",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D045",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D046",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D047",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D048",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D049",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D050",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D051",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D052",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Duplicate of D009. Should be merged.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D053",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D054",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D055",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D056",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D057",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D058",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D059",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D060",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D061",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D062",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D063",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D064",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D065",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D066",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D067",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: 'Regardless' framing overstates \u2014 adapters handle nil gracefully.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D068",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: 'Codable' claim inaccurate \u2014 SectionInputs is not Codable.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D069",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D070",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D071",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D072",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Same root cause as D054. Should be merged.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D073",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D074",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D075",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D076",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D077",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D078",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D079",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D080",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D081",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D082",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D083",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D084",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D085",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D086",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D087",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D088",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D089",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D090",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D091",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D092",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D093",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D094",
+      "decision": "CLOSE",
+      "reason": "SyxxDiagnostics uses Volatile.Read correctly. Defect does not match current code.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D095",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D096",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D097",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D098",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D099",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D100",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D101",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D102",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D103",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D104",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D105",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Inconclusive may be correct behavior. Needs clarification.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D106",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D107",
+      "decision": "CLOSE",
+      "reason": "GluttonView.xaml.cs correctly hides NoProbesText when ProbeRows.Count > 0.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D108",
+      "decision": "CLOSE",
+      "reason": "SettingsView.xaml contains CrashReportingToggle with Toggled handler.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D109",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Fire-and-forget in OnNavigatedTo, not constructor. Fix location update.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D110",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D111",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D112",
+      "decision": "CLOSE",
+      "reason": "WitnessView uses direct Click handlers, not CommunityToolkit RelayCommand.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D113",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: No 'sudo' on Windows. Delta description needs correction.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D114",
+      "decision": "CLOSE",
+      "reason": "WhatsNewViewModel sets IsFromCache in both paths, not just fallback.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D115",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D116",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D117",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D118",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D119",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D120",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D121",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D122",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D123",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D124",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D125",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D126",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D127",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D128",
+      "decision": "CLOSE",
+      "reason": "ContinuousMonitor implements corrupt-baseline quarantine with .corrupt suffix.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D129",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D130",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D131",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D132",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D133",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D134",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D135",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D136",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D137",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D138",
+      "decision": "CLOSE",
+      "reason": "WelcomeView is step-based wizard with no recursive polling. MOTD uses 5-second deadline.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D139",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D140",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D141",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D142",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D143",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D144",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Duplicate of D120. Should be merged.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "D145",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E001",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E002",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E003",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E004",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E005",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E006",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E007",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E008",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E009",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E010",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E011",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E012",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: Documentation delta misclassified as Security. Belongs in F-domain.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E013",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E014",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E015",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: NuGet scanning DOES exist in CI. pip-audit and SPM audit still missing.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E016",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E017",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E018",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E019",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E020",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E021",
+      "decision": "CLOSE",
+      "reason": "app.py now includes Secure flag on session cookie.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E022",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: Rate limiting DOES exist on /api/auth/activate. Focus on lockout bypass instead.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E023",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E024",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E025",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E026",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E027",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E028",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E029",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E030",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E031",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E032",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E033",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E034",
+      "decision": "CLOSE",
+      "reason": "security.txt has Expires: 2027-07-28T00:00:00Z.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E035",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E036",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E037",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority (description needs revision: Trial anchor endpoint now has per-IP rate limiting. Focus on fingerprint validation only.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E038",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E039",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E040",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E041",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E042",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E043",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E044",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E045",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E046",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E047",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E048",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E049",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E050",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E051",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E052",
+      "decision": "CLOSE",
+      "reason": "SyxxCLI now uses Bundle.main.executablePath over argv[0].",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E053",
+      "decision": "FIX NEXT",
+      "rationale": "Important domain \u2014 auto-assigned secondary priority",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E054",
+      "decision": "CLOSE",
+      "reason": "Marked DUPLICATE \u2014 see D137.",
+      "rationale": "Duplicate or invalid delta",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "E055",
+      "decision": "CLOSE",
+      "reason": "Marked DUPLICATE \u2014 see A078.",
+      "rationale": "Duplicate or invalid delta",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F001",
+      "decision": "CLOSE",
+      "reason": "Duplicate of A001. Placeholder/example entry.",
+      "rationale": "Duplicate or invalid delta",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F002",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F003",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F004",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F005",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F006",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F007",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F008",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: No concrete failure scenario. Scope fix to 'add tests covering documented limitations' rather than library replacement.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F009",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F010",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F011",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F012",
+      "decision": "CLOSE",
+      "reason": "Text corruption no longer exists in DELTAS.md.",
+      "rationale": "Already verified fixed in current codebase",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F013",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F014",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F015",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    },
+    {
+      "delta_id": "F016",
+      "decision": "DEFER",
+      "rationale": "Lower-priority domain \u2014 deferred to next cycle (description needs revision: Needs deployment target check for @Observable and D014 coordination.)",
+      "decided_by": "auto",
+      "decided_at": "2026-08-10T06:15:00.888944+00:00"
+    }
+  ],
+  "worklist": {
+    "fix_now": [
+      "A001",
+      "A002",
+      "A003",
+      "A004",
+      "A005",
+      "A006",
+      "A007",
+      "A008",
+      "A009",
+      "A010",
+      "A011",
+      "A012",
+      "A013",
+      "A014",
+      "A015",
+      "A016",
+      "A017",
+      "A018",
+      "A019",
+      "A020",
+      "A021",
+      "A022",
+      "A023",
+      "A024",
+      "A025",
+      "A026",
+      "A027",
+      "A028",
+      "A029",
+      "A030",
+      "A031",
+      "A032",
+      "A033",
+      "A034",
+      "A035",
+      "A036",
+      "A037",
+      "A038",
+      "A039",
+      "A040",
+      "A041",
+      "A042",
+      "A043",
+      "A044",
+      "A045",
+      "A046",
+      "A047",
+      "A048",
+      "A049",
+      "A050",
+      "A051",
+      "A052",
+      "A053",
+      "A054",
+      "A055",
+      "A056",
+      "A057",
+      "A058",
+      "A059",
+      "A060",
+      "A061",
+      "A062",
+      "A063",
+      "A064",
+      "A065",
+      "A066",
+      "A067",
+      "A068",
+      "A069",
+      "A070",
+      "A071",
+      "A072",
+      "A073",
+      "A074",
+      "A075",
+      "A076",
+      "A077",
+      "A078",
+      "A079",
+      "A080",
+      "A081",
+      "A082",
+      "A083",
+      "A084",
+      "C001",
+      "C002",
+      "C003",
+      "C005",
+      "C006",
+      "C007",
+      "C008",
+      "C009",
+      "C010",
+      "C011",
+      "C012",
+      "C013"
+    ],
+    "fix_next": [
+      "B001",
+      "B002",
+      "B003",
+      "B004",
+      "B005",
+      "B006",
+      "B007",
+      "B008",
+      "B009",
+      "B010",
+      "B011",
+      "B012",
+      "B013",
+      "B014",
+      "B015",
+      "B016",
+      "B017",
+      "B018",
+      "B019",
+      "B020",
+      "B021",
+      "B022",
+      "B023",
+      "B024",
+      "B025",
+      "B026",
+      "B027",
+      "B028",
+      "B029",
+      "B030",
+      "B031",
+      "B032",
+      "B033",
+      "B034",
+      "B035",
+      "B036",
+      "B037",
+      "B038",
+      "B039",
+      "B040",
+      "B041",
+      "B042",
+      "B043",
+      "B044",
+      "B045",
+      "B046",
+      "B047",
+      "B048",
+      "E001",
+      "E002",
+      "E003",
+      "E004",
+      "E005",
+      "E006",
+      "E007",
+      "E008",
+      "E009",
+      "E010",
+      "E011",
+      "E012",
+      "E013",
+      "E014",
+      "E015",
+      "E016",
+      "E017",
+      "E018",
+      "E019",
+      "E020",
+      "E022",
+      "E023",
+      "E024",
+      "E025",
+      "E026",
+      "E027",
+      "E028",
+      "E029",
+      "E030",
+      "E031",
+      "E032",
+      "E033",
+      "E035",
+      "E036",
+      "E037",
+      "E038",
+      "E039",
+      "E040",
+      "E041",
+      "E042",
+      "E043",
+      "E044",
+      "E045",
+      "E046",
+      "E047",
+      "E048",
+      "E049",
+      "E050",
+      "E051",
+      "E053"
+    ],
+    "deferred": [
+      "D001",
+      "D002",
+      "D003",
+      "D004",
+      "D005",
+      "D006",
+      "D007",
+      "D008",
+      "D009",
+      "D010",
+      "D011",
+      "D012",
+      "D013",
+      "D014",
+      "D015",
+      "D016",
+      "D017",
+      "D018",
+      "D019",
+      "D020",
+      "D021",
+      "D022",
+      "D023",
+      "D024",
+      "D025",
+      "D026",
+      "D027",
+      "D028",
+      "D029",
+      "D030",
+      "D031",
+      "D032",
+      "D033",
+      "D034",
+      "D035",
+      "D036",
+      "D037",
+      "D038",
+      "D039",
+      "D040",
+      "D041",
+      "D042",
+      "D043",
+      "D044",
+      "D045",
+      "D046",
+      "D047",
+      "D048",
+      "D049",
+      "D050",
+      "D051",
+      "D052",
+      "D053",
+      "D054",
+      "D055",
+      "D056",
+      "D057",
+      "D058",
+      "D059",
+      "D060",
+      "D061",
+      "D062",
+      "D063",
+      "D064",
+      "D065",
+      "D066",
+      "D067",
+      "D068",
+      "D069",
+      "D070",
+      "D071",
+      "D072",
+      "D073",
+      "D074",
+      "D075",
+      "D076",
+      "D077",
+      "D078",
+      "D079",
+      "D080",
+      "D081",
+      "D082",
+      "D083",
+      "D084",
+      "D085",
+      "D086",
+      "D087",
+      "D088",
+      "D089",
+      "D090",
+      "D091",
+      "D092",
+      "D093",
+      "D095",
+      "D096",
+      "D097",
+      "D098",
+      "D099",
+      "D100",
+      "D101",
+      "D102",
+      "D103",
+      "D104",
+      "D105",
+      "D106",
+      "D109",
+      "D110",
+      "D111",
+      "D113",
+      "D115",
+      "D116",
+      "D117",
+      "D118",
+      "D119",
+      "D120",
+      "D121",
+      "D122",
+      "D123",
+      "D124",
+      "D125",
+      "D126",
+      "D127",
+      "D129",
+      "D130",
+      "D131",
+      "D132",
+      "D133",
+      "D134",
+      "D135",
+      "D136",
+      "D137",
+      "D139",
+      "D140",
+      "D141",
+      "D142",
+      "D143",
+      "D144",
+      "D145",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011",
+      "F013",
+      "F014",
+      "F015",
+      "F016"
+    ],
+    "closed": [
+      "C004",
+      "D094",
+      "D107",
+      "D108",
+      "D112",
+      "D114",
+      "D128",
+      "D138",
+      "E021",
+      "E034",
+      "E052",
+      "E054",
+      "E055",
+      "F001",
+      "F012"
+    ]
+  },
+  "summary": {
+    "fix_now": 96,
+    "fix_next": 98,
+    "deferred": 152,
+    "closed": 15,
+    "total": 361
+  }
+}

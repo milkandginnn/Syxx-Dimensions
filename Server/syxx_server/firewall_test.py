@@ -17,8 +17,9 @@ Usage:
     result = firewall_test.test("1.2.3.4")
 """
 
+import concurrent.futures
 import logging
-import random
+import secrets
 
 from . import resolver
 
@@ -114,14 +115,26 @@ def _query_resolver(domain, server, timeout):
 
     status is one of: "resolved", "nxdomain", "refused", "error", "nodata".
     addresses is a list of IP strings (empty when not resolved).
+
+    A053: the A and AAAA queries are independent — run them concurrently so a
+    slow IPv4 query does not stall the IPv6 query (and vice versa).
     """
+    def _query_one(qtype):
+        try:
+            return resolver.query(domain, qtype, server, timeout=timeout)
+        except Exception as exc:
+            log.debug("query %s/%s via %s failed: %s", domain, "A" if qtype == resolver.TYPE_A else "AAAA", server, exc)
+            return None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as _ex:
+        _futures = {qtype: _ex.submit(_query_one, qtype) for qtype in (resolver.TYPE_A, resolver.TYPE_AAAA)}
+        _responses = {qtype: _futures[qtype].result() for qtype in (resolver.TYPE_A, resolver.TYPE_AAAA)}
+
     all_addrs = []
     last_status = "error"
     for qtype in (resolver.TYPE_A, resolver.TYPE_AAAA):
-        try:
-            resp = resolver.query(domain, qtype, server, timeout=timeout)
-        except Exception as exc:
-            log.debug("query %s/%s via %s failed: %s", domain, "A" if qtype == resolver.TYPE_A else "AAAA", server, exc)
+        resp = _responses[qtype]
+        if resp is None:
             continue
 
         rcode = resp.get("rcode", -1)
@@ -230,7 +243,9 @@ def test(resolver_ip, timeout=5):
     # order (eicar.org, doubleclick.net, etc.) is a recognizable pattern that
     # reveals the user is running Syxx's firewall test to any observer.
     test_domains = list(_TEST_DOMAINS)
-    random.shuffle(test_domains)
+    # E028: cryptographic shuffle — random.shuffle uses Mersenne Twister which
+    # is predictable; secrets.SystemRandom uses the OS CSPRNG.
+    secrets.SystemRandom().shuffle(test_domains)
 
     for entry in test_domains:
         # A162: check deadline before each domain to prevent unbounded runtime
@@ -244,9 +259,16 @@ def test(resolver_ip, timeout=5):
         user_status, user_addrs = _query_resolver(domain, resolver_ip, timeout)
 
         # Query clean vantages and take the first successful result.
+        # A053: run all vantages concurrently instead of N+1 sequential queries,
+        # then prefer the first "resolved" vantage in the canonical order.
+        def _query_clean_vantage(vantage):
+            return _query_resolver(domain, vantage, timeout)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(_CLEAN_VANTAGES)) as _ex:
+            _vantage_results = list(_ex.map(_query_clean_vantage, _CLEAN_VANTAGES))
+
         clean_status, clean_addrs = "error", []
-        for vantage in _CLEAN_VANTAGES:
-            cs, ca = _query_resolver(domain, vantage, timeout)
+        for (cs, ca) in _vantage_results:
             if cs == "resolved":
                 clean_status, clean_addrs = cs, ca
                 clean_reference_count += 1

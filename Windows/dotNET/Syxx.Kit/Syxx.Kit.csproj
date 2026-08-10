@@ -13,6 +13,14 @@
     <PackageReference Include="NSec.Cryptography" Version="26.4.0" />
   </ItemGroup>
   <ItemGroup>
+    <!-- B007: the default matrix spec as a JSON embedded resource, transcribed from the
+         frozen oracle at corpus/matrix/default-spec.frozen.json. Loaded at startup by
+         SyxxMatrixBuilder.LoadDefaultSpec() with the inline BuildDefaultSpec() as fallback.
+         A drift between this resource and BuildDefaultSpec() is caught by
+         MatrixGoldenCorpusTests (default-spec.frozen.json byte-for-byte comparison). -->
+    <EmbeddedResource Include="Synthesis\default-spec.json" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- D003: expose internal transport-pinning helpers (IsTransportIdentityFailure,
          MakeCollectorClient) to the test project, mirroring macOS @testable access. -->
     <InternalsVisibleTo Include="Syxx.Tests" />

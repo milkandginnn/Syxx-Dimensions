@@ -13,7 +13,12 @@ public enum OTelBootstrap {
         // `unknown` (never asked, or a settings file that will not decode) behaves as denied:
         // missing data is not consent.
         guard ifAllowed ?? TelemetryGate.isAllowed else { return }
-        guard let endpoint = URL(string: "https://bugsmasher.syxx.app/v1/traces") else { return }
+        // E041: allow the OTLP endpoint to be overridden via environment variable
+        // (e.g. for local debugging with `SYXX_OTEL_ENDPOINT=http://localhost:4318/v1/traces`).
+        // The hardcoded default is the production collector.
+        let endpointURL = ProcessInfo.processInfo.environment["SYXX_OTEL_ENDPOINT"]
+            ?? "https://bugsmasher.syxx.app/v1/traces"
+        guard let endpoint = URL(string: endpointURL) else { return }
         let exporter = OtlpHttpTraceExporter(endpoint: endpoint)
         let processor = BatchSpanProcessor(spanExporter: exporter)
         OpenTelemetry.registerTracerProvider(tracerProvider:

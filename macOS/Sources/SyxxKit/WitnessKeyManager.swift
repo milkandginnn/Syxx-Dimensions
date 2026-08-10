@@ -1,5 +1,10 @@
 import Foundation
 import Security
+import CryptoKit
+
+#if canImport(Darwin)
+import Darwin
+#endif
 
 /// Manages the Ed25519 witness signing key in the macOS Keychain.
 ///
@@ -108,7 +113,19 @@ public enum WitnessKeyManager {
         }()
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        let key = (status == errSecSuccess) ? (result as? Data).flatMap { String(data: $0, encoding: .utf8) } : nil
+        // E029: unwrap device-specific key wrapping if present, with backward compatibility for
+        // legacy plain base64 keys stored before E029.
+        let key: String? = {
+            guard status == errSecSuccess, let raw = result as? Data else { return nil }
+            if let rawStr = String(data: raw, encoding: .utf8), rawStr.hasPrefix(wrappedKeyPrefix) {
+                let wrappedData = raw.dropFirst(wrappedKeyPrefix.utf8.count)
+                guard let unwrapped = unwrapKey(Data(wrappedData)),
+                      let keyStr = String(data: unwrapped, encoding: .utf8) else { return nil }
+                return keyStr
+            }
+            // Legacy plain base64 key (pre-E029) — use as-is for backward compatibility.
+            return String(data: raw, encoding: .utf8)
+        }()
 
         // D084: only cache successful reads and confirmed absence (errSecItemNotFound).
         // A transient Keychain error (locked, auth failed, user cancelled) must NOT be
@@ -136,8 +153,18 @@ public enum WitnessKeyManager {
     ///   Ed25519 signing key material; `LicenseManagerError.keychainError` on Keychain failure.
     public static func saveKey(_ base64Key: String) throws {
         try WitnessSigner.validatePrivateKey(base64: base64Key)
-        guard let data = base64Key.data(using: .utf8) else {
+        guard let plaintext = base64Key.data(using: .utf8) else {
             throw LicenseManagerError.invalidKeyEncoding
+        }
+        // E029: wrap the signing key with a device-specific AES-GCM key before Keychain storage.
+        // The wrapped form is prefixed with "wrapped:v1:" so loadKey() can distinguish it from
+        // legacy plain base64 keys stored before E029.
+        let data: Data
+        if let wrapped = wrapKey(plaintext) {
+            data = Data(wrappedKeyPrefix.utf8) + wrapped
+        } else {
+            // Wrapping unavailable (non-macOS or IOKit failure) — store as plain base64 (legacy format).
+            data = plaintext
         }
         try writeKeychainData(data, account: account)
         _keyLock.lock(); _keyCache = .some(base64Key); _keyLock.unlock()   // write-through
@@ -189,6 +216,47 @@ public enum WitnessKeyManager {
         let (priv, pub) = WitnessSigner.generateKeyPair()
         try saveKey(priv)
         return pub
+    }
+
+    // MARK: - E029: Device-specific key wrapping
+
+    /// Prefix for wrapped keys stored in Keychain, distinguishing from legacy plain base64 keys.
+    /// Keys stored before E029 lack this prefix and are read as-is for backward compatibility.
+    private static let wrappedKeyPrefix = "wrapped:v1:"
+
+    /// E029: Derives a 256-bit AES wrapping key from this device's hardware UUID using HKDF-SHA256.
+    /// The wrapping key is unique to this machine — a Keychain item copied to another device
+    /// cannot be unwrapped because the hardware UUID differs. Returns nil when the hardware UUID
+    /// is unavailable (non-macOS platform or IOKit failure).
+    private static func deriveWrappingKey() -> SymmetricKey? {
+        #if os(macOS)
+        let platformExpert = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
+        guard platformExpert > 0 else { return nil }
+        defer { IOObjectRelease(platformExpert) }
+        guard let uuid = IORegistryEntryCreateCFProperty(platformExpert, kIOPlatformUUIDKey as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? String,
+              !uuid.isEmpty else { return nil }
+        let ikm = SymmetricKey(data: Data(uuid.utf8))
+        let salt = Data("com.milkandgin.syxx.witness-key-wrap.v1".utf8)
+        return HKDF<SHA256>.deriveKey(inputKeyMaterial: ikm, salt: salt, outputByteCount: 32)
+        #else
+        return nil
+        #endif
+    }
+
+    /// E029: Wraps the signing key plaintext with AES-GCM using the device-specific wrapping key.
+    /// Returns the combined sealed box (nonce + ciphertext + tag), or nil if wrapping is unavailable.
+    private static func wrapKey(_ plaintext: Data) -> Data? {
+        guard let wrappingKey = deriveWrappingKey() else { return nil }
+        guard let sealed = try? AES.GCM.seal(plaintext, using: wrappingKey) else { return nil }
+        return sealed.combined
+    }
+
+    /// E029: Unwraps a previously wrapped signing key using the device-specific AES-GCM key.
+    /// Returns the original plaintext, or nil if unwrapping fails (wrong device, corrupted data).
+    private static func unwrapKey(_ wrapped: Data) -> Data? {
+        guard let wrappingKey = deriveWrappingKey() else { return nil }
+        guard let sealedBox = try? AES.GCM.SealedBox(combined: wrapped) else { return nil }
+        return try? AES.GCM.open(sealedBox, using: wrappingKey)
     }
 
     // MARK: - Keychain plumbing

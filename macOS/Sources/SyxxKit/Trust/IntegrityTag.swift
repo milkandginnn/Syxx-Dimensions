@@ -38,7 +38,11 @@ enum IntegrityTag {
     static func verifyStatus(_ data: Data, hmac: Data) -> CacheIntegrityVerification {
         guard let key = loadOrCreateKey() else { return .unavailable }
         let computed = HMAC<SHA256>.authenticationCode(for: data, using: key)
-        return Data(computed) == hmac ? .valid : .invalid
+        // E007: constant-time comparison for raw HMAC Data — never use `==` on
+        // cryptographic tags, even when the key is Keychain-resident. A timing
+        // oracle on the comparison lets an attacker byte-probe a valid HMAC
+        // without the key.
+        return constantTimeEqual(Data(computed), hmac) ? .valid : .invalid
     }
 
     /// Compute HMAC-SHA256 of `data` using the Keychain-stored key and write it to `<url>.hmac`.
@@ -114,15 +118,25 @@ enum IntegrityTag {
 
     // MARK: - Constant-time comparison
 
-    private static func constantTimeEqual(_ a: String, _ b: String) -> Bool {
-        let aBytes = Array(a.utf8)
-        let bBytes = Array(b.utf8)
-        guard aBytes.count == bBytes.count else { return false }
+    /// E007: constant-time byte comparison. Processes every byte regardless of
+    /// length difference — an early `count != count` return leaks whether the
+    /// candidate tag has the right length, giving a timing oracle to an attacker
+    /// who can measure response latency (e.g. over a local network).
+    private static func constantTimeEqual(_ a: Data, _ b: Data) -> Bool {
         var result: UInt8 = 0
-        for i in 0..<aBytes.count {
-            result |= aBytes[i] ^ bBytes[i]
+        let aBytes = Array(a)
+        let bBytes = Array(b)
+        result |= UInt8(truncatingIfNeeded: aBytes.count ^ bBytes.count)
+        for i in 0..<max(aBytes.count, bBytes.count) {
+            let ai = i < aBytes.count ? aBytes[i] : 0
+            let bi = i < bBytes.count ? bBytes[i] : 0
+            result |= ai ^ bi
         }
         return result == 0
+    }
+
+    private static func constantTimeEqual(_ a: String, _ b: String) -> Bool {
+        constantTimeEqual(Data(a.utf8), Data(b.utf8))
     }
 }
 

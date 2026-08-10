@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -105,6 +106,22 @@ public static class EvidenceAdapters
         return Math.Min(1.0, (double)usable / totalDatapoints);
     }
 
+    /// <summary>
+    /// B003: common probe-evaluation pattern — null-guard + status classification → subs/evidence.
+    /// Eliminates the duplicated switch(probe.Status) boilerplate that appeared across every
+    /// section adapter (Prophet, Mirror, Portal, Glutton, Cage). The <paramref name="classify"/>
+    /// function maps a non-null probe to its (SectionStatus, optional EvidenceItem) outcome.
+    /// </summary>
+    private static void Evaluate<T>(T? probe,
+        Func<T, (SectionStatus Status, EvidenceItem? Evidence)> classify,
+        List<EvidenceItem> evidence, List<SectionStatus> subs) where T : class
+    {
+        if (probe is null) return;
+        var (status, ev) = classify(probe);
+        if (ev is not null) evidence.Add(ev);
+        subs.Add(status);
+    }
+
     // Datapoint-catalog sizes (M) per section — MUST track the corresponding builder's probe
     // slots below and the macOS Synthesizer.swift twins. Portal's openResolver is advisory-only
     // (never a result datapoint) and Mirror's serverGroundTruth corroborates `authoritative`
@@ -199,30 +216,18 @@ public static class EvidenceAdapters
             subs.Add(c.Status);
         }
 
-        // Workstream H: latency — B193: adopt macOS mapping. Slow/Degraded all
-        // contribute Degraded (a quality knock, not a hard gate); Unreachable is Invalidated
-        // (the probe could not complete — it is not usable evidence, matching the timeout
-        // behavior in the resolution slot). Fast/Moderate are Negative (clean).
+        // Workstream H: latency — B193: adopt macOS mapping. Slow/Degraded/Unreachable all
+        // contribute Degraded (a quality knock, not a hard gate; Unreachable means the probe
+        // timed out — usable but degraded evidence, matching macOS behavior).
+        // Fast/Moderate are Negative (clean).
         // No default: arm so a new enum case is a compile error.
-        if (latency is ResolverLatency l)
+        Evaluate(latency, l => l.Status switch
         {
-            switch (l.Status)
-            {
-                case ResolverLatencyStatus.Slow:
-                case ResolverLatencyStatus.Degraded:
-                    subs.Add(SectionStatus.Degraded);
-                    break;
-                case ResolverLatencyStatus.Unreachable:
-                    subs.Add(SectionStatus.Invalidated);
-                    break;
-                case ResolverLatencyStatus.Fast:
-                case ResolverLatencyStatus.Moderate:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case ResolverLatencyStatus.Untested:
-                    break;
-            }
-        }
+            ResolverLatencyStatus.Slow or ResolverLatencyStatus.Degraded or ResolverLatencyStatus.Unreachable => (SectionStatus.Degraded, null),
+            ResolverLatencyStatus.Fast or ResolverLatencyStatus.Moderate => (SectionStatus.Negative, null),
+            ResolverLatencyStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         // Workstream H: stability
         if (stability is AnswerStability stab)
@@ -251,119 +256,78 @@ public static class EvidenceAdapters
                 case AnswerStabilityStatus.Untested:
                     break;
                 case AnswerStabilityStatus.Stable:
+                case AnswerStabilityStatus.Rotating:
+                    // Swift parity (B038): .stable and .rotating both map to .negative — rotating
+                    // load-balancer answers without suspicion are clean.
                     subs.Add(SectionStatus.Negative);
+                    break;
+                default:
+                    // Unhandled AnswerStabilityStatus — breadcrumb rather than silently drop.
+                    SyxxDiagnostics.Breadcrumb(
+                        category: "synthesizer.stability.unhandled",
+                        message: $"Unhandled AnswerStabilityStatus: {stab.Status}",
+                        level: DiagnosticSeverity.Warning);
                     break;
             }
         }
 
         // Workstream H: wildcard synthesis
-        if (wildcardSynthesis is WildcardSynthesis wc)
+        Evaluate(wildcardSynthesis, wc => wc.Status switch
         {
-            switch (wc.Status)
-            {
-                case WildcardSynthesisStatus.NxHijack:
-                    ev.Add(EvidenceItem.Create(Section.Prophet, EvidenceId.NxSubdomainHijack,
-                        "Resolver invented address(es) for nonexistent subdomains of the target that a trusted resolver denies"
-                            + (wc.SyntheticAddresses is { Count: > 0 } ? $" (→ {string.Join(", ", wc.SyntheticAddresses.Take(2))})" : ""),
-                        "A resolver fabricating answers for names that provably do not exist is hijacking NXDOMAIN to a block/ad page, aimed at this domain's namespace."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case WildcardSynthesisStatus.WildcardZone:
-                case WildcardSynthesisStatus.NoSynthesis:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case WildcardSynthesisStatus.Untested:
-                    break;
-                default:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-            }
-        }
+            WildcardSynthesisStatus.NxHijack => (SectionStatus.Positive, EvidenceItem.Create(Section.Prophet, EvidenceId.NxSubdomainHijack,
+                "Resolver invented address(es) for nonexistent subdomains of the target that a trusted resolver denies"
+                    + (wc.SyntheticAddresses is { Count: > 0 } ? $" (→ {string.Join(", ", wc.SyntheticAddresses.Take(2))})" : ""),
+                "A resolver fabricating answers for names that provably do not exist is hijacking NXDOMAIN to a block/ad page, aimed at this domain's namespace.")),
+            WildcardSynthesisStatus.WildcardZone or WildcardSynthesisStatus.NoSynthesis => (SectionStatus.Negative, null),
+            WildcardSynthesisStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         // Workstream H: denial of existence
-        if (denial is DenialOfExistence de)
+        // B036: NotADenial means the name resolved — the denial check does not apply.
+        // Skip this datapoint entirely (no sub-status appended), matching Swift's `break`.
+        if (denial is not { Status: DenialStatus.NotADenial })
         {
-            switch (de.Status)
+            Evaluate(denial, de => de.Status switch
             {
-                case DenialStatus.Contradictory:
-                    ev.Add(EvidenceItem.Create(Section.Prophet, EvidenceId.DenialInjected,
-                        $"Negative answer for {de.QueriedName} is inconsistent — {de.Detail}",
-                        "A negative that carries answers, or is signed by an SOA outside the name's zone, is a fabricated denial — a censor/middlebox pretending the name does not exist."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case DenialStatus.BareDenial:
-                    ev.Add(EvidenceItem.Create(Section.Prophet, EvidenceId.DenialBare,
-                        $"Negative answer for {de.QueriedName} carries no SOA or NSEC — bare denial",
-                        "A genuine authoritative negative includes an SOA (and NSEC in a signed zone); a bare denial can be a synthesised block — corroborate."));
-                    subs.Add(SectionStatus.Degraded);
-                    break;
-                case DenialStatus.NsecProven:
-                case DenialStatus.SoaBacked:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                // B195: NotADenial is a genuine clean datapoint (macOS: .negative),
-                // distinct from Untested ("never ran") and Inconclusive ("ran, unresolved").
-                case DenialStatus.NotADenial:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case DenialStatus.Inconclusive:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-                case DenialStatus.Untested:
-                    break;
-            }
+                DenialStatus.Contradictory => (SectionStatus.Positive, EvidenceItem.Create(Section.Prophet, EvidenceId.DenialInjected,
+                    $"Negative answer for {de.QueriedName} is inconsistent — {de.Detail}",
+                    "A negative that carries answers, or is signed by an SOA outside the name's zone, is a fabricated denial — a censor/middlebox pretending the name does not exist.")),
+                DenialStatus.BareDenial => (SectionStatus.Degraded, EvidenceItem.Create(Section.Prophet, EvidenceId.DenialBare,
+                    $"Negative answer for {de.QueriedName} carries no SOA or NSEC — bare denial",
+                    "A genuine authoritative negative includes an SOA (and NSEC in a signed zone); a bare denial can be a synthesised block — corroborate.")),
+                DenialStatus.NsecProven or DenialStatus.SoaBacked => (SectionStatus.Negative, null),
+                DenialStatus.Inconclusive => (SectionStatus.Inconclusive, null),
+                DenialStatus.Untested => (SectionStatus.Untested, null),
+                _ => (SectionStatus.Inconclusive, null),
+            }, ev, subs);
         }
 
         // Workstream H: dual-stack
-        if (dualStack is DualStackAudit ds)
+        Evaluate(dualStack, ds => ds.Status switch
         {
-            switch (ds.Status)
-            {
-                case DualStackStatus.Ipv4Suppressed:
-                    ev.Add(EvidenceItem.Create(Section.Prophet, EvidenceId.Ipv4Suppressed,
-                        "AAAA resolves but the A record does not for the target",
-                        "A missing IPv4 record while IPv6 resolves can be selective IPv4 blocking — weak; a domain may also legitimately publish only AAAA, so corroborate."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                // B195: Inconclusive is a real "ran-but-unresolved" sub-status (macOS maps it
-                // to .inconclusive); Untested means "never ran" and contributes nothing.
-                case DualStackStatus.Inconclusive:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-                case DualStackStatus.Untested:
-                    break;
-                case DualStackStatus.DualStack:
-                case DualStackStatus.Ipv4Only:
-                case DualStackStatus.Dns64Synthesis:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-            }
-        }
+            DualStackStatus.Ipv4Suppressed => (SectionStatus.Positive, EvidenceItem.Create(Section.Prophet, EvidenceId.Ipv4Suppressed,
+                "AAAA resolves but the A record does not for the target",
+                "A missing IPv4 record while IPv6 resolves can be selective IPv4 blocking — weak; a domain may also legitimately publish only AAAA, so corroborate.")),
+            // B195: Inconclusive is a real "ran-but-unresolved" sub-status (macOS maps it
+            // to .inconclusive); Untested means "never ran" and contributes nothing.
+            DualStackStatus.Inconclusive => (SectionStatus.Inconclusive, null),
+            DualStackStatus.Untested => (SectionStatus.Untested, null),
+            DualStackStatus.DualStack or DualStackStatus.Ipv4Only or DualStackStatus.Dns64Synthesis => (SectionStatus.Negative, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         // Workstream H: EDNS0
-        if (edns0 is EDNS0Capability edns)
+        Evaluate(edns0, edns => edns.Status switch
         {
-            switch (edns.Status)
-            {
-                case EDNS0CapabilityStatus.Broken:
-                    ev.Add(EvidenceItem.Create(Section.Prophet, EvidenceId.EdnsBlocked,
-                        "EDNS0 (OPT) queries are dropped on this path while plain queries work",
-                        "A network device stripping EDNS0 is interfering with DNS at the protocol level (it also breaks DNSSEC and large answers) — corroborate."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case EDNS0CapabilityStatus.NotSupported:
-                    subs.Add(SectionStatus.Degraded);
-                    break;
-                case EDNS0CapabilityStatus.Supported:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case EDNS0CapabilityStatus.Untested:
-                    break;
-                default:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-            }
-        }
+            EDNS0CapabilityStatus.Broken => (SectionStatus.Positive, EvidenceItem.Create(Section.Prophet, EvidenceId.EdnsBlocked,
+                "EDNS0 (OPT) queries are dropped on this path while plain queries work",
+                "A network device stripping EDNS0 is interfering with DNS at the protocol level (it also breaks DNSSEC and large answers) — corroborate.")),
+            EDNS0CapabilityStatus.NotSupported => (SectionStatus.Degraded, null),
+            EDNS0CapabilityStatus.Supported => (SectionStatus.Negative, null),
+            EDNS0CapabilityStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         // C010: version.bind is tilt-only — emit EvidenceItem, never section-gate.
         if (versionBind is VersionBindResult vb)
@@ -378,24 +342,27 @@ public static class EvidenceAdapters
             }
         }
 
-        // Workstream H: stub entropy (capture-sourced)
-        if (stubEntropy is StubEntropyAudit se)
+        // Workstream H: stub entropy (capture-sourced).
+        // B043: handle InsufficientData explicitly (→ inconclusive, never clean).
+        // No default arm: unhandled cases are compile errors.
+        if (stubEntropy is not null)
         {
-            switch (se.Status)
+            switch (stubEntropy.Status)
             {
                 case StubEntropyStatus.WeakRandomization:
                     ev.Add(EvidenceItem.Create(Section.Prophet, EvidenceId.WeakStubEntropy,
-                        $"Local stub/OS DNS randomization is weak — {se.Detail}",
+                        $"Local stub/OS DNS randomization is weak — {stubEntropy.Detail}",
                         "Low source-port / transaction-ID entropy on the LOCAL resolver path makes this host easier to spoof — a spoofability posture, not proof of upstream cache poisoning. Weak and contextual: corroborate with the spoofing/interception checks."));
                     subs.Add(SectionStatus.Degraded);
                     break;
                 case StubEntropyStatus.WellRandomized:
                     subs.Add(SectionStatus.Negative);
                     break;
-                case StubEntropyStatus.Untested:
-                    break;
-                default:
+                case StubEntropyStatus.InsufficientData:
+                    // B043: too few captured queries to judge — inconclusive, never clean.
                     subs.Add(SectionStatus.Inconclusive);
+                    break;
+                case StubEntropyStatus.Untested:
                     break;
             }
         }
@@ -460,7 +427,10 @@ public static class EvidenceAdapters
                     subs.Add(SectionStatus.Positive);
                     break;
                 case WarpConclusion.INCONCLUSIVE:
-                    ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.ScriptMismatch,
+                    // B034: an inconclusive warp is NOT a confirmed script mismatch — it is a
+                    // distinct evidence type that says the check could not determine whether
+                    // content was modified. Using ScriptMismatch here would overclaim.
+                    ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.ScriptMismatchInconclusive,
                         "Content warp check was inconclusive"
                             + (string.IsNullOrEmpty(warpManifest.InconclusiveReason) ? "" : $": {warpManifest.InconclusiveReason}"),
                         "An inconclusive warp (untrusted/unpinned signer, stale/forged freshness, or unfetchable content) could not determine whether content was modified — not a clean result; requires corroboration."));
@@ -485,12 +455,17 @@ public static class EvidenceAdapters
                         && ac.ResolverAnswers?.Count > 0
                         && !ac.ResolverAnswers.Select(a => a.ToLowerInvariant()).Any(addr =>
                             serverGroundTruth.Authoritative.Answers.Any(gt => gt.ToLowerInvariant() == addr));
+                    // B041 (B092): the Dimension response arrives over ordinary TLS with no response
+                    // signature or pinned key. "Near-proof" / "independent, untampered" overclaims
+                    // what the transport actually proved — a compromised CA, TLS interceptor, or
+                    // Dimension service could forge this. Report the corroboration honestly as a
+                    // second source, not as cryptographic proof.
                     if (serverConfirmed)
                     {
                         ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.AuthoritativeDivergesConfirmed,
-                            "Recursive answer diverges from the domain's authoritative nameservers — SERVER-CONFIRMED against Dimension ground truth"
+                            "Recursive answer diverges from the domain's authoritative nameservers — corroborated by Dimension server"
                                 + (ac.Nameservers is { Count: > 0 } ? $" ({string.Join(", ", ac.Nameservers.Take(2))})" : ""),
-                            "An independent, untampered vantage (Dimension) confirms the authority does not serve the address your resolver returned — near-proof of an upstream rewrite."));
+                            "The Dimension server also reports the authority does not serve the address your resolver returned — corroborates an upstream rewrite over TLS, but the response is unsigned and should be independently verified."));
                     }
                     else
                     {
@@ -520,78 +495,40 @@ public static class EvidenceAdapters
         }
 
         // Workstream H: SVCB
-        if (svcb is SVCBFinding sv)
+        Evaluate(svcb, sv => sv.Status switch
         {
-            switch (sv.Status)
-            {
-                case SVCBFindingStatus.Divergent:
-                    ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.SvcbStripped,
-                        $"HTTPS/SVCB record served by {sv.PresentAt?.Count ?? 0} resolver(s) but returned by none at {sv.AbsentAt?.Count ?? 0}",
-                        "Inconsistent HTTPS (type 65) records across modern resolvers can indicate SVCB/ECH stripping that silently downgrades transport — corroborate."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case SVCBFindingStatus.Present:
-                case SVCBFindingStatus.Absent:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case SVCBFindingStatus.Untested:
-                    break;
-                default:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-            }
-        }
+            SVCBFindingStatus.Divergent => (SectionStatus.Positive, EvidenceItem.Create(Section.Mirror, EvidenceId.SvcbStripped,
+                $"HTTPS/SVCB record served by {sv.PresentAt?.Count ?? 0} resolver(s) but returned by none at {sv.AbsentAt?.Count ?? 0}",
+                "Inconsistent HTTPS (type 65) records across modern resolvers can indicate SVCB/ECH stripping that silently downgrades transport — corroborate.")),
+            SVCBFindingStatus.Present or SVCBFindingStatus.Absent => (SectionStatus.Negative, null),
+            SVCBFindingStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         // Workstream H: TTL anomaly
-        if (ttlAnomaly is TTLAnomaly ta)
+        Evaluate(ttlAnomaly, ta => ta.Status switch
         {
-            switch (ta.Status)
-            {
-                case TTLAnomalyStatus.LockstepTTL:
-                    ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.TtlLockstep,
-                        $"{ta.TtlsByResolver?.Count ?? 0} independent resolvers report the identical TTL",
-                        "Lockstep TTLs across independent resolvers indicate a shared upstream or on-path injection, not independent caching."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case TTLAnomalyStatus.ExtremeTTL:
-                    ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.TtlExtreme,
-                        "A resolver reports an implausibly large TTL (> 7 days)",
-                        "An extreme TTL suggests a pinned/stale answer, possible replay attack."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case TTLAnomalyStatus.IndependentCaching:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case TTLAnomalyStatus.Untested:
-                    break;
-                default:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-            }
-        }
+            TTLAnomalyStatus.LockstepTTL => (SectionStatus.Positive, EvidenceItem.Create(Section.Mirror, EvidenceId.TtlLockstep,
+                $"{ta.TtlsByResolver?.Count ?? 0} independent resolvers report the identical TTL",
+                "Lockstep TTLs across independent resolvers indicate a shared upstream or on-path injection, not independent caching.")),
+            TTLAnomalyStatus.ExtremeTTL => (SectionStatus.Positive, EvidenceItem.Create(Section.Mirror, EvidenceId.TtlExtreme,
+                "A resolver reports an implausibly large TTL (> 7 days)",
+                "An extreme TTL suggests a pinned/stale answer, possible replay attack.")),
+            TTLAnomalyStatus.IndependentCaching => (SectionStatus.Negative, null),
+            TTLAnomalyStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         // Workstream H: CNAME chain
-        if (cnameChain is CNAMEChainAudit cc)
+        Evaluate(cnameChain, cc => cc.Status switch
         {
-            switch (cc.Status)
-            {
-                case CNAMEChainStatus.Divergent:
-                    ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.CnameChainDivergent,
-                        "The resolver's CNAME chain diverges from the unanimous reference consensus",
-                        "A resolver that follows a different CNAME path than all trusted references may be redirected."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case CNAMEChainStatus.Consistent:
-                case CNAMEChainStatus.NoCNAME:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case CNAMEChainStatus.Untested:
-                    break;
-                default:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-            }
-        }
+            CNAMEChainStatus.Divergent => (SectionStatus.Positive, EvidenceItem.Create(Section.Mirror, EvidenceId.CnameChainDivergent,
+                "The resolver's CNAME chain diverges from the unanimous reference consensus",
+                "A resolver that follows a different CNAME path than all trusted references may be redirected.")),
+            CNAMEChainStatus.Consistent or CNAMEChainStatus.NoCNAME => (SectionStatus.Negative, null),
+            CNAMEChainStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         return CombineWithEvidence(ev, subs, completeness: DatapointCompleteness(subs, MirrorDatapointCatalog),
             datapointsExpected: MirrorDatapointCatalog);
@@ -679,26 +616,15 @@ public static class EvidenceAdapters
         }
 
         // Workstream H: encrypted transport
-        if (encryptedTransport is EncryptedTransport et)
+        Evaluate(encryptedTransport, et => et.Status switch
         {
-            switch (et.Status)
-            {
-                case EncryptedTransportStatus.Blocked:
-                    ev.Add(EvidenceItem.Create(Section.Portal, EvidenceId.EncryptedDnsBlocked,
-                        $"DoH endpoint {et.Endpoint} is unreachable — encrypted DNS is blocked/filtered",
-                        "A network that blocks encrypted DNS forces cleartext resolution and makes tampering easier."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case EncryptedTransportStatus.Working:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case EncryptedTransportStatus.Untested:
-                    break;
-                default:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-            }
-        }
+            EncryptedTransportStatus.Blocked => (SectionStatus.Positive, EvidenceItem.Create(Section.Portal, EvidenceId.EncryptedDnsBlocked,
+                $"DoH endpoint {et.Endpoint} is unreachable — encrypted DNS is blocked/filtered",
+                "A network that blocks encrypted DNS forces cleartext resolution and makes tampering easier.")),
+            EncryptedTransportStatus.Working => (SectionStatus.Negative, null),
+            EncryptedTransportStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         // Workstream H: open resolver — produces advisory, not evidence
         if (openResolver is OpenResolverFinding orf)
@@ -723,6 +649,13 @@ public static class EvidenceAdapters
                     break;
             }
         }
+
+        // B176(c): `ev` is provably empty when `subs` is empty — every evidence-emitting branch
+        // above also appends to `subs`. Assert the invariant so a future code change that breaks
+        // this coupling is caught in debug builds rather than silently discarding evidence.
+        // Twin of macOS Synthesizer.swift:557-559.
+        if (subs.Count == 0 && advisories.Count == 0)
+            Debug.Assert(ev.Count == 0, "B176(c): ev non-empty with empty subs — evidence would be silently discarded");
 
         return CombineWithEvidence(ev, subs, advisories,
             completeness: DatapointCompleteness(subs, PortalDatapointCatalog),
@@ -759,7 +692,11 @@ public static class EvidenceAdapters
                     subs.Add(SectionStatus.Negative);
                     break;
                 case LeakResult.Inconclusive:
-                    subs.Add(leak.Signature is null ? SectionStatus.Invalidated : SectionStatus.Inconclusive);
+                    // C008: a null signature means the leak test never had a collector to talk to
+                    // (ProbePlan.RunGluttonAsync synthesises this for every collector-less run) — the
+                    // probe never executed, so it is Untested, not Invalidated ("ran but corrupt").
+                    // Parity with macOS Synthesizer.swift:579 (`l.signature == nil ? .untested : .inconclusive`).
+                    subs.Add(leak.Signature is null ? SectionStatus.Untested : SectionStatus.Inconclusive);
                     break;
                 case LeakResult.Invalid:
                 case LeakResult.Error:
@@ -768,28 +705,22 @@ public static class EvidenceAdapters
             }
         }
 
+        // B040 (B138): the ECS probe sends a synthetic test subnet (203.0.113.0), so a non-zero
+        // echoed scope proves ECS CAPABILITY, not that the user's real subnet was forwarded.
+        // A confirmed privacy leak requires paired plain/ECS comparison or collector-grounded
+        // evidence. Report capability honestly; do not promote to a privacy-leak claim.
         // Workstream H: ECS leak
-        if (ecs is ECSLeak ecsL)
+        Evaluate(ecs, ecsL => ecsL.Status switch
         {
-            switch (ecsL.Status)
-            {
-                case ECSLeakStatus.Forwarded:
-                    ev.Add(EvidenceItem.Create(Section.Glutton, EvidenceId.EcsSubnetLeak,
-                        "Resolver forwards your client subnet (EDNS Client Subnet) to authoritative servers"
-                            + (ecsL.ScopePrefixLength is byte spl ? $" (scope /{spl})" : ""),
-                        "ECS exposes a /24 of your address to every authoritative you look up — a privacy leak; prefer a resolver that strips ECS, or encrypted DNS."));
-                    subs.Add(SectionStatus.Positive);
-                    break;
-                case ECSLeakStatus.NotForwarded:
-                    subs.Add(SectionStatus.Negative);
-                    break;
-                case ECSLeakStatus.Untested:
-                    break;
-                default:
-                    subs.Add(SectionStatus.Inconclusive);
-                    break;
-            }
-        }
+            ECSLeakStatus.Forwarded => (SectionStatus.Positive, EvidenceItem.Create(Section.Glutton, EvidenceId.EcsSubnetLeak,
+                "Resolver honours EDNS Client Subnet and echoed a scope"
+                    + (ecsL.ScopePrefixLength is byte spl ? $" (/{spl})" : "")
+                    + " for the synthetic test subnet",
+                "The resolver processes ECS options — a capability that could expose your subnet to authoritative servers if your real prefix is forwarded. Confirming an actual leak requires a paired plain/ECS query or a collector observation.")),
+            ECSLeakStatus.NotForwarded => (SectionStatus.Negative, null),
+            ECSLeakStatus.Untested => (SectionStatus.Untested, null),
+            _ => (SectionStatus.Inconclusive, null),
+        }, ev, subs);
 
         return CombineWithEvidence(ev, subs, completeness: DatapointCompleteness(subs, GluttonDatapointCatalog),
             datapointsExpected: GluttonDatapointCatalog);
@@ -847,24 +778,27 @@ public static class EvidenceAdapters
             }
         }
 
-        // Workstream H: response size
-        if (responseSize is ResponseSizeAudit rsa)
+        // Workstream H: response size.
+        // B043/B044: handle InsufficientData explicitly (→ inconclusive, never clean); add
+        // Inconclusive member parity with Swift. No default arm: unhandled cases are compile errors.
+        if (responseSize is not null)
         {
-            switch (rsa.Status)
+            switch (responseSize.Status)
             {
                 case ResponseSizeStatus.Oversized:
                     ev.Add(EvidenceItem.Create(Section.Cage, EvidenceId.ResponseSizeAnomaly,
-                        $"Sustained large DNS responses observed — {rsa.Detail}",
+                        $"Sustained large DNS responses observed — {responseSize.Detail}",
                         "A run of unusually large responses can be amplification or covert DNS tunnelling (large TXT/NULL answers). Weak and contextual — big DNSSEC/TXT answers are also legitimately large — so it corroborates the exfil check, never decides alone."));
                     subs.Add(SectionStatus.Degraded);
                     break;
                 case ResponseSizeStatus.Normal:
                     subs.Add(SectionStatus.Negative);
                     break;
-                case ResponseSizeStatus.Untested:
-                    break;
-                default:
+                case ResponseSizeStatus.InsufficientData:
+                    // B043: too few samples to judge — inconclusive, never rendered clean.
                     subs.Add(SectionStatus.Inconclusive);
+                    break;
+                case ResponseSizeStatus.Untested:
                     break;
             }
         }

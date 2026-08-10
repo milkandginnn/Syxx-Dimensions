@@ -3,6 +3,14 @@
 Queries DNS TXT records via the existing resolver module and parses
 results into structured results. All queries go through PUBLIC_RESOLVERS
 only (SSRF-safe). DNS failures produce "inconclusive", never crash.
+
+E038: DNSSEC (DO bit) — resolver.query() does not currently expose a ``do``
+parameter to set the DNSSEC OK bit on outgoing queries. The underlying
+``_build_query`` supports ``do=True``, but ``query()`` does not forward it.
+Until ``resolver.query()`` gains an optional ``do`` keyword argument, email
+auth queries cannot request DNSSEC validation. This is a known limitation
+documented here; the fix belongs in resolver.py (add ``do=False`` to the
+``query()`` signature and pass it to ``_build_query``).
 """
 
 from . import config, resolver

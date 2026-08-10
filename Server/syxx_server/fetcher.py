@@ -84,6 +84,33 @@ def _resolve_public(host):
 import time as _time  # noqa: E402 — import placed after runtime setup above it, deliberately
 
 
+def _strip_invisible(s):
+    """E005: Strip zero-width and bidi control characters from hostnames.
+    
+    These invisible characters (U+200B-U+200F, U+202A-U+202E, U+FEFF) can be
+    embedded in hostnames to create visually identical but distinct domains
+    that bypass SSRF validation or consume separate budget slots."""
+    if not s:
+        return s
+    # Zero-width spaces, joiners, and bidi control characters
+    invisible = (
+        '\u200B',  # Zero Width Space
+        '\u200C',  # Zero Width Non-Joiner
+        '\u200D',  # Zero Width Joiner
+        '\u200E',  # Left-to-Right Mark
+        '\u200F',  # Right-to-Left Mark
+        '\u202A',  # Left-to-Right Embedding
+        '\u202B',  # Right-to-Left Embedding
+        '\u202C',  # Pop Directional Formatting
+        '\u202D',  # Left-to-Right Override
+        '\u202E',  # Right-to-Left Override
+        '\uFEFF',  # Zero Width No-Break Space (BOM)
+    )
+    for char in invisible:
+        s = s.replace(char, '')
+    return s
+
+
 def _one_request(url, timeout, max_bytes, deadline=None):
     parts = urllib.parse.urlsplit(url)
     if parts.scheme not in ("http", "https"):
@@ -91,6 +118,8 @@ def _one_request(url, timeout, max_bytes, deadline=None):
     host = parts.hostname
     if not host:
         raise BlockedError("missing host")
+    # E005: strip zero-width and bidi control characters from hostname
+    host = _strip_invisible(host)
     port = parts.port or (443 if parts.scheme == "https" else 80)
     # A033: reject non-web ports. This runs on every hop (fetch() re-enters here per
     # redirect), so an http->https:PORT redirect cannot bypass a first-request-only check.

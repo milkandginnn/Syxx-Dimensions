@@ -1,0 +1,3608 @@
+{
+  "fix_now": [
+    "A001",
+    "A002",
+    "A003",
+    "A004",
+    "A005",
+    "A006",
+    "A007",
+    "A008",
+    "A009",
+    "A010",
+    "A011",
+    "A012",
+    "A013",
+    "A014",
+    "A015",
+    "A016",
+    "A017",
+    "A018",
+    "A019",
+    "A020",
+    "A021",
+    "A022",
+    "A023",
+    "A024",
+    "A025",
+    "A026",
+    "A027",
+    "A028",
+    "A029",
+    "A030",
+    "A031",
+    "A032",
+    "A033",
+    "A034",
+    "A035",
+    "A036",
+    "A037",
+    "A038",
+    "A039",
+    "A040",
+    "A041",
+    "A042",
+    "A043",
+    "A044",
+    "A045",
+    "A046",
+    "A047",
+    "A048",
+    "A049",
+    "A050",
+    "A051",
+    "A052",
+    "A053",
+    "A054",
+    "A055",
+    "A056",
+    "A057",
+    "A058",
+    "A059",
+    "A060",
+    "A061",
+    "A062",
+    "A063",
+    "A064",
+    "A065",
+    "A066",
+    "A067",
+    "A068",
+    "A069",
+    "A070",
+    "A071",
+    "A072",
+    "A073",
+    "A074",
+    "A075",
+    "A076",
+    "A077",
+    "A078",
+    "A079",
+    "A080",
+    "A081",
+    "A082",
+    "A083",
+    "A084",
+    "C001",
+    "C002",
+    "C003",
+    "C005",
+    "C006",
+    "C007",
+    "C008",
+    "C009",
+    "C010",
+    "C011",
+    "C012",
+    "C013"
+  ],
+  "fix_next": [
+    "B001",
+    "B002",
+    "B003",
+    "B004",
+    "B005",
+    "B006",
+    "B007",
+    "B008",
+    "B009",
+    "B010",
+    "B011",
+    "B012",
+    "B013",
+    "B014",
+    "B015",
+    "B016",
+    "B017",
+    "B018",
+    "B019",
+    "B020",
+    "B021",
+    "B022",
+    "B023",
+    "B024",
+    "B025",
+    "B026",
+    "B027",
+    "B028",
+    "B029",
+    "B030",
+    "B031",
+    "B032",
+    "B033",
+    "B034",
+    "B035",
+    "B036",
+    "B037",
+    "B038",
+    "B039",
+    "B040",
+    "B041",
+    "B042",
+    "B043",
+    "B044",
+    "B045",
+    "B046",
+    "B047",
+    "B048",
+    "E001",
+    "E002",
+    "E003",
+    "E004",
+    "E005",
+    "E006",
+    "E007",
+    "E008",
+    "E009",
+    "E010",
+    "E011",
+    "E012",
+    "E013",
+    "E014",
+    "E015",
+    "E016",
+    "E017",
+    "E018",
+    "E019",
+    "E020",
+    "E022",
+    "E023",
+    "E024",
+    "E025",
+    "E026",
+    "E027",
+    "E028",
+    "E029",
+    "E030",
+    "E031",
+    "E032",
+    "E033",
+    "E035",
+    "E036",
+    "E037",
+    "E038",
+    "E039",
+    "E040",
+    "E041",
+    "E042",
+    "E043",
+    "E044",
+    "E045",
+    "E046",
+    "E047",
+    "E048",
+    "E049",
+    "E050",
+    "E051",
+    "E053"
+  ],
+  "deltas": {
+    "E035": {
+      "title": "Session signing secret stored as plaintext in SQLite kv table \u2014 DB",
+      "location": "Server/syxx_server/licensing.py:90-99; db.py:get_or_create_secret()",
+      "files": [
+        "Server/syxx_server/licensing.py",
+        "db.py",
+        "licensing.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/licensing.py",
+          "90"
+        ],
+        [
+          "licensing.py",
+          "90"
+        ]
+      ],
+      "body_len": 1242
+    },
+    "A001": {
+      "title": "Passive DNS drift boolean fallback collapses tri-state",
+      "location": "Server/syxx_server/passivedns.py:121",
+      "files": [
+        "Server/syxx_server/passivedns.py",
+        "passivedns.py"
+      ],
+      "line_refs": [
+        [
+          "passivedns.py",
+          "123"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ]
+      ],
+      "body_len": 1482
+    },
+    "A002": {
+      "title": "IDN/Punycode bypass of per-run unique-host cap enables SSRF fan-out",
+      "location": "Server/syxx_server/warp.py:339",
+      "files": [
+        "Server/syxx_server/warp.py",
+        "xa9.com/a.js",
+        "xn--caf-dma.com/a.js"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ]
+      ],
+      "body_len": 1875
+    },
+    "A003": {
+      "title": "No Unicode normalization of hostnames in host budget comparison",
+      "location": "Server/syxx_server/warp.py:339, 442",
+      "files": [
+        "Server/syxx_server/warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ]
+      ],
+      "body_len": 1673
+    },
+    "A004": {
+      "title": "_envelope_decode function name conflates Content-Encoding with Transfer-",
+      "location": "Server/syxx_server/warp.py:218, 233, 269, 277",
+      "files": [
+        "Server/syxx_server/warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "218"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "218"
+        ]
+      ],
+      "body_len": 1993
+    },
+    "A005": {
+      "title": "Server exposes two different key_id schemes from the same Ed25519 key",
+      "location": "Server/syxx_server/app.py:1933; Server/syxx_server/leak.py:158-161",
+      "files": [
+        "Server/syxx_server/app.py",
+        "Server/syxx_server/leak.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1933"
+        ],
+        [
+          "Server/syxx_server/leak.py",
+          "158"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1933"
+        ]
+      ],
+      "body_len": 1973
+    },
+    "A006": {
+      "title": "Python str.lower() is locale-sensitive for hostname normalization",
+      "location": "Server/syxx_server/warp.py:339, 442",
+      "files": [
+        "Server/syxx_server/warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ]
+      ],
+      "body_len": 1441
+    },
+    "A007": {
+      "title": "_envelope_decode does not handle multiple Content-Encoding values",
+      "location": "Server/syxx_server/warp.py:226-233",
+      "files": [
+        "Server/syxx_server/warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "226"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "226"
+        ]
+      ],
+      "body_len": 1917
+    },
+    "A008": {
+      "title": "Server uses time.time() (wall clock) for manifest timestamps without clock-",
+      "location": "Server/syxx_server/warp.py:309",
+      "files": [
+        "Server/syxx_server/warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "309"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "309"
+        ]
+      ],
+      "body_len": 1761
+    },
+    "A009": {
+      "title": "No upper bound on freshness_seconds emitted by the server",
+      "location": "Server/syxx_server/warp.py:310",
+      "files": [
+        "Server/syxx_server/warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "310"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "310"
+        ]
+      ],
+      "body_len": 1418
+    },
+    "A010": {
+      "title": "Deprecated build_baseline serializes without sort_keys=True",
+      "location": "Server/syxx_server/warp.py:192",
+      "files": [
+        "Server/syxx_server/warp.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "192"
+        ],
+        [
+          "app.py",
+          "1925"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "192"
+        ]
+      ],
+      "body_len": 1418
+    },
+    "A011": {
+      "title": "json.dumps with ensure_ascii=False produces non-normalized UTF-8 signed",
+      "location": "Server/syxx_server/app.py:1925",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1925"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1925"
+        ]
+      ],
+      "body_len": 1717
+    },
+    "B001": {
+      "title": "Passive DNS drift boolean fallback collapses tri-state",
+      "location": "Server/syxx_server/passivedns.py:121",
+      "files": [
+        "Server/syxx_server/passivedns.py",
+        "passivedns.py"
+      ],
+      "line_refs": [
+        [
+          "passivedns.py",
+          "123"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ]
+      ],
+      "body_len": 1482
+    },
+    "C001": {
+      "title": "Passive DNS drift boolean fallback collapses tri-state",
+      "location": "Server/syxx_server/passivedns.py:121",
+      "files": [
+        "Server/syxx_server/passivedns.py",
+        "passivedns.py"
+      ],
+      "line_refs": [
+        [
+          "passivedns.py",
+          "123"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ]
+      ],
+      "body_len": 1482
+    },
+    "E001": {
+      "title": "Passive DNS drift boolean fallback collapses tri-state",
+      "location": "Server/syxx_server/passivedns.py:121",
+      "files": [
+        "Server/syxx_server/passivedns.py",
+        "passivedns.py"
+      ],
+      "line_refs": [
+        [
+          "passivedns.py",
+          "123"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ],
+        [
+          "Server/syxx_server/passivedns.py",
+          "121"
+        ]
+      ],
+      "body_len": 1482
+    },
+    "E002": {
+      "title": "TOCTOU DNS rebinding in Swift client-vantage HTTP fetch bypasses SSRF gate",
+      "location": "macOS/Sources/SyxxKit/WarpEngine.swift:520-525, 601-605",
+      "files": [
+        "macOS/Sources/SyxxKit/WarpEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/WarpEngine.swift",
+          "520"
+        ],
+        [
+          "macOS/Sources/SyxxKit/WarpEngine.swift",
+          "520"
+        ]
+      ],
+      "body_len": 2024
+    },
+    "E003": {
+      "title": "No key rotation, expiration, or revocation support in trust store",
+      "location": "macOS/Sources/SyxxKit/WarpManifestPinning.swift:19-48;",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/WarpManifestPinning.cs",
+        "macOS/Sources/SyxxKit/WarpManifestPinning.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/WarpManifestPinning.swift",
+          "19"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/WarpManifestPinning.cs",
+          "22"
+        ],
+        [
+          "macOS/Sources/SyxxKit/WarpManifestPinning.swift",
+          "19"
+        ]
+      ],
+      "body_len": 1897
+    },
+    "E004": {
+      "title": "No explicit certificate revocation checking (CRL/OCSP) in TLS connections",
+      "location": "macOS/Sources/SyxxKit/WarpEngine.swift:508-512;",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/WarpEngine.cs",
+        "macOS/Sources/SyxxKit/WarpEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/WarpEngine.swift",
+          "508"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/WarpEngine.cs",
+          "574"
+        ],
+        [
+          "macOS/Sources/SyxxKit/WarpEngine.swift",
+          "508"
+        ]
+      ],
+      "body_len": 2155
+    },
+    "E005": {
+      "title": "No zero-width character handling in URL parsing enables invisible host",
+      "location": "Server/syxx_server/warp.py:339; Server/syxx_server/fetcher.py:90-98",
+      "files": [
+        "Server/syxx_server/fetcher.py",
+        "Server/syxx_server/warp.py",
+        "fetcher.py",
+        "warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ],
+        [
+          "Server/syxx_server/fetcher.py",
+          "90"
+        ],
+        [
+          "warp.py",
+          "339"
+        ]
+      ],
+      "body_len": 1629
+    },
+    "E006": {
+      "title": "No homoglyph / confusable character detection in domain names",
+      "location": "Server/syxx_server/warp.py:339; macOS/Sources/SyxxKit/WarpEngine.swift;",
+      "files": [
+        "Server/syxx_server/warp.py",
+        "SyxxDiagnostics.swift",
+        "Windows/dotNET/Syxx.Kit/WarpEngine.cs",
+        "macOS/Sources/SyxxKit/WarpEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "339"
+        ]
+      ],
+      "body_len": 1973
+    },
+    "E007": {
+      "title": "IntegrityTag.constantTimeEqual leaks HMAC length via early return",
+      "location": "macOS/Sources/SyxxKit/Trust/IntegrityTag.swift:117-124",
+      "files": [
+        "macOS/Sources/SyxxKit/Trust/IntegrityTag.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/Trust/IntegrityTag.swift",
+          "117"
+        ],
+        [
+          "macOS/Sources/SyxxKit/Trust/IntegrityTag.swift",
+          "117"
+        ]
+      ],
+      "body_len": 2026
+    },
+    "E008": {
+      "title": "Test Ed25519 private keys committed to the repository",
+      "location": "warp-manifest-vectors/keys/test_signing_key.pem;",
+      "files": [
+        "_build_vectors.py",
+        "pinned_keys.js",
+        "warp-manifest-vectors/_build_vectors.py"
+      ],
+      "line_refs": [
+        [
+          "warp-manifest-vectors/_build_vectors.py",
+          "68"
+        ]
+      ],
+      "body_len": 1806
+    },
+    "A012": {
+      "title": "In-memory lockout counters reset on server restart",
+      "location": "Server/syxx_server/app.py:1586 (_ACTIVATE_FAILURES dict),",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1586"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1667"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1586"
+        ]
+      ],
+      "body_len": 1848
+    },
+    "E009": {
+      "title": "Keygen API calls over configurable base URL lack HTTPS enforcement",
+      "location": "Server/syxx_server/fulfillment.py:51,85,109;",
+      "files": [
+        "Server/syxx_server/fulfillment.py",
+        "Server/syxx_server/licensing.py",
+        "api.keygen.sh",
+        "config.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/fulfillment.py",
+          "51"
+        ],
+        [
+          "Server/syxx_server/licensing.py",
+          "341"
+        ],
+        [
+          "Server/syxx_server/fulfillment.py",
+          "51"
+        ]
+      ],
+      "body_len": 1966
+    },
+    "E010": {
+      "title": "_cap_rows f-string SQL construction gates on caller discipline only",
+      "location": "Server/syxx_server/db.py:885 (_cap_rows function signature)",
+      "files": [
+        "Server/syxx_server/db.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/db.py",
+          "885"
+        ],
+        [
+          "Server/syxx_server/db.py",
+          "885"
+        ]
+      ],
+      "body_len": 2360
+    },
+    "E011": {
+      "title": "logging_util event category uses f-string interpolation for caller data",
+      "location": "Server/syxx_server/fulfillment.py:140,227,260",
+      "files": [
+        "Server/syxx_server/fulfillment.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/fulfillment.py",
+          "140"
+        ],
+        [
+          "Server/syxx_server/fulfillment.py",
+          "140"
+        ]
+      ],
+      "body_len": 1752
+    },
+    "A013": {
+      "title": "IDN domain corruption in DNSSEC validator \u2014 `encode(\"ascii\",\"replace\")`",
+      "location": "Server/syxx_server/dnssec_validator.py:84",
+      "files": [
+        "Server/syxx_server/dnssec_validator.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dnssec_validator.py",
+          "84"
+        ],
+        [
+          "Server/syxx_server/dnssec_validator.py",
+          "73"
+        ]
+      ],
+      "body_len": 2000
+    },
+    "A014": {
+      "title": "backup() leaves stale .partial tmp files on error \u2014 no finally cleanup",
+      "location": "Server/syxx_server/db.py:986-998",
+      "files": [
+        "Server/syxx_server/db.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/db.py",
+          "986"
+        ],
+        [
+          "Server/syxx_server/db.py",
+          "986"
+        ]
+      ],
+      "body_len": 1600
+    },
+    "A015": {
+      "title": "app.py is a 3,425-line God module mixing 5 distinct concerns",
+      "location": "Server/syxx_server/app.py",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py",
+        "billing.py",
+        "diff.py",
+        "seo.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "265"
+        ]
+      ],
+      "body_len": 2114
+    },
+    "A016": {
+      "title": "dnssec_validator.py has zero test coverage \u2014 785-line crypto module",
+      "location": "Server/syxx_server/dnssec_validator.py (entire file, 785 lines)",
+      "files": [
+        "Server/syxx_server/dnssec_validator.py",
+        "dnssec_validator.py",
+        "test_dnssec_validator.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dnssec_validator.py",
+          "1"
+        ]
+      ],
+      "body_len": 1752
+    },
+    "A017": {
+      "title": "DNS wire protocol duplicated between dnssec_validator.py and resolver.py",
+      "location": "Server/syxx_server/dnssec_validator.py:89-200;",
+      "files": [
+        "Server/syxx_server/dnssec_validator.py",
+        "Server/syxx_server/resolver.py",
+        "dnssec_validator.py",
+        "resolver.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dnssec_validator.py",
+          "89"
+        ],
+        [
+          "Server/syxx_server/resolver.py",
+          "638"
+        ],
+        [
+          "dnssec_validator.py",
+          "110"
+        ]
+      ],
+      "body_len": 1994
+    },
+    "A018": {
+      "title": "db.py is a 1,351-line data access monolith with no repository classes",
+      "location": "Server/syxx_server/db.py (entire file, 1,351 lines)",
+      "files": [
+        "Server/syxx_server/db.py",
+        "db.py",
+        "leak_repo.py",
+        "license_repo.py",
+        "monitor_repo.py"
+      ],
+      "line_refs": [],
+      "body_len": 2361
+    },
+    "A019": {
+      "title": "No architecture documentation for Server \u2014 no ADRs, C4 diagrams, or",
+      "location": "Server/ (no architecture docs exist)",
+      "files": [
+        "api.html",
+        "app.py",
+        "dnssec_validator.py",
+        "help.html",
+        "investigate.py"
+      ],
+      "line_refs": [],
+      "body_len": 1760
+    },
+    "A020": {
+      "title": "_diff_content has no direct unit tests \u2014 tested only indirectly via",
+      "location": "Server/syxx_server/app.py:265-354",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "265"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "265"
+        ]
+      ],
+      "body_len": 1526
+    },
+    "A021": {
+      "title": "Circular dependency workarounds in config.py, db.py, licensing.py",
+      "location": "Server/syxx_server/config.py:39;",
+      "files": [
+        "Server/syxx_server/config.py",
+        "Server/syxx_server/db.py",
+        "Server/syxx_server/licensing.py",
+        "config.py",
+        "core.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/config.py",
+          "39"
+        ],
+        [
+          "Server/syxx_server/db.py",
+          "485"
+        ],
+        [
+          "Server/syxx_server/licensing.py",
+          "521"
+        ]
+      ],
+      "body_len": 1937
+    },
+    "A022": {
+      "title": "12 type safety suppression overrides in pyproject.toml mask real errors",
+      "location": "Server/pyproject.toml (12 [[tool.ty.overrides]] blocks)",
+      "files": [
+        "Server/pyproject.toml",
+        "app.py",
+        "dnssec_validator.py",
+        "leak.py",
+        "netutil.py"
+      ],
+      "line_refs": [],
+      "body_len": 1858
+    },
+    "A023": {
+      "title": "_env_int helper duplicated across 3 modules \u2014 copy-paste pattern",
+      "location": "Server/syxx_server/app.py:233;",
+      "files": [
+        "Server/syxx_server/app.py",
+        "Server/syxx_server/db.py",
+        "Server/syxx_server/investigate.py",
+        "app.py",
+        "config.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "233"
+        ],
+        [
+          "Server/syxx_server/investigate.py",
+          "32"
+        ],
+        [
+          "Server/syxx_server/db.py",
+          "31"
+        ]
+      ],
+      "body_len": 1535
+    },
+    "A024": {
+      "title": "_diff_content and _route_diff use different comparison logic for the",
+      "location": "Server/syxx_server/app.py:265-354 vs app.py:2062-2180",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py",
+        "diff.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "265"
+        ],
+        [
+          "app.py",
+          "2062"
+        ],
+        [
+          "app.py",
+          "265"
+        ]
+      ],
+      "body_len": 1809
+    },
+    "A025": {
+      "title": "seo.py duplicates pricing constants from app.py \u2014 not shared via config",
+      "location": "Server/syxx_server/seo.py:33-34;",
+      "files": [
+        "Server/syxx_server/app.py",
+        "Server/syxx_server/seo.py",
+        "app.py",
+        "config.py",
+        "seo.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/seo.py",
+          "33"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "178"
+        ],
+        [
+          "seo.py",
+          "33"
+        ]
+      ],
+      "body_len": 1446
+    },
+    "A026": {
+      "title": "_dnssec_observed deeply nested \u2014 ~120 lines, 5 levels of nesting,",
+      "location": "Server/syxx_server/investigate.py:230-350",
+      "files": [
+        "Server/syxx_server/investigate.py",
+        "dnssec_observation.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/investigate.py",
+          "230"
+        ],
+        [
+          "Server/syxx_server/investigate.py",
+          "230"
+        ]
+      ],
+      "body_len": 1668
+    },
+    "A027": {
+      "title": "resolve_authoritative \u2014 6 levels of nesting, ~160 lines, 8 return sites",
+      "location": "Server/syxx_server/resolver.py:830-990",
+      "files": [
+        "Server/syxx_server/resolver.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/resolver.py",
+          "830"
+        ],
+        [
+          "Server/syxx_server/resolver.py",
+          "830"
+        ]
+      ],
+      "body_len": 1804
+    },
+    "A028": {
+      "title": "_diff_content lives in app.py but depends on warp.build_baseline",
+      "location": "Server/syxx_server/app.py:265-354",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py",
+        "diff.py",
+        "warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "265"
+        ],
+        [
+          "app.py",
+          "265"
+        ]
+      ],
+      "body_len": 1375
+    },
+    "A029": {
+      "title": "config.py mixes product catalog (Stripe SKUs) with infrastructure config",
+      "location": "Server/syxx_server/config.py (624 lines)",
+      "files": [
+        "Server/syxx_server/config.py",
+        "catalog.py",
+        "config.py",
+        "seo.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/config.py",
+          "280"
+        ]
+      ],
+      "body_len": 1784
+    },
+    "A030": {
+      "title": "No unified DNS query interface \u2014 5 different query paths for 3 transports",
+      "location": "Server/syxx_server/resolver.py;",
+      "files": [
+        "Server/syxx_server/dnssec_validator.py",
+        "Server/syxx_server/dot_listener.py",
+        "Server/syxx_server/resolver.py"
+      ],
+      "line_refs": [],
+      "body_len": 1971
+    },
+    "A031": {
+      "title": "Tests use unittest.TestCase alongside pytest inconsistently",
+      "location": "Server/tests/ (~15 files)",
+      "files": [
+        "Server/tests/test_something.py",
+        "conftest.py"
+      ],
+      "line_refs": [],
+      "body_len": 1806
+    },
+    "B002": {
+      "title": "208 quarantined test methods in macOS _quarantine/ \u2014 synthesis engine",
+      "location": "macOS/Tests/_quarantine/ (19 active test files, 208 test methods)",
+      "files": [
+        "FusionRuleBakeoffTests.swift",
+        "ScorersContractTests.swift",
+        "Stage0GoldenCorpusTests.swift",
+        "SynthesisEngineTests.swift",
+        "SynthesizerDatapointWiringTests.swift"
+      ],
+      "line_refs": [],
+      "body_len": 2191
+    },
+    "B003": {
+      "title": "Synthesizer.cs \u2014 15 duplicated switch (probe.Status) blocks across 6",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs (1,073 lines)",
+      "files": [
+        "Synthesizer.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs"
+      ],
+      "line_refs": [],
+      "body_len": 1879
+    },
+    "B004": {
+      "title": "MatrixDeterminativeEngine.cs \u2014 1,319-line port of Swift engine with",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+      "files": [
+        "MatrixDeterminativeEngine.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "MatrixDeterminativeEngine.cs",
+          "1"
+        ],
+        [
+          "MatrixDeterminativeEngine.cs",
+          "808"
+        ]
+      ],
+      "body_len": 1757
+    },
+    "B005": {
+      "title": "DNSResolver.cs \u2014 1,289-line static class mixing transport, parsing,",
+      "location": "Windows/dotNET/Syxx.Kit/DNSResolver.cs (1,289 lines)",
+      "files": [
+        "DNSResolver.cs",
+        "Windows/dotNET/Syxx.Kit/DNSResolver.cs"
+      ],
+      "line_refs": [],
+      "body_len": 1803
+    },
+    "B006": {
+      "title": "LeakDetector.cs \u2014 1,092-line monolith mixing HTTP, TLS, Ed25519,",
+      "location": "Windows/dotNET/Syxx.Kit/LeakDetector.cs (1,092 lines)",
+      "files": [
+        "LeakDetector.cs",
+        "Windows/dotNET/Syxx.Kit/LeakDetector.cs"
+      ],
+      "line_refs": [],
+      "body_len": 2044
+    },
+    "B007": {
+      "title": "SyxxMatrixIntegration.cs \u2014 200-line inline BuildDefaultSpec() with ~100",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs (485 lines)",
+      "files": [
+        "SyxxMatrixIntegration.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs"
+      ],
+      "line_refs": [
+        [
+          "SyxxMatrixIntegration.cs",
+          "200"
+        ]
+      ],
+      "body_len": 1951
+    },
+    "B008": {
+      "title": "DNSResolver.swift \u2014 1,698-line monolith mixing transport and wire format",
+      "location": "macOS/Sources/SyxxKit/DNSResolver.swift (1,698 lines)",
+      "files": [
+        "DNSResolver.swift",
+        "macOS/Sources/SyxxKit/DNSResolver.swift"
+      ],
+      "line_refs": [],
+      "body_len": 1889
+    },
+    "B009": {
+      "title": "MatrixDeterminativeEngine.swift \u2014 1,068 lines, deeply nested scoring",
+      "location": "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift",
+      "files": [
+        "MatrixDeterminativeEngine.swift",
+        "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift"
+      ],
+      "line_refs": [],
+      "body_len": 1656
+    },
+    "B010": {
+      "title": "SynthesisEngine incomplete indicator mapping \u2014 4 clean-support",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:180-230",
+      "files": [
+        "SynthesisEngine.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs",
+          "180"
+        ],
+        [
+          "SynthesisEngine.cs",
+          "180"
+        ]
+      ],
+      "body_len": 2148
+    },
+    "B011": {
+      "title": "No integration tests on macOS \u2014 all 889 active tests are unit tests",
+      "location": "macOS/Tests/ (889 test methods, all unit tests)",
+      "files": [],
+      "line_refs": [],
+      "body_len": 1724
+    },
+    "B012": {
+      "title": "No integration tests on any platform \u2014 cannot verify DNS tampering",
+      "location": "All platforms (macOS, Windows, Linux, Server)",
+      "files": [],
+      "line_refs": [],
+      "body_len": 1612
+    },
+    "B013": {
+      "title": "_diff_content lives in app.py but belongs in a dedicated diff module",
+      "location": "Server/syxx_server/app.py:265-354",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py",
+        "diff.py",
+        "warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "265"
+        ],
+        [
+          "app.py",
+          "265"
+        ]
+      ],
+      "body_len": 1449
+    },
+    "C002": {
+      "title": "WitnessWireJson.cs \u2014 IEEE-754 ULP-nudging date math is fragile",
+      "location": "Windows/dotNET/Syxx.Kit/WitnessWireJson.cs:200-240",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/WitnessWireJson.cs",
+        "WitnessWireJson.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/WitnessWireJson.cs",
+          "200"
+        ],
+        [
+          "WitnessWireJson.cs",
+          "200"
+        ]
+      ],
+      "body_len": 2434
+    },
+    "C003": {
+      "title": "HasChanges API divergence \u2014 Linux uses computed property, Windows uses",
+      "location": "Linux/Ubuntu/SyxxUI.Avalonia/Mirror/DiffResult.cs:62;",
+      "files": [
+        "Linux/Ubuntu/SyxxUI.Avalonia/Mirror/DiffResult.cs",
+        "Windows/dotNET/SyxxUI/Mirror/DiffResult.cs"
+      ],
+      "line_refs": [
+        [
+          "Linux/Ubuntu/SyxxUI.Avalonia/Mirror/DiffResult.cs",
+          "62"
+        ],
+        [
+          "Windows/dotNET/SyxxUI/Mirror/DiffResult.cs",
+          "69"
+        ]
+      ],
+      "body_len": 1634
+    },
+    "E012": {
+      "title": "No architecture documentation on macOS \u2014 no ADRs, C4 diagrams, or",
+      "location": "macOS/ (no architecture docs exist)",
+      "files": [],
+      "line_refs": [],
+      "body_len": 1762
+    },
+    "A032": {
+      "title": "cryptography is 9 major versions behind \u2014 exposed to CVE-2026-69249",
+      "location": "Server/requirements.txt (constraint: `cryptography>=41.0.0`)",
+      "files": [],
+      "line_refs": [],
+      "body_len": 1980
+    },
+    "A033": {
+      "title": "sentry-sdk[opentelemetry] is 47 minor versions behind \u2014 missing OTel",
+      "location": "Server/requirements.txt (constraint: `sentry-sdk[opentelemetry]>=2.19`)",
+      "files": [],
+      "line_refs": [],
+      "body_len": 1342
+    },
+    "A034": {
+      "title": "Server uses pip not uv \u2014 no lockfile, no reproducible builds, no",
+      "location": "Server/ (no uv.lock, no Pipfile.lock, no poetry.lock)",
+      "files": [
+        "Server/pyproject.toml"
+      ],
+      "line_refs": [],
+      "body_len": 1727
+    },
+    "A035": {
+      "title": "idna package is a transitive dependency of cryptography \u2014 should be",
+      "location": "Server/requirements.txt (idna not listed)",
+      "files": [
+        "dnssec_validator.py"
+      ],
+      "line_refs": [],
+      "body_len": 1633
+    },
+    "A036": {
+      "title": "brotli is 1 minor version behind \u2014 missing performance improvements",
+      "location": "Server/requirements.txt (constraint: `brotli>=1.1.0`)",
+      "files": [],
+      "line_refs": [],
+      "body_len": 643
+    },
+    "B014": {
+      "title": "sentry-sdk 47 minor versions behind \u2014 missing OTel interop fixes could",
+      "location": "Server/requirements.txt (constraint: `sentry-sdk[opentelemetry]>=2.19`)",
+      "files": [],
+      "line_refs": [],
+      "body_len": 1218
+    },
+    "C005": {
+      "title": "cryptography CVE-2026-69249 exposes Ed25519 leak attestation signing",
+      "location": "Server/requirements.txt (constraint: `cryptography>=41.0.0`);",
+      "files": [
+        "Server/syxx_server/leak.py",
+        "leak.py"
+      ],
+      "line_refs": [],
+      "body_len": 1682
+    },
+    "E013": {
+      "title": "colorthief is unmaintained since Feb 2017 \u2014 Python 2 only, will not",
+      "location": "tools/yt-design-extractor/pyproject.toml",
+      "files": [
+        "colorgram.py",
+        "pyproject.toml",
+        "tools/yt-design-extractor/pyproject.toml"
+      ],
+      "line_refs": [],
+      "body_len": 1428
+    },
+    "E014": {
+      "title": "Pillow constraint >=10.0.0 allows vulnerable versions \u2014 11 HIGH CVEs",
+      "location": "tools/yt-design-extractor/pyproject.toml",
+      "files": [
+        "tools/yt-design-extractor/pyproject.toml"
+      ],
+      "line_refs": [],
+      "body_len": 1245
+    },
+    "E015": {
+      "title": "No automated dependency vulnerability scanning in CI for any ecosystem",
+      "location": ".github/workflows/ (no dependency audit workflow)",
+      "files": [
+        "ci.yml",
+        "code-quality.yml",
+        "validate.yml"
+      ],
+      "line_refs": [],
+      "body_len": 1505
+    },
+    "A037": {
+      "title": "do_DELETE has no CSRF protection while do_POST does \u2014 attacker can",
+      "location": "Server/syxx_server/app.py:996",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "996"
+        ],
+        [
+          "app.py",
+          "996"
+        ]
+      ],
+      "body_len": 1886
+    },
+    "A038": {
+      "title": "_client_ip returns loopback (127.0.0.1) on malformed XFF, enabling",
+      "location": "Server/syxx_server/app.py (SEC-035 XFF validation)",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [],
+      "body_len": 1808
+    },
+    "A039": {
+      "title": "HSTS emitted via X-Forwarded-Proto without peer validation \u2014 attacker",
+      "location": "Server/syxx_server/app.py:654",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "654"
+        ],
+        [
+          "app.py",
+          "654"
+        ]
+      ],
+      "body_len": 1619
+    },
+    "B015": {
+      "title": "Swift Forensics module (1,173 lines) has zero tests \u2014 C# twin has",
+      "location": "macOS/Sources/SyxxKit/Forensics/ (1,173 lines, no test file);",
+      "files": [
+        "ForensicsAnalyzerTests.cs",
+        "ForensicsAnalyzerTests.swift",
+        "Windows/dotNET/Syxx.Tests/ForensicsAnalyzerTests.cs",
+        "macOS/Tests/SyxxKitTests/ForensicsAnalyzerTests.swift"
+      ],
+      "line_refs": [],
+      "body_len": 1662
+    },
+    "B016": {
+      "title": "CaptureEvents.ClassifyWindow triple-enumerates windowed records \u2014",
+      "location": "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs:170-210",
+      "files": [
+        "CaptureEvents.cs",
+        "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs",
+          "170"
+        ],
+        [
+          "CaptureEvents.cs",
+          "170"
+        ]
+      ],
+      "body_len": 1617
+    },
+    "B017": {
+      "title": "ParityVectorLoader.Walker.Done() does O(n log n) key-sort on every",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/ParityVectorLoader.cs:1650-1660",
+      "files": [
+        "ParityVectorLoader.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/ParityVectorLoader.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/ParityVectorLoader.cs",
+          "1650"
+        ],
+        [
+          "ParityVectorLoader.cs",
+          "1650"
+        ]
+      ],
+      "body_len": 1783
+    },
+    "B018": {
+      "title": "CageRedundancyCorrelator.swift (235 lines) has zero tests \u2014 pure logic",
+      "location": "macOS/Sources/SyxxKit/CageRedundancyCorrelator.swift (235 lines)",
+      "files": [
+        "CageRedundancyCorrelator.swift",
+        "macOS/Sources/SyxxKit/CageRedundancyCorrelator.swift",
+        "macOS/Tests/SyxxKitTests/CageRedundancyCorrelatorTests.swift"
+      ],
+      "line_refs": [],
+      "body_len": 1705
+    },
+    "B019": {
+      "title": "DNSPathConfirmation.swift (318 lines) has zero tests \u2014 accuracy-critical",
+      "location": "macOS/Sources/SyxxKit/DNSPathConfirmation.swift (318 lines)",
+      "files": [
+        "DNSPathConfirmation.swift",
+        "macOS/Sources/SyxxKit/DNSPathConfirmation.swift",
+        "macOS/Tests/SyxxKitTests/DNSPathConfirmationTests.swift"
+      ],
+      "line_refs": [],
+      "body_len": 1637
+    },
+    "B020": {
+      "title": "19 unique test files quarantined in macOS _quarantine/ \u2014 SynthesisEngine",
+      "location": "macOS/Tests/_quarantine/ (44 files: 19 unique, 14 .phase32-active-dup,",
+      "files": [
+        "SynthesisEngineTests.swift",
+        "SyxxKitTests.swift"
+      ],
+      "line_refs": [],
+      "body_len": 2125
+    },
+    "B021": {
+      "title": "CaptureEvents.cs (407 lines) has zero tests \u2014 new Windows capture",
+      "location": "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs (407 lines)",
+      "files": [
+        "CaptureEvents.cs",
+        "CaptureEventsTests.cs",
+        "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs",
+        "Windows/dotNET/Syxx.Tests/CaptureEventsTests.cs"
+      ],
+      "line_refs": [],
+      "body_len": 1366
+    },
+    "B022": {
+      "title": "ParityVectorLoader.RejectDuplicateMembers allocates HashSet per JSON",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/ParityVectorLoader.cs:380-410",
+      "files": [
+        "ParityVectorLoader.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/ParityVectorLoader.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/ParityVectorLoader.cs",
+          "380"
+        ],
+        [
+          "ParityVectorLoader.cs",
+          "380"
+        ]
+      ],
+      "body_len": 1537
+    },
+    "B023": {
+      "title": "CaptureEvents rcode string matching fragile to producer changes \u2014",
+      "location": "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs",
+      "files": [
+        "CaptureEvents.cs",
+        "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs"
+      ],
+      "line_refs": [],
+      "body_len": 1687
+    },
+    "E016": {
+      "title": "Breadcrumb() called from catch blocks can throw, replacing the",
+      "location": "Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs",
+      "files": [
+        "LinuxSecretStore.cs",
+        "Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs"
+      ],
+      "line_refs": [],
+      "body_len": 1667
+    },
+    "C006": {
+      "title": "C# Assemble drops hard-excluded diagnoses from the clean-blocking",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1193-1201,",
+      "files": [
+        "MatrixDeterminativeEngine.cs",
+        "MatrixDeterminativeEngine.swift",
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+        "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+          "1193"
+        ],
+        [
+          "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift",
+          "982"
+        ],
+        [
+          "MatrixDeterminativeEngine.cs",
+          "1193"
+        ]
+      ],
+      "body_len": 2952
+    },
+    "C007": {
+      "title": "C# DNS spoofed-then-timeout collapses to `.timeout` where macOS",
+      "location": "Windows/dotNET/Syxx.Kit/DNSResolver.cs:244-257, 284-313;",
+      "files": [
+        "DNSResolver.cs",
+        "Windows/dotNET/Syxx.Kit/DNSResolver.cs",
+        "macOS/Sources/SyxxKit/DNSResolver.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/DNSResolver.cs",
+          "244"
+        ],
+        [
+          "macOS/Sources/SyxxKit/DNSResolver.swift",
+          "423"
+        ]
+      ],
+      "body_len": 1944
+    },
+    "C008": {
+      "title": "Collector-less Glutton runs promote a never-executed probe to",
+      "location": "Windows/dotNET/Syxx.Kit/ProbePlan.cs:224-226;",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/ProbePlan.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs",
+        "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/ProbePlan.cs",
+          "224"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "761"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs",
+          "370"
+        ]
+      ],
+      "body_len": 2058
+    },
+    "C009": {
+      "title": "Conclusions scan drops accumulated session evidence and falls back to",
+      "location": "Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ConclusionsViewModel.cs:62-66;",
+      "files": [
+        "Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ConclusionsViewModel.cs",
+        "Windows/dotNET/Syxx.Kit/Synthesis/FirstRunScan.cs"
+      ],
+      "line_refs": [
+        [
+          "Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ConclusionsViewModel.cs",
+          "62"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/FirstRunScan.cs",
+          "41"
+        ],
+        [
+          "Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ConclusionsViewModel.cs",
+          "62"
+        ]
+      ],
+      "body_len": 1988
+    },
+    "A040": {
+      "title": "Trial-anchor per-IP limiter `_TRIAL_ANCHOR_IP_COUNTS` grows unbounded",
+      "location": "Server/syxx_server/app.py:1667-1702 (_TRIAL_ANCHOR_IP_COUNTS)",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1667"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1667"
+        ]
+      ],
+      "body_len": 1755
+    },
+    "A041": {
+      "title": "`/api/diff` content half runs `warp.build_baseline` with no aggregate",
+      "location": "Server/syxx_server/app.py:265-273; Server/syxx_server/warp.py:123-193,",
+      "files": [
+        "Server/syxx_server/app.py",
+        "Server/syxx_server/scheduler.py",
+        "Server/syxx_server/warp.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "app.py",
+          "2119"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "265"
+        ],
+        [
+          "Server/syxx_server/warp.py",
+          "123"
+        ]
+      ],
+      "body_len": 2140
+    },
+    "A042": {
+      "title": "Server Sentry SDK initialized but never used \u2014 zero capture_exception",
+      "location": "Server/syxx_server/app.py:74 (sentry_sdk.init)",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "74"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "74"
+        ]
+      ],
+      "body_len": 1873
+    },
+    "A043": {
+      "title": "handler_exception catch-all creates no Sentry event \u2014 production",
+      "location": "Server/syxx_server/app.py:919",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "919"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "919"
+        ]
+      ],
+      "body_len": 1766
+    },
+    "A044": {
+      "title": "Server OTel spans cover only 16 of ~30+ endpoint paths \u2014 most-called",
+      "location": "Server/syxx_server/app.py (span creation sites)",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [],
+      "body_len": 2083
+    },
+    "A045": {
+      "title": "Server /readyz and /healthz endpoints do not create OTel spans",
+      "location": "Server/syxx_server/app.py:1044 (/healthz), 1551 (/readyz)",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1044"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1044"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1551"
+        ]
+      ],
+      "body_len": 1568
+    },
+    "A046": {
+      "title": "_route_diff performs two sequential DNS resolutions that could run",
+      "location": "Server/syxx_server/app.py:2097-2108",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "2097"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "2097"
+        ]
+      ],
+      "body_len": 1817
+    },
+    "B024": {
+      "title": "ExfilSuspicious EvidenceId unmapped in C# SynthesisEngine \u2014 macOS",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:283-310;",
+      "files": [
+        "SynthesisEngine.cs",
+        "SynthesisEngine.swift",
+        "Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs",
+        "macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs",
+          "283"
+        ],
+        [
+          "macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift",
+          "290"
+        ],
+        [
+          "SynthesisEngine.swift",
+          "290"
+        ]
+      ],
+      "body_len": 2084
+    },
+    "B025": {
+      "title": "MatrixDeterminativeEngine.evaluate() O(n\u00b2) competitor strength",
+      "location": "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:640-646",
+      "files": [
+        "MatrixDeterminativeEngine.swift",
+        "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift",
+          "640"
+        ],
+        [
+          "MatrixDeterminativeEngine.swift",
+          "640"
+        ]
+      ],
+      "body_len": 1826
+    },
+    "B026": {
+      "title": "C# MatrixDeterminativeEngine missing B162 section-usability gate for",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:920-950",
+      "files": [
+        "MatrixDeterminativeEngine.cs",
+        "MatrixDeterminativeEngine.swift",
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "MatrixDeterminativeEngine.cs",
+          "920"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+          "920"
+        ],
+        [
+          "MatrixDeterminativeEngine.swift",
+          "800"
+        ]
+      ],
+      "body_len": 2078
+    },
+    "B027": {
+      "title": "C# MatrixDeterminativeEngine missing B162 section-usability gate for",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:958-966",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+          "958"
+        ]
+      ],
+      "body_len": 1280
+    },
+    "B028": {
+      "title": "C# MatrixDeterminativeEngine missing B163 ExclusionQualityFloor \u2014 no",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:969-976",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+          "969"
+        ]
+      ],
+      "body_len": 1541
+    },
+    "B029": {
+      "title": "C# MatrixDeterminativeEngine hard exclusion missing section-usability",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:969-976",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+          "969"
+        ]
+      ],
+      "body_len": 1387
+    },
+    "B030": {
+      "title": "C# MatrixDeterminativeEngine missing B159 emittableIDs filter in",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:850-860",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+          "850"
+        ]
+      ],
+      "body_len": 1268
+    },
+    "B031": {
+      "title": "C# MatrixDeterminativeEngine missing B168 cleanID guard \u2014 clean",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:880-895",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs",
+          "880"
+        ]
+      ],
+      "body_len": 1108
+    },
+    "B032": {
+      "title": "DNSResolver spoof-detection uses fragile string-matching on",
+      "location": "macOS/Sources/SyxxKit/DNSResolver.swift:513, 525",
+      "files": [
+        "DNSResolver.swift",
+        "macOS/Sources/SyxxKit/DNSResolver.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/DNSResolver.swift",
+          "513"
+        ],
+        [
+          "DNSResolver.swift",
+          "513"
+        ]
+      ],
+      "body_len": 1201
+    },
+    "B033": {
+      "title": "DNSResponse.didFail includes .servFail and .refused as \"failures\" \u2014",
+      "location": "macOS/Sources/SyxxKit/DNSResolver.swift:330",
+      "files": [
+        "DNSResolver.swift",
+        "macOS/Sources/SyxxKit/DNSResolver.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/DNSResolver.swift",
+          "330"
+        ],
+        [
+          "DNSResolver.swift",
+          "330"
+        ]
+      ],
+      "body_len": 1370
+    },
+    "B034": {
+      "title": "ScriptMismatchInconclusive EvidenceId missing from C# \u2014 inconclusive",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:463;",
+      "files": [
+        "Synthesizer.cs",
+        "Synthesizer.swift",
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+        "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "463"
+        ],
+        [
+          "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift",
+          "354"
+        ],
+        [
+          "Synthesizer.cs",
+          "463"
+        ]
+      ],
+      "body_len": 1890
+    },
+    "B035": {
+      "title": "C# authoritative negative treats CNAME-only answers as divergence",
+      "location": "Windows/dotNET/Syxx.Kit/AuthoritativeVantage.cs:148-190;",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/AuthoritativeVantage.cs",
+        "macOS/Sources/SyxxKit/AuthoritativeVantage.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/AuthoritativeVantage.cs",
+          "148"
+        ],
+        [
+          "macOS/Sources/SyxxKit/AuthoritativeVantage.swift",
+          "131"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/AuthoritativeVantage.cs",
+          "189"
+        ]
+      ],
+      "body_len": 1865
+    },
+    "A047": {
+      "title": "investigate.py _resolve_all uses type(e).__name__ in broad except \u2014",
+      "location": "Server/syxx_server/investigate.py:122-127",
+      "files": [
+        "Server/syxx_server/investigate.py",
+        "investigate.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/investigate.py",
+          "122"
+        ],
+        [
+          "investigate.py",
+          "127"
+        ]
+      ],
+      "body_len": 1204
+    },
+    "A048": {
+      "title": "_deadline_timer comment claims \"per-CONNECTION\" but setup() runs per-",
+      "location": "Server/syxx_server/app.py:300-308",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "300"
+        ],
+        [
+          "app.py",
+          "300"
+        ]
+      ],
+      "body_len": 1145
+    },
+    "A049": {
+      "title": "investigate.py hasattr(resolver, \"TYPE_DNSKEY\") fallback to 48 is",
+      "location": "Server/syxx_server/investigate.py:200",
+      "files": [
+        "Server/syxx_server/investigate.py",
+        "investigate.py",
+        "resolver.py"
+      ],
+      "line_refs": [
+        [
+          "resolver.py",
+          "27"
+        ],
+        [
+          "Server/syxx_server/investigate.py",
+          "200"
+        ],
+        [
+          "investigate.py",
+          "200"
+        ]
+      ],
+      "body_len": 1036
+    },
+    "A050": {
+      "title": "_route_investigate records domain in OTel span BEFORE validation \u2014",
+      "location": "Server/syxx_server/app.py:2017-2022",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "2017"
+        ],
+        [
+          "app.py",
+          "2017"
+        ]
+      ],
+      "body_len": 1194
+    },
+    "A051": {
+      "title": "leak.py _ensure_collector_key raises RuntimeError at import time \u2014",
+      "location": "Server/syxx_server/leak.py:89-97",
+      "files": [
+        "Server/syxx_server/leak.py",
+        "leak.py",
+        "preflight.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/leak.py",
+          "89"
+        ],
+        [
+          "leak.py",
+          "93"
+        ]
+      ],
+      "body_len": 1216
+    },
+    "A052": {
+      "title": "No ETag/If-None-Match support on server \u2014 full body retransmit every",
+      "location": "Server/syxx_server/app.py (all _send(), _serve_static(),",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [],
+      "body_len": 1244
+    },
+    "A053": {
+      "title": "N+1 sequential DNS queries in firewall_test \u2014 120 DNS queries, all",
+      "location": "Server/syxx_server/firewall_test.py:120, 170, 210, 220",
+      "files": [
+        "Server/syxx_server/firewall_test.py",
+        "firewall_test.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/firewall_test.py",
+          "120"
+        ],
+        [
+          "firewall_test.py",
+          "210"
+        ]
+      ],
+      "body_len": 1288
+    },
+    "A054": {
+      "title": "N+1 sequential script fetches in warp.build_baseline \u2014 up to 50 scripts",
+      "location": "Server/syxx_server/warp.py:120-150; Server/syxx_server/fetcher.py",
+      "files": [
+        "Server/syxx_server/fetcher.py",
+        "Server/syxx_server/warp.py",
+        "warp.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/warp.py",
+          "120"
+        ],
+        [
+          "warp.py",
+          "145"
+        ]
+      ],
+      "body_len": 1167
+    },
+    "A055": {
+      "title": "No Cache-Control on any API response \u2014 zero browser/CDN caching",
+      "location": "Server/syxx_server/app.py:660, 2000, 2050, 2180, 2450, 2660",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "660"
+        ],
+        [
+          "app.py",
+          "660"
+        ]
+      ],
+      "body_len": 1103
+    },
+    "A056": {
+      "title": "Server OTel spans have no error status on exception paths \u2014 span ends",
+      "location": "Server/syxx_server/app.py:2051-2053, 2189-2191",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "2051"
+        ],
+        [
+          "app.py",
+          "2051"
+        ]
+      ],
+      "body_len": 1116
+    },
+    "A057": {
+      "title": "No health check for Sentry/OTel connectivity \u2014 server can be \"healthy\"",
+      "location": "Server/syxx_server/app.py:1044-1045, 1546-1565",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1044"
+        ],
+        [
+          "app.py",
+          "1044"
+        ]
+      ],
+      "body_len": 1071
+    },
+    "A058": {
+      "title": "Server /metrics returns raw JSON dict, not Prometheus exposition format",
+      "location": "Server/syxx_server/app.py:1580-1586",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1580"
+        ],
+        [
+          "app.py",
+          "1580"
+        ]
+      ],
+      "body_len": 949
+    },
+    "A059": {
+      "title": "Server OTLP log records lack trace context \u2014 log records disconnected",
+      "location": "Server/syxx_server/logging_util.py:77-85",
+      "files": [
+        "Server/syxx_server/logging_util.py",
+        "logging_util.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/logging_util.py",
+          "77"
+        ],
+        [
+          "logging_util.py",
+          "77"
+        ]
+      ],
+      "body_len": 984
+    },
+    "A060": {
+      "title": "Stripe SPKI pin list is loaded but never enforced on checkout",
+      "location": "Server/syxx_server/stripe_checkout.py:45-50, 175",
+      "files": [
+        "Server/syxx_server/stripe_checkout.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/stripe_checkout.py",
+          "45"
+        ],
+        [
+          "Server/syxx_server/stripe_checkout.py",
+          "45"
+        ]
+      ],
+      "body_len": 1625
+    },
+    "A061": {
+      "title": "Keygen revocation webhook is replayable because it checks HMAC only",
+      "location": "Server/syxx_server/app.py:1407-1452",
+      "files": [
+        "Server/syxx_server/app.py",
+        "hashlib.sh"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1407"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "1419"
+        ]
+      ],
+      "body_len": 1847
+    },
+    "E017": {
+      "title": "Hardcoded P-256 Keygen public key in macOS and Windows clients \u2014 no",
+      "location": "macOS/Sources/SyxxKit/LicenseManager.swift:74;",
+      "files": [
+        "LicenseManager.cs",
+        "LicenseManager.swift",
+        "Windows/dotNET/Syxx.Kit/LicenseManager.cs",
+        "macOS/Sources/SyxxKit/LicenseManager.swift"
+      ],
+      "line_refs": [
+        [
+          "LicenseManager.swift",
+          "74"
+        ],
+        [
+          "LicenseManager.cs",
+          "508"
+        ],
+        [
+          "macOS/Sources/SyxxKit/LicenseManager.swift",
+          "74"
+        ]
+      ],
+      "body_len": 1728
+    },
+    "E018": {
+      "title": "Key algorithm mismatch \u2014 server docstring says Ed25519, clients use",
+      "location": "Server/syxx_server/licensing.py:61-63 (Ed25519);",
+      "files": [
+        "Keygen.sh",
+        "LicenseManager.cs",
+        "LicenseManager.swift",
+        "Server/syxx_server/licensing.py",
+        "Windows/dotNET/Syxx.Kit/LicenseManager.cs"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/licensing.py",
+          "61"
+        ],
+        [
+          "macOS/Sources/SyxxKit/LicenseManager.swift",
+          "74"
+        ],
+        [
+          "Windows/dotNET/Syxx.Kit/LicenseManager.cs",
+          "508"
+        ]
+      ],
+      "body_len": 1392
+    },
+    "E019": {
+      "title": "CSP on main site leaks user IPs to Google Fonts \u2014 privacy violation",
+      "location": "Server/syxx_server/app.py:628-638",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "628"
+        ],
+        [
+          "app.py",
+          "628"
+        ],
+        [
+          "app.py",
+          "1209"
+        ]
+      ],
+      "body_len": 1359
+    },
+    "E020": {
+      "title": "CSP script-src 'self' allows any same-origin script \u2014 bypasses nonce",
+      "location": "Server/syxx_server/app.py:628-638",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "628"
+        ]
+      ],
+      "body_len": 1119
+    },
+    "E022": {
+      "title": "No rate limiting on /api/auth/activate \u2014 session token brute-force",
+      "location": "Server/syxx_server/app.py (activation endpoint)",
+      "files": [
+        "Server/syxx_server/app.py",
+        "ratelimit.py"
+      ],
+      "line_refs": [],
+      "body_len": 788
+    },
+    "E023": {
+      "title": "Trial fingerprint bypass on VMs/containers \u2014 documented, enforcement",
+      "location": "Server/syxx_server/config.py:370-375",
+      "files": [
+        "Server/syxx_server/config.py",
+        "config.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/config.py",
+          "370"
+        ],
+        [
+          "config.py",
+          "370"
+        ]
+      ],
+      "body_len": 972
+    },
+    "E024": {
+      "title": "Leak tokens stored as plaintext in SQLite \u2014 no hashing",
+      "location": "Server/syxx_server/db.py:715-760; leak.py:185",
+      "files": [
+        "Server/syxx_server/db.py",
+        "db.py",
+        "leak.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/db.py",
+          "715"
+        ],
+        [
+          "leak.py",
+          "185"
+        ],
+        [
+          "leak.py",
+          "185"
+        ]
+      ],
+      "body_len": 808
+    },
+    "E025": {
+      "title": "SQLite WAL/SHM sidecar permissions may drift from 0600 to umask default",
+      "location": "Server/syxx_server/db.py:311-330",
+      "files": [
+        "Server/syxx_server/db.py",
+        "db.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/db.py",
+          "311"
+        ],
+        [
+          "db.py",
+          "311"
+        ]
+      ],
+      "body_len": 870
+    },
+    "E026": {
+      "title": "DNS authoritative server binds to 0.0.0.0:53 by default",
+      "location": "Server/syxx_server/config.py:393",
+      "files": [
+        "Server/syxx_server/config.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/config.py",
+          "393"
+        ]
+      ],
+      "body_len": 749
+    },
+    "E027": {
+      "title": "Missing Sec-Fetch-* header validation for cross-origin request",
+      "location": "Server/syxx_server/app.py (request handling)",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [],
+      "body_len": 864
+    },
+    "E028": {
+      "title": "random.shuffle in firewall_test uses non-cryptographic Mersenne Twister",
+      "location": "Server/syxx_server/firewall_test.py:233",
+      "files": [
+        "Server/syxx_server/firewall_test.py",
+        "random.sh"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/firewall_test.py",
+          "233"
+        ]
+      ],
+      "body_len": 742
+    },
+    "E029": {
+      "title": "Witness key stored as plain base64 in Keychain \u2014 no additional wrapping",
+      "location": "macOS/Sources/SyxxKit/WitnessKeyManager.swift:100-120",
+      "files": [
+        "macOS/Sources/SyxxKit/WitnessKeyManager.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/WitnessKeyManager.swift",
+          "100"
+        ]
+      ],
+      "body_len": 795
+    },
+    "E030": {
+      "title": "License key Keychain fallback to password-only when biometric",
+      "location": "macOS/Sources/SyxxKit/LicenseManager.swift:130-180",
+      "files": [
+        "macOS/Sources/SyxxKit/LicenseManager.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/LicenseManager.swift",
+          "130"
+        ]
+      ],
+      "body_len": 946
+    },
+    "E031": {
+      "title": "SQLite database has no encryption at rest beyond filesystem permissions",
+      "location": "Server/syxx_server/db.py:311-330",
+      "files": [
+        "Server/syxx_server/db.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/db.py",
+          "311"
+        ]
+      ],
+      "body_len": 867
+    },
+    "E032": {
+      "title": "Server error messages may leak internal paths in debug scenarios",
+      "location": "Server/syxx_server/app.py:1556",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1556"
+        ]
+      ],
+      "body_len": 799
+    },
+    "E033": {
+      "title": "No Subresource Integrity hashes for whats-new HTML files",
+      "location": "Server/syxx_server/app.py:1166-1210",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1166"
+        ]
+      ],
+      "body_len": 703
+    },
+    "E036": {
+      "title": "Custom ASN.1 DER parser in SPKI pin extraction is error-prone \u2014",
+      "location": "Server/syxx_server/stripe_checkout.py:60-96",
+      "files": [
+        "Server/syxx_server/stripe_checkout.py",
+        "leak.py",
+        "stripe_checkout.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/stripe_checkout.py",
+          "60"
+        ],
+        [
+          "stripe_checkout.py",
+          "60"
+        ]
+      ],
+      "body_len": 1268
+    },
+    "E037": {
+      "title": "Unauthenticated trial anchor endpoint accepts arbitrary POST requests",
+      "location": "Server/syxx_server/app.py (/api/trial/anchor route)",
+      "files": [
+        "Server/syxx_server/app.py"
+      ],
+      "line_refs": [],
+      "body_len": 1241
+    },
+    "E038": {
+      "title": "Email auth DNS queries (SPF/DMARC/DKIM) not DNSSEC-validated \u2014 MITM",
+      "location": "Server/syxx_server/email_auth.py:30-90",
+      "files": [
+        "Server/syxx_server/email_auth.py",
+        "email_auth.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/email_auth.py",
+          "30"
+        ],
+        [
+          "email_auth.py",
+          "30"
+        ]
+      ],
+      "body_len": 1102
+    },
+    "E039": {
+      "title": "ThreadingHTTPServer lacks production security features \u2014 no request",
+      "location": "Server/syxx_server/app.py (ThreadingHTTPServer usage)",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [],
+      "body_len": 1103
+    },
+    "E040": {
+      "title": "Witness signing key exposed via SYXX_WITNESS_KEY env var \u2014 visible to",
+      "location": "macOS/Sources/SyxxCLI/Commands/SyxxWitness.swift:176",
+      "files": [
+        "SyxxWitness.swift",
+        "macOS/Sources/SyxxCLI/Commands/SyxxWitness.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxCLI/Commands/SyxxWitness.swift",
+          "176"
+        ],
+        [
+          "SyxxWitness.swift",
+          "176"
+        ]
+      ],
+      "body_len": 1240
+    },
+    "E041": {
+      "title": "Hardcoded OTLP telemetry endpoint in macOS binary \u2014 redirect risk if",
+      "location": "macOS/Sources/SyxxTelemetry/OTelBootstrap.swift:14",
+      "files": [
+        "OTelBootstrap.swift",
+        "macOS/Sources/SyxxTelemetry/OTelBootstrap.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxTelemetry/OTelBootstrap.swift",
+          "14"
+        ],
+        [
+          "OTelBootstrap.swift",
+          "14"
+        ]
+      ],
+      "body_len": 983
+    },
+    "E042": {
+      "title": "Unicode homograph attacks possible in domain validation regex \u2014 mixed-",
+      "location": "Server/syxx_server/investigate.py:25-28",
+      "files": [
+        "Server/syxx_server/investigate.py",
+        "investigate.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/investigate.py",
+          "25"
+        ],
+        [
+          "investigate.py",
+          "25"
+        ]
+      ],
+      "body_len": 1049
+    },
+    "E043": {
+      "title": "DPAPI legacy entropy constants are static across all installations \u2014",
+      "location": "Windows/dotNET/Syxx.Kit/DpapiSecretStore.cs:220-225",
+      "files": [
+        "DpapiSecretStore.cs",
+        "Windows/dotNET/Syxx.Kit/DpapiSecretStore.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/DpapiSecretStore.cs",
+          "220"
+        ],
+        [
+          "DpapiSecretStore.cs",
+          "220"
+        ]
+      ],
+      "body_len": 1098
+    },
+    "E044": {
+      "title": "In-memory rate limit buckets lost on server restart \u2014 burst attack",
+      "location": "Server/syxx_server/ratelimit.py:22-23",
+      "files": [
+        "Server/syxx_server/ratelimit.py",
+        "ratelimit.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/ratelimit.py",
+          "22"
+        ],
+        [
+          "ratelimit.py",
+          "22"
+        ]
+      ],
+      "body_len": 889
+    },
+    "E045": {
+      "title": "Session token TTL bound to server wall clock \u2014 no clock-skew tolerance",
+      "location": "Server/syxx_server/licensing.py:94",
+      "files": [
+        "Server/syxx_server/licensing.py",
+        "licensing.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/licensing.py",
+          "94"
+        ],
+        [
+          "licensing.py",
+          "94"
+        ]
+      ],
+      "body_len": 978
+    },
+    "E046": {
+      "title": "Settings file permissions not verified on load \u2014 overly permissive",
+      "location": "macOS/Sources/SyxxKit/SyxxSettings.swift:176-177, 143-152",
+      "files": [
+        "SyxxSettings.swift",
+        "macOS/Sources/SyxxKit/SyxxSettings.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/SyxxSettings.swift",
+          "176"
+        ],
+        [
+          "SyxxSettings.swift",
+          "176"
+        ],
+        [
+          "SyxxSettings.swift",
+          "143"
+        ]
+      ],
+      "body_len": 1019
+    },
+    "E047": {
+      "title": "Keystore passphrase-derived key held in memory for 15-minute idle",
+      "location": "Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs (KeystorePassphraseSession)",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs"
+      ],
+      "line_refs": [],
+      "body_len": 938
+    },
+    "E048": {
+      "title": "WKContentRuleList compilation races with first navigation \u2014 brief",
+      "location": "macOS/Sources/SyxxApp/RemoteContentView.swift:207-224",
+      "files": [
+        "RemoteContentView.swift",
+        "macOS/Sources/SyxxApp/RemoteContentView.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxApp/RemoteContentView.swift",
+          "207"
+        ],
+        [
+          "RemoteContentView.swift",
+          "207"
+        ]
+      ],
+      "body_len": 941
+    },
+    "E049": {
+      "title": "Captive portal detection uses unencrypted HTTP to gateway IP \u2014 MITM",
+      "location": "macOS/Sources/SyxxKit/NetworkKeyState.swift:804",
+      "files": [
+        "NetworkKeyState.swift",
+        "macOS/Sources/SyxxKit/NetworkKeyState.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/NetworkKeyState.swift",
+          "804"
+        ],
+        [
+          "NetworkKeyState.swift",
+          "804"
+        ]
+      ],
+      "body_len": 998
+    },
+    "E050": {
+      "title": "Hardcoded Stripe product IDs and price IDs in server config \u2014 reveals",
+      "location": "Server/syxx_server/config.py (STRIPE_SKUS table)",
+      "files": [
+        "Server/syxx_server/config.py",
+        "config.py"
+      ],
+      "line_refs": [],
+      "body_len": 1019
+    },
+    "E051": {
+      "title": "Server OTel export endpoint hardcoded \u2014 same as E041 but for server",
+      "location": "Server/syxx_server/app.py:109",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "app.py",
+          "109"
+        ],
+        [
+          "Server/syxx_server/app.py",
+          "109"
+        ],
+        [
+          "app.py",
+          "109"
+        ]
+      ],
+      "body_len": 681
+    },
+    "E053": {
+      "title": "Server query parameters logged verbatim \u2014 domain names in telemetry",
+      "location": "Server/syxx_server/app.py (route handler logging calls)",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [],
+      "body_len": 1078
+    },
+    "A062": {
+      "title": "HTML injection via _SEO_PRICE_* env vars \u2014 operator-controlled values",
+      "location": "Server/syxx_server/app.py:1505-1506",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1505"
+        ],
+        [
+          "app.py",
+          "1505"
+        ]
+      ],
+      "body_len": 1087
+    },
+    "A063": {
+      "title": "Keygen webhook has no rate limiting \u2014 resource exhaustion vector",
+      "location": "Server/syxx_server/app.py:1407",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1407"
+        ],
+        [
+          "app.py",
+          "1385"
+        ],
+        [
+          "app.py",
+          "1407"
+        ]
+      ],
+      "body_len": 813
+    },
+    "A064": {
+      "title": "_route_warp and _route_warp_raw missing URL length validation",
+      "location": "Server/syxx_server/app.py:1781, 1809",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1781"
+        ],
+        [
+          "app.py",
+          "1781"
+        ]
+      ],
+      "body_len": 755
+    },
+    "A065": {
+      "title": "_route_benchmark missing domain length validation (253 char check)",
+      "location": "Server/syxx_server/app.py:2521-2522",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "2521"
+        ],
+        [
+          "app.py",
+          "2521"
+        ]
+      ],
+      "body_len": 659
+    },
+    "A066": {
+      "title": "_route_investigate missing domain validation at route level",
+      "location": "Server/syxx_server/app.py:2016-2017",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "2016"
+        ],
+        [
+          "app.py",
+          "2016"
+        ]
+      ],
+      "body_len": 771
+    },
+    "A067": {
+      "title": "_route_leak_verify and _route_leaktest_check missing token length",
+      "location": "Server/syxx_server/app.py:2361, 2405",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "2361"
+        ],
+        [
+          "app.py",
+          "2361"
+        ]
+      ],
+      "body_len": 776
+    },
+    "A068": {
+      "title": "_route_activate missing license key upper length bound",
+      "location": "Server/syxx_server/app.py:1633",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1633"
+        ],
+        [
+          "app.py",
+          "1633"
+        ]
+      ],
+      "body_len": 762
+    },
+    "B036": {
+      "title": "Denial NotADenial maps to Negative in C# but skipped in Swift \u2014",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:304-306;",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+        "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "304"
+        ],
+        [
+          "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift",
+          "230"
+        ]
+      ],
+      "body_len": 1221
+    },
+    "B037": {
+      "title": "Latency Unreachable maps to Invalidated in C# but Degraded in Swift \u2014",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:213-214;",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+        "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "213"
+        ],
+        [
+          "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift",
+          "165"
+        ]
+      ],
+      "body_len": 1164
+    },
+    "B038": {
+      "title": "AnswerStabilityStatus.Rotating defined in C# enum but not handled in",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:229-255",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "229"
+        ]
+      ],
+      "body_len": 1116
+    },
+    "B039": {
+      "title": "Glutton Inconclusive without signature maps to Invalidated in C# but",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:763;",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+        "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "763"
+        ],
+        [
+          "macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift",
+          "596"
+        ]
+      ],
+      "body_len": 1150
+    },
+    "B040": {
+      "title": "ECS leak text in C# overclaims \u2014 B138 correction not ported",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:781-783",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "781"
+        ]
+      ],
+      "body_len": 924
+    },
+    "B041": {
+      "title": "Server-confirmed authoritative divergence text overclaims in C# \u2014",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:488-493",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "488"
+        ]
+      ],
+      "body_len": 1002
+    },
+    "B042": {
+      "title": "Portal B176(c) assertion guard missing from C# \u2014 silent evidence drop",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:600-730",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "600"
+        ]
+      ],
+      "body_len": 889
+    },
+    "B043": {
+      "title": "ResponseSizeStatus and StubEntropyStatus InsufficientData not",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:853-868, 396-397",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "853"
+        ]
+      ],
+      "body_len": 1152
+    },
+    "B044": {
+      "title": "ResponseSizeStatus enum missing Inconclusive member in C#",
+      "location": "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:853-868",
+      "files": [
+        "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs",
+          "853"
+        ]
+      ],
+      "body_len": 845
+    },
+    "A069": {
+      "title": "RRL pruning is dead code \u2014 _rrl_buckets grows unbounded (memory leak)",
+      "location": "Server/syxx_server/dns_authoritative.py:85-90",
+      "files": [
+        "Server/syxx_server/dns_authoritative.py",
+        "dns_authoritative.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dns_authoritative.py",
+          "85"
+        ],
+        [
+          "dns_authoritative.py",
+          "70"
+        ]
+      ],
+      "body_len": 1365
+    },
+    "A070": {
+      "title": "_dns_rate_buckets has no pruning \u2014 unbounded memory growth",
+      "location": "Server/syxx_server/dns_authoritative.py:30-51",
+      "files": [
+        "Server/syxx_server/dns_authoritative.py",
+        "dns_authoritative.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dns_authoritative.py",
+          "30"
+        ],
+        [
+          "dns_authoritative.py",
+          "30"
+        ]
+      ],
+      "body_len": 794
+    },
+    "A071": {
+      "title": "_token_obs_counts has no pruning \u2014 permanent counter per leak token",
+      "location": "Server/syxx_server/dns_authoritative.py:97-108",
+      "files": [
+        "Server/syxx_server/dns_authoritative.py",
+        "dns_authoritative.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dns_authoritative.py",
+          "97"
+        ],
+        [
+          "dns_authoritative.py",
+          "97"
+        ]
+      ],
+      "body_len": 709
+    },
+    "A072": {
+      "title": "_sync_api_keys() ThreadPoolExecutor can hang scheduler loop beyond",
+      "location": "Server/syxx_server/scheduler.py:163-173",
+      "files": [
+        "Server/syxx_server/scheduler.py",
+        "scheduler.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/scheduler.py",
+          "163"
+        ],
+        [
+          "scheduler.py",
+          "163"
+        ]
+      ],
+      "body_len": 1391
+    },
+    "A073": {
+      "title": "DoT listener has no restart mechanism \u2014 silent daemon death on",
+      "location": "Server/syxx_server/dot_listener.py:147-151",
+      "files": [
+        "Server/syxx_server/dot_listener.py",
+        "dns_authoritative.py",
+        "dot_listener.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dot_listener.py",
+          "147"
+        ],
+        [
+          "dot_listener.py",
+          "147"
+        ]
+      ],
+      "body_len": 1143
+    },
+    "A074": {
+      "title": "_serve_dns() has no top-level exception handler \u2014 unexpected exceptions",
+      "location": "Server/syxx_server/dns_authoritative.py:294-319",
+      "files": [
+        "Server/syxx_server/dns_authoritative.py",
+        "dns_authoritative.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/dns_authoritative.py",
+          "294"
+        ],
+        [
+          "dns_authoritative.py",
+          "294"
+        ]
+      ],
+      "body_len": 1172
+    },
+    "A075": {
+      "title": "db.backup() blocks scheduler shutdown for unbounded time \u2014 large DB",
+      "location": "Server/syxx_server/scheduler.py:276-279; db.py:956-1002",
+      "files": [
+        "Server/syxx_server/scheduler.py",
+        "db.py",
+        "scheduler.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/scheduler.py",
+          "276"
+        ],
+        [
+          "db.py",
+          "956"
+        ],
+        [
+          "scheduler.py",
+          "276"
+        ]
+      ],
+      "body_len": 1307
+    },
+    "A076": {
+      "title": "DoH DNSSEC probe reports signed zones as \"unsigned\" when DO bit",
+      "location": "Server/syxx_server/investigate.py:296-299",
+      "files": [
+        "Server/syxx_server/investigate.py",
+        "investigate.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/investigate.py",
+          "296"
+        ],
+        [
+          "investigate.py",
+          "296"
+        ]
+      ],
+      "body_len": 1056
+    },
+    "A077": {
+      "title": "zone_signing_status ignores parseComplete flag \u2014 false \"unsigned\" on",
+      "location": "Server/syxx_server/resolver.py:873-880",
+      "files": [
+        "Server/syxx_server/resolver.py",
+        "resolver.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/resolver.py",
+          "873"
+        ],
+        [
+          "resolver.py",
+          "873"
+        ]
+      ],
+      "body_len": 1158
+    },
+    "A078": {
+      "title": "Warp route error messages leak internal IP addresses and network",
+      "location": "Server/syxx_server/app.py:1791-1793, 1823-1825, 1920-1926",
+      "files": [
+        "Server/syxx_server/app.py",
+        "app.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/app.py",
+          "1791"
+        ],
+        [
+          "app.py",
+          "1791"
+        ]
+      ],
+      "body_len": 1082
+    },
+    "A079": {
+      "title": "SMTP password and all server secrets stored as immutable Python",
+      "location": "Server/syxx_server/config.py:574 (SMTP), 149 (Stripe), 173 (Keygen)",
+      "files": [
+        "Server/syxx_server/config.py",
+        "config.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/config.py",
+          "574"
+        ],
+        [
+          "config.py",
+          "574"
+        ]
+      ],
+      "body_len": 1083
+    },
+    "A080": {
+      "title": "Missing index on passive_dns.source \u2014 full-table scan on every purge",
+      "location": "Server/syxx_server/db.py:1280",
+      "files": [
+        "Server/syxx_server/db.py",
+        "db.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/db.py",
+          "1280"
+        ],
+        [
+          "db.py",
+          "1280"
+        ]
+      ],
+      "body_len": 784
+    },
+    "A081": {
+      "title": "N+1 query in passivedns.ingest() \u2014 SELECT LIMIT 101 before every INSERT",
+      "location": "Server/syxx_server/passivedns.py:24-30",
+      "files": [
+        "Server/syxx_server/passivedns.py",
+        "passivedns.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/passivedns.py",
+          "24"
+        ],
+        [
+          "passivedns.py",
+          "24"
+        ]
+      ],
+      "body_len": 865
+    },
+    "A082": {
+      "title": "_cap_rows double full-table scan \u2014 COUNT(*) + DELETE subquery per purge",
+      "location": "Server/syxx_server/db.py:942-953",
+      "files": [
+        "Server/syxx_server/db.py",
+        "db.py"
+      ],
+      "line_refs": [
+        [
+          "Server/syxx_server/db.py",
+          "942"
+        ],
+        [
+          "db.py",
+          "942"
+        ]
+      ],
+      "body_len": 979
+    },
+    "A083": {
+      "title": "Missing index on warp_cache.created_at \u2014 full-table scan during purge",
+      "location": "Server/syxx_server/db.py (schema + lines 948, 1301)",
+      "files": [
+        "Server/syxx_server/db.py"
+      ],
+      "line_refs": [],
+      "body_len": 629
+    },
+    "B045": {
+      "title": "macOS DNSCapture parser lacks monotonic compression-pointer defense \u2014",
+      "location": "macOS/Sources/SyxxKit/DNSCapture.swift:690-695",
+      "files": [
+        "DNSCapture.swift",
+        "macOS/Sources/SyxxKit/DNSCapture.swift",
+        "resolver.py"
+      ],
+      "line_refs": [
+        [
+          "resolver.py",
+          "189"
+        ],
+        [
+          "macOS/Sources/SyxxKit/DNSCapture.swift",
+          "690"
+        ],
+        [
+          "DNSCapture.swift",
+          "690"
+        ]
+      ],
+      "body_len": 1067
+    },
+    "B046": {
+      "title": "ProbeRunner.runTyped classifies deliberate nil return as transportError",
+      "location": "macOS/Sources/SyxxKit/ProbeRunner.swift:193-201",
+      "files": [
+        "ProbeRunner.swift",
+        "macOS/Sources/SyxxKit/ProbeRunner.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/ProbeRunner.swift",
+          "193"
+        ],
+        [
+          "ProbeRunner.swift",
+          "197"
+        ]
+      ],
+      "body_len": 1065
+    },
+    "B047": {
+      "title": "macOS AAAA answer rdata uses uncompressed IPv6 format \u2014 C077 fix",
+      "location": "macOS/Sources/SyxxKit/DNSCapture.swift:639-642",
+      "files": [
+        "DNSCapture.swift",
+        "macOS/Sources/SyxxKit/DNSCapture.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/DNSCapture.swift",
+          "639"
+        ],
+        [
+          "DNSCapture.swift",
+          "639"
+        ]
+      ],
+      "body_len": 1029
+    },
+    "B048": {
+      "title": "Windows CaptureEvents totalResponses>0 guard silently excludes 100%",
+      "location": "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs:259",
+      "files": [
+        "CaptureEvents.cs",
+        "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs",
+          "259"
+        ],
+        [
+          "CaptureEvents.cs",
+          "259"
+        ]
+      ],
+      "body_len": 1052
+    },
+    "C010": {
+      "title": "Windows CaptureEngine BothFailed produces Completed outcome via empty",
+      "location": "Windows/dotNET/Syxx.Kit/Capture/CaptureEngine.cs:125-128",
+      "files": [
+        "CaptureEngine.cs",
+        "Windows/dotNET/Syxx.Kit/Capture/CaptureEngine.cs"
+      ],
+      "line_refs": [
+        [
+          "Windows/dotNET/Syxx.Kit/Capture/CaptureEngine.cs",
+          "125"
+        ],
+        [
+          "CaptureEngine.cs",
+          "125"
+        ]
+      ],
+      "body_len": 1319
+    },
+    "C011": {
+      "title": "macOS PrivilegeManager failed helper install permanently suppresses",
+      "location": "macOS/Sources/SyxxApp/PrivilegeManager.swift:145-155",
+      "files": [
+        "PrivilegeManager.swift",
+        "macOS/Sources/SyxxApp/PrivilegeManager.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxApp/PrivilegeManager.swift",
+          "145"
+        ],
+        [
+          "PrivilegeManager.swift",
+          "149"
+        ]
+      ],
+      "body_len": 1182
+    },
+    "A084": {
+      "title": "`ResolverConsensusEngine` force-unwraps `dohEndpoints[name]!` \u2014 crash",
+      "location": "macOS/Sources/SyxxKit/ResolverConsensusEngine.swift:179, 181, 258",
+      "files": [
+        "macOS/Sources/SyxxKit/ResolverConsensusEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/ResolverConsensusEngine.swift",
+          "179"
+        ],
+        [
+          "macOS/Sources/SyxxKit/ResolverConsensusEngine.swift",
+          "179"
+        ]
+      ],
+      "body_len": 1734
+    },
+    "C012": {
+      "title": "`MatrixDeterminativeEngine` gates `.untested`/`.locked` sections as",
+      "location": "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:884-895",
+      "files": [
+        "MatrixDeterminativeEngine.swift",
+        "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift",
+          "884"
+        ],
+        [
+          "MatrixDeterminativeEngine.swift",
+          "891"
+        ]
+      ],
+      "body_len": 2164
+    },
+    "C013": {
+      "title": "`AnswerLedger.trimEntriesPreservingLastPerKey` anchor key omits",
+      "location": "macOS/Sources/SyxxKit/Trust/AnswerLedger.swift:188",
+      "files": [
+        "AnswerLedger.swift",
+        "macOS/Sources/SyxxKit/Trust/AnswerLedger.swift"
+      ],
+      "line_refs": [
+        [
+          "macOS/Sources/SyxxKit/Trust/AnswerLedger.swift",
+          "188"
+        ],
+        [
+          "AnswerLedger.swift",
+          "188"
+        ]
+      ],
+      "body_len": 1772
+    }
+  },
+  "merges": [
+    {
+      "merge_into": "A003",
+      "merge_from": [
+        "A006"
+      ],
+      "reason": "A006 description incorrect; actual issue covered by A003"
+    },
+    {
+      "merge_into": "D009",
+      "merge_from": [
+        "D052"
+      ],
+      "reason": "D052 is duplicate of D009"
+    },
+    {
+      "merge_into": "D023",
+      "merge_from": [
+        "D037"
+      ],
+      "reason": "D037 near-duplicate of D023"
+    },
+    {
+      "merge_into": "D054",
+      "merge_from": [
+        "D072"
+      ],
+      "reason": "Same root cause"
+    },
+    {
+      "merge_into": "D120",
+      "merge_from": [
+        "D144"
+      ],
+      "reason": "Duplicate"
+    },
+    {
+      "merge_into": "B002",
+      "merge_from": [
+        "B020"
+      ],
+      "reason": "B020 overlaps B002 significantly"
+    }
+  ]
+}

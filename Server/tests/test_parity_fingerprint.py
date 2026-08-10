@@ -207,7 +207,7 @@ class TestEvaluatedEqualsCaseCount:
         lines = _manifest_path().read_text().splitlines()
         assert lines[0].startswith("caseCount="), f"manifest header: {lines[0]}"
         declared = int(lines[0].split("=", 1)[1])
-        ids = [l for l in lines[1:] if l.strip()]
+        ids = [line for line in lines[1:] if line.strip()]
         assert declared == len(ids), (
             f"manifest header caseCount={declared} but {len(ids)} ids follow"
         )
@@ -215,11 +215,9 @@ class TestEvaluatedEqualsCaseCount:
     def test_manifest_ids_match_corpus_files(self):
         """Every vectorId in the manifest must have a corresponding .json file."""
         lines = _manifest_path().read_text().splitlines()
-        ids = [l.strip() for l in lines[1:] if l.strip()]
+        ids = [line.strip() for line in lines[1:] if line.strip()]
 
-        corpus_files = set(
-            f for f in os.listdir(_corpus_dir()) if f.endswith(".json")
-        )
+        corpus_files = {f for f in os.listdir(_corpus_dir()) if f.endswith(".json")}
 
         for vector_id in ids:
             matching = [f for f in corpus_files if vector_id in f]
@@ -230,7 +228,7 @@ class TestEvaluatedEqualsCaseCount:
     def test_every_corpus_case_is_in_manifest(self):
         """Every .json file in the corpus must appear in the manifest."""
         lines = _manifest_path().read_text().splitlines()
-        ids = set(l.strip() for l in lines[1:] if l.strip())
+        ids = {line.strip() for line in lines[1:] if line.strip()}
 
         for f in sorted(os.listdir(_corpus_dir())):
             if not f.endswith(".json"):
@@ -320,7 +318,7 @@ class TestLoaderRejection:
             try:
                 json.loads(path.read_text())
             except json.JSONDecodeError as e:
-                raise AssertionError(f"corpus file {f} is not valid JSON: {e}")
+                raise AssertionError(f"corpus file {f} is not valid JSON: {e}") from e
 
     def test_every_case_file_has_required_fields(self):
         """Every corpus case must have schemaVersion, vectorId, pinnedUnixSeconds, sectionInputs."""

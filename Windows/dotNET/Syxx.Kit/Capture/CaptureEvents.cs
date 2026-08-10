@@ -108,6 +108,11 @@ public sealed record CaptureEvent(
 /// </summary>
 public static class CaptureThresholds
 {
+    /// <summary>DNS RCODE values per IANA registry — numeric comparison is authoritative;
+    /// string names vary by producer ("NXDOMAIN" vs "nxdomain-records" vs "3"). B023.</summary>
+    public const string RcodeServFail = "2";   // Server failure
+    public const string RcodeNxDomain = "3";   // Non-existent domain
+
     /// <summary>Window length the classifier is asked to evaluate. 30s balances "fast enough to
     /// surface an acute issue" against "long enough to accumulate statistical samples".</summary>
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(30);
@@ -177,12 +182,32 @@ public static class CaptureEventClassifier
 
         if (inWindow.Count == 0) return events;   // no samples ⇒ no events ⇒ no claim
 
-        // ── Outbound plaintext UDP/53 ⇒ PlainTextLeak (only when encrypted DNS is expected) ──
+        // ── B016: single-pass enumeration ────────────────────────────────────────────
         // Direction word-match parity with DNSCapture / DNSCaptureReportGenerator. The cage CLI
         // writes "Outbound Query" / "Inbound Response" — match the same substrings here so the
         // classifier does not drift from the producer.
-        bool anyOutboundPlaintext = inWindow.Any(r =>
-            r.Network.Direction.Contains("Outbound", StringComparison.OrdinalIgnoreCase));
+        //
+        // Replaced multiple LINQ enumerations (Any + Where + ToList + foreach) with a single
+        // foreach pass over inWindow, accumulating outbound-plaintext, inbound count, nxdomain,
+        // and servfail in one sweep.
+        bool anyOutboundPlaintext = false;
+        int totalResponses = 0, nxdomain = 0, servfail = 0;
+        foreach (var r in inWindow)
+        {
+            if (r.Network.Direction.Contains("Outbound", StringComparison.OrdinalIgnoreCase))
+                anyOutboundPlaintext = true;
+            if (r.Network.Direction.Contains("Inbound", StringComparison.OrdinalIgnoreCase))
+            {
+                totalResponses++;
+                // B023: match on the IANA-numeric RCODE string — authoritative and producer-agnostic.
+                // String names ("NXDOMAIN", "nxdomain-records") vary by capture surface; the numeric
+                // value (3, 2) is stable across all producers.
+                var rc = (r.Packet.Rcode ?? "").Trim();
+                if (rc == CaptureThresholds.RcodeNxDomain) nxdomain++;
+                else if (rc == CaptureThresholds.RcodeServFail) servfail++;
+            }
+        }
+
         if (anyOutboundPlaintext && encryptedDnsExpected)
         {
             // PENDING OWNER APPROVAL (2026-08-04): wording carries no cause the records did not
@@ -197,17 +222,6 @@ public static class CaptureEventClassifier
                 {
                     ["window_seconds"] = span.TotalSeconds.ToString("F0", CultureInfo.InvariantCulture),
                 }));
-        }
-
-        // ── rcode tallies over responses (inbound) ──
-        var inbound = inWindow.Where(r => r.Network.Direction.Contains("Inbound", StringComparison.OrdinalIgnoreCase)).ToList();
-        int totalResponses = inbound.Count;
-        int nxdomain = 0, servfail = 0;
-        foreach (var r in inbound)
-        {
-            var rc = (r.Packet.Rcode ?? "").Trim().ToLowerInvariant();
-            if (rc == "nxdomain" || rc == "nxdomain-records" || rc == "3") nxdomain++;
-            else if (rc == "servfail" || rc == "2") servfail++;
         }
 
         // ── NXDomainFlood ──
@@ -256,7 +270,6 @@ public static class CaptureEventClassifier
         // ── ResponseLossHigh ──
         int outbound = inWindow.Count(r => r.Network.Direction.Contains("Outbound", StringComparison.OrdinalIgnoreCase));
         if (outbound >= CaptureThresholds.ResponseLossMinOutbound
-            && totalResponses > 0   // guard: zero responses ⇒ the fallthrough below
             && (double)totalResponses / outbound <= CaptureThresholds.ResponseLossMaxRatio)
         {
             double ratio = (double)totalResponses / outbound;

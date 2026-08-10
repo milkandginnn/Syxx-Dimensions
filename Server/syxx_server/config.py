@@ -3,9 +3,40 @@
 Everything is overridable via environment variables so the daemon can be
 configured from the systemd unit without editing code. No secrets are hardcoded;
 the session-signing secret is generated and persisted on first run (see db.py).
+
+.. SECURITY NOTE (A079):
+   All secrets loaded in this module (Stripe keys, Keygen tokens, SMTP password,
+   admin token, webhook HMAC secrets) are stored as plain Python ``str`` objects.
+   Python strings are **immutable** — they cannot be overwritten or cleared from
+   memory, and they persist in the process heap until the GC reclaims the object
+   *and* the allocator returns the page.  This means:
+
+   1. **Core dumps** — A crash dump or ``/proc/<pid>/mem`` read will contain the
+      raw secret bytes in cleartext.  Mitigate by disabling core dumps in
+      production::
+
+          sysctl -w kernel.core_pattern='|/bin/false'   # Linux (systemd unit)
+          ulimit -c 0                                    # shell-level fallback
+
+   2. **Memory-mapped swap** — If the OS swaps anonymous pages, secrets may land
+      on disk unencrypted.  Mitigate with encrypted swap or ``mlock`` on the
+      process.
+
+   3. **No zero-copy** — Every ``_s()`` call returns a new ``str``; there is no
+      ``mlock``/``SecureString`` wrapper in CPython.
+
+   For higher-assurance environments, consider migrating secrets to a dedicated
+   secrets manager (HashiCorp Vault, AWS Secrets Manager) and fetching them via
+   short-lived subprocess calls so the Python process never holds the plaintext.
+   That restructuring is tracked separately and is out of scope for this pass.
 """
 
 import os
+
+# A021: logging_util has no dependency on config (verified), so this import is
+# safe at module level.  The previous deferred-import workaround was based on a
+# stale assumption that logging_util → config existed.
+from . import logging_util
 
 
 def _b(name, default=False):
@@ -33,16 +64,9 @@ def _b(name, default=False):
     # A131: unrecognised value — return the default, never silently coerce.
     # A careful operator writing "enabled" or "TRUE!" must not get False on
     # a flag whose secure default is True (that would disable enforcement).
-    # C223: route through logging_util for structured JSON logging (lazy import
-    # to avoid circular dependency since logging_util imports config).
-    try:
-        from . import logging_util
-        logging_util.warn("config_invalid_bool", var=name, value=v, default=default)
-    except ImportError:
-        import logging
-        logging.getLogger("syxx-server").warning(
-            "config_invalid_bool: %s=%r; using default %r", name, v, default,
-        )
+    # C223: route through logging_util for structured JSON logging.
+    # A021: logging_util is now imported at module level (no cycle exists).
+    logging_util.warn("config_invalid_bool", var=name, value=v, default=default)
     return default
 
 
@@ -58,14 +82,8 @@ def _i(name, default):
         return int(raw.strip())
     except (TypeError, ValueError):
         # C223: route through logging_util for structured JSON logging.
-        try:
-            from . import logging_util
-            logging_util.warn("config_invalid_int", var=name, value=raw, default=default)
-        except ImportError:
-            import logging
-            logging.getLogger("syxx-server").warning(
-                "config_invalid_int: %s=%r; using default %r", name, raw, default,
-            )
+        # A021: logging_util is now imported at module level (no cycle exists).
+        logging_util.warn("config_invalid_int", var=name, value=raw, default=default)
         return default
 
 
@@ -86,12 +104,21 @@ def _list(name, default):
     return list(seen)
 
 
+# --- Deployment environment ------------------------------------------------
+#: "production", "staging", or "development" (default). Used by validation
+#: helpers to gate warnings that are only meaningful in production.
+SYXX_ENV = os.environ.get("SYXX_ENV", "development")
+
 # --- Paths -----------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_DIR = _s("SYXX_STATIC_DIR", BASE_DIR)  # index.html / favicon live here
 DB_PATH = _s("SYXX_DB_PATH", os.path.join(BASE_DIR, "syxx-server.db"))
 # Rotating online backups (SD-56 / SHIP-v1 S7-1). Blank dir → "<db-dir>/backups". KEEP=0 disables
 # pruning. Local step one; an off-host copy of this dir is the operator's follow-up.
+# E035: Optional key for at-rest encryption of sensitive kv table entries (e.g. session_secret).
+# When set, kv_set_encrypted / kv_get_encrypted (to be implemented) use AES-GCM with this key.
+# Unset = plaintext storage protected by filesystem permissions only (see kv_repo.get_or_create_secret).
+DB_ENCRYPTION_KEY = os.environ.get("SYXX_DB_ENCRYPTION_KEY", "")
 DB_BACKUP_DIR = _s("SYXX_DB_BACKUP_DIR", "")
 DB_BACKUP_KEEP = _i("SYXX_DB_BACKUP_KEEP", 14)
 # Operator-edited broadcast / message-of-the-day (Workstream D2). Edit this JSON to push a message
@@ -152,6 +179,8 @@ UPDATE_PACKAGE_DIR = _s(
 # --- Stripe Managed Payments (Workstream D4) --------------------------------
 # Secrets ALL from env — never hardcode keys. sk_/rk_ secret + whsec_ webhook secret; a blank
 # secret disables the checkout/webhook routes.
+# A079: STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are held as Python str (immutable,
+# not clearable).  See module-level SECURITY NOTE for core-dump and swap mitigations.
 STRIPE_SECRET_KEY = _s("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = _s("STRIPE_WEBHOOK_SECRET", "")
 # SEC-048: Validate webhook secret length. Stripe webhook secrets are at least
@@ -174,6 +203,11 @@ STRIPE_API_VERSION = _s("STRIPE_API_VERSION", "2025-03-31.basil")  # Managed Pay
 CHECKOUT_SUCCESS_URL = _s("STRIPE_SUCCESS_URL", "https://syxx.app/purchase/success?session_id={CHECKOUT_SESSION_ID}")
 CHECKOUT_CANCEL_URL = _s("STRIPE_CANCEL_URL", "https://syxx.app/purchase/cancel")
 
+# A025: SEO pricing constants — single source of truth for both seo.py and app.py.
+# E-10: configurable via env to prevent drift from Stripe catalog.
+SEO_PRICE_MONTHLY = _s("SYXX_SEO_PRICE_MONTHLY", "3.95")
+SEO_PRICE_YEARLY = _s("SYXX_SEO_PRICE_YEARLY", "19.95")
+
 # Stripe subscription trial (`subscription_data[trial_period_days]` on the Checkout Session).
 # The buyer enters payment details, is NOT charged for N days, and Stripe fires
 # customer.subscription.deleted if they never convert (which the lapse path already suspends).
@@ -192,6 +226,15 @@ CHECKOUT_CANCEL_URL = _s("STRIPE_CANCEL_URL", "https://syxx.app/purchase/cancel"
 # forwarding it to Stripe would fail the whole checkout for a buyer who did nothing wrong.
 STRIPE_TRIAL_DAYS = max(0, _i("SYXX_STRIPE_TRIAL_DAYS", 0))
 
+# E023: Trial anchor endpoint is aware of VM/container fingerprint bypass.
+# The fingerprint is derived from hardware identifiers (MAC address, disk serial, etc.)
+# which can be spoofed or regenerated in virtualized environments. This is a deliberate
+# enforcement tradeoff: we accept that determined users can reset trials by cloning VMs
+# rather than implementing invasive device attestation (TPM/secure enclave checks) that
+# would complicate legitimate multi-device usage and require platform-specific code paths.
+# The 3-day local trial (macOS/Sources/SyxxKit/LicenseManager.swift:316) is the primary
+# trial mechanism; this server-side anchor is a secondary enforcement layer for edge cases.
+
 # Product catalog, keyed by globally-unique Stripe Product ID (live mode). The checkout endpoint
 # only sells a product listed here; the webhook maps the sold product back to the Keygen policy its
 # license mints under. Prices are deliberately NOT listed — the server reads each product's current
@@ -200,13 +243,18 @@ STRIPE_TRIAL_DAYS = max(0, _i("SYXX_STRIPE_TRIAL_DAYS", 0))
 # Each product's Keygen policy id comes from env; a blank policy → the sale is recorded pending
 # (never dropped). Test mode uses different prod_ ids — override the whole table via
 # SYXX_STRIPE_PRODUCTS_JSON ({"prod_…": {"label": "...", "policy_env": "SYXX_KEYGEN_POLICY_…"}}).
+# A079: KEYGEN_ADMIN_TOKEN is held as Python str (immutable, not clearable from memory).
+# A core dump or swap page will contain the raw bearer token.  See module-level SECURITY NOTE.
 KEYGEN_ADMIN_TOKEN = _s("SYXX_KEYGEN_ADMIN_TOKEN", "")  # admin bearer token that mints licenses
 
 # G-5: Operator admin token for support tooling (license lookup, key resend, etc.).
 # If blank, admin endpoints are disabled. Set via SYXX_ADMIN_TOKEN env var.
+# A079: ADMIN_TOKEN has the same immutable-str risk — see module-level SECURITY NOTE.
 ADMIN_TOKEN = _s("SYXX_ADMIN_TOKEN", "")
 
 # Keygen webhook + API key sync
+# A079: KEYGEN_WEBHOOK_SECRET is held as Python str (immutable, not clearable).
+# See module-level SECURITY NOTE for core-dump and swap mitigations.
 KEYGEN_WEBHOOK_SECRET = _s("SYXX_KEYGEN_WEBHOOK_SECRET", "")  # HMAC secret for license webhooks
 # SEC-048: Validate Keygen webhook secret length. HMAC secrets should be at
 # least 16 characters to provide adequate entropy against brute-force attacks.
@@ -242,6 +290,32 @@ API_KEY_SYNC_INTERVAL_HOURS = _i("SYXX_API_KEY_SYNC_INTERVAL_HOURS", 24)  # dail
 # 0 disables the attribute entirely (mint exactly as before).
 KEYGEN_MAX_MACHINES = max(0, _i("SYXX_KEYGEN_MAX_MACHINES", 5))
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Product Catalog (Stripe SKUs)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# This section defines the Syxx product catalog — the mapping from internal SKU
+# keys to Stripe product and price IDs. It is kept in config.py (rather than a
+# separate catalog.py module) because the catalog is read by stripe_checkout,
+# fulfillment, and keygen_policy modules that already import from config; moving
+# it would create import churn with no architectural benefit.
+#
+# Structure:
+#   STRIPE_SKUS: dict[str, dict] — keyed by SKU string (e.g. "syxx_mac_monthly_sub")
+#     Each entry contains:
+#       product_default  — Stripe product ID (compiled-in default)
+#       price_default    — Stripe price ID (compiled-in default; blank = unsellable)
+#       label            — Human-readable product description
+#       policy_env       — Env var for Keygen policy name override
+#       prodid_env       — Env var for Stripe product ID override
+#       priceid_env      — Env var for Stripe price ID override
+#
+#   Helper functions:
+#     stripe_product_for(sku) → str — resolved product ID (env override or default)
+#     stripe_price_for(sku)   → str — resolved price ID (env override or default)
+#
+# ═══════════════════════════════════════════════════════════════════════════════
 
 # WHY THIS IS KEYED BY SKU AND CARRIES AN EXPLICIT PRICE ID (changed 2026-07-16)
 # ------------------------------------------------------------------------------
@@ -280,7 +354,13 @@ KEYGEN_MAX_MACHINES = max(0, _i("SYXX_KEYGEN_MAX_MACHINES", 5))
 # by reimporting the module, which is both a bad operator story and untestable without
 # importlib.reload — and reloading config regenerates SESSION_SECRET, silently invalidating every
 # live session. Config that is read live is config that can be tested and corrected.
-def _sku(suffix, product_default, price_default, label):
+def _sku(suffix: str, product_default: str, price_default: str, label: str) -> dict:
+    """Build a catalog entry mapping an SKU suffix to its Stripe IDs and env-var names.
+
+    Returns a dict with compiled-in defaults (product_default, price_default, label)
+    and the env-var names (policy_env, prodid_env, priceid_env) used for runtime overrides.
+    The actual values are resolved live by stripe_product_for() / stripe_price_for().
+    """
     return {
         "product_default": product_default,
         "price_default": price_default,
@@ -294,7 +374,11 @@ def _sku(suffix, product_default, price_default, label):
 # One product per PLATFORM; the tier is the PRICE. Note _MAC appears twice, _WIN twice, _DEB twice
 # — that is the point, and it is why the product id cannot identify a purchase.
 _MAC, _WIN, _DEB = "prod_Uq652gww87MGYT", "prod_Uq6ODZbCgLWfIU", "prod_Utkr2kcmWzMNNq"
-STRIPE_SKUS = {
+
+#: Product catalog — maps SKU keys to Stripe product/price IDs and env-var overrides.
+#: Six entries: {mac, win, deb} × {monthly, yearly}. Price ID is the load-bearing field
+#: (monthly and yearly share a product ID; only the price distinguishes tiers).
+STRIPE_SKUS: dict[str, dict] = {
     "syxx_mac_monthly_sub": _sku("MAC_MONTHLY", _MAC, "price_1TqPt10Owf1ALdZDpXWZqB2r", "Syxx (macOS), Monthly"),
     "syxx_mac_yearly_sub": _sku("MAC_YEARLY", _MAC, "price_1Ttwpw0Owf1ALdZDhfZ2LTlz", "Syxx (macOS), Yearly"),
     "syxx_win_monthly_sub": _sku("WIN_MONTHLY", _WIN, "price_1TqQBk0Owf1ALdZDKVoRroPD", "Syxx (Windows), Monthly"),
@@ -324,6 +408,33 @@ def stripe_price_for(sku):
     if not entry:
         return ""
     return os.environ.get(entry["priceid_env"]) or entry["price_default"]
+
+
+def validate_stripe_config() -> None:
+    """Warn when compiled-in Stripe ID defaults are active in production.
+
+    E050: hardcoded Stripe product/price IDs reveal internal structure.  In
+    production every SKU should be overridden via its env var so the compiled-in
+    defaults never reach a live Stripe API call.  In development/staging the
+    defaults are intentional and this function is a no-op.
+
+    Call this once at server startup (e.g. from app.py or the WSGI entry point).
+    """
+    if SYXX_ENV != "production":
+        return
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    for sku, entry in STRIPE_SKUS.items():
+        if not os.environ.get(entry["prodid_env"]):
+            _log.warning(
+                "E050: Stripe product ID for %s uses compiled-in default %s "
+                "— set %s in production", sku, entry["product_default"], entry["prodid_env"]
+            )
+        if entry["price_default"] and not os.environ.get(entry["priceid_env"]):
+            _log.warning(
+                "E050: Stripe price ID for %s uses compiled-in default %s "
+                "— set %s in production", sku, entry["price_default"], entry["priceid_env"]
+            )
 
 
 # Checkout sessions created BEFORE the SKU refactor stamped `metadata[product]`, not
@@ -399,6 +510,9 @@ def perm_policy_for(platform):
 HTTP_HOST = _s("SYXX_HTTP_HOST", "127.0.0.1")
 HTTP_PORT = _i("SYXX_HTTP_PORT", 8080)
 HTTP_REQUEST_TIMEOUT = _i("SYXX_HTTP_REQUEST_TIMEOUT", 30)
+# E026: 0.0.0.0 is intentional for the authoritative DNS server — it must
+# receive queries on every network interface to serve as a public resolver.
+# Override via SYXX_DNS_HOST to restrict binding (e.g. 127.0.0.1 for testing).
 DNS_HOST = _s("SYXX_DNS_HOST", "0.0.0.0")
 DNS_PORT = _i("SYXX_DNS_PORT", 53)
 DNS_FALLBACK_PORT = _i("SYXX_DNS_FALLBACK_PORT", 5053)
@@ -418,6 +532,24 @@ KEYGEN_ACCOUNT_ID = _s("SYXX_KEYGEN_ACCOUNT_ID", "4b50cc83-1664-4626-99b1-fbd4e7
 KEYGEN_TIMEOUT = _i("SYXX_KEYGEN_TIMEOUT", 8)
 KEYGEN_BASE_URL = _s("SYXX_KEYGEN_BASE_URL", "")  # SRV-023: mock server override
 KEYGEN_MAX_WORKERS = _i("SYXX_KEYGEN_MAX_WORKERS", 4)  # SRV-019: concurrent validation cap
+
+# E009: HTTPS enforcement for Keygen URLs. A non-HTTPS base URL sends license
+# keys and admin tokens in cleartext. Warn always; refuse to start unless the
+# operator has explicitly opted in via SYXX_INSECURE_KEYGEN_URL=1.
+if KEYGEN_BASE_URL and not KEYGEN_BASE_URL.startswith("https://"):
+    import logging as _logging
+    _log = _logging.getLogger("syxx-server")
+    _log.warning(
+        "E009: KEYGEN_BASE_URL (%s) is not HTTPS — license keys and admin "
+        "tokens will be sent in cleartext. Set SYXX_INSECURE_KEYGEN_URL=1 "
+        "to allow this (development/testing only).",
+        KEYGEN_BASE_URL,
+    )
+    if not _b("SYXX_INSECURE_KEYGEN_URL", False):
+        raise RuntimeError(
+            f"KEYGEN_BASE_URL ({KEYGEN_BASE_URL}) is not HTTPS. "
+            "Set SYXX_INSECURE_KEYGEN_URL=1 to override (dev/test only)."
+        )
 # Ed25519 public key (hex-encoded) from the Keygen account settings page. When set,
 # every validate-key response is cryptographically verified before trusting
 # meta.valid — a MITM with a forged body is denied even over valid TLS (A021 Fix 1).
@@ -470,6 +602,10 @@ FETCH_MAX_REDIRECTS = _i("SYXX_FETCH_MAX_REDIRECTS", 3)
 DEV_MODE = _b("SYXX_DEV_MODE", False)
 FETCH_ALLOW_PRIVATE = _b("SYXX_FETCH_ALLOW_PRIVATE") and DEV_MODE  # test escape hatch
 WARP_CACHE_TTL = _i("SYXX_WARP_CACHE_TTL", 300)
+# A041: aggregate wall-clock budget for build_baseline when called from diff.py.
+# Prevents the baseline builder from pinning the /api/diff handler with unbounded
+# script fetches. The caller passes time.monotonic() + WARP_BUILD_DEADLINE.
+WARP_BUILD_DEADLINE = _i("SYXX_WARP_BUILD_DEADLINE", 15)
 # Per-run unique-host cap for the Warp raw-concatenation assembler. Discovery pulls
 # a page's declared JS/CSS subresources, which can point at arbitrary hosts; this
 # bounds how many DISTINCT hosts a single assembly run may contact (SSRF surface).
@@ -495,7 +631,27 @@ WARP_MANIFEST_MAX_ASSETS = _i("SYXX_WARP_MANIFEST_MAX_ASSETS", 200)
 WARP_CSS_IMPORT_MAX_DEPTH = _i("SYXX_WARP_CSS_IMPORT_MAX_DEPTH", 5)
 # WARP_MANIFEST_FRESHNESS: the freshness_seconds the manifest declares (spec §3/§4.5).
 # The client rejects a manifest older than this. 300s matches the WitnessSigner window.
+# A009: server-side clamp at warp._MAX_FRESHNESS_SECONDS (600 s / 10 min). Values
+# above that ceiling are accepted here but clamped before emission, so setting
+# SYXX_WARP_MANIFEST_FRESHNESS=3600 still produces freshness_seconds=600 in the manifest.
 WARP_MANIFEST_FRESHNESS = _i("SYXX_WARP_MANIFEST_FRESHNESS", 300)
+
+# A008 — Wall-clock dependency design-decision record.
+# The manifest ``timestamp`` field (warp.py build_manifest) uses time.time()
+# (wall-clock / UTC epoch milliseconds). This is intentional and unavoidable:
+# the value must be comparable across hosts — the client checks freshness
+# against the HTTP Date header and its own system clock, both wall-clock.
+# A monotonic clock (time.monotonic()) is per-process and anchored to an
+# arbitrary boot epoch, so it cannot be compared between server and client.
+# Clock skew between server and client (typically <1 s with NTP) is absorbed
+# by the freshness tolerance window (default 300 s above). Operator
+# mitigation: keep chrony or systemd-timesyncd running on the server.
+# This constant exists so the design decision is grep-able from config.
+WARP_MANIFEST_CLOCK_NOTE = (
+    "manifest timestamp uses wall-clock time.time(); "
+    "cross-host comparison requires wall-clock, not monotonic; "
+    "clock skew is bounded by NTP drift and freshness_seconds headroom"
+)
 
 # --- Investigation ---------------------------------------------------------
 # UDP/53 vantage points (skipped automatically when a network blocks port 53).
@@ -530,6 +686,7 @@ PROPAGATION_RESOLVERS = [
 # Off until a cert + firewall are staged. Authoritative-leak-only by default; recursive forwarding
 # only for explicitly allowlisted source IPs, so :853 is never an open forwarder.
 ENABLE_DOT = _b("SYXX_ENABLE_DOT")
+# E026: same rationale as DNS_HOST — DoT must listen on all interfaces.
 DOT_HOST = _s("SYXX_DOT_HOST", "0.0.0.0")
 DOT_PORT = _i("SYXX_DOT_PORT", 853)
 DOT_MAX_CONN = _i("SYXX_DOT_MAX_CONN", 128)  # SD-51 cap for the DoT path
@@ -571,6 +728,11 @@ DOH_TIMEOUT = _i("SYXX_DOH_TIMEOUT", 5)
 SMTP_HOST = _s("SYXX_SMTP_HOST", "")
 SMTP_PORT = _i("SYXX_SMTP_PORT", 587)
 SMTP_USER = _s("SYXX_SMTP_USER", "")
+# A079: SMTP_PASSWORD is held as Python str (immutable, not clearable from memory).
+# A core dump or unencrypted swap page will contain the raw password in cleartext.
+# Production mitigation: disable core dumps (sysctl kernel.core_pattern='|/bin/false'),
+# use encrypted swap, or migrate to a secrets manager fetched via subprocess.
+# See module-level SECURITY NOTE.
 SMTP_PASSWORD = _s("SYXX_SMTP_PASSWORD", "")
 SMTP_STARTTLS = _b("SYXX_SMTP_STARTTLS")  # True: STARTTLS on 587; False: implicit TLS on 465
 SMTP_TIMEOUT = _i("SYXX_SMTP_TIMEOUT", 15)  # SRV-032: configurable SMTP timeout
@@ -622,3 +784,10 @@ EXPOSURE_RATE_REFILL_MILLIS = _i("SYXX_EXPOSURE_RATE_REFILL_MILLIS", 12000)  # 1
 
 # --- Server ----------------------------------------------------------------
 SERVER_NAME = "SyxxServer/2.0"
+
+# --- OpenTelemetry (OTel/OTLP) --------------------------------------------
+# E051: OTLP collector endpoint. Configurable via env so the destination can
+# change without a code change or redeploy. The compiled-in default points at
+# the production bugsmasher collector; set SYXX_OTLP_ENDPOINT in any env where
+# telemetry must go elsewhere (staging, self-hosted, off).
+OTLP_ENDPOINT = _s("SYXX_OTLP_ENDPOINT", "https://bugsmasher.syxx.app")

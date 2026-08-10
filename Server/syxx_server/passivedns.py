@@ -32,11 +32,13 @@ def ingest(domain, rtype, value, source, resolver=None):
     # A095/A079: refuse to ingest if this domain already has too many distinct records.
     # Upsert (ON CONFLICT UPDATE) still bumps hits/last_seen for existing records,
     # but new distinct values past the cap are silently dropped.
+    # A081: replaced N+1 SELECT-all-rows with two lightweight queries —
+    # a LIMIT-1 existence check and a capped COUNT subquery.
     if _PASSIVE_PER_DOMAIN_MAX > 0:
-        existing = db.passive_query(domain, _PASSIVE_PER_DOMAIN_MAX + 1)
-        known_values = {(r["rtype"], r["value"]) for r in existing}
-        if (rtype, value) not in known_values and len(existing) >= _PASSIVE_PER_DOMAIN_MAX:
-            return
+        if not db.passive_domain_exists(domain, rtype, value):
+            count = db.passive_domain_count_capped(domain, _PASSIVE_PER_DOMAIN_MAX)
+            if count >= _PASSIVE_PER_DOMAIN_MAX:
+                return
     db.passive_record(domain, rtype, value, source, resolver)
 
 
@@ -133,7 +135,6 @@ def baseline(domain, rtype=None, now=None):
         "established": sorted(v for _, v in established),
         "recentlyNew": sorted(v for _, v in (recently_new - established)),
         "drift": drift,
-        "driftSuspected": drift == "suspected",  # A117: backward-compat bool alongside tri-state
         "observationDays": round(max(v["ageDays"] for v in values) if values else 0, 1),
         # A187 Fix 2: surface truncation so the caller can distinguish "thin
         # observation" from "server-side LIMIT truncated the evidence set".

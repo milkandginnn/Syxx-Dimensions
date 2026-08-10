@@ -10,8 +10,9 @@ Two things must hold above all:
 
 import os
 import struct
-import unittest
 from unittest.mock import patch
+
+import pytest
 
 os.environ.setdefault("STRIPE_SECRET_KEY", "")
 os.environ.setdefault("SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY", "1")
@@ -37,104 +38,96 @@ def _reply_for(query_wire, *, override_txid=None, override_question=None, tc=Fal
     return header + question + answer
 
 
-class QuestionParsingTests(unittest.TestCase):
-    def test_extracts_txid_and_question(self):
-        txid, wire = _query("example.com", 1)
-        got_txid, question = resolver._question_bytes(wire)
-        self.assertEqual(got_txid, struct.pack(">H", txid))
-        self.assertTrue(question.endswith(struct.pack(">HH", 1, 1)))  # qtype=A qclass=IN
-
-    def test_rejects_a_too_short_message(self):
-        with self.assertRaises(resolver.DNSError):
-            resolver._question_bytes(b"\x00\x01\x02")
+def test_extracts_txid_and_question():
+    txid, wire = _query("example.com", 1)
+    got_txid, question = resolver._question_bytes(wire)
+    assert got_txid == struct.pack(">H", txid)
+    assert question.endswith(struct.pack(">HH", 1, 1))  # qtype=A qclass=IN
 
 
-class ForwardWirePassthroughTests(unittest.TestCase):
-    """forward_wire does real socket I/O; patch the socket so we control the upstream bytes and can
-    assert the validation without a network."""
-
-    def _run_with_reply(self, query_wire, reply):
-        class _FakeSock:
-            def __init__(self, *a, **k):
-                pass
-
-            def settimeout(self, t):
-                pass
-
-            def connect(self, addr):
-                pass
-
-            def send(self, data):
-                return len(data)
-
-            def recv(self, n):
-                return reply
-
-            def close(self):
-                pass
-
-        with patch("syxx_server.resolver.socket.socket", _FakeSock):
-            return resolver.forward_wire(query_wire, "1.1.1.1", timeout=1)
-
-    def test_returns_upstream_bytes_unchanged(self):
-        _txid, wire = _query()
-        reply = _reply_for(wire)
-        out = self._run_with_reply(wire, reply)
-        self.assertEqual(out, reply, "the client must receive the exact upstream bytes")
-
-    def test_rejects_a_txid_mismatch(self):
-        # A reply with the wrong txid is a spoof; it must never be passed through as an answer.
-        _txid, wire = _query()
-        spoof = _reply_for(wire, override_txid=b"\xff\xff")
-        with self.assertRaises(resolver.DNSError):
-            self._run_with_reply(wire, spoof)
-
-    def test_rejects_an_off_question_reply(self):
-        # Right txid, wrong question (answering a DIFFERENT name) — the cache-poisoning shape. Reject.
-        _txid, wire = _query("example.com", 1)
-        _t2, otherq = resolver._question_bytes(_query("evil.example", 1)[1])
-        off = _reply_for(wire, override_question=otherq)
-        with self.assertRaises(resolver.DNSError):
-            self._run_with_reply(wire, off)
+def test_rejects_a_too_short_message():
+    with pytest.raises(resolver.DNSError):
+        resolver._question_bytes(b"\x00\x01\x02")
 
 
-class JsonHonestyTests(unittest.TestCase):
-    """The JSON convenience path must never fabricate a Status:0 on an upstream failure. Drives the
-    REAL route method (_doh_respond_json) bound to a capturing double, so it tests the actual
-    honesty mapping, not a restatement of it."""
+def _run_with_reply(query_wire, reply):
+    class _FakeSock:
+        def __init__(self, *a, **k):
+            pass
 
-    def _run(self, query, *, upstream=None, error=None):
-        from syxx_server import app
+        def settimeout(self, t):
+            pass
 
-        sent = {}
+        def connect(self, addr):
+            pass
 
-        class _Double:
-            _DOH_JSON_TYPES = app.Handler._DOH_JSON_TYPES
+        def send(self, data):
+            return len(data)
 
-            def _send(self, status, body, *a, **k):
-                sent["status"], sent["body"] = status, body
+        def recv(self, n):
+            return reply
 
-            def _json_error(self, status, msg, *a, **k):
-                sent["status"], sent["body"] = status, msg
+        def close(self):
+            pass
 
-        with patch("syxx_server.resolver.query", side_effect=error, return_value=upstream) as q:
-            if error is not None:
-                q.side_effect = error
-            app.Handler._doh_respond_json(_Double(), query)
-        return sent
-
-    def test_upstream_failure_is_status_2_not_a_fake_clean(self):
-        sent = self._run({"name": ["example.com"], "type": ["A"]}, error=resolver.DNSError("unreachable"))
-        self.assertEqual(sent["status"], 200)
-        self.assertEqual(sent["body"]["Status"], 2, "an upstream failure must be Status:2, never 0")
-        self.assertNotIn("Answer", sent["body"])  # no fabricated empty answer set
-
-    def test_real_records_pass_through_with_status_0(self):
-        parsed = {"rcode": 0, "truncated": False, "ad": False, "records": [{"type": "A", "value": "93.184.216.34"}]}
-        sent = self._run({"name": ["example.com"], "type": ["A"]}, upstream=parsed)
-        self.assertEqual(sent["body"]["Status"], 0)
-        self.assertEqual(sent["body"]["Answer"][0]["data"], "93.184.216.34")
+    with patch("syxx_server.resolver.socket.socket", _FakeSock):
+        return resolver.forward_wire(query_wire, "1.1.1.1", timeout=1)
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_returns_upstream_bytes_unchanged():
+    _txid, wire = _query()
+    reply = _reply_for(wire)
+    out = _run_with_reply(wire, reply)
+    assert out == reply, "the client must receive the exact upstream bytes"
+
+
+def test_rejects_a_txid_mismatch():
+    # A reply with the wrong txid is a spoof; it must never be passed through as an answer.
+    _txid, wire = _query()
+    spoof = _reply_for(wire, override_txid=b"\xff\xff")
+    with pytest.raises(resolver.DNSError):
+        _run_with_reply(wire, spoof)
+
+
+def test_rejects_an_off_question_reply():
+    # Right txid, wrong question (answering a DIFFERENT name) — the cache-poisoning shape. Reject.
+    _txid, wire = _query("example.com", 1)
+    _t2, otherq = resolver._question_bytes(_query("evil.example", 1)[1])
+    off = _reply_for(wire, override_question=otherq)
+    with pytest.raises(resolver.DNSError):
+        _run_with_reply(wire, off)
+
+
+def _run_json(query, *, upstream=None, error=None):
+    from syxx_server import app
+
+    sent = {}
+
+    class _Double:
+        _DOH_JSON_TYPES = app.Handler._DOH_JSON_TYPES
+
+        def _send(self, status, body, *a, **k):
+            sent["status"], sent["body"] = status, body
+
+        def _json_error(self, status, msg, *a, **k):
+            sent["status"], sent["body"] = status, msg
+
+    with patch("syxx_server.resolver.query", side_effect=error, return_value=upstream) as q:
+        if error is not None:
+            q.side_effect = error
+        app.Handler._doh_respond_json(_Double(), query)
+    return sent
+
+
+def test_upstream_failure_is_status_2_not_a_fake_clean():
+    sent = _run_json({"name": ["example.com"], "type": ["A"]}, error=resolver.DNSError("unreachable"))
+    assert sent["status"] == 200
+    assert sent["body"]["Status"] == 2, "an upstream failure must be Status:2, never 0"
+    assert "Answer" not in sent["body"]  # no fabricated empty answer set
+
+
+def test_real_records_pass_through_with_status_0():
+    parsed = {"rcode": 0, "truncated": False, "ad": False, "records": [{"type": "A", "value": "93.184.216.34"}]}
+    sent = _run_json({"name": ["example.com"], "type": ["A"]}, upstream=parsed)
+    assert sent["body"]["Status"] == 0
+    assert sent["body"]["Answer"][0]["data"] == "93.184.216.34"

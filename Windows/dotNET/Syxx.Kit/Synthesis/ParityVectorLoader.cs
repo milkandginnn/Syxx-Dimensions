@@ -373,7 +373,11 @@ public static class ParityVectorLoader
             CommentHandling = JsonCommentHandling.Disallow,
             AllowTrailingCommas = false,
         });
+        // B022: reuse a single HashSet per scope depth, cleared on EndObject instead of
+        // allocating a new one per JSON object. The stack still tracks depth so nested objects
+        // each get their own set; we just avoid the per-object heap allocation.
         var scopes = new Stack<HashSet<string>>();
+        var pool = new HashSet<string>(StringComparer.Ordinal);
         try
         {
             while (reader.Read())
@@ -381,10 +385,22 @@ public static class ParityVectorLoader
                 switch (reader.TokenType)
                 {
                     case JsonTokenType.StartObject:
-                        scopes.Push(new HashSet<string>(StringComparer.Ordinal));
+                        if (scopes.Count == 0)
+                        {
+                            pool.Clear();
+                            scopes.Push(pool);
+                        }
+                        else
+                        {
+                            scopes.Push(new HashSet<string>(StringComparer.Ordinal));
+                        }
                         break;
                     case JsonTokenType.EndObject:
-                        if (scopes.Count > 0) scopes.Pop();
+                        if (scopes.Count > 0)
+                        {
+                            var popped = scopes.Pop();
+                            if (popped != pool) popped.Clear();
+                        }
                         break;
                     case JsonTokenType.PropertyName:
                         var member = reader.GetString() ?? string.Empty;
@@ -1667,12 +1683,20 @@ public static class ParityVectorLoader
         }
 
         /// <summary>Refuse every member nobody claimed. Ordinal-first so the name is deterministic.</summary>
+        /// <remarks>B017: replaced O(n log n) LINQ sort with a single-pass scan that tracks the
+        /// ordinally smallest unread key — same deterministic error name, no intermediate
+        /// allocations, O(n).</remarks>
         internal void Done()
         {
-            var stray = _o.Select(kv => kv.Key)
-                .Where(k => !_read.Contains(k))
-                .OrderBy(k => k, StringComparer.Ordinal)
-                .FirstOrDefault();
+            string? stray = null;
+            foreach (var kv in _o)
+            {
+                if (!_read.Contains(kv.Key))
+                {
+                    if (stray is null || string.Compare(kv.Key, stray, StringComparison.Ordinal) < 0)
+                        stray = kv.Key;
+                }
+            }
             if (stray is not null)
             {
                 throw Bad(_f, _p,

@@ -66,7 +66,7 @@ public sealed class DiffResult
     /// <summary>Total number of changed lines (additions + removals) across all sections.</summary>
     public int TotalDifferences { get; }
     /// <summary>True if any differences exist.</summary>
-    public bool HasChanges { get; }
+    public bool HasChanges => TotalDifferences > 0;
 
     public DiffResult(List<DiffLine> htmlDiff, List<DiffLine> cssDiff, List<DiffLine> jsDiff)
     {
@@ -77,7 +77,6 @@ public sealed class DiffResult
                     + cssDiff.Count(l => l.Kind != DiffLineKind.Context)
                     + jsDiff.Count(l => l.Kind != DiffLineKind.Context);
         TotalDifferences = changes;
-        HasChanges = changes > 0;
     }
 
     /// <summary>Returns the diff lines for a given section.</summary>

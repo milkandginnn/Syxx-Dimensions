@@ -97,6 +97,7 @@ public sealed class CaptureSession : IDisposable
     private readonly Channel<DNSCaptureRecord> _channel;
     private readonly Task _captureTask;
     private readonly List<Exception> _loopErrors = new();
+    private readonly int _loopCount;
 
     internal CaptureSession(OpenSocketResult sockets, TimeSpan duration)
     {
@@ -111,6 +112,7 @@ public sealed class CaptureSession : IDisposable
         var tasks = new List<Task>(2);
         if (sockets.V4 is { } s4) tasks.Add(CaptureLoop(s4, locals, _channel.Writer, _cts.Token, _loopErrors));
         if (sockets.V6 is { } s6) tasks.Add(CaptureLoop(s6, locals, _channel.Writer, _cts.Token, _loopErrors));
+        _loopCount = tasks.Count;
         // When both loops finish, complete the channel so the reader's await foreach exits.
         _captureTask = Task.WhenAll(tasks).ContinueWith(_ => _channel.Writer.TryComplete(), TaskScheduler.Default);
     }
@@ -143,9 +145,17 @@ public sealed class CaptureSession : IDisposable
         await _captureTask.ConfigureAwait(false);
         Exception[] errs;
         lock (_loopErrors) errs = _loopErrors.ToArray();
-        return errs.Length > 0
-            ? new EngineOutcome.Aborted(string.Join("; ", errs.Select(e => e.Message)))
-            : new EngineOutcome.Completed();
+        if (errs.Length > 0)
+            return new EngineOutcome.Aborted(string.Join("; ", errs.Select(e => e.Message)));
+        // C010: both sockets failed to open, so no capture loop ever ran. A capture that
+        // produced nothing is a failed run — never an ordinary Completed outcome.
+        string? failureReason = _sockets.Failure?.Message;
+        if (_loopCount == 0)
+            return new EngineOutcome.Aborted(
+                string.IsNullOrWhiteSpace(failureReason)
+                    ? "Capture did not run: no socket was opened."
+                    : failureReason);
+        return new EngineOutcome.Completed();
     }
 
     // ──────────────────────────────────────────────────────────────────────

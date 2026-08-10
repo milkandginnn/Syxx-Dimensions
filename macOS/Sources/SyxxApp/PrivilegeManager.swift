@@ -254,7 +254,17 @@ final class PrivilegeManager {
         }
         if needsInstall {
             hasAttemptedInstall = true
-            try await installHelper()
+            do {
+                try await installHelper()
+            } catch {
+                // C011: a failed install must not permanently suppress retry. Clear the flag so the
+                // next ensureHelperInstalled() re-prompts instead of being short-circuited by the
+                // "already attempted this session" check above. UI follow-up: no retry affordance
+                // exists for the install state in this file or its direct view; the state reset is
+                // the core fix, surface a "Retry installation" action at the call site as needed.
+                hasAttemptedInstall = false
+                throw error
+            }
         }
 
         // Connect to the helper via XPC

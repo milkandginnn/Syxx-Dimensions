@@ -32,12 +32,23 @@ _dns_rate_buckets = {}  # ip -> [count, window_start]
 # resolvers rarely exceed this; a flood of known-token replays would.
 _DNS_RATE_LIMIT = 50
 _DNS_RATE_WINDOW = 60
+# A070: cap on the number of tracked source IPs to prevent unbounded memory
+# growth. 10 000 distinct IPs in a 60-second window is generous for a
+# collector that serves a handful of leak zones.
+_MAX_DNS_RATE_BUCKETS = 10_000
 
 
 def _dns_rate_ok(source_ip):
     """Return True if source_ip is within the per-source rate limit."""
     now = int(time.time())
     with _dns_rate_lock:
+        # A070: prune stale entries when the bucket dict grows too large so
+        # memory does not grow unbounded as unique source IPs accumulate.
+        if len(_dns_rate_buckets) > _MAX_DNS_RATE_BUCKETS:
+            cutoff = now - _DNS_RATE_WINDOW * 2
+            expired = [k for k, v in _dns_rate_buckets.items() if v[1] < cutoff]
+            for k in expired:
+                del _dns_rate_buckets[k]
         entry = _dns_rate_buckets.get(source_ip)
         if entry is None:
             _dns_rate_buckets[source_ip] = [1, now]
@@ -69,6 +80,15 @@ def _rrl_ok(source_ip, qname, qtype):
     key = (source_ip, qname.lower(), qtype)
     now = int(time.time())
     with _rrl_lock:
+        # A069: prune old entries periodically (every ~1000 calls) so the
+        # bucket dict does not grow unbounded. Previously this block sat after
+        # the `with _rrl_lock:` returns (dead code) — every path returns inside
+        # the lock — leaking memory as entries accumulated forever.
+        if len(_rrl_buckets) > 1000:
+            cutoff = now - _RRL_WINDOW * 2
+            expired = [k for k, v in _rrl_buckets.items() if v[1] < cutoff]
+            for k in expired:
+                del _rrl_buckets[k]
         entry = _rrl_buckets.get(key)
         if entry is None:
             _rrl_buckets[key] = [1, now]
@@ -81,13 +101,6 @@ def _rrl_ok(source_ip, qname, qtype):
             return False
         entry[0] = count + 1
         return True
-    # Prune old entries periodically (every ~1000 calls)
-    if len(_rrl_buckets) > 1000:
-        with _rrl_lock:
-            cutoff = now - _RRL_WINDOW * 2
-            expired = [k for k, v in _rrl_buckets.items() if v[1] < cutoff]
-            for k in expired:
-                del _rrl_buckets[k]
 
 
 # SEC-050: Per-token observation limit.
@@ -96,11 +109,20 @@ def _rrl_ok(source_ip, qname, qtype):
 _token_obs_lock = _threading.Lock()
 _token_obs_counts = {}  # token -> count
 _TOKEN_OBS_LIMIT = 100  # max observations per token
+# A071: cap on the number of tracked tokens to prevent unbounded memory growth.
+# These are ephemeral observation counters — when the cap is exceeded the dict
+# is cleared entirely; tokens will be recreated on the next observation.
+_MAX_TOKEN_OBS_COUNTS = 10_000
 
 
 def _token_obs_ok(token):
     """Return True if this token has not exceeded its observation limit."""
     with _token_obs_lock:
+        # A071: evict all counters when the dict grows too large so memory
+        # does not grow unbounded as unique tokens accumulate. The counters
+        # are ephemeral and will be recreated on the next observation.
+        if len(_token_obs_counts) > _MAX_TOKEN_OBS_COUNTS:
+            _token_obs_counts.clear()
         count = _token_obs_counts.get(token, 0)
         if count >= _TOKEN_OBS_LIMIT:
             return False
@@ -370,72 +392,81 @@ def _serve_dns(socks):
     sock_errors = {s.fileno(): 0 for s in socks}
     _MAX_CONSECUTIVE_ERRORS = 8  # after this many, the socket is considered dead
     while True:
-        try:
-            readable, _, _ = select.select(socks, [], [], 1.0)
-        except (OSError, ValueError):
-            # A socket may have been closed; filter out dead sockets.
-            socks = [s for s in socks if s.fileno() >= 0]
-            sock_errors = {s.fileno(): 0 for s in socks}
-            if not socks:
-                # A122: all sockets dead — set health to "down" and rebind.
-                listeners.set_state("dns", "down", detail="all sockets dead in select; rebinding")
-                _rebind_with_backoff()
-                return
-            continue
-        for sock in readable:
+        try:  # A074: top-level guard — never let an unexpected exception kill the DNS thread
             try:
-                data, addr = sock.recvfrom(2048)
-                sock_errors[sock.fileno()] = 0  # reset on success
-            except OSError as e:
-                errno_val = getattr(e, "errno", None) or 0
-                fno = sock.fileno()
-                sock_errors[fno] = sock_errors.get(fno, 0) + 1
-                if errno_val in _FATAL_RECV_ERRNOS or sock_errors[fno] >= _MAX_CONSECUTIVE_ERRORS:
-                    # A122: this socket is dead — remove it from the active set.
-                    logging_util.error(
-                        "dns_fatal_socket_error",
-                        err=str(e),
-                        errno=errno_val,
-                        fileno=fno,
-                        consecutive=sock_errors[fno],
-                        detail="removing dead socket from active set",
-                    )
-                    socks = [s for s in socks if s is not sock]
-                    sock_errors.pop(fno, None)
-                    try:
-                        sock.close()
-                    except OSError:
-                        pass
-                    if not socks:
-                        # A122: all sockets dead — set health to "down" and rebind.
-                        listeners.set_state("dns", "down", detail="all sockets dead; rebinding")
-                        _rebind_with_backoff()
-                        return
-                else:
-                    logging_util.error("dns_recv_error", err=str(e), consecutive=sock_errors[fno])
+                readable, _, _ = select.select(socks, [], [], 1.0)
+            except (OSError, ValueError):
+                # A socket may have been closed; filter out dead sockets.
+                socks = [s for s in socks if s.fileno() >= 0]
+                sock_errors = {s.fileno(): 0 for s in socks}
+                if not socks:
+                    # A122: all sockets dead — set health to "down" and rebind.
+                    listeners.set_state("dns", "down", detail="all sockets dead in select; rebinding")
+                    _rebind_with_backoff()
+                    return
                 continue
-            try:
-                response, leak_hit = _build_response(data)
-                if leak_hit is not None:
-                    token, qtype = leak_hit
-                    # A034: per-source rate limit on observation recording. The DNS
-                    # response is always sent (the client gets a valid answer), but
-                    # the DB write is skipped when the source IP has exceeded its
-                    # quota, preventing unbounded INSERTs from a single resolver.
-                    # SEC-024: Also apply RRL to prevent amplification
-                    # SEC-050: Also apply per-token observation limit
-                    if (
-                        _dns_rate_ok(addr[0])
-                        and _rrl_ok(addr[0], token, qtype)
-                        and _token_obs_ok(token)
-                    ):
-                        leak.observe(token, addr[0], qtype)
+            for sock in readable:
+                try:
+                    data, addr = sock.recvfrom(2048)
+                    sock_errors[sock.fileno()] = 0  # reset on success
+                except OSError as e:
+                    errno_val = getattr(e, "errno", None) or 0
+                    fno = sock.fileno()
+                    sock_errors[fno] = sock_errors.get(fno, 0) + 1
+                    if errno_val in _FATAL_RECV_ERRNOS or sock_errors[fno] >= _MAX_CONSECUTIVE_ERRORS:
+                        # A122: this socket is dead — remove it from the active set.
+                        logging_util.error(
+                            "dns_fatal_socket_error",
+                            err=str(e),
+                            errno=errno_val,
+                            fileno=fno,
+                            consecutive=sock_errors[fno],
+                            detail="removing dead socket from active set",
+                        )
+                        socks = [s for s in socks if s is not sock]
+                        sock_errors.pop(fno, None)
+                        try:
+                            sock.close()
+                        except OSError:
+                            pass
+                        if not socks:
+                            # A122: all sockets dead — set health to "down" and rebind.
+                            listeners.set_state("dns", "down", detail="all sockets dead; rebinding")
+                            _rebind_with_backoff()
+                            return
                     else:
-                        logging_util.incr("dns_rate_limited")
-                if response:
-                    sock.sendto(response, addr)
-            except Exception as e:  # never let one packet kill the loop
-                logging_util.error("dns_handler_error", err=str(e), peer=addr[0])
+                        logging_util.error("dns_recv_error", err=str(e), consecutive=sock_errors[fno])
+                    continue
+                try:
+                    response, leak_hit = _build_response(data)
+                    if leak_hit is not None:
+                        token, qtype = leak_hit
+                        # A034: per-source rate limit on observation recording. The DNS
+                        # response is always sent (the client gets a valid answer), but
+                        # the DB write is skipped when the source IP has exceeded its
+                        # quota, preventing unbounded INSERTs from a single resolver.
+                        # SEC-024: Also apply RRL to prevent amplification
+                        # SEC-050: Also apply per-token observation limit
+                        if (
+                            _dns_rate_ok(addr[0])
+                            and _rrl_ok(addr[0], token, qtype)
+                            and _token_obs_ok(token)
+                        ):
+                            leak.observe(token, addr[0], qtype)
+                        else:
+                            logging_util.incr("dns_rate_limited")
+                    if response:
+                        sock.sendto(response, addr)
+                except Exception as e:  # never let one packet kill the loop
+                    logging_util.error("dns_handler_error", err=str(e), peer=addr[0])
+        except Exception as e:
+            # A074: catch-all for any unexpected exception not handled above.
+            # Log the type, message, and continue — don't crash the DNS thread.
+            logging_util.error(
+                "dns_unexpected_error",
+                err_type=type(e).__name__,
+                err=str(e),
+            )
 
 
 def _rebind_with_backoff():

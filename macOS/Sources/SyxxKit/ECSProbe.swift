@@ -47,7 +47,7 @@ public enum ECSProbe {
                              query: QueryFn = { await DNSResolver.queryUDPDetailed($0) }) async -> ECSLeak {
         let resp = await query(DNSQuery(name: domain, type: typeA, server: server,
                                         edns0UDPSize: 4096, edns0ClientSubnetV4: testSubnet))
-        guard !resp.didFail, let edns = resp.edns else {
+        guard !resp.didNotSucceed, let edns = resp.edns else {
             return ECSLeak(status: .inconclusive,
                 detail: "no EDNS/OPT echoed for the ECS query (\(resp.status.rawValue)) — cannot assess ECS forwarding")
         }

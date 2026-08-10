@@ -617,6 +617,12 @@ namespace Syxx.Kit
             try
             {
                 string current = req.Url;
+                // E006: warn on mixed-script homograph domains (informational, never blocks)
+                if (Uri.TryCreate(current, UriKind.Absolute, out var homographUri)
+                    && homographUri.Host != null)
+                {
+                    WarnHomograph(homographUri.Host);
+                }
                 for (int hop = 0; hop < 6; hop++)
                 {
                     if (!Uri.TryCreate(current, UriKind.Absolute, out var u)
@@ -652,6 +658,32 @@ namespace Syxx.Kit
             catch
             {
                 return WarpFetchOutcome.FailedOutcome;
+            }
+        }
+
+        // ---- E006: Homograph detection ----
+
+        /// <summary>Cyrillic characters that visually resemble ASCII letters (U+0430–U+0445 range).</summary>
+        private static readonly HashSet<char> ConfusableCyrillic = new("асеорхуАСЕОРХУ");
+
+        /// <summary>Log a warning if <paramref name="domain"/> mixes ASCII and confusable Cyrillic
+        /// characters. E006: informational only — never rejects or blocks the fetch.</summary>
+        internal static void WarnHomograph(string domain)
+        {
+            bool hasAscii = false, hasNonAscii = false, hasCyrillicConfusable = false;
+            foreach (char ch in domain)
+            {
+                if (ch < 128) hasAscii = true;
+                else
+                {
+                    hasNonAscii = true;
+                    if (ConfusableCyrillic.Contains(ch)) hasCyrillicConfusable = true;
+                }
+            }
+            if (hasAscii && hasNonAscii && hasCyrillicConfusable)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[WarpEngine] E006: possible Unicode homograph domain: {domain} — mixed ASCII and confusable Cyrillic characters");
             }
         }
     }

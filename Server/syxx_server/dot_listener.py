@@ -19,6 +19,7 @@ import socketserver
 import ssl
 import struct
 import threading
+import time
 
 from . import config, dns_authoritative, leak, listeners, logging_util, resolver
 
@@ -161,22 +162,79 @@ def run(stop_event=None):
         logging_util.error("dot_cert_failed", err=str(e))
         return
 
-    try:
-        # A119: pass the SSL context to the server; do NOT wrap the listening
-        # socket here. Wrapping it would cause accept() to block on the TLS
-        # handshake before the connection cap (_slots) can reject over-limit
-        # clients. The handler performs the handshake in its own thread after
-        # acquiring a slot.
-        server = _BoundedThreadingTCPServer((config.DOT_HOST, config.DOT_PORT), _Handler, ssl_context=ctx)
-    except OSError as e:
-        listeners.set_state("dot", "down", detail=f"bind :{config.DOT_PORT} failed: {e}")
-        logging_util.error("dot_bind_failed", port=config.DOT_PORT, err=str(e))
-        return
+    # A073: restart loop — mirrors dns_authoritative._rebind_with_backoff so an
+    # unexpected serve_forever crash or transient bind failure does not silently
+    # kill the DoT daemon.  Bounded by _MAX_RESTART_ATTEMPTS with exponential
+    # backoff (1 s → 60 s cap).  Both bind failures and serve crashes share the
+    # same retry budget; once exhausted the listener stays "down".
+    _MAX_RESTART_ATTEMPTS = 10
+    restart_count = 0
+    backoff = 1.0
 
-    listeners.set_state("dot", "listening", detail=f"TLS on :{config.DOT_PORT}")
-    logging_util.info("dot_listening", port=config.DOT_PORT)
-    try:
-        server.serve_forever()
-    finally:
+    while True:
+        try:
+            # A119: pass the SSL context to the server; do NOT wrap the listening
+            # socket here. Wrapping it would cause accept() to block on the TLS
+            # handshake before the connection cap (_slots) can reject over-limit
+            # clients. The handler performs the handshake in its own thread after
+            # acquiring a slot.
+            server = _BoundedThreadingTCPServer(
+                (config.DOT_HOST, config.DOT_PORT), _Handler, ssl_context=ctx
+            )
+        except OSError as e:
+            restart_count += 1
+            if restart_count > _MAX_RESTART_ATTEMPTS:
+                listeners.set_state(
+                    "dot", "down",
+                    detail=f"rebind exhausted after {restart_count - 1} attempts",
+                )
+                logging_util.error(
+                    "dot_rebind_exhausted",
+                    attempts=restart_count - 1,
+                    err=str(e),
+                )
+                return
+            logging_util.warn(
+                "dot_rebind_failed",
+                err=str(e),
+                port=config.DOT_PORT,
+                attempt=restart_count,
+                backoff_s=backoff,
+            )
+            time.sleep(backoff)
+            backoff = min(backoff * 2, 60.0)
+            continue
+
+        listeners.set_state("dot", "listening", detail=f"TLS on :{config.DOT_PORT}")
+        logging_util.info("dot_listening", port=config.DOT_PORT)
+
+        try:
+            server.serve_forever()
+        except Exception as e:
+            # Unexpected crash — log, clean up, and restart with backoff.
+            restart_count += 1
+            logging_util.error(
+                "dot_serve_crashed",
+                err=str(e),
+                restart_count=restart_count,
+            )
+            try:
+                server.server_close()
+            except OSError:
+                pass
+            if restart_count > _MAX_RESTART_ATTEMPTS:
+                listeners.set_state(
+                    "dot", "down",
+                    detail=f"restart exhausted after {restart_count - 1} attempts",
+                )
+                logging_util.error("dot_restart_exhausted", attempts=restart_count - 1)
+                return
+            time.sleep(backoff)
+            backoff = min(backoff * 2, 60.0)
+            continue
+
+        # serve_forever() returned cleanly (shutdown() was called elsewhere) —
+        # exit normally without restarting.
         listeners.set_state("dot", "down", detail="serve loop exited")
         server.server_close()
+        return

@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Win32;
 
 namespace Syxx.Kit;
 
@@ -102,8 +103,26 @@ internal sealed class DpapiSecretStore : ISecretStore
             var ciphertext = File.ReadAllBytes(path);
             if (ciphertext.Length == 0) return null;
 
-            var entropy = GetEntropy(keyType);
-            var plaintext = Unprotect(ciphertext, entropy);
+            // E043 migration: try machine-specific entropy first, then fall back to the legacy
+            // static entropy for blobs written before the E043 change.
+            byte[]? plaintext = null;
+            try
+            {
+                plaintext = Unprotect(ciphertext, GetEntropy(keyType));
+            }
+            catch
+            {
+                // New entropy failed — try legacy static entropy for pre-E043 blobs.
+                try
+                {
+                    plaintext = Unprotect(ciphertext, GetLegacyStaticEntropy(keyType));
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
             try
             {
                 return Encoding.UTF8.GetString(plaintext);
@@ -214,15 +233,59 @@ internal sealed class DpapiSecretStore : ISecretStore
 
     /// <summary>Per-keyType entropy so blobs for different purposes are not interchangeable
     /// under the same Windows user account.</summary>
+    /// <remarks>E043: entropy now incorporates the machine-specific MachineGuid from the Windows
+    /// registry instead of a static constant. MIGRATION: existing blobs encrypted with the legacy
+    /// static entropy remain readable — <see cref="Retrieve"/> tries the new entropy first and
+    /// falls back to the legacy static entropy on failure. New writes always use machine-specific
+    /// entropy, so the legacy path is self-retiring as secrets are rewritten.</remarks>
     private static byte[] GetEntropy(string keyType)
     {
-        // Combine app-level entropy with key-type discriminator
+        // E043: derive entropy from machine-specific secret (MachineGuid) instead of static constant.
+        var machineId = GetMachineGuid();
+        var prefix = $"com.milkandgin.syxx:{machineId}";
+        var prefixBytes = Encoding.UTF8.GetBytes(prefix);
+        var result = new byte[prefixBytes.Length + 1 + keyType.Length];
+        prefixBytes.CopyTo(result, 0);
+        result[prefixBytes.Length] = (byte)':';
+        Encoding.UTF8.GetBytes(keyType, result.AsSpan(prefixBytes.Length + 1));
+        return result;
+    }
+
+    /// <summary>Legacy static entropy — used ONLY as a decryption fallback for blobs written
+    /// before E043. Never used for new writes.</summary>
+    private static byte[] GetLegacyStaticEntropy(string keyType)
+    {
         var appEntropy = "com.milkandgin.syxx"u8;
         var result = new byte[appEntropy.Length + 1 + keyType.Length];
         appEntropy.CopyTo(result);
         result[appEntropy.Length] = (byte)':';
         Encoding.UTF8.GetBytes(keyType, result.AsSpan(appEntropy.Length + 1));
         return result;
+    }
+
+    /// <summary>Reads the Windows MachineGuid from HKLM\SOFTWARE\Microsoft\Cryptography.
+    /// Falls back to Environment.MachineName if the registry is inaccessible (restricted
+    /// environments, containers). Cached for the process lifetime.</summary>
+    private static string? _machineGuidCache;
+    private static string GetMachineGuid()
+    {
+        if (_machineGuidCache is not null) return _machineGuidCache;
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography");
+            var guid = key?.GetValue("MachineGuid") as string;
+            if (!string.IsNullOrWhiteSpace(guid))
+                return _machineGuidCache = guid;
+        }
+        catch
+        {
+            // Registry inaccessible (restricted environment, container, or security policy).
+            // Fall through to hostname fallback.
+        }
+        // Fallback: Environment.MachineName — weaker than MachineGuid but always available.
+        // This means entropy differs across installations on the same hardware only if the
+        // hostname changes, which is rare on Windows desktops.
+        return _machineGuidCache = Environment.MachineName;
     }
 
     // ── DPAPI encrypt / decrypt ───────────────────────────────────────────────────

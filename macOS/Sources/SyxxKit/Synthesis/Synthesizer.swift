@@ -113,10 +113,11 @@ public enum EvidenceAdapters {
         var ev: [EvidenceItem] = []; var subs: [SectionStatus] = []
         // B161: split "no answer at all" (timeout/transport/malformed ⇒ invalidated) from "an answer
         // with a refusal RCODE" (servFail/refused ⇒ inconclusive + emit the resolverStatus evidence
-        // item). Previously, didFail caught .servFail/.refused first, so the switch arm below was
-        // unreachable for those RCODEs — the resolverStatus signal was discarded before it reached
-        // the ledger or the engine, and a valid parsed refusal was filed as invalidated ("ran but its
-        // premise failed") instead of inconclusive ("ran, valid data, unresolved").
+        // item). Previously, didNotSucceed (then named didFail) caught .servFail/.refused first, so
+        // the switch arm below was unreachable for those RCODEs — the resolverStatus signal was
+        // discarded before it reached the ledger or the engine, and a valid parsed refusal was filed
+        // as invalidated ("ran but its premise failed") instead of inconclusive ("ran, valid data,
+        // unresolved").
         if let r = resolution {
             switch r.status {
             case .refused, .servFail:

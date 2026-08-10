@@ -9,6 +9,23 @@ Session tokens are stateless HMAC-signed blobs so verifying them needs no round
 trip to Keygen. The website obtains one via /api/auth/activate and attaches it
 to every live query, so a visitor with no license can never run a paid search.
 
+E018 — Key algorithm summary (cross-platform):
+  * SERVER (this file): Ed25519 — verifies Keygen.sh response signatures via
+    the Keygen-Signature header.  The public key is a 32-byte Ed25519 key
+    (hex-encoded, from config.KEYGEN_PUBLIC_KEY).  Requires the `cryptography`
+    library.
+  * macOS CLIENT (LicenseManager.swift): P-256 (NIST secp256r1) ECDSA —
+    verifies Keygen.sh response signatures using CryptoKit's P256.Signing API.
+    The public key is a 91-byte SubjectPublicKeyInfo DER blob (hex-encoded).
+  * WINDOWS CLIENT (LicenseManager.cs): P-256 (NIST secp256r1) ECDSA —
+    verifies Keygen.sh response signatures using .NET's ECDsa with
+    DSASignatureFormat.Rfc3279DerSequence.  Same DER key format as macOS.
+
+  The server and clients use DIFFERENT signature algorithms because Keygen.sh
+  offers both Ed25519 (preferred for server-to-server, higher performance) and
+  P-256/ECDSA (for client SDKs using platform-native crypto like CryptoKit and
+  .NET ECDsa).  Both provide equivalent security against forged responses.
+
 A021 (Fix 1): validate-key responses from Keygen are cryptographically verified
 using Ed25519 response signatures (Keygen-Signature header) when
 config.KEYGEN_PUBLIC_KEY is set.  A MITM with a forged body is denied even over
@@ -46,6 +63,14 @@ _KEYGEN_SSL_CONTEXT.minimum_version = ssl.TLSVersion.TLSv1_2
 # signature check would be partially defeated. +/- 5 minutes tolerates clock drift.
 _KEYGEN_DATE_SKEW_SECONDS = 300
 
+# E045: Clock-skew tolerance for session token expiry verification.
+# Wall clock (time.time()) is intentional here — session tokens must survive server
+# restarts and be verified against an absolute timestamp embedded at mint time.
+# time.monotonic() is only usable for intra-process intervals and must NOT be used.
+# This constant provides tolerance for NTP adjustments or minor clock drift between
+# the minting host and the verifying host.
+_SESSION_CLOCK_SKEW_TOLERANCE = 30  # seconds of tolerance for clock drift
+
 # S11: how often to re-log the "unprovisioned, denying every key" warning. Denying a
 # valid key with NO signal at all is the worst of both worlds — the customer is locked
 # out and the operator has nothing to search for. preflight says it once at boot, which
@@ -76,6 +101,11 @@ _secret = None
 
 
 def secret():
+    # SECURITY NOTE (E035): The session signing secret is loaded from db.get_or_create_secret(),
+    # which reads/writes the 'session_secret' key in the SQLite kv table as a hex string in
+    # plaintext. To encrypt the secret at rest, set SYXX_DB_ENCRYPTION_KEY and implement
+    # kv_set_encrypted / kv_get_encrypted helpers in db.py using AES-GCM keyed from that env var.
+    # Until then, the secret is protected only by filesystem permissions (0600) on the database.
     global _secret
     if _secret is None:
         _secret = db.get_or_create_secret()
@@ -129,7 +159,10 @@ def verify_session(token):
         exp = int(payload.get("exp", 0))
     except (TypeError, ValueError):
         return None
-    if exp < int(time.time()):
+    # E045: accept tokens that are up to _SESSION_CLOCK_SKEW_TOLERANCE seconds expired,
+    # to handle NTP adjustments and minor clock drift. Wall clock is intentional for
+    # cross-restart validity; tolerance handles clock skew without weakening revocation.
+    if exp < int(time.time()) - _SESSION_CLOCK_SKEW_TOLERANCE:
         return None
     return Entitlement(payload.get("sub", ""), payload.get("plan", "pro"), "session")
 
@@ -518,8 +551,8 @@ def entitlement_for(headers, query):
     if api_key:
         import hashlib
 
-        from . import db
-
+        # A021: db is already imported at module level (line 33), so this
+        # deferred import was redundant. Removed the unnecessary `from . import db`.
         key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         row = db.api_key_lookup(key_hash)
         if row:

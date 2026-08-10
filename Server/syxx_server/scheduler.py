@@ -204,11 +204,16 @@ _last_db_backup = 0.0
 def _backup_db():
     """Daily backup of the SQLite database. G-8: the license DB must survive
     a dead disk. Uses SQLite's online backup API for a consistent snapshot
-    without blocking writers."""
+    without blocking writers.
+    
+    A075: Pass _shutdown event to prevent blocking shutdown indefinitely.
+    """
     try:
         # A173: db.backup() is the actual function name — backup_database() never existed.
-        path = db.backup()
-        logging_util.info("db_backup_completed", path=path)
+        # A075: Pass shutdown event so backup can be cancelled before starting
+        path = db.backup(shutdown_event=_shutdown)
+        if path:
+            logging_util.info("db_backup_completed", path=path)
     except (OSError, Exception) as exc:
         logging_util.error("db_backup_failed", err=str(exc))
 
@@ -240,14 +245,22 @@ def _sync_api_keys():
         return False  # active or transient
 
     revoked_count = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(subjects))) as pool:
+    # A072: explicit create/shutdown to prevent the scheduler loop from hanging.
+    # The `with` statement calls shutdown(wait=True), which blocks until ALL
+    # submitted futures finish — even those still stuck on Keygen network calls.
+    # shutdown(wait=False, cancel_futures=True) cancels pending futures and
+    # returns immediately so the scheduler loop stays responsive.
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(subjects)))
+    try:
         futures = {pool.submit(_check_one, s): s for s in subjects}
         for fut in concurrent.futures.as_completed(futures, timeout=max(0, deadline - time.monotonic())):
             try:
-                if fut.result() is True:
+                if fut.result(timeout=5) is True:
                     revoked_count += 1
             except Exception:  # noqa: S110 — one subject failing must not abort the sweep
                 pass  # one subject failing must not abort the sweep
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
 
     if revoked_count:
         logging_util.info("api_key_sync_complete", checked=len(subjects), revoked=revoked_count)

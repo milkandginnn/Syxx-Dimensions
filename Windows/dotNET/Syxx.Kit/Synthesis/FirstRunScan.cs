@@ -48,13 +48,27 @@ public static class FirstRunScan
     ///
     /// <param name="isPro">If true, enables Pro-level Mirror corroboration (Dimension server).
     /// Parity twin of macOS FirstRunScan.runAsync(domain:isPro:progress:).</param>
+    /// <param name="fallbackToDefaultDomain">When true (the zero-config first-run default) a blank
+    /// <paramref name="domain"/> falls back to <see cref="DefaultDomain"/>. A surface that carries
+    /// a session domain (the Conclusions surfaces) passes false so an empty session can never be
+    /// silently graded against the well-known default (C009).</param>
     public static async Task<FirstRunResult> RunAsync(
         string? domain = null,
         bool isPro = false,
         IProgress<string>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool fallbackToDefaultDomain = true)
     {
-        domain = string.IsNullOrWhiteSpace(domain) ? DefaultDomain : domain.Trim();
+        domain = string.IsNullOrWhiteSpace(domain)
+            ? (fallbackToDefaultDomain ? DefaultDomain : null)
+            : domain.Trim();
+        if (domain is null)
+        {
+            // C009: refusing the well-known default is the honest failure here. A conclusions
+            // surface with no session domain must not silently summarize a github.com scan.
+            throw new InvalidOperationException(
+                "A first-run scan requires a domain; the well-known default is not permitted for this surface.");
+        }
         var inputs = new SectionInputs();
 
         var servers = NetworkKeyState.GetSystemDNSServers();

@@ -631,6 +631,19 @@ public enum DNSCapture {
         if type == 1 && rdLength == 4 {
             return "\(bytes[offset]).\(bytes[offset+1]).\(bytes[offset+2]).\(bytes[offset+3])"
         } else if type == 28 && rdLength == 16 {
+            // B047: RFC 5952 canonical form via inet_ntop (C077 fix ported from the IP-header
+            // address path). The old group-hex join produced "2001:db8:0:0:0:0:0:1" instead of
+            // "2001:db8::1", so the same address compared unequal between capture exports and
+            // resolver-reported addresses.
+            var addr = in6_addr()
+            withUnsafeMutableBytes(of: &addr) { raw in
+                for i in 0..<16 { raw[i] = bytes[offset + i] }
+            }
+            var buf = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+            if let cstr = inet_ntop(AF_INET6, &addr, &buf, socklen_t(buf.count)) {
+                return String(cString: cstr)
+            }
+            // Fall back to the uncompressed form only if inet_ntop fails (should not happen).
             var groups: [String] = []
             for i in stride(from: 0, to: 16, by: 2) {
                 let val = (Int(bytes[offset + i]) << 8) | Int(bytes[offset + i + 1])
@@ -688,6 +701,12 @@ public enum DNSCapture {
                 guard current + 1 < bytes.count else { throw DNSParseError() }
                 let pointer = ((len & 0x3F) << 8) | Int(bytes[current + 1])
                 guard pointer < bytes.count else { throw DNSParseError() }
+                // B045: monotonic compression-pointer defense. A pointer must always point
+                // BACKWARD (to an earlier offset) — a forward pointer would let an attacker
+                // fabricate a domain name by chaining pointers into arbitrary bytes. The
+                // server-side resolver.py:189 enforces the same rule (`if pointer >= offset:
+                // raise DNSError("non-monotonic")`); the macOS capture parser must match it.
+                guard pointer < current else { throw DNSParseError() }
                 if !jumped {
                     nextOffset = current + 2
                     jumped = true

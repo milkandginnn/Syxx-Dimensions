@@ -79,7 +79,7 @@ public enum DNSSECVerifier {
     public static func checkStatus(domain: String, resolver: String, now: Date = Date()) async -> DNSSECStatus {
         let response = await DNSResolver.queryUDPDetailed(
             DNSQuery(name: domain, type: 48, server: resolver, edns0UDPSize: 1232, edns0DODNSSEC: true))
-        if response.didFail { return .inconclusive }
+        if response.didNotSucceed { return .inconclusive }
         return classify(records: response.records, now: now, queriedName: domain)
     }
 

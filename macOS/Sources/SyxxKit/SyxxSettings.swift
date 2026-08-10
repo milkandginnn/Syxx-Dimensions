@@ -168,6 +168,27 @@ public enum SyxxSettingsStore {
     /// Lifecycle gates must use this API so unreadable acceptance never opens the shell.
     public static func loadWithStatus(from url: URL = defaultURL) -> SettingsLoadStatus {
         guard FileManager.default.fileExists(atPath: url.path) else { return .absent }
+
+        // E046: verify file permissions before trusting the contents. A settings file writable
+        // by group or others is a privilege-escalation vector — a co-tenant on a shared machine
+        // could inject malicious preferences (e.g. disable telemetry consent, change resolver IDs).
+        // Reject any file whose POSIX mode grants write access beyond the owner (expected: 0o600
+        // or stricter). Falls through to .corrupt which the load() caller maps to safe defaults
+        // with all network/telemetry features disabled.
+        #if os(macOS) || os(Linux)
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+           let perms = attrs[.posixPermissions] as? Int {
+            // 0o022 = group-write | other-write. Reject if either bit is set.
+            if (perms & 0o022) != 0 {
+                #if DEBUG
+                print("[SyxxSettings] E046: settings file permissions too permissive " +
+                      "(\(String(perms, radix: 8))) — expected 0600 or stricter, falling back to defaults")
+                #endif
+                return .corrupt
+            }
+        }
+        #endif
+
         let data: Data
         do {
             data = try Data(contentsOf: url)

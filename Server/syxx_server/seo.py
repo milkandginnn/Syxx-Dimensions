@@ -20,17 +20,13 @@ import os
 import re
 
 from . import __version__
+from .config import SEO_PRICE_MONTHLY, SEO_PRICE_YEARLY  # A025: single source of truth
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 CANONICAL_ORIGIN = "https://syxx.app"
-
-# E-10: SEO prices are configurable to prevent drift from Stripe.
-# The operator should update these when Stripe prices change.
-_SEO_PRICE_MONTHLY = os.environ.get("SYXX_SEO_PRICE_MONTHLY", "3.95")
-_SEO_PRICE_YEARLY = os.environ.get("SYXX_SEO_PRICE_YEARLY", "19.95")
 
 # ---------------------------------------------------------------------------
 # JSON-LD — SoftwareApplication (landing page only)
@@ -58,13 +54,13 @@ def _build_software_application_ld_json():
             "offers": [
                 {
                     "@type": "Offer",
-                    "price": _SEO_PRICE_MONTHLY,
+                    "price": SEO_PRICE_MONTHLY,
                     "priceCurrency": "USD",
                     "description": "Monthly subscription",
                 },
                 {
                     "@type": "Offer",
-                    "price": _SEO_PRICE_YEARLY,
+                    "price": SEO_PRICE_YEARLY,
                     "priceCurrency": "USD",
                     "description": "Yearly subscription",
                 },

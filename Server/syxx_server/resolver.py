@@ -3,6 +3,26 @@
 This is an independent implementation (it does NOT import Syxx client code). It
 uses random transaction IDs, a hard timeout, TCP fallback on truncation, and
 bounds-checked name parsing so hostile responses cannot hang or crash it.
+
+A030 — Query interface taxonomy (3 transports, 3 purposes, NOT duplicates):
+
+  query(name, qtype, server)
+      Recursive (RD=1, DO=0). Returns formatted strings via _parse_response.
+      Used by the investigation API for human-readable results.
+
+  raw_query(name, qtype, server)
+      Non-recursive (RD=0, DO=1). Returns raw rdata bytes via parse_raw_response.
+      Used by dnssec_validator for cryptographic verification where formatted
+      strings are unsuitable. Shared transport extracted in A017.
+
+  forward_wire(query_wire, server)
+      Passthrough proxy. Sends exact client query bytes, returns exact response
+      bytes unchanged. Used by DoH/DoT listeners — never re-encodes, because
+      re-parsing would silently drop EDNS/DNSSEC/unknown RRs.
+
+All three share _build_query, _read_name, _recv_exact, and the UDP+TCP fallback
+pattern. Further unification beyond A017's extraction would be forced — these
+functions intentionally differ in flags, return types, and validation strategy.
 """
 
 import ipaddress
@@ -284,6 +304,103 @@ def _parse_response(data, expected_txid, qtype, expected_qname=None, expected_qc
     return {"rcode": rcode, "truncated": truncated, "ad": ad, "records": records}
 
 
+# A017: shared raw-record parser — used by dnssec_validator for crypto verification
+# where formatted strings from _parse_response are not suitable.
+_MAX_RECORDS_PER_SECTION = 256
+
+
+def _rr_raw(data, offset, count):
+    """Parse *count* raw resource records starting at *offset*.
+
+    Returns (records, next_offset).  Each record dict contains:
+      ow  – owner name (str)
+      rt  – record type (int)
+      rc  – record class (int)
+      ttl – TTL (int)
+      rd  – raw rdata (bytes)
+      pk  – full packet (bytes, needed for DNSSEC signed-data construction)
+      ro  – rdata offset within packet (int)
+    """
+    records = []
+    for _ in range(min(count, _MAX_RECORDS_PER_SECTION)):
+        if offset >= len(data):
+            break
+        try:
+            owner, offset = _read_name(data, offset)
+        except DNSError:
+            break
+        if offset + 10 > len(data):
+            break
+        rtype, rclass, ttl, rdlength = struct.unpack(">HHIH", data[offset : offset + 10])
+        offset += 10
+        if offset + rdlength > len(data):
+            break
+        records.append(
+            {
+                "ow": owner,
+                "rt": rtype,
+                "rc": rclass,
+                "ttl": ttl,
+                "rd": data[offset : offset + rdlength],
+                "pk": data,
+                "ro": offset,
+            }
+        )
+        offset += rdlength
+    return records, offset
+
+
+def parse_raw_response(data, expected_txid, expected_qname=None, expected_qtype=None):
+    """Parse a DNS response returning raw rdata records for all sections.
+
+    Unlike :func:`_parse_response` (which formats rdata into human-readable
+    strings), this returns raw rdata bytes suitable for DNSSEC cryptographic
+    verification.  Shared from resolver to eliminate duplication with
+    dnssec_validator (A017).
+
+    Returns a dict with keys:
+      rc   – rcode (int)
+      aa   – authoritative answer (bool)
+      tc   – truncated (bool)
+      ans  – answer records (list of raw-record dicts)
+      auth – authority records
+      addl – additional records
+    """
+    if len(data) < 12:
+        raise DNSError("short header")
+    txid, flags, qd, an, ns, ar = struct.unpack(">HHHHHH", data[:12])
+    if txid != expected_txid:
+        raise DNSError("txid mismatch")
+    if not (flags & 0x8000):
+        raise DNSError("not a response")
+    offset = 12
+    for _ in range(qd):
+        qname, offset = _read_name(data, offset)
+        if offset + 4 > len(data):
+            raise DNSError("truncated question")
+        qtype_parsed, qclass_parsed = struct.unpack(">HH", data[offset : offset + 4])
+        offset += 4
+        if expected_qname is not None:
+            if (
+                qname.lower() != expected_qname.lower()
+                or qtype_parsed != expected_qtype
+                or qclass_parsed != 1
+            ):
+                raise DNSError("question mismatch")
+        break
+    ans, offset = _rr_raw(data, offset, an)
+    auth, offset = _rr_raw(data, offset, ns)
+    addl, offset = _rr_raw(data, offset, ar)
+    return {
+        "rc": flags & 0xF,
+        "aa": bool(flags & 0x400),
+        "tc": bool(flags & 0x200),
+        "ans": ans,
+        "auth": auth,
+        "addl": addl,
+    }
+
+
 def _format_rdata(rtype, rdata, full, rdata_offset):
     """Format raw rdata into a human-readable string. Returns a plain
     formatted string for all record types (including MX, SOA, SRV, CAA).
@@ -411,6 +528,66 @@ def _query_tcp(name, qtype, server, timeout):
     finally:
         sock.close()
     return _parse_response(data, txid, qtype_, expected_qname=qname, expected_qclass=qclass_)
+
+
+def raw_query(name, qtype, server, timeout=5, deadline=None):
+    """Non-recursive DNSSEC query (RD=0, DO=1) with UDP+TCP fallback.
+
+    A017: shared transport for dnssec_validator — eliminates duplicated
+    UDP/TCP socket logic.  Returns the result of :func:`parse_raw_response`
+    (raw rdata bytes, all sections).
+
+    *deadline* is a ``time.monotonic()`` absolute deadline; the per-socket
+    timeout is clamped to the remaining budget (A162).
+    """
+    import time as _time
+
+    if deadline is not None:
+        remaining = deadline - _time.monotonic()
+        if remaining <= 0:
+            raise DNSError("deadline exceeded")
+        timeout = min(timeout, remaining)
+
+    txid, packet, qname, qtype_, qclass_ = _build_query(name, qtype, rd=False, do=True)
+
+    # UDP
+    sock = socket.socket(_addr_family(server), socket.SOCK_DGRAM)
+    sock.settimeout(timeout)
+    try:
+        sock.connect((server, 53))
+        sock.send(packet)
+        data = sock.recv(65535)  # A169: max UDP DNS buffer
+    except OSError as exc:
+        raise DNSError("network error") from exc
+    finally:
+        sock.close()
+
+    parsed = parse_raw_response(data, txid, expected_qname=qname, expected_qtype=qtype_)
+
+    # TCP fallback on truncation
+    if parsed["tc"]:
+        if deadline is not None:
+            remaining = deadline - _time.monotonic()
+            if remaining <= 0:
+                raise DNSError("deadline exceeded")
+            timeout = min(timeout, remaining)
+        framed = struct.pack(">H", len(packet)) + packet
+        tsock = socket.socket(_addr_family(server), socket.SOCK_STREAM)
+        tsock.settimeout(timeout)
+        try:
+            tsock.connect((server, 53))
+            tsock.sendall(framed)
+            (length,) = struct.unpack(">H", _recv_exact(tsock, 2))
+            # SD-72: cap server-declared TCP length at 16384 bytes.
+            if length > _MAX_TCP_LENGTH:
+                raise DNSError(f"server-declared TCP length exceeds {_MAX_TCP_LENGTH}")
+            parsed = parse_raw_response(
+                _recv_exact(tsock, length), txid, expected_qname=qname, expected_qtype=qtype_
+            )
+        finally:
+            tsock.close()
+
+    return parsed
 
 
 def _recv_exact(sock, n):
@@ -874,6 +1051,9 @@ def zone_signing_status(zone, server, timeout, now=None, rd=False):
         resp = _query_sections(zone, TYPE_DNSKEY, server, timeout, do=True, rd=rd)
     except DNSError:
         return None, []
+    # A077: truncated response — signing status unknown rather than false "unsigned"
+    if not resp.get("parseComplete", True):
+        return None, []
     if not any(r["type"] == "DNSKEY" for r in resp["answers"]):
         return False, []
     # B145: iterate all three response sections for RRSIGs, not just "answers". Some authoritative
@@ -895,6 +1075,118 @@ def _zone_is_signed(zone, server, timeout, now=None):
     return zone_signing_status(zone, server, timeout, now)[0]
 
 
+def _inconclusive(name, qtype, delegation):
+    """Build a standard inconclusive result dict (A027: DRY for 6+ return sites)."""
+    return {
+        "name": name,
+        "qtype": qtype,
+        "delegation": delegation,
+        "authoritative": None,
+        "conclusion": "inconclusive",
+    }
+
+
+def _extract_glue(additional, delegated_zone):
+    """Extract bailiwick-filtered glue A records from the additional section.
+
+    Returns a dict mapping owner names (trailing-dot-stripped) to IP addresses.
+    A063: only records whose owner is within the delegated zone are included —
+    out-of-bailiwick glue (e.g. an A record for ``ns.attacker.net`` in a
+    delegation of ``example.com``) is discarded so the additional section
+    cannot inject a redirect."""
+    return {
+        r["owner"].rstrip("."): r["value"]
+        for r in additional
+        if r["type"] == "A" and _in_bailiwick(r["owner"], delegated_zone)
+    }
+
+
+def _next_servers_from_glue(ns_names, glue):
+    """Build a next-servers list from NS names and a glue dict.
+
+    A011: filters out non-public IPs so a malicious authoritative cannot return
+    glue like ``169.254.169.254`` / ``10.0.0.53`` / ``127.0.0.1`` to make us
+    probe internal hosts and reflect the answers (SSRF)."""
+    return [
+        {"ip": glue[n.rstrip(".")], "label": n}
+        for n in ns_names
+        if n.rstrip(".") in glue and netutil.ip_is_public(glue[n.rstrip(".")])
+    ]
+
+
+def _resolve_ns_via_subwalk(ns_names, timeout, max_depth, depth, deadline):
+    """Resolve NS names lacking glue via bounded recursive sub-walks.
+
+    Tries up to 2 NS names; returns the first publicly-routable answer.
+    A066: respects the shared deadline — aborts early if it has passed."""
+    for nsname in ns_names[:2]:
+        if deadline is not None and time.monotonic() >= deadline:
+            break
+        try:
+            sub_depth = min(3, max_depth - depth - 1)
+            if sub_depth <= 0:
+                continue
+            sub = resolve_authoritative(nsname, TYPE_A, timeout, sub_depth, deadline=deadline)
+            if sub.get("authoritative") and sub["authoritative"]["answers"]:
+                ip = sub["authoritative"]["answers"][0]
+                if netutil.ip_is_public(ip):
+                    return [{"ip": ip, "label": nsname}]
+        except DNSError:
+            continue
+    return []
+
+
+def _handle_terminal(resp, zone, used, used_ip, timeout, delegation, name, qtype):
+    """Handle a terminal response: answer, NXDOMAIN, SOA-backed NODATA, or no-referral.
+
+    A terminal response is usable as authoritative ground truth only when the
+    responding server asserts AA. Otherwise it may be a recursive/middlebox
+    answer on the path and must not be treated as truth.
+
+    A168: requires non-empty answers for rcode 0 'authoritative'. An empty
+    answer set with rcode 0 and no SOA in authority is not a proven NODATA
+    — it may be a CNAME-only response or a silently-dropped parse."""
+    answers = [r["value"] for r in resp["answers"] if r["rtype"] == qtype]
+    if not resp["aa"]:
+        delegation.append(
+            {
+                "zone": zone,
+                "server": used,
+                "authoritative": False,
+                "answer": [r["value"] for r in resp["answers"]],
+                "error": "terminal response without AA bit",
+            }
+        )
+        return _inconclusive(name, qtype, delegation)
+
+    delegation.append(
+        {"zone": zone, "server": used, "authoritative": True, "answer": [r["value"] for r in resp["answers"]]}
+    )
+
+    has_soa = any(r["type"] == "SOA" for r in resp["authority"])
+    if resp["rcode"] == 3:
+        conclusion = "authoritative"
+    elif resp["rcode"] == 0 and answers:
+        conclusion = "authoritative"
+    elif resp["rcode"] == 0 and has_soa:
+        conclusion = "authoritative"  # SOA-backed NODATA
+    else:
+        conclusion = "inconclusive"
+
+    return {
+        "name": name,
+        "qtype": qtype,
+        "delegation": delegation,
+        "authoritative": {
+            "answers": answers,
+            "aa": resp["aa"],
+            "rcode": resp["rcode"],
+            "dnskeyObserved": _zone_is_signed(zone, used_ip, timeout),
+        },
+        "conclusion": conclusion,
+    }
+
+
 def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH, deadline=None):
     """Walk root -> TLD -> authoritative for `name`/`qtype`, returning the authoritative answer plus the
     delegation chain. Never delegates recursion to an upstream resolver, so the result is ground truth.
@@ -906,36 +1198,33 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
     delegation = []
     servers = [{"ip": ip, "label": ip} for ip in ROOT_SERVERS]
     zone = "."
+
     for depth in range(max_depth):
         # A066: abort if the shared deadline has passed.
         if deadline is not None and time.monotonic() >= deadline:
             delegation.append({"zone": zone, "server": None, "error": "walk deadline exceeded"})
-            return {
-                "name": name,
-                "qtype": qtype,
-                "delegation": delegation,
-                "authoritative": None,
-                "conclusion": "inconclusive",
-            }
+            return _inconclusive(name, qtype, delegation)
+
+        # Try each server at this level until one responds.
         resp, used, used_ip = None, None, None
         for s in servers[:MAX_SERVERS_PER_LEVEL]:
             try:
                 # B145: set the DO (DNSSEC OK) bit on authoritative queries so resolvers include
                 # DNSSEC records. Without it the server is systematically blind to DNSSEC data.
                 # SM-011: propagate the deadline so each query's timeout is clamped.
-                resp, used, used_ip = _query_sections(name, qtype, s["ip"], timeout, do=True, deadline=deadline), s["label"], s["ip"]
+                resp, used, used_ip = (
+                    _query_sections(name, qtype, s["ip"], timeout, do=True, deadline=deadline),
+                    s["label"],
+                    s["ip"],
+                )
                 break
             except DNSError:
                 continue
+
+        # Early return: no reachable server at this level.
         if resp is None:
             delegation.append({"zone": zone, "server": None, "error": "no reachable nameserver at this level"})
-            return {
-                "name": name,
-                "qtype": qtype,
-                "delegation": delegation,
-                "authoritative": None,
-                "conclusion": "inconclusive",
-            }
+            return _inconclusive(name, qtype, delegation)
 
         # A168: an incomplete parse means records were silently dropped by the
         # parser. Treat this as inconclusive — a confident "authoritative" label
@@ -944,131 +1233,40 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
             delegation.append(
                 {"zone": zone, "server": used, "error": "incomplete parse — records may have been dropped"}
             )
-            return {
-                "name": name,
-                "qtype": qtype,
-                "delegation": delegation,
-                "authoritative": None,
-                "conclusion": "inconclusive",
-            }
+            return _inconclusive(name, qtype, delegation)
 
+        # Terminal response: answer, NXDOMAIN, SOA-backed NODATA, or no-referral.
         has_soa = any(r["type"] == "SOA" for r in resp["authority"])
-        if resp["answers"] or resp["rcode"] == 3 or has_soa or (not resp["authority"]):
-            # An answer, NXDOMAIN, SOA-backed NODATA, or no-referral terminal response
-            # is usable as authoritative ground truth only when the responding server
-            # asserts AA. Otherwise it may be a recursive/middlebox answer on the
-            # path and must not be treated as truth.
-            answers = [r["value"] for r in resp["answers"] if r["rtype"] == qtype]
-            if not resp["aa"]:
-                delegation.append(
-                    {
-                        "zone": zone,
-                        "server": used,
-                        "authoritative": False,
-                        "answer": [r["value"] for r in resp["answers"]],
-                        "error": "terminal response without AA bit",
-                    }
-                )
-                return {
-                    "name": name,
-                    "qtype": qtype,
-                    "delegation": delegation,
-                    "authoritative": None,
-                    "conclusion": "inconclusive",
-                }
-            delegation.append(
-                {"zone": zone, "server": used, "authoritative": True, "answer": [r["value"] for r in resp["answers"]]}
-            )
-            # A168: require non-empty answers for rcode 0 "authoritative". An empty
-            # answer set with rcode 0 and no SOA in authority is not a proven NODATA
-            # — it may be a CNAME-only response or a silently-dropped parse. Use
-            # "inconclusive" unless we have actual evidence (answers, NXDOMAIN, or SOA).
-            if resp["rcode"] == 3:
-                conclusion = "authoritative"
-            elif resp["rcode"] == 0 and answers:
-                conclusion = "authoritative"
-            elif resp["rcode"] == 0 and has_soa:
-                conclusion = "authoritative"  # SOA-backed NODATA
-            else:
-                conclusion = "inconclusive"
-            return {
-                "name": name,
-                "qtype": qtype,
-                "delegation": delegation,
-                "authoritative": {
-                    "answers": answers,
-                    "aa": resp["aa"],
-                    "rcode": resp["rcode"],
-                    "dnskeyObserved": _zone_is_signed(zone, used_ip, timeout),
-                },
-                "conclusion": conclusion,
-            }
+        is_terminal = resp["answers"] or resp["rcode"] == 3 or has_soa or (not resp["authority"])
+        if is_terminal:
+            return _handle_terminal(resp, zone, used, used_ip, timeout, delegation, name, qtype)
 
-        # A referral: NS records in the authority section, glue A records in additional.
+        # --- Referral: NS records in authority, glue A records in additional. ---
         ns_names = [r["value"] for r in resp["authority"] if r["type"] == "NS"]
         delegated_zone = resp["authority"][0]["owner"] if resp["authority"] else zone
 
         # A063: reject an out-of-bailiwick delegation. A rogue authoritative for zone Z can
         # answer our query with a referral whose owner is NOT within Z (an upward/sideways
-        # redirect) to steer the walk to attacker infrastructure and forge ground truth. The
-        # delegated zone must be at or below the zone we actually asked.
+        # redirect) to steer the walk to attacker infrastructure and forge ground truth.
         if not _in_bailiwick(delegated_zone, zone):
-            delegation.append({"zone": zone, "server": used, "error": f"out-of-bailiwick referral to {delegated_zone}"})
-            return {
-                "name": name,
-                "qtype": qtype,
-                "delegation": delegation,
-                "authoritative": None,
-                "conclusion": "inconclusive",
-            }
+            delegation.append(
+                {"zone": zone, "server": used, "error": f"out-of-bailiwick referral to {delegated_zone}"}
+            )
+            return _inconclusive(name, qtype, delegation)
 
         delegation.append({"zone": zone, "server": used, "referral": ns_names, "delegatedZone": delegated_zone})
 
-        # A063: only trust glue whose owner is in-bailiwick of the delegated zone. Out-of-bailiwick
-        # glue (e.g. an A record for `ns.attacker.net` in a delegation of `example.com`) is discarded;
-        # such NS names are instead resolved by an independent walk below, so the additional section
-        # cannot be used to inject a redirect.
-        # A011: never query a glue/NS IP that isn't publicly routable. A malicious authoritative
-        # can return glue like `169.254.169.254` / `10.0.0.53` / `127.0.0.1` to make us probe
-        # internal hosts and reflect the answers (SSRF).
-        glue = {
-            r["owner"].rstrip("."): r["value"]
-            for r in resp["additional"]
-            if r["type"] == "A" and _in_bailiwick(r["owner"], delegated_zone)
-        }
-        next_servers = [
-            {"ip": glue[n.rstrip(".")], "label": n}
-            for n in ns_names
-            if n.rstrip(".") in glue and netutil.ip_is_public(glue[n.rstrip(".")])
-        ]
+        # Resolve next-hop servers: prefer glue, fall back to sub-walk.
+        glue = _extract_glue(resp["additional"], delegated_zone)
+        next_servers = _next_servers_from_glue(ns_names, glue)
         if not next_servers:
-            # No glue — resolve a couple of NS names from the root (bounded so it can't loop forever).
-            for nsname in ns_names[:2]:
-                # A066: abort sub-walk early if the shared deadline has passed.
-                if deadline is not None and time.monotonic() >= deadline:
-                    break
-                try:
-                    sub_depth = min(3, max_depth - depth - 1)
-                    if sub_depth <= 0:
-                        continue
-                    sub = resolve_authoritative(nsname, TYPE_A, timeout, sub_depth, deadline=deadline)
-                    if sub.get("authoritative") and sub["authoritative"]["answers"]:
-                        ip = sub["authoritative"]["answers"][0]
-                        if netutil.ip_is_public(ip):
-                            next_servers.append({"ip": ip, "label": nsname})
-                            break
-                except DNSError:
-                    continue
+            next_servers = _resolve_ns_via_subwalk(ns_names, timeout, max_depth, depth, deadline)
+
         if not next_servers:
             delegation.append({"zone": delegated_zone, "server": None, "error": "could not resolve any nameserver"})
-            return {
-                "name": name,
-                "qtype": qtype,
-                "delegation": delegation,
-                "authoritative": None,
-                "conclusion": "inconclusive",
-            }
+            return _inconclusive(name, qtype, delegation)
+
         servers, zone = next_servers, delegated_zone
 
     delegation.append({"zone": zone, "server": None, "error": "max delegation depth exceeded"})
-    return {"name": name, "qtype": qtype, "delegation": delegation, "authoritative": None, "conclusion": "inconclusive"}
+    return _inconclusive(name, qtype, delegation)

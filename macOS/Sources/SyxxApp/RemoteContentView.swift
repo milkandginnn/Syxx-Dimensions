@@ -210,17 +210,6 @@ struct RemoteContentView: NSViewRepresentable {
           }
         ]
         """
-        WKContentRuleListStore.default().compileContentRuleList(
-            forIdentifier: "SyxxBlockExternalResources",
-            encodedContentRuleList: ruleListJSON
-        ) { ruleList, error in
-            if let ruleList {
-                config.userContentController.add(ruleList)
-            }
-            // If compilation fails, the webview still works but external resources are not blocked.
-            // This is a defense-in-depth layer; the server CSP header is the primary defense.
-        }
-
         // No WKUserScripts are added here.  allowsContentJavaScript is false, so
         // JavaScript is disabled entirely — user scripts injected via the content
         // controller never execute.  CSS injection is done server-side by fetching
@@ -251,10 +240,29 @@ struct RemoteContentView: NSViewRepresentable {
         }
         #endif
 
-        // Fetch the HTML ourselves so we can inject a CSS reset before the page
-        // renders.  The WKUserScript path is dead because allowsContentJavaScript
-        // is false; this is the only way to strip html/body margins.
-        context.coordinator.loadContent(into: webView, url: url)
+        // E048: defer loadContent until the WKContentRuleList compilation callback
+        // fires. Previously, loadContent was called synchronously after kicking off
+        // the async compile — the first HTTP request could race ahead of the rule
+        // list being installed, letting external subresources through the gap.
+        // Now the load is triggered from inside the completion handler, so the
+        // rule list is guaranteed to be in place (or compilation has failed and
+        // we proceed with CSP-only defense).
+        WKContentRuleListStore.default().compileContentRuleList(
+            forIdentifier: "SyxxBlockExternalResources",
+            encodedContentRuleList: ruleListJSON
+        ) { ruleList, error in
+            if let ruleList {
+                config.userContentController.add(ruleList)
+            }
+            // If compilation fails, the webview still works but external resources are not blocked.
+            // This is a defense-in-depth layer; the server CSP header is the primary defense.
+            // Fetch the HTML ourselves so we can inject a CSS reset before the page
+            // renders.  The WKUserScript path is dead because allowsContentJavaScript
+            // is false; this is the only way to strip html/body margins.
+            DispatchQueue.main.async {
+                context.coordinator.loadContent(into: webView, url: url)
+            }
+        }
 
         Self.cache.setObject(container, forKey: url as NSURL)
         return container

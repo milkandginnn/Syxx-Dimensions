@@ -174,6 +174,11 @@ struct SyxxWitnessCLI {
                 print("  Use --key-file <path> or set SYXX_WITNESS_KEY instead. To suppress this warning, pass --insecure-key-arg.")
             }
             if key == nil { key = ProcessInfo.processInfo.environment["SYXX_WITNESS_KEY"] }
+            // E040: scrub the key from the process environment after reading it.
+            // `/proc/self/environ` (Linux) and `ps e` (macOS) expose env vars to
+            // other local users; overwriting with an empty string removes the
+            // private key from the live environment as early as possible.
+            setenv("SYXX_WITNESS_KEY", "", 1)
             guard let key, !key.isEmpty else {
                 print("[ERROR] Private key required (use --key-file <path>, set SYXX_WITNESS_KEY, or --gen-keypair to create a keypair).")
                 printUsage()

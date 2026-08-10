@@ -124,7 +124,7 @@ public final class DNSCryptProxyManager: @unchecked Sendable {
     private func queryReaches(port: UInt16, domain: String) async -> Bool {
         let q = DNSQuery(name: domain, type: 1, server: "127.0.0.1", port: port)
         let r = await DNSResolver.queryUDPDetailed(q)
-        return !r.didFail && !r.records.isEmpty
+        return !r.didNotSucceed && !r.records.isEmpty
     }
 
     /// D093: tri-state outcome of reading the query log, distinguishing "no relay used" (direct)

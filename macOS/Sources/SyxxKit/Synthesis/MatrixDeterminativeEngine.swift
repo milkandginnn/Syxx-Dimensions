@@ -707,20 +707,24 @@ public struct MatrixDeterminativeEngine: Sendable {
         // Pass 2: margins (need cross-diagnosis strengths). Competitors exclude self, any
         // explicitly-allowed co-occurrence, AND (B159) any diagnosis that is gated or hard-excluded
         // — an unevaluable or impossible rival is not a hypothesis.
-        func competitorBestStrength(for d: DiagnosisSpec) -> Double {
+        // B025: pre-compute the best competitor strength for every diagnosis in a single O(d²)
+        // pass instead of recomputing it per diagnosis inside Pass 3. Pass 3 now does O(1)
+        // dictionary lookups, so the cost stays flat if the diagnosis catalog expands.
+        var competitorBestStrengthByID: [DiagnosisID: Double] = [:]
+        for d in spec.diagnoses {
             let allowed = Set(d.allowedCooccurrenceWith)
             var best = 0.0
             for other in spec.diagnoses where other.id != d.id && !allowed.contains(other.id) && emittableIDs.contains(other.id) {
                 best = max(best, raws[other.id]?.strength ?? 0)
             }
-            return best
+            competitorBestStrengthByID[d.id] = best
         }
 
         // Pass 3: classify each emittable diagnosis into a tier (or below-tier suppressed).
         var emitted: [DiagnosisID: (DiagnosisScore, DiagnosisSpec)] = [:]
         for d in spec.diagnoses {
             guard emittableIDs.contains(d.id), let raw = raws[d.id] else { continue }
-            let margin = round6(raw.strength - competitorBestStrength(for: d))
+            let margin = round6(raw.strength - (competitorBestStrengthByID[d.id] ?? 0))
 
             guard let tier = tier(for: raw, margin: margin) else {
                 // C062: a non-gated THREAT that fired with real observed support but fell below
@@ -755,6 +759,13 @@ public struct MatrixDeterminativeEngine: Sendable {
     }
 
     // MARK: Raw scoring
+    //
+    // The scoring pipeline is decomposed into composable stages:
+    // 1. `accumulateSupportMetrics` — iterate support rules, computing coverage/fit/contradiction
+    // 2. `accumulateExclusionContradiction` — iterate exclude rules, adding contradiction mass
+    // 3. `checkHardExclusion` — determine if an exclusionary indicator fires
+    // 4. `checkRequiredSectionGate` — validate required sections are usable
+    // The `rawScore` method coordinates these stages into a final `RawScore`.
 
     private struct GateInfo { let reason: SuppressedDiagnosis.Reason; let detail: String }
 
@@ -778,67 +789,100 @@ public struct MatrixDeterminativeEngine: Sendable {
         var gate: GateInfo? = nil
     }
 
-    private func rawScore(for d: DiagnosisSpec,
-                          indicatorByID: [IndicatorID: ObservedIndicator],
-                          sectionByID: [SectionID: SectionResult]) -> RawScore {
-        var r = RawScore()
+    /// Intermediate accumulator for support-rule metrics. Returned by `accumulateSupportMetrics`
+    /// and consumed by `rawScore` to finalize coverage, fit, and strength.
+    private struct SupportAccumulator {
+        var totalSupportWeight: Double = 0
+        var observedSupportWeight: Double = 0
+        var alignedSupport: Double = 0
+        var contradictionMass: Double = 0
+        var observedSupport: Double = 0
+        var groups: Set<String> = []
+        var hasDecisive: Bool = false
+        var majorCount: Int = 0
+        var supportingIndicators: [IndicatorID] = []
+    }
 
+    /// Stage 1: Coverage calculation — iterates support rules and accumulates the metrics
+    /// needed to compute coverage, fit, contradiction, and evidence classification.
+    ///
+    /// B156: normalises coverage over *mappable* indicator weight only. Rules referencing
+    /// unmappable indicators are permanent dead weight in the denominator, hard-capping
+    /// coverage below the minimum thresholds. When `mappableIndicators` is nil (legacy spec),
+    /// all rules count.
+    ///
+    /// B162: indicators from non-usable sections still contribute to observedSupport
+    /// (quality-independent overhang measure) but not to scoring metrics.
+    private func accumulateSupportMetrics(
+        for d: DiagnosisSpec,
+        indicatorByID: [IndicatorID: ObservedIndicator],
+        sectionByID: [SectionID: SectionResult]
+    ) -> SupportAccumulator {
+        var acc = SupportAccumulator()
         let supportRules = d.rules.filter { $0.polarity == .supports }
-        let excludeRules = d.rules.filter { $0.polarity == .excludes }
 
-        // B156: normalise coverage over *mappable* indicator weight only. Rules referencing
-        // unmappable indicators (those with no EvidenceId mapping) are permanent dead weight in
-        // the denominator, hard-capping coverage below the minimum thresholds and making entire
-        // diagnoses unreachable. When `mappableIndicators` is nil (legacy spec), all rules count.
-        let totalSupportWeight: Double
+        // B156: total weight denominator excludes unmappable indicators when the spec provides them
         if let mappable = spec.mappableIndicators {
-            totalSupportWeight = supportRules
+            acc.totalSupportWeight = supportRules
                 .filter { mappable.contains($0.indicatorID) }
                 .reduce(0.0) { $0 + $1.weight }
         } else {
-            totalSupportWeight = supportRules.reduce(0.0) { $0 + $1.weight }
+            acc.totalSupportWeight = supportRules.reduce(0.0) { $0 + $1.weight }
         }
-        var observedSupportWeight = 0.0
-        var alignedSupport = 0.0          // Σ weight*effective for non-contradictory support
-        var contradictionMass = 0.0
-        var groups = Set<String>()
 
         for rule in supportRules {
             guard let obs = indicatorByID[rule.indicatorID], let s = obs.observedStrength else { continue }
             let alignment = rule.expectedStrength > 0 ? min(1.0, s / rule.expectedStrength) : s
             let aligned = pow(alignment, rule.decayExponent)
-            // B162: indicators from non-usable sections still contribute to observedSupport
-            // (quality-independent overhang measure) but not to scoring metrics.
+
+            // B162: non-usable sections contribute to observedSupport only (overhang measure)
             if let producing = sectionByID[obs.section], !producing.status.isUsable {
-                observedSupportWeight += rule.weight
-                r.observedSupport += rule.weight * aligned
+                acc.observedSupportWeight += rule.weight
+                acc.observedSupport += rule.weight * aligned
                 continue
             }
-            observedSupportWeight += rule.weight
+
+            acc.observedSupportWeight += rule.weight
             let effectiveQuality = clamp01(obs.quality)
             let effective = aligned * effectiveQuality
             let contribution = rule.weight * effective
+
             if obs.contradictory {
                 // A contradictory indicator still contributes to support at half weight
                 // (bounded attenuation), and adds contradiction mass at half weight.
                 // It can attenuate, never silently zero.
-                alignedSupport += contribution * 0.5
-                contradictionMass += contribution * 0.5
+                acc.alignedSupport += contribution * 0.5
+                acc.contradictionMass += contribution * 0.5
             } else {
-                alignedSupport += contribution
+                acc.alignedSupport += contribution
             }
+
             // Quality-independent: the observation FIRED; thin-section attenuation must not
             // erase it from the overhang-admission measure (C062/C065).
-            r.observedSupport += rule.weight * aligned
+            acc.observedSupport += rule.weight * aligned
+
             if effective > 0 {
-                groups.insert(rule.independenceGroup)
-                r.supportingIndicators.append(rule.indicatorID)
-                if rule.evidenceClass == .decisive { r.hasDecisive = true }
-                if rule.evidenceClass == .major { r.majorCount += 1 }
+                acc.groups.insert(rule.independenceGroup)
+                acc.supportingIndicators.append(rule.indicatorID)
+                if rule.evidenceClass == .decisive { acc.hasDecisive = true }
+                if rule.evidenceClass == .major { acc.majorCount += 1 }
             }
         }
 
-        // Exclude-polarity rules: firing observations add strong contradiction.
+        return acc
+    }
+
+    /// Stage 2: Exclusion contradiction — iterates exclude-polarity rules and accumulates
+    /// contradiction mass from firing, non-contradictory exclusion observations.
+    /// B162: applies the same section-usability gate as support rules.
+    private func accumulateExclusionContradiction(
+        for d: DiagnosisSpec,
+        indicatorByID: [IndicatorID: ObservedIndicator],
+        sectionByID: [SectionID: SectionResult]
+    ) -> Double {
+        var contradictionMass = 0.0
+        let excludeRules = d.rules.filter { $0.polarity == .excludes }
+
         for rule in excludeRules {
             guard let obs = indicatorByID[rule.indicatorID], let s = obs.observedStrength,
                   !obs.contradictory else { continue }
@@ -849,51 +893,104 @@ public struct MatrixDeterminativeEngine: Sendable {
             contradictionMass += rule.weight * effective
         }
 
-        r.rawSupport = alignedSupport
-        r.coverage = totalSupportWeight > 0 ? clamp01(observedSupportWeight / totalSupportWeight) : 0
-        r.fit = observedSupportWeight > 0 ? clamp01(alignedSupport / observedSupportWeight) : 0
-        // Contradiction normalised against the support it competes with (bounded, never > 1).
-        r.contradiction = clamp01(contradictionMass / (contradictionMass + observedSupportWeight + 1e-9))
-        r.strength = r.fit * r.coverage
-        r.independentGroups = groups.count
+        return contradictionMass
+    }
 
-        // Hard exclusion: a listed exclusionary indicator observed as firing and non-contradictory.
-        // B163: require the producing section to be usable and the observation quality to clear
-        // the quality floor — a degraded/unreliable observation must not silently zero a threat.
+    /// Stage 3: Exclusion gating — checks if any exclusionary indicator has fired strongly
+    /// enough to hard-exclude this diagnosis.
+    ///
+    /// B163: requires the producing section to be usable and the observation quality to clear
+    /// the quality floor — a degraded/unreliable observation must not silently zero a threat.
+    private func checkHardExclusion(
+        for d: DiagnosisSpec,
+        indicatorByID: [IndicatorID: ObservedIndicator],
+        sectionByID: [SectionID: SectionResult]
+    ) -> IndicatorID? {
         for exID in d.exclusionaryIndicators {
             if let obs = indicatorByID[exID], let s = obs.observedStrength,
                !obs.contradictory, s >= Self.exclusionFiringThreshold,
                obs.quality >= Self.exclusionQualityFloor,
                sectionByID[obs.section]?.status.isUsable ?? false {
-                r.hardExclusion = exID
-                break
+                return exID
             }
         }
+        return nil
+    }
 
-        // Required-section hard gate (fail-closed).
+    /// Stage 4: Required-section gating — validates that all required sections produced usable
+    /// output. Returns a `GateInfo` if gating applies, nil if the diagnosis may proceed.
+    ///
+    /// PRECEDENCE (C065, fail-closed): the required-section gate is checked BEFORE hard exclusion.
+    /// A diagnosis whose required evidential context is missing/invalidated is UNEVALUABLE — it can
+    /// be neither affirmed nor affirmatively disproved.
+    ///
+    /// B166: when the operator disabled the hard-missing flag, keep checking the remaining
+    /// required sections — the invalidated / unusable checks below are governed by independent
+    /// flags and must not be short-circuited.
+    ///
+    /// C012: .untested / .locked sections are present in the matrix but have no evidence yet —
+    /// only gate on them when the hard-gate flag is set, matching the flag's "missing" semantics
+    /// (absent ≠ present-but-untested).
+    private func checkRequiredSectionGate(
+        for d: DiagnosisSpec,
+        sectionByID: [SectionID: SectionResult]
+    ) -> GateInfo? {
         for reqSection in d.requiredSections {
             guard let section = sectionByID[reqSection] else {
                 if spec.thresholds.hardGateOnMissingRequiredSections {
-                    r.gate = GateInfo(reason: .missingRequiredSection,
-                                      detail: "Required section '\(reqSection)' did not run.")
-                    break
+                    return GateInfo(reason: .missingRequiredSection,
+                                    detail: "Required section '\(reqSection)' did not run.")
                 }
-                // B166: when the operator disabled the hard-missing flag, keep checking the
-                // remaining required sections — the invalidated / unusable checks below are
-                // governed by independent flags and must not be short-circuited.
                 continue
             }
             if section.status == .invalidated, spec.thresholds.failClosedOnInvalidatedRequiredSections {
-                r.gate = GateInfo(reason: .invalidatedRequiredSection,
-                                  detail: "Required section '\(reqSection)' ran but its premise failed (invalidated).")
-                break
+                return GateInfo(reason: .invalidatedRequiredSection,
+                                detail: "Required section '\(reqSection)' ran but its premise failed (invalidated).")
             }
             if !section.status.isUsable {
-                r.gate = GateInfo(reason: .missingRequiredSection,
-                                  detail: "Required section '\(reqSection)' produced no usable output (\(section.status.rawValue)).")
-                break
+                if spec.thresholds.hardGateOnMissingRequiredSections {
+                    return GateInfo(reason: .missingRequiredSection,
+                                    detail: "Required section '\(reqSection)' produced no usable output (\(section.status.rawValue)).")
+                }
             }
         }
+        return nil
+    }
+
+    /// Coordinator: assembles a `RawScore` by calling the four scoring stages in sequence.
+    /// Each stage is independently testable and composable.
+    private func rawScore(for d: DiagnosisSpec,
+                          indicatorByID: [IndicatorID: ObservedIndicator],
+                          sectionByID: [SectionID: SectionResult]) -> RawScore {
+        var r = RawScore()
+
+        // Stage 1: accumulate support metrics (coverage, fit, observedSupport, evidence class)
+        let support = accumulateSupportMetrics(for: d, indicatorByID: indicatorByID, sectionByID: sectionByID)
+
+        // Stage 2: accumulate exclusion contradiction mass
+        let exclusionContradiction = accumulateExclusionContradiction(for: d, indicatorByID: indicatorByID, sectionByID: sectionByID)
+
+        // Combine support and exclusion contradiction
+        let totalContradictionMass = support.contradictionMass + exclusionContradiction
+
+        // Normalize metrics
+        r.rawSupport = support.alignedSupport
+        r.coverage = support.totalSupportWeight > 0 ? clamp01(support.observedSupportWeight / support.totalSupportWeight) : 0
+        r.fit = support.observedSupportWeight > 0 ? clamp01(support.alignedSupport / support.observedSupportWeight) : 0
+        // Contradiction normalised against the support it competes with (bounded, never > 1).
+        r.contradiction = clamp01(totalContradictionMass / (totalContradictionMass + support.observedSupportWeight + 1e-9))
+        r.strength = r.fit * r.coverage
+        r.independentGroups = support.groups.count
+        r.hasDecisive = support.hasDecisive
+        r.majorCount = support.majorCount
+        r.supportingIndicators = support.supportingIndicators
+        r.observedSupport = support.observedSupport
+
+        // Stage 3: check hard exclusion
+        r.hardExclusion = checkHardExclusion(for: d, indicatorByID: indicatorByID, sectionByID: sectionByID)
+
+        // Stage 4: check required-section gating (applied last so it can override exclusion)
+        r.gate = checkRequiredSectionGate(for: d, sectionByID: sectionByID)
 
         return r
     }

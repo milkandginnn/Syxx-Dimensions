@@ -1,3 +1,14 @@
+// E018 — Key algorithm used by this file:
+//   macOS client uses P-256 (NIST secp256r1) ECDSA for Keygen.sh response
+//   signature verification, via CryptoKit's P256.Signing API.  The pinned
+//   public key is a 91-byte SubjectPublicKeyInfo DER blob (hex-encoded).
+//
+//   Cross-platform note: the Server (licensing.py) uses Ed25519 for the same
+//   purpose — Keygen.sh offers both Ed25519 (server-to-server, higher perf)
+//   and P-256 (client SDKs with platform-native crypto).  Both provide
+//   equivalent forgery protection.  See licensing.py module docstring for the
+//   full algorithm summary.
+
 import Foundation
 import Security
 import LocalAuthentication
@@ -67,11 +78,60 @@ public enum LicenseManager {
 
     private static let validationTimeout: TimeInterval = 8.0
 
-    /// B187: Pinned P-256 public key (SubjectPublicKeyInfo DER, hex-encoded, 91 bytes = 182 hex chars)
-    /// from Keygen.sh. Used to verify the Keygen-Signature header on validate-key responses before
-    /// trusting meta.valid. Until this is populated, unverifiable responses return false (safe default).
-    /// Retrieve from: Keygen dashboard Settings → Public Key (PEM), then hex-encode the DER bytes.
-    private static let keygenPublicKeyDERHex = "3059301306072a8648ce3d020106082a8648ce3d030107034200043495cab670d545c30a9f6a3cce56658883ffbe96a48c03a09efbc3350ed23e513c9064ea53b32b354202fae899e50ab30262788441c7f95bbd3779215da6a78e"
+    /// B187: Compiled-in fallback P-256 public key (SubjectPublicKeyInfo DER, hex-encoded,
+    /// 91 bytes = 182 hex chars) from Keygen.sh. Used ONLY when the server-provided key is
+    /// unavailable (server unreachable, cache empty). E017: the preferred key source is the
+    /// server-provided key cached in Keychain — see `resolveKeygenPublicKeyDERHex()`.
+    private static let compiledKeygenPublicKeyDERHex = "3059301306072a8648ce3d020106082a8648ce3d030107034200043495cab670d545c30a9f6a3cce56658883ffbe96a48c03a09efbc3350ed23e513c9064ea53b32b354202fae899e50ab30262788441c7f95bbd3779215da6a78e"
+
+    /// E017: Keychain account for the server-provided Keygen public key (hex-encoded DER).
+    /// Populated by `cacheServerPublicKey(_:)` when the /api/startup response includes a key.
+    /// Read by `resolveKeygenPublicKeyDERHex()` as the preferred key source.
+    private static let serverPublicKeyAccount = "keygen-server-pubkey"
+
+    /// E017: Resolves the best available Keygen public key for signature verification.
+    /// Priority: (1) server-provided key cached in Keychain, (2) compiled-in fallback.
+    /// The server-provided key is preferred because it can be rotated without an app update;
+    /// the compiled-in key is the last resort when the server has never been reachable.
+    private static func resolveKeygenPublicKeyDERHex() -> String {
+        if let cached = readKeychainData(account: serverPublicKeyAccount),
+           let hex = String(data: cached, encoding: .utf8),
+           !hex.isEmpty,
+           hex.count == compiledKeygenPublicKeyDERHex.count,
+           hex.allSatisfy({ $0.isHexDigit }) {
+            return hex
+        }
+        return compiledKeygenPublicKeyDERHex
+    }
+
+    /// E017: Caches a Keygen public key received from the server (e.g. via /api/startup).
+    /// The key is validated as plausible P-256 DER hex (91 bytes = 182 hex chars) before caching.
+    /// Call this when the /api/startup response includes a `keygenPublicKey` field.
+    /// - Parameter derHex: The hex-encoded DER representation of the P-256 public key.
+    /// - Returns: `true` if the key was cached successfully, `false` if validation or storage failed.
+    @discardableResult
+    public static func cacheServerPublicKey(derHex: String) -> Bool {
+        // Validate: must be plausible P-256 SubjectPublicKeyInfo DER (91 bytes = 182 hex chars).
+        guard derHex.count == compiledKeygenPublicKeyDERHex.count,
+              derHex.allSatisfy({ $0.isHexDigit }) else {
+            return false
+        }
+        guard let data = derHex.data(using: .utf8) else { return false }
+        do {
+            try writeKeychainData(data, account: serverPublicKeyAccount)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    // TODO(E017): Integrate with DimensionService.fetchStartup() to extract the `keygenPublicKey`
+    // field from the /api/startup response and call `cacheServerPublicKey(derHex:)`. Requires
+    // server-side endpoint to include the public key in the startup response payload.
+    // Example integration point in DimensionService:
+    //   if let keyHex = startupResponse.keygenPublicKey {
+    //       LicenseManager.cacheServerPublicKey(derHex: keyHex)
+    //   }
 
     private static var configURL: URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -190,7 +250,20 @@ public enum LicenseManager {
             // Pass the authenticated LAContext so the write doesn't prompt.
             query[kSecUseAuthenticationContext as String] = ctx
         } else {
-            // Password-only fallback: no biometric requirement.
+            // E030: Password-only fallback — no biometric requirement.
+            //
+            // TRADEOFF: when biometrics are unavailable (no enrolled fingerprint, expired
+            // LAContext after sleep/lock, or hardware without Touch ID), the license key is
+            // stored with kSecAttrAccessibleWhenUnlockedThisDeviceOnly. This keeps the app
+            // functional on every Mac but means any process running while the device is
+            // unlocked can read the key without user interaction. The biometric path
+            // (kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly + .biometryAny) is strictly
+            // stronger because it requires a positive user authentication per access.
+            //
+            // CONSIDER: for Pro-tier licenses, requiring biometric authentication and
+            // refusing to store the key when biometrics are unavailable would close this
+            // gap — the user would need to re-enroll or use an explicit password entry
+            // flow rather than silently downgrading to password-only protection.
             // B188: apply the same accessibility class as WitnessKeyManager for consistency.
             query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         }
@@ -642,7 +715,9 @@ public enum LicenseManager {
     /// missing/malformed, or verification fails — caller must NOT trust meta.valid.
     private static func verifyKeygenSignature(body: Data, httpResponse: HTTPURLResponse,
                                                requestPath: String, requestMethod: String) -> Bool {
-        guard !keygenPublicKeyDERHex.isEmpty else { return false }
+        // E017: resolve the active key — server-provided (cached) takes priority over compiled-in.
+        let activeKeyHex = resolveKeygenPublicKeyDERHex()
+        guard !activeKeyHex.isEmpty else { return false }
 
         // Parse the Keygen-Signature header: keyid="...", algorithm="...", signature="...", headers="..."
         guard let sigHeader = httpResponse.value(forHTTPHeaderField: "Keygen-Signature") else {
@@ -681,7 +756,7 @@ public enum LicenseManager {
 
         // Load the pinned P-256 public key from its DER representation and verify.
         // The signature from Keygen is DER-encoded ECDSA; SHA-256 is the digest for P-256.
-        guard let derBytes = Data(hexString: keygenPublicKeyDERHex),
+        guard let derBytes = Data(hexString: activeKeyHex),
               let pubKey = try? P256.Signing.PublicKey(derRepresentation: derBytes) else {
             return false
         }
@@ -742,11 +817,11 @@ public enum LicenseManager {
                 return .networkError("HTTP \(httpResponse.statusCode)")
             }
             let validation = try JSONDecoder().decode(KeygenValidationResponse.self, from: data)
-            // D066: verify the Ed25519 response signature before trusting meta.valid OR
-            // meta.invalid. A forged "invalid" response silently revokes Pro capability
-            // (disabling collector-backed probes) just as a forged "valid" grants it.
-            // The signature must check regardless of the meta.valid value — an unverifiable
-            // response is untrusted in either direction.
+            // D066 (E018): verify the P-256 ECDSA response signature before trusting
+            // meta.valid OR meta.invalid. A forged "invalid" response silently revokes
+            // Pro capability (disabling collector-backed probes) just as a forged "valid"
+            // grants it. The signature must check regardless of the meta.valid value —
+            // an unverifiable response is untrusted in either direction.
             let requestPath = "/v1/accounts/\(accountID)/licenses/actions/validate-key"
             if !verifyKeygenSignature(body: data, httpResponse: httpResponse,
                                       requestPath: requestPath, requestMethod: "post") {

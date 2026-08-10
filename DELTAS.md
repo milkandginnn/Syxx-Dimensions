@@ -242,12 +242,14 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A001]**            Passive DNS drift boolean fallback collapses tri-state
-- **Status:**           **OPEN** — Verified in source. passivedns.py:123 still emits
+- **Status:**           **fixed-unverified** — Verified in source. passivedns.py:123 still emits
                         `"driftSuspected": drift == "suspected"`. The comment says "backward-compat
                         bool alongside tri-state" (A117), but legacy clients reading only the
                         boolean cannot distinguish "insufficient-data" from "none" — both collapse
                         to false, violating the no-result-before-evidence rule the comment itself
                         cites.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Non-critical; API response JSON includes legacy driftSuspected boolean
                         alongside tri-state drift string.
 - **Location:**         Server/syxx_server/passivedns.py:121
@@ -268,10 +270,13 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A002]**            IDN/Punycode bypass of per-run unique-host cap enables SSRF fan-out
-- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+- **Status:**           **fixed-unverified** — Found during warp content-integrity multi-reviewer
+                        audit
                         2026-08-09. urlsplit does not perform IDN-to-punycode conversion.
                         caf\xc3\xa9.com and xn--caf-dma.com produce different hostnames, each consuming
                         a separate budget slot.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical — server-side input validation gap allowing host budget bypass.
                         The FETCH_MAX_UNIQUE_HOSTS cap is the SSRF fan-out bound; an attacker can
                         double the effective host limit by submitting the same asset host in both
@@ -354,9 +359,12 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A005]**            Server exposes two different key_id schemes from the same Ed25519 key
-- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+- **Status:**           **fixed-unverified** — Found during warp content-integrity multi-reviewer
+                        audit
                         2026-08-09. /api/pubkey returns a base64-of-first-8-bytes key_id; warp
                         manifest uses lowercase hex of full 32-byte key.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Non-critical; operator confusion risk. An operator who copies keyId from
                         /api/pubkey into their pinned key set would pin a value that never matches
                         the warp manifest key_id, producing silent untrustedSigner -> INCONCLUSIVE.
@@ -1326,7 +1334,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A013]**            IDN domain corruption in DNSSEC validator — `encode("ascii","replace")`
-- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup tech-debt scan
+                        2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical. Silently breaks DNSSEC validation for all internationalized
                         domain names. The failure mode is indistinguishable from "this zone
                         is not signed."
@@ -1360,7 +1371,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A014]**            backup() leaves stale .partial tmp files on error — no finally cleanup
-- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup tech-debt scan
+                        2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      High. Failed backups accumulate .partial files that could be mistaken
                         for restore points during disaster recovery. The test
                         `test_no_partial_file_is_left_behind` only covers the happy path.
@@ -1882,7 +1896,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A031]**            Tests use unittest.TestCase alongside pytest inconsistently
-- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup tech-debt scan
+                        2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Low. Inconsistent patterns make tests harder to write and maintain.
 - **Location:**         Server/tests/ (~15 files)
 - **Issue:**            The test suite is split between `unittest.TestCase` (with manual
@@ -2285,7 +2302,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[C002]**            WitnessWireJson.cs — IEEE-754 ULP-nudging date math is fragile
                         precision-critical code
-- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup tech-debt scan
+                        2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      High. This code guarantees millisecond agreement with macOS's
                         Foundation TimeInterval encoding. A change to the macOS date encoding
                         would silently break the agreement.
@@ -2324,7 +2344,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[C003]**            HasChanges API divergence — Linux uses computed property, Windows uses
                         constructor-set field
-- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup tech-debt scan
+                        2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      High. If someone mutates DiffResult after construction, HasChanges
                         would lie on Windows but not on Linux.
 - **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/DiffResult.cs:62;
@@ -3266,7 +3289,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[A032]**            cryptography is 9 major versions behind — exposed to CVE-2026-69249
                         (CVSS 8.7) and multiple OpenSSL CVEs
-- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical. CVE-2026-69249 (CVSS 8.7 HIGH): Duplicate self-signed
                         intermediates cause exponential path-building DoS. Fixed in 49.0.0.
                         Also exposed to GHSA-h4gh-qq45-vh27 (Moderate, fixed in 43.x),
@@ -3298,7 +3323,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[A033]**            sentry-sdk[opentelemetry] is 47 minor versions behind — missing OTel
                         interop fixes and potential silent error data loss
-- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      High. Sentry SDK is the error telemetry pipeline. Dozens of bug fixes
                         and OTel interop improvements between 2.19 and 2.66.1. Missing error
                         context could mean silent data loss in production monitoring.
@@ -3377,7 +3404,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A036]**            brotli is 1 minor version behind — missing performance improvements
-- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Low. No known CVEs. Performance improvements in 1.2.0.
 - **Location:**         Server/requirements.txt (constraint: `brotli>=1.1.0`)
 - **Issue:**            Constraint allows 1.1.0 through 1.2.0. Latest is 1.2.0.
@@ -4592,9 +4621,11 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[C006]**            C# Assemble drops hard-excluded diagnoses from the clean-blocking
                         overhang — false `.clean` verdict on Windows (B163 parity gap)
-- **Status:**           **OPEN** — Found during delta analysis (-deep) of feat/1 branch
+- **Status:**           **fixed-unverified** — Found during delta analysis (-deep) of feat/1 branch
                         2026-08-09. macOS preserves B163; the C# port's Assemble still strips
                         HardExcluded from the overhang used to block a clean verdict.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical. A hard-excluded diagnosis that carried real raw support
                         licenses `.clean` on Windows where macOS returns `.inconclusive` —
                         a false "clean/secure" verdict on the Windows build.
@@ -4636,8 +4667,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 - **[C007]**            C# DNS spoofed-then-timeout collapses to `.timeout` where macOS
                         records `.responseIdMismatch` — recorded evidence diverges for the
                         same attack
-- **Status:**           **OPEN** — Found during delta analysis (-deep) of feat/1 branch
+- **Status:**           **fixed-unverified** — Found during delta analysis (-deep) of feat/1 branch
                         2026-08-09. Parity agent P2.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Medium. Both platforms end in a didFail verdict, so no false
                         verdict results; but the Windows evidence bundle records `.timeout`
                         where macOS records `.responseIdMismatch` (injection observed) for
@@ -4666,8 +4699,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[C008]**            Collector-less Glutton runs promote a never-executed probe to
                         `Invalidated` instead of `Untested`
-- **Status:**           **OPEN** — Found during the completed five-agent audit
+- **Status:**           **fixed-unverified** — Found during the completed five-agent audit
                         2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Non-critical. The run still reports absence of collector data, but
                         the status code overstates the failure mode and makes a never-run
                         probe look like a corrupt one.
@@ -4701,8 +4736,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[C009]**            Conclusions scan drops accumulated session evidence and falls back to
                         the hard-coded `github.com` first-run target
-- **Status:**           **OPEN** — Found during the completed five-agent audit
+- **Status:**           **fixed-unverified** — Found during the completed five-agent audit
                         2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical. The conclusions surface is supposed to summarize the
                         current run, but this path clears its collections and launches a
                         fresh first-run scan against a default target instead.
@@ -6563,8 +6600,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[A053]**            N+1 sequential DNS queries in firewall_test — 120 DNS queries, all
                         sequential, handler pinned up to 60s
-- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+- **Status:**           **fixed-unverified** — Found during deep delta-analysis performance audit
                         2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      High. 10 domains × (1 user resolver × 2 qtypes + 5 clean vantages
                         × 2 qtypes) = up to 120 DNS queries, sequential. _TEST_DEADLINE_
                         SECONDS=60 truncates but handler is pinned for up to 60s.
@@ -6699,8 +6738,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[A059]**            Server OTLP log records lack trace context — log records disconnected
                         from active spans
-- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+- **Status:**           **fixed-unverified** — Found during deep delta-analysis observability audit
                         2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Low. A collector query cannot join a server error log to its request
                         span.
 - **Location:**         Server/syxx_server/logging_util.py:77-85
@@ -6721,8 +6762,10 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[A060]**            Stripe SPKI pin list is loaded but never enforced on checkout
                         requests
-- **Status:**           **OPEN** — Found during the completed five-agent audit
+- **Status:**           **fixed-unverified** — Found during the completed five-agent audit
                         2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Non-critical. The client still verifies CA trust and hostname
                         checks, so this is defense-in-depth that fails open to standard
                         TLS rather than a direct break in checkout.
@@ -8063,7 +8106,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 ---
 
 - **[A069]**            RRL pruning is dead code — _rrl_buckets grows unbounded (memory leak)
-- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during fast delta-analysis 2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical. Every code path through the `with _rrl_lock:` block
                         explicitly returns, making the pruning block at lines 85-90
                         unreachable. Under sustained DNS traffic, dict grows until OOM.
@@ -8765,7 +8810,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[C010]**            Windows CaptureEngine BothFailed produces Completed outcome via empty
                         Task.WhenAll — capture never started but reported as success
-- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during deepest delta-analysis 2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Medium. Both sockets fail → empty tasks list → WhenAll completes
                         immediately → Outcome returns Completed. Caller renders empty
                         capture as normal result.
@@ -8790,7 +8837,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[C011]**            macOS PrivilegeManager failed helper install permanently suppresses
                         retry — hasAttemptedInstall set before installHelper()
-- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Status:**           **fixed-unverified** — Found during deepest delta-analysis 2026-08-09.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Medium. User cancels password prompt → hasAttemptedInstall = true →
                         all subsequent privileged operations silently skip install → fail
                         with connectionFailed. No retry until app restart.
@@ -9250,7 +9299,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 
 - **[A084]**            `ResolverConsensusEngine` force-unwraps `dohEndpoints[name]!` — crash
                         when resolver name has no DoH endpoint entry
-- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Status:**           **fixed-unverified** — Found during delta-analysis (deep) 2026-08-10.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical. A missing entry in `dohEndpoints` crashes the entire
                         scan at runtime via Swift trap, producing no verdict and no evidence.
                         Any operator adding a resolver name to `mirrorPrimaryResolvers` without
@@ -9313,7 +9364,9 @@ Do not call the analysis "complete" until you've covered all critical paths abov
 - **[C013]**            `AnswerLedger.trimEntriesPreservingLastPerKey` anchor key omits
                         `networkKey` — eviction can delete the only prior anchor for a
                         network-scoped key, masking real DNS drift as first-seen
-- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Status:**           **fixed-unverified** — Found during delta-analysis (deep) 2026-08-10.
+- **Fixed by:**         opencode
+- **Fixed at:**         2026-08-10T13:12:56.189168+00:00
 - **Criticality:**      Critical. After eviction, the next `detectDrift` call for that
                         domain/network pair returns `.firstSeen` instead of `.drifted`,
                         directly suppressing a DNS-tampering signal.
@@ -9445,11 +9498,13 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         weaker matrix determination than a macOS user in identical conditions.
 - **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:291-292;
                         Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:310
-- **Issue:**            macOS `indicatorMapping` maps `.exfilSuspicious → (.localEnvironmentCompromised, 0.35)`.
+- **Issue:**            macOS `indicatorMapping` maps `.exfilSuspicious →
+                        (.localEnvironmentCompromised, 0.35)`.
                         Windows `IndicatorMapping` contains only `ExfilLikely` (0.60) with no
                         `ExfilSuspicious` entry.
 - **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Add `[EvidenceId.ExfilSuspicious] = (SyxxIndicator.LocalEnvironmentCompromised, 0.35)`
+- **Fix(es):**          [Fix 1] Add `[EvidenceId.ExfilSuspicious] =
+                        (SyxxIndicator.LocalEnvironmentCompromised, 0.35)`
                         to the Windows `IndicatorMapping` dictionary.
 - **Code Sample:**      [
 

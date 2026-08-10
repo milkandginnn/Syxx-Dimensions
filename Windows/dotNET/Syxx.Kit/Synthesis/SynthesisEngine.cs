@@ -192,12 +192,12 @@ public static class SynthesisEngine
     ///    `Pow(alignment, decay) * clamp01(quality)`. A section MISSING from `sectionCompleteness`
     ///    reads 0.0, never 1.0 (the B151/B173 lesson: an inert 1.0 default is fabricated certainty).
     ///
-    /// Clean-support indicators (`resolverAgreement`, `routeClean`, `trustedWitnessOK`,
-    /// `localEvidenceSealValid`) are intentionally NOT wired here: the current evidence model emits
-    /// items for *findings*, and the trusted-witness / evidence-seal signals that would affirm a
-    /// clean pattern are not yet plumbed as `EvidenceId`s. Consequently a benign run reaches
-    /// `.inconclusive` rather than `.clean` — the honest posture (inconclusive over unearned secure)
-    /// until those affirmative-clean signals are wired.
+    /// B010: the four clean-support indicators (`resolverAgreement`, `routeClean`,
+    /// `trustedWitnessOK`, `localEvidenceSealValid`) are now wired via affirmative-clean
+    /// `EvidenceId`s (ResolverStatus, NxCanaryClean, DnssecCanarySecure, DnsEncrypted).
+    /// Strengths are conservative (0.70–0.80) — these are corroborating signals, not
+    /// cryptographic proof. A benign run with all four clean-support indicators present can
+    /// now reach `.clean` rather than stalling at `.inconclusive`.
     internal static List<SyxxIndicatorInput> MapEvidenceToIndicators(
         IReadOnlyList<EvidenceItem> evidence,
         Dictionary<Section, double> sectionCompleteness)
@@ -290,10 +290,19 @@ public static class SynthesisEngine
         [EvidenceId.AuthoritativeDiverges] = (SyxxIndicator.AuthoritativeMismatch, 0.70),
         [EvidenceId.DnssecCanaryStripped] = (SyxxIndicator.SignedAnswerMismatch, 0.80),
 
+        // B010 — clean-support: resolver completed successfully implies agreement.
+        // Conservative 0.80: a status check confirms the resolver answered, not that it agreed
+        // with an authoritative source — but absence of divergence IS the agreement signal here.
+        [EvidenceId.ResolverStatus] = (SyxxIndicator.ResolverAgreement, 0.80),
+
         // Portal — path / redirection
         [EvidenceId.Redirection] = (SyxxIndicator.LanDnsRedirect, 0.90),
         [EvidenceId.GatewayDhcpOffLinkDNS] = (SyxxIndicator.ResolverPathAnomaly, 0.70),
         [EvidenceId.CaptivePortalActive] = (SyxxIndicator.CaptivePortalSignal, 0.90),
+
+        // B010 — clean-support: NX canary returned clean (not hijacked) → route is clean.
+        // Mirror of NxCanaryHijack → SuspiciousNxDomainPattern; the clean counterpart.
+        [EvidenceId.NxCanaryClean] = (SyxxIndicator.RouteClean, 0.80),
 
         // Glutton — transport / privacy
         [EvidenceId.DnsLeakConfirmed] = (SyxxIndicator.DnsLeakDetected, 0.95),
@@ -308,6 +317,18 @@ public static class SynthesisEngine
 
         // Witness / host — tentative: DNS exfiltration implies a local process tunnelling out.
         [EvidenceId.ExfilLikely] = (SyxxIndicator.LocalEnvironmentCompromised, 0.60),
+        // B024: ExfilSuspicious is weaker than ExfilLikely — suspicious patterns without the
+        // volume/tunnel shape that makes exfiltration likely. Same indicator, lower strength.
+        [EvidenceId.ExfilSuspicious] = (SyxxIndicator.LocalEnvironmentCompromised, 0.35),
+
+        // B010 — clean-support: DNSSEC validation succeeded → trusted cryptographic witness.
+        // Mirror of DnssecCanaryStripped → SignedAnswerMismatch; the secure counterpart.
+        [EvidenceId.DnssecCanarySecure] = (SyxxIndicator.TrustedWitnessOK, 0.75),
+
+        // B010 — clean-support: encrypted DNS transport confirmed → local evidence path intact.
+        // Conservative 0.70: encrypted transport is necessary but not sufficient for a valid
+        // evidence seal (the seal also requires response integrity and witness attestation).
+        [EvidenceId.DnsEncrypted] = (SyxxIndicator.LocalEvidenceSealValid, 0.70),
     };
 }
 

@@ -62,6 +62,7 @@ public static class AuthoritativeVantage
     public const ushort TypeA = 1;
     public const ushort TypeAAAA = 28;
     public const ushort TypeNS = 2;
+    public const ushort TypeCNAME = 5;
 
     public static readonly IReadOnlyList<string> DefaultBootstrapResolvers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"];
 
@@ -139,6 +140,10 @@ public static class AuthoritativeVantage
         }
 
         var authSets = new List<HashSet<string>>();
+        // B035 / C060: track whether any authoritative responder returned CNAME records without
+        // address records — this is a delegation, not a genuine NODATA. An empty auth set from a
+        // CNAME-only answer must not produce .diverges.
+        bool sawCNAMEOnly = false;
         foreach (var ip in nsIPs)
         {
             var resp = await query(new DNSQuery(name: domain, type: options.Qtype, server: ip, port: 53));
@@ -148,6 +153,10 @@ public static class AuthoritativeVantage
             var addrs = new HashSet<string>(resp.Records
                 .Where(r => r.Type == options.Qtype)
                 .Select(r => NormalizeAddress(r.Rdata)));
+            // B035: if the response has CNAME records but no address records of the requested type,
+            // the zone delegates via CNAME and address ground truth is not obtainable here.
+            if (addrs.Count == 0 && resp.Records.Any(r => r.Type == TypeCNAME))
+                sawCNAMEOnly = true;
             authSets.Add(addrs);
         }
         if (authSets.Count < 2)
@@ -161,6 +170,16 @@ public static class AuthoritativeVantage
         // Majority consensus: pick the answer set shared by the most responders.
         var authSet = authSets.GroupBy(x => x, HashSet<string>.CreateSetComparer())
             .MaxBy(g => g.Count())?.Key ?? authSets[0];
+
+        // B035: if the consensus auth set is empty but the authoritative answer was a CNAME
+        // delegation (not a genuine NODATA/NXDOMAIN), address ground truth is not obtainable from
+        // this zone. Return inconclusive instead of a fabricated .diverges.
+        if (authSet.Count == 0 && sawCNAMEOnly)
+        {
+            return new AuthoritativeComparison(AuthComparisonStatus.Inconclusive,
+                ResolverAnswers: [.. resolverSet], Nameservers: nsHosts,
+                Detail: "authoritative answer is a CNAME delegation — address ground truth not obtainable from this zone");
+        }
 
         return Classify(resolverSet, authSet, nsHosts, domain, options.ResolverDidFail);
     }

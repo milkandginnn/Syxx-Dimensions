@@ -16,15 +16,16 @@ import time
 
 from .netutil import ip_is_public as _ip_is_public
 from .resolver import (
+    _MAX_RECORDS_PER_SECTION,  # A017: re-exported for backward compat
     ROOT_SERVERS,
     TYPE_DNSKEY,
     DNSError,
-    _addr_family,
-    _build_query,
     _in_bailiwick,
     _read_name,
-    _recv_exact,
+    _rr_raw,  # A017: shared raw-record parser (moved to resolver)
     _rrsig_window_valid,
+    parse_raw_response,  # A017: shared raw response parser
+    raw_query,  # A017: shared RD=0/DO=1 transport
     resolve_authoritative,
 )
 
@@ -79,110 +80,22 @@ def _nw(name):
     try:
         encoded = domain.encode("idna")
     except (UnicodeError, UnicodeDecodeError):
-        # IDNA encoding failed — fall back to ASCII with replacement
-        encoded = domain.encode("ascii", "replace")
+        # IDNA encoding failed — the domain is unresolvable for DNSSEC purposes.
+        raise DNSError(f"IDNA encoding failed for domain {name!r}") from None
     return encoded.lower() + b"\x00"
 
 
-_MAX_RECORDS_PER_SECTION = 256  # A160: cap parsed records per section
-
-
-def _rr_raw(d, off, n):
-    rs = []
-    for _ in range(min(n, _MAX_RECORDS_PER_SECTION)):
-        if off >= len(d):
-            break
-        try:
-            ow, off = _read_name(d, off)
-        except DNSError:
-            break
-        if off + 10 > len(d):
-            break
-        rt, rc, ttl, rdl = struct.unpack(">HHIH", d[off : off + 10])
-        off += 10
-        if off + rdl > len(d):
-            break
-        rs.append({"ow": ow, "rt": rt, "rc": rc, "ttl": ttl, "rd": d[off : off + rdl], "pk": d, "ro": off})
-        off += rdl
-    return rs, off
+# A017: _rr_raw, parse_raw_response, raw_query moved to resolver.py — imported above.
 
 
 def _parse(d, tid, qn=None, qt=None):
-    if len(d) < 12:
-        raise DNSError("short header")
-    t, fl, qd, an, ns, ar = struct.unpack(">HHHHHH", d[:12])
-    if t != tid:
-        raise DNSError("txid mismatch")
-    if not (fl & 0x8000):
-        raise DNSError("not a response")
-    off = 12
-    for _ in range(qd):
-        q, off = _read_name(d, off)
-        if off + 4 > len(d):
-            raise DNSError("truncated question")
-        qt2, qc = struct.unpack(">HH", d[off : off + 4])
-        off += 4
-        if qn and (q.lower() != qn.lower() or qt2 != qt or qc != 1):
-            raise DNSError("question mismatch")
-        break
-    ans, off = _rr_raw(d, off, an)
-    auth, off = _rr_raw(d, off, ns)
-    addl, off = _rr_raw(d, off, ar)
-    return {"rc": fl & 0xF, "aa": bool(fl & 0x400), "tc": bool(fl & 0x200), "ans": ans, "auth": auth, "addl": addl}
+    """Thin wrapper around resolver.parse_raw_response for backward compat."""
+    return parse_raw_response(d, tid, expected_qname=qn, expected_qtype=qt)
 
 
 def _q(name, qtype, srv, to=5, deadline=None):
-    """RD=0, DO=1 query returning raw rdata. TCP fallback on TC.
-
-    A162: accepts an optional monotonic deadline. The per-socket timeout is
-    clamped to the remaining budget so the aggregate deadline is honoured
-    inside each individual query, not just between phases."""
-    # SM-023: use time.monotonic() for deadline tracking (not time.time(), which
-    # can jump backwards on NTP adjustments, making a deadline appear to have
-    # more budget than it actually does).
-    # A162: clamp socket timeout to remaining deadline budget
-    if deadline is not None:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise DNSError("deadline exceeded")
-        to = min(to, remaining)
-    tid, pk, qn, qt, qc = _build_query(name, qtype, rd=False, do=True)
-    s = socket.socket(_addr_family(srv), socket.SOCK_DGRAM)
-    s.settimeout(to)
-    # A169: 65535-byte buffer to avoid silent local truncation of oversized UDP replies
-    try:
-        s.connect((srv, 53))
-        s.send(pk)
-        d = s.recv(65535)
-    except OSError as e:
-        raise DNSError("network error") from e
-    finally:
-        s.close()
-    p = _parse(d, tid, qn=qn, qt=qt)
-    if p["tc"]:
-        # SM-023: use time.monotonic() for TCP fallback deadline too.
-        if deadline is not None:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                # SM-024: socket s is already closed in the finally block above.
-                # No socket leak here.
-                raise DNSError("deadline exceeded")
-            to = min(to, remaining)
-        fr = struct.pack(">H", len(pk)) + pk
-        ts = socket.socket(_addr_family(srv), socket.SOCK_STREAM)
-        ts.settimeout(to)
-        try:
-            ts.connect((srv, 53))
-            ts.sendall(fr)
-            (ln,) = struct.unpack(">H", _recv_exact(ts, 2))
-            # SD-72: cap server-declared TCP length at 16384 bytes.
-            # An attacker could send a huge length to exhaust memory.
-            if ln > 16384:
-                raise DNSError("server-declared TCP length exceeds 16384")
-            p = _parse(_recv_exact(ts, ln), tid, qn=qn, qt=qt)
-        finally:
-            ts.close()
-    return p
+    """RD=0, DO=1 query — delegates to resolver.raw_query (A017)."""
+    return raw_query(name, qtype, srv, timeout=to, deadline=deadline)
 
 
 def _sq(name, qtype, srv, to=5, deadline=None):

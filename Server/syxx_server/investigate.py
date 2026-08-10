@@ -12,6 +12,7 @@ cryptographically validated — labeled honestly, matching the project's stance.
 
 import re
 import time
+import traceback
 
 from . import config, passivedns, resolver
 
@@ -29,9 +30,7 @@ _HOSTNAME = re.compile(
 )
 
 
-def _env_int(name, default):
-    return config._i(name, default)
-
+# A023: _env_int removed — use config._i() directly (canonical definition lives in config.py).
 
 # A096: aggregate wall-clock budget for one investigation. Each vantage query is
 # bounded per-request, but the fan-out (system + UDP + DoH, for A and AAAA, plus
@@ -39,11 +38,45 @@ def _env_int(name, default):
 # hold a worker across many slow queries. When the budget is spent, remaining
 # vantages are left UNQUERIED and simply absent from the result; they are never
 # silently counted as agreeing (that would be a false clean).
-_INVESTIGATE_DEADLINE = max(1, _env_int("SYXX_INVESTIGATE_DEADLINE", 15))
+_INVESTIGATE_DEADLINE = max(1, config._i("SYXX_INVESTIGATE_DEADLINE", 15))
 
 
 def valid_domain(domain):
     return bool(_HOSTNAME.match(domain or ""))
+
+
+# E042: Unicode homograph / mixed-script detection.
+# Confusable lookalikes: Latin characters that have visually identical
+# Cyrillic (or other script) counterparts commonly used in homograph attacks.
+_CONFUSABLE_LATIN = set("aceopxyACEOPXY")
+_CONFUSABLE_CYRILLIC = set("асеорхуАСЕОРХУ")  # U+0430-U+0445 range lookalikes
+_log = __import__("logging").getLogger(__name__)
+
+
+def _warn_homograph(domain: str) -> None:
+    """Log a warning if *domain* mixes scripts with confusable characters.
+
+    Simple heuristic: if the domain contains both ASCII and non-ASCII
+    characters, and the non-ASCII characters include Cyrillic lookalikes
+    of ASCII letters, flag it as a potential homograph attack. This is a
+    warning only — the domain is not rejected.
+    """
+    has_ascii = False
+    has_non_ascii = False
+    has_cyrillic_confusable = False
+    for ch in domain:
+        if ord(ch) < 128:
+            has_ascii = True
+        else:
+            has_non_ascii = True
+            if ch in _CONFUSABLE_CYRILLIC:
+                has_cyrillic_confusable = True
+    if has_ascii and has_non_ascii and has_cyrillic_confusable:
+        _log.warning(
+            "E042: possible Unicode homograph domain: %r — "
+            "mixed ASCII and confusable Cyrillic characters detected",
+            domain,
+        )
 
 
 def _vantages():
@@ -66,6 +99,27 @@ def _query_vantage(kind, target, domain, qtype):
     if kind == "udp":
         return resolver.query(domain, qtype, target, timeout=config.INVESTIGATE_TIMEOUT)
     return resolver.query_doh(domain, qtype, target["ip"], target["sni"], target["path"], timeout=config.DOH_TIMEOUT)
+
+
+def _format_exception_with_cause(e: BaseException) -> str:
+    """Format an exception with its explicit cause chain for error reporting.
+
+    A047: replaces bare ``type(e).__name__: {e}`` which discarded the exception
+    message's detail and any chained cause.  ``traceback.format_exception_only``
+    formats the exception type + message (and notes, on 3.11+), but does NOT walk
+    ``__cause__`` — that requires manual traversal.  We stop at the first
+    exception without an explicit ``__cause__`` (``raise … from …``); implicit
+    ``__context__`` chains are deliberately excluded because they represent
+    "while handling X, Y happened" noise that clutters a per-vantage error field.
+    """
+    parts = ["".join(traceback.format_exception_only(type(e), e)).strip()]
+    cause = e.__cause__
+    while cause is not None:
+        parts.append(
+            "caused by: " + "".join(traceback.format_exception_only(type(cause), cause)).strip()
+        )
+        cause = cause.__cause__
+    return "; ".join(parts)
 
 
 def _resolve_all(domain, qtype, deadline=None, vantages=None):
@@ -118,10 +172,13 @@ def _resolve_all(domain, qtype, deadline=None, vantages=None):
             # escape as a 500 that hides the outcome of the vantages that did answer
             # (honesty spine #2: a failure is not an absence of evidence, and it is
             # certainly not a clean result).
+            # A047: preserve the full exception message AND chain (__cause__) instead
+            # of just type(e).__name__ which loses the original error text. Walk the
+            # explicit cause chain so "raise X from Y" reports both exceptions.
             per_resolver[label] = {
                 "status": "error",
                 "transport": kind,
-                "error": f"{type(e).__name__}: {e}",
+                "error": _format_exception_with_cause(e),
                 "values": [],
             }
     return per_resolver
@@ -247,6 +304,146 @@ def _consensus(a_by_vantage, aaaa_by_vantage):
 _DNSSEC_NOTE = "presence-only; not cryptographically validated"
 
 
+def _dnssec_vantage_doh(domain, label, target):
+    """DNSSEC probe via DoH — query DNSKEY and check for RRSIG presence.
+
+    A293: The DoH JSON API may not carry the DO bit directly, but we can still
+    query for DNSKEY records and check for RRSIG presence in the response.
+    """
+    try:
+        res = resolver.query_doh(
+            domain,
+            resolver.TYPE_DNSKEY,  # A049: direct reference — always defined in resolver.py:50
+            target["ip"],
+            target["sni"],
+            target["path"],
+            timeout=config.DOH_TIMEOUT,
+        )
+    except Exception:
+        return {
+            "signed": "unknown",
+            "observed": False,
+            "adBit": False,
+            "note": "DoH DNSSEC probe failed",
+            "rrsigStatuses": [],
+            "transport": "doh",
+            "vantage": label,
+        }
+
+    records = res.get("records", [])
+    dnskey_records = [r for r in records if r.get("type") in ("DNSKEY", 48)]
+    rrsig_records = [r for r in records if r.get("type") in ("RRSIG", 46)]
+
+    if dnskey_records and rrsig_records:
+        signed, observed, note = "yes", True, "DNSKEY+RRSIG observed via DoH (presence-only)"
+    elif dnskey_records:
+        signed, observed, note = "no", False, "DNSKEY present but no RRSIG via DoH"
+    else:
+        signed, observed, note = "unknown", False, "no DNSKEY records via DoH; resolver may not honor DO bit"
+
+    return {
+        "signed": signed,
+        "observed": observed,
+        "adBit": res.get("ad", False),
+        "note": note,
+        "rrsigStatuses": [],
+        "transport": "doh",
+        "vantage": label,
+    }
+
+
+def _dnssec_vantage_system(kind, label):
+    """System resolver cannot carry the DO bit — report unknown, not absent."""
+    return {
+        "signed": "unknown",
+        "observed": False,
+        "adBit": False,
+        "note": "transport cannot carry the DNSSEC OK bit",
+        "rrsigStatuses": [],
+        "transport": kind,
+        "vantage": label,
+    }
+
+
+def _dnssec_vantage_udp(domain, label, target):
+    """DNSSEC probe via UDP — query DNSKEY with DO bit set, read RRSIG from response.
+
+    S13: delegates to resolver.zone_signing_status which asks for DNSKEY with
+    the DO bit set and reads the covering RRSIG out of that same response.
+    """
+    posture, statuses = resolver.zone_signing_status(
+        domain, target, config.INVESTIGATE_TIMEOUT, rd=True
+    )
+    signed = {True: "yes", False: "no", None: "unknown"}[posture]
+    note = _DNSSEC_NOTE
+
+    if posture is None and statuses:
+        # DNSKEY present, but nothing inside its validity window: say which way.
+        if "expired" in statuses:
+            note += " (DNSKEY present; some RRSIGs are expired)"
+        elif "not-yet-valid" in statuses:
+            note += " (DNSKEY present; some RRSIGs are not yet valid)"
+        else:
+            note += " (DNSKEY present; no usable covering RRSIG)"
+    elif posture is None:
+        note = "could not query DNSSEC records"
+
+    return {
+        "signed": signed,
+        "observed": posture is True,
+        "adBit": False,
+        "note": note,
+        "rrsigStatuses": statuses,
+        "transport": "udp",
+        "vantage": label,
+    }
+
+
+def _dnssec_aggregate(per_vantage):
+    """Aggregate per-vantage DNSSEC results into an overall tri-state result.
+
+    A041: signed if ANY reachable vantage saw a DNSKEY with a covering RRSIG
+    inside its validity window. A single stripping vantage must not terminate
+    the search.
+
+    A167: tri-state observed — True if signed, False if unsigned, None if
+    unknown (no vantage could answer). The previous bool rendered "unknown"
+    identically to "this zone is not signed" in the UI.
+    """
+    if any(v["signed"] == "yes" for v in per_vantage):
+        status = "signed"
+    elif any(v["signed"] == "no" for v in per_vantage):
+        status = "unsigned"
+    else:
+        # Honesty spine #2/#3: no vantage could answer. That is UNKNOWN, and it must
+        # not be reported with the same value as an observed unsigned zone.
+        status = "unknown"
+
+    confirming = [v for v in per_vantage if v["signed"] == "yes"]
+    if confirming:
+        note, rrsig_statuses = confirming[0]["note"], confirming[0]["rrsigStatuses"]
+    elif per_vantage:
+        note, rrsig_statuses = per_vantage[0]["note"], per_vantage[0]["rrsigStatuses"]
+    else:
+        note, rrsig_statuses = "could not query DNSSEC records", []
+
+    if status == "signed":
+        observed_val = True
+    elif status == "unsigned":
+        observed_val = False
+    else:
+        observed_val = None  # no vantage could answer — unknown, not false
+
+    return {
+        "status": status,
+        "observed": observed_val,
+        "adBit": any(v["adBit"] for v in per_vantage),
+        "note": note,
+        "rrsigStatuses": rrsig_statuses,
+        "vantages": per_vantage,
+    }
+
+
 def _dnssec_observed(domain, deadline=None, vantages=None):
     """DNSSEC posture as OBSERVED across vantages — never cryptographically validated.
 
@@ -272,133 +469,27 @@ def _dnssec_observed(domain, deadline=None, vantages=None):
     """
     per_vantage = []
     vantage_list = vantages if vantages is not None else _vantages()
+
     for kind, label, target in vantage_list:
         if deadline is not None and time.monotonic() > deadline:
             break
-        if kind == "doh":
-            # A293: DoH DNSSEC probe — query DNSKEY via DoH with DO bit.
-            # The DoH JSON API may not carry the DO bit directly, but we can
-            # still query for DNSKEY records and check for RRSIG presence.
-            try:
-                res = resolver.query_doh(
-                    domain, resolver.TYPE_DNSKEY if hasattr(resolver, "TYPE_DNSKEY") else 48,
-                    target["ip"], target["sni"], target["path"],
-                    timeout=config.DOH_TIMEOUT,
-                )
-                records = res.get("records", [])
-                dnskey_records = [r for r in records if r.get("type") in ("DNSKEY", 48)]
-                rrsig_records = [r for r in records if r.get("type") in ("RRSIG", 46)]
-                if dnskey_records and rrsig_records:
-                    signed = "yes"
-                    observed = True
-                    note = "DNSKEY+RRSIG observed via DoH (presence-only)"
-                elif dnskey_records:
-                    signed = "no"
-                    observed = False
-                    note = "DNSKEY present but no RRSIG via DoH"
-                else:
-                    signed = "no"
-                    observed = False
-                    note = "no DNSKEY records via DoH"
-                per_vantage.append({
-                    "signed": signed,
-                    "observed": observed,
-                    "adBit": res.get("ad", False),
-                    "note": note,
-                    "rrsigStatuses": [],
-                    "transport": kind,
-                    "vantage": label,
-                })
-            except Exception:
-                per_vantage.append({
-                    "signed": "unknown",
-                    "observed": False,
-                    "adBit": False,
-                    "note": "DoH DNSSEC probe failed",
-                    "rrsigStatuses": [],
-                    "transport": kind,
-                    "vantage": label,
-                })
-            continue
-        if kind != "udp":
-            # System resolver: no DO bit -> this vantage cannot answer.
-            per_vantage.append(
-                {
-                    "signed": "unknown",
-                    "observed": False,
-                    "adBit": False,
-                    "note": "transport cannot carry the DNSSEC OK bit",
-                    "rrsigStatuses": [],
-                    "transport": kind,
-                    "vantage": label,
-                }
-            )
-            continue
-        posture, statuses = resolver.zone_signing_status(domain, target, config.INVESTIGATE_TIMEOUT, rd=True)
-        signed = {True: "yes", False: "no", None: "unknown"}[posture]
-        note = _DNSSEC_NOTE
-        if posture is None and statuses:
-            # DNSKEY present, but nothing inside its validity window: say which way.
-            if "expired" in statuses:
-                note += " (DNSKEY present; some RRSIGs are expired)"
-            elif "not-yet-valid" in statuses:
-                note += " (DNSKEY present; some RRSIGs are not yet valid)"
-            else:
-                note += " (DNSKEY present; no usable covering RRSIG)"
-        elif posture is None:
-            note = "could not query DNSSEC records"
-        per_vantage.append(
-            {
-                "signed": signed,
-                "observed": posture is True,
-                "adBit": False,
-                "note": note,
-                "rrsigStatuses": statuses,
-                "transport": kind,
-                "vantage": label,
-            }
-        )
 
-    # A041: signed if ANY reachable vantage saw a DNSKEY with a covering RRSIG inside its
-    # validity window. A single stripping vantage must not terminate the search.
-    if any(v["signed"] == "yes" for v in per_vantage):
-        status = "signed"
-    elif any(v["signed"] == "no" for v in per_vantage):
-        status = "unsigned"
-    else:
-        # Honesty spine #2/#3: no vantage could answer. That is UNKNOWN, and it must
-        # not be reported with the same value as an observed unsigned zone.
-        status = "unknown"
-    confirming = [v for v in per_vantage if v["signed"] == "yes"]
-    if confirming:
-        note, rrsig_statuses = confirming[0]["note"], confirming[0]["rrsigStatuses"]
-    elif per_vantage:
-        note, rrsig_statuses = per_vantage[0]["note"], per_vantage[0]["rrsigStatuses"]
-    else:
-        note, rrsig_statuses = "could not query DNSSEC records", []
-    # A167: tri-state observed — True if signed, False if unsigned, None if
-    # unknown (no vantage could answer). The previous bool rendered "unknown"
-    # identically to "this zone is not signed" in the UI.
-    if status == "signed":
-        observed_val = True
-    elif status == "unsigned":
-        observed_val = False
-    else:
-        observed_val = None  # no vantage could answer — unknown, not false
-    return {
-        "status": status,
-        "observed": observed_val,
-        "adBit": any(v["adBit"] for v in per_vantage),
-        "note": note,
-        "rrsigStatuses": rrsig_statuses,
-        "vantages": per_vantage,
-    }
+        if kind == "doh":
+            per_vantage.append(_dnssec_vantage_doh(domain, label, target))
+        elif kind == "udp":
+            per_vantage.append(_dnssec_vantage_udp(domain, label, target))
+        else:
+            per_vantage.append(_dnssec_vantage_system(kind, label))
+
+    return _dnssec_aggregate(per_vantage)
 
 
 def investigate(domain):
     domain = (domain or "").strip().lower().rstrip(".")
     if not valid_domain(domain) or len(domain) > 253:
         return None, "invalid domain"
+    # E042: warn on potential homograph domains (mixed-script confusables)
+    _warn_homograph(domain)
     deadline = time.monotonic() + _INVESTIGATE_DEADLINE
     t0 = time.monotonic()
     vantages = _vantages()

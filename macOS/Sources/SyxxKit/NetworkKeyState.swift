@@ -631,6 +631,13 @@ public enum NetworkKeyState {
     /// Distinguishes an intercepting portal (yes) from a clear network (no) from an
     /// offline/errored probe (unknown). A failed request is not evidence of "no portal".
     public static func captivePortalStatus() async -> CaptivePortalStatus {
+        // E049: HTTP (not HTTPS) is deliberate here. Captive portals intercept
+        // cleartext HTTP traffic and inject their own redirect or login page.
+        // HTTPS probes would fail with a TLS certificate error instead of being
+        // intercepted, making portal detection unreliable. Apple's own captive
+        // portal detection uses the same HTTP endpoint for this reason.
+        // Timeout (3 s) is set on the URLRequest; response size is capped below
+        // to prevent a malicious portal from exhausting memory with an oversized body.
         guard let url = URL(string: "http://captive.apple.com/hotspot-detect.html") else {
             return CaptivePortalStatus(state: .unknown, evidence: "Could not construct probe URL")
         }
@@ -642,6 +649,13 @@ public enum NetworkKeyState {
             let (data, response) = try await noRedirectSession.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 return CaptivePortalStatus(state: .unknown, evidence: "Non-HTTP response to probe")
+            }
+            // E049: response size limit — a captive portal probe should return a
+            // tiny HTML snippet (< 4 KB). An oversized response is either a
+            // misbehaving portal or an injection attack; refuse to parse it.
+            guard data.count <= 4096 else {
+                return CaptivePortalStatus(state: .unknown,
+                                           evidence: "Probe response exceeded 4 KB size limit (\(data.count) bytes)")
             }
             // C030: a 3xx response (redirect refused by our delegate) is itself evidence of a
             // captive portal intercepting the probe — evaluate it directly as portal-present.

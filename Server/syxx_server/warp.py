@@ -12,11 +12,15 @@ tags like `<script data-x=">">` to be truncated and assets missed/evaded. The
 HTMLParser handles quoted `>`, nested quotes, and comment boundaries correctly.
 """
 
+import concurrent.futures
+import encodings.idna
 import hashlib
 import html.parser
 import json
 import re
+import threading
 import time
+import unicodedata
 import urllib.parse
 import zlib
 
@@ -163,17 +167,31 @@ def build_baseline(target_url, deadline=None):
     # against a real SHA-256, recording a mismatch instead of making the component
     # inconclusive.
     script_fetch_status = {}
-    for script_url in scripts[: config.FETCH_MAX_SCRIPTS]:
+    # A054: parallel script fetches via ThreadPoolExecutor (max_workers=5) to
+    # eliminate the N+1 serial-fetch bottleneck — up to 50 scripts were previously
+    # fetched one at a time, each waiting the full FETCH_SCRIPT_TIMEOUT on failure.
+    # Concurrency cap of 5 prevents overwhelming upstream servers while delivering
+    # ~5× wall-clock improvement on the common (no-error) path.
+    _script_urls = scripts[: config.FETCH_MAX_SCRIPTS]
+    _dict_lock = threading.Lock()
+
+    def _fetch_one_script(script_url):
         # SM-016: check deadline before each script fetch to prevent unbounded runtime.
         if deadline is not None and time.monotonic() > deadline:
-            script_fetch_status[script_url] = "deadline_exceeded"
-            continue
+            with _dict_lock:
+                script_fetch_status[script_url] = "deadline_exceeded"
+            return
         try:
             data, _c, _f = fetcher.fetch(script_url, timeout=config.FETCH_SCRIPT_TIMEOUT)
-            script_hashes[script_url] = hashlib.sha256(data).hexdigest()
-            script_fetch_status[script_url] = "success"
+            with _dict_lock:
+                script_hashes[script_url] = hashlib.sha256(data).hexdigest()
+                script_fetch_status[script_url] = "success"
         except fetcher.FetchError:
-            script_fetch_status[script_url] = "fetch_failed"
+            with _dict_lock:
+                script_fetch_status[script_url] = "fetch_failed"
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        pool.map(_fetch_one_script, _script_urls)
 
     inline_hashes = [hashlib.sha256(b.encode("utf-8")).hexdigest() for b in inlines]
     result = {
@@ -188,7 +206,9 @@ def build_baseline(target_url, deadline=None):
     }
     # A092: cache under the resolved final_url (see the note at the top of this
     # function), never the pre-redirect target_url.
-    db.warp_cache_put(final_url, json.dumps(result))
+    # A010: sort_keys=True for deterministic serialization order so the cache
+    # entry is byte-identical regardless of dict insertion order.
+    db.warp_cache_put(final_url, json.dumps(result, sort_keys=True))
     logging_util.incr("warp_baselines_built")
     return result
 
@@ -209,6 +229,12 @@ def build_baseline(target_url, deadline=None):
 # ===========================================================================
 
 MANIFEST_VERSION = "WARP_MANIFEST_V1"
+
+# A009: hard ceiling on freshness_seconds emitted in the manifest. Even if the
+# operator sets WARP_MANIFEST_FRESHNESS higher (via env var), the server clamps
+# the emitted value to prevent excessively long cache windows that would let a
+# stale manifest be accepted by clients for hours. 600 s = 10 minutes.
+_MAX_FRESHNESS_SECONDS = 600
 
 CLASS_HTML = "HTML"
 CLASS_JS = "JS"
@@ -307,26 +333,118 @@ def _brotli_decompress(body, max_bytes):
         raise fetcher.FetchError(f"brotli decode failed: {e}") from e
 
 
-def _envelope_decode(body, encoding, max_bytes):
+def _content_encoding_decode(body, encoding, max_bytes):
     """Spec §8: decode the transfer envelope ONLY (gzip / br / deflate), to recover the
     resource's actual bytes. Identity passes through untouched. Never charset-decode,
     trim, or normalize — the returned bytes are exactly what gets hashed.
 
     A `br` body that cannot be decoded (no decoder, or corrupt) raises FetchError so the
-    asset is recorded fetch_failed rather than hashed while still compressed."""
-    enc = (encoding or "").strip().lower()
-    if enc in ("", "identity"):
+    asset is recorded fetch_failed rather than hashed while still compressed.
+
+    A007: supports comma-separated multi-encoding (e.g. "gzip, br"). Decodings are
+    applied in reverse order — the outermost (last-applied) encoding is decoded first."""
+    raw = (encoding or "").strip()
+    if not raw:
         return body
-    if enc == "gzip":
-        return _bounded_decompress(body, 16 + zlib.MAX_WBITS, max_bytes)
-    if enc == "deflate":
-        try:
-            return _bounded_decompress(body, zlib.MAX_WBITS, max_bytes)
-        except zlib.error:
-            return _bounded_decompress(body, -zlib.MAX_WBITS, max_bytes)
-    if enc == "br":
-        return _brotli_decompress(body, max_bytes)
-    raise fetcher.FetchError(f"unsupported content-encoding: {enc!r}")
+    layers = [e.strip().lower() for e in raw.split(",") if e.strip()]
+    if not layers:
+        return body
+    for enc in reversed(layers):
+        if enc in ("", "identity"):
+            continue
+        if enc == "gzip":
+            body = _bounded_decompress(body, 16 + zlib.MAX_WBITS, max_bytes)
+        elif enc == "deflate":
+            try:
+                body = _bounded_decompress(body, zlib.MAX_WBITS, max_bytes)
+            except zlib.error:
+                body = _bounded_decompress(body, -zlib.MAX_WBITS, max_bytes)
+        elif enc == "br":
+            body = _brotli_decompress(body, max_bytes)
+        else:
+            raise fetcher.FetchError(f"unsupported content-encoding: {enc!r}")
+    return body
+
+
+def _strip_invisible(s):
+    """E005: Strip zero-width and bidi control characters from hostnames.
+    
+    These invisible characters (U+200B-U+200F, U+202A-U+202E, U+FEFF) can be
+    embedded in hostnames to create visually identical but distinct domains
+    that bypass deduplication and consume separate budget slots."""
+    if not s:
+        return s
+    # Zero-width spaces, joiners, and bidi control characters
+    invisible = (
+        '\u200B',  # Zero Width Space
+        '\u200C',  # Zero Width Non-Joiner
+        '\u200D',  # Zero Width Joiner
+        '\u200E',  # Left-to-Right Mark
+        '\u200F',  # Right-to-Left Mark
+        '\u202A',  # Left-to-Right Embedding
+        '\u202B',  # Right-to-Left Embedding
+        '\u202C',  # Pop Directional Formatting
+        '\u202D',  # Left-to-Right Override
+        '\u202E',  # Right-to-Left Override
+        '\uFEFF',  # Zero Width No-Break Space (BOM)
+    )
+    for char in invisible:
+        s = s.replace(char, '')
+    return s
+
+
+# E006: confusable-character sets for homograph detection (mirrors investigate.py).
+_CONFUSABLE_LATIN = set("aceopxyACEOPXY")
+_CONFUSABLE_CYRILLIC = set("асеорхуАСЕОРХУ")  # U+0430–U+0445 range lookalikes
+
+
+def _warn_homograph(domain: str) -> None:
+    """Log a warning if *domain* mixes scripts with confusable characters.
+
+    E006: detects potential homograph attacks where Cyrillic lookalikes of
+    ASCII letters are mixed into a domain name.  Warning only — never rejects."""
+    has_ascii = has_non_ascii = has_cyrillic_confusable = False
+    for ch in domain:
+        if ord(ch) < 128:
+            has_ascii = True
+        else:
+            has_non_ascii = True
+            if ch in _CONFUSABLE_CYRILLIC:
+                has_cyrillic_confusable = True
+    if has_ascii and has_non_ascii and has_cyrillic_confusable:
+        logging_util.warn(
+            "E006_homograph_warn",
+            domain=domain,
+            detail="mixed ASCII and confusable Cyrillic characters in hostname",
+        )
+
+
+def _canonical_hostname(host):
+    """IDNA-canonical ASCII form of a hostname, lowercased.
+
+    A002: urlsplit leaves IDN hostnames as-is, so ``café.com`` and its punycode
+    equivalent ``xn--caf-dma.com`` would each consume a separate budget slot even
+    though socket.getaddrinfo resolves both to the same server. Canonicalizing to
+    punycode makes the per-run unique-host cap see them as one host.
+
+    A003: apply NFC normalization before IDNA encoding so that visually identical
+    hostnames with different Unicode representations (e.g., café.com as NFC vs NFD)
+    are treated as the same host in the budget comparison."""
+    if not host:
+        return ""
+    try:
+        # E005: strip zero-width and bidi control characters before normalization
+        host = _strip_invisible(host)
+        # E006: warn on mixed-script homograph domains before IDNA encoding
+        _warn_homograph(host)
+        # A006: .casefold() is locale-insensitive, unlike .lower() which varies
+        # with LC_ALL (e.g. Turkish I/i). Applied before NFC so the Unicode input
+        # to normalization is deterministic regardless of the server locale.
+        host = unicodedata.normalize('NFC', host.casefold())
+        labels = host.rstrip(".").split(".")
+        return ".".join(encodings.idna.ToASCII(label).decode("ascii") for label in labels).casefold()
+    except UnicodeError:
+        return host.casefold()
 
 
 def _fetch_decoded(url, host_budget):
@@ -335,13 +453,13 @@ def _fetch_decoded(url, host_budget):
     Enforces the per-run unique-host cap: a host beyond the cap is refused (raised as a
     BlockedError) so the asset counts as a fetch failure and is recorded fetch_failed,
     never a bypass. Returns (raw_decoded_bytes, final_url)."""
-    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    host = _canonical_hostname(urllib.parse.urlsplit(url).hostname or "")
     if host not in host_budget["seen"]:
         if len(host_budget["seen"]) >= host_budget["cap"]:
             raise fetcher.BlockedError(f"per-run unique-host cap reached ({host_budget['cap']})")
         host_budget["seen"].add(host)
     data, _ctype, cenc, final = fetcher.fetch_ex(url, timeout=config.FETCH_SCRIPT_TIMEOUT)
-    return _envelope_decode(data, cenc, config.FETCH_MAX_BYTES), final
+    return _content_encoding_decode(data, cenc, config.FETCH_MAX_BYTES), final
 
 
 def fetch_raw_decoded(url):
@@ -351,7 +469,7 @@ def fetch_raw_decoded(url):
     the server's clean copy of ONE asset without any charset-decode, so the client can hash
     and diff the exact bytes. Raises FetchError/BlockedError like the fetcher."""
     data, _ctype, cenc, final = fetcher.fetch_ex(url)
-    return _envelope_decode(data, cenc, config.FETCH_MAX_BYTES), final
+    return _content_encoding_decode(data, cenc, config.FETCH_MAX_BYTES), final
 
 
 class _ManifestParser(html.parser.HTMLParser):
@@ -438,9 +556,9 @@ def build_manifest(target_url, nonce=None):
     # 1. Initial-load HTML. If it will not come down, there is nothing to attest.
     try:
         html_raw, _ctype, html_cenc, final_url = fetcher.fetch_ex(target_url)
-        thost = (urllib.parse.urlsplit(final_url).hostname or "").lower()
+        thost = _canonical_hostname(urllib.parse.urlsplit(final_url).hostname or "")
         host_budget["seen"].add(thost)
-        html_bytes = _envelope_decode(html_raw, html_cenc, config.FETCH_MAX_BYTES)
+        html_bytes = _content_encoding_decode(html_raw, html_cenc, config.FETCH_MAX_BYTES)
     except fetcher.BlockedError:
         raise
     except fetcher.FetchError as e:
@@ -502,8 +620,36 @@ def build_manifest(target_url, nonce=None):
         # so the client knows the closure is incomplete.
         "truncated": truncated,
         # Spec §3: integer milliseconds since epoch, truncated (WitnessSigner convention).
+        #
+        # A008 — Clock-source design decision (wall clock, not monotonic):
+        # ─────────────────────────────────────────────────────────────────
+        # This timestamp uses time.time() (wall-clock / UTC epoch) deliberately.
+        # The manifest's `timestamp` field must be comparable ACROSS hosts: the
+        # client validates freshness by comparing it against the HTTP Date header
+        # (also wall-clock) and its own system clock. A monotonic clock
+        # (time.monotonic()) is anchored to an arbitrary boot epoch that differs
+        # on every machine, so a monotonic value from the server would be
+        # meaningless to any client.
+        #
+        # Known consequence — clock skew:
+        #   If the server's NTP is ahead of the client's, the manifest appears
+        #   "from the future" and freshness_seconds shrinks from the client's
+        #   perspective. If the server's clock lags, the manifest looks stale
+        #   sooner than intended. Both are bounded by typical NTP drift (<1 s
+        #   on a properly configured host) and are absorbed by the client's
+        #   freshness tolerance window. This is an inherent property of any
+        #   cross-host wall-clock comparison, not a bug in this implementation.
+        #
+        # Mitigation (operator-side): keep the server's clock synchronised via
+        # chrony or systemd-timesyncd. The WARP_MANIFEST_FRESHNESS config value
+        # (default 300 s) provides ample headroom for sub-second NTP skew.
+        #
+        # See also: config.WARP_MANIFEST_CLOCK_NOTE for the design-decision record.
         "timestamp": int(time.time() * 1000),
-        "freshness_seconds": config.WARP_MANIFEST_FRESHNESS,
+        # A009: cap freshness at 10 minutes to prevent excessively long cache windows.
+        # Even if WARP_MANIFEST_FRESHNESS is set to a large value via env var,
+        # the server never emits more than _MAX_FRESHNESS_SECONDS.
+        "freshness_seconds": min(config.WARP_MANIFEST_FRESHNESS, _MAX_FRESHNESS_SECONDS),
         "redirect_policy": REDIRECT_POLICY,
         "allowed_redirects": [],
         "nonce": nonce,

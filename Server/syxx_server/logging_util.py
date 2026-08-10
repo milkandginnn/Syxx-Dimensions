@@ -77,10 +77,31 @@ def _emit(level, event, **fields):
     if level == "error" and _otel_logger is not None and _otel_log_record is not None:
         try:
             body = json.dumps(rec, default=str, ensure_ascii=False)
+            # A059: attach the current trace/span context so OTLP error records can be
+            # correlated with the trace that produced them. Defensive: the OTel SDK may be
+            # absent or the span not recording, in which case the record is emitted without
+            # trace context (same as before this change).
+            trace_id = None
+            span_id = None
+            trace_flags = None
+            try:
+                from opentelemetry import trace as _otel_trace  # type: ignore[unresolved-import]
+
+                _span = _otel_trace.get_current_span()
+                if _span.is_recording():
+                    _span_ctx = _span.get_span_context()
+                    trace_id = _span_ctx.trace_id
+                    span_id = _span_ctx.span_id
+                    trace_flags = _span_ctx.trace_flags
+            except Exception:  # noqa: S110 - best-effort context lookup
+                pass
             rec_obj = _otel_log_record(  # type: ignore[call-non-callable]
                 body=body,
                 severity_number=_severity_number_error,
                 severity_text="ERROR",
+                trace_id=trace_id,
+                span_id=span_id,
+                trace_flags=trace_flags,
             )
             _otel_logger.emit(rec_obj)
         except Exception:  # noqa: S110 — best-effort path; failing here must not take the request down

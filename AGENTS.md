@@ -1,4 +1,4 @@
-# claude-agents — multi-harness agentic plugin marketplace
+ # claude-agents — multi-harness agentic plugin marketplace
 
 Production-ready agentic-workflow building blocks: **94 plugins** (90 local + 4 external), **164 agents**, **175 skills**, **103 commands**. Native source-of-truth for Claude Code; also consumed by OpenAI Codex CLI, Cursor, OpenCode, and Gemini CLI from a single Markdown source.
 
@@ -19,6 +19,10 @@ This file is the canonical context file. Codex / Cursor / OpenCode read it direc
 - **[docs/plugin-eval.md](docs/plugin-eval.md)** — three-layer quality evaluation framework
 - **[docs/round-trip-results.md](docs/round-trip-results.md)** — real-CLI verification recipes
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to contribute
+
+## Required Reading - Rules
+
+- **[SUBAGENTS-RULES.md](rules/SUBAGENT-RULES.md)** — mandatory (NO EXCEPTIONS) rules for managing subagents, including when and how to deplopy them, edit their prompts, and map them to tasks. 
 
 ## Working in this repo
 

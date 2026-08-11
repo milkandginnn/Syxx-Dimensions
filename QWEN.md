@@ -1,5 +1,9 @@
 # Qwen Code — Agentic Plugin Marketplace Integration
 
+Look in ./Subagents/ for additional available options.
+
+Compliance with rules/* is not optional. You do not have room for judgmnent calls. There are no exceptions.
+
 > 91 plugins installed: **180 skills**, **164 agents**, **145 commands**.
 > Generated from [wshobson/agents](https://github.com/wshobson/agents) for all 5 harnesses.
 

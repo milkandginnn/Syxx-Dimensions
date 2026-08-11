@@ -222,8 +222,11 @@ public static class ProbePlan
             LeakDetector.TriggerQueriesAsync(subdomain, servers.ToList()));
 
         // Without a collector URL, the leak result is always inconclusive.
-        inputs.Leak = new LeakTestResult { Result = LeakResult.Inconclusive,
-            ErrorReason = "Local check only; use collector for confirmed result." };
+        inputs.Leak = new LeakTestResult
+        {
+            Result = LeakResult.Inconclusive,
+            ErrorReason = "Local check only; use collector for confirmed result."
+        };
 
         return inputs;
     }

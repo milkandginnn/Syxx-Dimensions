@@ -113,7 +113,8 @@ public partial class GluttonViewModel : ObservableObject
     [ObservableProperty] private bool _collectorRunning;
     [ObservableProperty] private bool _hasCollectorResult;
     [ObservableProperty] private string _leakResultText = "No leak check has run yet.";
-    [ObservableProperty] private string _leakResultDetailText =
+    [ObservableProperty]
+    private string _leakResultDetailText =
         "Run a leak check; the collector's signed attestation decides the conclusion shown here.";
     [ObservableProperty] private IBrush _leakResultBrush = NeutralBrush;
 
@@ -383,8 +384,11 @@ public partial class GluttonViewModel : ObservableObject
                 "collector", budget,
                 async () => (LeakTestResult?)await LeakDetector.RunCollectorTestAsync(
                     subdomain, servers, url))
-                ?? new LeakTestResult { Result = LeakResult.Inconclusive,
-                                        ErrorReason = "Collector verification returned no result." };
+                ?? new LeakTestResult
+                {
+                    Result = LeakResult.Inconclusive,
+                    ErrorReason = "Collector verification returned no result."
+                };
 
             RenderLeakResult(result);
         }

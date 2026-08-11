@@ -272,115 +272,115 @@ namespace Syxx.Kit
             int offset = 12;
             try
             {
-            // Capture the first question's owner name (B070 — the root of the valid owner set) while
-            // skipping the rest of the question section.
-            string? questionName = null;
-            for (int i = 0; i < questionCount; i++)
-            {
-                var q = ParseName(data, offset);
-                if (i == 0) questionName = q.Name.ToLowerInvariant();
-                offset = q.NextOffset;
-                if (offset + 4 > data.Length)
+                // Capture the first question's owner name (B070 — the root of the valid owner set) while
+                // skipping the rest of the question section.
+                string? questionName = null;
+                for (int i = 0; i < questionCount; i++)
                 {
-                    return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = "Question section exceeds packet bounds." };
-                }
-                offset += 4; // Skip type and class
-            }
-
-            // Phase 1 — parse every answer RR (owner name, type, class, ttl, rdata, and for a CNAME
-            // its decoded target name). A strict bounds/parse failure fails the whole response.
-            var raws = new List<(string Name, string OwnerLower, ushort Type, ushort Cls, uint Ttl, string Rdata, string? CnameTarget)>();
-            int parsedCount = 0;
-            for (int i = 0; i < answerCount; i++)
-            {
-                if (offset >= data.Length) break;
-                var parsedNameResult = ParseName(data, offset);
-                string name = parsedNameResult.Name;
-                offset = parsedNameResult.NextOffset;
-
-                if (offset + 10 > data.Length)
-                {
-                    return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = "Answer header exceeds packet bounds." };
-                }
-                ushort type = (ushort)((data[offset] << 8) | data[offset + 1]);
-                ushort cls = (ushort)((data[offset + 2] << 8) | data[offset + 3]);
-                uint ttl = (uint)((data[offset + 4] << 24) |
-                                  (data[offset + 5] << 16) |
-                                  (data[offset + 6] << 8) |
-                                  data[offset + 7]);
-                int rdLength = (data[offset + 8] << 8) | data[offset + 9];
-                offset += 10;
-
-                if (offset + rdLength > data.Length)
-                {
-                    return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = "RDATA exceeds packet bounds." };
-                }
-
-                string rdataStr = FormatRData(data, offset, rdLength, type);
-                // A CNAME's RDATA is a single (possibly compressed) domain name — decode it so the
-                // owner chain can be tracked (B070). Non-CNAME RRs carry no chain target.
-                string? cnameTarget = null;
-                if (cls == 1 && type == 5)
-                {
-                    try { cnameTarget = ParseName(data, offset).Name.ToLowerInvariant(); }
-                    catch (FormatException) { cnameTarget = null; }
-                }
-                raws.Add((name, name.ToLowerInvariant(), type, cls, ttl, rdataStr, cnameTarget));
-
-                offset += rdLength;
-                parsedCount++;
-            }
-            // B068/A077: declared ANCOUNT > actually parsed records -> corrupt/truncated
-            if (parsedCount < answerCount)
-                return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = $"Declared ANCOUNT {answerCount} exceeds parsed records {parsedCount}." };
-
-            // B070 — build the set of owner names that legitimately belong to this answer: the question
-            // name plus every CNAME target reachable from it (fixpoint, so an out-of-order CNAME chain
-            // is still resolved). An in-class address RR whose owner is outside this set is a smuggled
-            // off-name record and must not be surfaced as a resolved address.
-            var validOwners = new HashSet<string>();
-            if (questionName != null) validOwners.Add(questionName);
-            bool grew = true;
-            while (grew)
-            {
-                grew = false;
-                foreach (var r in raws)
-                {
-                    if (r.Cls == 1 && r.Type == 5 && validOwners.Contains(r.OwnerLower)
-                        && r.CnameTarget != null && !validOwners.Contains(r.CnameTarget))
+                    var q = ParseName(data, offset);
+                    if (i == 0) questionName = q.Name.ToLowerInvariant();
+                    offset = q.NextOffset;
+                    if (offset + 4 > data.Length)
                     {
-                        validOwners.Add(r.CnameTarget);
-                        grew = true;
+                        return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = "Question section exceeds packet bounds." };
+                    }
+                    offset += 4; // Skip type and class
+                }
+
+                // Phase 1 — parse every answer RR (owner name, type, class, ttl, rdata, and for a CNAME
+                // its decoded target name). A strict bounds/parse failure fails the whole response.
+                var raws = new List<(string Name, string OwnerLower, ushort Type, ushort Cls, uint Ttl, string Rdata, string? CnameTarget)>();
+                int parsedCount = 0;
+                for (int i = 0; i < answerCount; i++)
+                {
+                    if (offset >= data.Length) break;
+                    var parsedNameResult = ParseName(data, offset);
+                    string name = parsedNameResult.Name;
+                    offset = parsedNameResult.NextOffset;
+
+                    if (offset + 10 > data.Length)
+                    {
+                        return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = "Answer header exceeds packet bounds." };
+                    }
+                    ushort type = (ushort)((data[offset] << 8) | data[offset + 1]);
+                    ushort cls = (ushort)((data[offset + 2] << 8) | data[offset + 3]);
+                    uint ttl = (uint)((data[offset + 4] << 24) |
+                                      (data[offset + 5] << 16) |
+                                      (data[offset + 6] << 8) |
+                                      data[offset + 7]);
+                    int rdLength = (data[offset + 8] << 8) | data[offset + 9];
+                    offset += 10;
+
+                    if (offset + rdLength > data.Length)
+                    {
+                        return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = "RDATA exceeds packet bounds." };
+                    }
+
+                    string rdataStr = FormatRData(data, offset, rdLength, type);
+                    // A CNAME's RDATA is a single (possibly compressed) domain name — decode it so the
+                    // owner chain can be tracked (B070). Non-CNAME RRs carry no chain target.
+                    string? cnameTarget = null;
+                    if (cls == 1 && type == 5)
+                    {
+                        try { cnameTarget = ParseName(data, offset).Name.ToLowerInvariant(); }
+                        catch (FormatException) { cnameTarget = null; }
+                    }
+                    raws.Add((name, name.ToLowerInvariant(), type, cls, ttl, rdataStr, cnameTarget));
+
+                    offset += rdLength;
+                    parsedCount++;
+                }
+                // B068/A077: declared ANCOUNT > actually parsed records -> corrupt/truncated
+                if (parsedCount < answerCount)
+                    return new DNSResponse { Status = DNSResponseStatus.MalformedResponse, ErrorMessage = $"Declared ANCOUNT {answerCount} exceeds parsed records {parsedCount}." };
+
+                // B070 — build the set of owner names that legitimately belong to this answer: the question
+                // name plus every CNAME target reachable from it (fixpoint, so an out-of-order CNAME chain
+                // is still resolved). An in-class address RR whose owner is outside this set is a smuggled
+                // off-name record and must not be surfaced as a resolved address.
+                var validOwners = new HashSet<string>();
+                if (questionName != null) validOwners.Add(questionName);
+                bool grew = true;
+                while (grew)
+                {
+                    grew = false;
+                    foreach (var r in raws)
+                    {
+                        if (r.Cls == 1 && r.Type == 5 && validOwners.Contains(r.OwnerLower)
+                            && r.CnameTarget != null && !validOwners.Contains(r.CnameTarget))
+                        {
+                            validOwners.Add(r.CnameTarget);
+                            grew = true;
+                        }
                     }
                 }
-            }
 
-            // Phase 2 — apply the class (B069), owner-name (B070) and type filters.
-            foreach (var r in raws)
-            {
-                // B069: reject off-class RRs to prevent class-smuggled addresses.
-                if (r.Cls != 1) continue;
-                // B070: an in-class A/AAAA whose owner is not in the question/CNAME chain is off-name.
-                // (Only enforced when the question name is known, so a parse gap never drops everything.)
-                if ((r.Type == 1 || r.Type == 28) && validOwners.Count > 0 && !validOwners.Contains(r.OwnerLower))
+                // Phase 2 — apply the class (B069), owner-name (B070) and type filters.
+                foreach (var r in raws)
                 {
-                    offNameCount++;
-                    continue;
+                    // B069: reject off-class RRs to prevent class-smuggled addresses.
+                    if (r.Cls != 1) continue;
+                    // B070: an in-class A/AAAA whose owner is not in the question/CNAME chain is off-name.
+                    // (Only enforced when the question name is known, so a parse gap never drops everything.)
+                    if ((r.Type == 1 || r.Type == 28) && validOwners.Count > 0 && !validOwners.Contains(r.OwnerLower))
+                    {
+                        offNameCount++;
+                        continue;
+                    }
+                    // Surface answers of the requested type (M04), CNAMEs (needed for chain-following) and
+                    // RRSIGs (the DNSSEC signature companion of a DO-enabled answer - it carries no address
+                    // and never substitutes the queried answer, so it is not off-type poisoning; the DNSSEC
+                    // verifier needs it to check the covering signature over the DNSKEY RRset - A030/A036).
+                    // Count off-type answers separately so callers can detect poisoning attempts (KDNS-06).
+                    if (!requestedType.HasValue || r.Type == requestedType.Value || r.Type == 5 || r.Type == 46)
+                    {
+                        records.Add(new DNSRecord { Name = r.Name, Type = r.Type, Ttl = r.Ttl, Rdata = r.Rdata });
+                    }
+                    else
+                    {
+                        offTypeCount++;
+                    }
                 }
-                // Surface answers of the requested type (M04), CNAMEs (needed for chain-following) and
-                // RRSIGs (the DNSSEC signature companion of a DO-enabled answer - it carries no address
-                // and never substitutes the queried answer, so it is not off-type poisoning; the DNSSEC
-                // verifier needs it to check the covering signature over the DNSKEY RRset - A030/A036).
-                // Count off-type answers separately so callers can detect poisoning attempts (KDNS-06).
-                if (!requestedType.HasValue || r.Type == requestedType.Value || r.Type == 5 || r.Type == 46)
-                {
-                    records.Add(new DNSRecord { Name = r.Name, Type = r.Type, Ttl = r.Ttl, Rdata = r.Rdata });
-                }
-                else
-                {
-                    offTypeCount++;
-                }
-            }
             }
             catch (FormatException ex)
             {

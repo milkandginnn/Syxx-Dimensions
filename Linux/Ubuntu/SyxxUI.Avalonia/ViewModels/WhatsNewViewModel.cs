@@ -169,8 +169,8 @@ public partial class WhatsNewViewModel : ObservableObject
     private static IBrush AccentFor(string? severity) => (severity ?? "").ToLowerInvariant() switch
     {
         "critical" or "error" => new SolidColorBrush(Color.Parse("#FF5C7A")),
-        "warning"             => new SolidColorBrush(Color.Parse("#F2B33D")),
-        _                     => new SolidColorBrush(Color.Parse("#7C5CFF")),
+        "warning" => new SolidColorBrush(Color.Parse("#F2B33D")),
+        _ => new SolidColorBrush(Color.Parse("#7C5CFF")),
     };
 
     [RelayCommand]

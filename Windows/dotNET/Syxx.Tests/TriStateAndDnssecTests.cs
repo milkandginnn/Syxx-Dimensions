@@ -195,7 +195,9 @@ namespace Syxx.Tests
                                            byte protocolField = 3, byte algorithm = 13) =>
             new DNSRecord
             {
-                Name = owner, Type = 48, Ttl = 3600,
+                Name = owner,
+                Type = 48,
+                Ttl = 3600,
                 Rdata = Convert.ToHexString(new byte[]
                 {
                     (byte)(flags >> 8), (byte)flags, protocolField, algorithm, 0xab, 0xcd, 0xef
@@ -221,7 +223,9 @@ namespace Syxx.Tests
         private static DNSRecord RrsigFor(string owner, string signer, uint inception, uint expiration) =>
             new DNSRecord
             {
-                Name = owner, Type = 46, Ttl = 3600,
+                Name = owner,
+                Type = 46,
+                Ttl = 3600,
                 Rdata = RrsigHexSigned(inception, expiration, signer)
             };
 

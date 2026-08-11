@@ -25,12 +25,12 @@ namespace SyxxUI.Avalonia.Tests;
 public class ProphetViewModelPresentationTests
 {
     // --- Colour constants (must match ProphetViewModel's static brush fields exactly) ---
-    private static readonly Color Teal     = Color.Parse("#2dd4bf");
+    private static readonly Color Teal = Color.Parse("#2dd4bf");
     // Prophet module highlight (owner directive 2026-08-02), parity with macOS ioProphetBlue.
     private static readonly Color ProphetBlue = Color.Parse("#00b4ff");
-    private static readonly Color Amber    = Color.Parse("#F2B33D");
-    private static readonly Color Red      = Color.Parse("#FF5C7A");
-    private static readonly Color TextSec  = Color.Parse("#c9c1e6");
+    private static readonly Color Amber = Color.Parse("#F2B33D");
+    private static readonly Color Red = Color.Parse("#FF5C7A");
+    private static readonly Color TextSec = Color.Parse("#c9c1e6");
 
     private static Color BrushColor(IBrush b) => ((SolidColorBrush)b).Color;
 

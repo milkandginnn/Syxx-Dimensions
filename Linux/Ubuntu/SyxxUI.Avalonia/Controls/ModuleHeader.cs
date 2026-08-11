@@ -69,7 +69,8 @@ public class ModuleHeader : UserControl
 
         _runeTile = new Border
         {
-            Width = 54, Height = 54,
+            Width = 54,
+            Height = 54,
             CornerRadius = new CornerRadius(14),
             VerticalAlignment = VerticalAlignment.Top,
             Child = _runeGlyph,

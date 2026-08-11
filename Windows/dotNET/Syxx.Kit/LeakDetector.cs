@@ -111,7 +111,7 @@ namespace Syxx.Kit
             {
                 var tokenResp = await RequestTokenAsync(client, collectorBaseURL, baseDomain, authToken, licenseKey);
                 tokenLabel = tokenResp.Token;
-                subdomain  = tokenResp.Subdomain;
+                subdomain = tokenResp.Subdomain;
             }
             catch (Exception ex)
             {

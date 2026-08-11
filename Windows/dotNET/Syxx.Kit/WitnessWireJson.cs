@@ -121,28 +121,28 @@ namespace Syxx.Kit
             switch (reader.TokenType)
             {
                 case JsonTokenType.String:
-                {
-                    string? raw = reader.GetString();
-                    if (raw is not null && ByWireName.TryGetValue(raw, out var mapped))
-                        return mapped;
-                    // Fail closed. An unknown status is NOT "success" and is not "timeout"; we do
-                    // not know what happened, so the whole snapshot read fails and the caller
-                    // reports malformed input rather than verifying fabricated evidence.
-                    throw new JsonException(
-                        $"Unrecognised DNS response status '{raw}'. Expected one of: {string.Join(", ", WireNames.Values)}.");
-                }
-                case JsonTokenType.Number:
-                {
-                    // Back-compat: Windows builds before B251 wrote the bare CLR ordinal. The
-                    // declaration order of DNSResponseStatus (DNSResolver.cs:78-90) matches the
-                    // Swift declaration order and is pinned by DNSResponseStatusWireTests.
-                    if (reader.TryGetInt32(out int ordinal)
-                        && Enum.IsDefined(typeof(DNSResponseStatus), ordinal))
                     {
-                        return (DNSResponseStatus)ordinal;
+                        string? raw = reader.GetString();
+                        if (raw is not null && ByWireName.TryGetValue(raw, out var mapped))
+                            return mapped;
+                        // Fail closed. An unknown status is NOT "success" and is not "timeout"; we do
+                        // not know what happened, so the whole snapshot read fails and the caller
+                        // reports malformed input rather than verifying fabricated evidence.
+                        throw new JsonException(
+                            $"Unrecognised DNS response status '{raw}'. Expected one of: {string.Join(", ", WireNames.Values)}.");
                     }
-                    throw new JsonException("Numeric DNS response status is outside the defined range.");
-                }
+                case JsonTokenType.Number:
+                    {
+                        // Back-compat: Windows builds before B251 wrote the bare CLR ordinal. The
+                        // declaration order of DNSResponseStatus (DNSResolver.cs:78-90) matches the
+                        // Swift declaration order and is pinned by DNSResponseStatusWireTests.
+                        if (reader.TryGetInt32(out int ordinal)
+                            && Enum.IsDefined(typeof(DNSResponseStatus), ordinal))
+                        {
+                            return (DNSResponseStatus)ordinal;
+                        }
+                        throw new JsonException("Numeric DNS response status is outside the defined range.");
+                    }
                 default:
                     throw new JsonException(
                         $"DNS response status must be a string or a number, got {reader.TokenType}.");
@@ -202,16 +202,16 @@ namespace Syxx.Kit
                 case JsonTokenType.Number:
                     return FromAppleReferenceSeconds(reader.GetDouble());
                 case JsonTokenType.String:
-                {
-                    // Legacy Windows encoding (ISO-8601). Round-trip kind so the value stays UTC.
-                    string? raw = reader.GetString();
-                    if (raw is not null && DateTime.TryParse(raw, CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind, out var parsed))
                     {
-                        return parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+                        // Legacy Windows encoding (ISO-8601). Round-trip kind so the value stays UTC.
+                        string? raw = reader.GetString();
+                        if (raw is not null && DateTime.TryParse(raw, CultureInfo.InvariantCulture,
+                                DateTimeStyles.RoundtripKind, out var parsed))
+                        {
+                            return parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+                        }
+                        throw new JsonException($"Timestamp '{raw}' is neither a Foundation reference-date interval nor an ISO-8601 date.");
                     }
-                    throw new JsonException($"Timestamp '{raw}' is neither a Foundation reference-date interval nor an ISO-8601 date.");
-                }
                 default:
                     throw new JsonException($"Timestamp must be a number or a string, got {reader.TokenType}.");
             }

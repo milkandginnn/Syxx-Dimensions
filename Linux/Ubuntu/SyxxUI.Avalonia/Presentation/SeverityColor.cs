@@ -21,14 +21,14 @@ public static class SeverityColor
 {
     public static IBrush For(Severity severity) => severity switch
     {
-        Severity.Clean    => new SolidColorBrush(Color.Parse("#3FD08A")), // success green
-        Severity.Info     => new SolidColorBrush(Color.Parse("#A79CC4")), // info purple
-        Severity.Warning  => new SolidColorBrush(Color.Parse("#F2B33D")), // warning amber
-        Severity.High     => new SolidColorBrush(Color.Parse("#FF9A3D")), // high orange (NOT red)
+        Severity.Clean => new SolidColorBrush(Color.Parse("#3FD08A")), // success green
+        Severity.Info => new SolidColorBrush(Color.Parse("#A79CC4")), // info purple
+        Severity.Warning => new SolidColorBrush(Color.Parse("#F2B33D")), // warning amber
+        Severity.High => new SolidColorBrush(Color.Parse("#FF9A3D")), // high orange (NOT red)
         Severity.Critical => new SolidColorBrush(Color.Parse("#FF5C7A")), // danger red
         // D275: Unknown AND any future/unmapped case fall here: neutral GREY, never green and
         // never the info-purple reserved for Severity.Info. A state we did not establish must
         // render in the most semantically neutral tone available.
-        _                 => new SolidColorBrush(Color.Parse("#808080")),
+        _ => new SolidColorBrush(Color.Parse("#808080")),
     };
 }

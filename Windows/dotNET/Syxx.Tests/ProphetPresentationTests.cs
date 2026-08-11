@@ -237,12 +237,12 @@ public class ProphetPresentationTests
         // interpolate to a leading-space-only " returned no..." with no subject.
         var pres = ProphetPresentation.BuildDnssecPresentation(DNSSECStatus.Unsigned, "");
 
-Assert.StartsWith("this domain", pres.Detail, StringComparison.Ordinal);
-Assert.DoesNotContain("{}", pres.Detail);
-// Failure case: removing the `display` substitution guard would interpolate the empty
-// domain to a leading space; this Assert.False reds.
-Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
-    "empty domain interpolated to a leading-space subject; the 'this domain' guard is missing");
+        Assert.StartsWith("this domain", pres.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("{}", pres.Detail);
+        // Failure case: removing the `display` substitution guard would interpolate the empty
+        // domain to a leading space; this Assert.False reds.
+        Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
+            "empty domain interpolated to a leading-space subject; the 'this domain' guard is missing");
     }
 
     [Theory]

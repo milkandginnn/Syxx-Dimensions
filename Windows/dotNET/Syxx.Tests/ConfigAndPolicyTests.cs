@@ -141,7 +141,10 @@ namespace Syxx.Tests
                 Packet = new DNSPacketReport { Qr = "Query" },   // forged QR on an inbound packet
                 Network = new NetworkContextReport
                 {
-                    SourceIP = "8.8.8.8", DestIP = "10.0.0.5", SourcePort = 53, DestPort = 54321,
+                    SourceIP = "8.8.8.8",
+                    DestIP = "10.0.0.5",
+                    SourcePort = 53,
+                    DestPort = 54321,
                     Direction = "Inbound Response"
                 }
             };
@@ -157,10 +160,12 @@ namespace Syxx.Tests
     {
         private static NetworkConfigSnapshot Snap(List<string> resolvers, bool vpn = false, bool enc = false,
                                                   List<string>? ifaces = null) => new()
-        {
-            Resolvers = resolvers, ActiveInterfaces = ifaces ?? new() { "en0" },
-            VpnActive = vpn ? ConditionState.Yes : ConditionState.No, DnsEncrypted = enc
-        };
+                                                  {
+                                                      Resolvers = resolvers,
+                                                      ActiveInterfaces = ifaces ?? new() { "en0" },
+                                                      VpnActive = vpn ? ConditionState.Yes : ConditionState.No,
+                                                      DnsEncrypted = enc
+                                                  };
 
         // Acceptance bar: a different network lists the REAL deltas from home.
         // Fail state: don't diff -> "matches home" on a network that plainly differs.
@@ -448,9 +453,12 @@ namespace Syxx.Tests
             var path = TempPath();
             var s = new SyxxSettings
             {
-                EncryptedDnsEnabled = true, EncryptedDnsResolverId = "quad9",
-                EncryptedDnsTransport = EncryptedDNSTransport.Dot, ScanResolverId = "google",
-                NotificationsEnabled = false, TelemetryEnabled = false
+                EncryptedDnsEnabled = true,
+                EncryptedDnsResolverId = "quad9",
+                EncryptedDnsTransport = EncryptedDNSTransport.Dot,
+                ScanResolverId = "google",
+                NotificationsEnabled = false,
+                TelemetryEnabled = false
             };
             Assert.True(SyxxSettingsStore.Save(s, path));
             var loaded = SyxxSettingsStore.Load(path);

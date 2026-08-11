@@ -34,17 +34,17 @@ public partial class ShellViewModel : ObservableObject, IDisposable
     // survive navigating away and back.
     private readonly Dictionary<string, Func<Control>> _viewFactories = new()
     {
-        ["What's New"]  = () => new WhatsNewView(),
-        ["Dashboard"]   = () => new DashboardView(),
-        ["Prophet"]     = () => new ProphetView(),
-        ["Mirror"]      = () => new MirrorView(),
-        ["Portal"]      = () => new PortalView(),
-        ["Glutton"]     = () => new GluttonView(),
-        ["Cage"]        = () => new CageView(),
-        ["Witness"]     = () => new WitnessView(),
+        ["What's New"] = () => new WhatsNewView(),
+        ["Dashboard"] = () => new DashboardView(),
+        ["Prophet"] = () => new ProphetView(),
+        ["Mirror"] = () => new MirrorView(),
+        ["Portal"] = () => new PortalView(),
+        ["Glutton"] = () => new GluttonView(),
+        ["Cage"] = () => new CageView(),
+        ["Witness"] = () => new WitnessView(),
         ["Conclusions"] = () => new ConclusionsView(),
-        ["Settings"]    = () => new SettingsView(),
-        ["License"]     = () => new LicenseView(),
+        ["Settings"] = () => new SettingsView(),
+        ["License"] = () => new LicenseView(),
     };
 
     private readonly Dictionary<string, Control> _views = new();

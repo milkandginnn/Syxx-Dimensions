@@ -72,10 +72,22 @@ namespace Syxx
 
             switch (args[0].ToLowerInvariant())
             {
-                case "nslook":    case "mirror":   case "leak":     case "witness":
-                case "key":       case "route":    case "lan":      case "forensics":
-                case "sentinel":  case "cage":     case "warp":     case "speed":
-                case "unbound":   case "filter":   case "firstrun": case "parity-transcript":
+                case "nslook":
+                case "mirror":
+                case "leak":
+                case "witness":
+                case "key":
+                case "route":
+                case "lan":
+                case "forensics":
+                case "sentinel":
+                case "cage":
+                case "warp":
+                case "speed":
+                case "unbound":
+                case "filter":
+                case "firstrun":
+                case "parity-transcript":
                     await DispatchSubcommand(args);
                     break;
                 case "--version":
@@ -123,21 +135,21 @@ namespace Syxx
         {
             switch (args[0].ToLowerInvariant())
             {
-                case "nslook":    await NslookCommand.RunAsync(args[1..]); break;
-                case "mirror":    await MirrorCommand.RunAsync(args[1..]); break;
-                case "leak":      await LeakCommand.RunAsync(args[1..]); break;
-                case "witness":   await WitnessCommand.RunAsync(args[1..]); break;
-                case "key":       await KeyCommand.RunAsync(args[1..]); break;
-                case "route":     await RouteCommand.RunAsync(args[1..]); break;
-                case "lan":       await LanCommand.RunAsync(args[1..]); break;
+                case "nslook": await NslookCommand.RunAsync(args[1..]); break;
+                case "mirror": await MirrorCommand.RunAsync(args[1..]); break;
+                case "leak": await LeakCommand.RunAsync(args[1..]); break;
+                case "witness": await WitnessCommand.RunAsync(args[1..]); break;
+                case "key": await KeyCommand.RunAsync(args[1..]); break;
+                case "route": await RouteCommand.RunAsync(args[1..]); break;
+                case "lan": await LanCommand.RunAsync(args[1..]); break;
                 case "forensics": await ForensicsCommand.RunAsync(args[1..]); break;
-                case "sentinel":  await SentinelCommand.RunAsync(args[1..]); break;
-                case "cage":      await CageCommand.RunAsync(args[1..]); break;
-                case "warp":      await WarpCommand.RunAsync(args[1..]); break;
-                case "speed":     await SpeedCommand.RunAsync(args[1..]); break;
-                case "unbound":   await UnboundCommand.RunAsync(args[1..]); break;
-                case "filter":    await FilterCommand.RunAsync(args[1..]); break;
-                case "firstrun":  await FirstRunCommand.RunAsync(args[1..]); break;
+                case "sentinel": await SentinelCommand.RunAsync(args[1..]); break;
+                case "cage": await CageCommand.RunAsync(args[1..]); break;
+                case "warp": await WarpCommand.RunAsync(args[1..]); break;
+                case "speed": await SpeedCommand.RunAsync(args[1..]); break;
+                case "unbound": await UnboundCommand.RunAsync(args[1..]); break;
+                case "filter": await FilterCommand.RunAsync(args[1..]); break;
+                case "firstrun": await FirstRunCommand.RunAsync(args[1..]); break;
                 case "parity-transcript":
                     Environment.ExitCode = ParityTranscriptCommand.Run(args[1..]);
                     break;

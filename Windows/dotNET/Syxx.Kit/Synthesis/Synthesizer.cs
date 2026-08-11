@@ -181,10 +181,10 @@ public static class EvidenceAdapters
             if (DidFail(resolution)) subs.Add(SectionStatus.Invalidated);
             else if (resolution.Status is DNSResponseStatus.NXDomain or DNSResponseStatus.Refused or DNSResponseStatus.ServFail)
             {
-                    ev.Add(EvidenceItem.Create(Section.Prophet,
-                    EvidenceId.ResolverStatus,
-                    $"Resolver returned {resolution.Status} for the target domain",
-                    "A refusal / failure / NXDOMAIN can be a block — ambiguous alone; corroborate with the NXDOMAIN canary."));
+                ev.Add(EvidenceItem.Create(Section.Prophet,
+                EvidenceId.ResolverStatus,
+                $"Resolver returned {resolution.Status} for the target domain",
+                "A refusal / failure / NXDOMAIN can be a block — ambiguous alone; corroborate with the NXDOMAIN canary."));
                 subs.Add(SectionStatus.Inconclusive);
             }
             else subs.Add(SectionStatus.Negative);

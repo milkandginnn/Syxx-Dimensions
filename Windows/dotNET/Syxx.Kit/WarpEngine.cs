@@ -162,10 +162,17 @@ namespace Syxx.Kit
                 var conclusion = Conclude(sig, man, fresh, WarpContentState.NotEvaluated, Array.Empty<WarpContentState>());
                 return new WarpManifestResult
                 {
-                    OriginUrl = originUrl, FinalUrl = finalUrl, KeyId = keyId,
-                    SignatureState = sig, ManifestState = man, FreshnessState = fresh,
-                    HtmlState = WarpContentState.NotEvaluated, DeclaredHtmlSha256 = declaredHtmlSha,
-                    Conclusion = conclusion, InconclusiveReason = reason, RawManifestJson = rawJson
+                    OriginUrl = originUrl,
+                    FinalUrl = finalUrl,
+                    KeyId = keyId,
+                    SignatureState = sig,
+                    ManifestState = man,
+                    FreshnessState = fresh,
+                    HtmlState = WarpContentState.NotEvaluated,
+                    DeclaredHtmlSha256 = declaredHtmlSha,
+                    Conclusion = conclusion,
+                    InconclusiveReason = reason,
+                    RawManifestJson = rawJson
                 };
             }
 
@@ -224,7 +231,8 @@ namespace Syxx.Kit
             {
                 return new WarpManifestResult
                 {
-                    OriginUrl = originUrl, KeyId = keyId,
+                    OriginUrl = originUrl,
+                    KeyId = keyId,
                     SignatureState = WarpSignatureState.InvalidSignature,
                     ManifestState = WarpManifestState.NotEvaluated,
                     FreshnessState = WarpFreshnessState.NotEvaluated,
@@ -335,8 +343,11 @@ namespace Syxx.Kit
                     var req = new WarpAssetRequest
                     {
                         Url = string.IsNullOrEmpty(manifestOrigin) ? originUrl : manifestOrigin,
-                        FinalUrl = finalUrl, RedirectPolicy = policy,
-                        AllowedRedirects = allowedRedirects, AssetClass = "HTML", IsHtml = true
+                        FinalUrl = finalUrl,
+                        RedirectPolicy = policy,
+                        AllowedRedirects = allowedRedirects,
+                        AssetClass = "HTML",
+                        IsHtml = true
                     };
                     var outcome = await fetch(req).ConfigureAwait(false);
                     if (outcome.Failed) htmlState = WarpContentState.FetchError;
@@ -368,7 +379,9 @@ namespace Syxx.Kit
                         {
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, AssetClass = cls,
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                AssetClass = cls,
                                 State = WarpContentState.FetchFailedDeclared
                             });
                             continue;
@@ -376,15 +389,21 @@ namespace Syxx.Kit
 
                         var req = new WarpAssetRequest
                         {
-                            Url = url, FinalUrl = assetFinal, RedirectPolicy = policy,
-                            AllowedRedirects = allowedRedirects, AssetClass = cls, IsHtml = false
+                            Url = url,
+                            FinalUrl = assetFinal,
+                            RedirectPolicy = policy,
+                            AllowedRedirects = allowedRedirects,
+                            AssetClass = cls,
+                            IsHtml = false
                         };
                         var outcome = await fetch(req).ConfigureAwait(false);
                         if (outcome.Failed)
                         {
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, AssetClass = cls,
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                AssetClass = cls,
                                 State = WarpContentState.FetchError
                             });
                         }
@@ -392,8 +411,11 @@ namespace Syxx.Kit
                         {
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, AssetClass = cls,
-                                ByteLen = outcome.Bytes.Length, State = WarpContentState.FetchError
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                AssetClass = cls,
+                                ByteLen = outcome.Bytes.Length,
+                                State = WarpContentState.FetchError
                             });
                         }
                         else
@@ -402,8 +424,11 @@ namespace Syxx.Kit
                             bool matches = sha == declaredSha;
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, FetchedSha256 = sha,
-                                ByteLen = outcome.Bytes.Length, AssetClass = cls,
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                FetchedSha256 = sha,
+                                ByteLen = outcome.Bytes.Length,
+                                AssetClass = cls,
                                 State = matches ? WarpContentState.Match : WarpContentState.Mismatch,
                                 FetchedBytes = matches ? null : outcome.Bytes
                             });
@@ -428,12 +453,20 @@ namespace Syxx.Kit
 
                 return new WarpManifestResult
                 {
-                    OriginUrl = originUrl, FinalUrl = finalUrl, KeyId = keyId,
-                    SignatureState = WarpSignatureState.Verified, ManifestState = WarpManifestState.Parsed,
-                    FreshnessState = WarpFreshnessState.Fresh, HtmlState = htmlState,
-                    DeclaredHtmlSha256 = declaredHtmlSha, FetchedHtmlSha256 = fetchedHtmlSha,
-                    Assets = assetResults, Conclusion = conclusion, InconclusiveReason = reason,
-                    RawManifestJson = rawManifestJson, LocalHtmlBytes = localHtmlBytes
+                    OriginUrl = originUrl,
+                    FinalUrl = finalUrl,
+                    KeyId = keyId,
+                    SignatureState = WarpSignatureState.Verified,
+                    ManifestState = WarpManifestState.Parsed,
+                    FreshnessState = WarpFreshnessState.Fresh,
+                    HtmlState = htmlState,
+                    DeclaredHtmlSha256 = declaredHtmlSha,
+                    FetchedHtmlSha256 = fetchedHtmlSha,
+                    Assets = assetResults,
+                    Conclusion = conclusion,
+                    InconclusiveReason = reason,
+                    RawManifestJson = rawManifestJson,
+                    LocalHtmlBytes = localHtmlBytes
                 };
             }
         }

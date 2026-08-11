@@ -29,10 +29,10 @@ public class GluttonViewModelParityTests
 {
     // --- Severity-Color brush constants (the Linux theme's canonical mapping, parroting
     // Presentation/SeverityColor.cs so a drift in EITHER file surfaces here) ---
-    private static readonly Color Teal  = Color.Parse("#3FD08A"); // SuccessBrush
+    private static readonly Color Teal = Color.Parse("#3FD08A"); // SuccessBrush
     private static readonly Color Amber = Color.Parse("#F2B33D"); // AmberBrush
-    private static readonly Color Red   = Color.Parse("#FF5C7A"); // CriticalBrush
-    private static readonly Color Info  = Color.Parse("#A79CC4"); // NeutralBrush
+    private static readonly Color Red = Color.Parse("#FF5C7A"); // CriticalBrush
+    private static readonly Color Info = Color.Parse("#A79CC4"); // NeutralBrush
 
     private static Color BrushColor(IBrush b) => ((SolidColorBrush)b).Color;
 
@@ -49,15 +49,15 @@ public class GluttonViewModelParityTests
         string? signature = null,
         List<string>? observed = null,
         string? errorReason = null) => new()
-    {
-        Result = r,
-        SignatureValid = sigValid,
-        SignatureKeyTrusted = sigTrusted,
-        TransportPinning = transport,
-        Signature = signature,
-        ObservedResolvers = observed ?? new(),
-        ErrorReason = errorReason,
-    };
+        {
+            Result = r,
+            SignatureValid = sigValid,
+            SignatureKeyTrusted = sigTrusted,
+            TransportPinning = transport,
+            Signature = signature,
+            ObservedResolvers = observed ?? new(),
+            ErrorReason = errorReason,
+        };
 
     // =========================================================================
     // D004 — no attestation ⇒ always UNVERIFIED amber, regardless of outer Result.
@@ -93,7 +93,7 @@ public class GluttonViewModelParityTests
 
         Assert.StartsWith("[UNVERIFIED]", vm.LeakResultText, System.StringComparison.Ordinal);
         Assert.Equal(Amber, BrushColor(vm.LeakResultBrush));
-        Assert.NotEqual(Red,  BrushColor(vm.LeakResultBrush));
+        Assert.NotEqual(Red, BrushColor(vm.LeakResultBrush));
     }
 
     // =========================================================================
@@ -267,7 +267,7 @@ public class GluttonViewModelParityTests
 
         Assert.Equal(Amber, BrushColor(vm.LeakResultBrush));
         Assert.NotEqual(Teal, BrushColor(vm.LeakResultBrush));
-        Assert.NotEqual(Red,  BrushColor(vm.LeakResultBrush));
+        Assert.NotEqual(Red, BrushColor(vm.LeakResultBrush));
     }
 
     // =========================================================================

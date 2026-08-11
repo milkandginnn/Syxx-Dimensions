@@ -151,42 +151,42 @@ namespace Syxx.Kit
         }
 
         public enum TrustLoadResult
-    {
-        Success,
-        FileNotFound,
-        Corrupted
-    }
+        {
+            Success,
+            FileNotFound,
+            Corrupted
+        }
 
-    public TrustLoadResult Load(string? path = null)
-    {
-        path ??= DefaultPath;
-        if (!File.Exists(path))
+        public TrustLoadResult Load(string? path = null)
         {
-            return TrustLoadResult.FileNotFound;
-        }
-        try
-        {
-            var json = File.ReadAllText(path);
-            // D030: reject unsigned or tampered baselines — a missing/mismatched HMAC means the
-            // file was written by something other than Syxx. The caller treats Corrupted as
-            // "no history" and will re-capture on the next check.
-            if (!IntegrityTag.Verify(Encoding.UTF8.GetBytes(json), path))
-                return TrustLoadResult.Corrupted;
-            var decoded = JsonSerializer.Deserialize<Persisted>(json);
-            if (decoded == null) return TrustLoadResult.Corrupted;
-            lock (_lock)
+            path ??= DefaultPath;
+            if (!File.Exists(path))
             {
-                _entries.Clear(); _entries.AddRange(decoded.Entries);
-                _drifts.Clear(); _drifts.AddRange(decoded.Drifts);
-                PruneAged();
+                return TrustLoadResult.FileNotFound;
             }
-            return TrustLoadResult.Success;
+            try
+            {
+                var json = File.ReadAllText(path);
+                // D030: reject unsigned or tampered baselines — a missing/mismatched HMAC means the
+                // file was written by something other than Syxx. The caller treats Corrupted as
+                // "no history" and will re-capture on the next check.
+                if (!IntegrityTag.Verify(Encoding.UTF8.GetBytes(json), path))
+                    return TrustLoadResult.Corrupted;
+                var decoded = JsonSerializer.Deserialize<Persisted>(json);
+                if (decoded == null) return TrustLoadResult.Corrupted;
+                lock (_lock)
+                {
+                    _entries.Clear(); _entries.AddRange(decoded.Entries);
+                    _drifts.Clear(); _drifts.AddRange(decoded.Drifts);
+                    PruneAged();
+                }
+                return TrustLoadResult.Success;
+            }
+            catch
+            {
+                return TrustLoadResult.Corrupted;
+            }
         }
-        catch
-        {
-            return TrustLoadResult.Corrupted;
-        }
-    }
 
         /// <summary>Erase all retained history, in memory and on disk, including the HMAC sibling.</summary>
         public void Forget(string? path = null)

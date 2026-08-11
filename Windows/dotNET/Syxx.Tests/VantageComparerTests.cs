@@ -235,15 +235,15 @@ namespace Syxx.Tests
             var publics = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = Success(TamperIP),
-                ["Google"]     = Success(TamperIP),
-                ["Quad9"]      = Success(TamperIP)
+                ["Google"] = Success(TamperIP),
+                ["Quad9"] = Success(TamperIP)
             };
             // All DoH endpoints blocked — no records returned from any.
             var doh = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = Failure(),
-                ["Google"]     = Failure(),
-                ["Quad9"]      = Failure()
+                ["Google"] = Failure(),
+                ["Quad9"] = Failure()
             };
             var result = VantageComparer.Evaluate(local, publics, doh);
 
@@ -264,15 +264,15 @@ namespace Syxx.Tests
             var publics = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = Success(TamperIP),
-                ["Google"]     = Success(TamperIP),
-                ["Quad9"]      = Success(TamperIP)
+                ["Google"] = Success(TamperIP),
+                ["Quad9"] = Success(TamperIP)
             };
             // One DoH endpoint succeeds and returns the real IP — partial success, not total blockage.
             var doh = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = Success(GoodIP),   // succeeds with real answer
-                ["Google"]     = Failure(),
-                ["Quad9"]      = Failure()
+                ["Google"] = Failure(),
+                ["Quad9"] = Failure()
             };
             var result = VantageComparer.Evaluate(local, publics, doh);
             // One DoH success is below the ≥2 corroboration floor for a tamper result, but also
@@ -316,7 +316,7 @@ namespace Syxx.Tests
             var publics = new Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = CnameFronted("e1.akamaiedge.net", GoodIP),
-                ["Google"]     = CnameFronted("e1.akamaiedge.net", GoodIP)
+                ["Google"] = CnameFronted("e1.akamaiedge.net", GoodIP)
             };
             var result = VantageComparer.Evaluate(local, publics);
 
@@ -334,13 +334,15 @@ namespace Syxx.Tests
             var local = Success(GoodIP);
             local.Records.Add(new DNSRecord
             {
-                Name = "example.com", Type = 46, Ttl = 60,
+                Name = "example.com",
+                Type = 46,
+                Ttl = 60,
                 Rdata = "00010802000151800000000000000000"
             });
             var publics = new Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = Success(GoodIP),
-                ["Google"]     = Success(GoodIP)
+                ["Google"] = Success(GoodIP)
             };
             var result = VantageComparer.Evaluate(local, publics);
 
@@ -364,15 +366,15 @@ namespace Syxx.Tests
             var publics = new Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = CnameFronted("cdn.example.net", TamperIP),
-                ["Google"]     = CnameFronted("cdn.example.net", TamperIP),
-                ["Quad9"]      = CnameFronted("cdn.example.net", TamperIP)
+                ["Google"] = CnameFronted("cdn.example.net", TamperIP),
+                ["Quad9"] = CnameFronted("cdn.example.net", TamperIP)
             };
             // Two attacker-independent DoH endpoints agree on the real destination, which is what
             // licenses the accusation at all (B010 needs the cross-transport disagreement).
             var doh = new Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = Success(GoodIP),
-                ["Quad9"]      = Success(GoodIP)
+                ["Quad9"] = Success(GoodIP)
             };
             var result = VantageComparer.Evaluate(local, publics, doh);
 
@@ -391,7 +393,7 @@ namespace Syxx.Tests
             var publics = new Dictionary<string, ResolverQueryOutcome>
             {
                 ["Cloudflare"] = Success(GoodIP),
-                ["Google"]     = Success(GoodIP)
+                ["Google"] = Success(GoodIP)
             };
             var result = VantageComparer.Evaluate(local, publics);
 

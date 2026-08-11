@@ -26,7 +26,8 @@ public class EngineFailureIsReportedTests : IDisposable
         public int Discards { get; private set; }
         public void Capture(DiagnosticEvent evt) => Events.Add(evt);
         public void Breadcrumb(string category, string message, DiagnosticSeverity level,
-                               IReadOnlyDictionary<string, string> data) { }
+                               IReadOnlyDictionary<string, string> data)
+        { }
         public void DiscardBuffered() => Discards++;
     }
 

@@ -456,7 +456,8 @@ public static class ParityVectorLoader
                 case "warpManifest": inputs.WarpManifest = DecodeWarpManifestResult(v, f, name); break;
                 case "network": inputs.Network = DecodeNetworkStateReport(v, f, name); break;
                 case "leak": inputs.Leak = DecodeLeakTestResult(v, f, name); break;
-                case "exfil": inputs.Exfil = RequireArray(v, f, name)
+                case "exfil":
+                    inputs.Exfil = RequireArray(v, f, name)
                     .Select((n, i) => DecodeExfilAssessment(n, f, $"{name}[{i.ToString(CultureInfo.InvariantCulture)}]"))
                     .ToList(); break;
                 case "cageAttributionRate": inputs.CageAttributionRate = RequireDouble(v, f, name); break;
@@ -468,7 +469,8 @@ public static class ParityVectorLoader
                         "unrepresentable in v1: AnswerDrift carries a date " +
                         "(Windows/dotNET/Syxx.Kit/Trust/Trust.cs:33) and PARITY_VECTOR_V1 admits no " +
                         "dates; use configChanges for witness vectors");
-                case "configChanges": inputs.ConfigChanges = RequireArray(v, f, name)
+                case "configChanges":
+                    inputs.ConfigChanges = RequireArray(v, f, name)
                     .Select((n, i) => DecodeConfigChange(n, f, $"{name}[{i.ToString(CultureInfo.InvariantCulture)}]"))
                     .ToList(); break;
                 case "latency": inputs.Latency = DecodeResolverLatency(v, f, name); break;
@@ -1178,22 +1180,31 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, Section> SectionWire =
         new Dictionary<string, Section>(StringComparer.Ordinal)
         {
-            ["prophet"] = Section.Prophet, ["mirror"] = Section.Mirror, ["portal"] = Section.Portal,
-            ["glutton"] = Section.Glutton, ["cage"] = Section.Cage, ["witness"] = Section.Witness,
+            ["prophet"] = Section.Prophet,
+            ["mirror"] = Section.Mirror,
+            ["portal"] = Section.Portal,
+            ["glutton"] = Section.Glutton,
+            ["cage"] = Section.Cage,
+            ["witness"] = Section.Witness,
         };
 
     private static readonly IReadOnlyDictionary<string, SectionStatus> SectionStatusWire =
         new Dictionary<string, SectionStatus>(StringComparer.Ordinal)
         {
-            ["untested"] = SectionStatus.Untested, ["invalidated"] = SectionStatus.Invalidated,
-            ["inconclusive"] = SectionStatus.Inconclusive, ["degraded"] = SectionStatus.Degraded,
-            ["positive"] = SectionStatus.Positive, ["negative"] = SectionStatus.Negative,
+            ["untested"] = SectionStatus.Untested,
+            ["invalidated"] = SectionStatus.Invalidated,
+            ["inconclusive"] = SectionStatus.Inconclusive,
+            ["degraded"] = SectionStatus.Degraded,
+            ["positive"] = SectionStatus.Positive,
+            ["negative"] = SectionStatus.Negative,
         };
 
     private static readonly IReadOnlyDictionary<string, ConditionState> ConditionStateWire =
         new Dictionary<string, ConditionState>(StringComparer.Ordinal)
         {
-            ["yes"] = ConditionState.Yes, ["no"] = ConditionState.No, ["unknown"] = ConditionState.Unknown,
+            ["yes"] = ConditionState.Yes,
+            ["no"] = ConditionState.No,
+            ["unknown"] = ConditionState.Unknown,
         };
 
     /// Swift <c>DNSProtocol</c> raw values are "DoH"/"DoT" (NetworkKeyState.swift:54-57) — NOT the
@@ -1201,15 +1212,19 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, DnsProtocol> DnsProtocolWire =
         new Dictionary<string, DnsProtocol>(StringComparer.Ordinal)
         {
-            ["DoH"] = DnsProtocol.Doh, ["DoT"] = DnsProtocol.Dot,
-            ["DoQ"] = DnsProtocol.Doq, ["DNSCrypt"] = DnsProtocol.DnsCrypt,
+            ["DoH"] = DnsProtocol.Doh,
+            ["DoT"] = DnsProtocol.Dot,
+            ["DoQ"] = DnsProtocol.Doq,
+            ["DNSCrypt"] = DnsProtocol.DnsCrypt,
         };
 
     private static readonly IReadOnlyDictionary<string, LeakResult> LeakResultWire =
         new Dictionary<string, LeakResult>(StringComparer.Ordinal)
         {
-            ["confirmed"] = LeakResult.Confirmed, ["notDetected"] = LeakResult.NotDetected,
-            ["inconclusive"] = LeakResult.Inconclusive, ["invalid"] = LeakResult.Invalid,
+            ["confirmed"] = LeakResult.Confirmed,
+            ["notDetected"] = LeakResult.NotDetected,
+            ["inconclusive"] = LeakResult.Inconclusive,
+            ["invalid"] = LeakResult.Invalid,
             ["error"] = LeakResult.Error,
         };
 
@@ -1277,14 +1292,16 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, WarpManifestState> WarpManifestStateWire =
         new Dictionary<string, WarpManifestState>(StringComparer.Ordinal)
         {
-            ["parsed"] = WarpManifestState.Parsed, ["malformed"] = WarpManifestState.Malformed,
+            ["parsed"] = WarpManifestState.Parsed,
+            ["malformed"] = WarpManifestState.Malformed,
             ["notEvaluated"] = WarpManifestState.NotEvaluated,
         };
 
     private static readonly IReadOnlyDictionary<string, WarpFreshnessState> WarpFreshnessStateWire =
         new Dictionary<string, WarpFreshnessState>(StringComparer.Ordinal)
         {
-            ["fresh"] = WarpFreshnessState.Fresh, ["expired"] = WarpFreshnessState.Expired,
+            ["fresh"] = WarpFreshnessState.Fresh,
+            ["expired"] = WarpFreshnessState.Expired,
             ["futureDated"] = WarpFreshnessState.FutureDated,
             ["originMismatch"] = WarpFreshnessState.OriginMismatch,
             ["replayNonceMismatch"] = WarpFreshnessState.ReplayNonceMismatch,
@@ -1294,7 +1311,8 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, WarpContentState> WarpContentStateWire =
         new Dictionary<string, WarpContentState>(StringComparer.Ordinal)
         {
-            ["match"] = WarpContentState.Match, ["mismatch"] = WarpContentState.Mismatch,
+            ["match"] = WarpContentState.Match,
+            ["mismatch"] = WarpContentState.Mismatch,
             ["fetchError"] = WarpContentState.FetchError,
             ["fetchFailedDeclared"] = WarpContentState.FetchFailedDeclared,
             ["notEvaluated"] = WarpContentState.NotEvaluated,
@@ -1313,8 +1331,10 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, ResolverLatencyStatus> ResolverLatencyStatusWire =
         new Dictionary<string, ResolverLatencyStatus>(StringComparer.Ordinal)
         {
-            ["fast"] = ResolverLatencyStatus.Fast, ["moderate"] = ResolverLatencyStatus.Moderate,
-            ["slow"] = ResolverLatencyStatus.Slow, ["degraded"] = ResolverLatencyStatus.Degraded,
+            ["fast"] = ResolverLatencyStatus.Fast,
+            ["moderate"] = ResolverLatencyStatus.Moderate,
+            ["slow"] = ResolverLatencyStatus.Slow,
+            ["degraded"] = ResolverLatencyStatus.Degraded,
             ["unreachable"] = ResolverLatencyStatus.Unreachable,
             ["untested"] = ResolverLatencyStatus.Untested,
         };
@@ -1322,7 +1342,8 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, AnswerStabilityStatus> AnswerStabilityStatusWire =
         new Dictionary<string, AnswerStabilityStatus>(StringComparer.Ordinal)
         {
-            ["stable"] = AnswerStabilityStatus.Stable, ["rotating"] = AnswerStabilityStatus.Rotating,
+            ["stable"] = AnswerStabilityStatus.Stable,
+            ["rotating"] = AnswerStabilityStatus.Rotating,
             ["unstable"] = AnswerStabilityStatus.Unstable,
             ["ttlAnomaly"] = AnswerStabilityStatus.TtlAnomaly,
             ["inconclusive"] = AnswerStabilityStatus.Inconclusive,
@@ -1342,10 +1363,13 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, DenialStatus> DenialStatusWire =
         new Dictionary<string, DenialStatus>(StringComparer.Ordinal)
         {
-            ["notADenial"] = DenialStatus.NotADenial, ["nsecProven"] = DenialStatus.NsecProven,
-            ["soaBacked"] = DenialStatus.SoaBacked, ["bareDenial"] = DenialStatus.BareDenial,
+            ["notADenial"] = DenialStatus.NotADenial,
+            ["nsecProven"] = DenialStatus.NsecProven,
+            ["soaBacked"] = DenialStatus.SoaBacked,
+            ["bareDenial"] = DenialStatus.BareDenial,
             ["contradictory"] = DenialStatus.Contradictory,
-            ["inconclusive"] = DenialStatus.Inconclusive, ["untested"] = DenialStatus.Untested,
+            ["inconclusive"] = DenialStatus.Inconclusive,
+            ["untested"] = DenialStatus.Untested,
         };
 
     private static readonly IReadOnlyDictionary<string, DenialNegativeKind> DenialNegativeKindWire =
@@ -1358,10 +1382,12 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, DualStackStatus> DualStackStatusWire =
         new Dictionary<string, DualStackStatus>(StringComparer.Ordinal)
         {
-            ["dualStack"] = DualStackStatus.DualStack, ["ipv4Only"] = DualStackStatus.Ipv4Only,
+            ["dualStack"] = DualStackStatus.DualStack,
+            ["ipv4Only"] = DualStackStatus.Ipv4Only,
             ["dns64Synthesis"] = DualStackStatus.Dns64Synthesis,
             ["ipv4Suppressed"] = DualStackStatus.Ipv4Suppressed,
-            ["inconclusive"] = DualStackStatus.Inconclusive, ["untested"] = DualStackStatus.Untested,
+            ["inconclusive"] = DualStackStatus.Inconclusive,
+            ["untested"] = DualStackStatus.Untested,
         };
 
     private static readonly IReadOnlyDictionary<string, EDNS0CapabilityStatus> Edns0CapabilityStatusWire =
@@ -1394,7 +1420,8 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, SVCBFindingStatus> SvcbFindingStatusWire =
         new Dictionary<string, SVCBFindingStatus>(StringComparer.Ordinal)
         {
-            ["present"] = SVCBFindingStatus.Present, ["absent"] = SVCBFindingStatus.Absent,
+            ["present"] = SVCBFindingStatus.Present,
+            ["absent"] = SVCBFindingStatus.Absent,
             ["divergent"] = SVCBFindingStatus.Divergent,
             ["inconclusive"] = SVCBFindingStatus.Inconclusive,
             ["untested"] = SVCBFindingStatus.Untested,
@@ -1413,7 +1440,8 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, CNAMEChainStatus> CnameChainStatusWire =
         new Dictionary<string, CNAMEChainStatus>(StringComparer.Ordinal)
         {
-            ["consistent"] = CNAMEChainStatus.Consistent, ["noCNAME"] = CNAMEChainStatus.NoCNAME,
+            ["consistent"] = CNAMEChainStatus.Consistent,
+            ["noCNAME"] = CNAMEChainStatus.NoCNAME,
             ["divergent"] = CNAMEChainStatus.Divergent,
             ["inconclusive"] = CNAMEChainStatus.Inconclusive,
             ["untested"] = CNAMEChainStatus.Untested,
@@ -1422,7 +1450,8 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, EncryptedTransportStatus> EncryptedTransportStatusWire =
         new Dictionary<string, EncryptedTransportStatus>(StringComparer.Ordinal)
         {
-            ["working"] = EncryptedTransportStatus.Working, ["blocked"] = EncryptedTransportStatus.Blocked,
+            ["working"] = EncryptedTransportStatus.Working,
+            ["blocked"] = EncryptedTransportStatus.Blocked,
             ["inconclusive"] = EncryptedTransportStatus.Inconclusive,
             ["untested"] = EncryptedTransportStatus.Untested,
         };
@@ -1439,14 +1468,17 @@ public static class ParityVectorLoader
     private static readonly IReadOnlyDictionary<string, ECSLeakStatus> EcsLeakStatusWire =
         new Dictionary<string, ECSLeakStatus>(StringComparer.Ordinal)
         {
-            ["forwarded"] = ECSLeakStatus.Forwarded, ["notForwarded"] = ECSLeakStatus.NotForwarded,
-            ["inconclusive"] = ECSLeakStatus.Inconclusive, ["untested"] = ECSLeakStatus.Untested,
+            ["forwarded"] = ECSLeakStatus.Forwarded,
+            ["notForwarded"] = ECSLeakStatus.NotForwarded,
+            ["inconclusive"] = ECSLeakStatus.Inconclusive,
+            ["untested"] = ECSLeakStatus.Untested,
         };
 
     private static readonly IReadOnlyDictionary<string, ResponseSizeStatus> ResponseSizeStatusWire =
         new Dictionary<string, ResponseSizeStatus>(StringComparer.Ordinal)
         {
-            ["normal"] = ResponseSizeStatus.Normal, ["oversized"] = ResponseSizeStatus.Oversized,
+            ["normal"] = ResponseSizeStatus.Normal,
+            ["oversized"] = ResponseSizeStatus.Oversized,
             ["insufficientData"] = ResponseSizeStatus.InsufficientData,
             ["untested"] = ResponseSizeStatus.Untested,
         };

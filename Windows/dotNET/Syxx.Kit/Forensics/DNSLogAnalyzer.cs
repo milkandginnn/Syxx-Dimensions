@@ -100,8 +100,15 @@ namespace Syxx.Kit
 
                 records.Add(new DNSLogRecord
                 {
-                    Process = name, ProcessPath = path, SigningID = signingID, Pid = pid,
-                    IsReply = isReply, Rcode = rcode, QuestionName = qName, QuestionType = qType, Answers = answers
+                    Process = name,
+                    ProcessPath = path,
+                    SigningID = signingID,
+                    Pid = pid,
+                    IsReply = isReply,
+                    Rcode = rcode,
+                    QuestionName = qName,
+                    QuestionType = qType,
+                    Answers = answers
                 });
             }
             return records;

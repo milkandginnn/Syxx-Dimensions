@@ -233,103 +233,103 @@ public partial class WitnessViewModel : ObservableObject
         try
         {
 
-        var servers = NetworkKeyState.GetSystemDNSServers();
-        if (servers.Count == 0)
-        {
-            // D278 parity (macOS AppModel): never fabricate a resolver. A refused seal renders as
-            // Failed (never Signed), so the run can never be mistaken for a completed, clean
-            // testimony — same state discipline as the catch branches below.
-            SignatureLine = "System resolver could not be determined. Check your network connection, then retry.";
-            TestimonyState = WitnessTestimonyState.Failed;
+            var servers = NetworkKeyState.GetSystemDNSServers();
+            if (servers.Count == 0)
+            {
+                // D278 parity (macOS AppModel): never fabricate a resolver. A refused seal renders as
+                // Failed (never Signed), so the run can never be mistaken for a completed, clean
+                // testimony — same state discipline as the catch branches below.
+                SignatureLine = "System resolver could not be determined. Check your network connection, then retry.";
+                TestimonyState = WitnessTestimonyState.Failed;
+                terminalStateReached = true;
+                return;
+            }
+
+            string local = servers[0];
+
+            SectionInputs r;
+            try { r = await _runMirror(Domain.Trim(), local, false); }
+            // Defect-2 parity: raw detail to the diagnostic sink, readable text (or the bare failure,
+            // with no invented cause) to the screen. TestimonyState carries the failure, so an empty
+            // detail can never be mistaken for a seal that succeeded.
+            catch (System.Exception ex)
+            {
+                SignatureLine = ErrorPresenter.Compose(
+                    "Could not resolve to witness.", ErrorPresenter.UserDetail(ex, "witness.vantage"));
+                TestimonyState = WitnessTestimonyState.Failed; return;
+            }
+
+            var comparison = r.Comparison;
+            if (comparison is null)
+            {
+                // No real evidence to seal — do NOT sign an empty result as testimony.
+                SignatureLine = "Nothing to witness — the domain did not resolve, so there is no result to seal.";
+                VerifyLine = "";
+                TestimonyState = WitnessTestimonyState.Failed;
+                return;
+            }
+
+            // G16 / #21: sign with the PERSISTENT identity (load-or-create), not a fresh throwaway key.
+            // A failure to reach the key store is an honest Failed outcome, never a silent fall-through
+            // to an unsigned or ephemerally-signed seal.
+            string priv;
+            try { priv = _loadOrCreateSigningKey(); }
+            // RG-2: a key EXISTS but the store is unreachable. This is caught BEFORE the generic branch so
+            // it renders a DISTINCT message — the identity is intact, not lost — and it is impossible for
+            // this path to have minted/overwritten a key (LoadOrCreatePersistentSigningKey threw instead).
+            catch (WitnessKeyStoreUnavailableException)
+            {
+                SignatureLine = KeyStoreUnavailableMessage;
+                TestimonyState = WitnessTestimonyState.Failed; return;
+            }
+            catch (System.Exception ex)
+            {
+                SignatureLine = ErrorPresenter.Compose(
+                    "Could not access the signing key.", ErrorPresenter.UserDetail(ex, "witness.key"));
+                TestimonyState = WitnessTestimonyState.Failed; return;
+            }
+
+            WitnessSnapshot snap;
+            try { snap = _createSnapshot(Domain.Trim(), comparison, priv); }
+            // Defect-2 parity: WitnessSignerException's default message is a namespace-qualified type
+            // dump, exactly the crash-reporter material this boundary exists to keep off the screen.
+            catch (System.Exception ex)
+            {
+                SignatureLine = ErrorPresenter.Compose(
+                    "Signing failed.", ErrorPresenter.UserDetail(ex, "witness.sign"));
+                TestimonyState = WitnessTestimonyState.Failed; return;
+            }
+
+            // 5(b): retain the last successfully-sealed snapshot so the user can re-verify it on demand
+            // (SelfVerifyCommand) without re-resolving/re-signing. Only a genuine seal updates it, so
+            // "Re-verify last seal" always re-checks the most recent real testimony.
+            _lastSnapshot = snap;
+
+            SignatureLine = $"Sealed. Signature: {Truncate(snap.Signature, 44)}";
+            // Show the PUBLIC identity only — anyone can verify with it, and it discloses nothing secret.
+            // The private key never reaches the view (it stays inside WitnessKeyStore / the secret store).
+            IdentityLine = $"Signing identity (public): {snap.PublicKey} · key {snap.KeyId}";
+
+            // D105: derive the redirection drift from the SAME comparison, single-sourced through the
+            // shared Syxx.Kit WitnessTestifyPlanner — exactly the step macOS (AppModel.swift) and Windows
+            // (AppViewModel.cs) run off the planner's Outcome. Signing stays behind the injected seam above
+            // (so the offline sign-throws test still fires); only the drift step, the block D093 silently
+            // dropped, is routed through the planner here. On this Linux client the drift is only STORED for
+            // now (no Conclusions surface consumes it yet), but it EXISTS and is populated identically to
+            // the other two twins instead of being absent.
+            Drift = WitnessTestifyPlanner.DriftIfRedirected(Domain.Trim(), local, comparison);
+
+            // Verify the seal we just made — the full forensic tri-state, through the SAME switch the
+            // paste-JSON external verify uses.
+            // C211: the state must reflect the verification outcome — a seal that fails its own
+            // post-sign verification must never be reported as Signed.
+            var verifyResult = WitnessSigner.VerifySnapshotDetailed(snap);
+            ApplyVerification(verifyResult);
+
+            TestimonyState = verifyResult == SnapshotVerification.Valid
+                ? WitnessTestimonyState.Signed
+                : WitnessTestimonyState.Failed;
             terminalStateReached = true;
-            return;
-        }
-
-        string local = servers[0];
-
-        SectionInputs r;
-        try { r = await _runMirror(Domain.Trim(), local, false); }
-        // Defect-2 parity: raw detail to the diagnostic sink, readable text (or the bare failure,
-        // with no invented cause) to the screen. TestimonyState carries the failure, so an empty
-        // detail can never be mistaken for a seal that succeeded.
-        catch (System.Exception ex)
-        {
-            SignatureLine = ErrorPresenter.Compose(
-                "Could not resolve to witness.", ErrorPresenter.UserDetail(ex, "witness.vantage"));
-            TestimonyState = WitnessTestimonyState.Failed; return;
-        }
-
-        var comparison = r.Comparison;
-        if (comparison is null)
-        {
-            // No real evidence to seal — do NOT sign an empty result as testimony.
-            SignatureLine = "Nothing to witness — the domain did not resolve, so there is no result to seal.";
-            VerifyLine = "";
-            TestimonyState = WitnessTestimonyState.Failed;
-            return;
-        }
-
-        // G16 / #21: sign with the PERSISTENT identity (load-or-create), not a fresh throwaway key.
-        // A failure to reach the key store is an honest Failed outcome, never a silent fall-through
-        // to an unsigned or ephemerally-signed seal.
-        string priv;
-        try { priv = _loadOrCreateSigningKey(); }
-        // RG-2: a key EXISTS but the store is unreachable. This is caught BEFORE the generic branch so
-        // it renders a DISTINCT message — the identity is intact, not lost — and it is impossible for
-        // this path to have minted/overwritten a key (LoadOrCreatePersistentSigningKey threw instead).
-        catch (WitnessKeyStoreUnavailableException)
-        {
-            SignatureLine = KeyStoreUnavailableMessage;
-            TestimonyState = WitnessTestimonyState.Failed; return;
-        }
-        catch (System.Exception ex)
-        {
-            SignatureLine = ErrorPresenter.Compose(
-                "Could not access the signing key.", ErrorPresenter.UserDetail(ex, "witness.key"));
-            TestimonyState = WitnessTestimonyState.Failed; return;
-        }
-
-        WitnessSnapshot snap;
-        try { snap = _createSnapshot(Domain.Trim(), comparison, priv); }
-        // Defect-2 parity: WitnessSignerException's default message is a namespace-qualified type
-        // dump, exactly the crash-reporter material this boundary exists to keep off the screen.
-        catch (System.Exception ex)
-        {
-            SignatureLine = ErrorPresenter.Compose(
-                "Signing failed.", ErrorPresenter.UserDetail(ex, "witness.sign"));
-            TestimonyState = WitnessTestimonyState.Failed; return;
-        }
-
-        // 5(b): retain the last successfully-sealed snapshot so the user can re-verify it on demand
-        // (SelfVerifyCommand) without re-resolving/re-signing. Only a genuine seal updates it, so
-        // "Re-verify last seal" always re-checks the most recent real testimony.
-        _lastSnapshot = snap;
-
-        SignatureLine = $"Sealed. Signature: {Truncate(snap.Signature, 44)}";
-        // Show the PUBLIC identity only — anyone can verify with it, and it discloses nothing secret.
-        // The private key never reaches the view (it stays inside WitnessKeyStore / the secret store).
-        IdentityLine = $"Signing identity (public): {snap.PublicKey} · key {snap.KeyId}";
-
-        // D105: derive the redirection drift from the SAME comparison, single-sourced through the
-        // shared Syxx.Kit WitnessTestifyPlanner — exactly the step macOS (AppModel.swift) and Windows
-        // (AppViewModel.cs) run off the planner's Outcome. Signing stays behind the injected seam above
-        // (so the offline sign-throws test still fires); only the drift step, the block D093 silently
-        // dropped, is routed through the planner here. On this Linux client the drift is only STORED for
-        // now (no Conclusions surface consumes it yet), but it EXISTS and is populated identically to
-        // the other two twins instead of being absent.
-        Drift = WitnessTestifyPlanner.DriftIfRedirected(Domain.Trim(), local, comparison);
-
-        // Verify the seal we just made — the full forensic tri-state, through the SAME switch the
-        // paste-JSON external verify uses.
-        // C211: the state must reflect the verification outcome — a seal that fails its own
-        // post-sign verification must never be reported as Signed.
-        var verifyResult = WitnessSigner.VerifySnapshotDetailed(snap);
-        ApplyVerification(verifyResult);
-
-        TestimonyState = verifyResult == SnapshotVerification.Valid
-            ? WitnessTestimonyState.Signed
-            : WitnessTestimonyState.Failed;
-        terminalStateReached = true;
 
         } // end try
         // L2-033: if an unexpected exception escaped the inner catch branches, force Failed

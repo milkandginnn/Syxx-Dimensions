@@ -29,57 +29,70 @@ namespace Syxx.Tests
 
         // MARK: classifyPeerConsensus
 
-        [Fact] public void PeerConsensus_Identical_IsMatch()
+        [Fact]
+        public void PeerConsensus_Identical_IsMatch()
             => Assert.Equal(CrossVantageOutcome.Match,
                 CrossVantageConsensus.ClassifyPeerConsensus(new List<HashSet<string>> { Set(PoolB), Set(PoolB) }));
 
-        [Fact] public void PeerConsensus_OwnerSameNetworkSplit_IsInconclusiveNotMismatch()
+        [Fact]
+        public void PeerConsensus_OwnerSameNetworkSplit_IsInconclusiveNotMismatch()
             => Assert.Equal(CrossVantageOutcome.Inconclusive,
                 CrossVantageConsensus.ClassifyPeerConsensus(new List<HashSet<string>> { Set(PoolA), Set(PoolB) }));
 
-        [Fact] public void PeerConsensus_P0c_DifferentMultiAddressSharingFirst_IsNotMatch()
+        [Fact]
+        public void PeerConsensus_P0c_DifferentMultiAddressSharingFirst_IsNotMatch()
         {
             var got = CrossVantageConsensus.ClassifyPeerConsensus(
                 new List<HashSet<string>> { Set(PoolA, PoolB), Set(PoolA, "9.9.9.9") });
             Assert.NotEqual(CrossVantageOutcome.Match, got);   // records.first would collapse to a false clean
         }
 
-        [Fact] public void PeerConsensus_BlockingBesideRoutable_IsMismatch()
+        [Fact]
+        public void PeerConsensus_BlockingBesideRoutable_IsMismatch()
             => Assert.Equal(CrossVantageOutcome.Mismatch,
                 CrossVantageConsensus.ClassifyPeerConsensus(new List<HashSet<string>> { Set(Blocked), Set(PoolB) }));
 
-        [Fact] public void PeerConsensus_OneUsable_IsInsufficient()
+        [Fact]
+        public void PeerConsensus_OneUsable_IsInsufficient()
             => Assert.Equal(CrossVantageOutcome.Insufficient,
                 CrossVantageConsensus.ClassifyPeerConsensus(new List<HashSet<string>> { Set(PoolB), Set() }));
 
         // MARK: classifyDivergence / strength
 
-        [Fact] public void Divergence_NoReference_IsInconclusive()
+        [Fact]
+        public void Divergence_NoReference_IsInconclusive()
             => Assert.Equal(CrossVantageOutcome.Inconclusive,
                 CrossVantageConsensus.ClassifyDivergence(Set(Unrelated), Set()));
 
-        [Fact] public void Divergence_SameNetworkAsReference_IsInconclusive()
+        [Fact]
+        public void Divergence_SameNetworkAsReference_IsInconclusive()
             => Assert.Equal(CrossVantageOutcome.Inconclusive,
                 CrossVantageConsensus.ClassifyDivergence(Set(PoolA), Set(PoolB)));
 
-        [Fact] public void Divergence_DifferentNetworkFromReference_IsMismatch()
+        [Fact]
+        public void Divergence_DifferentNetworkFromReference_IsMismatch()
             => Assert.Equal(CrossVantageOutcome.Mismatch,
                 CrossVantageConsensus.ClassifyDivergence(Set(Unrelated), Set(PoolB)));
 
-        [Fact] public void Strong_SameSlash16DifferentSlash24_IsWeak()
+        [Fact]
+        public void Strong_SameSlash16DifferentSlash24_IsWeak()
             => Assert.False(CrossVantageConsensus.IsStrongDisagreement(Set(PoolFar), Set(PoolB)));
 
-        [Fact] public void Strong_MixedFamily_IsNotStrong()
+        [Fact]
+        public void Strong_MixedFamily_IsNotStrong()
             => Assert.False(CrossVantageConsensus.IsStrongDisagreement(Set("2606:50c0:8000::153"), Set(PoolB)));
 
-        [Fact] public void SharesNetwork_SameSlash16_True()
+        [Fact]
+        public void SharesNetwork_SameSlash16_True()
             => Assert.True(CrossVantageConsensus.SharesResponsibleNetwork(PoolA, PoolFar));
-        [Fact] public void SharesNetwork_DifferentSlash16_False()
+        [Fact]
+        public void SharesNetwork_DifferentSlash16_False()
             => Assert.False(CrossVantageConsensus.SharesResponsibleNetwork(PoolA, Unrelated));
 
         // MARK: dohCorroboratedPool (UDP never counted; failures never counted)
 
-        [Fact] public void DohPool_TwoEndpointsAgree_Included()
+        [Fact]
+        public void DohPool_TwoEndpointsAgree_Included()
         {
             var doh = new Dictionary<string, ResolverQueryOutcome> {
                 { "Cloudflare", Out(new[]{ PoolB }) }, { "Google", Out(new[]{ PoolB }) }, { "Quad9", Out(new[]{ PoolA }) }
@@ -89,7 +102,8 @@ namespace Syxx.Tests
             Assert.DoesNotContain(PoolA, pool);
         }
 
-        [Fact] public void DohPool_FailedEndpoints_NotCounted()
+        [Fact]
+        public void DohPool_FailedEndpoints_NotCounted()
         {
             var doh = new Dictionary<string, ResolverQueryOutcome> {
                 { "Cloudflare", Out(new[]{ PoolB }, DNSResponseStatus.Timeout) },
@@ -100,7 +114,8 @@ namespace Syxx.Tests
 
         // MARK: Mirror Evaluate B281 behaviour
 
-        [Fact] public void Evaluate_DisjointSameNetworkAsDoHConsensus_IsInconclusiveNotRedirection()
+        [Fact]
+        public void Evaluate_DisjointSameNetworkAsDoHConsensus_IsInconclusiveNotRedirection()
         {
             var local = Out(new[] { PoolA });
             var publics = new Dictionary<string, ResolverQueryOutcome> {
@@ -114,7 +129,8 @@ namespace Syxx.Tests
             Assert.True(r.Inconclusive);
         }
 
-        [Fact] public void Evaluate_DisjointDifferentNetworkFromDoHConsensus_IsRedirection()
+        [Fact]
+        public void Evaluate_DisjointDifferentNetworkFromDoHConsensus_IsRedirection()
         {
             var local = Out(new[] { Unrelated });
             var publics = new Dictionary<string, ResolverQueryOutcome> {

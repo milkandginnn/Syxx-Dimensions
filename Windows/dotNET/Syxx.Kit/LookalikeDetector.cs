@@ -29,10 +29,34 @@ public static class LookalikeDetector
     // matches the macOS table character-for-character.
     private static readonly Dictionary<char, char> Confusables = new()
     {
-        ['а'] = 'a', ['е'] = 'e', ['о'] = 'o', ['р'] = 'p', ['с'] = 'c', ['х'] = 'x', ['у'] = 'y', ['ѕ'] = 's',
-        ['і'] = 'i', ['ј'] = 'j', ['к'] = 'k', ['н'] = 'h', ['м'] = 'm', ['т'] = 't', ['в'] = 'b', ['г'] = 'r',
-        ['ο'] = 'o', ['α'] = 'a', ['ρ'] = 'p', ['ε'] = 'e', ['ν'] = 'v', ['τ'] = 't', ['ι'] = 'i', ['κ'] = 'k',
-        ['0'] = 'o', ['1'] = 'l', ['5'] = 's', ['3'] = 'e',
+        ['а'] = 'a',
+        ['е'] = 'e',
+        ['о'] = 'o',
+        ['р'] = 'p',
+        ['с'] = 'c',
+        ['х'] = 'x',
+        ['у'] = 'y',
+        ['ѕ'] = 's',
+        ['і'] = 'i',
+        ['ј'] = 'j',
+        ['к'] = 'k',
+        ['н'] = 'h',
+        ['м'] = 'm',
+        ['т'] = 't',
+        ['в'] = 'b',
+        ['г'] = 'r',
+        ['ο'] = 'o',
+        ['α'] = 'a',
+        ['ρ'] = 'p',
+        ['ε'] = 'e',
+        ['ν'] = 'v',
+        ['τ'] = 't',
+        ['ι'] = 'i',
+        ['κ'] = 'k',
+        ['0'] = 'o',
+        ['1'] = 'l',
+        ['5'] = 's',
+        ['3'] = 'e',
     };
 
     /// The confusable-folded skeleton: every char mapped to its Latin lookalike, lowercased.

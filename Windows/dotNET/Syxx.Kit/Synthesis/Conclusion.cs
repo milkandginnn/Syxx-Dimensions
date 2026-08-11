@@ -244,15 +244,15 @@ public sealed class SectionJsonConverter : JsonConverter<Section>
 {
     public override Section Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "prophet" => Section.Prophet,
-        "mirror" => Section.Mirror,
-        "portal" => Section.Portal,
-        "glutton" => Section.Glutton,
-        "cage" => Section.Cage,
-        "witness" => Section.Witness,
-        var s => throw new JsonException($"unknown Section '{s}'"),
-    };
+        {
+            "prophet" => Section.Prophet,
+            "mirror" => Section.Mirror,
+            "portal" => Section.Portal,
+            "glutton" => Section.Glutton,
+            "cage" => Section.Cage,
+            "witness" => Section.Witness,
+            var s => throw new JsonException($"unknown Section '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, Section value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {
@@ -281,15 +281,15 @@ public sealed class SectionStatusJsonConverter : JsonConverter<SectionStatus>
 {
     public override SectionStatus Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "untested" => SectionStatus.Untested,
-        "invalidated" => SectionStatus.Invalidated,
-        "inconclusive" => SectionStatus.Inconclusive,
-        "degraded" => SectionStatus.Degraded,
-        "positive" => SectionStatus.Positive,
-        "negative" => SectionStatus.Negative,
-        var s => throw new JsonException($"unknown SectionStatus '{s}'"),
-    };
+        {
+            "untested" => SectionStatus.Untested,
+            "invalidated" => SectionStatus.Invalidated,
+            "inconclusive" => SectionStatus.Inconclusive,
+            "degraded" => SectionStatus.Degraded,
+            "positive" => SectionStatus.Positive,
+            "negative" => SectionStatus.Negative,
+            var s => throw new JsonException($"unknown SectionStatus '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, SectionStatus value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {
@@ -330,15 +330,15 @@ public sealed class SeverityJsonConverter : JsonConverter<Severity>
 {
     public override Severity Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "clean" => Severity.Clean,
-        "info" => Severity.Info,
-        "warning" => Severity.Warning,
-        "high" => Severity.High,
-        "critical" => Severity.Critical,
-        "unknown" => Severity.Unknown,
-        var s => throw new JsonException($"unknown Severity '{s}'"),
-    };
+        {
+            "clean" => Severity.Clean,
+            "info" => Severity.Info,
+            "warning" => Severity.Warning,
+            "high" => Severity.High,
+            "critical" => Severity.Critical,
+            "unknown" => Severity.Unknown,
+            var s => throw new JsonException($"unknown Severity '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, Severity value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {
@@ -368,10 +368,10 @@ public sealed class AdvisoryIdJsonConverter : JsonConverter<AdvisoryId>
 {
     public override AdvisoryId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "openResolverExposure" => AdvisoryId.OpenResolverExposure,
-        var s => throw new JsonException($"unknown AdvisoryId '{s}'"),
-    };
+        {
+            "openResolverExposure" => AdvisoryId.OpenResolverExposure,
+            var s => throw new JsonException($"unknown AdvisoryId '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, AdvisoryId value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {

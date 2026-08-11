@@ -28,10 +28,10 @@ public partial class ProphetViewModel : ObservableObject
     // ProphetBlue is the module highlight (#00b4ff, owner directive 2026-08-02) used by the
     // agreeing consensus card and the "rightly set" DNSSEC card, in parity with macOS.
     private static readonly IBrush ProphetBlueBrush = new SolidColorBrush(Color.Parse("#00b4ff"));
-    private static readonly IBrush AmberBrush       = new SolidColorBrush(Color.Parse("#F2B33D"));
-    private static readonly IBrush RedBrush         = new SolidColorBrush(Color.Parse("#FF5C7A"));
-    private static readonly IBrush TextSecondary    = new SolidColorBrush(Color.Parse("#c9c1e6"));
-    private static readonly IBrush FallbackBrush    = Brushes.Gray;
+    private static readonly IBrush AmberBrush = new SolidColorBrush(Color.Parse("#F2B33D"));
+    private static readonly IBrush RedBrush = new SolidColorBrush(Color.Parse("#FF5C7A"));
+    private static readonly IBrush TextSecondary = new SolidColorBrush(Color.Parse("#c9c1e6"));
+    private static readonly IBrush FallbackBrush = Brushes.Gray;
 
     /// <summary>
     /// Map a Kit <c>ColorKey</c> to the Avalonia brush for this platform. The Kit stays
@@ -41,11 +41,11 @@ public partial class ProphetViewModel : ObservableObject
     /// </summary>
     private static IBrush BrushFor(string colorKey) => colorKey switch
     {
-        "IoProphetBlueBrush"   => ProphetBlueBrush,
-        "IoWarningAmberBrush"  => AmberBrush,
-        "IoCriticalRedBrush"   => RedBrush,
+        "IoProphetBlueBrush" => ProphetBlueBrush,
+        "IoWarningAmberBrush" => AmberBrush,
+        "IoCriticalRedBrush" => RedBrush,
         "IoTextSecondaryBrush" => TextSecondary,
-        _                      => FallbackBrush,
+        _ => FallbackBrush,
     };
 
     // --- Observable state ---
@@ -104,24 +104,24 @@ public partial class ProphetViewModel : ObservableObject
         ProphetConsensusResult?.ResolverResponses ?? Array.Empty<ProphetResult.ResolverResponse>();
 
     // Consensus presentation (computed from ProphetConsensusResult + Domain via the shared Kit)
-    public string ConsensusHeadlinePrimary   => Consensus().HeadlinePrimary;
+    public string ConsensusHeadlinePrimary => Consensus().HeadlinePrimary;
     public string ConsensusHeadlineSecondary => Consensus().HeadlineSecondary ?? "";
     /// <summary>True only for the lore agree/disagree states, which carry a second headline run.</summary>
     public bool HasConsensusHeadlineSecondary => Consensus().HeadlineSecondary is not null;
-    public string ConsensusDetail      => Consensus().Detail;
-    public string ConsensusFraction    => Consensus().AgreementFraction;
-    public IBrush ConsensusBrush       => BrushFor(Consensus().ColorKey);
+    public string ConsensusDetail => Consensus().Detail;
+    public string ConsensusFraction => Consensus().AgreementFraction;
+    public IBrush ConsensusBrush => BrushFor(Consensus().ColorKey);
     public IBrush ConsensusCardBackground => Tint(ConsensusBrush, 0.05);
-    public IBrush ConsensusBorderBrush    => Tint(ConsensusBrush, 0.24);
+    public IBrush ConsensusBorderBrush => Tint(ConsensusBrush, 0.24);
 
     // DNSSEC presentation (computed from DnssecStatus + Domain via the shared Kit)
-    public string DnssecTitle       => Dnssec().Title;
-    public string DnssecDetail      => Dnssec().Detail;
+    public string DnssecTitle => Dnssec().Title;
+    public string DnssecDetail => Dnssec().Detail;
     public string DnssecDescription => DnssecStatus.HasValue ? DNSSECVerifier.Describe(DnssecStatus.Value) : "";
     public string DnssecStatusLabel => Dnssec().StatusLabel;
-    public IBrush DnssecBrush        => BrushFor(Dnssec().ColorKey);
+    public IBrush DnssecBrush => BrushFor(Dnssec().ColorKey);
     public IBrush DnssecCardBackground => Tint(DnssecBrush, 0.05);
-    public IBrush DnssecBorderBrush    => Tint(DnssecBrush, 0.24);
+    public IBrush DnssecBorderBrush => Tint(DnssecBrush, 0.24);
 
     // --- Command ---
 

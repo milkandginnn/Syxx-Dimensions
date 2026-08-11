@@ -1011,13 +1011,13 @@ public sealed class MatrixDeterminativeEngine
 
         var (r, observedSupportWeight, alignedSupport, contradictionMass) =
             CalculateCoverageAndFit(d, supportRules, indicatorById, sectionById);
-        
+
         contradictionMass += CalculateExclusionContradiction(excludeRules, indicatorById, sectionById);
-        
+
         ApplyThresholds(r, observedSupportWeight, alignedSupport, contradictionMass);
-        
+
         CheckHardExclusion(d, r, indicatorById, sectionById);
-        
+
         CheckRequiredSectionGates(d, r, sectionById);
 
         return r;
@@ -1099,7 +1099,7 @@ public sealed class MatrixDeterminativeEngine
                                                     IReadOnlyDictionary<SectionId, SectionResult> sectionById)
     {
         var contradictionMass = 0.0;
-        
+
         // Exclude-polarity rules: firing observations add strong contradiction.
         foreach (var rule in excludeRules)
         {

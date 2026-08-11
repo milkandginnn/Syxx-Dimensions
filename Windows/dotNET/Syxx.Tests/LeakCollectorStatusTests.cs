@@ -373,10 +373,10 @@ namespace Syxx.Tests
         public async Task LiveNon200Statuses_DoNotCollapseIntoOneState()
         {
             var rateLimited = await RunAgainstLocalCollector(429);
-            var serverDown  = await RunAgainstLocalCollector(503);
-            var teapot      = await RunAgainstLocalCollector(418);
-            var paywall     = await RunAgainstLocalCollector(402);
-            var forbidden   = await RunAgainstLocalCollector(403);
+            var serverDown = await RunAgainstLocalCollector(503);
+            var teapot = await RunAgainstLocalCollector(418);
+            var paywall = await RunAgainstLocalCollector(402);
+            var forbidden = await RunAgainstLocalCollector(403);
 
             Assert.Equal(new CollectorFailure(CollectorFailureKind.RateLimited, 429), rateLimited.CollectorFailure);
             Assert.Equal(new CollectorFailure(CollectorFailureKind.ServerError, 503), serverDown.CollectorFailure);

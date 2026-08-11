@@ -34,4 +34,5 @@ class TriState(StrEnum):
     UNKNOWN = "unknown"
 
     def __str__(self) -> str:
+        """Render as the bare wire-format string (e.g. ``"success"``)."""
         return self.value

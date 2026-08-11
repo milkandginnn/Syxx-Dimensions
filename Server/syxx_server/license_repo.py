@@ -122,6 +122,7 @@ def _migrate_license_hmac_v1_to_v2(conn):
 
 
 def license_lookup(key):
+    """Look up a license row by key, verifying its HMAC integrity (D053/A184)."""
     from .db import _return_conn, connect
 
     conn = connect()
@@ -157,6 +158,7 @@ def license_lookup(key):
 
 
 def license_upsert(key, plan="pro", status="active", expires_at=None, note=None):
+    """Insert or update a license row with a v2 HMAC over all mutable fields (A184)."""
     from .db import _return_conn, _write_conn
 
     # A184: compute v2 HMAC over all mutable row fields using the purpose-bound

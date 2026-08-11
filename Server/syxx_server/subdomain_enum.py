@@ -214,6 +214,7 @@ def _resolve_subdomains(names, deadline):
     resolvers = config.PUBLIC_RESOLVERS or ["1.1.1.1"]
 
     def resolve_one(name):
+        """Resolve a single subdomain name, respecting the wall-clock deadline."""
         if deadline is not None and time.monotonic() > deadline:
             return name, None
         ips = _resolve_one_sequential(name, resolvers)

@@ -35,6 +35,7 @@ class _AssetExtractor(html.parser.HTMLParser):
     attributes that the old regex `[^>]*>` could not."""
 
     def __init__(self, base_url):
+        """Initialise the extractor with a *base_url* for resolving relative asset paths."""
         super().__init__(convert_charrefs=False)
         self._base = base_url
         self.scripts = []
@@ -46,6 +47,7 @@ class _AssetExtractor(html.parser.HTMLParser):
         self._script_body = []
 
     def handle_starttag(self, tag, attrs):
+        """Collect script src, stylesheet href, and iframe src from opening tags."""
         # A308: markupbase.ParserBase already lowercases attribute names before
         # passing them here. The explicit .lower() is a defensive measure against
         # parser implementation differences or future HTMLParser changes — it is
@@ -67,6 +69,7 @@ class _AssetExtractor(html.parser.HTMLParser):
                 self.iframes.append(_resolve(self._base, a["src"]))
 
     def handle_endtag(self, tag):
+        """Finalise inline script body collection when a ``</script>`` is seen."""
         if tag == "script" and self._in_script:
             self._in_script = False
             if not self._script_src:
@@ -85,14 +88,17 @@ class _AssetExtractor(html.parser.HTMLParser):
             self._script_body = []
 
     def handle_data(self, data):
+        """Accumulate text data inside ``<script>`` elements for inline body hashing."""
         if self._in_script:
             self._script_body.append(data)
 
     def handle_comment(self, data):
+        """Deliberately no-op — A094 preserves comment bytes in the inline hash."""
         pass  # A094: comments inside script bodies are preserved in the hash
 
 
 def _resolve(base, src):
+    """Resolve *src* against *base*; return *src* verbatim on failure."""
     try:
         return urllib.parse.urljoin(base, src)
     except ValueError:
@@ -176,6 +182,7 @@ def build_baseline(target_url, deadline=None):
     _dict_lock = threading.Lock()
 
     def _fetch_one_script(script_url):
+        """Fetch a single script and store its SHA-256 hash, respecting the deadline."""
         # SM-016: check deadline before each script fetch to prevent unbounded runtime.
         if deadline is not None and time.monotonic() > deadline:
             with _dict_lock:
@@ -483,11 +490,13 @@ class _ManifestParser(html.parser.HTMLParser):
     (each asset's body is fetched and hashed raw)."""
 
     def __init__(self, base_url):
+        """Initialise the classifier with a *base_url* for resolving relative asset paths."""
         super().__init__(convert_charrefs=False)
         self._base = base_url
         self.ordered = []  # [(absolute_url, class), ...] in document order
 
     def handle_starttag(self, tag, attrs):
+        """Classify script and stylesheet assets in document order."""
         a = {k.lower(): (v or "") for k, v in attrs}
         if tag == "script":
             src = a.get("src")

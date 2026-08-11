@@ -27,6 +27,12 @@ _PASSIVE_PER_DOMAIN_MAX = _i("SYXX_PASSIVE_PER_DOMAIN_MAX", 100)
 
 
 def ingest(domain, rtype, value, source, resolver=None):
+    """Record a DNS observation into the passive-DNS index.
+
+    Enforces the per-domain cardinality cap (A095/A079) — new distinct values
+    beyond the cap are silently dropped while existing rows still get their
+    hit counter bumped.
+    """
     if not domain or not value:
         return
     # A095/A079: refuse to ingest if this domain already has too many distinct records.
@@ -43,6 +49,7 @@ def ingest(domain, rtype, value, source, resolver=None):
 
 
 def query(domain, limit=200):
+    """Return passive-DNS records for *domain*, stripping resolver PII (A023)."""
     records = db.passive_query(domain, limit)
     # A023: the /api/passive-dns endpoint is cross-readable (no per-record ownership
     # check), so never return the observing resolver IP. For a leak observation it is
@@ -56,6 +63,7 @@ def query(domain, limit=200):
 
 
 def total_records():
+    """Return the total number of passive-DNS records across all domains."""
     return db.passive_count()
 
 

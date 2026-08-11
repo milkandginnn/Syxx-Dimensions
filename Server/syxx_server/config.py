@@ -71,6 +71,7 @@ def _b(name, default=False):
 
 
 def _i(name, default):
+    """Read an integer config from *name*, logging and returning *default* on parse failure (A154)."""
     # A154: log the coercion so the operator is told their value was discarded.
     # A silent fallback is the defect; the fallback itself is defensible. Without
     # logging, `SYXX_RATE_CAPACITY=thirty` silently becomes 30 and the operator
@@ -88,11 +89,13 @@ def _i(name, default):
 
 
 def _s(name, default):
+    """Read a string config from *name*, returning *default* when absent or empty."""
     v = os.environ.get(name)
     return v if v is not None and v != "" else default
 
 
 def _list(name, default):
+    """Read a comma-separated list config, deduplicating while preserving order."""
     v = os.environ.get(name)
     if not v:
         return list(default)

@@ -26,6 +26,7 @@ _CLEAN_VANTAGE_POOL = concurrent.futures.ThreadPoolExecutor(
 
 
 def _host(u: str) -> str:
+    """Extract the lowercased hostname from a URL, or empty string on failure."""
     try:
         return (urllib.parse.urlsplit(u).hostname or "").lower()
     except ValueError:
@@ -166,6 +167,7 @@ def _clean_vantage_answers(domain, qtype, qtype_str):
         return set()
 
     def query_one(server):
+        """Query a single clean vantage and return its answer set as a frozenset."""
         clean = resolver.query(domain, qtype, server)
         return frozenset(str(r["value"]).lower() for r in clean["records"] if r["type"] == qtype_str)
 

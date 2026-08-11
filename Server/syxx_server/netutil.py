@@ -120,11 +120,13 @@ class PinnedHTTPSConnection(http.client.HTTPSConnection):
     validation."""
 
     def __init__(self, pin_ip, port, server_hostname, timeout, context):
+        """Store the pinned IP and SNI hostname for later connect()."""
         super().__init__(pin_ip, port, timeout=timeout, context=context)
         self._pin_ip = pin_ip
         self._server_hostname = server_hostname
 
     def connect(self):
+        """Open a TLS connection to the pinned IP, bypassing any DNS re-resolution."""
         # pin_ip is numeric -> create_connection does not query DNS (no rebind).
         sock = socket.create_connection((self._pin_ip, self.port), self.timeout, self.source_address)  # type: ignore[unresolved-attribute]
         self.sock = self._context.wrap_socket(sock, server_hostname=self._server_hostname)  # type: ignore[unresolved-attribute]

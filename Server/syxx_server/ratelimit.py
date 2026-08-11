@@ -52,6 +52,13 @@ def _prune(now_ms):
 
 
 def allow(key, capacity=None, refill_millis=None):
+    """Consume one token from the bucket keyed by *key*; return True if allowed.
+
+    Uses a token-bucket algorithm with millitoken precision (A054).  During the
+    startup grace period (E044) the default capacity is halved to compensate for
+    in-memory state reset.  Explicit *capacity* / *refill_millis* overrides bypass
+    the grace adjustment.
+    """
     global _last_prune_ms
     _using_default_capacity = capacity is None
     capacity = config.RATE_CAPACITY if capacity is None else capacity

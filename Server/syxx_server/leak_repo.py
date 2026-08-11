@@ -44,6 +44,7 @@ def leak_token_create(token, subject, zone, ttl, origin="ip"):
 
 
 def leak_token_get(token, now=None):
+    """Look up a leak token by its cleartext value; return None if absent or expired."""
     from .db import _return_conn, connect
 
     now = int(time.time()) if now is None else now
@@ -119,6 +120,7 @@ def leak_token_consume(token):
 
 
 def leak_observation_add(token, resolver_ip, qtype):
+    """Record a leak observation, deduplicating on (token, resolver_ip, qtype) (A034)."""
     from .db import _return_conn, _write_conn
 
     # E024: hash the token before storing observations
@@ -140,6 +142,7 @@ def leak_observation_add(token, resolver_ip, qtype):
 
 
 def leak_observations(token):
+    """Return all leak observations for *token*, ordered chronologically."""
     from .db import _return_conn, connect
 
     # E024: hash the token for lookup
@@ -161,6 +164,7 @@ def leak_observations(token):
 
 
 def passive_record(domain, rtype, value, source, resolver=None):
+    """Upsert a passive-DNS record, normalising the domain key (A080)."""
     from .db import _return_conn, _write_conn
 
     now = int(time.time())
@@ -215,6 +219,7 @@ def passive_query(domain, limit=200, rtype=None):
 
 
 def passive_count():
+    """Return the total number of rows in the passive-DNS table."""
     from .db import _return_conn, connect
 
     conn = connect()

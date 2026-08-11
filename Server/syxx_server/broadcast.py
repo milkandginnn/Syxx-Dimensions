@@ -39,6 +39,12 @@ def _safe_url(raw):
 
 
 def current(now=None):
+    """Return the active broadcast message, or None if none is currently live.
+
+    Reads ``config.BROADCAST_FILE``, validates required fields, and applies
+    time-window / severity filtering.  *now* overrides the current epoch for
+    testing.
+    """
     now = now if now is not None else int(time.time())
     try:
         with open(config.BROADCAST_FILE, encoding="utf-8") as f:

@@ -207,6 +207,37 @@ def _rdap_query(domain, timeout=10):
     return None
 
 
+def _extract_registrar_from_entity(entity):
+    """Extract registrar name and IANA ID from an RDAP entity dict.
+
+    Returns (name_or_None, iana_id_or_None).
+    """
+    name = None
+    iana_id = None
+    vcard = entity.get("vcardArray", [None, []])
+    if len(vcard) == 2:
+        for item in vcard[1]:
+            if len(item) >= 4 and item[0] == "fn":
+                name = item[3]
+                break
+    for pid in entity.get("publicIds", []):
+        if pid.get("type") == "IANA Registrar ID":
+            iana_id = pid.get("identifier")
+    return name, iana_id
+
+
+def _first_whois_field(lines, patterns):
+    """Return the first value matching any of *patterns* at line start, or None."""
+    for line in lines:
+        line_stripped = line.strip()
+        for pattern in patterns:
+            if line_stripped.startswith(pattern):
+                value = line_stripped[len(pattern):].strip()
+                if value:
+                    return value
+    return None
+
+
 def _parse_rdap(data):
     """Extract registrar, dates, nameservers, status from RDAP JSON response."""
     result = {"source": "rdap"}
@@ -239,20 +270,14 @@ def _parse_rdap(data):
 
     # Registrar (from entities)
     for entity in data.get("entities", []):
-        roles = entity.get("roles", [])
-        if "registrar" in roles:
-            # Look for the fn (formatted name) vcard
-            vcard = entity.get("vcardArray", [None, []])
-            if len(vcard) == 2:
-                for item in vcard[1]:
-                    if len(item) >= 4 and item[0] == "fn":
-                        result["registrar"] = item[3]
-                        break
-            # Also check the publicIds for registrar IANA ID
-            for pid in entity.get("publicIds", []):
-                if pid.get("type") == "IANA Registrar ID":
-                    result["registrarId"] = pid.get("identifier")
-            break
+        if "registrar" not in entity.get("roles", []):
+            continue
+        reg_name, reg_id = _extract_registrar_from_entity(entity)
+        if reg_name:
+            result["registrar"] = reg_name
+        if reg_id:
+            result["registrarId"] = reg_id
+        break
 
     # Raw RDAP JSON for debugging
     result["raw"] = json.dumps(data, indent=2)[:4000]
@@ -359,15 +384,13 @@ def _parse_whois_text(raw, domain):
         "updated": ["Updated Date:", "Last Modified:", "updated:"],
     }
 
+    raw_lines = raw.split("\n")
     for field, patterns in field_map.items():
-        for line in raw.split("\n"):
-            line_stripped = line.strip()
-            for pattern in patterns:
-                if line_stripped.startswith(pattern):
-                    value = line_stripped[len(pattern) :].strip()
-                    if value and field not in result:
-                        result[field] = value[:10] if field != "registrar" else value
-                    break
+        if field in result:
+            continue
+        value = _first_whois_field(raw_lines, patterns)
+        if value:
+            result[field] = value[:10] if field != "registrar" else value
 
     # Nameservers
     ns_list = []

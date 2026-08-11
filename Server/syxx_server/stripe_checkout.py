@@ -113,6 +113,7 @@ def _extract_spki_sha256_b64(der_cert: bytes) -> str:
 
 
 class StripeError(Exception):
+    """Raised on Stripe API communication failures or unexpected responses."""
     pass
 
 
@@ -122,6 +123,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     SYXX_STRIPE_PIN_SPKI is unset (_verify_spki_pin returns immediately)."""
 
     def connect(self):
+        """Establish the TLS connection and verify Stripe's SPKI pin (E226)."""
         super().connect()
         _verify_spki_pin(self.sock, self.host)
 
@@ -131,6 +133,7 @@ class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
     runs on every Stripe API request."""
 
     def https_open(self, req):
+        """Open an HTTPS request using the pinned connection class."""
         return self.do_open(
             _PinnedHTTPSConnection,
             req,
@@ -144,6 +147,7 @@ _STRIPE_OPENER = urllib.request.build_opener(_PinnedHTTPSHandler(context=_STRIPE
 
 
 def _request(path, method, params=None, idempotency_key=None):
+    """Issue a signed HTTP request to the Stripe API with Bearer auth and SPKI pinning."""
     if not config.STRIPE_SECRET_KEY:
         raise StripeError("STRIPE_SECRET_KEY not configured")
     # A046: for GET requests, params MUST go in the query string, not the body —

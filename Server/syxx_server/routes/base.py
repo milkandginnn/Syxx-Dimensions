@@ -447,10 +447,12 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, *args, max_workers=None, **kwargs):
+        """Initialise with a bounded semaphore capping concurrent worker threads."""
         super().__init__(*args, **kwargs)
         self._worker_sema = threading.BoundedSemaphore(max_workers or _MAX_WORKERS)
 
     def process_request(self, request, client_address):
+        """Dispatch a request or reject it with 503 when at capacity."""
         if not self._worker_sema.acquire(blocking=False):
             # At capacity: refuse fast rather than queue unbounded work.
             try:
@@ -467,6 +469,7 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
             raise
 
     def process_request_thread(self, request, client_address):
+        """Process a request in a worker thread, always releasing the semaphore on exit."""
         try:
             super().process_request_thread(request, client_address)
         finally:
@@ -474,14 +477,17 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
+    """HTTP request handler with CORS, security headers, rate limiting, and deadline enforcement."""
     protocol_version = "HTTP/1.1"
     server_version = config.SERVER_NAME
 
     # Route the default per-request logging through our structured logger.
     def log_message(self, format, *args):
+        """Suppress default stderr logging — structured JSON logs via logging_util."""
         return
 
     def setup(self):
+        """Set up the connection with per-request deadline timer (A137)."""
         super().setup()
         self._responded = False  # A134: track whether a response has been sent
         self._deadline_exceeded = False  # A137: flag for routes to poll
@@ -497,6 +503,7 @@ class Handler(BaseHTTPRequestHandler):
         self._deadline_timer.start()
 
     def _abort_on_deadline(self):
+        """Force-shutdown the connection when the absolute request deadline expires (A137)."""
         # A137: set flag so routes can poll and return early, and add observability.
         self._deadline_exceeded = True
         logging_util.incr("http_deadline_aborted")
@@ -506,6 +513,7 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     def finish(self):
+        """Cancel the deadline timer and clean up the connection."""
         timer = getattr(self, "_deadline_timer", None)
         if timer is not None:
             timer.cancel()
@@ -544,6 +552,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # --- response helpers --------------------------------------------------
     def _cors(self):
+        """Emit CORS headers when the request Origin is on the allowlist (S1/A140/A149)."""
         # S1: echo the request Origin ONLY when it is on the allowlist.
         # Never send "*" -- that would let any site read authenticated responses.
         origin = self.headers.get("Origin", "")
@@ -573,6 +582,7 @@ class Handler(BaseHTTPRequestHandler):
         return nonce
 
     def _security_headers(self, content_type="application/json"):
+        """Emit security headers: nosniff, referrer-policy, XFO, CSP with per-request nonce (E212)."""
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         # S3/XFO: prevent clickjacking by denying all framing.
@@ -622,6 +632,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 
     def _send(self, status, body, content_type="application/json", extra_headers=None):
+        """Send an HTTP response with ETag support (A052), guarding against double-response (A134)."""
         # A134: refuse to send a second response on the same connection to prevent
         # response-queue desync on keep-alive connections.
         if self._responded:
@@ -679,17 +690,14 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self._security_headers(content_type)
         if extra_keys and hasattr(self, "_headers_buffer"):
-            # Remove headers that extra_headers will replace
-            new_buf = self._headers_buffer[:buf_start]
-            for line in self._headers_buffer[buf_start:]:
-                # Each line is b"Key: Value\r\n"
-                colon_pos = line.find(b":")
-                if colon_pos > 0:
-                    key = line[:colon_pos].decode("latin-1").lower()
-                    if key in extra_keys:
-                        continue
-                new_buf.append(line)
-            self._headers_buffer = new_buf
+            # Remove headers that extra_headers will replace.
+            # Each line is b"Key: Value\r\n" — extract the key and skip if overridden.
+            def _line_key(ln):
+                colon = ln.find(b":")
+                return ln[:colon].decode("latin-1").lower() if colon > 0 else ""
+
+            kept = [ln for ln in self._headers_buffer[buf_start:] if _line_key(ln) not in extra_keys]
+            self._headers_buffer = self._headers_buffer[:buf_start] + kept
         if extra_headers:
             for k, v in extra_headers.items():
                 self.send_header(k, v)
@@ -702,6 +710,7 @@ class Handler(BaseHTTPRequestHandler):
     # or stack traces. The guard below enforces this at runtime as a last line
     # of defence in case a future caller accidentally passes unsafe content.
     def _json_error(self, status, message, extra=None):
+        """Send a JSON error response, suppressing unsafe 5xx message content (E032)."""
         # E032: 5xx messages must never leak internal paths or stack traces.
         if status >= 500 and (
             "/" in message
@@ -721,6 +730,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # --- auth --------------------------------------------------------------
     def _entitlement(self, query):
+        """Resolve the caller's entitlement from auth headers and query parameters."""
         return licensing.entitlement_for(self.headers, query)
 
     def _require(self, query, enforce):
@@ -803,11 +813,13 @@ class Handler(BaseHTTPRequestHandler):
         return peer
 
     def _rate_key(self, ent):
+        """Build the rate-limiter bucket key — subject when authenticated, else client IP."""
         if ent:
             return "sub:" + ent.subject
         return "ip:" + self._client_ip()
 
     def _rate_ok(self, ent):
+        """Consume a rate-limit token; send 429 and return False when exhausted."""
         if ratelimit.allow(self._rate_key(ent)):
             logging_util.incr("ratelimit_allowed")
             return True
@@ -816,6 +828,7 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def _body(self):
+        """Read the request body with size and Content-Type guards; return bytes or a sentinel."""
         # A144: reject Transfer-Encoding (chunked decoding not implemented; leaving
         # bytes unread enables request smuggling on keep-alive connections).
         if self.headers.get("Transfer-Encoding"):
@@ -860,6 +873,7 @@ class Handler(BaseHTTPRequestHandler):
         return b"".join(chunks)
 
     def _body_error(self, raw):
+        """Send the appropriate error response for a body sentinel; return True if an error was sent."""
         if raw is _BODY_TOO_LARGE:
             self._json_error(413, "request body too large")
             return True
@@ -869,6 +883,7 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def _require_json(self):
+        """Reject the request with 415 unless Content-Type is application/json."""
         ctype = self.headers.get("Content-Type", "").lower()
         if "application/json" not in ctype:
             self._json_error(415, "Content-Type must be application/json")
@@ -907,6 +922,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # --- HTTP verbs --------------------------------------------------------
     def do_OPTIONS(self):
+        """Respond to CORS preflight with 204 and appropriate headers."""
         self.send_response(204)
         self._cors()
         self._security_headers()
@@ -914,6 +930,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_HEAD(self):
+        """Handle HEAD requests — restricted to static files/assets only (A147)."""
         # A147: HEAD must be safe — it should not execute side effects or expensive
         # operations. The previous implementation delegated to do_GET, which ran every
         # route including /api/checkout (creates a real Stripe session), /api/benchmark
@@ -931,6 +948,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        """Route GET requests with OTel tracing, API versioning, and Sentry integration."""
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
         self._request_path = self.path  # track for metrics
@@ -980,6 +998,7 @@ class Handler(BaseHTTPRequestHandler):
             self._current_otel_span = None
 
     def do_POST(self):
+        """Route POST requests with CSRF checks, rate limiting, and body parsing."""
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
         self._request_path = self.path  # track for metrics
@@ -995,9 +1014,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 # SEC-005: CSRF check on state-changing routes (exclude webhooks)
                 # Webhooks are signed-HMAC verified by their respective handlers
-                if path not in ("/api/webhooks/stripe", "/api/webhooks/keygen"):
-                    if not self._check_csrf():
-                        return
+                _CSRF_EXEMPT = ("/api/webhooks/stripe", "/api/webhooks/keygen")
+                if path not in _CSRF_EXEMPT and not self._check_csrf():
+                    return
                 if path == "/api/auth/activate":
                     return self._route_activate()
                 if path == "/api/trial/anchor":
@@ -1056,6 +1075,7 @@ class Handler(BaseHTTPRequestHandler):
                 span.end()
 
     def do_DELETE(self):
+        """Route DELETE requests with CSRF checks, OTel tracing, and Sentry integration."""
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
         self._request_path = self.path  # track for metrics (parity with GET/POST)
@@ -1071,9 +1091,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 # A037: CSRF check on state-changing DELETE routes (exclude webhooks)
                 # Webhooks are signed-HMAC verified by their respective handlers
-                if path not in ("/api/webhooks/stripe", "/api/webhooks/keygen"):
-                    if not self._check_csrf():
-                        return
+                _CSRF_EXEMPT = ("/api/webhooks/stripe", "/api/webhooks/keygen")
+                if path not in _CSRF_EXEMPT and not self._check_csrf():
+                    return
                 if path.startswith("/api/keys/"):
                     return self._route_revoke_api_key(path)
                 if path.startswith("/api/monitors/"):
@@ -1108,6 +1128,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # --- GET routing -------------------------------------------------------
     def _dispatch_get(self, path, query):
+        """Route a GET request to the appropriate handler based on path and host."""
         # A150: MOTD subdomains serve What's-New ONLY at the root path.
         host = (self.headers.get("Host", "").split(":")[0]).strip().lower()
         if path in ("/", "/index.html", ""):
@@ -1230,12 +1251,14 @@ def _beta_digest_csv(rows):
     import io
 
     def _iso(ts):
+        """Format a Unix timestamp as a human-readable UTC datetime string."""
         try:
             return datetime.datetime.fromtimestamp(int(ts), datetime.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
         except (TypeError, ValueError):
             return ""
 
     def _ip(raw):
+        """Validate and return an IP address string, or empty string if unparseable."""
         # Validate the IP cell: only a real address is emitted, so a spoofed/garbage
         # X-Forwarded-For value cannot smuggle a formula or junk into the digest.
         raw = (raw or "").strip()
@@ -1274,6 +1297,7 @@ def _start_beta_digest_thread():
     interval = max(1, config.BETA_DIGEST_INTERVAL_DAYS) * 86400
 
     def _send_if_due(now):
+        """Send the beta digest if the configured interval has elapsed since the last send."""
         last = db.kv_get("beta_digest_last_sent")
         if last is None:
             db.kv_set("beta_digest_last_sent", str(now))  # seed; first digest one interval later
@@ -1299,6 +1323,7 @@ def _start_beta_digest_thread():
             logging_util.error("beta_digest_failed", count=len(rows))  # left un-stamped → retry next tick
 
     def _loop():
+        """Background loop — check hourly whether a beta digest is due."""
         while True:
             time.sleep(3600)  # check hourly; the interval gate is by timestamp, not sleep length
             try:
@@ -1316,6 +1341,7 @@ def _start_beta_digest_thread():
 # --- serve() entry point ---------------------------------------------------
 
 def serve():
+    """Start the HTTP server, background threads (purge, digest, scheduler), and signal handlers."""
     import signal as _signal
 
     db.init()
@@ -1356,6 +1382,7 @@ def serve():
     # shutdown: the scheduler finishes in-flight work, the HTTP server stops
     # accepting new connections, and serve_forever() returns.
     def _graceful_stop(signum, frame):
+        """Signal handler — stop HTTP server and scheduler on SIGTERM/SIGINT (A313)."""
         sig_name = _signal.Signals(signum).name
         logging_util.info("server_signal_received", signal=sig_name)
         # Stop accepting new HTTP requests; serve_forever() returns.

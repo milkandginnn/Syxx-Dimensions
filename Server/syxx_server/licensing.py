@@ -101,6 +101,7 @@ _secret = None
 
 
 def secret():
+    """Lazy-load the session signing secret (HMAC key for session tokens and attestations)."""
     # SECURITY NOTE (E035): The session signing secret is loaded from db.get_or_create_secret(),
     # which reads/writes the 'session_secret' key in the SQLite kv table as a hex string in
     # plaintext. To encrypt the secret at rest, set SYXX_DB_ENCRYPTION_KEY and implement
@@ -113,16 +114,20 @@ def secret():
 
 
 class Entitlement:
+    """Resolved entitlement for a subject — plan tier and its provenance."""
+
     def __init__(self, subject, plan, source):
         self.subject = subject  # opaque id (license key hash or session subject)
         self.plan = plan
         self.source = source  # 'keygen' | 'offline' | 'session'
 
     def as_dict(self):
+        """Serialise to a JSON-friendly dict for API responses."""
         return {"subject": self.subject, "plan": self.plan, "source": self.source}
 
 
 def _subject_id(key):
+    """Derive a stable opaque subject identifier from a license key."""
     return "lic_" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
 
 
@@ -130,10 +135,12 @@ def _subject_id(key):
 
 
 def _sign(payload_bytes):
+    """HMAC-SHA256 sign *payload_bytes* with the session secret."""
     return hmac.new(secret(), payload_bytes, hashlib.sha256).digest()
 
 
 def mint_session(subject, plan, ttl=None):
+    """Mint a stateless HMAC-signed session token for *subject* with the given *plan*."""
     ttl = ttl if ttl is not None else config.SESSION_TTL
     payload = {"sub": subject, "plan": plan, "exp": int(time.time()) + ttl}
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -143,6 +150,7 @@ def mint_session(subject, plan, ttl=None):
 
 
 def verify_session(token):
+    """Verify and decode a session token; return the payload dict or None on any failure."""
     try:
         body, sig = token.split(".", 1)
     except ValueError:
@@ -369,6 +377,7 @@ def _offline_license_hmac(key, status, expires_at, plan):
 
 
 def _validate_keygen(key):
+    """Validate a license key against the Keygen API; return status string, None, or ``__transient__``."""
     if not config.KEYGEN_ACCOUNT_ID:
         return None
     # Cap concurrent Keygen HTTP requests so a deluge doesn't exhaust resources (SRV-019).
@@ -536,6 +545,17 @@ def check_keygen_license_status(subject):
 # --- Request-level entitlement resolution ----------------------------------
 
 
+def _extract_session_token(cookie_header: str) -> str | None:
+    """Extract the syxx_session token value from a Cookie header string."""
+    for part in cookie_header.split(";"):
+        stripped = part.strip()
+        if stripped.startswith("syxx_session="):
+            token = stripped[13:].strip()
+            if token:
+                return token
+    return None
+
+
 def entitlement_for(headers, query):
     """Resolve an Entitlement from a request, or None.
 
@@ -578,15 +598,11 @@ def entitlement_for(headers, query):
     # SEC-004/HT-005: Session token from httpOnly cookie
     cookie_header = headers.get("Cookie", "")
     if cookie_header:
-        # Parse cookies — simple parser for key=value pairs
-        for part in cookie_header.split(";"):
-            part = part.strip()
-            if part.startswith("syxx_session="):
-                token = part[13:].strip()
-                if token:
-                    ent = verify_session(token)
-                    if ent:
-                        return ent, None
+        token = _extract_session_token(cookie_header)
+        if token:
+            ent = verify_session(token)
+            if ent:
+                return ent, None
 
     # 3. License key header
     key = headers.get("X-Syxx-License")

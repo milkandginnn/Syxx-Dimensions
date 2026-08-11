@@ -168,6 +168,7 @@ def _tick():
         return
 
     def _process_one(monitor):
+        """Run a single monitor check and deliver alerts if changes are detected."""
         if _shutdown.is_set():
             return
         try:
@@ -233,6 +234,7 @@ def _sync_api_keys():
     deadline = time.monotonic() + 120  # 2-minute budget for the full sweep
 
     def _check_one(subject):
+        """Verify one subject's license status; revoke API keys if invalidated."""
         if time.monotonic() > deadline:
             return None
         status = licensing.check_keygen_license_status(subject)
@@ -276,6 +278,7 @@ def start():
     backup_interval_sec = 86400  # daily
 
     def _loop():
+        """Background scheduler loop — ticks monitors, syncs API keys, and runs daily backups."""
         global _last_api_key_sync, _last_db_backup
         while not _shutdown.is_set():
             # A313: use Event.wait() instead of time.sleep() so shutdown is

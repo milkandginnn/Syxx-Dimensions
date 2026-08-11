@@ -97,6 +97,7 @@ def _q(name, qtype, srv, to=5, deadline=None):
 
 
 def _sq(name, qtype, srv, to=5, deadline=None):
+    """Safe query — return None instead of raising on DNS errors."""
     try:
         return _q(name, qtype, srv, to, deadline=deadline)
     except DNSError:
@@ -104,6 +105,7 @@ def _sq(name, qtype, srv, to=5, deadline=None):
 
 
 def _pdk(r):
+    """Parse a DNSKEY rdata into (flags, protocol, algorithm, public_key)."""
     if len(r) < 4:
         return None
     f, p, a = struct.unpack(">HBB", r[:4])
@@ -111,6 +113,7 @@ def _pdk(r):
 
 
 def _pds(r):
+    """Parse a DS rdata into (key_tag, algorithm, digest_type, digest)."""
     if len(r) < 4:
         return None
     k, a, d = struct.unpack(">HBB", r[:4])
@@ -118,6 +121,7 @@ def _pds(r):
 
 
 def _psig(r, pk, ro):
+    """Parse an RRSIG rdata into its component fields."""
     if len(r) < 18:
         return None
     tc, al, lb, ot = struct.unpack(">HBBI", r[:8])
@@ -145,6 +149,7 @@ def _psig(r, pk, ro):
 
 
 def _vec(pub, sig, d):
+    """Verify an ECDSA P-256 (algorithm 13) signature; return True/False/None."""
     if not _cry or len(pub) != 64:
         return None
     try:
@@ -217,6 +222,7 @@ if _cry:
 
 
 def _cv(algo, pub, sig, d):
+    """Dispatch cryptographic verification to the correct algorithm handler (RSA/ECDSA/Ed25519/Ed448)."""
     if algo in _RSA_HASH_MAP:
         # SM-022: use the correct hash for each RSA variant.
         return _vrsa(pub, sig, d, hash_algo=_RSA_HASH_MAP[algo]())
@@ -266,6 +272,7 @@ def _sd(sig, rrs):
 
 
 def _kt(r):
+    """Calculate the DNSKEY key tag per RFC 4034 Appendix B."""
     ac = 0
     for i, b in enumerate(r):
         ac += b << (8 if (i % 2) == 0 else 0)
@@ -298,6 +305,23 @@ def _vsig(sigs, rrs, dkp, dkr, now, zone=None):
         if r is None:
             unsup = True
     return None if unsup else False
+
+
+def _resolve_ns_ip(nn, to, deadline):
+    """Resolve a nameserver name to its first public IP via authoritative walk.
+
+    Returns the IP string or None if resolution fails or the IP is non-public.
+    """
+    try:
+        # A162: thread deadline into sub-walks
+        sub = resolve_authoritative(nn, 1, to, 4, deadline=deadline)
+    except DNSError:
+        return None
+    auth = sub.get("authoritative")
+    if not auth or not auth.get("answers"):
+        return None
+    ip = auth["answers"][0]
+    return ip if _ip_is_public(ip) else None
 
 
 def _find(name, to, deadline=None):
@@ -349,16 +373,10 @@ def _find(name, to, deadline=None):
                     nn, _ = _read_name(r["pk"], r["ro"])
                 except DNSError:
                     continue
-                try:
-                    # A162: thread deadline into sub-walks
-                    sub = resolve_authoritative(nn, 1, to, 4, deadline=deadline)
-                    if sub.get("authoritative") and sub["authoritative"]["answers"]:
-                        ip = sub["authoritative"]["answers"][0]
-                        if _ip_is_public(ip):
-                            nxt.append(ip)
-                            break
-                except DNSError:
-                    continue
+                ip = _resolve_ns_ip(nn, to, deadline)
+                if ip:
+                    nxt.append(ip)
+                    break
         if not nxt:
             return None, z
         srvs, z = nxt, dz
@@ -387,6 +405,7 @@ def _ksk(rs):
 
 
 def _chk_ans(sigs, arecs, dkrs, now, zone=None):
+    """Verify RRSIGs over the answer RRset using protocol-3 DNSKEYs; tri-state result."""
     if not sigs or not arecs:
         return None
     # SD-74: filter DNSKEYs by protocol==3 before using them for verification
@@ -405,6 +424,7 @@ def _chk_ans(sigs, arecs, dkrs, now, zone=None):
 
 
 def _r(domain, result, signed, algorithm, chain, errors):
+    """Build a DNSSEC validation result dict."""
     return {
         "domain": domain,
         "conclusion": result,

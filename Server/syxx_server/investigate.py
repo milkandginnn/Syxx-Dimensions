@@ -42,6 +42,7 @@ _INVESTIGATE_DEADLINE = max(1, config._i("SYXX_INVESTIGATE_DEADLINE", 15))
 
 
 def valid_domain(domain):
+    """Return True if *domain* matches the hostname regex (syntactic check only)."""
     return bool(_HOSTNAME.match(domain or ""))
 
 
@@ -94,6 +95,7 @@ def _vantages():
 
 
 def _query_vantage(kind, target, domain, qtype):
+    """Dispatch a DNS query to the appropriate vantage backend (system/UDP/DoH)."""
     if kind == "system":
         return resolver.query_system(domain, qtype)
     if kind == "udp":
@@ -123,6 +125,7 @@ def _format_exception_with_cause(e: BaseException) -> str:
 
 
 def _resolve_all(domain, qtype, deadline=None, vantages=None):
+    """Fan out a DNS query across all vantages, collecting per-vantage results."""
     per_resolver = {}
     vantage_list = vantages if vantages is not None else _vantages()
     for kind, label, target in vantage_list:
@@ -292,6 +295,7 @@ _RANK = {"divergent": 4, "single-vantage": 3, "consistent-degraded": 2, "consist
 
 
 def _consensus(a_by_vantage, aaaa_by_vantage):
+    """Compute overall consensus across A and AAAA vantage results."""
     va = _consensus_one(a_by_vantage)
     v6 = _consensus_one(aaaa_by_vantage)
     candidates = [v for v in (va, v6) if v[0] != "inconclusive"]
@@ -485,6 +489,7 @@ def _dnssec_observed(domain, deadline=None, vantages=None):
 
 
 def investigate(domain):
+    """Run a full multi-vantage DNS investigation for *domain*; return (result_dict, None) or (None, error)."""
     domain = (domain or "").strip().lower().rstrip(".")
     if not valid_domain(domain) or len(domain) > 253:
         return None, "invalid domain"

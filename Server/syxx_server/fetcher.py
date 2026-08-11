@@ -30,14 +30,17 @@ if config.FETCH_ALLOW_PRIVATE:
 
 
 class FetchError(Exception):
+    """Base exception for outbound fetch failures."""
     pass
 
 
 class BlockedError(FetchError):
+    """Raised when a fetch target is blocked by the SSRF guard (non-public IP, disallowed port)."""
     pass
 
 
 class TruncatedError(FetchError):
+    """Raised when the response exceeds *max_bytes* and is truncated."""
     pass
 
 
@@ -112,6 +115,12 @@ def _strip_invisible(s):
 
 
 def _one_request(url, timeout, max_bytes, deadline=None):
+    """Execute a single HTTP request with SSRF guards, port allowlisting, and size limits.
+
+    Follows redirects up to the configured hop count, re-validating the destination
+    on each hop (A033).  Raises ``BlockedError`` for non-public targets or disallowed
+    ports, ``TruncatedError`` when the response exceeds *max_bytes*.
+    """
     parts = urllib.parse.urlsplit(url)
     if parts.scheme not in ("http", "https"):
         raise BlockedError(f"scheme not allowed: {parts.scheme!r}")

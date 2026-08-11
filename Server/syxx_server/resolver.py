@@ -140,6 +140,7 @@ _TYPE_NAMES = {
 
 
 class DNSError(Exception):
+    """Raised on any DNS resolution failure — timeouts, malformed responses, or protocol errors."""
     pass
 
 
@@ -158,6 +159,7 @@ def _in_bailiwick(name, zone):
 
 
 def _encode_name(name):
+    """Encode a DNS name into IDNA-aware wire-format labels."""
     out = b""
     for label in name.rstrip(".").split("."):
         b = label.encode("idna") if label else b""
@@ -168,6 +170,7 @@ def _encode_name(name):
 
 
 def _build_query(name, qtype, rd=True, do=False, qclass=1):
+    """Build a DNS query packet with EDNS0 OPT record (A073); return (txid, packet, name, qtype, qclass)."""
     txid = secrets.randbits(16)
     flags = 0x0100 if rd else 0x0000  # RD on for recursive queries; off for iterative (walker)
     # A073: always include an EDNS0 OPT record to advertise a larger UDP payload
@@ -512,6 +515,7 @@ def query(name, qtype, server, timeout=3):
 
 
 def _query_tcp(name, qtype, server, timeout):
+    """Retry a DNS query over TCP when the UDP response is truncated (SD-72 length cap)."""
     txid, packet, qname, qtype_, qclass_ = _build_query(name, qtype)
     framed = struct.pack(">H", len(packet)) + packet
     sock = socket.socket(_addr_family(server), socket.SOCK_STREAM)
@@ -591,6 +595,7 @@ def raw_query(name, qtype, server, timeout=5, deadline=None):
 
 
 def _recv_exact(sock, n):
+    """Read exactly *n* bytes from *sock*, raising DNSError on premature close."""
     buf = b""
     while len(buf) < n:
         chunk = sock.recv(n - len(buf))

@@ -327,6 +327,11 @@ def _ensure_sidecar_permissions() -> None:
 
 
 def init():
+    """Create the SQLite schema, run migrations, and validate the session secret.
+
+    Idempotent — guarded by ``_initialized`` so repeated calls are no-ops.
+    Sets a restrictive umask (E025) and enforces 0600 on the database file.
+    """
     # SECURITY NOTE (E031): SQLite database is protected by filesystem permissions (0600)
     # only — no encryption at rest. For environments requiring encryption, replace with
     # SQLCipher (https://www.zetetic.net/sqlcipher/) or encrypt sensitive columns
@@ -379,6 +384,7 @@ def _validate_env_secret(env):
 
 
 def audit(subject, route, status, ip):
+    """Append an audit row recording *subject*'s access to *route*."""
     conn = _write_conn()
     try:
         conn.execute(

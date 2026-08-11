@@ -131,6 +131,7 @@ def _token_obs_ok(token):
 
 
 def _encode_name(name):
+    """Encode a DNS name into wire-format labels (length-prefixed, null-terminated)."""
     out = b""
     for label in name.rstrip(".").split("."):
         b = label.encode("utf-8")
@@ -238,16 +239,19 @@ def _build_response(data):
 
 
 def _rr_a(ip, name_offs=12):
+    """Build a wire-format A resource record pointing to *ip*."""
     ptr = bytes([0xC0 | (name_offs >> 8), name_offs & 0xFF])
     return ptr + struct.pack(">HHIH", TYPE_A, 1, 60, 4) + socket.inet_pton(socket.AF_INET, ip)
 
 
 def _rr_aaaa(ip, name_offs=12):
+    """Build a wire-format AAAA resource record pointing to *ip*."""
     ptr = bytes([0xC0 | (name_offs >> 8), name_offs & 0xFF])
     return ptr + struct.pack(">HHIH", TYPE_AAAA, 1, 60, 16) + socket.inet_pton(socket.AF_INET6, ip)
 
 
 def _rr_ns(nsname, name_offs=12):
+    """Build a wire-format NS resource record delegating to *nsname*."""
     rdata = _encode_name(nsname)
     ptr = bytes([0xC0 | (name_offs >> 8), name_offs & 0xFF])
     return ptr + struct.pack(">HHIH", TYPE_NS, 1, 3600, len(rdata)) + rdata
@@ -277,6 +281,7 @@ _soa_serial._cached = 0  # type: ignore[unresolved-attribute]
 
 
 def _rr_soa(name_offs=12):
+    """Build a wire-format SOA resource record with date-based serial (A275)."""
     rdata = (
         _encode_name(config.DNS_SOA_MNAME)
         + _encode_name(config.DNS_SOA_RNAME)
@@ -341,10 +346,12 @@ def _bind():
 
 
 def run():
+    """Start the authoritative DNS listener; schedule a rebind thread if bind fails."""
     socks = _bind()
     if not socks:
 
         def _rebind_loop():
+            """Periodically retry binding and start serving once sockets are acquired."""
             while True:
                 time.sleep(60)
                 candidate = _bind()

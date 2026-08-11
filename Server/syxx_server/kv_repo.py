@@ -12,6 +12,7 @@ from . import config
 
 
 def kv_get(key, default=None):
+    """Return the value for *key* from the kv store, or *default* if absent."""
     # Imported lazily to break the db↔repo circular import at module level.
     from .db import _return_conn, connect
 
@@ -44,6 +45,7 @@ def kv_get_with_created_at(key):
 
 
 def kv_set(key, value):
+    """Insert or update *key* in the kv store, preserving the original created_at."""
     from .db import _return_conn, _write_conn
 
     conn = _write_conn()

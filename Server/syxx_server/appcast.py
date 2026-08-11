@@ -191,6 +191,7 @@ def _sha256_file(path):
 
 
 def _package_store_path(platform):
+    """Return the filesystem path of the update manifest for *platform*."""
     return os.path.join(config.UPDATE_PACKAGE_DIR, f"{platform}.json")
 
 

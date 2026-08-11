@@ -139,6 +139,7 @@ def monitor_delete(monitor_id, subject):
 
 
 def warp_cache_get(url, ttl):
+    """Return the cached warp payload for *url* if it is younger than *ttl* seconds."""
     from .db import _return_conn, connect
 
     conn = connect()
@@ -154,6 +155,7 @@ def warp_cache_get(url, ttl):
 
 
 def warp_cache_put(url, payload):
+    """Insert or replace the warp cache entry for *url* with *payload*."""
     from .db import _return_conn, _write_conn
 
     conn = _write_conn()

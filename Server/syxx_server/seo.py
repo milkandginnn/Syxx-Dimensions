@@ -356,6 +356,7 @@ def inject_meta_tags(html_content: str, page_path: str) -> str:
 
     # --- remove existing tags we are about to replace ---
     def _drop_meta(m: re.Match) -> str:
+        """Remove existing meta tags that are about to be re-injected."""
         tag = m.group(0)
         ident = _tag_identity(tag)
         if ident and ident in injected_identities:

@@ -120,6 +120,7 @@ def _query_resolver(domain, server, timeout):
     slow IPv4 query does not stall the IPv6 query (and vice versa).
     """
     def _query_one(qtype):
+        """Query a single record type (A or AAAA) via *server*, returning None on failure."""
         try:
             return resolver.query(domain, qtype, server, timeout=timeout)
         except Exception as exc:
@@ -209,6 +210,7 @@ def _query_clean_reference(domain, timeout):
     when at least one vantage resolved the domain successfully.
     """
     def _query_clean_vantage(vantage):
+        """Query one clean vantage for *domain*; delegates to ``_query_resolver``."""
         return _query_resolver(domain, vantage, timeout)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(_CLEAN_VANTAGES)) as _ex:

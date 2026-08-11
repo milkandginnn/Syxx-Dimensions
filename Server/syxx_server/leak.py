@@ -179,6 +179,7 @@ def _ensure_collector_key():
 
 
 def _canon(obj):
+    """Canonical JSON encoding for deterministic hashing (sorted keys, no whitespace)."""
     return json.dumps(obj, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
 

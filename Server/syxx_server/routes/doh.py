@@ -158,26 +158,18 @@ class DohRoutes:
         # returned results, prefer the answer set confirmed by >=2 vantages.
         chosen = parsed_results[0]
         if len(parsed_results) >= 2:
-            # _TYPE_NAMES maps numeric types to strings; reverse-map the type_param
-            # to match the record's "type" field (which is the formatted string name).
-            answer_sets = []
-            for p in parsed_results:
-                aset = frozenset(str(r["value"]).lower() for r in p.get("records", []) if r.get("type") == type_param)
-                answer_sets.append(aset)
-            # Pick the answer set that appears most often (>=2 agreement preferred).
+            # Build per-result answer sets and pick the most common (>=2 agreement).
+            def _aset(p):
+                return frozenset(
+                    str(r["value"]).lower() for r in p.get("records", []) if r.get("type") == type_param
+                )
+
             from collections import Counter
 
-            counts = Counter(answer_sets)
-            best_set, best_count = counts.most_common(1)[0]
+            answer_sets = [_aset(p) for p in parsed_results]
+            best_set, best_count = Counter(answer_sets).most_common(1)[0]
             if best_count >= 2:
-                # Find the parsed result matching the corroborated set.
-                for p in parsed_results:
-                    pset = frozenset(
-                        str(r["value"]).lower() for r in p.get("records", []) if r.get("type") == type_param
-                    )
-                    if pset == best_set:
-                        chosen = p
-                        break
+                chosen = parsed_results[answer_sets.index(best_set)]
         # The parser returns {rcode, truncated, ad, records:[{type,value}]} — no TTL is captured, so
         # the JSON omits it rather than fabricate one. `ad` is the only DNSSEC signal we actually
         # observed; RA/CD are not measured, so they are not claimed.

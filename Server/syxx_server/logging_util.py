@@ -60,6 +60,11 @@ def _redact_emails(obj):
 
 
 def _emit(level, event, **fields):
+    """Write a structured JSON log line to stdout and forward to OTLP if applicable.
+
+    Redacts email addresses (A188), attaches trace context when available (A059),
+    and exports error-level records to the OTLP sink.
+    """
     # A188 Fix 2: redact email addresses from all fields before serialisation.
     # This is the single choke point — every log line and every OTLP export
     # passes through here, so no call site can accidentally leak a recipient
@@ -109,14 +114,17 @@ def _emit(level, event, **fields):
 
 
 def info(event, **fields):
+    """Emit an info-level structured log event."""
     _emit("info", event, **fields)
 
 
 def warn(event, **fields):
+    """Emit a warn-level structured log event."""
     _emit("warn", event, **fields)
 
 
 def error(event, **fields):
+    """Emit an error-level structured log event (also forwarded to OTLP)."""
     _emit("error", event, **fields)
 
 
@@ -127,6 +135,7 @@ _MAX_METRIC_KEYS = 512
 
 
 def incr(name, n=1):
+    """Increment the monotonic counter *name* by *n* (A138 key-cap enforced)."""
     # A318: use _metrics_lock (not _log_lock) so metric increments never block
     # on slow stdout writes.
     with _metrics_lock:
@@ -140,5 +149,6 @@ def incr(name, n=1):
 
 
 def snapshot():
+    """Return a point-in-time copy of all metric counters."""
     with _metrics_lock:
         return dict(_metrics)

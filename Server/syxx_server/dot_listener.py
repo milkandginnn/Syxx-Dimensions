@@ -25,10 +25,12 @@ from . import config, dns_authoritative, leak, listeners, logging_util, resolver
 
 
 class _BoundedThreadingTCPServer(socketserver.ThreadingTCPServer):
+    """TCP server with a bounded connection cap (SD-51) and deferred TLS handshake (A119)."""
     daemon_threads = True
     allow_reuse_address = True
 
     def __init__(self, *a, ssl_context=None, **k):
+        """Initialise with a BoundedSemaphore for connection slots and an optional SSL context."""
         super().__init__(*a, **k)
         # Non-blocking cap: an over-limit connection is closed immediately rather than queued into
         # an unbounded thread pile (the SD-51 failure). BoundedSemaphore raises if released too many
@@ -40,6 +42,7 @@ class _BoundedThreadingTCPServer(socketserver.ThreadingTCPServer):
         self._ssl_context = ssl_context
 
     def get_request(self):
+        """Accept a raw TCP connection, rejecting over-cap connections immediately (A119)."""
         # A119: accept the RAW TCP socket (no TLS handshake here). The listening
         # socket is NOT wrapped with SSL, so accept() returns immediately on a
         # TCP connection without waiting for TLS bytes. The handshake is done
@@ -55,6 +58,7 @@ class _BoundedThreadingTCPServer(socketserver.ThreadingTCPServer):
         return sock, addr
 
     def shutdown_request(self, request):
+        """Release the connection slot after the request is done or has errored."""
         try:
             super().shutdown_request(request)
         finally:
@@ -66,12 +70,14 @@ class _BoundedThreadingTCPServer(socketserver.ThreadingTCPServer):
 
 
 class _Handler(socketserver.BaseRequestHandler):
+    """Handle a single DNS-over-TLS connection with handshake timeout and query cap."""
     # A119: maximum time (seconds) allowed for the TLS handshake to complete.
     # A client that connects but sends no TLS ClientHello blocks this handler
     # thread; the timeout prevents it from blocking indefinitely.
     _HANDSHAKE_TIMEOUT = 10
 
     def handle(self):
+        """TLS handshake, then serve DNS queries up to the per-connection cap."""
         # A119: perform the TLS handshake HERE, after the connection slot has
         # been acquired. The listening socket is plain TCP, so the accept loop
         # is never blocked by a slow/idle TLS client. Apply an absolute timeout
@@ -119,6 +125,7 @@ class _Handler(socketserver.BaseRequestHandler):
             return None
 
     def _recv_exact(self, n):
+        """Read exactly *n* bytes from the handler's socket; return None on EOF."""
         buf = b""
         while len(buf) < n:
             chunk = self.request.recv(n - len(buf))

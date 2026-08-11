@@ -198,6 +198,45 @@ class AccountRoutes:
             for ip in to_remove:
                 del cls._TRIAL_ANCHOR_IP_COUNTS[ip]
 
+    def _check_trial_anchor_ip_limit(self, client_ip: str, day_start: int) -> bool:
+        """Return True if the per-IP daily limit is exceeded.
+
+        Acquires _TRIAL_ANCHOR_IP_LOCK, prunes stale entries, and resets the
+        counter for a new day. Sends a 429 response and returns True when the
+        limit is hit; returns False otherwise.
+        """
+        with self._TRIAL_ANCHOR_IP_LOCK:
+            self._prune_trial_anchor_ips(day_start)
+            entry = self._TRIAL_ANCHOR_IP_COUNTS.get(client_ip)
+            if entry is not None:
+                count, stored_day = entry
+                if stored_day != day_start:
+                    self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (0, day_start)
+                elif count >= self._TRIAL_ANCHOR_IP_DAILY_LIMIT:
+                    logging_util.warn(
+                        "trial_anchor_ip_limit",
+                        ip=client_ip[:15],
+                        count=count,
+                    )
+                    self._json_error(429, "trial anchor daily limit exceeded")
+                    return True
+            else:
+                self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (0, day_start)
+        return False
+
+    def _increment_trial_anchor_ip_count(self, client_ip: str, day_start: int) -> None:
+        """Increment the per-IP trial anchor counter under lock."""
+        with self._TRIAL_ANCHOR_IP_LOCK:
+            entry = self._TRIAL_ANCHOR_IP_COUNTS.get(client_ip)
+            if entry is not None:
+                count, stored_day = entry
+                if stored_day == day_start:
+                    self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (count + 1, day_start)
+                else:
+                    self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (1, day_start)
+            else:
+                self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (1, day_start)
+
     def _route_trial_anchor(self):
         if not self._rate_ok(None):
             return
@@ -207,27 +246,8 @@ class AccountRoutes:
         # SEC-006: Check per-IP daily limit before processing
         client_ip = self._client_ip()
         day_start = int(time.time()) // 86400 * 86400  # start of current UTC day
-        with self._TRIAL_ANCHOR_IP_LOCK:
-            # A040: prune stale entries before lookup to bound memory.
-            self._prune_trial_anchor_ips(day_start)
-            if client_ip in self._TRIAL_ANCHOR_IP_COUNTS:
-                count, stored_day = self._TRIAL_ANCHOR_IP_COUNTS[client_ip]
-                if stored_day == day_start:
-                    if count >= self._TRIAL_ANCHOR_IP_DAILY_LIMIT:
-                        logging_util.warn(
-                            "trial_anchor_ip_limit",
-                            ip=client_ip[:15],
-                            count=count,
-                        )
-                        return self._json_error(
-                            429,
-                            "trial anchor daily limit exceeded",
-                        )
-                else:
-                    # New day — reset
-                    self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (0, day_start)
-            else:
-                self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (0, day_start)
+        if self._check_trial_anchor_ip_limit(client_ip, day_start):
+            return
 
         raw = self._body()
         if self._body_error(raw):
@@ -252,15 +272,7 @@ class AccountRoutes:
                 return self._json_error(507, "trial anchor capacity reached; try again later")
             # SEC-006: Increment IP counter on successful anchor creation
             if is_new:
-                with self._TRIAL_ANCHOR_IP_LOCK:
-                    if client_ip in self._TRIAL_ANCHOR_IP_COUNTS:
-                        count, stored_day = self._TRIAL_ANCHOR_IP_COUNTS[client_ip]
-                        if stored_day == day_start:
-                            self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (count + 1, day_start)
-                        else:
-                            self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (1, day_start)
-                    else:
-                        self._TRIAL_ANCHOR_IP_COUNTS[client_ip] = (1, day_start)
+                self._increment_trial_anchor_ip_count(client_ip, day_start)
             self._send(200, {"fingerprint": fingerprint, "firstLaunch": first_launch, "serverTime": now})
         except Exception as e:
             logging_util.error("trial_anchor_error", err=str(e))

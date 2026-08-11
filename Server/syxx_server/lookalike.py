@@ -134,6 +134,7 @@ def generate_permutations(domain, max_permutations=200):
     results = []
 
     def _add(fqdn, vtype):
+        """Deduplicate and append a lookalike candidate if under the cap."""
         if fqdn not in seen and fqdn != domain and len(results) < max_permutations:
             seen.add(fqdn)
             results.append((fqdn, vtype))

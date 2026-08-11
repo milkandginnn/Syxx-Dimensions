@@ -27,8 +27,8 @@ import re
 import socket
 import threading
 import time
-import urllib.parse
 import unicodedata
+import urllib.parse
 import uuid
 from email.utils import parseaddr
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -66,7 +66,6 @@ try:
 except ImportError:
     dnssec_validator = None  # cryptography library not installed
 from . import __version__
-
 
 # E037: Fingerprint validation patterns — compiled once at module level rather than per-request.
 # UUIDs: "550e8400-e29b-41d4-a716-446655440000"; hex strings: 32–128 lowercase hex chars.
@@ -197,7 +196,7 @@ if _OTEL_STATE.startswith("live"):
 
         _OTEL_TRACER = _otel_trace_mod.get_tracer("syxx-server")
         _OTEL_STATUS_ERROR = _otel_trace_mod.StatusCode.ERROR
-    except Exception:
+    except Exception:  # noqa: S110
         _OTEL_STATE = "failed: tracer unavailable"
 
 # Wire OTel logger into logging_util so all logging_util.error() calls also export via OTLP.
@@ -427,7 +426,7 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
             return
         try:
             super().process_request(request, client_address)
-        except Exception:
+        except Exception:  # noqa: S110
             self._worker_sema.release()
             raise
 
@@ -898,7 +897,7 @@ class Handler(BaseHTTPRequestHandler):
                     sentry_sdk.set_tag("route", path or "unknown")
                     sentry_sdk.set_tag("method", "GET")
                     sentry_sdk.capture_exception(e)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # Sentry failure must not break error handling
                 # A134: if a response was already sent, close the connection instead of
                 # writing a second response that would desync the keep-alive pipeline.
@@ -1005,7 +1004,7 @@ class Handler(BaseHTTPRequestHandler):
                     sentry_sdk.set_tag("route", path or "unknown")
                     sentry_sdk.set_tag("method", "POST")
                     sentry_sdk.capture_exception(e)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # Sentry failure must not break error handling
                 # A134: if a response was already sent, close the connection instead of
                 # writing a second response that would desync the keep-alive pipeline.
@@ -1056,7 +1055,7 @@ class Handler(BaseHTTPRequestHandler):
                     sentry_sdk.set_tag("route", path or "unknown")
                     sentry_sdk.set_tag("method", "DELETE")
                     sentry_sdk.capture_exception(e)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # Sentry failure must not break error handling
                 # A134: if a response was already sent, close the connection instead of
                 # writing a second response that would desync the keep-alive pipeline.
@@ -2115,7 +2114,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(415, "content is not text and cannot be diffed: %s" % (ctype or "unknown"))
         try:
             text = data.decode("utf-8", errors="replace")
-        except Exception:
+        except Exception:  # noqa: S110
             return self._json_error(415, "content could not be decoded as text")
 
         if span:
@@ -3372,7 +3371,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 pad = "=" * (-len(dns_param) % 4)
                 wire = base64.urlsafe_b64decode(dns_param + pad)
-            except Exception:
+            except Exception:  # noqa: S110
                 return self._json_error(400, "invalid dns= parameter (want base64url)")
             return self._doh_respond_wire(wire)
         if query.get("name", [""])[0]:

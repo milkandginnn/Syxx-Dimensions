@@ -58,4 +58,24 @@
   --text-muted: var(--io-text-secondary);
   --accent: var(--io-blue);
   --accent-2: var(--io-electric);
+
+  /* ---- Unified design system bridge ----
+     These aliases map the Nnyx Io tokens to the unified Syxx design
+     system variable names (defined in tokens.css). Consumers should
+     prefer the --color-* / --font-* names for new code. */
+  --color-cyan: var(--io-blue);
+  --color-cyan-deep: var(--io-deep-blue);
+  --color-violet: var(--io-electric);
+  --color-violet-bright: var(--io-electric);
+  --color-critical: var(--io-critical);
+  --color-high: var(--io-high);
+  --color-warning: var(--io-warning);
+  --color-success: var(--io-success);
+  --color-info: var(--io-info);
+  --color-canvas: var(--io-bg);
+  --color-surface: var(--io-surface);
+  --color-surface-elevated: var(--io-surface-elevated);
+  --color-border: var(--io-border);
+  --color-text: var(--io-text);
+  --color-text-muted: var(--io-text-secondary);
 }

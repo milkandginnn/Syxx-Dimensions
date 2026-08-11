@@ -6,7 +6,6 @@ backward compatibility — callers should continue using ``db.monitor_create(...
 
 import time
 
-
 # ---------------------------------------------------------------------------
 # Monitor CRUD
 # ---------------------------------------------------------------------------
@@ -31,7 +30,7 @@ def monitor_create(monitor_id, subject, domain, checks, interval_hours=24, notif
 
 def monitor_list(subject):
     """List all monitors for a subject."""
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -43,7 +42,7 @@ def monitor_list(subject):
 
 def monitors_due(now=None):
     """Return all active monitors whose next_run <= now."""
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     now = int(time.time()) if now is None else now
     conn = connect()
@@ -94,7 +93,7 @@ def monitor_result_save(monitor_id, check_type, result, changes=None, raw_json=N
 
 def monitor_results_for(monitor_id, check_type=None, limit=10):
     """Return recent results for a monitor, optionally filtered by check_type."""
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -140,7 +139,7 @@ def monitor_delete(monitor_id, subject):
 
 
 def warp_cache_get(url, ttl):
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:

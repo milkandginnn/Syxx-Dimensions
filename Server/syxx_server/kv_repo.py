@@ -13,7 +13,7 @@ from . import config
 
 def kv_get(key, default=None):
     # Imported lazily to break the db↔repo circular import at module level.
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -31,7 +31,7 @@ def kv_get_with_created_at(key):
     original handler likely crashed between claiming the event and writing the
     terminal state, and the row would otherwise strand the order permanently.
     """
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -101,7 +101,7 @@ def kv_find_by_value_prefix(key_prefix, value, limit=100):
         # An empty needle can only ever produce a wrong answer here; refuse rather than
         # return whichever row happens to sort first.
         return None
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -129,8 +129,8 @@ def get_or_create_secret():
     and SECURITY NOTE in licensing.py:secret()). Without that env var, the secret
     is protected only by filesystem permissions (0600) on the database file.
     """
-    from .db import _validate_env_secret
     from . import logging_util
+    from .db import _validate_env_secret
 
     if not config.DB_ENCRYPTION_KEY:
         logging_util.warn(

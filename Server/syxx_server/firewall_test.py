@@ -261,8 +261,8 @@ def test(resolver_ip, timeout=5):
         # Query clean vantages and take the first successful result.
         # A053: run all vantages concurrently instead of N+1 sequential queries,
         # then prefer the first "resolved" vantage in the canonical order.
-        def _query_clean_vantage(vantage):
-            return _query_resolver(domain, vantage, timeout)
+        def _query_clean_vantage(vantage, _domain=domain):
+            return _query_resolver(_domain, vantage, timeout)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(_CLEAN_VANTAGES)) as _ex:
             _vantage_results = list(_ex.map(_query_clean_vantage, _CLEAN_VANTAGES))

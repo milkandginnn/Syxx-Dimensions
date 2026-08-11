@@ -16,13 +16,11 @@ import time
 
 from .netutil import ip_is_public as _ip_is_public
 from .resolver import (
-    _MAX_RECORDS_PER_SECTION,  # A017: re-exported for backward compat
     ROOT_SERVERS,
     TYPE_DNSKEY,
     DNSError,
     _in_bailiwick,
     _read_name,
-    _rr_raw,  # A017: shared raw-record parser (moved to resolver)
     _rrsig_window_valid,
     parse_raw_response,  # A017: shared raw response parser
     raw_query,  # A017: shared RD=0/DO=1 transport

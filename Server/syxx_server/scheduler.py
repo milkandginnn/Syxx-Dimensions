@@ -205,7 +205,7 @@ def _backup_db():
     """Daily backup of the SQLite database. G-8: the license DB must survive
     a dead disk. Uses SQLite's online backup API for a consistent snapshot
     without blocking writers.
-    
+
     A075: Pass _shutdown event to prevent blocking shutdown indefinitely.
     """
     try:

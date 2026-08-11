@@ -44,7 +44,6 @@ from syxx_server.dnssec_validator import (  # noqa: E402
     _DIG,
     _MAXD,
     _MAXS,
-    _MAX_RECORDS_PER_SECTION,
     _chk_ans,
     _cv,
     _dsm,
@@ -58,7 +57,6 @@ from syxx_server.dnssec_validator import (  # noqa: E402
     _q,
     _r,
     _read_nsec_bitmap,
-    _rr_raw,
     _sd,
     _sq,
     _step,
@@ -73,7 +71,7 @@ from syxx_server.dnssec_validator import (  # noqa: E402
     validate_chain,
     verify_denial_of_existence,
 )
-from syxx_server.resolver import DNSError, TYPE_DNSKEY  # noqa: E402
+from syxx_server.resolver import DNSError, TYPE_DNSKEY, _MAX_RECORDS_PER_SECTION, _rr_raw  # noqa: E402
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────

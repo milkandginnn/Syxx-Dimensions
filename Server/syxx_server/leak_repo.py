@@ -10,7 +10,7 @@ import time
 
 def _hash_token(token):
     """E024: Hash leak tokens with SHA-256 before storage.
-    
+
     Tokens are one-time use and short-lived, but hashing them before storage
     prevents exposure if the SQLite database is compromised (backup leak,
     filesystem access, etc.). The token is the lookup key, so we hash it
@@ -44,7 +44,7 @@ def leak_token_create(token, subject, zone, ttl, origin="ip"):
 
 
 def leak_token_get(token, now=None):
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     now = int(time.time()) if now is None else now
     token_hash = _hash_token(token)
@@ -140,7 +140,7 @@ def leak_observation_add(token, resolver_ip, qtype):
 
 
 def leak_observations(token):
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     # E024: hash the token for lookup
     token_hash = _hash_token(token)
@@ -191,7 +191,7 @@ def passive_query(domain, limit=200, rtype=None):
     the LIMIT, so a rare rtype on a busy domain could return zero rows while
     hundreds existed.
     """
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -215,7 +215,7 @@ def passive_query(domain, limit=200, rtype=None):
 
 
 def passive_count():
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -231,7 +231,7 @@ def passive_domain_exists(domain, rtype, value):
     A081: lightweight existence check — SELECT 1 with LIMIT 1 instead of
     fetching full rows just to test membership.
     """
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -251,7 +251,7 @@ def passive_domain_count_capped(domain, cap):
     A081: uses a subquery with LIMIT so SQLite stops scanning after *cap*
     rows — O(cap) instead of O(total) for high-cardinality domains.
     """
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:

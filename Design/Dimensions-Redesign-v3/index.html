@@ -4,13 +4,71 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Syxx Dimensions mockups</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Cormorant+SC:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=JetBrains+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/tokens.css">
+    <link rel="stylesheet" href="assets/css/shell.css">
+    <link rel="stylesheet" href="assets/css/components.css">
+    <link rel="stylesheet" href="assets/css/platforms.css">
+    <style>
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        text-align: center;
+      }
+      h1 {
+        font-family: var(--font-display);
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-violet);
+        margin-bottom: 8px;
+      }
+      p {
+        font-family: var(--font-body);
+        font-size: 16px;
+        color: var(--color-text-muted);
+        margin-bottom: 32px;
+      }
+      nav ul {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+      }
+      nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 8px 20px;
+        font-family: var(--font-sc);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-button);
+        background: var(--color-surface);
+        text-decoration: none;
+        transition: all 120ms ease;
+      }
+      nav a:hover {
+        border-color: var(--color-cyan);
+        box-shadow: var(--glow-cyan);
+        transform: translateY(-1px);
+      }
+    </style>
   </head>
   <body>
     <main>
       <header>
-        <h1>Syxx Dimensions mockups</h1>
-        <p>Choose a platform or the copy catalogue.</p>
+        <h1>Syxx Dimensions</h1>
+        <p>Choose a platform mockup or the copy catalogue.</p>
       </header>
       <nav aria-label="Mockup pages">
         <ul>
@@ -18,7 +76,7 @@
           <li><a href="syxx-windows.html">Windows</a></li>
           <li><a href="syxx-linux.html">Linux</a></li>
           <li><a href="syxx-server.html">Server</a></li>
-          <li><a href="copy-catalogue.html">Copy catalogue</a></li>
+          <li><a href="copy-catalogue.html">Copy Catalogue</a></li>
         </ul>
       </nav>
     </main>

@@ -43,4 +43,14 @@
   /* ---- Tracking (uppercase labels use positive tracking) ---- */
   --tracking-eyebrow: 0.06em;
   --tracking-badge: 0.04em;
+
+  /* ---- Unified design system bridge ----
+     Maps the Nnyx Io font families to the unified Syxx type system.
+     New code should use the --font-* names. */
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "Spectral", Georgia, serif;
+  --font-sc: "Cormorant SC", Georgia, serif;
+  --font-editorial: "EB Garamond", Georgia, serif;
+  --font-mono: "JetBrains Mono", var(--font-mono);
+  --font-ui: var(--font-sans);
 }

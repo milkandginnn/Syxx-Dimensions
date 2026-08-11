@@ -16,8 +16,8 @@ body {
   margin: 0;
   color: var(--color-text);
   background:
-    radial-gradient(circle at 16% 0%, rgba(124, 92, 255, 0.17), transparent 42%),
-    radial-gradient(circle at 92% 88%, rgba(45, 212, 191, 0.08), transparent 34%),
+    radial-gradient(circle at 16% 0%, rgba(5, 181, 212, 0.12), transparent 42%),
+    radial-gradient(circle at 92% 88%, rgba(140, 92, 245, 0.10), transparent 34%),
     var(--color-canvas);
 }
 
@@ -38,18 +38,18 @@ textarea,
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-teal);
+  outline: 2px solid var(--color-cyan);
   outline-offset: 2px;
   box-shadow: var(--focus-ring);
 }
 
 ::selection {
   color: var(--color-canvas);
-  background: var(--color-teal);
+  background: var(--color-cyan);
 }
 
 * {
-  scrollbar-color: rgba(167, 139, 255, 0.48) rgba(11, 5, 24, 0.34);
+  scrollbar-color: rgba(140, 92, 245, 0.48) rgba(26, 33, 56, 0.34);
   scrollbar-width: thin;
 }
 
@@ -59,14 +59,14 @@ textarea,
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(11, 5, 24, 0.34);
+  background: rgba(26, 33, 56, 0.34);
 }
 
 *::-webkit-scrollbar-thumb {
   min-block-size: 32px;
   border: 3px solid transparent;
-  border-radius: 999px;
-  background: rgba(167, 139, 255, 0.48);
+  border-radius: var(--radius-pill);
+  background: rgba(140, 92, 245, 0.48);
   background-clip: padding-box;
 }
 
@@ -227,9 +227,10 @@ textarea,
 .brand-lockup__name {
   min-width: 0;
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
 }
 
 .app-nav {
@@ -246,8 +247,10 @@ textarea,
   gap: 10px;
   color: var(--color-text-muted);
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--radius-button);
   background: transparent;
+  font-family: var(--font-body);
+  font-size: 14px;
   text-align: start;
   text-decoration: none;
   cursor: pointer;
@@ -265,9 +268,9 @@ textarea,
 
 .app-nav__item[aria-current="page"] {
   color: var(--color-text);
-  border-color: rgba(167, 139, 255, 0.28);
-  background: linear-gradient(90deg, rgba(124, 92, 255, 0.22), rgba(124, 92, 255, 0.07));
-  box-shadow: 3px 0 0 var(--color-teal) inset;
+  border-color: rgba(140, 92, 245, 0.28);
+  background: linear-gradient(90deg, rgba(140, 92, 245, 0.22), rgba(140, 92, 245, 0.07));
+  box-shadow: 3px 0 0 var(--color-cyan) inset;
 }
 
 .app-nav__glyph {
@@ -344,7 +347,7 @@ textarea,
 }
 
 .wayline::before {
-  background: linear-gradient(90deg, #ff2d78, var(--color-violet), var(--color-teal));
+  background: linear-gradient(90deg, var(--color-cyan), var(--color-violet), #ff2d78);
   opacity: 0.62;
 }
 

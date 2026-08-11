@@ -86,7 +86,7 @@ import time as _time  # noqa: E402 — import placed after runtime setup above i
 
 def _strip_invisible(s):
     """E005: Strip zero-width and bidi control characters from hostnames.
-    
+
     These invisible characters (U+200B-U+200F, U+202A-U+202E, U+FEFF) can be
     embedded in hostnames to create visually identical but distinct domains
     that bypass SSRF validation or consume separate budget slots."""

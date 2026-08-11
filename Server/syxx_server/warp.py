@@ -368,7 +368,7 @@ def _content_encoding_decode(body, encoding, max_bytes):
 
 def _strip_invisible(s):
     """E005: Strip zero-width and bidi control characters from hostnames.
-    
+
     These invisible characters (U+200B-U+200F, U+202A-U+202E, U+FEFF) can be
     embedded in hostnames to create visually identical but distinct domains
     that bypass deduplication and consume separate budget slots."""

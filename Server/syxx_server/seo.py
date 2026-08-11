@@ -16,7 +16,6 @@ the SEO page and the actual Stripe prices. Defaults match the Stripe catalog.
 from __future__ import annotations
 
 import json
-import os
 import re
 
 from . import __version__

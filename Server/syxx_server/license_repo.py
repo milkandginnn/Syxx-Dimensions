@@ -11,7 +11,6 @@ import time
 
 from . import logging_util
 
-
 # ---------------------------------------------------------------------------
 # HMAC helpers (used by license_lookup / license_upsert / migration)
 # ---------------------------------------------------------------------------
@@ -123,7 +122,7 @@ def _migrate_license_hmac_v1_to_v2(conn):
 
 
 def license_lookup(key):
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -207,7 +206,7 @@ def keygen_license_id_set(subject, license_id):
 def keygen_license_id_get(subject):
     """Return the stored Keygen license id for *subject*, or None when this
     subject never validated through Keygen (offline/admin keys never store one)."""
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -232,7 +231,7 @@ def keygen_subject_for_license_id(license_id):
     """
     if not license_id:
         return None
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -281,7 +280,7 @@ def api_key_create(subject, label=None, scopes="*", ttl_days=90):
 
 def api_key_lookup(key_hash):
     """Look up an API key by its SHA-256 hash. Returns dict or None."""
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -317,7 +316,7 @@ def api_key_list(subject):
     never enforced (licensing.py:entitlement_for hardcodes full authority), so
     returning it would show the user a restriction the server does not apply.
     """
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     conn = connect()
     try:
@@ -370,7 +369,7 @@ def api_key_revoke_all_for_subject(subject):
 def api_key_subjects_with_active_keys():
     """Return distinct subjects that have at least one active (non-revoked, non-expired) API key.
     Used by the periodic Keygen license sync job."""
-    from .db import connect, _return_conn
+    from .db import _return_conn, connect
 
     now = int(time.time())
     conn = connect()

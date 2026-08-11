@@ -441,9 +441,9 @@ def _cap_rows(conn, table, order_col, max_rows):
     # ORDER BY DESC puts newest first; OFFSET skips them; LIMIT -1 ("no limit")
     # captures all remaining (oldest) rows for deletion — no COUNT(*) needed.
     conn.execute(
-        f"DELETE FROM {table} WHERE rowid IN ("
+        f"DELETE FROM {table} WHERE rowid IN ("  # noqa: S608 — table/order_col guarded by assertion above
         f"SELECT rowid FROM {table} ORDER BY {order_col} DESC LIMIT -1 OFFSET ?"
-        f")",  # noqa: S608
+        f")",
         (max_rows,),
     )
 
@@ -455,7 +455,7 @@ def _cap_rows(conn, table, order_col, max_rows):
 
 def backup(dest_dir=None, keep=None, stamp=None, shutdown_event=None):
     """Write a consistent online backup of the live DB, then prune to `keep` most recent.
-    
+
     A075: If shutdown_event is provided, check it before starting the backup
     to prevent blocking scheduler shutdown indefinitely.
     """
@@ -463,7 +463,7 @@ def backup(dest_dir=None, keep=None, stamp=None, shutdown_event=None):
     if shutdown_event is not None and shutdown_event.is_set():
         logging_util.warn("db_backup_cancelled_by_shutdown")
         return None
-        
+
     dest_dir = dest_dir or config.DB_BACKUP_DIR or (os.path.dirname(config.DB_PATH) or ".") + "/backups"
     keep = config.DB_BACKUP_KEEP if keep is None else keep
     os.makedirs(dest_dir, mode=0o700, exist_ok=True)
@@ -586,7 +586,9 @@ def get_or_create_trial_anchor(fingerprint, current_time):
 # ---------------------------------------------------------------------------
 
 from .kv_repo import *  # noqa: E402,F401,F403
-from .license_repo import *  # noqa: E402,F401,F403
-from .license_repo import _migrate_license_hmac_v1_to_v2  # A021: explicit (underscore prefix excluded from import *)
 from .leak_repo import *  # noqa: E402,F401,F403
+from .license_repo import *  # noqa: E402,F401,F403
+from .license_repo import (  # noqa: E402
+    _migrate_license_hmac_v1_to_v2,  # A021: explicit (underscore prefix excluded from import *)
+)
 from .monitor_repo import *  # noqa: E402,F401,F403

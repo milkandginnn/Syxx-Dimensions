@@ -45,7 +45,9 @@ def _keygen_key_error():
     if len(key_bytes) != 32:
         return f"32 bytes of hex expected, got {len(key_bytes)} bytes"
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey  # type: ignore[unresolved-import]
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PublicKey,  # type: ignore[unresolved-import]
+        )
 
         Ed25519PublicKey.from_public_bytes(key_bytes)
     except Exception as e:

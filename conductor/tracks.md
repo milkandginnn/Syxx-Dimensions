@@ -20,7 +20,6 @@
 
 | [x] | [fix-fingerprint-mismatch_20260809](./tracks/fix-fingerprint-mismatch_20260809/index.md) | Fix Fingerprint Mismatch — R→G17, C# test build errors | 2026-08-09 | 2026-08-09 |
 
-| [x] | [tech-debt-remediation_20260811](./tracks/tech-debt-remediation_20260811/index.md) | Tech Debt Remediation — Full Program (50/56 tasks, 6 deferred) | 2026-08-11 | 2026-08-11 |
 
 ## Archived
 
@@ -32,5 +31,6 @@
 | [fix-test-integrity_20260808](./tracks/_archive/fix-test-integrity_20260808/index.md) | Fix Test Integrity | Completed | 2026-08-09 |
 | [reverify-test-integrity_20260808](./tracks/_archive/reverify-test-integrity_20260808/index.md) | Re-Verify Test Integrity | Completed | 2026-08-09 |
 | [fix-fingerprint-defects_20260809](./tracks/_archive/fix-fingerprint-defects_20260809/index.md) | Fix Twin Parity Fingerprint Defects | Completed | 2026-08-09 |
+| [tech-debt-remediation_20260811](./tracks/_archive/tech-debt-remediation_20260811/index.md) | Tech Debt Remediation — Full Program | Completed | 2026-08-11 |
 
 <!-- Tracks registered by /conductor:new-track -->

@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syxx Unified Type Specimen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Cormorant+SC:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=JetBrains+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Unified Design Tokens ── */
+  :root {
+    /* Brand co-primaries */
+    --cyan: #05b5d4;
+    --cyan-deep: #0066cc;
+    --violet: #8c5cf5;
+    --violet-dim: #7c5cff;
+    --violet-bright: #a78bff;
+
+    /* Semantic severity */
+    --critical: #f5405e;
+    --high: #fa7317;
+    --warning: #f59e0a;
+    --success: #0d9487;
+
+    /* Dark mode (default) */
+    --bg: #0B1120;
+    --surface: #1a2138;
+    --surface-elevated: #26304a;
+    --border: #334561;
+    --text: #ffffff;
+    --text-muted: #94a3bf;
+    --text-faint: #6b7a94;
+    --hairline: rgba(255,255,255,0.10);
+
+    /* Font families — from Syxx Type Specimen */
+    --font-display: "Cinzel", Georgia, serif;
+    --font-body: "Spectral", Georgia, serif;
+    --font-sc: "Cormorant SC", Georgia, serif;
+    --font-editorial: "EB Garamond", Georgia, serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+    /* Type scale */
+    --text-hero: 34px;
+    --text-title1: 28px;
+    --text-title2: 22px;
+    --text-title3: 18px;
+    --text-body: 14px;
+    --text-caption: 12px;
+    --text-small: 11px;
+    --text-eyebrow: 10px;
+    --text-badge: 9px;
+
+    /* Weights */
+    --w-regular: 400;
+    --w-medium: 500;
+    --w-semibold: 600;
+    --w-bold: 700;
+
+    /* Spacing */
+    --s1: 2px; --s2: 4px; --s3: 6px; --s4: 8px; --s5: 10px;
+    --s6: 12px; --s7: 16px; --s8: 20px; --s9: 24px; --s10: 32px; --s11: 40px;
+
+    /* Radii */
+    --r-badge: 4px;
+    --r-chip: 6px;
+    --r-button: 8px;
+    --r-card: 12px;
+    --r-panel: 16px;
+    --r-pill: 999px;
+
+    /* Motion */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --dur-fast: 0.15s;
+    --dur-base: 0.2s;
+
+    /* Shadows & glows */
+    --shadow-card: 0 4px 8px rgba(0,0,0,0.20);
+    --shadow-pop: 0 8px 24px rgba(0,0,0,0.35);
+    --glow-cyan: 0 0 8px rgba(5,181,212,0.30), 0 0 12px rgba(5,181,212,0.20);
+    --glow-violet: 0 0 8px rgba(140,92,245,0.30), 0 0 12px rgba(140,92,245,0.20);
+    --glow-critical: 0 0 8px rgba(245,64,94,0.30), 0 0 12px rgba(245,64,94,0.20);
+    --focus-ring: 0 0 0 2px var(--cyan);
+
+    /* Gradient */
+    --brand-gradient: linear-gradient(120deg, var(--cyan), var(--violet));
+  }
+
+  /* ── Light mode ── */
+  [data-theme="light"] {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface-elevated: #f0f2f5;
+    --border: #d1d5db;
+    --text: #111827;
+    --text-muted: #4b5563;
+    --text-faint: #9ca3af;
+    --hairline: rgba(0,0,0,0.08);
+    --shadow-card: 0 4px 8px rgba(0,0,0,0.06);
+    --shadow-pop: 0 8px 24px rgba(0,0,0,0.10);
+  }
+
+  /* ── Base ── */
+  html { color-scheme: dark; }
+  [data-theme="light"] { color-scheme: light; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--s10) var(--s8);
+  }
+  .section {
+    margin-bottom: var(--s11);
+  }
+  .section-label {
+    font-family: var(--font-sc);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: var(--s7);
+    padding-bottom: var(--s4);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s7);
+  }
+  @media (max-width: 640px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Theme toggle ── */
+  .theme-toggle {
+    position: fixed;
+    top: var(--s7);
+    right: var(--s7);
+    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s4);
+    padding: var(--s4) var(--s6);
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    font-weight: var(--w-semibold);
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+  }
+  .theme-toggle:hover {
+    color: var(--text);
+    border-color: var(--cyan);
+  }
+
+  /* ── Hero ── */
+  .hero {
+    text-align: center;
+    padding: var(--s11) 0;
+    margin-bottom: var(--s11);
+  }
+  .hero-glyph {
+    font-family: var(--font-display);
+    font-size: clamp(120px, 20vw, 280px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: var(--violet);
+    margin-bottom: var(--s8);
+  }
+  .hero-title {
+    font-family: var(--font-sc);
+    font-size: var(--text-title2);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    margin-bottom: var(--s4);
+  }
+  .hero-sub {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .hero-sub .cyan { color: var(--cyan); }
+  .hero-sub .violet { color: var(--violet); }
+
+  /* ── Type scale ── */
+  .scale-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s7);
+    padding: var(--s5) 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .scale-row:last-child { border-bottom: none; }
+  .scale-meta {
+    flex: 0 0 140px;
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    color: var(--text-faint);
+    line-height: 1.6;
+  }
+  .scale-sample { flex: 1; min-width: 0; }
+  .scale-sample.display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .scale-sample.body-serif { font-family: var(--font-body); }
+  .scale-sample.editorial { font-family: var(--font-editorial); }
+  .scale-sample.sc { font-family: var(--font-sc); letter-spacing: 0.06em; }
+  .scale-sample.mono {
+    font-family: var(--font-mono);
+    font-size: calc(var(--text-body) - 1px);
+  }
+
+  /* ── Family cards ── */
+  .family-card {
+    padding: var(--s8);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-card);
+  }
+  .family-card h3 {
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    font-weight: var(--w-bold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: var(--s6);
+  }
+  .family-card .sample {
+    font-size: var(--text-title2);
+    font-weight: var(--w-bold);
+    margin-bottom: var(--s4);
+  }
+  .family-card .stack {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    color: var(--text-faint);
+    word-break: break-all;
+  }
+  .family-card .usage {
+    margin-top: var(--s5);
+    font-size: var(--text-caption);
+    color: var(--text-muted);
+  }
+
+  /* ── Weight grid ── */
+  .weight-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--s6);
+  }
+  @media (max-width: 640px) {
+    .weight-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .weight-cell {
+    padding: var(--s6);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-button);
+    text-align: center;
+  }
+  .weight-cell .big {
+    font-family: var(--font-display);
+    font-size: var(--text-title1);
+    margin-bottom: var(--s3);
+  }
+  .weight-cell .label {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    color: var(--text-faint);
+  }
+
+  /* ── Color swatches ── */
+  .swatch-row {
+    display: flex;
+    gap: var(--s4);
+    flex-wrap: wrap;
+    margin-bottom: var(--s6);
+  }
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s3);
+  }
+  .swatch-dot {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--r-card);
+    border: 1px solid var(--hairline);
+  }
+  .swatch-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-badge);
+    color: var(--text-faint);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .swatch-hex {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    color: var(--text-muted);
+  }
+
+  /* ── Components ── */
+  .component-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s6);
+    align-items: center;
+    margin-bottom: var(--s7);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: var(--s5) var(--s8);
+    gap: var(--s4);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: var(--w-semibold);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--r-button);
+    background: var(--surface-elevated);
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-smooth);
+  }
+  .btn:hover {
+    border-color: var(--cyan);
+    box-shadow: var(--glow-cyan);
+    transform: translateY(-1px);
+  }
+  .btn-primary {
+    border-color: transparent;
+    background: var(--brand-gradient);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(5,181,212,0.20);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(5,181,212,0.30);
+  }
+  .btn-danger {
+    border-color: var(--critical);
+    background: rgba(245,64,94,0.10);
+    color: var(--critical);
+  }
+  .btn-danger:hover {
+    box-shadow: var(--glow-critical);
+  }
+  .btn-quiet {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-muted);
+  }
+  .btn-quiet:hover {
+    color: var(--text);
+    background: var(--surface-elevated);
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* ── Badges / chips ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 var(--s5);
+    font-family: var(--font-sans);
+    font-size: var(--text-badge);
+    font-weight: var(--w-bold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: var(--r-badge);
+  }
+  .badge-critical { background: rgba(245,64,94,0.15); color: var(--critical); }
+  .badge-high { background: rgba(250,115,23,0.15); color: var(--high); }
+  .badge-warning { background: rgba(245,158,10,0.15); color: var(--warning); }
+  .badge-success { background: rgba(13,148,135,0.15); color: var(--success); }
+  .badge-info { background: rgba(140,92,245,0.15); color: var(--violet); }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 var(--s6);
+    gap: var(--s3);
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    font-weight: var(--w-semibold);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+  }
+  .chip-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  /* ── Stat card ── */
+  .stat-card {
+    padding: var(--s7);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-card);
+  }
+  .stat-card .stat-eyebrow {
+    font-family: var(--font-sc);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: var(--s4);
+  }
+  .stat-card .stat-value {
+    font-family: var(--font-mono);
+    font-size: var(--text-hero);
+    font-weight: 700;
+    color: var(--cyan);
+    line-height: 1.15;
+    margin-bottom: var(--s3);
+  }
+  .stat-card .stat-detail {
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    color: var(--text-muted);
+  }
+
+  /* ── Terminal ── */
+  .terminal {
+    padding: var(--s6);
+    background: #080410;
+    border: 1px solid rgba(5,181,212,0.24);
+    border-radius: var(--r-button);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    line-height: 1.55;
+    color: #c9f8ef;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .terminal .prompt { color: var(--cyan); }
+  .terminal .flag { color: var(--violet-bright); }
+  .terminal .val { color: var(--warning); }
+  .terminal .ok { color: var(--success); }
+  .terminal .err { color: var(--critical); }
+
+  /* ── Input ── */
+  .field { display: grid; gap: var(--s3); margin-bottom: var(--s7); }
+  .field-label {
+    font-size: var(--text-body);
+    font-weight: var(--w-semibold);
+    color: var(--text);
+  }
+  .field-input {
+    width: 100%;
+    min-height: 36px;
+    padding: var(--s4) var(--s5);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-button);
+    outline: none;
+    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+  }
+  .field-input:focus {
+    border-color: var(--cyan);
+    box-shadow: var(--focus-ring);
+  }
+  .field-input::placeholder { color: var(--text-faint); }
+  .field-hint {
+    font-size: var(--text-caption);
+    color: var(--text-muted);
+  }
+
+  /* ── Gradient bar ── */
+  .gradient-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--brand-gradient);
+    margin: var(--s8) 0;
+  }
+
+  /* ── Glow demo ── */
+  .glow-row {
+    display: flex;
+    gap: var(--s8);
+    flex-wrap: wrap;
+  }
+  .glow-box {
+    width: 120px;
+    height: 80px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-card);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    color: var(--text-muted);
+  }
+  .glow-box.cyan { box-shadow: var(--glow-cyan); border-color: var(--cyan); }
+  .glow-box.violet { box-shadow: var(--glow-violet); border-color: var(--violet); }
+  .glow-box.critical { box-shadow: var(--glow-critical); border-color: var(--critical); }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: var(--s10) 0 var(--s7);
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    color: var(--text-faint);
+  }
+  .footer a { color: var(--cyan); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* ── Focus ── */
+  :focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+    box-shadow: var(--focus-ring);
+  }
+
+  /* ── Selection ── */
+  ::selection {
+    color: var(--bg);
+    background: var(--cyan);
+  }
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle color mode">
+  <span id="theme-icon">◑</span> Toggle light/dark
+</button>
+
+<div class="page">
+
+  <!-- ═══ HERO ═══ -->
+  <header class="hero">
+    <div class="hero-glyph">Aa</div>
+    <h1 class="hero-title">Syxx Unified Type Specimen</h1>
+    <p class="hero-sub">
+      <span class="cyan">Cyan</span> for interaction · <span class="violet">Violet</span> for brand · Dark + Light modes
+    </p>
+    <div class="gradient-bar" style="max-width:320px;margin:var(--s8) auto 0;"></div>
+  </header>
+
+  <!-- ═══ FONT FAMILIES ═══ -->
+  <section class="section">
+    <div class="section-label">Font Families</div>
+
+    <!-- Cinzel -->
+    <div class="family-card" style="margin-bottom:var(--s7)">
+      <h3>Cinzel — Display</h3>
+      <div style="font-family:var(--font-display);font-size:48px;font-weight:700;letter-spacing:0.04em;margin-bottom:var(--s4)">Dimensions</div>
+      <div style="font-family:var(--font-display);font-size:var(--text-title2);font-weight:400;letter-spacing:0.03em;color:var(--text-muted);margin-bottom:var(--s5)">The quick brown fox jumps over the lazy dog</div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s6);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-display);font-weight:400;font-size:var(--text-title3)">Regular 400</span>
+        <span style="font-family:var(--font-display);font-weight:500;font-size:var(--text-title3)">Medium 500</span>
+        <span style="font-family:var(--font-display);font-weight:600;font-size:var(--text-title3)">Semi 600</span>
+        <span style="font-family:var(--font-display);font-weight:700;font-size:var(--text-title3)">Bold 700</span>
+        <span style="font-family:var(--font-display);font-weight:800;font-size:var(--text-title3)">Extra 800</span>
+        <span style="font-family:var(--font-display);font-weight:900;font-size:var(--text-title3)">Black 900</span>
+      </div>
+      <div class="stack">"Cinzel", Georgia, serif</div>
+      <div class="usage">View titles, hero glyphs, branding, section headers. Uppercase-only design inspired by Roman inscriptions.</div>
+    </div>
+
+    <!-- Spectral -->
+    <div class="family-card" style="margin-bottom:var(--s7)">
+      <h3>Spectral — Body Serif</h3>
+      <div style="font-family:var(--font-body);font-size:var(--text-title1);font-weight:400;margin-bottom:var(--s4)">Investigation Results</div>
+      <div style="font-family:var(--font-body);font-size:var(--text-body);font-weight:400;line-height:1.6;color:var(--text-muted);margin-bottom:var(--s3);max-width:640px">All three vantages returned the same A record for this domain. No evidence of DNS hijacking, selective censorship, or cache poisoning was detected during the investigation window.</div>
+      <div style="font-family:var(--font-body);font-style:italic;font-size:var(--text-body);font-weight:400;color:var(--text-muted);margin-bottom:var(--s5)">The resolver's story, written in packets and timestamps.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-body);font-weight:200">ExtraLight 200</span>
+        <span style="font-family:var(--font-body);font-weight:300">Light 300</span>
+        <span style="font-family:var(--font-body);font-weight:400">Regular 400</span>
+        <span style="font-family:var(--font-body);font-weight:500">Medium 500</span>
+        <span style="font-family:var(--font-body);font-weight:600">Semi 600</span>
+        <span style="font-family:var(--font-body);font-weight:700">Bold 700</span>
+        <span style="font-family:var(--font-body);font-weight:800">ExtraBold 800</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-body);font-style:italic;font-weight:300">Light Italic</span>
+        <span style="font-family:var(--font-body);font-style:italic;font-weight:400">Regular Italic</span>
+        <span style="font-family:var(--font-body);font-style:italic;font-weight:600">Semi Italic</span>
+        <span style="font-family:var(--font-body);font-style:italic;font-weight:700">Bold Italic</span>
+      </div>
+      <div class="stack">"Spectral", Georgia, serif</div>
+      <div class="usage">Body text, investigation descriptions, card copy, help documentation. Clean serif optimized for screen reading.</div>
+    </div>
+
+    <!-- Cormorant SC -->
+    <div class="family-card" style="margin-bottom:var(--s7)">
+      <h3>Cormorant SC — Small Caps Labels</h3>
+      <div style="font-family:var(--font-sc);font-size:var(--text-title1);font-weight:600;letter-spacing:0.06em;margin-bottom:var(--s4)">Vantage Points</div>
+      <div style="font-family:var(--font-sc);font-size:var(--text-body);font-weight:400;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:var(--s5)">Authoritative Lookup · Resolver Consensus · DNSSEC Validation</div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-sc);font-weight:300;font-size:var(--text-title3)">Light 300</span>
+        <span style="font-family:var(--font-sc);font-weight:400;font-size:var(--text-title3)">Regular 400</span>
+        <span style="font-family:var(--font-sc);font-weight:500;font-size:var(--text-title3)">Medium 500</span>
+        <span style="font-family:var(--font-sc);font-weight:600;font-size:var(--text-title3)">Semi 600</span>
+        <span style="font-family:var(--font-sc);font-weight:700;font-size:var(--text-title3)">Bold 700</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-sc);font-style:italic;font-weight:400;font-size:var(--text-title3)">Regular Italic</span>
+        <span style="font-family:var(--font-sc);font-style:italic;font-weight:600;font-size:var(--text-title3)">Semi Italic</span>
+      </div>
+      <div class="stack">"Cormorant SC", Georgia, serif</div>
+      <div class="usage">Eyebrow labels, section headers, stat card titles, navigation categories. Elegant small caps at all sizes.</div>
+    </div>
+
+    <!-- EB Garamond -->
+    <div class="family-card" style="margin-bottom:var(--s7)">
+      <h3>EB Garamond — Editorial</h3>
+      <div style="font-family:var(--font-editorial);font-size:var(--text-title1);font-weight:400;font-style:italic;margin-bottom:var(--s4)">"Every resolver tells a story."</div>
+      <div style="font-family:var(--font-editorial);font-size:var(--text-body);font-weight:400;line-height:1.6;color:var(--text-muted);margin-bottom:var(--s3);max-width:640px">Syxx traces DNS lookups end to end — spoofed answers, poisoned caches, silent exfiltration — and writes your resolver's story. The evidence is in the packets.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-editorial);font-weight:400">Regular 400</span>
+        <span style="font-family:var(--font-editorial);font-weight:500">Medium 500</span>
+        <span style="font-family:var(--font-editorial);font-weight:600">Semi 600</span>
+        <span style="font-family:var(--font-editorial);font-weight:700">Bold 700</span>
+        <span style="font-family:var(--font-editorial);font-weight:800">Extra 800</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-editorial);font-style:italic;font-weight:400">Regular Italic</span>
+        <span style="font-family:var(--font-editorial);font-style:italic;font-weight:500">Medium Italic</span>
+        <span style="font-family:var(--font-editorial);font-style:italic;font-weight:700">Bold Italic</span>
+      </div>
+      <div class="stack">"EB Garamond", Georgia, serif</div>
+      <div class="usage">Pull quotes, editorial emphasis, welcome letters, about page, legal prose. Classical old-style elegance.</div>
+    </div>
+
+    <!-- JetBrains Mono -->
+    <div class="family-card">
+      <h3>JetBrains Mono — Code & Terminal</h3>
+      <div style="font-family:var(--font-mono);font-size:var(--text-title3);font-weight:400;margin-bottom:var(--s4)">0x4f2a  resolver.query("example.com")</div>
+      <div style="font-family:var(--font-mono);font-size:var(--text-caption);color:var(--text-muted);line-height:1.6;margin-bottom:var(--s5)">
+        <span style="color:var(--cyan)">const</span> result = <span style="color:var(--violet-bright)">investigate</span>(domain, { vantages: <span style="color:var(--warning)">"all"</span> });<br>
+        <span style="color:var(--text-faint)">// consensus: "consistent" · 4/4 agree · 24ms</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-mono);font-weight:100;font-size:var(--text-caption)">Thin 100</span>
+        <span style="font-family:var(--font-mono);font-weight:300;font-size:var(--text-caption)">Light 300</span>
+        <span style="font-family:var(--font-mono);font-weight:400;font-size:var(--text-caption)">Regular 400</span>
+        <span style="font-family:var(--font-mono);font-weight:500;font-size:var(--text-caption)">Medium 500</span>
+        <span style="font-family:var(--font-mono);font-weight:700;font-size:var(--text-caption)">Bold 700</span>
+        <span style="font-family:var(--font-mono);font-weight:800;font-size:var(--text-caption)">Extra 800</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s7);margin-bottom:var(--s5)">
+        <span style="font-family:var(--font-mono);font-style:italic;font-weight:400;font-size:var(--text-caption)">Regular Italic</span>
+        <span style="font-family:var(--font-mono);font-style:italic;font-weight:700;font-size:var(--text-caption)">Bold Italic</span>
+      </div>
+      <div class="stack">"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace</div>
+      <div class="usage">Code blocks, hashes, file paths, terminal output, version numbers, IP addresses, DNS records.</div>
+    </div>
+  </section>
+
+  <!-- ═══ WEIGHT SHOWCASE ═══ -->
+  <section class="section">
+    <div class="section-label">Cinzel Weight Range</div>
+    <div class="weight-grid">
+      <div class="weight-cell">
+        <div class="big" style="font-family:var(--font-display);font-weight:400">Aa</div>
+        <div class="label">Regular 400</div>
+      </div>
+      <div class="weight-cell">
+        <div class="big" style="font-family:var(--font-display);font-weight:600">Aa</div>
+        <div class="label">Semibold 600</div>
+      </div>
+      <div class="weight-cell">
+        <div class="big" style="font-family:var(--font-display);font-weight:700">Aa</div>
+        <div class="label">Bold 700</div>
+      </div>
+      <div class="weight-cell">
+        <div class="big" style="font-family:var(--font-display);font-weight:900">Aa</div>
+        <div class="label">Black 900</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TYPE SCALE ═══ -->
+  <section class="section">
+    <div class="section-label">Type Scale</div>
+
+    <div class="scale-row">
+      <div class="scale-meta">--text-hero<br>34px · bold<br>cinzel</div>
+      <div class="scale-sample display" style="font-size:var(--text-hero)">DNS Integrity</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-title1<br>28px · bold<br>cinzel</div>
+      <div class="scale-sample display" style="font-size:var(--text-title1)">Investigation Results</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-title2<br>22px · semi<br>spectral</div>
+      <div class="scale-sample body-serif" style="font-size:var(--text-title2);font-weight:600">Authoritative Lookup</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-title3<br>18px · semi<br>spectral</div>
+      <div class="scale-sample body-serif" style="font-size:var(--text-title3);font-weight:600">Resolver Consensus</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-body<br>14px · regular<br>spectral</div>
+      <div class="scale-sample body-serif" style="font-size:var(--text-body)">All three vantages returned the same A record. No evidence of DNS hijacking or selective censorship was detected during this investigation.</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-caption<br>12px · italic<br>garamond</div>
+      <div class="scale-sample editorial" style="font-size:var(--text-caption);font-style:italic;color:var(--text-muted)">Last checked 4 minutes ago via UDP 8.8.8.8, DoH cloudflare-dns.com, and system resolver</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-small<br>11px · regular<br>mono</div>
+      <div class="scale-sample mono" style="font-size:var(--text-small);color:var(--text-faint)">DNSSEC presence-only observation; not cryptographically validated</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-eyebrow<br>12px · semi<br>cormorant sc</div>
+      <div class="scale-sample sc" style="font-size:var(--text-caption);font-weight:600;color:var(--text-faint)">Vantage Points</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-meta">--text-badge<br>9px · bold<br>mono</div>
+      <div class="scale-sample mono" style="font-size:var(--text-badge);font-weight:700;letter-spacing:0.04em;text-transform:uppercase">CRITICAL · HIGH · WARNING</div>
+    </div>
+  </section>
+
+  <!-- ═══ WEIGHTS ═══ -->
+  <section class="section">
+    <div class="section-label">Weights — Display (Georgia)</div>
+    <div class="weight-grid">
+      <div class="weight-cell">
+        <div class="big" style="font-weight:400">Aa</div>
+        <div class="label">Regular 400</div>
+      </div>
+      <div class="weight-cell">
+        <div class="big" style="font-weight:500">Aa</div>
+        <div class="label">Medium 500</div>
+      </div>
+      <div class="weight-cell">
+        <div class="big" style="font-weight:600">Aa</div>
+        <div class="label">Semibold 600</div>
+      </div>
+      <div class="weight-cell">
+        <div class="big" style="font-weight:700">Aa</div>
+        <div class="label">Bold 700</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ COLORS ═══ -->
+  <section class="section">
+    <div class="section-label">Brand Colors</div>
+    <div class="swatch-row">
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--cyan)"></div>
+        <div class="swatch-label">Cyan</div>
+        <div class="swatch-hex">#05b5d4</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--cyan-deep)"></div>
+        <div class="swatch-label">Deep Blue</div>
+        <div class="swatch-hex">#0066cc</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--violet)"></div>
+        <div class="swatch-label">Violet</div>
+        <div class="swatch-hex">#8c5cf5</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--violet-bright)"></div>
+        <div class="swatch-label">Bright</div>
+        <div class="swatch-hex">#a78bff</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:var(--s8)">Semantic / Severity</div>
+    <div class="swatch-row">
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--critical)"></div>
+        <div class="swatch-label">Critical</div>
+        <div class="swatch-hex">#f5405e</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--high)"></div>
+        <div class="swatch-label">High</div>
+        <div class="swatch-hex">#fa7317</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--warning)"></div>
+        <div class="swatch-label">Warning</div>
+        <div class="swatch-hex">#f59e0a</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--success)"></div>
+        <div class="swatch-label">Success</div>
+        <div class="swatch-hex">#0d9487</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:var(--s8)">Surfaces</div>
+    <div class="swatch-row">
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--bg);border:1px solid var(--border)"></div>
+        <div class="swatch-label">BG</div>
+        <div class="swatch-hex">#0B1120</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--surface)"></div>
+        <div class="swatch-label">Surface</div>
+        <div class="swatch-hex">#1a2138</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--surface-elevated)"></div>
+        <div class="swatch-label">Elevated</div>
+        <div class="swatch-hex">#26304a</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-dot" style="background:var(--border)"></div>
+        <div class="swatch-label">Border</div>
+        <div class="swatch-hex">#334561</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ GLOW EFFECTS ═══ -->
+  <section class="section">
+    <div class="section-label">Glow Effects</div>
+    <div class="glow-row">
+      <div class="glow-box cyan">cyan</div>
+      <div class="glow-box violet">violet</div>
+      <div class="glow-box critical">critical</div>
+    </div>
+  </section>
+
+  <!-- ═══ COMPONENTS ═══ -->
+  <section class="section">
+    <div class="section-label">Components — Buttons</div>
+    <div class="component-row">
+      <button class="btn btn-primary">Investigate</button>
+      <button class="btn">Run Trace</button>
+      <button class="btn btn-danger">Revoke Key</button>
+      <button class="btn btn-quiet">Cancel</button>
+    </div>
+
+    <div class="section-label" style="margin-top:var(--s8)">Badges & Chips</div>
+    <div class="component-row">
+      <span class="badge badge-critical">Critical</span>
+      <span class="badge badge-high">High</span>
+      <span class="badge badge-warning">Warning</span>
+      <span class="badge badge-success">Secure</span>
+      <span class="badge badge-info">Info</span>
+    </div>
+    <div class="component-row">
+      <span class="chip"><span class="chip-dot" style="background:var(--success)"></span> Consistent</span>
+      <span class="chip"><span class="chip-dot" style="background:var(--warning)"></span> Degraded</span>
+      <span class="chip"><span class="chip-dot" style="background:var(--critical)"></span> Divergent</span>
+      <span class="chip"><span class="chip-dot" style="background:var(--text-faint)"></span> Inconclusive</span>
+    </div>
+
+    <div class="section-label" style="margin-top:var(--s8)">Stat Cards (JetBrains Mono numerics)</div>
+    <div class="grid-2" style="margin-bottom:var(--s7)">
+      <div class="stat-card">
+        <div class="stat-eyebrow">Vantages Queried</div>
+        <div class="stat-value">12</div>
+        <div class="stat-detail">3 system · 5 UDP · 4 DoH</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-eyebrow">Consensus</div>
+        <div class="stat-value" style="font-family:var(--font-display);font-size:var(--text-title1);letter-spacing:0.04em;color:var(--success)">Clean</div>
+        <div class="stat-detail">All vantages agree · 8ms elapsed</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:var(--s8)">Form Input</div>
+    <div class="field" style="max-width:400px">
+      <label class="field-label" for="domain">Domain to investigate</label>
+      <input class="field-input" id="domain" type="text" placeholder="example.com" spellcheck="false">
+      <span class="field-hint">Enter a domain name to trace across all vantage points</span>
+    </div>
+
+    <div class="section-label" style="margin-top:var(--s8)">Terminal / Mono</div>
+    <div class="terminal"><span class="prompt">$</span> syxx investigate <span class="flag">--domain</span> example.com <span class="flag">--vantages</span> <span class="val">all</span>
+
+<span class="ok">✓</span> system    93.184.216.34   NOERROR  12ms
+<span class="ok">✓</span> 8.8.8.8   93.184.216.34   NOERROR  18ms
+<span class="ok">✓</span> 1.1.1.1   93.184.216.34   NOERROR  14ms
+<span class="ok">✓</span> cloudflare 93.184.216.34  NOERROR  22ms
+
+consensus: <span class="ok">consistent</span> (4/4 agree)
+dnssec: <span class="val">unsigned</span> (presence-only observation)
+elapsed: 24ms · deadline remaining: 14,976ms</div>
+  </section>
+
+  <!-- ═══ SPACING ═══ -->
+  <section class="section">
+    <div class="section-label">Spacing Scale</div>
+    <div style="display:flex;flex-direction:column;gap:var(--s4)">
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s1 · 2px</span>
+        <div style="width:2px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s2 · 4px</span>
+        <div style="width:4px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s4 · 8px</span>
+        <div style="width:8px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s6 · 12px</span>
+        <div style="width:12px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s7 · 16px</span>
+        <div style="width:16px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s8 · 20px</span>
+        <div style="width:20px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s9 · 24px</span>
+        <div style="width:24px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s10 · 32px</span>
+        <div style="width:32px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s6)">
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint);flex:0 0 60px">s11 · 40px</span>
+        <div style="width:40px;height:16px;background:var(--cyan);border-radius:1px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ RADII ═══ -->
+  <section class="section">
+    <div class="section-label">Border Radii</div>
+    <div style="display:flex;gap:var(--s8);flex-wrap:wrap;align-items:end">
+      <div style="text-align:center">
+        <div style="width:64px;height:64px;background:var(--surface-elevated);border:1px solid var(--border);border-radius:var(--r-badge);margin-bottom:var(--s3)"></div>
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint)">badge<br>4px</span>
+      </div>
+      <div style="text-align:center">
+        <div style="width:64px;height:64px;background:var(--surface-elevated);border:1px solid var(--border);border-radius:var(--r-chip);margin-bottom:var(--s3)"></div>
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint)">chip<br>6px</span>
+      </div>
+      <div style="text-align:center">
+        <div style="width:64px;height:64px;background:var(--surface-elevated);border:1px solid var(--border);border-radius:var(--r-button);margin-bottom:var(--s3)"></div>
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint)">button<br>8px</span>
+      </div>
+      <div style="text-align:center">
+        <div style="width:64px;height:64px;background:var(--surface-elevated);border:1px solid var(--border);border-radius:var(--r-card);margin-bottom:var(--s3)"></div>
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint)">card<br>12px</span>
+      </div>
+      <div style="text-align:center">
+        <div style="width:64px;height:64px;background:var(--surface-elevated);border:1px solid var(--border);border-radius:var(--r-panel);margin-bottom:var(--s3)"></div>
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint)">panel<br>16px</span>
+      </div>
+      <div style="text-align:center">
+        <div style="width:64px;height:64px;background:var(--surface-elevated);border:1px solid var(--border);border-radius:var(--r-pill);margin-bottom:var(--s3)"></div>
+        <span style="font-family:var(--font-mono);font-size:var(--text-small);color:var(--text-faint)">pill<br>999px</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    Syxx Unified Design System · Merged from Dimensions v3 + Nnyx Io<br>
+    <a href="#">.ui-design/</a>
+  </footer>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-icon').textContent = next === 'light' ? '◐' : '◑';
+}
+</script>
+</body>
+</html>

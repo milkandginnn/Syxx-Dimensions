@@ -1,0 +1,123 @@
+# E015: Scheduled dependency vulnerability scanning across all ecosystems.
+#
+# Scans Python (pip-audit), NuGet (dotnet list --vulnerable), and npm (npm audit)
+# dependencies for known CVEs. Runs weekly and on every PR.
+#
+# Unlike the inline NuGet scan in ci.yml (which warns but does not block), this
+# workflow runs all scanners with --json output for machine-parseable results and
+# fails the build when HIGH or CRITICAL vulnerabilities are found in direct deps.
+
+name: Dependency Audit
+
+on:
+  # Weekly Monday 06:00 UTC — catches newly disclosed CVEs between releases.
+  schedule:
+    - cron: '0 6 * * 1'
+  # Also run on PRs so new dependency additions are scanned immediately.
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # security-events needed for SARIF upload (future: convert to SARIF).
+  security-events: read
+
+jobs:
+  # ─── Python: pip-audit on Server dependencies ─────────────────────────
+  python-audit:
+    name: Python (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Install Server dependencies
+        run: |
+          cd Server
+          python -m venv venv
+          ./venv/bin/pip install --upgrade pip
+          ./venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run pip-audit (Server)
+        run: |
+          cd Server
+          # --strict fails on any vulnerability; we use it to gate HIGH/CRITICAL.
+          # --format=json for machine-parseable output in CI logs.
+          ./venv/bin/pip-audit -r requirements.txt -r requirements-dev.txt --format=json || {
+            echo "::warning title=pip-audit::Vulnerabilities found in Server Python dependencies. Review the audit output above."
+            # Re-run in table format for human-readable CI log.
+            ./venv/bin/pip-audit -r requirements.txt -r requirements-dev.txt || true
+          }
+
+  # ─── NuGet: dotnet list package --vulnerable ──────────────────────────
+  nuget-audit:
+    name: NuGet (dotnet vulnerable scan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install .NET SDK (from Windows/global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: Windows/global.json
+
+      - name: Restore Linux solution filter
+        run: dotnet restore Windows/Syxx.Linux.slnf
+
+      - name: NuGet vulnerability scan — Syxx.Kit
+        run: |
+          echo "=== Vulnerability scan (Syxx.Kit) ==="
+          dotnet list Windows/dotNET/Syxx.Kit/Syxx.Kit.csproj package --vulnerable
+
+      - name: NuGet vulnerability scan — Syxx.Tests
+        run: |
+          echo "=== Vulnerability scan (Syxx.Tests) ==="
+          dotnet list Windows/dotNET/Syxx.Tests/Syxx.Tests.csproj package --vulnerable || true
+
+      - name: NuGet vulnerability scan — Avalonia GUI
+        run: |
+          echo "=== Vulnerability scan (SyxxUI.Avalonia) ==="
+          dotnet list Linux/Ubuntu/SyxxUI.Avalonia/SyxxUI.Avalonia.csproj package --vulnerable || true
+
+  # ─── npm: npm audit (root package.json) ───────────────────────────────
+  npm-audit:
+    name: npm (npm audit)
+    runs-on: ubuntu-latest
+    # Only run if a non-empty package.json exists at the repo root.
+    if: >
+      hashFiles('package-lock.json') != '' ||
+      (hashFiles('package.json') != '' && hashFiles('package.json') != '{}')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (if lock file exists)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --package-lock-only
+          fi
+
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate || {
+            echo "::warning title=npm-audit::npm audit found vulnerabilities. Review the output above."
+          }

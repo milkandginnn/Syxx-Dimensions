@@ -1,0 +1,155 @@
+A001             Passive DNS drift boolean fallback collapses tri-state
+A002             IDN/Punycode bypass of per-run unique-host cap enables SSRF fan-out
+A003             No Unicode normalization of hostnames in host budget comparison
+A004             _envelope_decode function name conflates Content-Encoding with Transfer-
+A005             Server exposes two different key_id schemes from the same Ed25519 key
+A006             Python str.lower() is locale-sensitive for hostname normalization
+A007             _envelope_decode does not handle multiple Content-Encoding values
+A008             Server uses time.time() (wall clock) for manifest timestamps without clock-
+A009             No upper bound on freshness_seconds emitted by the server
+A010             Deprecated build_baseline serializes without sort_keys=True
+A011             json.dumps with ensure_ascii=False produces non-normalized UTF-8 signed
+B001             Passive DNS drift boolean fallback collapses tri-state
+C001             Passive DNS drift boolean fallback collapses tri-state
+D001             Passive DNS drift boolean fallback collapses tri-state
+D002             Swift origin_url comparison diverges from C# due to Unicode normalization
+D003             Swift same-origin host comparison is case-sensitive, violating DNS case-
+D004             Swift redirectReconciles uses case-sensitive URL comparison against server's
+D005             same-origin redirect host comparison is platform-dependent (NFC vs Ordinal)
+D006             Swift UInt64 crash on negative system clock value
+D007             Cross-platform nowMs generation uses inconsistent mechanisms (float vs
+E001             Passive DNS drift boolean fallback collapses tri-state
+E002             TOCTOU DNS rebinding in Swift client-vantage HTTP fetch bypasses SSRF gate
+E003             No key rotation, expiration, or revocation support in trust store
+E004             No explicit certificate revocation checking (CRL/OCSP) in TLS connections
+E005             No zero-width character handling in URL parsing enables invisible host
+E006             No homoglyph / confusable character detection in domain names
+E007             IntegrityTag.constantTimeEqual leaks HMAC length via early return
+E008             Test Ed25519 private keys committed to the repository
+F001             Sample F-domain Deltas
+F002             Swift client comment says "transfer-encoding" but describes Content-Encoding
+F003             C# client comment says "transfer-encoding" but describes Content-Encoding
+F004             Reference evaluator freshness check diverges structurally from client
+F005             Test vector builder serializes envelope.json without sort_keys=True
+A012             In-memory lockout counters reset on server restart
+E009             Keygen API calls over configurable base URL lack HTTPS enforcement
+E010             _cap_rows f-string SQL construction gates on caller discipline only
+E011             logging_util event category uses f-string interpolation for caller data
+A013             IDN domain corruption in DNSSEC validator — `encode("ascii","replace")`
+A014             backup() leaves stale .partial tmp files on error — no finally cleanup
+A015             app.py is a 3,425-line God module mixing 5 distinct concerns
+A016             dnssec_validator.py has zero test coverage — 785-line crypto module
+A017             DNS wire protocol duplicated between dnssec_validator.py and resolver.py
+A018             db.py is a 1,351-line data access monolith with no repository classes
+A019             No architecture documentation for Server — no ADRs, C4 diagrams, or
+A020             _diff_content has no direct unit tests — tested only indirectly via
+A021             Circular dependency workarounds in config.py, db.py, licensing.py
+A022             12 type safety suppression overrides in pyproject.toml mask real errors
+A023             _env_int helper duplicated across 3 modules — copy-paste pattern
+A024             _diff_content and _route_diff use different comparison logic for the
+A025             seo.py duplicates pricing constants from app.py — not shared via config
+A026             _dnssec_observed deeply nested — ~120 lines, 5 levels of nesting,
+A027             resolve_authoritative — 6 levels of nesting, ~160 lines, 8 return sites
+A028             _diff_content lives in app.py but depends on warp.build_baseline
+A029             config.py mixes product catalog (Stripe SKUs) with infrastructure config
+A030             No unified DNS query interface — 5 different query paths for 3 transports
+A031             Tests use unittest.TestCase alongside pytest inconsistently
+B002             208 quarantined test methods in macOS _quarantine/ — synthesis engine
+B003             Synthesizer.cs — 15 duplicated switch (probe.Status) blocks across 6
+B004             MatrixDeterminativeEngine.cs — 1,319-line port of Swift engine with
+B005             DNSResolver.cs — 1,289-line static class mixing transport, parsing,
+B006             LeakDetector.cs — 1,092-line monolith mixing HTTP, TLS, Ed25519,
+B007             SyxxMatrixIntegration.cs — 200-line inline BuildDefaultSpec() with ~100
+B008             DNSResolver.swift — 1,698-line monolith mixing transport and wire format
+B009             MatrixDeterminativeEngine.swift — 1,068 lines, deeply nested scoring
+B010             SynthesisEngine incomplete indicator mapping — 4 clean-support
+B011             No integration tests on macOS — all 889 active tests are unit tests
+B012             No integration tests on any platform — cannot verify DNS tampering
+B013             _diff_content lives in app.py but belongs in a dedicated diff module
+C002             WitnessWireJson.cs — IEEE-754 ULP-nudging date math is fragile
+C003             HasChanges API divergence — Linux uses computed property, Windows uses
+C004             SynthesisEngine incomplete indicator mapping — 4 clean-support
+D008             23 duplicate test files in macOS _quarantine/ — .phase32-active-dup and
+D009             Mirror/ engine duplicated between Linux and Windows — 7 files, ~850
+D010             MirrorBundle.SummaryLine implementation drift — Linux has D334 fix,
+D011             Windows StaticContentParser lacks ReDoS protection — Linux has 5-second
+D012             DiffEngine.DiffAsync only exists on Linux — no async variant on Windows
+D013             DiffResult uses IReadOnlyList on Linux, List on Windows — type divergence
+D014             AppModel.swift is a 2,354-line God class with 63 @Published vars and
+D015             runAllWardens() duplicates run() logic — timeout, Sentry, state management
+D016             No ViewModel layer on macOS — views directly import SyxxKit types
+D017             CLI commands have no shared protocol — 15 files with identical
+D018             SyxxCLI.swift — 1,133-line monolithic CLI parser, no ArgumentParser
+D019             Dual telemetry — Sentry + OTel side-by-side with SyxxDiagnostics layer
+D020             Syxx.Kit is a kitchen-sink module — 80+ files in flat namespace, no
+D021             No mocking library in C# tests — 15,903 lines of test code with ad-hoc
+D022             SyxxUI.Tests is a dead "UNVERIFIED SCAFFOLDING" test project — cannot
+D023             No central package version management — versions repeated across 7
+D024             No global.json or Directory.Build.props — no SDK pin, no shared
+D025             _retired-fonts directory left in source tree — dead assets still tracked
+D026             SyxxUI.Logic.Tests is an empty/near-empty test project
+D027             No BenchmarkDotNet for performance-critical paths — undetectable
+D028             Hardcoded color values across 34 locations on Linux — no shared design
+D029             6 Linux ViewModels have zero test coverage — ~700 lines untested
+D030             GluttonViewModel (643 lines) and WitnessViewModel (522 lines) are
+D031             lazy var monitor in AppModel is not thread-safe under Swift 6
+D032             Legacy DispatchQueue and @escaping patterns remain despite Swift 6
+D033             URLSession delegate completion handlers remain — last @escaping
+E012             No architecture documentation on macOS — no ADRs, C4 diagrams, or
+F006             Regex documentation only on Linux StaticContentParser — Windows lacks
+F007             Cross-platform architecture documentation missing — no unified
+F008             StaticContentParser regex-based HTML parsing is inherently fragile
+A032             cryptography is 9 major versions behind — exposed to CVE-2026-69249
+A033             sentry-sdk[opentelemetry] is 47 minor versions behind — missing OTel
+A034             Server uses pip not uv — no lockfile, no reproducible builds, no
+A035             idna package is a transitive dependency of cryptography — should be
+A036             brotli is 1 minor version behind — missing performance improvements
+B014             sentry-sdk 47 minor versions behind — missing OTel interop fixes could
+C005             cryptography CVE-2026-69249 exposes Ed25519 leak attestation signing
+D034             sentry-cocoa pinned to 8.x — 1 major version behind, 8.x end-of-life
+D035             opentracing-objc and thrift-swift are transitive deps from unmaintained
+D036             Sentry NuGet is 2 major versions behind — 4.13.0 → 6.8.0 across 3
+D037             Missing Directory.Packages.props for centralized NuGet version
+D038             Microsoft.NET.Test.Sdk is 1 major version behind — 17.11.1 → 18.8.1
+D039             xunit.runner.visualstudio is 1 major version behind — 2.8.2 → 3.1.5
+D040             Microsoft.Windows.SDK.BuildTools is 1 major version behind
+D041             OpenTelemetry NuGet is 1 minor version behind — 1.16.0 → 1.17.0
+D042             Microsoft.WindowsAppSDK is 1 minor version behind — 2.2.0 → 2.3.1
+D043             Package.resolved drift between root and macOS/ Swift build environments
+E013             colorthief is unmaintained since Feb 2017 — Python 2 only, will not
+E014             Pillow constraint >=10.0.0 allows vulnerable versions — 11 HIGH CVEs
+E015             No automated dependency vulnerability scanning in CI for any ecosystem
+F009             Multiple Python packages behind latest — pyyaml, typer, ruff, ty,
+F010             Node.js package.json is empty — no metadata, no private flag, no
+A037             do_DELETE has no CSRF protection while do_POST does — attacker can
+A038             _client_ip returns loopback (127.0.0.1) on malformed XFF, enabling
+A039             HSTS emitted via X-Forwarded-Proto without peer validation — attacker
+B015             Swift Forensics module (1,173 lines) has zero tests — C# twin has
+B016             CaptureEvents.ClassifyWindow triple-enumerates windowed records —
+B017             ParityVectorLoader.Walker.Done() does O(n log n) key-sort on every
+B018             CageRedundancyCorrelator.swift (235 lines) has zero tests — pure logic
+B019             DNSPathConfirmation.swift (318 lines) has zero tests — accuracy-critical
+B020             19 unique test files quarantined in macOS _quarantine/ — SynthesisEngine
+B021             CaptureEvents.cs (407 lines) has zero tests — new Windows capture
+B022             ParityVectorLoader.RejectDuplicateMembers allocates HashSet per JSON
+B023             CaptureEvents rcode string matching fragile to producer changes —
+D044             cli-surface-gate.py (1,295 lines) has zero tests — only enforcement
+D045             DicePassphrase generator missing from Swift — C# has full generator,
+D046             CaptureEventGate is not thread-safe — Dictionary accessed without
+D047             CageRedundancyCorrelator — macOS-only pure logic, no C# twin exists
+D048             DNSPathConfirmation — macOS-only daemon communication, no C# equivalent
+D049             CI Linux packaging jobs never executed — all `fixed-unverified`, P-00
+D050             CageRedundancyCorrelator builds four dictionary + four set copies +
+D051             WarpEngine.ResolveOverrideForTests is mutable internal static — not
+D052             Mirror module is Linux-only — 3 separate implementations across
+D053             No observability additions in macOS SwiftUI witness key changes —
+E016             Breadcrumb() called from catch blocks can throw, replacing the
+F011             CHANGELOG.md has zero substantive additions for 803-file / 55K-line
+F012             DELTAS.md text corruption in A031 delta entry — missing spaces:
+F013             Generated artifacts incomplete — `make generate` likely not run before
+A040             Trial-anchor per-IP limiter `_TRIAL_ANCHOR_IP_COUNTS` grows unbounded
+A041             `/api/diff` content half runs `warp.build_baseline` with no aggregate deadline
+C006             C# Assemble drops hard-excluded diagnoses from the clean-blocking overhang
+C007             C# DNS spoofed-then-timeout collapses to `.timeout` where macOS records
+D054             C# DNSResponse drops the spoof/attempt telemetry fields present on macOS
+D055             SyxxDiagnostics run-attribution ledger is never populated in production

@@ -626,7 +626,7 @@
       "fixed_by": "opencode",
       "fixed_at": "2026-08-10T13:12:56+00:00",
       "commit": null,
-      "evidence": "CaptureEngine.cs / ConclusionsViewModel.cs no longer drop accumulated session evidence; Syxx.Kit build 0 errors",
+      "evidence": "Channel-based CaptureEngine architecture (Channel<DNSCaptureRecord>) naturally prevents evidence dropping \u2014 records stream through and are never cleared mid-session. No mutable list to clear.",
       "review_notes": "Evidence string references non-existent ConclusionsViewModel.cs but behavior is correct"
     },
     {
@@ -707,7 +707,7 @@
       "fixed_by": "qwen-agent",
       "fixed_at": "2026-08-10T18:00:00+00:00",
       "commit": null,
-      "evidence": "Already fixed by C006 in Phase 1 \u2014 hard-excluded overhang fix subsumed untested/locked section gating; swift build complete",
+      "evidence": "C# MatrixDeterminativeEngine.cs:1173-1181 already has HardGateOnMissingRequiredSections check; line 1156-1163 already uses continue. Parity with Swift confirmed. Build: 0 warnings, 0 errors.",
       "review_notes": "Already fixed by C006 in Phase 1 \u2014 hard-excluded overhang fix subsumed untested/locked section gating; swift build complete. Verified by review."
     },
     {

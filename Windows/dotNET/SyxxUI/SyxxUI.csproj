@@ -30,12 +30,13 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3719.77" />
     <PackageReference Include="OpenTelemetry" Version="1.16.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
-    <PackageReference Include="Sentry" Version="4.13.0" />
+    <PackageReference Include="Sentry" Version="6.8.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Syxx.Kit\Syxx.Kit.csproj" />
     <ProjectReference Include="..\Syxx.Telemetry\Syxx.Telemetry.csproj" />
+    <ProjectReference Include="..\SyxxUI.Shared\SyxxUI.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

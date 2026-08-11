@@ -20,6 +20,8 @@
 
 | [x] | [fix-fingerprint-mismatch_20260809](./tracks/fix-fingerprint-mismatch_20260809/index.md) | Fix Fingerprint Mismatch — R→G17, C# test build errors | 2026-08-09 | 2026-08-09 |
 
+| [~] | [tech-debt-remediation_20260811](./tracks/tech-debt-remediation_20260811/index.md) | Tech Debt Remediation — Full Program (4 phases, 56 tasks) | 2026-08-11 | 2026-08-11 |
+
 ## Archived
 
 | Track ID | Title | Reason | Archived |

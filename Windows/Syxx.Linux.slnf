@@ -5,6 +5,8 @@
       "dotNET\\Syxx.Kit\\Syxx.Kit.csproj",
       "dotNET\\Syxx\\Syxx.csproj",
       "dotNET\\Syxx.Tests\\Syxx.Tests.csproj",
+      "dotNET\\SyxxUI.Shared\\SyxxUI.Shared.csproj",
+      "dotNET\\SyxxUI.Shared.Tests\\SyxxUI.Shared.Tests.csproj",
       "..\\Linux\\Ubuntu\\SyxxUI.Avalonia\\SyxxUI.Avalonia.csproj",
       "..\\Linux\\Ubuntu\\SyxxUI.Avalonia.Tests\\SyxxUI.Avalonia.Tests.csproj"
     ]

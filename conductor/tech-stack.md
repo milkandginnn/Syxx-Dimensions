@@ -27,9 +27,10 @@ runtime matrix for the single C# assembly.
 - **Crypto** — `NSec.Cryptography` 26.4.0 (Ed25519, C# side); CryptoKit (Swift side)
 - **Telemetry** — `opentelemetry-swift` 2.5.0 / `opentelemetry-swift-core` 2.5.1;
   `System.Diagnostics.DiagnosticSource` 9.0.0 (C#)
-- **Crash reporting** — `sentry-cocoa` 8.43.0
-- **Server** — Python 3.12, `Server/venv` (note: the corpus builder needs `Server/venv/bin/python`;
-  system `python3` lacks `brotli`)
+- **Crash reporting** — `sentry-cocoa` 9.x (Swift); `Sentry` 6.8.0 (NuGet, 3 projects);
+  `sentry-sdk[opentelemetry]` ≥2.67.0 (Python)
+- **Server** — Python 3.12, `Server/.venv` (uv canonical; note: the corpus builder needs
+  `Server/.venv/bin/python`; system `python3` lacks `brotli`)
 
 ## Tooling
 

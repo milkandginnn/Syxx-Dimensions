@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
+using SyxxUI.Shared.Mirror;
 
 namespace SyxxUI.Mirror;
 
@@ -53,7 +54,7 @@ public sealed partial class MirrorDiffView : UserControl
         RenderContent();
     }
 
-    private void UpdateTabCount(TextBlock countText, List<DiffLine> lines)
+    private void UpdateTabCount(TextBlock countText, IReadOnlyList<DiffLine> lines)
     {
         int changes = 0;
         foreach (var line in lines)
@@ -135,7 +136,7 @@ public sealed partial class MirrorDiffView : UserControl
         JsChevron.Text = _expandedSections.Contains(DiffSection.JavaScript) ? "▼" : "▶";
     }
 
-    private void RenderSection(string name, List<DiffLine> lines)
+    private void RenderSection(string name, IReadOnlyList<DiffLine> lines)
     {
         if (lines.Count == 0)
         {

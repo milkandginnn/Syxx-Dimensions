@@ -9,7 +9,7 @@ dependencies = [
     "opentelemetry-api>=1.44.0",
     "opentelemetry-sdk>=1.44.0",
     "opentelemetry-exporter-otlp-proto-http>=1.44.0",
-    "sentry-sdk[opentelemetry]>=2.66.0",
+    "sentry-sdk[opentelemetry]>=2.67.0",
 ]
 
 [tool.uv]

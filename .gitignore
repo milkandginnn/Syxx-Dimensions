@@ -113,3 +113,12 @@ win-dev-skills-qwen/
 __pycache__/
 *.pyc
 plugins/*/.venv/
+
+# Generated output artifacts (catalog exports, session transcripts, tool dumps)
+outputs-catalog-*
+transcript.*.json
+t.net.json
+
+# MCPmarket plugin bundle — .mcp.json inside carries a live bearer token
+mcpmarket-me/
+mcpmarket-plugin-me-claude.zip

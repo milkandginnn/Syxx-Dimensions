@@ -189,70 +189,41 @@ def _warn_unprovisioned():
     return True
 
 
-def _verify_validate_key_response(body_str, sig_header, digest_header, date_header, method, url):
-    """Verify the Ed25519 response signature from Keygen's validate-key endpoint.
+# Sentinel: preflight checks passed, proceed with verification.
+_PROCEED = object()
 
-    Uses the Ed25519 public key from config.KEYGEN_PUBLIC_KEY (hex-encoded).
 
-    A130: returns a tri-state to distinguish verified/forgery/cannot-verify:
-      - True  : signature verified successfully
-      - False : forgery detected (InvalidSignature — the signature was present
-                but cryptographically invalid)
-      - None  : could not verify (missing config, infrastructure failure,
-                missing headers, unparseable date, stale date, bad base64,
-                crypto operation error)
+def _key_signature_preflight():
+    """Check config and crypto availability for Keygen signature verification.
 
-    The caller treats None as a transient error (503) and False as a denial (402),
-    so an operator whose deployment lacks the crypto library gets a 503 rather than
-    the same denial as a detected forgery.
-
-    In dev mode (SYXX_DEV_MODE=1), missing key or crypto lib returns True (skip).
-
-    The signing data follows the draft RFC http-signatures format:
-        (request-target): post /v1/accounts/{id}/licenses/actions/validate-key
-        host: api.keygen.sh
-        date: <Date header>
-        digest: sha-256=<SHA-256 of raw body>
+    D040/A021: fail CLOSED in production when the public key or crypto library
+    is absent. Returns _PROCEED to continue, True (dev skip), or None (cannot verify).
     """
-    # D040/A021: fail CLOSED in production (deny, never grant) when the public key
-    # is missing or the crypto library is absent. Set SYXX_DEV_MODE=1 to keep the
-    # old skip-verification behavior for dev/test.
     if not config.KEYGEN_PUBLIC_KEY:
         if os.environ.get("SYXX_DEV_MODE") != "1":
-            # S11: this was the ONE fail-closed path in this function with no signal at
-            # all — every other branch below logs why it denied. An unprovisioned host
-            # therefore rejected every genuine paying customer's key in total silence,
-            # and the operator's only evidence was the customer's complaint. Denying is
-            # correct (an unverifiable response is indistinguishable from a forged one);
-            # denying quietly is not.
             _warn_unprovisioned()
-            return None  # A130: cannot verify — missing config, not forgery
-        return True  # dev mode: skip verification
-
+            return None
+        return True
     if not _HAS_ED25519:
         if os.environ.get("SYXX_DEV_MODE") != "1":
             logging_util.warn(
                 "keygen_ed25519_unavailable_missing_key", msg="cryptography library not available; licensing denied"
             )
-            return None  # A130: cannot verify — infrastructure failure
+            return None
         logging_util.warn(
             "keygen_ed25519_unavailable",
             msg="cryptography library not available; signature verification skipped (dev mode)",
         )
         return True
+    return _PROCEED
 
-    if not sig_header or not digest_header or not date_header:
-        # A021: a successful Keygen response always carries signature headers. Their
-        # absence under a configured public key is an unsigned/forged response, not a
-        # transient infrastructure fault. Deny (False), never grant via the transient path.
-        logging_util.warn("keygen_signature_missing_headers")
-        return False
 
-    # A056: reject a stale or far-future Date before trusting the signature. The
-    # signature is valid over these exact headers, so a replayed old-but-signed
-    # response would otherwise verify and bypass license expiry. Parse the RFC 1123
-    # Date and require it within +/- the allowed skew of now; fail closed if it will
-    # not parse.
+def _validate_keygen_date(date_header):
+    """Parse and validate the Keygen response Date header.
+
+    A056: rejects stale or far-future dates to prevent replay attacks.
+    Returns epoch seconds on success, None on failure (already logged).
+    """
     try:
         parsed_dt = email.utils.parsedate_to_datetime(date_header)
         if parsed_dt is None:
@@ -262,46 +233,56 @@ def _verify_validate_key_response(body_str, sig_header, digest_header, date_head
         resp_epoch = parsed_dt.timestamp()
     except (TypeError, ValueError, OverflowError):
         logging_util.warn("keygen_signature_bad_date")
-        return None  # A130: cannot verify — unparseable date
+        return None
     if abs(time.time() - resp_epoch) > _KEYGEN_DATE_SKEW_SECONDS:
         logging_util.warn(
             "keygen_signature_stale_date",
             detail="Date header outside allowed clock skew (possible replay of an old signed response)",
         )
-        return None  # A130: cannot verify — clock skew or replay
+        return None
+    return resp_epoch
 
-    # Parse signature header parameters.
-    # The header format is: keyid="...", algorithm="...", signature="...", headers="..."
-    # Regex matches each k="v" pair; strip leading whitespace/commas from keys.
+
+def _extract_signature_bytes(sig_header):
+    """Parse the Keygen-Signature header and decode the base64 signature.
+
+    Returns the raw signature bytes, or None on failure (already logged).
+    """
     sig_params = {}
     for m in re.finditer(r'''([^=]+)="([^"]*)"''', sig_header):
         key = m.group(1).strip().lstrip(",").strip()
         sig_params[key] = m.group(2)
-
     enc_sig = sig_params.get("signature", "")
     if not enc_sig:
         logging_util.warn("keygen_signature_param_missing")
-        return None  # A130: cannot verify — missing signature parameter
-
-    # Decode the base64 signature.
+        return None
     try:
-        signature_bytes = base64.b64decode(enc_sig)
+        return base64.b64decode(enc_sig)
     except Exception:
         logging_util.warn("keygen_signature_bad_base64")
-        return None  # A130: cannot verify — malformed base64
+        return None
 
-    # Compute SHA-256 digest of the raw response body.
+
+def _build_signing_string(body_str, date_header, method, url):
+    """Build the RFC http-signatures signing data string.
+
+    Computes SHA-256 digest of the body and constructs the canonical signing
+    string from (request-target), host, date, and digest.
+    """
     digest_bytes = base64.b64encode(hashlib.sha256(body_str.encode("utf-8")).digest())
     enc_digest = digest_bytes.decode("ascii")
-
-    # Reconstruct signing data.  (request-target) method is always lowercase.
     parsed = urllib.parse.urlparse(url)
     host = parsed.hostname or "api.keygen.sh"
-    signing_data = (
+    return (
         f"(request-target): {method} {parsed.path}\nhost: {host}\ndate: {date_header}\ndigest: sha-256={enc_digest}"
     )
 
-    # Verify the Ed25519 signature.
+
+def _verify_ed25519(signature_bytes, signing_data):
+    """Verify an Ed25519 signature against the configured Keygen public key.
+
+    Returns True (verified), False (forgery), or None (crypto error).
+    """
     try:
         public_key_bytes = bytes.fromhex(config.KEYGEN_PUBLIC_KEY)
         public_key = Ed25519PublicKey.from_public_bytes(public_key_bytes)
@@ -311,10 +292,38 @@ def _verify_validate_key_response(body_str, sig_header, digest_header, date_head
         logging_util.warn(
             "keygen_signature_invalid", detail="Ed25519 signature verification failed – possible forged response"
         )
-        return False  # A130: forgery detected — signature present but invalid
+        return False
     except Exception as e:
         logging_util.warn("keygen_signature_error", err=str(e))
-        return None  # A130: cannot verify — crypto operation error
+        return None
+
+
+def _verify_validate_key_response(body_str, sig_header, digest_header, date_header, method, url):
+    """Verify the Ed25519 response signature from Keygen's validate-key endpoint.
+
+    Uses the Ed25519 public key from config.KEYGEN_PUBLIC_KEY (hex-encoded).
+
+    A130: returns a tri-state to distinguish verified/forgery/cannot-verify:
+      - True  : signature verified successfully
+      - False : forgery detected (InvalidSignature)
+      - None  : could not verify (missing config, infrastructure failure, etc.)
+
+    The caller treats None as a transient error (503) and False as a denial (402).
+    In dev mode (SYXX_DEV_MODE=1), missing key or crypto lib returns True (skip).
+    """
+    preflight = _key_signature_preflight()
+    if preflight is not _PROCEED:
+        return preflight
+    if not sig_header or not digest_header or not date_header:
+        logging_util.warn("keygen_signature_missing_headers")
+        return False
+    if _validate_keygen_date(date_header) is None:
+        return None
+    signature_bytes = _extract_signature_bytes(sig_header)
+    if signature_bytes is None:
+        return None
+    signing_data = _build_signing_string(body_str, date_header, method, url)
+    return _verify_ed25519(signature_bytes, signing_data)
 
 
 # --- License validation ----------------------------------------------------

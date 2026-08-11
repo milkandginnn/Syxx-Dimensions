@@ -2,7 +2,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Syxx.Kit;
-using SyxxUI.Avalonia.Mirror;
+using SyxxUI.Shared.Mirror;
 using SyxxUI.Presentation;   // linked from Windows/dotNET/SyxxUI/Presentation/ErrorPresenter.cs
 
 namespace SyxxUI.Avalonia.ViewModels;

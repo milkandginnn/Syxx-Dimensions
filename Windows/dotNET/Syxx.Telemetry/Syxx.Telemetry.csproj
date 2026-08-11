@@ -28,7 +28,7 @@
     advisories GHSA-g94r-2vxg-569j and GHSA-4625-4j76-fww9. Keep these two pins equal to SyxxUI's.
   -->
   <ItemGroup>
-    <PackageReference Include="Sentry" Version="4.13.0" />
+    <PackageReference Include="Sentry" Version="6.8.0" />
     <PackageReference Include="OpenTelemetry" Version="1.16.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
   </ItemGroup>

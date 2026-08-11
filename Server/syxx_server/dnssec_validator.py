@@ -415,6 +415,160 @@ def _r(domain, result, signed, algorithm, chain, errors):
     }
 
 
+def _fetch_root_dnskey(ch, deadline, timeout):
+    """Fetch and validate the root DNSKEY. Returns (rkp, pv_s, ra) on success,
+    or a result dict for early exit."""
+    if time.monotonic() > deadline:
+        return _r("", "inconclusive", False, None, ch, ["exceeded aggregate deadline at root"])
+    rv, _ = _find(".", timeout, deadline=deadline)
+    if rv is None:
+        return _r("", "inconclusive", False, None, ch, ["no root server"])
+    rr = _sq(".", TYPE_DNSKEY, rv, timeout, deadline=deadline)
+    if rr is None:
+        return _r("", "inconclusive", False, None, ch, ["root DNSKEY failed"])
+    rdks = [r for r in rr["ans"] if r["rt"] == TYPE_DNSKEY]
+    if not rdks:
+        _step(ch, ".", "root-dnskey", "invalid", detail="no DNSKEY at root")
+        return _r("", "unsigned", False, None, ch, [])
+    rk = _ksk(rdks)
+    rkp = _pdk(rk["rd"])
+    if rkp is None:
+        _step(ch, ".", "root-dnskey", "inconclusive", detail="bad root DNSKEY")
+        return _r("", "inconclusive", False, None, ch, [])
+    ra = _ALGO.get(rkp[2], f"algorithm-{rkp[2]}")
+    _step(ch, ".", "root-dnskey", "valid", algorithm=ra, keyTag=_kt(rk["rd"]), detail=f"root DNSKEY ({ra})")
+    return rkp, rv, ra
+
+
+def _walk_one_zone(zone, pv_s, ch, deadline, timeout):
+    """Execute one zone walk iteration. Returns (action, mkp, mk, zv, la).
+
+    action: "continue" (success), "break-inv", "break-inc", "inc-continue"
+    (inconclusive RRSIG but don't break the loop).
+    """
+    if time.monotonic() > deadline:
+        _step(ch, zone, "deadline", "inconclusive", detail="exceeded aggregate deadline")
+        return "break-inc", None, None, None, None
+    zv, _ = _find(zone.rstrip("."), timeout, deadline=deadline)
+    if zv is None:
+        _step(ch, zone, "ns-lookup", "inconclusive", detail="no NS")
+        return "break-inc", None, None, None, None
+    dr = _sq(zone, TYPE_DS, pv_s, timeout, deadline=deadline)
+    if dr is None:
+        _step(ch, zone, "ds-match", "inconclusive", detail="DS query failed")
+        return "break-inc", None, None, None, None
+    dsr = [r for r in dr["ans"] if r["rt"] == TYPE_DS]
+    if not dsr:
+        _step(ch, zone, "ds-match", "inconclusive", detail="no DS in parent")
+        return "break-inc", None, None, None, None
+    dkr = _sq(zone, TYPE_DNSKEY, zv, timeout, deadline=deadline)
+    if dkr is None:
+        _step(ch, zone, "dnskey-rrsig", "inconclusive", detail="DNSKEY failed")
+        return "break-inc", None, None, None, None
+    cdks = [r for r in dkr["ans"] if r["rt"] == TYPE_DNSKEY]
+    csig = [r for r in dkr["ans"] if r["rt"] == TYPE_RRSIG]
+    if not cdks:
+        _step(ch, zone, "ds-match", "invalid", detail="no DNSKEY")
+        return "break-inv", None, None, None, None
+    m, mk, mkp = False, None, None
+    for ds in dsr:
+        dp = _pds(ds["rd"])
+        if not dp:
+            continue
+        for dk in cdks:
+            kp = _pdk(dk["rd"])
+            if kp and _dsm(dp, kp, zone) is True:
+                m, mk, mkp = True, dk, kp
+                break
+        if m:
+            break
+    if not m:
+        _step(ch, zone, "ds-match", "invalid", detail="DS↔DNSKEY mismatch")
+        return "break-inv", None, None, None, None
+    dt = _pds(dsr[0]["rd"])
+    _step(ch, zone, "ds-match", "valid",
+          digestType=_DIG.get(dt[2], "unknown") if dt else "unknown", detail="DS↔DNSKEY verified")
+    now = time.time()
+    vr = _vsig(csig, cdks, mkp, mk, now, zone=zone)
+    if vr is True:
+        _step(ch, zone, "dnskey-rrsig", "valid", detail="DNSKEY RRSIG verified")
+    elif vr is False:
+        _step(ch, zone, "dnskey-rrsig", "invalid", detail="DNSKEY RRSIG failed")
+        return "break-inv", mkp, mk, zv, _ALGO.get(mkp[2], f"algorithm-{mkp[2]}")
+    else:
+        _step(ch, zone, "dnskey-rrsig", "inconclusive", detail="DNSKEY RRSIG unverifiable")
+        la = _ALGO.get(mkp[2], f"algorithm-{mkp[2]}")
+        return "inc-continue", mkp, mk, zv, la
+    la = _ALGO.get(mkp[2], f"algorithm-{mkp[2]}")
+    return "continue", mkp, mk, zv, la
+
+
+def _verify_answer_rrsig(domain, qtype, apex, pv_s, mk, mkp, ch, deadline, timeout, signed):
+    """Verify answer RRSIG at the validated apex. Returns (inv, inc) booleans."""
+    inv, inc = False, False
+    ar = _sq(domain, qtype, pv_s, timeout, deadline=deadline)
+    if not ar:
+        _step(ch, apex, "answer-rrsig", "inconclusive", detail="query failed")
+        return False, True
+    arec = [r for r in ar["ans"] if r["rt"] == qtype]
+    asig = [r for r in ar["ans"] if r["rt"] == TYPE_RRSIG]
+    if arec and asig:
+        return _verify_answer_with_records(apex, pv_s, arec, asig, mk, mkp, ch, deadline, timeout)
+    # No answer records — check for authenticated denial of existence
+    if signed:
+        return _verify_denial_or_inconclusive(domain, qtype, apex, arec, ar, ch)
+    _step(ch, apex, "answer-rrsig", "inconclusive", detail="no answer" if not arec else "no RRSIG")
+    return False, True
+
+
+def _verify_answer_with_records(apex, pv_s, arec, asig, mk, mkp, ch, deadline, timeout):
+    """Verify answer RRSIG when both answer records and signatures exist. Returns (inv, inc)."""
+    tdk = _sq(apex, TYPE_DNSKEY, pv_s, timeout, deadline=deadline)
+    tks = [r for r in tdk["ans"] if r["rt"] == TYPE_DNSKEY] if tdk else []
+    now = time.time()
+    if tks and mk and mkp and tdk:
+        tks_sigs = [r for r in tdk["ans"] if r["rt"] == TYPE_RRSIG]
+        dnskey_vr = _vsig(tks_sigs, tks, mkp, mk, now, zone=apex)
+        if dnskey_vr is not True:
+            tks = []
+    av = _chk_ans(asig, arec, tks, now, zone=apex)
+    st = "valid" if av is True else ("invalid" if av is False else "inconclusive")
+    _step(ch, apex, "answer-rrsig", st,
+          detail="answer RRSIG " + ("verified" if av is True else "failed" if av is False else "unverifiable"))
+    if av is False:
+        return True, False
+    if av is None:
+        return False, True
+    return False, False
+
+
+def _verify_denial_or_inconclusive(domain, qtype, apex, arec, ar, ch):
+    """Handle NSEC/NSEC3 denial-of-existence or report inconclusive. Returns (inv, inc)."""
+    denial = verify_denial_of_existence(domain, qtype, ar.get("auth", []))
+    if denial == "valid":
+        _step(ch, apex, "answer-rrsig", "valid", detail="authenticated denial of existence (NSEC/NSEC3)")
+        return False, False
+    if denial == "invalid":
+        _step(ch, apex, "answer-rrsig", "invalid", detail="denial of existence proof failed")
+        return True, False
+    _step(ch, apex, "answer-rrsig", "inconclusive", detail="no answer and no denial proof")
+    return False, True
+
+
+def _chain_conclusion(ch, inv, inc, la):
+    """Compute the final chain conclusion string from flags."""
+    signed = any(s["step"] == "ds-match" and s["status"] == "valid" for s in ch)
+    if inv:
+        return "invalid", signed
+    if inc:
+        return "inconclusive", signed
+    if signed and all(s["status"] == "valid" for s in ch):
+        return "valid", signed
+    if not signed:
+        return "unsigned", signed
+    return "inconclusive", signed
+
+
 # --- public API ---
 def validate_chain(domain, qtype=1, timeout=5):
     """Validate DNSSEC chain of trust for *domain*.
@@ -427,12 +581,7 @@ def validate_chain(domain, qtype=1, timeout=5):
     if not domain:
         return _r(domain, "inconclusive", False, None, [], ["empty domain"])
     ch, er = [], []
-    # SM-023/SM-025: use time.monotonic() for the deadline (wall-clock independent)
-    # and time.time() for RRSIG inception/expiration checks (wall-clock required
-    # since RRSIG timestamps are Unix epoch). Refresh `now` before each RRSIG
-    # check so a long walk doesn't use a stale timestamp.
-    deadline = time.monotonic() + min(timeout * 4, 30.0)  # SD-71: aggregate wall-clock cap
-    now = time.time()  # initial wall-clock for first RRSIG checks
+    deadline = time.monotonic() + min(timeout * 4, 30.0)
     labels = domain.split(".")
     zones = ["."]
     for i in range(len(labels)):
@@ -440,180 +589,39 @@ def validate_chain(domain, qtype=1, timeout=5):
         if z not in zones:
             zones.append(z)
     # Root DNSKEY
-    if time.monotonic() > deadline:
-        return _r(domain, "inconclusive", False, None, ch, ["exceeded aggregate deadline at root"])
-    rv, _ = _find(".", timeout, deadline=deadline)
-    if rv is None:
-        return _r(domain, "inconclusive", False, None, ch, ["no root server"])
-    rr = _sq(".", TYPE_DNSKEY, rv, timeout, deadline=deadline)
-    if rr is None:
-        return _r(domain, "inconclusive", False, None, ch, ["root DNSKEY failed"])
-    rdks = [r for r in rr["ans"] if r["rt"] == TYPE_DNSKEY]
-    if not rdks:
-        _step(ch, ".", "root-dnskey", "invalid", detail="no DNSKEY at root")
-        return _r(domain, "unsigned", False, None, ch, er)
-    rk = _ksk(rdks)
-    rkp = _pdk(rk["rd"])
-    if rkp is None:
-        _step(ch, ".", "root-dnskey", "inconclusive", detail="bad root DNSKEY")
-        return _r(domain, "inconclusive", False, None, ch, er)
-    ra = _ALGO.get(rkp[2], f"algorithm-{rkp[2]}")
-    _step(ch, ".", "root-dnskey", "valid", algorithm=ra, keyTag=_kt(rk["rd"]), detail=f"root DNSKEY ({ra})")
-    pv_s, inv, inc, la = rv, False, False, ra
-    apex = "."  # A158: track deepest zone with valid ds-match for answer-path verification
+    root = _fetch_root_dnskey(ch, deadline, timeout)
+    if isinstance(root, dict):
+        root["domain"] = domain
+        if not root.get("errors"):
+            root["errors"] = er
+        return root
+    rkp, pv_s, la = root
     # Walk zones
+    inv, inc, mk, mkp, apex = False, False, None, None, "."
     for zone in zones[1:]:
-        if time.monotonic() > deadline:
-            _step(ch, zone, "deadline", "inconclusive", detail="exceeded aggregate deadline")
-            inc = True
-            break
-        zv, _ = _find(zone.rstrip("."), timeout, deadline=deadline)
-        if zv is None:
-            _step(ch, zone, "ns-lookup", "inconclusive", detail="no NS")
-            inc = True
-            break
-        dr = _sq(zone, TYPE_DS, pv_s, timeout, deadline=deadline)
-        if dr is None:
-            _step(ch, zone, "ds-match", "inconclusive", detail="DS query failed")
-            inc = True
-            break
-        dsr = [r for r in dr["ans"] if r["rt"] == TYPE_DS]
-        if not dsr:
-            _step(ch, zone, "ds-match", "inconclusive", detail="no DS in parent")
-            inc = True
-            break
-        dkr = _sq(zone, TYPE_DNSKEY, zv, timeout, deadline=deadline)
-        if dkr is None:
-            _step(ch, zone, "dnskey-rrsig", "inconclusive", detail="DNSKEY failed")
-            inc = True
-            break
-        cdks = [r for r in dkr["ans"] if r["rt"] == TYPE_DNSKEY]
-        csig = [r for r in dkr["ans"] if r["rt"] == TYPE_RRSIG]
-        if not cdks:
-            _step(ch, zone, "ds-match", "invalid", detail="no DNSKEY")
+        action, z_mkp, z_mk, zv, z_la = _walk_one_zone(zone, pv_s, ch, deadline, timeout)
+        if z_mkp is not None:
+            mkp, mk = z_mkp, z_mk
+        if z_la is not None:
+            la = z_la
+        if zv is not None:
+            pv_s = zv
+            apex = zone
+        if action == "break-inv":
             inv = True
             break
-        m, mk, mkp = False, None, None
-        for ds in dsr:
-            dp = _pds(ds["rd"])
-            if not dp:
-                continue
-            for dk in cdks:
-                kp = _pdk(dk["rd"])
-                if kp and _dsm(dp, kp, zone) is True:
-                    m, mk, mkp = True, dk, kp
-                    break
-            if m:
-                break
-        if not m:
-            _step(ch, zone, "ds-match", "invalid", detail="DS↔DNSKEY mismatch")
-            inv = True
-            break
-        dt = _pds(dsr[0]["rd"])
-        _step(
-            ch,
-            zone,
-            "ds-match",
-            "valid",
-            digestType=_DIG.get(dt[2], "unknown") if dt else "unknown",
-            detail="DS↔DNSKEY verified",
-        )
-        apex = zone  # A158: deepest zone with valid ds-match
-        # SM-025: refresh wall-clock `now` before each RRSIG validation to
-        # prevent a stale timestamp from incorrectly accepting/rejecting
-        # signatures whose validity window boundary was crossed during the walk.
-        now = time.time()
-        vr = _vsig(csig, cdks, mkp, mk, now, zone=zone)
-        if vr is True:
-            _step(ch, zone, "dnskey-rrsig", "valid", detail="DNSKEY RRSIG verified")
-        elif vr is False:
-            _step(ch, zone, "dnskey-rrsig", "invalid", detail="DNSKEY RRSIG failed")
-            inv = True
-            break
-        else:
-            _step(ch, zone, "dnskey-rrsig", "inconclusive", detail="DNSKEY RRSIG unverifiable")
+        if action == "break-inc":
             inc = True
-        la = _ALGO.get(mkp[2], f"algorithm-{mkp[2]}")  # type: ignore[not-subscriptable]
-        pv_s = zv
-    # A156: compute signed BEFORE the answer-RRSIG block uses it (the old
-    # position at line 381 caused UnboundLocalError when the answer path
-    # reached the NSEC denial-of-existence check at line 363).
+            break
+        if action == "inc-continue":
+            inc = True
+    # Answer RRSIG verification
     signed = any(s["step"] == "ds-match" and s["status"] == "valid" for s in ch)
-    # Answer RRSIG
-    # A158: query DNSKEY at the validated apex (not zones[-1] which is the full
-    # queried name — for non-apex names that returns NODATA). Verify the
-    # answer-time DNSKEY RRset against the DS-validated key before using those
-    # keys for answer RRSIG verification, and pass zone=apex so SD-94's
-    # signer-name check applies to the answer path.
     if not inv and pv_s and time.monotonic() <= deadline:
-        ar = _sq(domain, qtype, pv_s, timeout, deadline=deadline)
-        if ar:
-            arec = [r for r in ar["ans"] if r["rt"] == qtype]
-            asig = [r for r in ar["ans"] if r["rt"] == TYPE_RRSIG]
-            if arec and asig:
-                tdk = _sq(apex, TYPE_DNSKEY, pv_s, timeout, deadline=deadline)
-                tks = [r for r in tdk["ans"] if r["rt"] == TYPE_DNSKEY] if tdk else []
-                # A301: refresh wall-clock before answer-path RRSIG checks.
-                # The zone-walk `now` may be 20+ seconds stale by this point —
-                # an RRSIG whose validity window boundary was crossed during the
-                # walk+answer queries must be checked against current time, not
-                # the last zone-iteration time.
-                now = time.time()
-                # A158: verify the DNSKEY RRset against the DS-validated key
-                # before trusting it for answer verification. An on-path server
-                # could serve a forged DNSKEY RRset otherwise.
-                if tks and mk and mkp and tdk:
-                    tks_sigs = [r for r in tdk["ans"] if r["rt"] == TYPE_RRSIG]
-                    dnskey_vr = _vsig(tks_sigs, tks, mkp, mk, now, zone=apex)
-                    if dnskey_vr is not True:
-                        tks = []  # unverified DNSKEY → cannot verify answers
-                av = _chk_ans(asig, arec, tks, now, zone=apex)
-                st = "valid" if av is True else ("invalid" if av is False else "inconclusive")
-                _step(
-                    ch,
-                    apex,
-                    "answer-rrsig",
-                    st,
-                    detail="answer RRSIG "
-                    + ("verified" if av is True else "failed" if av is False else "unverifiable"),
-                )
-                if av is False:
-                    inv = True
-                elif av is None:
-                    inc = True
-            else:
-                # No answer records — check for authenticated denial of existence
-                # A157: pass ar["auth"] (AUTHORITY section) not ar["ans"] (ANSWER section).
-                # NSEC/NSEC3 denial records live in the AUTHORITY section per RFC 4034.
-                if signed:
-                    denial = verify_denial_of_existence(domain, qtype, ar.get("auth", []))
-                    if denial == "valid":
-                        _step(
-                            ch, apex, "answer-rrsig", "valid", detail="authenticated denial of existence (NSEC/NSEC3)"
-                        )
-                    elif denial == "invalid":
-                        _step(ch, apex, "answer-rrsig", "invalid", detail="denial of existence proof failed")
-                        inv = True
-                    else:
-                        _step(ch, apex, "answer-rrsig", "inconclusive", detail="no answer and no denial proof")
-                        inc = True
-                else:
-                    _step(ch, apex, "answer-rrsig", "inconclusive", detail="no answer" if not arec else "no RRSIG")
-                    inc = True
-        else:
-            _step(ch, apex, "answer-rrsig", "inconclusive", detail="query failed")
-            inc = True
-    signed = any(s["step"] == "ds-match" and s["status"] == "valid" for s in ch)
-    if inv:
-        v = "invalid"
-    elif inc:
-        v = "inconclusive"
-    elif signed and all(s["status"] == "valid" for s in ch):
-        v = "valid"
-    elif not signed:
-        v = "unsigned"
-    else:
-        v = "inconclusive"
+        a_inv, a_inc = _verify_answer_rrsig(domain, qtype, apex, pv_s, mk, mkp, ch, deadline, timeout, signed)
+        inv = inv or a_inv
+        inc = inc or a_inc
+    v, signed = _chain_conclusion(ch, inv, inc, la)
     return _r(domain, v, signed, la if signed else None, ch, er)
 
 

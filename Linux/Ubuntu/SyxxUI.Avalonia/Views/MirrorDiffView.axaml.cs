@@ -5,7 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
-using SyxxUI.Avalonia.Mirror;
+using SyxxUI.Shared.Mirror;
 
 namespace SyxxUI.Avalonia.Views;
 

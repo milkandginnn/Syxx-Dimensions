@@ -462,7 +462,7 @@ requires-dist = [
     { name = "opentelemetry-api", specifier = ">=1.44.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.44.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.44.0" },
-    { name = "sentry-sdk", extras = ["opentelemetry"], specifier = ">=2.66.0" },
+    { name = "sentry-sdk", extras = ["opentelemetry"], specifier = ">=2.67.0" },
 ]
 
 [[package]]

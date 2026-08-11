@@ -1,0 +1,81 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Syxx Server — Docker Compose
+# Usage:
+#   docker compose up -d           # start in background
+#   docker compose logs -f         # tail logs
+#   docker compose down            # stop and remove
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+  syxx-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: syxx-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"       # HTTP API + website
+      - "5353:5353/udp"   # Authoritative DNS (non-privileged port for rootless)
+    volumes:
+      - syxx-data:/app/data
+    environment:
+      # ── Core ──────────────────────────────────────────────────────────────
+      SYXX_ENV: production
+      SYXX_HTTP_HOST: "0.0.0.0"
+      SYXX_HTTP_PORT: "8080"
+      SYXX_DNS_PORT: "5353"
+
+      # ── Database ──────────────────────────────────────────────────────────
+      SYXX_DB_PATH: /app/data/syxx-server.db
+      SYXX_DB_BACKUP_DIR: /app/data/backups
+      SYXX_DB_BACKUP_KEEP: "14"
+
+      # ── Secrets — uncomment and set for production ────────────────────────
+      # STRIPE_SECRET_KEY: sk_live_...
+      # STRIPE_WEBHOOK_SECRET: whsec_...
+      # SYXX_KEYGEN_ADMIN_TOKEN: ...
+      # SYXX_KEYGEN_WEBHOOK_SECRET: ...
+      # SYXX_ADMIN_TOKEN: ...
+      # SYXX_DB_ENCRYPTION_KEY: ...
+
+      # ── Observability — uncomment and set ─────────────────────────────────
+      # SENTRY_DSN: https://...@o...ingest.sentry.io/...
+      # OTEL_EXPORTER_OTLP_ENDPOINT: https://...
+
+      # ── DNS leak zones (comma-separated) ──────────────────────────────────
+      # SYXX_LEAK_ZONES: leak.syxx.app
+
+      # ── TLS (if not using a reverse proxy) ────────────────────────────────
+      # SYXX_TLS_CERT: /app/data/tls/cert.pem
+      # SYXX_TLS_KEY: /app/data/tls/key.pem
+
+      # ── Commerce / pricing overrides ──────────────────────────────────────
+      # SYXX_SEO_PRICE_MONTHLY: "3.95"
+      # SYXX_SEO_PRICE_YEARLY: "19.95"
+      # SYXX_STRIPE_TRIAL_DAYS: "0"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Resource limits — tune to your host.
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "2.0"
+        reservations:
+          memory: 128M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  syxx-data:
+    driver: local

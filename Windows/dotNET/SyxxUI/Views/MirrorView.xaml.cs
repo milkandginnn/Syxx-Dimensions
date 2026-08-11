@@ -288,18 +288,18 @@ public sealed partial class MirrorView : Page
                 .Concat(warp.LocalStylesheetURLs.Select(u => $"<link rel=\"stylesheet\" href=\"{u}\">")));
 
         string domain = _vm?.Domain ?? "";
-        var remoteBundle = SyxxUI.Mirror.StaticContentParser.MakeBundle(
-            SyxxUI.Mirror.BundleSource.Remote, domain, remoteHtml);
-        var localBundle = SyxxUI.Mirror.StaticContentParser.MakeBundle(
-            SyxxUI.Mirror.BundleSource.Local, domain, localHtml);
+        var remoteBundle = SyxxUI.Shared.Mirror.StaticContentParser.MakeBundle(
+            SyxxUI.Shared.Mirror.BundleSource.Remote, domain, remoteHtml);
+        var localBundle = SyxxUI.Shared.Mirror.StaticContentParser.MakeBundle(
+            SyxxUI.Shared.Mirror.BundleSource.Local, domain, localHtml);
 
         // Populate terminal panes
         RemoteTerminal.Populate("Remote (Server)", domain, remoteBundle);
         LocalTerminal.Populate("Local (Your PC)", domain, localBundle);
 
         // Compute diff and degradation
-        var diffResult = SyxxUI.Mirror.DiffEngine.Compare(remoteBundle, localBundle);
-        var score = SyxxUI.Mirror.DegradationCalculator.Calculate(diffResult);
+        var diffResult = SyxxUI.Shared.Mirror.DiffEngine.Compare(remoteBundle, localBundle);
+        var score = SyxxUI.Shared.Mirror.DegradationCalculator.Calculate(diffResult);
 
         DiffView.Populate(diffResult);
         DegradationBadge.Populate(score);

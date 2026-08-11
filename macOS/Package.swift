@@ -16,7 +16,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/open-telemetry/opentelemetry-swift", from: "2.5.0"),
         .package(url: "https://github.com/open-telemetry/opentelemetry-swift-core.git", from: "2.5.1"),
-        .package(url: "https://github.com/getsentry/sentry-cocoa", from: "8.43.0")
+        .package(url: "https://github.com/getsentry/sentry-cocoa", from: "9.0.0")
     ],
     targets: [
         .target(

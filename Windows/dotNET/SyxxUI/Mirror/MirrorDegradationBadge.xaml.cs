@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
+using SyxxUI.Shared.Mirror;
 
 namespace SyxxUI.Mirror;
 
@@ -52,7 +53,7 @@ public sealed partial class MirrorDegradationBadge : UserControl
         PercentageText.Foreground = fgBrush;
 
         // Classification label
-        ClassificationText.Text = DegradationScore.LabelFor(score.Bucket);
+        ClassificationText.Text = DegradationScore.Label(score.Bucket);
         ClassificationText.Foreground = fgBrush;
     }
 

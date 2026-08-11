@@ -202,6 +202,66 @@ import time as _time  # noqa: E402 — import placed after runtime setup above i
 _TEST_DEADLINE_SECONDS = 60
 
 
+def _query_clean_reference(domain, timeout):
+    """Query all clean vantages concurrently for a domain.
+
+    Returns (clean_status, clean_addrs, had_reference). had_reference is True
+    when at least one vantage resolved the domain successfully.
+    """
+    def _query_clean_vantage(vantage):
+        return _query_resolver(domain, vantage, timeout)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(_CLEAN_VANTAGES)) as _ex:
+        _vantage_results = list(_ex.map(_query_clean_vantage, _CLEAN_VANTAGES))
+
+    for cs, ca in _vantage_results:
+        if cs == "resolved":
+            return cs, ca, True
+    return "error", [], False
+
+
+def _test_one_domain(entry, resolver_ip, timeout):
+    """Query one domain via user resolver and clean vantages.
+
+    Returns (result_dict, filtered, user_status, had_clean_ref, clean_ok).
+    clean_ok is False when a clean-control domain fails to resolve via the user.
+    """
+    domain = entry["domain"]
+    category = entry["category"]
+    expected = entry["expected"]
+
+    user_status, user_addrs = _query_resolver(domain, resolver_ip, timeout)
+    clean_status, clean_addrs, had_ref = _query_clean_reference(domain, timeout)
+    filtered = _is_filtered(user_status, user_addrs, clean_status, clean_addrs)
+    clean_ok = not (expected == "resolve" and user_status != "resolved")
+
+    result = {
+        "domain": domain,
+        "category": category,
+        "userConclusion": user_status,
+        "cleanConclusion": clean_status,
+        "filtered": filtered,
+    }
+    return result, filtered, user_status, had_ref, clean_ok
+
+
+def _compute_assessment(tested, filtered_count, inconclusive_count, clean_reference_count, clean_domains_ok, deadline):
+    """Compute the overall firewall test assessment.
+
+    Returns one of "filtered", "open", or "inconclusive".
+    """
+    if filtered_count >= tested * 0.3:
+        return "filtered"
+    if clean_reference_count == 0:
+        # No reference read succeeded — "no filtering detected" would be an
+        # artifact of having measured nothing. Missing data is not clean data.
+        return "inconclusive"
+    if clean_domains_ok and filtered_count == 0 and inconclusive_count <= tested * 0.2:
+        # A159: "open" only when inconclusive measurements ≤ 20% of tested.
+        return "open"
+    return "inconclusive"
+
+
 def test(resolver_ip, timeout=5):
     """Test whether a DNS resolver is filtering domains.
 
@@ -230,93 +290,31 @@ def test(resolver_ip, timeout=5):
     clean_count = 0
     inconclusive_count = 0
     clean_domains_ok = True
-    # How many domains we obtained a usable CLEAN-VANTAGE reference for. Without at least one,
-    # `_is_filtered` can never return True (it bails when clean_status != "resolved"), so
-    # filtered_count is structurally 0 and the run would report "open" — i.e. "not filtering" —
-    # precisely on a network that blocks the reference resolvers. That is the filtering case
-    # this test exists to catch, so zero references must be inconclusive, never "open".
     clean_reference_count = 0
-    # A162: aggregate wall-clock deadline for the entire test
     deadline = _time.monotonic() + _TEST_DEADLINE_SECONDS
 
-    # E262: Randomize test domain order to reduce fingerprint. A fixed query
-    # order (eicar.org, doubleclick.net, etc.) is a recognizable pattern that
-    # reveals the user is running Syxx's firewall test to any observer.
+    # E262: Randomize test domain order to reduce fingerprint.
     test_domains = list(_TEST_DOMAINS)
-    # E028: cryptographic shuffle — random.shuffle uses Mersenne Twister which
-    # is predictable; secrets.SystemRandom uses the OS CSPRNG.
     secrets.SystemRandom().shuffle(test_domains)
 
     for entry in test_domains:
-        # A162: check deadline before each domain to prevent unbounded runtime
         if _time.monotonic() > deadline:
             break
-
-        domain = entry["domain"]
-        category = entry["category"]
-        expected = entry["expected"]
-
-        user_status, user_addrs = _query_resolver(domain, resolver_ip, timeout)
-
-        # Query clean vantages and take the first successful result.
-        # A053: run all vantages concurrently instead of N+1 sequential queries,
-        # then prefer the first "resolved" vantage in the canonical order.
-        def _query_clean_vantage(vantage, _domain=domain):
-            return _query_resolver(_domain, vantage, timeout)
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(_CLEAN_VANTAGES)) as _ex:
-            _vantage_results = list(_ex.map(_query_clean_vantage, _CLEAN_VANTAGES))
-
-        clean_status, clean_addrs = "error", []
-        for (cs, ca) in _vantage_results:
-            if cs == "resolved":
-                clean_status, clean_addrs = cs, ca
-                clean_reference_count += 1
-                break
-
-        filtered = _is_filtered(user_status, user_addrs, clean_status, clean_addrs)
-
+        result, filtered, user_status, had_ref, clean_ok = _test_one_domain(entry, resolver_ip, timeout)
+        results.append(result)
+        if had_ref:
+            clean_reference_count += 1
         if filtered:
             filtered_count += 1
         elif user_status in ("error", "nodata"):
-            # A159: "nodata" (NOERROR + no A records) that isn't flagged as
-            # filtered (e.g. clean vantage also failed) is inconclusive.
             inconclusive_count += 1
         else:
             clean_count += 1
-
-        # Track whether clean-control domains resolve via the user resolver.
-        if expected == "resolve" and user_status != "resolved":
+        if not clean_ok:
             clean_domains_ok = False
 
-        results.append(
-            {
-                "domain": domain,
-                "category": category,
-                "userConclusion": user_status,
-                "cleanConclusion": clean_status,
-                "filtered": filtered,
-            }
-        )
-
-    # SM-041: tested count reflects actual domains queried, not the total
-    # domain list. When the deadline fires mid-run, tested must not claim
-    # more domains were checked than actually were.
     tested = len(results)
-
-    # Assessment logic.
-    if filtered_count >= tested * 0.3:
-        assessment = "filtered"
-    elif clean_reference_count == 0:
-        # No reference read succeeded, so "no filtering detected" would be an artifact of having
-        # measured nothing. Missing data is not clean data.
-        assessment = "inconclusive"
-    elif clean_domains_ok and filtered_count == 0 and inconclusive_count <= tested * 0.2:
-        # A159: require evidence floor — "open" only when inconclusive measurements
-        # are at most 20% of tested domains. Missing data must not render as clean.
-        assessment = "open"
-    else:
-        assessment = "inconclusive"
+    assessment = _compute_assessment(tested, filtered_count, inconclusive_count, clean_reference_count, clean_domains_ok, deadline)
 
     return {
         "resolver": resolver_ip,
@@ -326,7 +324,6 @@ def test(resolver_ip, timeout=5):
             "filtered": filtered_count,
             "clean": clean_count,
             "inconclusive": inconclusive_count,
-            # SM-041: report whether the deadline truncated the test run.
             "deadline_truncated": _time.monotonic() > deadline,
         },
         "assessment": assessment,

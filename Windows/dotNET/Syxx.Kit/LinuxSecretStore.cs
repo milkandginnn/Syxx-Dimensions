@@ -467,7 +467,7 @@ public sealed class LinuxSecretStore : ISecretStore
     /// It buys two to four orders of magnitude, which is worth having and is NOT enough on its own to
     /// rescue a low-entropy passphrase — see <see cref="DicePassphrase.EntropyBits"/>, which is why
     /// that number is displayed rather than implied.</summary>
-    private const int Argon2MemoryBytes = 64 * 1024 * 1024;
+    private const int Argon2MemoryKiB = 64 * 1024;
     private const int Argon2Passes = 3;
 
     /// <summary>Name of the per-store salt. Leading dot so it cannot collide with a
@@ -657,7 +657,7 @@ public sealed class LinuxSecretStore : ISecretStore
             var argon2id = new Argon2id(new Argon2Parameters
             {
                 DegreeOfParallelism = 1,
-                MemorySize = Argon2MemoryBytes,
+                MemorySize = Argon2MemoryKiB,
                 NumberOfPasses = Argon2Passes,
             });
             return argon2id.DeriveBytes(password.AsSpan(0, written), salt, 32);

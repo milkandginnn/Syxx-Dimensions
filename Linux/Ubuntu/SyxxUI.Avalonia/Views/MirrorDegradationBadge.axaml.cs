@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
-using SyxxUI.Avalonia.Mirror;
+using SyxxUI.Shared.Mirror;
 
 namespace SyxxUI.Avalonia.Views;
 

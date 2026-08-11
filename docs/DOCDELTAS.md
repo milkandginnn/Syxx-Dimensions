@@ -66,6 +66,7 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
 ## **G. Doc-vs-Code Drift**
 
 ---
+
 - **[G001]**            DESIGN.md declares the Windows engine retired when Windows now runs the matrix engine
 - **Criticality:**      Critical. An agent reading this will refuse to touch working Windows code, or
                         will "port" an engine that is already ported. User made aware in this report.
@@ -99,9 +100,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                             Determination?.State == DeterminativeState.Clean;
 
                         ]
+
 ---
 
 ---
+
 - **[G002]**            DESIGN.md's score-design invariants govern three scorers that were deleted
 - **Criticality:**      Non-critical for runtime, critical for planning. 76 lines of binding contract
                         describe code that cannot be found. Any agent implementing B005 from this
@@ -137,9 +140,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         0
 
                         ]
+
 ---
 
 ---
+
 - **[G003]**            MEMORY.md reports every suite green and artifacts shipped while two GUIs do not compile
 - **Criticality:**      Critical. This is the newest entry in the file, so it is the first thing an
                         agent reads, and it reports a green tree that does not build.
@@ -171,9 +176,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         error: emit-module command failed with exit code 1
 
                         ]
+
 ---
 
 ---
+
 - **[G004]**            MEMORY.md's em-dash admission cites a dead location and understates scope by three orders of magnitude
 - **Criticality:**      Critical. This is a standing directive the owner has raised six or seven
                         times. The document that is supposed to prevent regression measures the
@@ -205,9 +212,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         # Windows 1322, Linux 92. MEMORY.md:16-17 says "Four".
 
                         ]
+
 ---
 
 ---
+
 - **[G005]**            MEMORY.md claims zero third-party tool names remain; one survives on Windows
 - **Criticality:**      Non-critical, but it is a firm owner directive stated twice and reported
                         complete. The macOS purge landed; the Windows twin kept an identifier.
@@ -230,9 +239,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         private void ProcessMonitorTick(MonitorTick tick)
 
                         ]
+
 ---
 
 ---
+
 - **[G006]**            macOS deployment target is macOS 14 against a rule MEMORY.md marks still binding
 - **Criticality:**      Non-critical for detection, relevant to notarization and to any macOS 26 API
                         the GUI redesign assumes is available.
@@ -255,9 +266,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                             .macOS(.v14)
 
                         ]
+
 ---
 
 ---
+
 - **[G007]**            DESIGN.md's shared-probe-orchestration section is written as a proposal for work that landed
 - **Criticality:**      Non-critical. Wastes planning effort and invites duplicate implementation.
 - **Location:**         DESIGN.md:237-291
@@ -284,9 +297,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         DESIGN.md:278   1. Add `ProbeBudget` + `ProbeRunner` to `SyxxKit`/`Syxx.Kit`
 
                         ]
+
 ---
 
 ---
+
 - **[G008]**            DESIGN.md's GUI redesign section depends on an external Downloads folder
 - **Criticality:**      Non-critical, but it makes the design unreproducible for any other machine or
                         agent, and AGENTS.md:377 asks agents to record concerns with that design.
@@ -313,11 +328,13 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         Mockup data regions are watermarked ... (`Mockups-Web-Promos/`)
 
                         ]
+
 ---
 
 ## **H. Cross-Document Contradiction**
 
 ---
+
 - **[H001]**            A5 continuous monitoring is [done] and its live path has never executed
 - **Criticality:**      Critical. ROADMAP.md calls monitoring "THE subscription item", so the
                         contradiction sits on the feature the business model depends on.
@@ -343,9 +360,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         ROADMAP.md:145   D-2  Continuous monitoring  ⬜  "the live path has never executed"
 
                         ]
+
 ---
 
 ---
+
 - **[H002]**            DESIGN.md asserts both that no confidence percentage exists and that three confidence scores are binding
 - **Criticality:**      Non-critical to runtime, high for anyone implementing scoring.
 - **Location:**         DESIGN.md:147 versus DESIGN.md:159-234
@@ -366,9 +385,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         DESIGN.md:217  "This is the flagship number shown to the end user."
 
                         ]
+
 ---
 
 ---
+
 - **[H003]**            ROADMAP.md asserts nothing was marked done that is not done, then downgrades five rows
 - **Criticality:**      Non-critical alone, but it teaches agents to trust the checkmarks, which is
                         the failure mode MEMORY.md:228-236 warns about by name.
@@ -393,9 +414,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                                        several cannot be verified from this host at all.
 
                         ]
+
 ---
 
 ---
+
 - **[H004]**            Two typography specifications are both stated as current
 - **Criticality:**      Non-critical, but the GUI is the stated top priority and the two sets differ.
 - **Location:**         MEMORY.md:44-45 versus MEMORY.md:113-117; DESIGN.md:35-38
@@ -420,9 +443,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                                        EB Garamond Italic emphasis, JetBrains Mono technical
 
                         ]
+
 ---
 
 ---
+
 - **[H005]**            MEMORY.md states two opposite commit policies
 - **Criticality:**      Non-critical but directly operational. An agent following the wrong one
                         either loses work or commits another session's staged files.
@@ -444,11 +469,13 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         MEMORY.md:1115  "Do NOT commit/push unless the user asks."
 
                         ]
+
 ---
 
 ## **I. Terminology (verdict → result / conclusion)**
 
 ---
+
 - **[I001]**            Windows kept VerdictAction after macOS renamed it to ResultAction, and its header cites the dead path
 - **Criticality:**      Non-critical to runtime, high for parity. macOS is the gold standard per
                         AGENTS.md:7 and it already performed this rename, so the direction is settled
@@ -485,9 +512,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         public sealed record VerdictAction(string Meaning, string PrimaryAction, Severity Severity, bool Qualified);
 
                         ]
+
 ---
 
 ---
+
 - **[I002]**            "verdict" is a field name inside the SIGNED witness payload; renaming it breaks issued evidence
 - **Criticality:**      Critical. A naive completion of the terminology rename silently invalidates
                         every previously issued signed snapshot and breaks cross-platform witness
@@ -529,9 +558,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         //   evidence.comparisonResult.verdict = "inconclusive"     <-- inside the signature
 
                         ]
+
 ---
 
 ---
+
 - **[I003]**            Linux is the only client with "verdict" in user-facing UI text, including two honesty strings
 - **Criticality:**      Non-critical to correctness, but it is shipped user-visible copy, it exists on
                         exactly one of three clients, and changing it needs owner approval per
@@ -563,9 +594,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         Text="No testimony has been gathered. A verdict is withheld until the wardens run — silence is not safety."
 
                         ]
+
 ---
 
 ---
+
 - **[I004]**            AGENTS.md states the prohibition without the replacements, which is why the rename drifted
 - **Criticality:**      Non-critical, but it is the root cause of the inconsistent application
                         recorded in I001, I003, and I005.
@@ -594,9 +627,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                           from your contexts.
 
                         ]
+
 ---
 
 ---
+
 - **[I005]**            The principle documents carry 116 uses of the word they prohibit
 - **Criticality:**      Non-critical. Documents are the "documentation" case, so the target word is
                         "conclusion".
@@ -621,9 +656,11 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         DESIGN.md:332  its output is a per-domain hostile-traffic verdict
 
                         ]
+
 ---
 
 ---
+
 - **[I006]**            Correct exceptions: do not rename these
 - **Criticality:**      Informational. Recorded so a future sweep does not "fix" correct code.
 - **Location:**         macOS/Sources/SyxxApp/ConclusionsView.swift; macOS/Sources/SyxxKit/Synthesis/Conclusion.swift;
@@ -651,6 +688,7 @@ through K instead. Align by hand, or generalize the script's domain pattern firs
                         Linux/Ubuntu/SyxxUI.Avalonia/Views/ConclusionsView.axaml
 
                         ]
+
 ---
 
 ## **J. Admitted Live Defect, Unfiled**
@@ -660,6 +698,7 @@ a defect the principle documents admit or imply, which is still true in code, an
 tracked nowhere in the open ledger. These are candidates for the next cycle, not go-signals.
 
 ---
+
 - **[J001]**            Dashboard Mirror chip renders PASSED on confirmed redirection
 - **Criticality:**      CRITICAL. A false clean on the first surface the user sees, on the flagship
                         paid module. Two shipped surfaces read the same flag and disagree.
@@ -701,9 +740,11 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                         if c.isRedirectionDetected { return "TAMPERING DETECTED" }
 
                         ]
+
 ---
 
 ---
+
 - **[J002]**            The root Package.swift builds a privileged helper SMJobBless rejects, and the parity test cannot see it
 - **Criticality:**      CRITICAL. Reintroduces D079. The guard written to prevent exactly this passes
                         while the defect is live, which is an AGENTS.md §3 litmus failure.
@@ -744,9 +785,11 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                         0
 
                         ]
+
 ---
 
 ---
+
 - **[J003]**            Collector pinning and the witness trust set are inert in every shipped call path
 - **Criticality:**      Critical, auto-enhanced per DELTAS.md:162 (reliance on forgeable evidence).
 - **Location:**         ROADMAP.md:171, 124, 1575-1577, 1000-1003, 1906, 1909; macOS/Sources/SyxxApp/AppModel.swift (runCollectorTest call)
@@ -777,9 +820,11 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                         renders VALID (delta B081). Signature proves integrity, not provenance.
 
                         ]
+
 ---
 
 ---
+
 - **[J004]**            19 quarantined test files are staged as added but deleted on disk
 - **Criticality:**      Non-critical, but a commit lands 19 invisible test files, several of which
                         duplicate the names of live tests.
@@ -810,9 +855,11 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                         0
 
                         ]
+
 ---
 
 ---
+
 - **[J005]**            The Linux build entry point cannot load
 - **Criticality:**      Non-critical to detection, blocking for the first-ship platform. ROADMAP.md:20
                         makes Linux ship first.
@@ -838,9 +885,11 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                         that is not in the solution file at ".../Windows/Syxx.sln"
 
                         ]
+
 ---
 
 ---
+
 - **[J006]**            Alert delivery failure is evictable-only on macOS and swallowed on Windows
 - **Criticality:**      High for honesty, zero for runtime. The user is silently never alerted while
                         monitoring appears armed, the same false-assurance class as J001.
@@ -883,11 +932,13 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                         catch { /* notification failure must not crash the monitor loop */ }
 
                         ]
+
 ---
 
 ## **K. Structural / Navigational**
 
 ---
+
 - **[K001]**            MEMORY.md's tail is chronologically scrambled, hiding the governing plan at the bottom
 - **Criticality:**      High for agent behavior, zero for runtime. An agent reading top-down absorbs
                         stale content and misses the entry that controls current work.
@@ -918,9 +969,11 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                           1467+    2026-07-24 macOS RC plan  <-- second-newest, at the very bottom
 
                         ]
+
 ---
 
 ---
+
 - **[K002]**            CHANGELOG.md hides three recent entries below much older content
 - **Criticality:**      Medium. The hidden entries are the status of the largest unfinished work
                         program in the log.
@@ -945,9 +998,11 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                                            ", , and  have all reported"   <-- corrupted names
 
                         ]
+
 ---
 
 ---
+
 - **[K003]**            ROADMAP.md's 20-item publication-blocker table cites delta IDs that describe different defects or do not exist
 - **Criticality:**      High. Twenty findings are marked open with no traceable backing, and the file
                         gives no way to tell whether they were never filed or already fixed.
@@ -979,6 +1034,7 @@ tracked nowhere in the open ledger. These are candidates for the next cycle, not
                                                  (unrelated to PR-01)
 
                         ]
+
 ---
 
 ## Recommended order, should these be slated

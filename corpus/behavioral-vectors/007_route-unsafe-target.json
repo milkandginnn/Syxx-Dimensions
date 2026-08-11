@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "route-unsafe-target",
+  "command": "route",
+  "args": ["-dangerous"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 3,
+  "expectedOutputPhrases": ["Analyzing route path to: -dangerous", "Error: target must be a plain hostname or IP address"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# RouteCommand never sets Environment.ExitCode — exits 0 instead of 3 on unsafe-target refusal. macOS returns 3 (failure) correctly."
+  ]
+}

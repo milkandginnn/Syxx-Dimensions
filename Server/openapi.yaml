@@ -1,0 +1,2416 @@
+openapi: 3.1.0
+info:
+  title: Syxx DNS Tampering Detection API
+  version: 1.0.0
+  description: |
+    DNS tampering detection, content integrity verification, and network security analysis.
+    
+    Syxx provides comprehensive DNS investigation tools, authoritative resolution tracking,
+    content integrity verification via WARP manifests, DNS leak detection, and network security
+    utilities. The API supports both free-tier public endpoints and Pro-tier authenticated endpoints.
+    
+    ## Authentication
+    
+    - **Free tier**: No authentication required, rate-limited per IP
+    - **Pro tier**: Requires session cookie (`syxx_session`) or API key (`X-Syxx-License` header)
+    - **Metrics**: Requires Bearer token authentication
+    
+    ## Rate Limiting
+    
+    All endpoints are rate-limited. Free endpoints use IP-based limiting. Pro endpoints use
+    subject-based limiting. Specific limits vary by endpoint.
+  contact:
+    name: Syxx Support
+    email: feedback@milkandgin.com
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+
+servers:
+  - url: https://api.syxx.app
+    description: Production server
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: DNS
+    description: DNS investigation and analysis endpoints
+  - name: WARP
+    description: Content integrity verification via WARP manifests
+  - name: Leak
+    description: DNS leak detection and verification
+  - name: Utilities
+    description: Free-tier network utilities (WHOIS, lookup, benchmark, etc.)
+  - name: Account
+    description: Authentication, billing, API keys, and monitors
+  - name: DoH
+    description: DNS-over-HTTPS resolver
+  - name: Operations
+    description: Health checks, metrics, and operational endpoints
+
+paths:
+  # DNS Routes
+  /api/investigate:
+    get:
+      operationId: investigate
+      tags: [DNS]
+      summary: Investigate a domain for DNS tampering
+      description: |
+        Performs comprehensive DNS investigation including recursive resolution,
+        authoritative walk, and comparison against clean vantage points.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+          description: Domain name to investigate
+      responses:
+        '200':
+          description: Investigation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  answers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        value:
+                          type: string
+                  conclusion:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/authoritative:
+    get:
+      operationId: authoritative
+      tags: [DNS]
+      summary: Authoritative DNS walk
+      description: |
+        Walks root → TLD → authoritative nameservers to get ground-truth DNS answers
+        and the delegation chain.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+          description: Domain name to resolve
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [A, AAAA, NS]
+            default: A
+          description: DNS record type
+      responses:
+        '200':
+          description: Authoritative resolution with delegation chain
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  type:
+                    type: string
+                  authoritative:
+                    type: object
+                    properties:
+                      answers:
+                        type: array
+                        items:
+                          type: string
+                  delegation:
+                    type: array
+                    items:
+                      type: object
+                  conclusion:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/diff:
+    post:
+      operationId: diff
+      tags: [DNS]
+      summary: Compare local DNS answers against authoritative ground truth
+      description: |
+        Compares client-observed DNS answers against authoritative and clean-vantage
+        answers to detect on-path interception or tampering.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain, localAnswers]
+              properties:
+                domain:
+                  type: string
+                  maxLength: 253
+                  description: Domain name to check
+                type:
+                  type: string
+                  enum: [A, AAAA]
+                  default: A
+                  description: DNS record type
+                localAnswers:
+                  type: array
+                  maxItems: 64
+                  items:
+                    type: string
+                  description: DNS answers observed by the client
+                url:
+                  type: string
+                  format: uri
+                  description: Optional URL for content comparison
+                localHTML:
+                  type: string
+                  maxLength: 500000
+                  description: Optional local HTML content
+                localScripts:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional list of local script URLs
+                localInlineScriptHashes:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional list of inline script hashes
+      responses:
+        '200':
+          description: Diff results with assessment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  type:
+                    type: string
+                  localAnswers:
+                    type: array
+                    items:
+                      type: string
+                  authoritative:
+                    type: object
+                    properties:
+                      answers:
+                        type: array
+                        items:
+                          type: string
+                      conclusion:
+                        type: string
+                  cleanVantage:
+                    type: object
+                    properties:
+                      answers:
+                        type: array
+                        items:
+                          type: string
+                  reference:
+                    type: string
+                    enum: [authoritative, cleanVantage, none]
+                  match:
+                    type: [boolean, 'null']
+                  assessment:
+                    type: string
+                    enum: [match, divergent, partial, inconclusive]
+                  conclusion:
+                    type: string
+                  content:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/trace:
+    get:
+      operationId: trace
+      tags: [DNS]
+      summary: DNS trace and hierarchy diagnostics
+      description: |
+        Surfaces the root → TLD → authoritative delegation walk as a diagnostic,
+        showing where resolution breaks or mismatches.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [A, AAAA, NS]
+            default: A
+      responses:
+        '200':
+          description: Delegation trace
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  type:
+                    type: string
+                  delegation:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        zone:
+                          type: string
+                        nameservers:
+                          type: array
+                          items:
+                            type: string
+                        error:
+                          type: [string, 'null']
+                  conclusion:
+                    type: string
+                  brokenAt:
+                    type: [string, 'null']
+                  error:
+                    type: [string, 'null']
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/baseline:
+    get:
+      operationId: baseline
+      tags: [DNS]
+      summary: Historical DNS baseline
+      description: |
+        Returns historical DNS records for a domain to detect drift from established patterns.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [A, AAAA, CNAME, NS, MX, TXT]
+      responses:
+        '200':
+          description: Historical baseline data
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/passive-dns:
+    get:
+      operationId: passiveDns
+      tags: [DNS]
+      summary: Passive DNS records
+      description: |
+        Query passive DNS database for historical resolution records.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Passive DNS records with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      hasMore:
+                        type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/dnssec:
+    get:
+      operationId: dnssec
+      tags: [DNS]
+      summary: DNSSEC chain validation
+      description: |
+        Validates DNSSEC chain from root → TLD → domain, verifying DS/DNSKEY/RRSIG records.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+      responses:
+        '200':
+          description: DNSSEC validation results
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '501':
+          description: DNSSEC validation unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  # WARP Routes
+  /warp:
+    get:
+      operationId: warp
+      tags: [WARP]
+      summary: Build content baseline (deprecated)
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `/api/warp/manifest` instead.
+        
+        Builds an unsigned structural baseline for content integrity comparison.
+        Superseded by signed manifests in WARP_MANIFEST_V1.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 2048
+            format: uri
+      responses:
+        '200':
+          description: Content baseline
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/warp/raw:
+    get:
+      operationId: warpRaw
+      tags: [WARP]
+      summary: Fetch raw content from clean vantage
+      description: |
+        Returns the server's clean-path copy of a page's raw content for side-by-side
+        comparison against client-observed content.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 2048
+            format: uri
+        - name: raw
+          in: query
+          schema:
+            type: string
+            enum: ['1', 'true', 'yes', 'on']
+          description: Return raw bytes as application/octet-stream
+      responses:
+        '200':
+          description: Raw content or binary data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vantage:
+                    type: string
+                  requestedUrl:
+                    type: string
+                  finalUrl:
+                    type: string
+                  contentType:
+                    type: string
+                  bytes:
+                    type: integer
+                  sha256:
+                    type: string
+                  content:
+                    type: string
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            X-Syxx-Warp-Sha256:
+              schema:
+                type: string
+              description: SHA-256 hash of raw bytes (when raw=1)
+            X-Syxx-Warp-Final-Url:
+              schema:
+                type: string
+              description: Final URL after redirects (when raw=1)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '415':
+          description: Content is not text and cannot be diffed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/warp/manifest:
+    get:
+      operationId: warpManifest
+      tags: [WARP]
+      summary: Signed content integrity manifest (WARP_MANIFEST_V1)
+      description: |
+        Returns a signed manifest attesting to the content integrity of a URL and its
+        transitive dependencies (HTML, JS, CSS, CSS@import) from the server's clean vantage.
+        
+        The manifest is Ed25519-signed over the base64-decoded manifest bytes. Clients MUST
+        verify the signature over those exact bytes and MUST NOT re-serialize.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+        - name: nonce
+          in: query
+          schema:
+            type: string
+            maxLength: 64
+            pattern: '^[A-Za-z0-9_-]{1,64}$'
+          description: Optional replay-binding nonce
+      responses:
+        '200':
+          description: Signed manifest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  manifest_b64:
+                    type: string
+                    description: Base64-encoded manifest
+                  signature_ed25519:
+                    type: string
+                    description: Ed25519 signature of manifest bytes
+                  key_id:
+                    type: string
+                    description: Hex key identifier
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/warp/assembly:
+    get:
+      operationId: warpAssembly
+      tags: [WARP]
+      summary: Content assembly (deprecated)
+      deprecated: true
+      description: |
+        **DEPRECATED** - Returns 410 Gone.
+        
+        WARP_ASSEMBLY_V1 raw-concatenation is retired. Use `/api/warp/manifest` instead.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      responses:
+        '410':
+          description: Gone - use /api/warp/manifest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  successor:
+                    type: string
+                  deprecated:
+                    type: boolean
+
+  /fetch_script:
+    get:
+      operationId: fetchScript
+      tags: [WARP]
+      summary: Fetch script content
+      description: |
+        Fetches a script URL and returns its content as text/plain to prevent
+        execution as same-origin JavaScript.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+      responses:
+        '200':
+          description: Script content
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /warp/fetch_script:
+    get:
+      operationId: fetchScriptAlias
+      tags: [WARP]
+      summary: Fetch script content (alias)
+      description: Alias for `/fetch_script`.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+      responses:
+        '200':
+          description: Script content
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  # Leak Routes
+  /leak:
+    get:
+      operationId: leakLegacy
+      tags: [Leak]
+      summary: Legacy leak token readout
+      description: |
+        Returns the last observed resolver for a leak token.
+        
+        **Pro tier endpoint** - requires authentication and a valid issued token.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Leak observations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  resolverIP:
+                    type: [string, 'null']
+                  observations:
+                    type: array
+                    items:
+                      type: object
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          description: Token not found or not owned by caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/leak/token:
+    post:
+      operationId: leakTokenIssue
+      tags: [Leak]
+      summary: Issue a leak detection token
+      description: |
+        Issues a new leak detection token for the authenticated subject.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: zone
+          in: query
+          schema:
+            type: string
+          description: Leak zone (optional)
+      responses:
+        '200':
+          description: Issued token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  domain:
+                    type: string
+                  expiresAt:
+                    type: integer
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/leak/verify:
+    get:
+      operationId: leakVerify
+      tags: [Leak]
+      summary: Verify a leak token
+      description: |
+        Verifies a leak token and returns observed resolvers. Consumes the token after verification.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        '200':
+          description: Verification results
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/leaktest/start:
+    post:
+      operationId: leaktestStart
+      tags: [Leak]
+      summary: Start free leak test
+      description: |
+        Issues a one-time leak token bound to the caller's IP address.
+        
+        **Free tier endpoint** - no authentication required.
+      responses:
+        '200':
+          description: Issued token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  domain:
+                    type: string
+
+  /api/leaktest/check:
+    get:
+      operationId: leaktestCheck
+      tags: [Leak]
+      summary: Check free leak test results
+      description: |
+        Returns observed resolvers for a free leak test token.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        '200':
+          description: Leak test results
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Token not issued by this endpoint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Utility Routes (Free Tier)
+  /api/lookup:
+    get:
+      operationId: lookup
+      tags: [Utilities]
+      summary: DNS lookup
+      description: |
+        Query a resolver for any DNS record type.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [A, AAAA, NS, CNAME, SOA, MX, TXT, CAA, PTR, SRV]
+            default: A
+        - name: server
+          in: query
+          schema:
+            type: string
+          description: DNS server IP (must be in allowed resolver list)
+      responses:
+        '200':
+          description: DNS query results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  type:
+                    type: string
+                  server:
+                    type: string
+                  rcode:
+                    type: integer
+                  rcodeName:
+                    type: string
+                  ad:
+                    type: boolean
+                  records:
+                    type: array
+                    items:
+                      type: object
+                  truncated:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/reverse-dns:
+    get:
+      operationId: reverseDns
+      tags: [Utilities]
+      summary: Reverse DNS lookup
+      description: |
+        Converts an IP address to its PTR record(s).
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: ip
+          in: query
+          required: true
+          schema:
+            type: string
+          description: IP address (IPv4 or IPv6)
+      responses:
+        '200':
+          description: Reverse DNS results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ip:
+                    type: string
+                  arpa:
+                    type: string
+                  ptr:
+                    type: [string, 'null']
+                  allPtr:
+                    type: array
+                    items:
+                      type: string
+                  rcode:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/benchmark:
+    get:
+      operationId: benchmark
+      tags: [Utilities]
+      summary: DNS benchmark
+      description: |
+        Benchmarks DNS resolution speed across multiple public resolvers.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [A, AAAA, NS, MX, TXT, CNAME]
+            default: A
+        - name: rounds
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 3
+      responses:
+        '200':
+          description: Benchmark results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  type:
+                    type: string
+                  rounds:
+                    type: integer
+                  resolvers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        server:
+                          type: string
+                        label:
+                          type: string
+                        avg_ms:
+                          type: [number, 'null']
+                        min_ms:
+                          type: [number, 'null']
+                        max_ms:
+                          type: [number, 'null']
+                        failures:
+                          type: integer
+                  fastest:
+                    type: [string, 'null']
+                  slowest:
+                    type: [string, 'null']
+                  truncated:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/whois:
+    get:
+      operationId: whois
+      tags: [Utilities]
+      summary: WHOIS/RDAP lookup
+      description: |
+        Performs WHOIS/RDAP lookup for domain registration information.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+      responses:
+        '200':
+          description: WHOIS/RDAP data
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/propagation:
+    get:
+      operationId: propagation
+      tags: [Utilities]
+      summary: DNS propagation check
+      description: |
+        Checks DNS propagation across multiple global resolvers.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [A, AAAA, NS, MX, TXT, CNAME]
+            default: A
+      responses:
+        '200':
+          description: Propagation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  type:
+                    type: string
+                  resolvers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        server:
+                          type: string
+                        label:
+                          type: string
+                        region:
+                          type: string
+                        status:
+                          type: string
+                        records:
+                          type: array
+                          items:
+                            type: object
+                        time_ms:
+                          type: number
+                  consensus:
+                    type: string
+                    enum: [consistent, mostly_consistent, divergent, inconclusive]
+                  uniqueValues:
+                    type: array
+                    items:
+                      type: string
+                  totalResolvers:
+                    type: integer
+                  successCount:
+                    type: integer
+                  propagationPct:
+                    type: number
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/email-auth:
+    get:
+      operationId: emailAuth
+      tags: [Utilities]
+      summary: Email authentication check (SPF/DMARC/DKIM)
+      description: |
+        Checks SPF, DMARC, and DKIM records for a domain.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+        - name: selector
+          in: query
+          schema:
+            type: string
+          description: DKIM selector (optional)
+      responses:
+        '200':
+          description: Email authentication results
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/subdomains:
+    get:
+      operationId: subdomains
+      tags: [Utilities]
+      summary: Subdomain enumeration
+      description: |
+        Enumerates subdomains via Certificate Transparency logs.
+        
+        **Free tier endpoint** - no authentication required.
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+      responses:
+        '200':
+          description: Subdomain list
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/firewall-test:
+    get:
+      operationId: firewallTest
+      tags: [Utilities]
+      summary: DNS firewall/filter detection
+      description: |
+        Tests whether the caller's IP is behind a DNS firewall or filter.
+        
+        **Free tier endpoint** - no authentication required.
+      responses:
+        '200':
+          description: Firewall test results
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  # Account Routes
+  /api/auth/activate:
+    post:
+      operationId: activate
+      tags: [Account]
+      summary: Activate a license key
+      description: |
+        Activates a license key and returns a session token as an httpOnly cookie.
+        
+        Implements account lockout after repeated failed attempts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key:
+                  type: string
+                  maxLength: 256
+                  description: License key
+      responses:
+        '200':
+          description: Activation successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Session cookie (httpOnly, Secure, SameSite=Strict)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    type: string
+                  expiresAt:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          description: Invalid or inactive license key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many failed activation attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: License validation service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/trial/anchor:
+    post:
+      operationId: trialAnchor
+      tags: [Account]
+      summary: Create trial anchor
+      description: |
+        Creates or retrieves a trial anchor for a device fingerprint.
+        
+        Rate-limited to 5 anchors per IP per day.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fingerprint]
+              properties:
+                fingerprint:
+                  type: string
+                  description: Device fingerprint (UUID or 32-128 hex chars)
+      responses:
+        '200':
+          description: Trial anchor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fingerprint:
+                    type: string
+                  firstLaunch:
+                    type: integer
+                  serverTime:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Daily limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '507':
+          description: Trial anchor capacity reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/beta/reserve:
+    post:
+      operationId: betaReserve
+      tags: [Account]
+      summary: Reserve beta access
+      description: |
+        Records interest in closed beta programs (Nnyx/Zzyn).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, interests]
+              properties:
+                email:
+                  type: string
+                  format: email
+                interests:
+                  type: array
+                  items:
+                    type: string
+                    enum: [nnyx, zzyn]
+                  minItems: 1
+      responses:
+        '200':
+          description: Reservation recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  interests:
+                    type: array
+                    items:
+                      type: string
+                  confirmation:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/checkout:
+    get:
+      operationId: checkout
+      tags: [Account]
+      summary: Start Stripe checkout
+      description: |
+        Creates a Stripe Managed-Payments checkout session and redirects to Stripe.
+      parameters:
+        - name: sku
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Product SKU
+      responses:
+        '303':
+          description: Redirect to Stripe checkout
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: Stripe checkout URL
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '502':
+          description: No checkout URL from Stripe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Checkout unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/billing/portal:
+    post:
+      operationId: billingPortal
+      tags: [Account]
+      summary: Create billing portal session
+      description: |
+        Creates a Stripe Customer Portal session for subscription management.
+        
+        **Requires session authentication** (Bearer token).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Portal URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No license or subscription found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Billing portal unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/webhooks/stripe:
+    post:
+      operationId: stripeWebhook
+      tags: [Account]
+      summary: Stripe webhook handler
+      description: |
+        Receives and processes Stripe webhook events.
+        
+        **Public endpoint** - verified via Stripe signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Event received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                  conclusion:
+                    type: string
+        '400':
+          description: Signature verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/webhooks/keygen:
+    post:
+      operationId: keygenWebhook
+      tags: [Account]
+      summary: Keygen webhook handler
+      description: |
+        Receives and processes Keygen license webhook events.
+        
+        **Public endpoint** - verified via HMAC-SHA256 signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                id:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Event received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                  conclusion:
+                    type: string
+                  event:
+                    type: string
+        '400':
+          description: Signature verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '501':
+          description: Webhook not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/keys:
+    post:
+      operationId: createApiKey
+      tags: [Account]
+      summary: Create API key
+      description: |
+        Creates a new long-lived API key for programmatic access.
+        
+        Limited to 5 keys per day. **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  maxLength: 64
+                  description: Key label
+                ttlDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 365
+                  default: 90
+                  description: Time-to-live in days
+      responses:
+        '201':
+          description: API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  label:
+                    type: string
+                  expiresInDays:
+                    type: integer
+                  warning:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Key creation limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      operationId: listApiKeys
+      tags: [Account]
+      summary: List API keys
+      description: |
+        Lists all API keys for the authenticated user.
+        
+        **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: API keys list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      type: object
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      hasMore:
+                        type: boolean
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/keys/{id}:
+    delete:
+      operationId: revokeApiKey
+      tags: [Account]
+      summary: Revoke API key
+      description: |
+        Revokes an API key by ID.
+        
+        **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked:
+                    type: boolean
+                  count:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/monitors:
+    post:
+      operationId: createMonitor
+      tags: [Account]
+      summary: Create scheduled monitor
+      description: |
+        Creates a new scheduled DNS monitor for a domain.
+        
+        **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain]
+              properties:
+                domain:
+                  type: string
+                  maxLength: 253
+                checks:
+                  type: string
+                  description: JSON array of check names (investigate, baseline, warp)
+                  default: '["investigate"]'
+                interval_hours:
+                  type: integer
+                  default: 24
+                notify_email:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: Monitor created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  domain:
+                    type: string
+                  checks:
+                    type: string
+                  interval_hours:
+                    type: integer
+                  notify_email:
+                    type: [string, 'null']
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+    get:
+      operationId: listMonitors
+      tags: [Account]
+      summary: List monitors
+      description: |
+        Lists all scheduled monitors for the authenticated user.
+        
+        **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Monitors list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  monitors:
+                    type: array
+                    items:
+                      type: object
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /api/monitors/{id}:
+    delete:
+      operationId: deleteMonitor
+      tags: [Account]
+      summary: Delete monitor
+      description: |
+        Deletes a scheduled monitor by ID.
+        
+        **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monitor deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                  count:
+                    type: integer
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  # DoH Routes
+  /dns-query:
+    get:
+      operationId: dohGet
+      tags: [DoH]
+      summary: DNS-over-HTTPS query (GET)
+      description: |
+        Resolves DNS queries via DNS-over-HTTPS (RFC 8484).
+        
+        Supports both wireformat (`?dns=`) and JSON convenience (`?name=`) modes.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      parameters:
+        - name: dns
+          in: query
+          schema:
+            type: string
+            maxLength: 2048
+          description: Base64url-encoded DNS wire format query
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: Domain name (JSON mode)
+        - name: type
+          in: query
+          schema:
+            type: string
+            default: A
+          description: DNS record type (JSON mode)
+      responses:
+        '200':
+          description: DNS response
+          content:
+            application/dns-message:
+              schema:
+                type: string
+                format: binary
+            application/dns-json:
+              schema:
+                type: object
+                properties:
+                  Status:
+                    type: integer
+                  TC:
+                    type: boolean
+                  RD:
+                    type: boolean
+                  AD:
+                    type: boolean
+                  Question:
+                    type: array
+                    items:
+                      type: object
+                  Answer:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          description: Forwarder not enabled for this address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: DNS query too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+    post:
+      operationId: dohPost
+      tags: [DoH]
+      summary: DNS-over-HTTPS query (POST)
+      description: |
+        Resolves DNS queries via DNS-over-HTTPS (RFC 8484) using POST.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/dns-message:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: DNS response
+          content:
+            application/dns-message:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          description: Forwarder not enabled for this address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: DNS query body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Unsupported media type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  # Operational Routes
+  /api/broadcast:
+    get:
+      operationId: broadcast
+      tags: [Operations]
+      summary: Get broadcast message
+      description: |
+        Returns the current operator-set broadcast message (message-of-the-day).
+        
+        **Public endpoint** - no authentication required.
+      responses:
+        '200':
+          description: Broadcast message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcast:
+                    type: [object, 'null']
+
+  /api/whats-new:
+    get:
+      operationId: whatsNew
+      tags: [Operations]
+      summary: Get What's New HTML
+      description: |
+        Returns per-platform What's New HTML content.
+        
+        **Public endpoint** - no authentication required.
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            type: string
+            enum: [mac, win, deb]
+            default: mac
+      responses:
+        '200':
+          description: What's New HTML
+          content:
+            text/html:
+              schema:
+                type: string
+          headers:
+            Content-Security-Policy:
+              schema:
+                type: string
+            X-Syxx-Signature:
+              schema:
+                type: string
+            X-Syxx-KeyId:
+              schema:
+                type: string
+            Content-Digest:
+              schema:
+                type: string
+        '404':
+          description: No What's New content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pubkey:
+    get:
+      operationId: pubkey
+      tags: [Operations]
+      summary: Get collector public key
+      description: |
+        Returns the Ed25519 public key used for signing leak attestations and WARP manifests.
+        
+        **Public endpoint** - no authentication required.
+      responses:
+        '200':
+          description: Public key information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  publicKey:
+                    type: string
+                  keyId:
+                    type: string
+                  warpKeyId:
+                    type: string
+                  activatedAt:
+                    type: integer
+                  rotationTimestamp:
+                    type: integer
+
+  /api/startup:
+    get:
+      operationId: startup
+      tags: [Operations]
+      summary: Startup check
+      description: |
+        Consolidated startup check returning broadcast, update info, and What's New URL.
+        
+        **Public endpoint** - no authentication required.
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            type: string
+            enum: [mac, win, deb]
+            default: mac
+        - name: version
+          in: query
+          schema:
+            type: string
+          description: Client version for update check
+      responses:
+        '200':
+          description: Startup data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcast:
+                    type: [object, 'null']
+                  update:
+                    type: [object, 'null']
+                    properties:
+                      available:
+                        type: boolean
+                      latest:
+                        type: string
+                      url:
+                        type: string
+                  whatsNewUrl:
+                    type: string
+
+  /api/appcast:
+    get:
+      operationId: appcast
+      tags: [Operations]
+      summary: Get auto-update appcast
+      description: |
+        Returns a custom auto-update appcast manifest (Sparkle-inspired, Ed25519-signed).
+        
+        **Public endpoint** - no authentication required.
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            type: string
+            enum: [mac, win, deb]
+            default: mac
+      responses:
+        '200':
+          description: Appcast manifest
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: No update available for this platform
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /readyz:
+    get:
+      operationId: readyz
+      tags: [Operations]
+      summary: Readiness probe
+      description: |
+        Checks if the server is ready to accept traffic (DB + DNS listeners healthy).
+        
+        **Public endpoint** - no authentication required.
+      responses:
+        '200':
+          description: Server is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready:
+                    type: boolean
+                  listeners:
+                    type: object
+                  otel:
+                    type: string
+                  sentry:
+                    type: boolean
+        '503':
+          description: Server not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready:
+                    type: boolean
+                  down:
+                    type: array
+                    items:
+                      type: string
+                  unknown:
+                    type: array
+                    items:
+                      type: string
+                  listeners:
+                    type: object
+
+  /healthz:
+    get:
+      operationId: healthz
+      tags: [Operations]
+      summary: Liveness probe
+      description: |
+        Process-liveness check only (no DB/DNS checks). Use `/readyz` for readiness.
+        
+        **Public endpoint** - no authentication required.
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  scope:
+                    type: string
+                  readiness:
+                    type: string
+
+  /metrics:
+    get:
+      operationId: metrics
+      tags: [Operations]
+      summary: Prometheus metrics
+      description: |
+        Returns Prometheus-format metrics.
+        
+        **Requires Bearer token authentication** (configured via `SYXX_METRICS_BEARER_TOKEN`).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Metrics endpoint not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/exposure:
+    get:
+      operationId: exposure
+      tags: [Operations]
+      summary: Resolver exposure check
+      description: |
+        Tests whether the caller's public IP is an open resolver reachable from the internet.
+        
+        **Pro tier endpoint** - requires authentication.
+      security:
+        - sessionCookie: []
+        - apiKey: []
+      responses:
+        '200':
+          description: Exposure assessment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ip:
+                    type: string
+                  reachable:
+                    type: boolean
+                  openResolver:
+                    type: boolean
+                  assessment:
+                    type: string
+                    enum: [open-resolver, closed, inconclusive, not-applicable]
+                  detail:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Exposure check limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/stats:
+    get:
+      operationId: stats
+      tags: [Operations]
+      summary: Server statistics
+      description: |
+        Returns basic server statistics.
+        
+        **Public endpoint** - no authentication required.
+      responses:
+        '200':
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  passiveRecords:
+                    type: integer
+
+  /api/bulk-investigate:
+    post:
+      operationId: bulkInvestigate
+      tags: [Operations]
+      summary: Bulk DNS investigation
+      description: |
+        Run investigation on up to 50 domains concurrently.
+        
+        Limited to 10 bulk requests per hour. **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domains]
+              properties:
+                domains:
+                  type: array
+                  maxItems: 50
+                  items:
+                    type: string
+                    maxLength: 253
+      responses:
+        '200':
+          description: Bulk investigation results
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Bulk investigation limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/lookalike:
+    post:
+      operationId: lookalike
+      tags: [Operations]
+      summary: Lookalike domain scan
+      description: |
+        Scans for lookalike/homoglyph domains that could be used for phishing.
+        
+        Limited to 5 scans per hour. **Requires session authentication**.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain]
+              properties:
+                domain:
+                  type: string
+                  maxLength: 253
+                maxPermutations:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+                  default: 200
+      responses:
+        '200':
+          description: Lookalike scan results
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Lookalike scan limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: syxx_session
+      description: Session cookie from /api/auth/activate (httpOnly, Secure, SameSite=Strict)
+    
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Syxx-License
+      description: API key for programmatic access
+    
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Bearer token for metrics endpoint
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Unauthorized:
+      description: Authentication required or invalid/expired session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    PaymentRequired:
+      description: Pro license required - activate a Syxx Pro subscription
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+              - type: object
+                properties:
+                  activate:
+                    type: string
+                    description: URL to activate a license
+    
+    BadGateway:
+      description: Upstream service failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

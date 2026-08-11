@@ -3,6 +3,7 @@
 Read-only diagnosis. No source files edited.
 
 ## GUI symptom (from owner screenshot)
+
 ```
 Conclusion: ERROR
 Observed Resolvers: none
@@ -13,12 +14,14 @@ Note: Token request failed: The operation couldn't be completed.
 ## STEP 1 — Decode "CollectorError error 0"
 
 Enum: `macOS/Sources/SyxxKit/LeakDetector.swift:381-384`
+
 ```swift
 private enum CollectorError: Error {
     case badStatus(Int)   // <- declaration index 0  == "error 0"
     case badJSON(Error)   // <- declaration index 1
 }
 ```
+
 - `CollectorError` is a bare `Error`, NOT `LocalizedError`. So `error.localizedDescription`
   is the Foundation NSError bridge string: `"The operation couldn't be completed.
   (<Type> error <caseIndex>.)"`. Case index 0 == the FIRST declared case == `badStatus(Int)`.
@@ -26,17 +29,20 @@ private enum CollectorError: Error {
   DISCARDED by `localizedDescription` — the message never shows which code it was.
 
 `badStatus` is thrown in exactly two places, both on a non-200 HTTP response:
+
 - `requestToken` — `LeakDetector.swift:410-412` (token step, the one in the message)
 - `verifyToken` — `LeakDetector.swift:434` (verify step)
 
 The message says "Token request failed" → it is the **token step**, so the throw site is
 `LeakDetector.swift:412`, reached from the guard at `410-411`:
+
 ```swift
 guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
     let code = (response as? HTTPURLResponse)?.statusCode ?? -1
     throw CollectorError.badStatus(code)
 }
 ```
+
 Conclusion of Step 1: **the collector returned a non-200 HTTP status on
 `POST /api/leak/token`.** This is not a crash, not a decode error, not (by itself) a
 transport failure.
@@ -60,6 +66,7 @@ transport failure.
 
 Route table: `app.py:700-701` → `_route_leak_token(...)`.
 Handler: `app.py:1582-1591`:
+
 ```python
 def _route_leak_token(self, query):
     ent, ok = self._require(query, config.ENFORCE_WEB)   # 1583
@@ -69,6 +76,7 @@ def _route_leak_token(self, query):
     result = leak.issue_token(ent.subject, zone)          # 1589
     self._send(200, result)                               # 1591
 ```
+
 Gate: `_require` (`app.py:573-588`). For an anonymous/unlicensed caller with
 `enforce=True`: no entitlement, no transient error → `app.py:585-588` emits
 **HTTP 402** `"payment required: activate a Syxx Pro license"` and returns `ok=False`,
@@ -84,12 +92,13 @@ NOTE: prior agent cited the gate at ~app.py:1497-1502; the live line is **app.py
 (gate) / **585-588** (402 emit). Line refs had drifted; the mechanism is unchanged.
 
 ### 402 → screenshot mapping (verified by code path)
+
 Server 402  →  client guard `410` sees `statusCode != 200`  →  `throw badStatus(402)`
 (`412`)  →  catch `183` , not transport-identity  →  `.error` +
 "Token request failed: …CollectorError error 0." (`191-193`). The `402` value is thrown
 away at the boundary; the UI shows an opaque enum description. **Matches the screenshot.**
 
-## STEP 4 — Does the client distinguish 402 from transport failure? NO.
+## STEP 4 — Does the client distinguish 402 from transport failure? NO
 
 - No `402` / `payment` / `requiresPro` / paywall handling exists anywhere in
   `macOS/Sources/` (grep: zero hits). `badStatus(Int)` carries the code at
@@ -106,6 +115,7 @@ away at the boundary; the UI shows an opaque enum description. **Matches the scr
 Server OTLP exporter fails every export with
 `CERTIFICATE_VERIFY_FAILED … 'bugsmasher.syxx.app'`. That is span EXPORT (background batch),
 not the request path. Two independent reasons it cannot affect the token response:
+
 1. In the unlicensed case, `_require` returns at `app.py:1584-1585` BEFORE any span is
    created (span creation is `1587`). The OTEL code is never even entered for a 402.
 2. Even on the 200 path, spans are created/ended locally (`1587-1590`) and the response is
@@ -133,12 +143,14 @@ This is NOT a false-secure/false-success (it shows ERROR, not clean), so it does
 honesty-spine #2/#4. But it is a dishonest/uninformative surfacing of a distinct state.
 
 ## Blast radius (to verify, not yet confirmed)
+
 - Windows twin `Syxx.Kit` LeakDetector: likely the same collapse — NOT YET CHECKED.
 - Verify step `verifyToken` (`434`) has the identical `badStatus` collapse; a 402/404/500
   on verify would surface the same opaque string.
 - Any other Kit HTTP client that only checks `statusCode == 200` inherits the pattern.
 
 ## Disposition
+
 Read-only per instructions — NOT fixed here. Hand to `syxx-neural-executor` /
 `syxx-neural-surfacer`: map `badStatus(402)` to a distinct "requires Pro" outcome (client
 CODE + Stage-5/UI surfacing), and audit `verifyToken` + the Windows twin for the same

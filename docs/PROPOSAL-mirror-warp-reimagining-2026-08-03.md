@@ -8,7 +8,7 @@
 
 > Framing (owner): **Mirror is the module; Warp is the feature.** This plan strips the Prophet echo
 > and makes Warp the module's working payload.
-
+>
 > **Governing principle (owner, honesty protocol):** Warp **concatenates the available static web
 > documents and never otherwise edits them.** Content is compared **raw, byte-for-byte**. No
 > canonicalization, normalization, trimming, or re-encoding — altering the evidence before comparing or
@@ -59,6 +59,7 @@ shared HTTP contract, the tri-state conclusion pattern, and the honesty protocol
 **Current-code divergences the raw model supersedes.** Today's code transforms content before hashing
 and the transforms disagree across platforms, producing false mismatches. Under the raw-concatenation
 model (§4) two of these simply **cease to exist**, and the third becomes a small assembly-agreement item:
+
 1. **inline-script trim divergence** — server `str.strip()` (`warp.py:69`), Swift
    `.trimmingCharacters` (`ContentWarp.swift:593`), C# `.Trim()` (`ContentWarp.cs:552`). **Gone** — raw
    bytes are never trimmed.
@@ -79,6 +80,7 @@ an asymmetric local-vs-consensus delta (Mirror) from one query. Persist the last
 a **shared last-run store keyed by domain** that both modules read.
 
 **Display split (owner-specified):**
+
 - **Prophet keeps rendering all 12 vantages as individual rows** — it owns the detail.
 - **Mirror renders no comparator rows.** The resolver-match is **not** Mirror's test — it is a
   supplementary **degradation factor** on Mirror's content conclusion, never a gate, and **Mirror never
@@ -268,6 +270,7 @@ scope needs owner direction before implementers touch another lane's files.
 compare — and render it in a UI that **mirrors the client's**, so the user sees "what the world sees"
 computed independently of their own device. A purely-local client run can be fooled if the client's own
 resolver path is poisoned/hijacked; an independent full-remote run is a reference vantage that separates:
+
 - **device/link tampering** — client-run deviates, server-run clean;
 - **genuine origin content** — both agree;
 - **whole-path / resolver poisoning of the client** — client-run reads "clean" against a locally-poisoned
@@ -275,6 +278,7 @@ resolver path is poisoned/hijacked; an independent full-remote run is a referenc
 
 **Design hooks to build into Phase 1 so Phase 2 is a new call site, not a rewrite** (freeze the §5
 contracts vantage-agnostically now):
+
 1. **Single pipeline, two call sites.** Structure the Warp pipeline (Streams B/C) so the same
    raw-concatenation recipe runs in-client and server-side — one recipe, invoked twice.
 2. **Vantage-tagged result shape.** `WarpResult` carries vantage provenance for each copy

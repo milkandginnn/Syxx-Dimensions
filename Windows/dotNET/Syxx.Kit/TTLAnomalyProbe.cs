@@ -25,7 +25,7 @@ public static class TTLAnomalyProbe
 
     public static async Task<TTLAnomaly> Probe(string domain,
         ushort qtype = TypeA,
-        IReadOnlyList<string> resolvers = null,
+        IReadOnlyList<string>? resolvers = null,
         Func<DNSQuery, Task<DNSResponse>>? query = null)
     {
         query ??= DefaultQuery;

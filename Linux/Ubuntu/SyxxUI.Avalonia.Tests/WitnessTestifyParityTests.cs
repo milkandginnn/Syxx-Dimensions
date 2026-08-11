@@ -191,54 +191,54 @@ public class WitnessTestifyParityTests
             switch (s.Id)
             {
                 case "empty-domain":
-                {
-                    // Linux client: empty domain is a silent early-return no-op → stays Idle.
-                    var vm = new WitnessViewModel(
-                        NeverResolve("empty domain must not resolve"),
-                        NeverSign("empty domain must not sign"));
-                    vm.Domain = "";
-                    await vm.SignCommand.ExecuteAsync(null);
-                    AssertTerminal(vm, ub.OutcomeState, s.Id);
-                    break;
-                }
+                    {
+                        // Linux client: empty domain is a silent early-return no-op → stays Idle.
+                        var vm = new WitnessViewModel(
+                            NeverResolve("empty domain must not resolve"),
+                            NeverSign("empty domain must not sign"));
+                        vm.Domain = "";
+                        await vm.SignCommand.ExecuteAsync(null);
+                        AssertTerminal(vm, ub.OutcomeState, s.Id);
+                        break;
+                    }
                 case "no-comparison-result":
-                {
-                    // Live resolve yields no comparison → Failed ("Nothing to witness …"), never signed.
-                    var vm = new WitnessViewModel(
-                        (_, _, _) => Task.FromResult(new SectionInputs { Comparison = null }),
-                        NeverSign("no comparison means nothing to sign"));
-                    vm.Domain = "example.com";
-                    await vm.SignCommand.ExecuteAsync(null);
-                    AssertTerminal(vm, ub.OutcomeState, s.Id);
-                    Assert.Equal(
-                        "Nothing to witness — the domain did not resolve, so there is no result to seal.",
-                        vm.SignatureLine);
-                    break;
-                }
+                    {
+                        // Live resolve yields no comparison → Failed ("Nothing to witness …"), never signed.
+                        var vm = new WitnessViewModel(
+                            (_, _, _) => Task.FromResult(new SectionInputs { Comparison = null }),
+                            NeverSign("no comparison means nothing to sign"));
+                        vm.Domain = "example.com";
+                        await vm.SignCommand.ExecuteAsync(null);
+                        AssertTerminal(vm, ub.OutcomeState, s.Id);
+                        Assert.Equal(
+                            "Nothing to witness — the domain did not resolve, so there is no result to seal.",
+                            vm.SignatureLine);
+                        break;
+                    }
                 case "redirection-detected-signed":
-                {
-                    // D105: a live comparison that FLAGS redirection is sealed by the real SignAsync,
-                    // which now routes the drift through the shared Syxx.Kit WitnessTestifyPlanner and
-                    // stores it on WitnessViewModel.Drift. Sign via the real WitnessSigner so the seal
-                    // genuinely succeeds; assert the view-model surfaces the drift (parity with the
-                    // planner-layer 'redirection-detected' scenario, now proven at the VIEW-MODEL layer
-                    // on Linux — the exact wiring D093 dropped on Windows).
-                    var redirected = MakeComparison(redirected: true);
-                    var vm = new WitnessViewModel(
-                        (_, _, _) => Task.FromResult(new SectionInputs { Comparison = redirected }),
-                        (d, c, k) => WitnessSigner.CreateSignedSnapshot(d, c, k));
-                    vm.Domain = "example.com";
-                    await vm.SignCommand.ExecuteAsync(null);
-                    AssertTerminal(vm, ub.OutcomeState, s.Id);
-                    Assert.True(s.ProducesDrift == true,
-                        $"{s.Id}: fixture must mark this signed-with-drift scenario producesDrift=true");
-                    Assert.NotNull(vm.Drift);
-                    Assert.Equal("93.184.216.34", vm.Drift!.PreviousAnswer);
-                    Assert.Equal("10.0.0.5", vm.Drift.NewAnswer);
-                    Assert.False(string.IsNullOrEmpty(vm.Drift.Resolver),
-                        $"{s.Id}: a real drift must record the resolver it was observed on");
-                    break;
-                }
+                    {
+                        // D105: a live comparison that FLAGS redirection is sealed by the real SignAsync,
+                        // which now routes the drift through the shared Syxx.Kit WitnessTestifyPlanner and
+                        // stores it on WitnessViewModel.Drift. Sign via the real WitnessSigner so the seal
+                        // genuinely succeeds; assert the view-model surfaces the drift (parity with the
+                        // planner-layer 'redirection-detected' scenario, now proven at the VIEW-MODEL layer
+                        // on Linux — the exact wiring D093 dropped on Windows).
+                        var redirected = MakeComparison(redirected: true);
+                        var vm = new WitnessViewModel(
+                            (_, _, _) => Task.FromResult(new SectionInputs { Comparison = redirected }),
+                            (d, c, k) => WitnessSigner.CreateSignedSnapshot(d, c, k));
+                        vm.Domain = "example.com";
+                        await vm.SignCommand.ExecuteAsync(null);
+                        AssertTerminal(vm, ub.OutcomeState, s.Id);
+                        Assert.True(s.ProducesDrift == true,
+                            $"{s.Id}: fixture must mark this signed-with-drift scenario producesDrift=true");
+                        Assert.NotNull(vm.Drift);
+                        Assert.Equal("93.184.216.34", vm.Drift!.PreviousAnswer);
+                        Assert.Equal("10.0.0.5", vm.Drift.NewAnswer);
+                        Assert.False(string.IsNullOrEmpty(vm.Drift.Resolver),
+                            $"{s.Id}: a real drift must record the resolver it was observed on");
+                        break;
+                    }
                 default:
                     Assert.Fail($"{s.Id}: fixture marks ubuntu loaderDrives=true but this loader has no driver for it");
                     break;

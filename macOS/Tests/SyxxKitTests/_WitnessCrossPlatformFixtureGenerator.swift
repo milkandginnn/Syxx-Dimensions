@@ -1,5 +1,6 @@
 import XCTest
 import Foundation
+import CryptoKit
 @testable import SyxxKit
 
 /// [B251/E162] Gated generator for the cross-platform witness golden vectors in
@@ -16,7 +17,7 @@ import Foundation
 /// PROVENANCE, stated honestly:
 ///  - `witness-macos-degraded.json` was originally a verbatim copy of the output of a real
 ///    `syxx witness create example.com` run on 2026-07-29. That capture predated the E011 wire-key
-///    rename (`verdict` → `conclusion`) and became undecodable by the current readers, so on
+///    rename (the former wire key → `conclusion`) and became undecodable by the current readers, so on
 ///    2026-08-01 it was regenerated HERE with the real SyxxKit `WitnessSigner` and the real Swift
 ///    `JSONEncoder`, from stated inputs that mirror the original capture's observed statuses
 ///    (local + public legs `timeout`, DoH legs `transportError`, no records anywhere, U+2019 in
@@ -106,6 +107,75 @@ final class WitnessCrossPlatformFixtureGenerator: XCTestCase {
         print("WROTE FIXTURE: \(out.path) (\(data.count) bytes)")
     }
 
+    /// [B252] Regenerates `witness-macos-answers-v2legacy.json` — the same comparison data as the
+    /// answers fixture but at formatVersion 2 (errorMessage included in signed bytes, no canonical
+    /// DoH, perResolverAnswers with ttl:0 matching current build). Both platforms' verifiers must
+    /// keep accepting v2 while v4 fixtures carry the new canonical fields.
+    func testGenerateAnswersV2LegacyGoldenVector() throws {
+        guard ProcessInfo.processInfo.environment["SYXX_GENERATE_FIXTURES"] == "1" else {
+            throw XCTSkip("Set SYXX_GENERATE_FIXTURES=1 to regenerate corpus/witness-crossplatform/.")
+        }
+        func rec(_ rdata: String, ttl: UInt32, type: UInt16 = 1) -> DNSRecord {
+            DNSRecord(name: "example.com", type: type, ttl: ttl, rdata: rdata)
+        }
+        let local = ResolverQueryOutcome(
+            records: [rec("93.184.216.34", ttl: 300), rec("2606:2800:220:1:248:1893:25c8:1946", ttl: 300, type: 28)],
+            status: .success, errorDescription: nil)
+        let publicOutcomes: [String: ResolverQueryOutcome] = [
+            "Cloudflare": ResolverQueryOutcome(records: [rec("93.184.216.34", ttl: 216)], status: .success, errorDescription: nil),
+            "Google": ResolverQueryOutcome(records: [rec("93.184.216.34", ttl: 300), rec("2606:2800:220:1:248:1893:25c8:1946", ttl: 120, type: 28)], status: .success, errorDescription: nil),
+            "Quad9": ResolverQueryOutcome(records: [], status: .noData, errorDescription: nil),
+            "OpenDNS": ResolverQueryOutcome(records: [], status: .nxDomain, errorDescription: nil),
+            "AdGuard": ResolverQueryOutcome(records: [], status: .servFail, errorDescription: nil),
+            "NextDNS": ResolverQueryOutcome(records: [], status: .refused, errorDescription: nil),
+            "Control D": ResolverQueryOutcome(records: [], status: .truncated, errorDescription: "TC bit set and TCP fallback failed"),
+        ]
+        let dohOutcomes: [String: ResolverQueryOutcome] = [
+            "Cloudflare": ResolverQueryOutcome(records: [rec("93.184.216.34", ttl: 60)], status: .success, errorDescription: nil),
+            "Google": ResolverQueryOutcome(records: [], status: .transportError, errorDescription: "The operation couldn\u{2019}t be completed. (NSURLErrorDomain error -1005.)"),
+            "Quad9": ResolverQueryOutcome(records: [], status: .responseIdMismatch, errorDescription: "response id 0x1a2b did not match query id 0x3c4d"),
+            "OpenDNS": ResolverQueryOutcome(records: [], status: .malformedResponse, errorDescription: "answer section truncated mid-record"),
+        ]
+        let comparison = ComparisonResult(
+            localServer: "10.2.0.1", localRecords: local.records,
+            publicResolverResults: publicOutcomes.mapValues(\.records),
+            isRedirectionDetected: false, isInconclusive: false, isDegraded: true,
+            localOutcome: local, publicResolverOutcomes: publicOutcomes, dohOutcomes: dohOutcomes)
+
+        // Build at formatVersion 2 so errorMessage is included and dohOutcomes is nil.
+        let now = Date()
+        let timestampMillis = UInt64(now.timeIntervalSince1970 * 1000)
+        let expiresAt = now.addingTimeInterval(30 * 24 * 60 * 60)
+        let expiresAtMillis = UInt64(expiresAt.timeIntervalSince1970 * 1000)
+        let evidence = SignedEvidencePayload.build(
+            domain: "example.com", comparison: comparison,
+            timestampMillis: timestampMillis, expiresAtMillis: expiresAtMillis,
+            formatVersion: 2)
+
+        let privateKey = try WitnessSigner.validatedPrivateKey(fromBase64: Self.fixturePrivateKey)
+        let publicKey = privateKey.publicKey
+        let pubKeyBase64 = publicKey.rawRepresentation.base64EncodedString()
+        let keyId = SHA256.hash(data: publicKey.rawRepresentation).prefix(8).map { String(format: "%02x", $0) }.joined()
+        let payload = try evidence.canonicalBytes()
+        let signature = try privateKey.signature(for: payload)
+
+        let snapshot = WitnessSnapshot(
+            formatVersion: 2, timestamp: now, expiresAt: expiresAt,
+            targetDomain: "example.com", comparison: comparison, evidence: evidence,
+            signature: signature.base64EncodedString(), publicKey: pubKeyBase64, keyId: keyId)
+
+        XCTAssertEqual(WitnessSigner.verifySnapshotDetailed(snapshot), .valid,
+                       "refusing to write a golden vector that does not verify on the platform that produced it")
+
+        let enc = JSONEncoder()
+        enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try enc.encode(snapshot)
+        let out = Self.corpusDir().appendingPathComponent("witness-macos-answers-v2legacy.json")
+        try FileManager.default.createDirectory(at: Self.corpusDir(), withIntermediateDirectories: true)
+        try data.write(to: out)
+        print("WROTE FIXTURE: \(out.path) (\(data.count) bytes)")
+    }
+
     /// [B252] Regenerates `witness-macos-degraded.json`. Inputs mirror the statuses the original
     /// 2026-07-29 real capture observed: local + public UDP legs timed out, every DoH leg hit a
     /// transport error, no resolver produced records, and Foundation's error text (including
@@ -165,8 +235,8 @@ final class WitnessCrossPlatformFixtureGenerator: XCTestCase {
     //
     // Every pre-existing vector exercises expired / forged / untrusted in ISOLATION, so the
     // crypto-LAST ordering bug on Windows/Linux is invisible. These two combine two conditions in a
-    // single artifact so the masking is caught: a non-crypto verdict (`.expired`) must never be
-    // returned ahead of the cryptographic/display verdict it hides. Neither file is a member of
+    // single artifact so the masking is caught: a non-crypto result (`.expired`) must never be
+    // returned ahead of the cryptographic/display result it hides. Neither file is a member of
     // `WitnessCrossPlatformGoldenVectorTests.vectorNames` (the "must be .valid" set) — a corrupted
     // fixture must never be folded into the valid set. See docs/PROPOSAL-witness-crypto-first-2026-08-03.md §4.
 

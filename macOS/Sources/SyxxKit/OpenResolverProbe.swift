@@ -61,7 +61,7 @@ public enum OpenResolverProbe {
                              ampType: UInt16 = typeDNSKEY,
                              query: QueryFn = { await DNSResolver.queryUDPDetailed($0) }) async -> OpenResolverFinding {
         let rec = await query(DNSQuery(name: recursionDomain, type: typeA, server: target))
-        if rec.didFail {
+        if rec.didNotSucceed {
             return OpenResolverFinding(status: .untested, target: target,
                 detail: "target did not answer (\(rec.status.rawValue)) — could not assess; unmeasured, not clean")
         }
@@ -78,7 +78,7 @@ public enum OpenResolverProbe {
         let edns0UDPSize: UInt16 = 4096
         let queryBytes = (try? DNSResolver.makeQueryPacketWithID(name: amplificationDomain, type: ampType, edns0UDPSize: edns0UDPSize).0)?.count
         let amp = await query(DNSQuery(name: amplificationDomain, type: ampType, server: target, edns0UDPSize: edns0UDPSize))
-        if amp.didFail {
+        if amp.didNotSucceed {
             return OpenResolverFinding(status: .untested, target: target, recursive: true,
                 detail: "amplification probe failed (\(amp.status.rawValue)) — factor unmeasured, not clean")
         }

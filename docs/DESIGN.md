@@ -36,7 +36,6 @@ for UI and body copy, Cormorant SC for deck copy, EB Garamond Italic for emphasi
 Mono for technical text. These roles come from the supplied type specimen. They do not authorize
 layout, color, control, or general visual redesign.
 
-
 ## 1. DNS Resolution & Protocol Integrity
 
 *Is a single query/response exchange itself trustworthy?*
@@ -51,8 +50,6 @@ layout, color, control, or general visual redesign.
 - **Proposed:** A2 (real DS→DNSKEY→RRSIG chain validation, replacing presence-only checks —
   CF-08), A8 (DoT/DoQ + per-answer transport provenance in nslook), B5 (`SyxxDeepVerify` —
   authoritative zone auditing)
-
-
 
 ## 2. Tampering & Censorship Detection
 
@@ -90,7 +87,7 @@ layout, color, control, or general visual redesign.
   complete on both platforms and the server.  `LeakDetector` now includes a `verify()` method
   that checks the collector's Ed25519 signature offline.
 - **Proposed:** A3 (enriched collector egress attestation — bind observations to source IP
-  + interface, protocol/port, first-seen timing, canary-label↔token linkage; CF-09)
+  - interface, protocol/port, first-seen timing, canary-label↔token linkage; CF-09)
 
 ## 5. Capture, Forensics & Attribution
 
@@ -103,7 +100,6 @@ layout, color, control, or general visual redesign.
   Honesty guards: `[SUCCESS]` prints after first packet; zero records → `INCONCLUSIVE`.
 - **Proposed:** A10 (EDNS-aware, low-memory streamed capture), B8 (`SyxxIdentity` — real-time
   process-level DNS attribution)
-
 
 ## 6. Trust Infrastructure: Evidence, Identity & Platform
 
@@ -313,6 +309,7 @@ struct ProbeBudget {
 ```
 
 **3. Consensus** — already implemented and in use:
+
 - `VantageComparer.evaluate()` + `detectUnanimousTampering()` (B010) — divergence classification
 - `AuthoritativeVantage.majorityConsensus()` (B012) — quorum-based agreement
 - `SectionStatus` / `SectionEvidence` — per-section aggregation
@@ -368,6 +365,7 @@ would consult that output *for*, not merely the code it happens to touch.
 | 6 | **Witness** | Trust Infrastructure: Evidence, Identity & Platform | Trust analysis for your home or office computer environment. | `WitnessSigner` (Ed25519), `LicenseManager`, `Sentinel`, `AnswerLedger`, `SyxxConfig` | `syxx witness`, `syxx sentinel` |
 
 **Why a few assignments go where they do (output-relevance, not code-touch):**
+
 - **`AnswerLedger` and `Sentinel` → Witness (6), not Tampering (2)**, even though answer-drift and
   config-change are tamper *signals*. Their output is a persistent trust/evidence baseline of your
   environment over time — you consult it to answer "is my environment still the one I trusted?",
@@ -384,7 +382,6 @@ would consult that output *for*, not merely the code it happens to touch.
 
 Each launcher option runs its discipline's primary check and reuses the shared `SyxxKit`/`Syxx.Kit`
 modules, so CLI and menu stay in lockstep.
-
 
 ## Encrypted transports & trusted resolution — forward-looking (PARTIALLY GATED)
 
@@ -429,7 +426,7 @@ As of july 20, 2026, a new and (hopefully) final mockup of the GUI has been crea
 > cites a *different* in-repo mockup location (`Mockups-Web-Promos/`), so two mockup sets are
 > currently presented as authoritative in one document. Resolve which is canonical.
 
-The mockup location: 
+The mockup location:
 
 '/Users/masterrabbit/Downloads/Dartboard GUI redesign fantasy theme-5/Syxx Linux GUI Mxups.html' '/Users/masterrabbit/Downloads/Dartboard GUI redesign fantasy theme-5/Syxx Windows GUI Mxups.html' '/Users/masterrabbit/Downloads/Dartboard GUI redesign fantasy theme-5/Syxx macOS GUI Mxups.html'  '/Users/masterrabbit/Downloads/Dartboard GUI redesign fantasy theme-5/Syxx Artboard (standalone).html'
 
@@ -437,9 +434,9 @@ The implementation guide:
 
 '/Users/masterrabbit/Downloads/Dartboard GUI redesign fantasy theme-5/IMPLEMENTATION_GUIDE.md'
 
-For macOS (and to a lesser extent Windows), this is not a huge change. It's a shift of colors and a slight reorganization of content. It's a significantly larger undertaking for linux. 
+For macOS (and to a lesser extent Windows), this is not a huge change. It's a shift of colors and a slight reorganization of content. It's a significantly larger undertaking for linux.
 
-Also adds clarity for the content of reports, how the reports should be organized, etc. 
+Also adds clarity for the content of reports, how the reports should be organized, etc.
 
 ### Mockup-translation guard (F038)
 

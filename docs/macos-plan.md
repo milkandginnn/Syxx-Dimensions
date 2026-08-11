@@ -289,6 +289,7 @@ if consensus.consensusLevel >= 0.8 && consensus.disagreement == 0 {
 ## Test Strategy
 
 For each delta:
+
 1. Verify test FAILS before fix
 2. Apply fix
 3. Verify test PASSES after fix

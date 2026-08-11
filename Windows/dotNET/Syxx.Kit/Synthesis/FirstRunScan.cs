@@ -48,21 +48,38 @@ public static class FirstRunScan
     ///
     /// <param name="isPro">If true, enables Pro-level Mirror corroboration (Dimension server).
     /// Parity twin of macOS FirstRunScan.runAsync(domain:isPro:progress:).</param>
+    /// <param name="fallbackToDefaultDomain">When true (the zero-config first-run default) a blank
+    /// <paramref name="domain"/> falls back to <see cref="DefaultDomain"/>. A surface that carries
+    /// a session domain (the Conclusions surfaces) passes false so an empty session can never be
+    /// silently graded against the well-known default (C009).</param>
     public static async Task<FirstRunResult> RunAsync(
         string? domain = null,
         bool isPro = false,
         IProgress<string>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool fallbackToDefaultDomain = true)
     {
-        domain = string.IsNullOrWhiteSpace(domain) ? DefaultDomain : domain.Trim();
+        domain = string.IsNullOrWhiteSpace(domain)
+            ? (fallbackToDefaultDomain ? DefaultDomain : null)
+            : domain.Trim();
+        if (domain is null)
+        {
+            // C009: refusing the well-known default is the honest failure here. A conclusions
+            // surface with no session domain must not silently summarize a github.com scan.
+            throw new InvalidOperationException(
+                "A first-run scan requires a domain; the well-known default is not permitted for this surface.");
+        }
         var inputs = new SectionInputs();
 
         var servers = NetworkKeyState.GetSystemDNSServers();
-        string localResolver = servers.FirstOrDefault();
+        string? localResolver = servers.FirstOrDefault();
         if (localResolver == null)
         {
             Console.WriteLine("⚠️ System resolver undetectable — falling back to 8.8.8.8");
             localResolver = "8.8.8.8";
+            // C212: flag the substitution so Synthesizer caps Mirror at Degraded — a local-vs-public
+            // comparison degenerates when local IS public (parity with macOS FirstRunScan.swift).
+            inputs.ResolverSubstituted = true;
         }
 
         // ---- Prophet — is the resolver telling the truth? -------------------------------------
@@ -93,13 +110,7 @@ public static class FirstRunScan
         progress?.Report("Mirror — comparing your answers against independent vantage points…");
         ct.ThrowIfCancellationRequested();
         var mirrorInputs = await ProbePlan.RunMirrorAsync(domain, localResolver, isPro: isPro);
-        if (mirrorInputs.Comparison is not null) inputs.Comparison = mirrorInputs.Comparison;
-        if (mirrorInputs.Authoritative is not null) inputs.Authoritative = mirrorInputs.Authoritative;
-        if (mirrorInputs.ServerGroundTruth is not null) inputs.ServerGroundTruth = mirrorInputs.ServerGroundTruth;
-        if (mirrorInputs.Svcb is not null) inputs.Svcb = mirrorInputs.Svcb;
-        if (mirrorInputs.TtlAnomaly is not null) inputs.TtlAnomaly = mirrorInputs.TtlAnomaly;
-        if (mirrorInputs.CnameChain is not null) inputs.CnameChain = mirrorInputs.CnameChain;
-        if (mirrorInputs.Warp is not null) inputs.Warp = mirrorInputs.Warp;
+        MergeMirror(inputs, mirrorInputs);
         inputs.TargetDomain = domain;
 
         // ---- Portal — what does this network look like? ----------------------------------------
@@ -126,6 +137,33 @@ public static class FirstRunScan
 
         progress?.Report("Synthesizing a result…");
         return Summarize(inputs);
+    }
+
+    /// Folds the Mirror section's evidence into the scan accumulator. Non-null wins; a null NEVER
+    /// overwrites evidence already gathered — that would silently delete a measurement.
+    ///
+    /// A SEAM ON PURPOSE (G-03). This was seven inline lines inside <see cref="RunAsync"/>, which
+    /// dials real resolvers and so is untestable by construction. That is exactly how the copy came
+    /// to omit <c>WarpManifest</c> — the live content-integrity result — without a single test
+    /// noticing: the scan compiled, ran, and simply reported no content check at all. Anything that
+    /// can silently drop a datapoint belongs behind a callable seam. Parity twin: the Swift
+    /// `FirstRunScan.merge` (which had the identical omission).
+    internal static void MergeMirror(SectionInputs into, SectionInputs from)
+    {
+        if (from.Comparison is not null) into.Comparison = from.Comparison;
+        if (from.Authoritative is not null) into.Authoritative = from.Authoritative;
+        if (from.ServerGroundTruth is not null) into.ServerGroundTruth = from.ServerGroundTruth;
+        if (from.Svcb is not null) into.Svcb = from.Svcb;
+        if (from.TtlAnomaly is not null) into.TtlAnomaly = from.TtlAnomaly;
+        if (from.CnameChain is not null) into.CnameChain = from.CnameChain;
+        // Retired WARP_ASSEMBLY shim. ProbePlan populates nothing into it (ContentWarp.cs:21-24);
+        // copied only so removing the shim stays a separate, deliberate change.
+        if (from.Warp is not null) into.Warp = from.Warp;
+        // G-03: WARP_MANIFEST_V1 is the LIVE content-integrity result and the only one ProbePlan
+        // actually fills (ProbePlan.cs:106,144). Synthesis has always read it (Synthesizer.cs:919);
+        // it was the copy that dropped it, so Mirror's content check was absent from every
+        // first-run scan — the first thing a new user ever sees.
+        if (from.WarpManifest is not null) into.WarpManifest = from.WarpManifest;
     }
 
     /// The PURE half of a first run: given whatever evidence the probes actually produced,

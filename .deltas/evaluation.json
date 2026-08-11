@@ -1,0 +1,1862 @@
+{
+  "timestamp": "2026-08-10T05:44:22.825350+00:00",
+  "evaluation_type": "readiness",
+  "deltas": [
+    {
+      "id": "A001",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A002",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A003",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A004",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A005",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A006",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Python 3 str.lower() is NOT locale-sensitive. Description incorrect \u2014 actual issue is IDN normalization, covered by A002/A003. Consider merging."
+    },
+    {
+      "id": "A007",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A008",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A009",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A010",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A011",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A012",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A013",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A014",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Line numbers moved from 986-998 to 956-998. backup() has try/finally but tmp file cleanup only on success path."
+    },
+    {
+      "id": "A015",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A016",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A017",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A018",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A019",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A020",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A021",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A022",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A023",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A024",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A025",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A026",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A027",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A028",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A029",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A030",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A031",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A032",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A033",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A034",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A035",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A036",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A037",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A038",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A039",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A040",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A041",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A042",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A043",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A044",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A045",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A046",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A047",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A048",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A049",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A050",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A051",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A052",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A053",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A054",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A055",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A056",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A057",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A058",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A059",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A060",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A061",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A062",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A063",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A064",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A065",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A066",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A067",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A068",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A069",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A070",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A071",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A072",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A073",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A074",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A075",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A076",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A077",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A078",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A079",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A080",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A081",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A082",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A083",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "A084",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B001",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B002",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Quarantine has 42 files not 44. Method count 208 not independently verified. Overlaps B020."
+    },
+    {
+      "id": "B003",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B004",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B005",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B006",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B007",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B008",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B009",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "ThresholdProfile init has 13 parameters not 14."
+    },
+    {
+      "id": "B010",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B011",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B012",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B013",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B014",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B015",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B016",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B017",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B018",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B019",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B020",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "File count is 42 not 44. Overlaps B002 significantly."
+    },
+    {
+      "id": "B021",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B022",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B023",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B024",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B025",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "O(n\u00b2) at current scale (6 diagnoses) is negligible. Performance optimization, not detection defect. Consider reclassifying to F-domain."
+    },
+    {
+      "id": "B026",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B027",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B028",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B029",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B030",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B031",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B032",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B033",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Fix needs refinement: consider splitting into didFail (transport) and didNotResolve (includes RCODE errors)."
+    },
+    {
+      "id": "B034",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B035",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B036",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B037",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B038",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B039",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B040",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B041",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B042",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B043",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B044",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B045",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B046",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B047",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "B048",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C001",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Line number 121 is stale \u2014 actual code at line 136."
+    },
+    {
+      "id": "C002",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C003",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C004",
+      "readiness": "REJECT",
+      "notes": "Explicitly marked as DUPLICATE to B010."
+    },
+    {
+      "id": "C005",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C006",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C007",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C008",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C009",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C010",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C011",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C012",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "C013",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D001",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Backward-compat boolean \u2014 add deprecation notice before removing."
+    },
+    {
+      "id": "D002",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D003",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D004",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D005",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D006",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D007",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Latent inconsistency, not a bug. Very low priority."
+    },
+    {
+      "id": "D008",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Count is 14 files, not 23. Fix description needs correction."
+    },
+    {
+      "id": "D009",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D010",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D011",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D012",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D013",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D014",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D015",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D016",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D017",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D018",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D019",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D020",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D021",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D022",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D023",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D024",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "global.json exists at Windows/ level. Fix should acknowledge."
+    },
+    {
+      "id": "D025",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D026",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D027",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D028",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D029",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D030",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D031",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D032",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D033",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D034",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D035",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D036",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D037",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Near-duplicate of D023. Should be merged."
+    },
+    {
+      "id": "D038",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D039",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D040",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D041",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D042",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D043",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D044",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D045",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D046",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D047",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D048",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D049",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D050",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D051",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D052",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Duplicate of D009. Should be merged."
+    },
+    {
+      "id": "D053",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D054",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D055",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D056",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D057",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D058",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D059",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D060",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D061",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D062",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D063",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D064",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D065",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D066",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D067",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "'Regardless' framing overstates \u2014 adapters handle nil gracefully."
+    },
+    {
+      "id": "D068",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "'Codable' claim inaccurate \u2014 SectionInputs is not Codable."
+    },
+    {
+      "id": "D069",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D070",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D071",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D072",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Same root cause as D054. Should be merged."
+    },
+    {
+      "id": "D073",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D074",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D075",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D076",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D077",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D078",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D079",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D080",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D081",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D082",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D083",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D084",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D085",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D086",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D087",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D088",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D089",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D090",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D091",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D092",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D093",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D094",
+      "readiness": "ALREADY_FIXED",
+      "notes": "SyxxDiagnostics uses Volatile.Read correctly. Defect does not match current code."
+    },
+    {
+      "id": "D095",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D096",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D097",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D098",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D099",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D100",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D101",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D102",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D103",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D104",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D105",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Inconclusive may be correct behavior. Needs clarification."
+    },
+    {
+      "id": "D106",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D107",
+      "readiness": "ALREADY_FIXED",
+      "notes": "GluttonView.xaml.cs correctly hides NoProbesText when ProbeRows.Count > 0."
+    },
+    {
+      "id": "D108",
+      "readiness": "ALREADY_FIXED",
+      "notes": "SettingsView.xaml contains CrashReportingToggle with Toggled handler."
+    },
+    {
+      "id": "D109",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Fire-and-forget in OnNavigatedTo, not constructor. Fix location update."
+    },
+    {
+      "id": "D110",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D111",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D112",
+      "readiness": "ALREADY_FIXED",
+      "notes": "WitnessView uses direct Click handlers, not CommunityToolkit RelayCommand."
+    },
+    {
+      "id": "D113",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "No 'sudo' on Windows. Delta description needs correction."
+    },
+    {
+      "id": "D114",
+      "readiness": "ALREADY_FIXED",
+      "notes": "WhatsNewViewModel sets IsFromCache in both paths, not just fallback."
+    },
+    {
+      "id": "D115",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D116",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D117",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D118",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D119",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D120",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D121",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D122",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D123",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D124",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D125",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D126",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D127",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D128",
+      "readiness": "ALREADY_FIXED",
+      "notes": "ContinuousMonitor implements corrupt-baseline quarantine with .corrupt suffix."
+    },
+    {
+      "id": "D129",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D130",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D131",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D132",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D133",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D134",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D135",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D136",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D137",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D138",
+      "readiness": "ALREADY_FIXED",
+      "notes": "WelcomeView is step-based wizard with no recursive polling. MOTD uses 5-second deadline."
+    },
+    {
+      "id": "D139",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D140",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D141",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D142",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D143",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "D144",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Duplicate of D120. Should be merged."
+    },
+    {
+      "id": "D145",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E001",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E002",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E003",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E004",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E005",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E006",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E007",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E008",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E009",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E010",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E011",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E012",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Documentation delta misclassified as Security. Belongs in F-domain."
+    },
+    {
+      "id": "E013",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E014",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E015",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "NuGet scanning DOES exist in CI. pip-audit and SPM audit still missing."
+    },
+    {
+      "id": "E016",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E017",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E018",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E019",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E020",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E021",
+      "readiness": "ALREADY_FIXED",
+      "notes": "app.py now includes Secure flag on session cookie."
+    },
+    {
+      "id": "E022",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Rate limiting DOES exist on /api/auth/activate. Focus on lockout bypass instead."
+    },
+    {
+      "id": "E023",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E024",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E025",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E026",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E027",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E028",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E029",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E030",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E031",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E032",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E033",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E034",
+      "readiness": "ALREADY_FIXED",
+      "notes": "security.txt has Expires: 2027-07-28T00:00:00Z."
+    },
+    {
+      "id": "E035",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E036",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E037",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Trial anchor endpoint now has per-IP rate limiting. Focus on fingerprint validation only."
+    },
+    {
+      "id": "E038",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E039",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E040",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E041",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E042",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E043",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E044",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E045",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E046",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E047",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E048",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E049",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E050",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E051",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E052",
+      "readiness": "ALREADY_FIXED",
+      "notes": "SyxxCLI now uses Bundle.main.executablePath over argv[0]."
+    },
+    {
+      "id": "E053",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "E054",
+      "readiness": "REJECT",
+      "notes": "Marked DUPLICATE \u2014 see D137."
+    },
+    {
+      "id": "E055",
+      "readiness": "REJECT",
+      "notes": "Marked DUPLICATE \u2014 see A078."
+    },
+    {
+      "id": "F001",
+      "readiness": "REJECT",
+      "notes": "Duplicate of A001. Placeholder/example entry."
+    },
+    {
+      "id": "F002",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F003",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F004",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F005",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F006",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F007",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F008",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "No concrete failure scenario. Scope fix to 'add tests covering documented limitations' rather than library replacement."
+    },
+    {
+      "id": "F009",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F010",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F011",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F012",
+      "readiness": "ALREADY_FIXED",
+      "notes": "Text corruption no longer exists in DELTAS.md."
+    },
+    {
+      "id": "F013",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F014",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F015",
+      "readiness": "READY",
+      "notes": ""
+    },
+    {
+      "id": "F016",
+      "readiness": "READY_WITH_REVISIONS",
+      "notes": "Needs deployment target check for @Observable and D014 coordination."
+    }
+  ],
+  "summary": {
+    "total": 361,
+    "ready": 319,
+    "ready_with_revisions": 27,
+    "reject": 4,
+    "already_fixed": 11
+  },
+  "merges_recommended": [
+    {
+      "merge_into": "A003",
+      "merge_from": [
+        "A006"
+      ],
+      "reason": "A006 description incorrect; actual issue covered by A003"
+    },
+    {
+      "merge_into": "D009",
+      "merge_from": [
+        "D052"
+      ],
+      "reason": "D052 is duplicate of D009"
+    },
+    {
+      "merge_into": "D023",
+      "merge_from": [
+        "D037"
+      ],
+      "reason": "D037 near-duplicate of D023"
+    },
+    {
+      "merge_into": "D054",
+      "merge_from": [
+        "D072"
+      ],
+      "reason": "Same root cause"
+    },
+    {
+      "merge_into": "D120",
+      "merge_from": [
+        "D144"
+      ],
+      "reason": "Duplicate"
+    },
+    {
+      "merge_into": "B002",
+      "merge_from": [
+        "B020"
+      ],
+      "reason": "B020 overlaps B002 significantly"
+    }
+  ]
+}

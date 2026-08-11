@@ -565,16 +565,16 @@ public final class UnboundManager: @unchecked Sendable {
         // validation must fetch the DNSKEY/DS chain, which can exceed a single query timeout, so poll
         // until validation settles rather than failing on a cold miss.
         var pos = await queryLocal(port: port, domain: "cloudflare.com", dnssec: true)
-        for _ in 0..<8 where pos.didFail || pos.records.isEmpty || !pos.authenticatedData {
+        for _ in 0..<8 where pos.didNotSucceed || pos.records.isEmpty || !pos.authenticatedData {
             try? await Task.sleep(nanoseconds: 700_000_000)
             pos = await queryLocal(port: port, domain: "cloudflare.com", dnssec: true)
         }
-        let recurses = !pos.didFail && !pos.records.isEmpty
+        let recurses = !pos.didNotSucceed && !pos.records.isEmpty
         let adBit = pos.authenticatedData
         // Negative-control: a deliberately-bogus zone must be REJECTED (SERVFAIL), proving validation
         // is genuinely on rather than merely passed through.
         let bogus = await queryLocal(port: port, domain: "dnssec-failed.org", dnssec: true)
-        let rejectedBogus = bogus.status == .servFail || bogus.didFail
+        let rejectedBogus = bogus.status == .servFail || bogus.didNotSucceed
         let dnssecValidated = adBit && rejectedBogus
         var detail = "recursion: \(recurses ? "ok" : "FAILED"); "
         detail += "DNSSEC AD bit on signed answer: \(adBit ? "yes" : "no"); "
@@ -643,15 +643,15 @@ public final class UnboundManager: @unchecked Sendable {
         // Positive: a signed name must validate (AD bit) through the chain. Cold validation may need the
         // DS/DNSKEY chain fetched over DNSCrypt, so poll rather than fail on a cold miss.
         var pos = await queryLocal(port: unboundPort, domain: "cloudflare.com", dnssec: true)
-        for _ in 0..<10 where pos.didFail || pos.records.isEmpty || !pos.authenticatedData {
+        for _ in 0..<10 where pos.didNotSucceed || pos.records.isEmpty || !pos.authenticatedData {
             try? await Task.sleep(nanoseconds: 800_000_000)
             pos = await queryLocal(port: unboundPort, domain: "cloudflare.com", dnssec: true)
         }
-        let chainResolves = !pos.didFail && !pos.records.isEmpty
+        let chainResolves = !pos.didNotSucceed && !pos.records.isEmpty
         let adBit = pos.authenticatedData
         // Negative control: a bogus DNSSEC zone must be REJECTED (SERVFAIL) — proves validation is live.
         let bogus = await queryLocal(port: unboundPort, domain: "dnssec-failed.org", dnssec: true)
-        let rejectedBogus = bogus.status == .servFail || bogus.didFail
+        let rejectedBogus = bogus.status == .servFail || bogus.didNotSucceed
 
         let transport: String
         switch proxyResult {
@@ -761,7 +761,7 @@ public final class UnboundManager: @unchecked Sendable {
     private func localResolves(port: UInt16, domain: String) async -> Bool {
         for _ in 0..<6 {
             let r = await queryLocal(port: port, domain: domain, dnssec: false)
-            if !r.didFail && !r.records.isEmpty { return true }
+            if !r.didNotSucceed && !r.records.isEmpty { return true }
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
         return false

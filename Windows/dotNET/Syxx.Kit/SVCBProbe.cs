@@ -25,7 +25,7 @@ public static class SVCBProbe
         async q => await DNSResolver.QueryUDPDetailedAsync(q);
 
     public static async Task<SVCBFinding> Probe(string domain,
-        IReadOnlyList<string> resolvers = null,
+        IReadOnlyList<string>? resolvers = null,
         Func<DNSQuery, Task<DNSResponse>>? query = null)
     {
         query ??= DefaultQuery;

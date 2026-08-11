@@ -123,6 +123,187 @@ namespace Syxx.Tests
         }
     }
 
+    // ── K-18 — typosquat detection must carry the transposition term ──────────────────
+    // C#'s EditDistance was plain Levenshtein over two rolling rows, which structurally cannot
+    // carry the transposition term (it reads d[i-2][j-2]). Caps and call sites are identical to
+    // the macOS twin, so the gap bit exactly AT the cap: an adjacent swap measured 2, exceeded the
+    // cap of 1, and produced NO finding. These tests pin both the fix and the VARIANT.
+    public class LookalikeEditDistanceTests
+    {
+        [Fact]
+        public void AdjacentTransposition_IsOneEdit_NotTwo()
+        {
+            // The documented K-18 case. Plain Levenshtein scores this 2 and returns cap+1 at cap 1.
+            Assert.Equal(1, LookalikeDetector.EditDistance("payapl.com", "paypal.com", 1));
+            Assert.Equal(1, LookalikeDetector.EditDistance("payapl", "paypal", 1));
+        }
+
+        [Fact]
+        public void TransposedBrandName_ProducesTyposquatFinding()
+        {
+            // The consequence that makes K-18 security-relevant: before the fix this returned null,
+            // so a phishing-shaped name passed through the log analyzer unflagged.
+            var f = LookalikeDetector.Analyze("payapl.com");
+            Assert.NotNull(f);
+            Assert.Equal("paypal.com", f!.Brand);
+            Assert.Equal(LookalikeDetector.Reason.Typosquat, f.Reason);
+        }
+
+        // The distance is OPTIMAL STRING ALIGNMENT (OSA), matching the Swift twin — NOT unrestricted
+        // Damerau-Levenshtein. Under OSA a substring may be edited at most once, so a transposed
+        // pair is never edited again. "ca" -> "abc" is the classic discriminator: OSA 3, unrestricted
+        // Damerau 2. This test exists so a future "improvement" cannot silently switch variants and
+        // change which names get flagged.
+        [Fact]
+        public void EditDistance_IsOptimalStringAlignment_NotUnrestrictedDamerau()
+        {
+            Assert.Equal(3, LookalikeDetector.EditDistance("ca", "abc", 3));
+        }
+
+        [Fact]
+        public void GenuineBrandAndUnrelatedNamesStillBehave()
+        {
+            // The transposition term must not widen the net: the brand itself is still not a finding,
+            // and the cap still rejects unrelated names cheaply.
+            Assert.Null(LookalikeDetector.Analyze("paypal.com"));
+            Assert.Null(LookalikeDetector.Analyze("example.com"));
+            Assert.Equal(0, LookalikeDetector.EditDistance("google", "google", 1));
+            Assert.Equal(2, LookalikeDetector.EditDistance("google", "yahoosearch", 1));   // cap+1
+        }
+    }
+
+    // ── K-17 — underscore names must not be silently dropped ──────────────────────────
+    // NormalizeDomain rejected `_`, returning null; the caller drops a null-normalising record
+    // entirely, so `_dmarc.example.com` and friends vanished from every tally INCLUDING exfil
+    // detection. RFC 8552 makes `_` valid, and SRV/DKIM/DMARC/mDNS depend on it.
+    public class DNSLogUnderscoreTests
+    {
+        private static DNSLogRecord Q(string name) =>
+            new() { QuestionName = name, QuestionType = "TXT", IsReply = false };
+
+        [Theory]
+        [InlineData("_dmarc.example.com")]
+        [InlineData("_sip._udp.example.com")]
+        [InlineData("_services._dns-sd._udp.local")]
+        [InlineData("_domainkey.example.com")]
+        public void UnderscoreNamesNormalizeInsteadOfReturningNull(string name)
+        {
+            Assert.Equal(name, DNSLogAnalyzer.NormalizeDomain(name));
+        }
+
+        [Fact]
+        public void UnderscoreNamesAreCountedNotDropped()
+        {
+            var a = DNSLogAnalyzer.Analyze(new List<DNSLogRecord>
+            {
+                Q("_dmarc.example.com"), Q("_sip._udp.example.com"), Q("www.example.com"),
+            });
+            Assert.Equal(3, a.UniqueDomains);
+            Assert.Contains(a.DomainCounts, p => p.Name == "_dmarc.example.com");
+            Assert.Contains(a.DomainCounts, p => p.Name == "_sip._udp.example.com");
+            Assert.Equal(0, a.NamesExcludedCount);
+        }
+
+        // The aggravating half of K-17: Swift disclosed excluded names via a counter and C# had
+        // neither counter nor disclosure. A drop the user cannot see is a silent drop.
+        [Fact]
+        public void ExcludedNamesAreCountedAndDisclosedInTheReport()
+        {
+            var a = DNSLogAnalyzer.Analyze(new List<DNSLogRecord>
+            {
+                Q("www.example.com"), Q("localhost"), Q("host name.example.com"),
+            });
+            Assert.Equal(1, a.UniqueDomains);
+            Assert.Equal(2, a.NamesExcludedCount);
+            Assert.Contains("Names excluded from analysis: 2", DNSLogAnalyzer.Render(a, "test"));
+        }
+
+        [Fact]
+        public void CleanRunDoesNotClaimAnExclusion()
+        {
+            var a = DNSLogAnalyzer.Analyze(new List<DNSLogRecord> { Q("www.example.com") });
+            Assert.Equal(0, a.NamesExcludedCount);
+            Assert.DoesNotContain("Names excluded from analysis", DNSLogAnalyzer.Render(a, "test"));
+        }
+    }
+
+    // ── K-07 — AuthComparisonStatus wire form is pinned, not positional ───────────────
+    // The member order was the REVERSE of the Swift twin (Diverges/Matches swapped) with no
+    // converter, and System.Text.Json emits a bare enum as its NUMERIC value: the first thing to
+    // serialize this would have put `0` on the wire meaning `Diverges` here and `matches` on macOS
+    // — a silent inversion of the exact finding the type carries. These tests pin the string form
+    // so ordinal drift can never reach the wire.
+    //
+    // (Housed in this file because it is the test file this change's seat owns; the type itself
+    // lives in Syxx.Kit/AuthoritativeVantage.cs, not in Forensics.)
+    public class AuthComparisonStatusWireTests
+    {
+        [Theory]
+        [InlineData(AuthComparisonStatus.Matches, "matches")]
+        [InlineData(AuthComparisonStatus.Diverges, "diverges")]
+        [InlineData(AuthComparisonStatus.Inconclusive, "inconclusive")]
+        [InlineData(AuthComparisonStatus.Untested, "untested")]
+        public void WireStringIsPinnedToTheSwiftRawValue(AuthComparisonStatus s, string wire)
+        {
+            Assert.Equal(wire, s.RawValue());
+            Assert.Equal($"\"{wire}\"", System.Text.Json.JsonSerializer.Serialize(s));
+            Assert.Equal(s, System.Text.Json.JsonSerializer.Deserialize<AuthComparisonStatus>($"\"{wire}\""));
+        }
+
+        // Declaration order must match Swift's `case matches, diverges, inconclusive, untested`.
+        // Belt and braces alongside the converter: this catches a reorder at its source.
+        [Fact]
+        public void MemberOrderMatchesTheSwiftTwin()
+        {
+            Assert.Equal(0, (int)AuthComparisonStatus.Matches);
+            Assert.Equal(1, (int)AuthComparisonStatus.Diverges);
+            Assert.Equal(2, (int)AuthComparisonStatus.Inconclusive);
+            Assert.Equal(3, (int)AuthComparisonStatus.Untested);
+        }
+    }
+
+    // ── K-16 — a same-provider disjoint answer stays a divergence ─────────────────────
+    // C# softened disjoint-but-same-CDN-provider to Inconclusive ("CDN/geo routing, not a rewrite").
+    // Swift retains .diverges because an attacker may share the provider's ASN. The traced
+    // consequence is what makes it severe: Synthesizer emits an evidence item for Diverges, while
+    // Inconclusive falls to `default:` and emits NO evidence item — the finding did not soften,
+    // it DISAPPEARED.
+    public class AuthoritativeSameProviderTests
+    {
+        private static HashSet<string> S(params string[] ips) => new(ips);
+
+        [Fact]
+        public void DisjointAnswersInOneCdn_RetainDivergence_WithTheProviderNoted()
+        {
+            // Both sets are Fastly (151.101.0.0/16).
+            var r = AuthoritativeVantage.Classify(S("151.101.1.1"), S("151.101.2.2"), new List<string>(), "x");
+            Assert.Equal(AuthComparisonStatus.Diverges, r.Status);
+            Assert.Contains("Fastly", r.Detail);
+            Assert.Contains("divergence retained", r.Detail);
+        }
+
+        [Fact]
+        public void DisjointAnswersAcrossProviders_StillDiverge()
+        {
+            var r = AuthoritativeVantage.Classify(S("151.101.1.1"), S("142.250.1.1"), new List<string>(), "x");
+            Assert.Equal(AuthComparisonStatus.Diverges, r.Status);
+        }
+
+        // The softening removal must not swallow the genuinely ambiguous case: PARTIAL overlap is
+        // still inconclusive (the real CDN/geo signature), and a subset is still a match.
+        [Fact]
+        public void PartialOverlapIsStillInconclusive_AndSubsetIsStillAMatch()
+        {
+            var partial = AuthoritativeVantage.Classify(S("1.2.3.4", "6.6.6.6"), S("1.2.3.4", "5.6.7.8"),
+                new List<string>(), "x");
+            Assert.Equal(AuthComparisonStatus.Inconclusive, partial.Status);
+
+            var subset = AuthoritativeVantage.Classify(S("1.2.3.4"), S("1.2.3.4", "5.6.7.8"),
+                new List<string>(), "x");
+            Assert.Equal(AuthComparisonStatus.Matches, subset.Status);
+        }
+    }
+
     public class EndpointLogAnalyzerTests
     {
         private static string WriteTemp(string content)

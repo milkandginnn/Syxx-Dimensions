@@ -3,11 +3,24 @@
 Keeps a single misbehaving client (or an abusive scan of the open-ended /warp
 proxy) from starving the shared daemon. Buckets are keyed by entitlement subject
 when authenticated, else by client IP for public routes.
+
+SECURITY NOTE (E044): Rate limit buckets are in-memory only. They reset on every
+server restart, creating a window where a client that was previously throttled can
+burst at full capacity again. The startup grace period below mitigates this by
+applying 50% of normal capacity for the first 60 seconds after process start, but
+does not eliminate the risk entirely. A DB-backed solution (persisting bucket state
+with a short TTL) would be the complete fix (see E044).
 """
+
 import threading
 import time
+import time as _time
 
 from . import config
+
+_STARTUP_TIME = _time.monotonic()
+_STARTUP_GRACE_SECONDS = 60
+_STARTUP_RATE_MULTIPLIER = 0.5  # 50% of normal capacity during grace period
 
 _lock = threading.Lock()
 _buckets = {}  # key -> [tokens_millis, last_refill]
@@ -34,13 +47,26 @@ def _prune(now_ms):
     # high-cardinality burst within the stale window.
     if len(_buckets) > _MAX_BUCKETS:
         by_last = sorted(_buckets.items(), key=lambda kv: kv[1][1])
-        for key, _ in by_last[:len(_buckets) - _MAX_BUCKETS]:
+        for key, _ in by_last[: len(_buckets) - _MAX_BUCKETS]:
             _buckets.pop(key, None)
 
 
 def allow(key, capacity=None, refill_millis=None):
+    """Consume one token from the bucket keyed by *key*; return True if allowed.
+
+    Uses a token-bucket algorithm with millitoken precision (A054).  During the
+    startup grace period (E044) the default capacity is halved to compensate for
+    in-memory state reset.  Explicit *capacity* / *refill_millis* overrides bypass
+    the grace adjustment.
+    """
     global _last_prune_ms
+    _using_default_capacity = capacity is None
     capacity = config.RATE_CAPACITY if capacity is None else capacity
+    # E044: stricter limits during startup grace period (in-memory state was just reset).
+    # Only applies when using the default configured capacity, not explicit overrides,
+    # so that internal callers and tests passing explicit values are unaffected.
+    if _using_default_capacity and _time.monotonic() - _STARTUP_TIME < _STARTUP_GRACE_SECONDS:
+        capacity = max(1, int(capacity * _STARTUP_RATE_MULTIPLIER))
     refill_ms = config.RATE_REFILL_MILLIS if refill_millis is None else refill_millis
     now = int(time.monotonic() * 1000)
     with _lock:

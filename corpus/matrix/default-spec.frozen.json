@@ -100,7 +100,7 @@
       "allowedCooccurrenceWith" : [
         "contentTampering"
       ],
-      "displayName" : "DNS spoofing \/ poisoning",
+      "displayName" : "DNS spoofing / poisoning",
       "exclusionaryIndicators" : [
         "trustedWitnessOK"
       ],
@@ -165,7 +165,7 @@
       "allowedCooccurrenceWith" : [
         "transportDowngrade"
       ],
-      "displayName" : "Censorship \/ blocking",
+      "displayName" : "Censorship / blocking",
       "exclusionaryIndicators" : [
 
       ],
@@ -423,7 +423,7 @@
       "allowedCooccurrenceWith" : [
 
       ],
-      "displayName" : "Local compromise \/ exfiltration",
+      "displayName" : "Local compromise / exfiltration",
       "exclusionaryIndicators" : [
 
       ],
@@ -475,12 +475,12 @@
     }
   ],
   "knownSections" : [
-    "prophet",
-    "portal",
     "cage",
     "glutton",
-    "witness",
-    "mirror"
+    "mirror",
+    "portal",
+    "prophet",
+    "witness"
   ],
   "thresholds" : {
     "failClosedOnInvalidatedRequiredSections" : true,

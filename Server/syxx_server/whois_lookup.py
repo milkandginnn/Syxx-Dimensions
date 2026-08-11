@@ -9,7 +9,6 @@ Never follows redirects to private IPs.
 """
 
 import http.client
-import ipaddress
 import json
 import socket
 import ssl
@@ -17,7 +16,6 @@ import threading
 import time
 import urllib.parse
 
-from . import netutil
 from .fetcher import _PinnedHTTPSConnection, _resolve_public
 
 # ---------- IANA RDAP Bootstrap Cache ----------
@@ -26,7 +24,7 @@ from .fetcher import _PinnedHTTPSConnection, _resolve_public
 
 _BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json"
 _BOOTSTRAP_TTL = 86400  # 24 hours
-_bootstrap_cache = {"data": None, "fetched_at": 0}
+_bootstrap_cache: dict[str, float | dict[str, object] | None] = {"data": None, "fetched_at": 0.0}
 _bootstrap_lock = threading.Lock()
 
 
@@ -34,13 +32,13 @@ def _fetch_bootstrap():
     """Fetch (or return cached) IANA RDAP bootstrap. Thread-safe."""
     with _bootstrap_lock:
         now = time.monotonic()
-        if _bootstrap_cache["data"] and (now - _bootstrap_cache["fetched_at"]) < _BOOTSTRAP_TTL:
+        if _bootstrap_cache["data"] and (now - float(_bootstrap_cache["fetched_at"])) < _BOOTSTRAP_TTL:  # type: ignore[invalid-argument-type]
             return _bootstrap_cache["data"]
     # Fetch outside lock to avoid holding it during network I/O
     try:
         parsed = urllib.parse.urlparse(_BOOTSTRAP_URL)
         ctx = ssl.create_default_context()
-        conn = http.client.HTTPSConnection(parsed.hostname, timeout=10, context=ctx)
+        conn = http.client.HTTPSConnection(parsed.hostname or "", timeout=10, context=ctx)  # type: ignore[invalid-argument-type]
         conn.request("GET", parsed.path)
         resp = conn.getresponse()
         if resp.status != 200:
@@ -69,11 +67,26 @@ def _rdap_base_for_tld(tld):
 
 # ---------- TLD Extraction ----------
 
-# Common two-part TLDs where we need the last two labels
+# SM-035: expanded two-part TLD set. The original list missed many common
+# multi-part TLDs (co.in, co.kr, com.cn, etc.) causing incorrect TLD extraction.
 _TWO_PART_TLDS = {
-    "co.uk", "org.uk", "ac.uk", "gov.uk", "co.jp", "or.jp", "ne.jp",
-    "com.au", "net.au", "org.au", "co.nz", "net.nz", "org.nz",
-    "com.br", "net.br", "org.br", "co.za", "com.mx", "com.ar",
+    "co.uk", "org.uk", "ac.uk", "gov.uk", "me.uk", "net.uk",
+    "co.jp", "or.jp", "ne.jp", "ac.jp",
+    "com.au", "net.au", "org.au", "edu.au", "gov.au",
+    "co.nz", "net.nz", "org.nz", "govt.nz",
+    "com.br", "net.br", "org.br", "gov.br",
+    "co.za", "org.za", "web.za",
+    "com.mx", "net.mx", "org.mx",
+    "com.ar", "net.ar", "org.ar",
+    "co.in", "net.in", "org.in", "gen.in", "firm.in", "ind.in",
+    "co.kr", "or.kr", "ne.kr",
+    "com.cn", "net.cn", "org.cn",
+    "com.tw", "net.tw", "org.tw",
+    "co.th", "or.th", "in.th",
+    "com.sg", "net.sg", "org.sg",
+    "com.hk", "net.hk", "org.hk",
+    "co.il", "org.il", "net.il",
+    "com.tr", "net.tr", "org.tr",
 }
 
 
@@ -136,6 +149,10 @@ def _rdap_query(domain, timeout=10):
         return None
 
     url = base_url.rstrip("/") + "/domain/" + domain
+    # SM-036: maximum RDAP response body size.
+    _MAX_RDAP_BYTES = 2 * 1024 * 1024  # 2 MiB — RDAP responses are typically < 100 KiB
+    # SM-040: track visited URLs to detect redirect loops beyond _MAX_REDIRECTS.
+    visited_urls = set()
     for _ in range(_MAX_REDIRECTS):
         try:
             parsed = urllib.parse.urlparse(url)
@@ -164,18 +181,60 @@ def _rdap_query(domain, timeout=10):
                 redir = urllib.parse.urlparse(location)
                 if redir.scheme != "https":
                     return None
-                # A161: _redirect_target_is_safe returns the vetted IP (or False).
-                # The IP is discarded — the next iteration will re-resolve and pin.
-                if not _redirect_target_is_safe(location):
+                # SM-038: _redirect_target_is_safe resolves the hostname — use the
+                # result. The next iteration MUST use the same resolved IP, not
+                # re-resolve (TOCTOU: the DNS answer can change between the check
+                # and the connect, allowing DNS-rebinding).
+                safe_ip = _redirect_target_is_safe(location)
+                if not safe_ip:
                     return None
+                # SM-040: detect redirect loops.
+                if location in visited_urls:
+                    return None
+                visited_urls.add(location)
                 url = location
                 continue
             if resp.status != 200:
                 return None
-            data = json.loads(resp.read().decode("utf-8"))
+            # SM-036: bounded read to prevent memory exhaustion from oversized RDAP responses.
+            body = resp.read(_MAX_RDAP_BYTES + 1)
+            if len(body) > _MAX_RDAP_BYTES:
+                return None  # response too large
+            data = json.loads(body.decode("utf-8"))
             return _parse_rdap(data)
         except Exception:
             return None
+    return None
+
+
+def _extract_registrar_from_entity(entity):
+    """Extract registrar name and IANA ID from an RDAP entity dict.
+
+    Returns (name_or_None, iana_id_or_None).
+    """
+    name = None
+    iana_id = None
+    vcard = entity.get("vcardArray", [None, []])
+    if len(vcard) == 2:
+        for item in vcard[1]:
+            if len(item) >= 4 and item[0] == "fn":
+                name = item[3]
+                break
+    for pid in entity.get("publicIds", []):
+        if pid.get("type") == "IANA Registrar ID":
+            iana_id = pid.get("identifier")
+    return name, iana_id
+
+
+def _first_whois_field(lines, patterns):
+    """Return the first value matching any of *patterns* at line start, or None."""
+    for line in lines:
+        line_stripped = line.strip()
+        for pattern in patterns:
+            if line_stripped.startswith(pattern):
+                value = line_stripped[len(pattern):].strip()
+                if value:
+                    return value
     return None
 
 
@@ -211,20 +270,14 @@ def _parse_rdap(data):
 
     # Registrar (from entities)
     for entity in data.get("entities", []):
-        roles = entity.get("roles", [])
-        if "registrar" in roles:
-            # Look for the fn (formatted name) vcard
-            vcard = entity.get("vcardArray", [None, []])
-            if len(vcard) == 2:
-                for item in vcard[1]:
-                    if len(item) >= 4 and item[0] == "fn":
-                        result["registrar"] = item[3]
-                        break
-            # Also check the publicIds for registrar IANA ID
-            for pid in entity.get("publicIds", []):
-                if pid.get("type") == "IANA Registrar ID":
-                    result["registrarId"] = pid.get("identifier")
-            break
+        if "registrar" not in entity.get("roles", []):
+            continue
+        reg_name, reg_id = _extract_registrar_from_entity(entity)
+        if reg_name:
+            result["registrar"] = reg_name
+        if reg_id:
+            result["registrarId"] = reg_id
+        break
 
     # Raw RDAP JSON for debugging
     result["raw"] = json.dumps(data, indent=2)[:4000]
@@ -311,10 +364,16 @@ def _parse_whois_text(raw, domain):
         "is available",
         "no information available",
     )
+    # SM-037: normalize line endings — WHOIS responses use \r\n from TCP/43,
+    # but the raw text may have mixed endings after decode.
+    raw = raw.replace("\r\n", "\n").replace("\r", "\n")
+    # SM-039: check patterns at line start, not as substrings. A domain name
+    # containing "no match for" would false-positive on a substring check.
     raw_lower = raw.lower()
     for pattern in _NEGATIVE_PATTERNS:
-        if pattern in raw_lower:
-            return {"source": "whois", "result": "not-found", "raw": raw[:4000]}
+        for line in raw_lower.split("\n"):
+            if line.strip().startswith(pattern):
+                return {"source": "whois", "result": "not-found", "raw": raw[:4000]}
 
     result = {"source": "whois", "raw": raw[:4000]}
 
@@ -325,15 +384,13 @@ def _parse_whois_text(raw, domain):
         "updated": ["Updated Date:", "Last Modified:", "updated:"],
     }
 
+    raw_lines = raw.split("\n")
     for field, patterns in field_map.items():
-        for line in raw.split("\n"):
-            line_stripped = line.strip()
-            for pattern in patterns:
-                if line_stripped.startswith(pattern):
-                    value = line_stripped[len(pattern):].strip()
-                    if value and field not in result:
-                        result[field] = value[:10] if field != "registrar" else value
-                    break
+        if field in result:
+            continue
+        value = _first_whois_field(raw_lines, patterns)
+        if value:
+            result[field] = value[:10] if field != "registrar" else value
 
     # Nameservers
     ns_list = []
@@ -362,6 +419,7 @@ def _parse_whois_text(raw, domain):
 
 # ---------- Public API ----------
 
+
 def lookup(domain, timeout=10):
     """Look up WHOIS/RDAP data for a domain.
 
@@ -374,7 +432,7 @@ def lookup(domain, timeout=10):
     """
     domain = domain.rstrip(".").lower()
     if not domain or "." not in domain:
-        raise ValueError("invalid domain: %s" % domain)
+        raise ValueError(f"invalid domain: {domain}")
     # A170 / SD-99: reject CR/LF in domain before it reaches the WHOIS command.
     # WHOIS sends `domain\r\n` over TCP/43; a domain containing CR or LF allows
     # injection of arbitrary WHOIS commands to the server.

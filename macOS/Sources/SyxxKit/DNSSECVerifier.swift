@@ -79,7 +79,7 @@ public enum DNSSECVerifier {
     public static func checkStatus(domain: String, resolver: String, now: Date = Date()) async -> DNSSECStatus {
         let response = await DNSResolver.queryUDPDetailed(
             DNSQuery(name: domain, type: 48, server: resolver, edns0UDPSize: 1232, edns0DODNSSEC: true))
-        if response.didFail { return .inconclusive }
+        if response.didNotSucceed { return .inconclusive }
         return classify(records: response.records, now: now, queriedName: domain)
     }
 
@@ -115,8 +115,11 @@ public enum DNSSECVerifier {
             let algorithm = bytes[3]
             // RFC 4034 §2.1.2: Protocol MUST be 3.
             guard protocol_ == 3 else { return false }
-            // RFC 4034 §2.1.1: bit 7 (ZONE flag, 0x0100) must be set for a zone-signing key.
-            guard (flags & 0x0100) != 0 else { return false }
+            // B295: RFC 4034 §2.1.1: bit 7 (ZONE flag, 0x0100) must be set for a zone-signing key.
+            // However, KSK-only keys set the SEP flag (bit 15, 0x0001) without the ZONE flag.
+            // A KSK-only DNSKEY (SEP=1, ZONE=0) is valid per RFC 4034 and must not be rejected.
+            // Accept if either ZONE or SEP is set.
+            guard (flags & 0x0100) != 0 || (flags & 0x0001) != 0 else { return false }
             // RFC 4034 §2.1.3: algorithm 0 is reserved and cannot support a conclusion.
             guard algorithm != 0 else { return false }
             return true
@@ -173,11 +176,13 @@ public enum DNSSECVerifier {
         return (inception, expiration)
     }
 
-    /// Maximum plausible RRSIG validity span, in seconds (2 years). Real signers use windows of days
+    /// Maximum plausible RRSIG validity span, in seconds (5 years). Real signers use windows of days
     /// to a few months. A span approaching the 2^31 serial half-space is implausible and is exactly
     /// what a spoofed local clock would need to wrap a long-expired signature back into "valid" under
     /// serial arithmetic, so we refuse to treat such a window as currently valid (B047).
-    static let maxPlausibleValiditySpanSeconds: UInt32 = 63_072_000
+    /// B291: increased from 2 years (63_072_000) to 5 years — legitimate zones with infrequent
+    /// re-signing (e.g. offline KSK ceremonies) can produce 2.5+ year validity windows.
+    static let maxPlausibleValiditySpanSeconds: UInt32 = 157_680_000
 
     /// RFC 1982 (SERIAL_BITS = 32) "a is at or before b": the forward distance from a to b, computed
     /// mod 2^32, is under 2^31.

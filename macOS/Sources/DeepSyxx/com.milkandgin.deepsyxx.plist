@@ -24,7 +24,15 @@
         <key>SuccessfulExit</key>
         <false/>
     </dict>
-    
+
+    <!-- D363: prevent launchd from respawning the helper in a tight crash loop.
+         Without this, a helper that crashes on startup (e.g. corrupted code signature)
+         is respawned immediately and repeatedly, flooding syslog and burning CPU.
+         10 seconds gives time for diagnostics and avoids launchd's own rate-limit
+         backoff kicking in (which disables the job for 10 minutes). -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
     <key>StandardErrorPath</key>
     <string>/var/log/com.milkandgin.deepsyxx.err</string>
 </dict>

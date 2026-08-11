@@ -11,6 +11,7 @@ key to r/AskNetSec without revealing a shared secret.
   3. /api/leak/verify (paid) returns the observed resolvers together with an
      Ed25519 signature the caller can verify with the collector's public key.
 """
+
 import base64
 import json
 import os
@@ -20,11 +21,13 @@ import time
 from . import config, db, logging_util, resolver
 
 try:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography.hazmat.primitives.serialization import (
-        Encoding, PrivateFormat, PublicFormat, NoEncryption,
-        load_der_private_key, load_der_public_key,
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # type: ignore[unresolved-import]
+    from cryptography.hazmat.primitives.serialization import (  # type: ignore[unresolved-import]
+        Encoding,
+        PublicFormat,
+        load_der_private_key,
     )
+
     _HAS_CRYPTO = True
 except ImportError:
     _HAS_CRYPTO = False
@@ -49,6 +52,11 @@ _COLLECTOR_KEY_ID = None
 # Returned by /api/pubkey so callers can see when the key was activated, not when
 # they happened to fetch it.
 _COLLECTOR_KEY_ACTIVATED_AT = None
+# A051: tracks whether _ensure_collector_key has been attempted and whether it
+# succeeded, so repeated calls don't re-raise the same RuntimeError on every
+# request (which the global handler turns into a vague 500 "internal error").
+_COLLECTOR_KEY_INITIALIZED = False
+_COLLECTOR_KEY_ERROR = None
 
 # A copy-pasteable generator. An error that names a format without showing how to
 # produce it is how an operator ends up pasting a bare seed.
@@ -75,35 +83,51 @@ def collector_key_error(env_key):
         return "unset"
     try:
         raw = base64.b64decode(env_key, validate=True)
-    except Exception:                                             # noqa: BLE001
+    except Exception:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
         return "not valid base64. " + _GENERATE_HINT
     if len(raw) == 32:
         # The specific mistake the old message invited. Name it exactly.
-        return ("looks like a bare 32-byte Ed25519 seed, not a DER PKCS#8 key. " +
-                _GENERATE_HINT)
+        return "looks like a bare 32-byte Ed25519 seed, not a DER PKCS#8 key. " + _GENERATE_HINT
     try:
         load_der_private_key(raw, password=None)
-    except Exception as exc:                                      # noqa: BLE001
-        return "does not parse as a DER PKCS#8 private key (%s). %s" % (exc, _GENERATE_HINT)
+    except Exception as exc:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
+        return f"does not parse as a DER PKCS#8 private key ({exc}). {_GENERATE_HINT}"
     return None
 
 
 def _ensure_collector_key():
-    global _COLLECTOR_PRIV_KEY, _COLLECTOR_PUB_KEY_RAW, _COLLECTOR_KEY_ID, _COLLECTOR_KEY_ACTIVATED_AT
-    if _COLLECTOR_PRIV_KEY is not None:
-        return
+    """Initialise the collector Ed25519 keypair (idempotent).
+
+    Returns True on success, False when the key is unavailable.  The error
+    message is stored in ``_COLLECTOR_KEY_ERROR`` for callers to surface as a
+    structured response instead of an unhandled 500.
+
+    A051: previously raised RuntimeError on failure, which the global HTTP
+    handler caught and flattened to ``{"error": "internal error"}`` — hiding
+    the actual diagnostic (missing key, bad format, wrong algorithm) from
+    both the operator's logs-at-a-glance and the client.  Now caches the
+    outcome so repeated requests get the same answer without re-raising.
+    """
+    global _COLLECTOR_PRIV_KEY, _COLLECTOR_PUB_KEY_RAW, _COLLECTOR_KEY_ID
+    global _COLLECTOR_KEY_ACTIVATED_AT, _COLLECTOR_KEY_INITIALIZED, _COLLECTOR_KEY_ERROR
+
+    # A051: return cached result — don't re-attempt (or re-raise) on every request.
+    if _COLLECTOR_KEY_INITIALIZED:
+        return _COLLECTOR_KEY_ERROR is None
+
     if not _HAS_CRYPTO:
-        raise RuntimeError(
-            "cryptography library required for Ed25519 leak signing. "
-            "Install: pip install cryptography"
-        )
+        _COLLECTOR_KEY_ERROR = "cryptography library required for Ed25519 leak signing. Install: pip install cryptography"
+        _COLLECTOR_KEY_INITIALIZED = True
+        return False
     env_key = os.environ.get("SYXX_COLLECTOR_PRIVATE_KEY")
     if env_key:
         # A provisioned-but-wrong key used to surface as a raw OpenSSL "not enough data"
         # on every request, naming neither the variable nor the fix.
         why = collector_key_error(env_key)
         if why:
-            raise RuntimeError("SYXX_COLLECTOR_PRIVATE_KEY %s" % why)
+            _COLLECTOR_KEY_ERROR = f"SYXX_COLLECTOR_PRIVATE_KEY {why}"
+            _COLLECTOR_KEY_INITIALIZED = True
+            return False
         _COLLECTOR_PRIV_KEY = load_der_private_key(base64.b64decode(env_key), password=None)
         # A113: validate the loaded key is actually Ed25519. A wrong-algorithm DER
         # key (e.g. RSA, ECDSA) passes load_der_private_key but fails later at
@@ -112,9 +136,12 @@ def _ensure_collector_key():
         if not isinstance(_COLLECTOR_PRIV_KEY, Ed25519PrivateKey):
             actual_type = type(_COLLECTOR_PRIV_KEY).__name__
             _COLLECTOR_PRIV_KEY = None
-            raise RuntimeError(
-                "SYXX_COLLECTOR_PRIVATE_KEY is %s, not Ed25519. The collector "
-                "signs leak attestations with Ed25519 only. %s" % (actual_type, _GENERATE_HINT))
+            _COLLECTOR_KEY_ERROR = (
+                f"SYXX_COLLECTOR_PRIVATE_KEY is {actual_type}, not Ed25519. The collector "
+                f"signs leak attestations with Ed25519 only. {_GENERATE_HINT}"
+            )
+            _COLLECTOR_KEY_INITIALIZED = True
+            return False
     elif os.environ.get("SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY") == "1":
         # Dev/test escape hatch ONLY. An ephemeral key means attestations do not
         # survive a restart and anyone could mint a self-consistent "collector
@@ -123,20 +150,22 @@ def _ensure_collector_key():
         logging_util.warn(
             "collector_ed25519_key",
             msg="SYXX_COLLECTOR_PRIVATE_KEY not set; generated ephemeral key "
-                "(dev/test only — attestations will not survive server restart)",
+            "(dev/test only — attestations will not survive server restart)",
         )
     else:
         # Fail closed (A022): refuse to sign with an ephemeral key in production. A
         # per-process key would silently invalidate every attestation after a restart
         # and offers no trust anchor a client could pin.
-        raise RuntimeError(
+        _COLLECTOR_KEY_ERROR = (
             "SYXX_COLLECTOR_PRIVATE_KEY is not set. The collector refuses to start "
             "without a stable Ed25519 signing key: an ephemeral key makes leak "
             "attestations unverifiable after a restart and forgeable by anyone. "
-            "Set it to a base64-encoded DER PKCS#8 Ed25519 private key. " +
-            _GENERATE_HINT +
-            "  (SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY=1 is dev/test ONLY.)"
+            "Set it to a base64-encoded DER PKCS#8 Ed25519 private key. "
+            + _GENERATE_HINT
+            + "  (SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY=1 is dev/test ONLY.)"
         )
+        _COLLECTOR_KEY_INITIALIZED = True
+        return False
     pub = _COLLECTOR_PRIV_KEY.public_key()
     _COLLECTOR_PUB_KEY_RAW = pub.public_bytes(Encoding.Raw, PublicFormat.Raw)
     _COLLECTOR_KEY_ID = base64.b64encode(_COLLECTOR_PUB_KEY_RAW[:8]).decode("ascii")
@@ -144,36 +173,66 @@ def _ensure_collector_key():
     # fetch time. For a configured key this is the server start time (the key was
     # already generated externally); for an ephemeral key it is now.
     _COLLECTOR_KEY_ACTIVATED_AT = int(time.time())
+    _COLLECTOR_KEY_INITIALIZED = True
+    _COLLECTOR_KEY_ERROR = None
+    return True
 
 
 def _canon(obj):
+    """Canonical JSON encoding for deterministic hashing (sorted keys, no whitespace)."""
     return json.dumps(obj, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
 
 def collector_public_key():
-    _ensure_collector_key()
-    return base64.b64encode(_COLLECTOR_PUB_KEY_RAW).decode("ascii")
+    """Return the base64-encoded Ed25519 public key, or None if unavailable (A051)."""
+    if not _ensure_collector_key():
+        return None
+    return base64.b64encode(_COLLECTOR_PUB_KEY_RAW).decode("ascii")  # type: ignore[invalid-argument-type]
 
 
 def collector_key_id():
-    _ensure_collector_key()
+    """Return the short key id (base64 of first 8 pubkey bytes), or None if unavailable (A051)."""
+    if not _ensure_collector_key():
+        return None
     return _COLLECTOR_KEY_ID
 
 
+def collector_warp_key_id():
+    """WARP_MANIFEST_V1 key id: lowercase hex of the RAW 32-byte Ed25519 public key.
+    Deliberately distinct from collector_key_id() (base64 of the first 8 pubkey bytes,
+    fixed by the leak-attestation protocol). Both derive from the same collector key.
+    Returns None if the key is unavailable (A051)."""
+    if not _ensure_collector_key():
+        return None
+    return _COLLECTOR_PUB_KEY_RAW.hex()
+
+
 def collector_key_activated_at():
-    """A114: return the timestamp when this key instance was activated (loaded/generated)."""
-    _ensure_collector_key()
+    """A114: return the timestamp when this key instance was activated (loaded/generated).
+    Returns None if the key is unavailable (A051)."""
+    if not _ensure_collector_key():
+        return None
     return _COLLECTOR_KEY_ACTIVATED_AT
+
+
+def collector_key_error_message():
+    """A051: return the stored error message for the collector key, or None if the key is OK.
+    Callers (e.g. /api/pubkey handler) can use this to build a structured error response
+    instead of getting a vague 500 from the global exception handler."""
+    _ensure_collector_key()
+    return _COLLECTOR_KEY_ERROR
 
 
 def sign_content(content):
     """D041: sign arbitrary content (bytes or str) with the collector's Ed25519 private key.
-    Returns a base64-encoded signature. Used to sign What's-New HTML so the client can verify
-    content integrity before rendering. If content is a string, it is encoded as UTF-8 before signing."""
-    _ensure_collector_key()
+    Returns a base64-encoded signature, or None if the collector key is unavailable (A051).
+    Used to sign What's-New HTML so the client can verify content integrity before rendering.
+    If content is a string, it is encoded as UTF-8 before signing."""
+    if not _ensure_collector_key():
+        return None
     if isinstance(content, str):
         content = content.encode("utf-8")
-    signature = _COLLECTOR_PRIV_KEY.sign(content)
+    signature = _COLLECTOR_PRIV_KEY.sign(content)  # type: ignore[unresolved-attribute]
     return base64.b64encode(signature).decode("ascii")
 
 
@@ -188,7 +247,7 @@ def issue_token(subject, zone=None, origin="ip"):
     return {
         "token": label,
         "zone": zone,
-        "subdomain": "%s.%s" % (label, zone),
+        "subdomain": f"{label}.{zone}",
         "expiresAt": int(time.time()) + config.LEAK_TOKEN_TTL,
     }
 
@@ -230,8 +289,7 @@ def _ptr_lookup(ip):
         return "lookup-failed"
     server = config.PUBLIC_RESOLVERS[0] if config.PUBLIC_RESOLVERS else "1.1.1.1"
     try:
-        result = resolver.query(arpa, resolver.TYPE_PTR, server,
-                                timeout=config.INVESTIGATE_TIMEOUT)
+        result = resolver.query(arpa, resolver.TYPE_PTR, server, timeout=config.INVESTIGATE_TIMEOUT)
     except (resolver.DNSError, Exception):
         return "lookup-failed"
     ptr_records = [r["value"] for r in result.get("records", []) if r["type"] == "PTR"]
@@ -343,19 +401,32 @@ def verify(token, subject, allow_any_subject=False):
         "observationsAttested": False,
         "verifiedAt": int(time.time()),
     }
-    signed = {k: result[k] for k in
-              ("token", "zone", "issuedAt", "queriesObserved", "leaked",
-               "resolverCount", "observedResolvers", "subjectBound", "tier",
-               "verifiedAt")}
+    signed = {
+        k: result[k]
+        for k in (
+            "token",
+            "zone",
+            "issuedAt",
+            "queriesObserved",
+            "leaked",
+            "resolverCount",
+            "observedResolvers",
+            "subjectBound",
+            "tier",
+            "verifiedAt",
+        )
+    }
     # Ensure the collector key exists BEFORE signing. It was previously created only
     # lazily inside collector_public_key()/collector_key_id() below, so on a cold
     # process this sign() ran with _COLLECTOR_PRIV_KEY == None — a deterministic
     # AttributeError that made /api/leak/verify never return an attestation.
-    _ensure_collector_key()
+    # A051: if the key is unavailable, release the claim so the client can retry
+    # later, and return a structured error instead of crashing mid-signature.
+    if not _ensure_collector_key():
+        db.leak_token_release_claim(label)
+        return None, f"collector key unavailable: {_COLLECTOR_KEY_ERROR}"
     signed_payload = _canon(signed)
-    result["signature"] = base64.b64encode(
-        _COLLECTOR_PRIV_KEY.sign(signed_payload)
-    ).decode("ascii")
+    result["signature"] = base64.b64encode(_COLLECTOR_PRIV_KEY.sign(signed_payload)).decode("ascii")  # type: ignore[unresolved-attribute]
     result["publicKey"] = collector_public_key()
     result["keyId"] = collector_key_id()
     result["signedPayload"] = base64.b64encode(signed_payload).decode("ascii")

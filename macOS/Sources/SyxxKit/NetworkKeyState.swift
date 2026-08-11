@@ -14,18 +14,25 @@ public enum ConditionState: String, Codable, Sendable {
     case unknown
 }
 
-public struct VPNStatus: Codable, Sendable {
+// G-16b: added Equatable so DNSPathSnapshot's synthesised conformance works.
+// All stored properties (ConditionState: raw-value enum, [String], String) are Equatable.
+public struct VPNStatus: Codable, Sendable, Equatable {
     public let state: ConditionState
     public let tunnelInterfaces: [String]
     public let evidence: String
 }
 
-public struct CaptivePortalStatus: Codable, Sendable {
+// D407: added Equatable conformance to match VPNStatus and EncryptedDNSStatus patterns.
+// Without Equatable, synthesis code comparing portal states across runs (Sentinel.diff)
+// could not use == and had to manually compare each property, risking field drift.
+public struct CaptivePortalStatus: Codable, Sendable, Equatable {
     public let state: ConditionState   // yes = portal intercepting, no = clear, unknown = offline/error
     public let evidence: String
 }
 
-public struct EncryptedDNSStatus: Codable, Sendable {
+// G-16b: added Equatable so DNSPathSnapshot's synthesised conformance works.
+// All stored properties (ConditionState, String, DNSProtocol?) are Equatable.
+public struct EncryptedDNSStatus: Codable, Sendable, Equatable {
     public let state: ConditionState
     public let evidence: String
     /// The transport the system is CONFIGURED to use, when `scutil --dns` actually named one, and
@@ -47,9 +54,62 @@ public struct EncryptedDNSStatus: Codable, Sendable {
 }
 
 /// The protocol used for DNS transport as reported by `scutil --dns`.
-public enum DNSProtocol: String, Codable, Sendable {
-    case doh = "DoH"
-    case dot = "DoT"
+///
+/// B324: extended with DoQ (DNS-over-QUIC) and DNSCrypt cases. Third-party DNS tools
+/// (dnscrypt-proxy, AdGuard) using these transports previously returned nil from rawValue init,
+/// silently dropping the transport classification.
+///
+/// D402: added `.unknown(String)` case to preserve unrecognized protocol strings instead of
+/// silently returning nil. A future macOS version reporting "Protocol : 3 (DNS over QUIC)"
+/// would previously drop the information entirely.
+public enum DNSProtocol: Codable, Sendable, Equatable, Hashable {
+    case doh
+    case dot
+    case doq
+    case dnsCrypt
+    case unknown(String)
+
+    public var rawValue: String {
+        switch self {
+        case .doh: return "DoH"
+        case .dot: return "DoT"
+        case .doq: return "DoQ"
+        case .dnsCrypt: return "DNSCrypt"
+        case .unknown(let value): return value
+        }
+    }
+
+    public init?(rawValue: String) {
+        switch rawValue {
+        case "DoH": self = .doh
+        case "DoT": self = .dot
+        case "DoQ": self = .doq
+        case "DNSCrypt": self = .dnsCrypt
+        default:
+            // D402: preserve unrecognized protocol strings instead of silently returning nil.
+            // Log at debug level so new protocol codes from future macOS versions are visible.
+            #if DEBUG
+            print("[NetworkKeyState] unrecognized DNS protocol '\(rawValue)' — preserving as .unknown")
+            #endif
+            self = .unknown(rawValue)
+        }
+    }
+
+    // Codable: encode/decode as rawValue string
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        if let known = DNSProtocol(rawValue: raw) {
+            self = known
+        } else {
+            self = .unknown(raw)
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 /// A DNS resolver together with the interface/scope it was discovered on.
@@ -73,7 +133,12 @@ public struct ScopedResolver: Codable, Sendable, Hashable {
 
     public init(address: String, interface: String? = nil, matchDomains: [String] = [],
                 isScoped: Bool = false, dnsProtocol: DNSProtocol? = nil, port: UInt16? = nil,
-                isSupplemental: Bool = false, isMDNS: Bool = false, isReachable: Bool = true) {
+                isSupplemental: Bool = false, isMDNS: Bool = false,
+                // D404: default isReachable to false (fail-closed). If the scutil parser cannot
+                // find a "reach" line, the resolver must not be assumed reachable — a parse
+                // failure previously defaulted to true (fail-open), causing queries to
+                // unreachable resolvers that always time out.
+                isReachable: Bool = false) {
         self.address = address
         self.interface = interface
         self.matchDomains = matchDomains
@@ -137,7 +202,12 @@ public enum NetworkKeyState {
         process.arguments = arguments
         let pipe = Pipe()
         process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
+        // D409: capture stderr instead of routing to nullDevice. scutil/ifconfig/route stderr
+        // contains diagnostic information (permission denied, interface not found) that is
+        // essential for debugging failures. Previously all stderr was discarded, making a
+        // crash look identical to a normal no-output exit.
+        let stderrPipe = Pipe()
+        process.standardError = stderrPipe
 
         // F047: Swift 6 strict concurrency rejects mutable captures inside the termination and
         // drain closures; wrap the mutable state in a final class so only the reference is
@@ -188,12 +258,36 @@ public enum NetworkKeyState {
         // safe immediate return on Darwin: Foundation has already collected the exit status.
         process.waitUntilExit()
 
-        // Bounded defensively; the drain signals at EOF, which the kill path guarantees. If it
-        // (structurally impossibly) still times out, return nil, never a string whose
-        // completeness cannot be verified.
-        if state.drained.wait(timeout: .now() + 2.0) == .timedOut { return nil }
+        // D408: drain timeout increased from 2s to 10s. scutil --dns on machines with many VPN
+        // tunnels or split-DNS configurations can produce >64KB of output, which takes >2s to
+        // drain through the 64KB OS pipe buffer. Returning nil on timeout silently truncated
+        // the output, making getSystemDNSServers return an empty list on complex setups.
+        if state.drained.wait(timeout: .now() + 10.0) == .timedOut {
+            // D409: log stderr on drain timeout for diagnostics
+            let stderrData = stderrPipe.fileHandleForReading.availableData
+            if let stderr = String(data: stderrData, encoding: .utf8), !stderr.isEmpty {
+                #if DEBUG
+                print("[runProcess] drain timeout for \(path) \(arguments.joined(separator: " ")) — stderr: \(stderr)")
+                #endif
+            }
+            return nil
+        }
 
         if didKill { return nil }
+
+        // D409: log stderr at debug level on non-zero exit for diagnostics.
+        // A non-zero exit with stderr output is a subprocess error that was previously
+        // invisible — the caller got nil and had no way to distinguish "scutil crashed"
+        // from "scutil reported an error".
+        if process.terminationStatus != 0 {
+            let stderrData = stderrPipe.fileHandleForReading.availableData
+            if let stderr = String(data: stderrData, encoding: .utf8), !stderr.isEmpty {
+                #if DEBUG
+                print("[runProcess] \(path) exited \(process.terminationStatus) — stderr: \(stderr.prefix(500))")
+                #endif
+            }
+        }
+
         return String(data: state.outputData, encoding: .utf8)
     }
 
@@ -235,7 +329,9 @@ public enum NetworkKeyState {
         // C113: track Supplemental flag, mDNS option, and reachability.
         var currentSupplemental = false
         var currentMDNS = false
-        var currentReachable = true
+        // D404: default reachable to false (fail-closed). Only set true when the scutil
+        // "reach" line explicitly confirms a non-zero reachability bitmask.
+        var currentReachable = false
 
         func flush() {
             for server in currentServers {
@@ -259,7 +355,8 @@ public enum NetworkKeyState {
             currentPort = nil
             currentSupplemental = false
             currentMDNS = false
-            currentReachable = true
+            // D404: reset to false (fail-closed) — same as initial value
+            currentReachable = false
         }
 
         for rawLine in output.components(separatedBy: .newlines) {
@@ -301,9 +398,13 @@ public enum NetworkKeyState {
                 // C113: parse options for mDNS pseudo-resolver detection.
                 if line.contains("mdns") { currentMDNS = true }
             } else if line.hasPrefix("reach") {
-                // C113: parse reach — 0x00000000 means macOS considers this resolver unreachable.
+                // C113 + D404: parse reach. 0x00000000 or "Not Reachable" means unreachable.
+                // Any other non-zero bitmask means reachable. D404 changed the default from
+                // true (fail-open) to false (fail-closed), so we must explicitly set true here.
                 if line.contains("0x00000000") || line.contains("Not Reachable") {
                     currentReachable = false
+                } else {
+                    currentReachable = true
                 }
             } else if line.hasPrefix("Protocol") {
                 // C011: scutil --dns outputs "Protocol : 1 (DNS over HTTPS)" or
@@ -316,8 +417,14 @@ public enum NetworkKeyState {
                     // Extract the protocol code (first token of the value, e.g. "1" from "1 (DNS over HTTPS)")
                     let value = components[1]
                     let code = value.components(separatedBy: .whitespaces).first ?? value
+                    // B324: extended with DoQ (3) and DNSCrypt (4) protocol codes.
+                    // Unknown codes are preserved via DNSProtocol.unknown instead of dropped.
                     if code == "1" { currentProtocol = .doh }
                     else if code == "2" { currentProtocol = .dot }
+                    else if code == "3" { currentProtocol = .doq }
+                    else if code == "4" { currentProtocol = .dnsCrypt }
+                    else if let proto = DNSProtocol(rawValue: code) { currentProtocol = proto }
+                    else { currentProtocol = .unknown(code) }
                 }
             } else if line.hasPrefix("Port") {
                 // e.g. "Port : 443"
@@ -524,6 +631,13 @@ public enum NetworkKeyState {
     /// Distinguishes an intercepting portal (yes) from a clear network (no) from an
     /// offline/errored probe (unknown). A failed request is not evidence of "no portal".
     public static func captivePortalStatus() async -> CaptivePortalStatus {
+        // E049: HTTP (not HTTPS) is deliberate here. Captive portals intercept
+        // cleartext HTTP traffic and inject their own redirect or login page.
+        // HTTPS probes would fail with a TLS certificate error instead of being
+        // intercepted, making portal detection unreliable. Apple's own captive
+        // portal detection uses the same HTTP endpoint for this reason.
+        // Timeout (3 s) is set on the URLRequest; response size is capped below
+        // to prevent a malicious portal from exhausting memory with an oversized body.
         guard let url = URL(string: "http://captive.apple.com/hotspot-detect.html") else {
             return CaptivePortalStatus(state: .unknown, evidence: "Could not construct probe URL")
         }
@@ -535,6 +649,13 @@ public enum NetworkKeyState {
             let (data, response) = try await noRedirectSession.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 return CaptivePortalStatus(state: .unknown, evidence: "Non-HTTP response to probe")
+            }
+            // E049: response size limit — a captive portal probe should return a
+            // tiny HTML snippet (< 4 KB). An oversized response is either a
+            // misbehaving portal or an injection attack; refuse to parse it.
+            guard data.count <= 4096 else {
+                return CaptivePortalStatus(state: .unknown,
+                                           evidence: "Probe response exceeded 4 KB size limit (\(data.count) bytes)")
             }
             // C030: a 3xx response (redirect refused by our delegate) is itself evidence of a
             // captive portal intercepting the probe — evaluate it directly as portal-present.

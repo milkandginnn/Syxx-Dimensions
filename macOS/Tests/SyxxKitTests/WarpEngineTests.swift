@@ -11,6 +11,9 @@ import Compression
 /// manifest/freshness/HTML states. Fetch, clock, and pinned keys are injected so the suite is fully
 /// offline. The redirect fail-closed paths (not exercised by the corpus, which uses redirect_policy
 /// "none") are covered by dedicated injected-fetch unit tests below.
+///
+/// Every case discovered on disk is executed and the count asserted, so a green run states how much
+/// of the corpus it measured. No case is skipped for any reason, including transport encoding.
 final class WarpEngineTests: XCTestCase {
 
     private static func corpusDir() -> URL {
@@ -24,9 +27,18 @@ final class WarpEngineTests: XCTestCase {
 
     // MARK: - Corpus loader
 
-    private func caseNames() -> [String] {
+    /// A fixture this harness cannot load is a FAILURE, never a skip. A corpus suite that quietly
+    /// drops cases still reports green while measuring less than its name claims.
+    private struct FixtureFailure: LocalizedError {
+        let message: String
+        var errorDescription: String? { message }
+    }
+
+    /// Throws rather than returning `[]`: an unreadable corpus directory must be a red suite, not a
+    /// zero-case run that the emptiness assertion below would have to catch second-hand.
+    private func caseNames() throws -> [String] {
         let dir = Self.corpusDir()
-        guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return [] }
+        let names = try FileManager.default.contentsOfDirectory(atPath: dir.path)
         return names.filter { $0.range(of: #"^\d\d\d_"#, options: .regularExpression) != nil }.sorted()
     }
 
@@ -41,20 +53,50 @@ final class WarpEngineTests: XCTestCase {
         return "https://example.test/\(filename)"
     }
 
-    /// Apple `COMPRESSION_ZLIB` decodes RFC-1951 raw DEFLATE; gzip = 10-byte header + DEFLATE +
-    /// 8-byte trailer, so strip the wrapper and inflate.
-    private static func gunzip(_ data: Data) -> Data? {
-        guard data.count > 18 else { return nil }
-        let deflate = data.subdata(in: 10..<(data.count - 8))
-        let cap = 1 << 16
-        var dst = [UInt8](repeating: 0, count: cap)
-        let written = deflate.withUnsafeBytes { srcRaw -> Int in
-            guard let src = srcRaw.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-            return dst.withUnsafeMutableBufferPointer { d in
-                compression_decode_buffer(d.baseAddress!, cap, src, deflate.count, nil, COMPRESSION_ZLIB)
+    /// Undo the Content-Encoding the corpus served a body under (spec §8). Apple's Compression
+    /// framework covers both encodings the corpus uses, so neither case is skipped:
+    /// `COMPRESSION_ZLIB` inflates RFC-1951 raw DEFLATE (gzip = 10-byte header + DEFLATE + 8-byte
+    /// trailer, so strip the wrapper first) and `COMPRESSION_BROTLI` — in the macOS SDK since
+    /// macOS 12, and this package targets macOS 14 — decodes a raw brotli stream.
+    private static func decodeBody(_ data: Data, encoding: String, case name: String, file: String) throws -> Data {
+        switch encoding.lowercased() {
+        case "", "identity":
+            return data
+        case "gzip":
+            guard data.count > 18 else {
+                throw FixtureFailure(message: "[\(name)] \(file): declared Content-Encoding gzip but only \(data.count) bytes — too short to hold a gzip header and trailer")
             }
+            return try inflate(data.subdata(in: 10..<(data.count - 8)),
+                               algorithm: COMPRESSION_ZLIB, encoding: encoding, case: name, file: file)
+        case "br":
+            return try inflate(data, algorithm: COMPRESSION_BROTLI, encoding: encoding, case: name, file: file)
+        default:
+            throw FixtureFailure(message: "[\(name)] \(file): fetch_meta.json declares Content-Encoding '\(encoding)', which this harness cannot decode. Add the codec — do not skip the case.")
         }
-        return written > 0 ? Data(dst.prefix(written)) : nil
+    }
+
+    /// `compression_decode_buffer` signals failure by returning 0 and gives no way to distinguish a
+    /// full destination from a truncated one, so grow and retry while the output exactly fills it.
+    private static func inflate(_ data: Data, algorithm: compression_algorithm,
+                                encoding: String, case name: String, file: String) throws -> Data {
+        let limit = 1 << 26
+        var cap = 1 << 16
+        while cap <= limit {
+            var dst = [UInt8](repeating: 0, count: cap)
+            let capacity = cap
+            let written = data.withUnsafeBytes { srcRaw -> Int in
+                guard let src = srcRaw.bindMemory(to: UInt8.self).baseAddress else { return 0 }
+                return dst.withUnsafeMutableBufferPointer { d in
+                    compression_decode_buffer(d.baseAddress!, capacity, src, data.count, nil, algorithm)
+                }
+            }
+            guard written > 0 else {
+                throw FixtureFailure(message: "[\(name)] \(file): Content-Encoding '\(encoding)' body (\(data.count) bytes) failed to decode. A codec failure fails the case; it is never a silent skip.")
+            }
+            if written == capacity { cap <<= 1; continue }
+            return Data(dst.prefix(written))
+        }
+        throw FixtureFailure(message: "[\(name)] \(file): '\(encoding)' body did not decode within \(limit) bytes")
     }
 
     private struct CaseData {
@@ -68,9 +110,9 @@ final class WarpEngineTests: XCTestCase {
         let expected: [String: Any]
     }
 
-    /// Loads one case. Returns nil (with XCTSkip semantics via the caller) if the case needs a
-    /// transport codec this harness lacks (brotli).
-    private func loadCase(_ name: String) throws -> CaseData? {
+    /// Loads one case. Every failure path throws naming the case: there is no shape of fixture this
+    /// harness declines to run, so a green `testCorpusOracle` means every discovered case executed.
+    private func loadCase(_ name: String) throws -> CaseData {
         let dir = Self.corpusDir().appendingPathComponent(name)
         let envelope = try Data(contentsOf: dir.appendingPathComponent("envelope.json"))
         let origin = (try String(contentsOf: dir.appendingPathComponent("requested_origin"), encoding: .utf8))
@@ -83,35 +125,42 @@ final class WarpEngineTests: XCTestCase {
         // Pinned keys: trusted_key_ids are the lowercase-hex raw public keys, so the pubkey IS
         // hexdecode(key_id). WarpManifestPinning.parse builds the same [keyId: rawpub] map.
         let pinnedRaw = try Data(contentsOf: dir.appendingPathComponent("pinned_keys.json"))
-        var pinnedKeys: [String: Data] = [:]
-        if let obj = try JSONSerialization.jsonObject(with: pinnedRaw) as? [String: Any],
-           let ids = obj["trusted_key_ids"] as? [String] {
-            pinnedKeys = WarpManifestPinning.parse(ids.joined(separator: " "))
+        guard let pinnedObj = try JSONSerialization.jsonObject(with: pinnedRaw) as? [String: Any],
+              let ids = pinnedObj["trusted_key_ids"] as? [String] else {
+            // Falling back to an empty pin set would turn every case into untrustedSigner and blame
+            // the engine for a fixture problem.
+            throw FixtureFailure(message: "[\(name)] pinned_keys.json has no `trusted_key_ids` string array")
         }
+        let pinnedKeys = WarpManifestPinning.parse(ids.joined(separator: " "))
 
         // fetch_meta: which input files arrived under a Content-Encoding the transport must decode.
+        // Optional on disk (most cases serve identity), but if present it must parse — treating an
+        // unreadable one as "everything is identity" silently changes what the case tests.
         var fetchMeta: [String: String] = [:]
-        if let fm = try? Data(contentsOf: dir.appendingPathComponent("fetch_meta.json")),
-           let obj = try? JSONSerialization.jsonObject(with: fm) as? [String: String] {
+        let fetchMetaURL = dir.appendingPathComponent("fetch_meta.json")
+        if FileManager.default.fileExists(atPath: fetchMetaURL.path) {
+            guard let obj = try JSONSerialization.jsonObject(with: Data(contentsOf: fetchMetaURL)) as? [String: String] else {
+                throw FixtureFailure(message: "[\(name)] fetch_meta.json is not a {filename: encoding} object")
+            }
             fetchMeta = obj
-        }
-        if fetchMeta.values.contains(where: { $0.lowercased() == "br" }) {
-            // Foundation ships no brotli codec; skip (production Swift fetch must add one for §8).
-            return nil
         }
 
         let inputsDir = dir.appendingPathComponent("inputs")
         var bytesByURL: [String: [UInt8]] = [:]
         var originHTML: [UInt8] = []
-        let files = (try? FileManager.default.contentsOfDirectory(atPath: inputsDir.path)) ?? []
+        // A missing origin.html is how the corpus expresses "unfetchable" (019), so an absent file
+        // is legitimate; an unreadable inputs DIRECTORY is not, and throws.
+        let files = try FileManager.default.contentsOfDirectory(atPath: inputsDir.path)
         for f in files {
-            var data = try Data(contentsOf: inputsDir.appendingPathComponent(f))
-            if fetchMeta[f]?.lowercased() == "gzip", let un = Self.gunzip(data) { data = un }
+            let raw = try Data(contentsOf: inputsDir.appendingPathComponent(f))
+            let data = try Self.decodeBody(raw, encoding: fetchMeta[f] ?? "identity", case: name, file: f)
             if f == "origin.html" { originHTML = Array(data) }
             else { bytesByURL[Self.urlForInput(f)] = Array(data) }
         }
 
-        let expected = (try JSONSerialization.jsonObject(with: Data(contentsOf: dir.appendingPathComponent("expected.json"))) as? [String: Any]) ?? [:]
+        guard let expected = try JSONSerialization.jsonObject(with: Data(contentsOf: dir.appendingPathComponent("expected.json"))) as? [String: Any] else {
+            throw FixtureFailure(message: "[\(name)] expected.json is not a JSON object")
+        }
         return CaseData(envelope: envelope, origin: origin, nowMs: nowMs, nonce: nonce,
                         pinnedKeys: pinnedKeys, bytesByURL: bytesByURL, originHTML: originHTML, expected: expected)
     }
@@ -119,15 +168,22 @@ final class WarpEngineTests: XCTestCase {
     // MARK: - The corpus oracle test
 
     func testCorpusOracle() async throws {
-        let names = caseNames()
+        let names = try caseNames()
         XCTAssertFalse(names.isEmpty, "warp-manifest-vectors corpus is missing — a vacuously-green oracle is the green that lies.")
+        // Counts cases this run actually put through the engine, and is asserted against the number
+        // discovered on disk below. Without it, green says nothing about how many cases ran.
+        var evaluated = 0
         for name in names {
-            guard let c = try loadCase(name) else { continue }   // skipped (missing codec)
+            let c = try loadCase(name)
+            // Capture only the Sendable payload: CaseData carries the expectations as [String: Any],
+            // which is not Sendable, so the struct itself cannot cross into a @Sendable closure.
+            let html = c.originHTML
+            let byURL = c.bytesByURL
             let fetch: @Sendable (WarpAssetRequest) async -> WarpFetchOutcome = { req in
                 if req.isHTML {
-                    return c.originHTML.isEmpty ? .failed : .fetched(bytes: c.originHTML, terminalURL: req.url)
+                    return html.isEmpty ? .failed : .fetched(bytes: html, terminalURL: req.url)
                 }
-                guard let bytes = c.bytesByURL[req.url] else { return .failed }
+                guard let bytes = byURL[req.url] else { return .failed }
                 return .fetched(bytes: bytes, terminalURL: req.url)   // corpus policy is "none": no redirect.
             }
             let result = await WarpEngine.verify(originURL: c.origin, envelopeBytes: c.envelope,
@@ -148,7 +204,13 @@ final class WarpEngineTests: XCTestCase {
                 XCTAssertEqual(result.assets[i].url, ea["url"] as? String, "[\(name)] asset[\(i)] url")
                 XCTAssertEqual(mapContent(result.assets[i].state), ea["state"] as? String, "[\(name)] asset[\(i)] state")
             }
+            evaluated += 1
         }
+
+        print("[warp corpus] evaluated \(evaluated) of \(names.count) cases in \(Self.corpusDir().path)")
+        XCTAssertGreaterThan(evaluated, 0, "no corpus case was evaluated — an empty run must not read as coverage")
+        XCTAssertEqual(evaluated, names.count,
+                       "every discovered case must reach the engine; \(evaluated) of \(names.count) ran")
     }
 
     /// Corpus `freshnessState`/`htmlState` use `notEvaluated`; our enum rawValue is also `notEvaluated`.
@@ -160,10 +222,12 @@ final class WarpEngineTests: XCTestCase {
     /// The "all good" case pins the exact tuple both twins must produce from the identical fixture.
     /// The C# twin (WarpEngineTests.AllGood_IsVerifiedMatch) asserts the byte-identical tuple.
     func testParityAllGood() async throws {
-        guard let c = try loadCase("001_all_good") else { return XCTFail("001_all_good missing") }
+        let c = try loadCase("001_all_good")
+        let html = c.originHTML
+        let byURL = c.bytesByURL
         let fetch: @Sendable (WarpAssetRequest) async -> WarpFetchOutcome = { req in
-            if req.isHTML { return .fetched(bytes: c.originHTML, terminalURL: req.url) }
-            return c.bytesByURL[req.url].map { .fetched(bytes: $0, terminalURL: req.url) } ?? .failed
+            if req.isHTML { return .fetched(bytes: html, terminalURL: req.url) }
+            return byURL[req.url].map { .fetched(bytes: $0, terminalURL: req.url) } ?? .failed
         }
         let r = await WarpEngine.verify(originURL: c.origin, envelopeBytes: c.envelope,
                                         pinnedKeys: c.pinnedKeys, nonce: c.nonce, nowMs: c.nowMs, fetch: fetch)

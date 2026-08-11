@@ -13,6 +13,7 @@ OUTPUT-REQUIRES-APPROVAL + parity + tri-state per `AGENTS.md`.
 **Nothing in this plan is "gated."** Every previously-deferred item is a concrete coded step. The three items
 that were gated on data that does not exist ship as **coded + runnable with principled defaults**, stated
 honestly as such:
+
 - **Ph3 fusion rule** commits with a **STATIC** evidence->cluster lineage/correlation table (not a captured
   corpus); the bake-off runs against the existing Stage0 golden corpus to **record** the choice.
 - **Ph4 mechanism-class partition** is coded from the design's working example; only the headline **STRING** is
@@ -46,6 +47,7 @@ No step fabricates a calibrated number or a verdict from data that does not exis
 ```
 
 ### Cross-WS ordering hazards (binding — from final-decisions.md)
+
 1. **Wire-parser false-clean lands before any WS1 real-data acceptance run.** If a truncated/short/off-name/
    off-class answer or an un-combined extended RCODE enters the fusion as CLEAN evidence, WS1's Ph3/Ph4 bar
    passes on garbage — the exact "31% inconclusive on 0 captured queries" failure. Sequence
@@ -65,6 +67,7 @@ No step fabricates a calibrated number or a verdict from data that does not exis
    a real one.
 
 ### Where the strict dependency reading strained the 5-WS cap, and the resolution
+
 A strict "no step depends on a later step" reading wants the WS2-A wire-parser fixes and the WS3-A D057
 signing fix to execute **before** WS1's phases, which would put engine-feeding work in WS2/WS3 ahead of the
 "WS1 first" directive. **Resolution (per the brief's escape hatch):** WS1 stays the engine workstream and the
@@ -131,7 +134,8 @@ E003, E004 + Ph7 magic-number class + Stage-5 remainder.
 **Preconditions:** S0 (Ph1/Ph2 gates committed both platforms, golden-green); WS2-A for the Ph3/Ph4 real run;
 WS2-B for Ph5; WS3-A for Ph6/B098. Detailed phase spec: `ENGINE-PHASE2-7-PLAN.md`.
 
-### WS1-S0 — Pre-flight: commit, confirm gates, renumber (prerequisite)
+## WS1-S0 — Pre-flight: commit, confirm gates, renumber (prerequisite)
+
 - **Action:** as global step 1 above.
 - **Closes:** unblocks all phases; closes the fixed cluster (B031/B032/F006/F007/A019/A022) to `DELTAS-fixed.md`
   after commit; renumbers F023.
@@ -143,6 +147,7 @@ WS2-B for Ph5; WS3-A for Ph6/B098. Detailed phase spec: `ENGINE-PHASE2-7-PLAN.md
 - **Effort:** S. **Copy-gated:** no.
 
 ### Phase 3 — Fusion rule + lineage + datapoint clean-support
+
 - **WS1-Ph3.1 (global step 8)** — swap rule to `.cautious` + drop cap + author static lineage table (same
   commit) + pin `ε`. **Closes B004, B055, B007-class.**
   - **Targets (verified):** `SynthesisEngine.swift:76` (`combinationRule`), `:199-202` (cap path), `:485`
@@ -160,6 +165,7 @@ WS2-B for Ph5; WS3-A for Ph6/B098. Detailed phase spec: `ENGINE-PHASE2-7-PLAN.md
     completeness concept with Stage-5 `EvidenceCompleteness`).
 
 ### Phase 4 — Verdict/confidence semantics
+
 - **WS1-Ph4.1** — confidence = `Bel(class-set)` single credal quantity (I6). Replace single-hypothesis
   `verdictBetP` readout with class-set belief. **Closes B086** (all-inconclusive must not fabricate
   `criticalAvailable==0`->fullData clean), part of B088.
@@ -191,6 +197,7 @@ WS2-B for Ph5; WS3-A for Ph6/B098. Detailed phase spec: `ENGINE-PHASE2-7-PLAN.md
   confirm both already-fixed states remain correct under the new class map. **Effort:** S.
 
 ### Phase 5 — Evidence model upgrade (consumes WS2-B)
+
 - **WS1-Ph5.1** — cross-vantage discrepancy as a **scored** DST mass source (not just a gate); typed
   `DivergenceKind`; scaled by corroborating-vantage count; benign multi-homed CDN contributes zero mass.
   **Closes B002** (ship-gate provenance scorer), **B040** (engine-consume of set-valued target_answer),
@@ -210,6 +217,7 @@ WS2-B for Ph5; WS3-A for Ph6/B098. Detailed phase spec: `ENGINE-PHASE2-7-PLAN.md
   L. **Copy-gated:** no.
 
 ### Phase 6 — Probe robustness + DecisiveAct population (consumes WS2-B, rides WS3-A)
+
 - **WS1-Ph6.1** — author the versioned, `WitnessSigner`-signed `enum DecisiveAct` catalog (scaffold + signing
   plumbing). **Rides WS3-A** (must not sign over a broken verify path). **B098** (signature must cover full
   evidence, not a lossy projection) is fixed here: extend `canonicalBytes()` to cover answer ownership/TTL/
@@ -233,6 +241,7 @@ WS2-B for Ph5; WS3-A for Ph6/B098. Detailed phase spec: `ENGINE-PHASE2-7-PLAN.md
     L. **Copy-gated:** advisory text (WS5).
 
 ### Phase 7 — Calibration (coded + runnable, principled defaults)
+
 - **WS1-Ph7.1** — build the calibration **harness + weight-loader + runner**; ship principled **LLR-tier**
   defaults as the `WeightRubric` values (design-sanctioned, honestly labeled expert-elicited-until-corpus).
   Do NOT fabricate calibrated numbers. **Closes the magic-number class.**
@@ -251,6 +260,7 @@ WS2-B for Ph5; WS3-A for Ph6/B098. Detailed phase spec: `ENGINE-PHASE2-7-PLAN.md
   L. **Copy-gated:** the adaptive-vs-static framing (proposal).
 
 ### Stage-5 remainder (engine population; surfacing is WS5)
+
 - **WS1-S5.1** — datapoint-level completeness (retire `profile.sections.v0`); populate mechanism headline /
   provenance (direct/inferred/unavailable) / within-class / cross-vantage answer matrix in the Stage-5 DTO.
   **Targets:** `Stage5Builder.swift`, `Stage5Presentation.swift`; Windows twins. **Acceptance bar:** §15
@@ -273,7 +283,8 @@ cross-vantage discrepancy is scored on a UNION consensus, not an overlap a poiso
 B025(rev), B040, B046, B047, B056, B057, B058, B059, B061, B065, B068-B075, B076, B077, B078, B079, B080, B083,
 B084, B039(rev), C007, C013, C014, C015, C016, C017, C018, D056, E001, E008, E010, E014(rev).
 
-### WS2-A — Wire-parser false-clean (EXECUTE FIRST — before WS1 Ph3/Ph4 real run; hazard #1)
+## WS2-A — Wire-parser false-clean (EXECUTE FIRST — before WS1 Ph3/Ph4 real run; hazard #1)
+
 - **WS2-A.1 (global step 2)** — `didFail` includes `.truncated` + servfail/refused/format-error. **B065, B083.**
   `DNSResolver.swift:181` / `DNSResolver.cs`. Parity: both twins. Acceptance: a truncated/servfail response
   reads inconclusive, never clean, on a real query. Copy-gated: no.
@@ -293,6 +304,7 @@ B084, B039(rev), C007, C013, C014, C015, C016, C017, C018, D056, E001, E008, E01
   rejected on Windows, not returned as a clean partial answer. Copy-gated: no.
 
 ### WS2-B — Vantage / authoritative / DNSSEC corroboration (before WS1 Ph5; hazard #2)
+
 - **WS2-B.1** — B040 set-valued `target_answer` (isConflicting must not fire on benign multi-A, `values.count>1`);
   thread target answer to the answer matrix. `VantageComparer.swift:121-146`; Report/Stage5 matrix. Parity:
   both. Acceptance: a benign multi-A domain does not read DISCREPANCY; a genuine single-value swap does.
@@ -314,6 +326,7 @@ B084, B039(rev), C007, C013, C014, C015, C016, C017, C018, D056, E001, E008, E01
   Acceptance: a legitimate CNAME/CDN answer is not flagged tampered.
 
 ### WS2-C — IP classification / transport / misc acquisition
+
 - **WS2-C.1** — B010 macOS DoH vantage (VantageComparer UDP-only; DoH Windows-only — **not fixed macOS**);
   bring macOS to DoH parity. `VantageComparer.swift:86`. Parity: macOS<->Windows. Acceptance: macOS runs a real
   DoH cross-vantage query.
@@ -351,7 +364,8 @@ B053, B063, B066, B067, B082, B085, B091, B092, B093, B098, B099, B100, C026->A0
 D003, D004, D005(rev), D006, D011, D021, D027, D030(rev), D040, D050(rev), D051, D052, D053, D057, D066, E011(rev),
 E019, E020, E021, E024(rev), B081->D011.
 
-### WS3-A — Collector/leak signing correctness (EXECUTE before WS1 Ph6 + B098; hazard #3)
+## WS3-A — Collector/leak signing correctness (EXECUTE before WS1 Ph6 + B098; hazard #3)
+
 - **WS3-A.1 (global step 7)** — **D057** leak signature base64 fix (urlsafe/padding). `leak.py:158,163`;
   client `LeakDetector.swift:261` / `.cs`. Parity: server+both clients. Acceptance: a real collector
   attestation **verifies** (today it fails every time); a corrupted signature fails. Copy-gated: no.
@@ -369,6 +383,7 @@ E019, E020, E021, E024(rev), B081->D011.
   TTL/type/owner makes verify fail. (Landed in WS1-Ph6.1 if sequenced together — cross-referenced.)
 
 ### WS3-B — Attestation liveness, freshness, replay, identity
+
 - **WS3-B.1** — **A024/C026/B030** empty-collector signed `leaked:false` zero-liveness (forgeable); sign over a
   liveness proof. **A111** leak.verify signs before consume()/delete race. **A034** leak-token replay unbounded
   INSERT. `Server/leak.py`. Parity: server. Acceptance: an empty collector cannot produce a signed clean leak
@@ -385,6 +400,7 @@ E019, E020, E021, E024(rev), B081->D011.
   resolver IP PII not cross-readable.
 
 ### WS3-C — Client verdict-gating on signature validity (GUI trust surfaces)
+
 - **WS3-C.1** — **B091** Win leak verdict from OUTER json not signed payload; **B092** DimensionClient no
   sig/pin, Synthesizer upgrades to decisive on unsigned; **D004(client)/D005** sig verified but NOT
   verdict-gating; **B026** version-mismatch discarded -> bare false; **D050** Win collapses verify-throw to
@@ -430,7 +446,8 @@ A057, A063, A066(rev), A067, A069->A013, A073->A030, A075, A078(rev), A079(rev),
 A085, A090->A067, A091(rev), A092(rev), A093->A051, A094, A095->A079, A096->A028, A097(rev), A098(rev),
 A100->A067, A101->A028, A102(rev), A104(rev), A105, A107(rev), A108, A112, F030.
 
-### WS4-A — Payments integrity (Critical)
+## WS4-A — Payments integrity (Critical)
+
 - **WS4-A.1** — **A013/A069** TOCTOU double-mint: `fulfillment.py:83-88` check-then-set race -> atomic
   compare-and-set (`kv_insert_once`-style). Parity: server. Acceptance: two concurrent webhook deliveries mint
   exactly one license.
@@ -440,6 +457,7 @@ A100->A067, A101->A028, A102(rev), A104(rev), A105, A107(rev), A108, A112, F030.
   redelivered webhook does not duplicate, and a paid buyer always gets a key.
 
 ### WS4-B — SSRF / rebind / bailiwick (Critical)
+
 - **WS4-B.1** — **A067/A088/A090/A100** DNS-rebind SSRF: `resolver.py:244` `HTTPSConnection(ip,443)` then
   `:245 conn.host=sni` re-resolves; **pin to the vetted sockaddr** (dial the already-validated IP; never let
   the connection re-resolve the hostname) for both `fetcher.py` and `query_doh`. Confirm `_ip_is_public`
@@ -452,6 +470,7 @@ A100->A067, A101->A028, A102(rev), A104(rev), A105, A107(rev), A108, A112, F030.
   `fetcher.py`. Acceptance: a request to a non-allowlisted port is rejected.
 
 ### WS4-C — Crash-to-500 masking honest inconclusive
+
 - **WS4-C.1** — **A078/A098** unguarded `struct.unpack` -> `struct.error` -> 500 masks inconclusive:
   `resolver.py:103,114,321,329` (question + record parse). Guard and return inconclusive. **A039** hostile DoH
   JSON->500. Parity: server. Acceptance: a malformed DNS/JSON payload returns an honest inconclusive, not a 500.
@@ -460,6 +479,7 @@ A100->A067, A101->A028, A102(rev), A104(rev), A105, A107(rev), A108, A112, F030.
   a DNS error reads inconclusive; the "signed" label reflects actual verification.
 
 ### WS4-D — Diff / investigate correctness
+
 - **WS4-D.1** — **A026/A027** cross-host script injected->hard tampered / first-race-winner clean w/ no
   authority (accuse/certify asymmetry->false-secure); **A012** AA geo-DNS zone still tampered; **A041/A044/A045/
   A060** vantage-walker fixes (server side); **A092** cache keyed target_url but assets vs final_url->stale
@@ -468,6 +488,7 @@ A100->A067, A101->A028, A102(rev), A104(rev), A105, A107(rev), A108, A112, F030.
   race-winner without authority does not certify clean.
 
 ### WS4-E — DoS / resource bounds
+
 - **WS4-E.1** — **A005/A028/A066/A096/A101/A102/A108** absolute request deadline + connection cap on the
   ThreadingHTTPServer / sequential vantages (no aggregate deadline; unbounded threads). `app.py`, `investigate.py`,
   `resolver.py`. Acceptance: a slow-drip request is bounded by an absolute deadline.
@@ -478,6 +499,7 @@ A100->A067, A101->A028, A102(rev), A104(rev), A105, A107(rev), A108, A112, F030.
   disk stays bounded.
 
 ### WS4-F — Info-leak / hygiene / misc server
+
 - **WS4-F.1** — **A105** readyz leaks sqlite path in 503; **A112** read(1<<20) truncation; **A029** escape all
   csv cells; **A037** env secret no entropy check; **A107** SMTP insecure certs default; **A104** broadcast no
   scheme validation; **A001-A004/A007/A008/A020/A080/A083** confirm-fixed residuals; **F030** test-harness stub
@@ -503,7 +525,8 @@ D062, D063(rev), D064, D065, D067, E012, E015(rev), E016, E017(rev), E022(rev), 
 E030, E031, E032, E033, E034, E035, E036, E037, E038, E039, E040, E041(rev), E044(rev), E045, E046, F009, F013(rev),
 F015-F029, F026(rev).
 
-### WS5-A — GUI honesty sweep (green-on-inconclusive; verdict-before-evidence)
+## WS5-A — GUI honesty sweep (green-on-inconclusive; verdict-before-evidence)
+
 - **WS5-A.1** — **B090(render)** ConclusionsView draws verdict BEFORE Stage-5 (fail-closed can't gate
   headline) -> render only after Stage-5 `isValid`; **B088(surface)** macOS trust=100-confidence green on
   threat / Win labels Confidence as TRUST SCORE. `ConclusionsView.swift`, Windows `ConclusionsView.xaml.cs`
@@ -527,6 +550,7 @@ F015-F029, F026(rev).
   overstated. Parity: both. Acceptance: an update check reflects real state, not a stamped stale cache.
 
 ### WS5-B — Cage capture / forensics honesty (no fabricated "Captured/Saved/erased")
+
 - **WS5-B.1** — **C037** report write `try?` swallowed prints "Saved" unconditionally; **C039** `try?
   removeItem` swallowed prints "erased" (false erasure); **C038** parsedRecords>0 only gate, unparsedCount
   printed not gating; **C044** pcap err breaks then reports "Captured N"; **C041** Win capture catch swallows
@@ -546,6 +570,7 @@ F015-F029, F026(rev).
   file; an apostrophe in a path cannot execute a command.
 
 ### WS5-C — Client URL / SSRF / resource safety
+
 - **WS5-C.1** — **D032/D033/D034/D035/D036/D038/D064** open-any-URL / substring host bypass / no-HTTPS /
   verbatim Update.Url / any-scheme NSWorkspace.open; **D045** `new Uri(broadcast.Url)` LaunchUri no scheme/
   try-catch (crash + arbitrary scheme); **D037** startup cache plain JSON trusted no sig; **D041** unsigned
@@ -563,6 +588,7 @@ F015-F029, F026(rev).
   fetch cannot be rebound to an internal/file target.
 
 ### WS5-D — Licensing UX honesty + platform parity + hygiene
+
 - **WS5-D.1** — **D042** `try? saveLicenseKey` then "SUCCESS" isPro=true regardless (§5 highest honesty item);
   **D043** bool wrapper collapses networkError->false ("invalid" for outage); **D044** Win GluttonView no leak
   verdict; **D054/D059/D061** trial clock/offline edge cases; **D028/D029** dead IsFeatureUnlocked / Pro path
@@ -604,6 +630,7 @@ resource logic).
   coordinate WS3-B/WS4 ownership; it is the largest single engine-adjacent item.
 
 ## Handoff
+
 - **`syxx-neural-executor`** — WS1 (all phases), WS2 answer-matrix feeds, WS3 signing/verify, verdict-semantic
   server deltas (A026/A027).
 - **`syxx-engineer`** — WS2 probes/transports, WS4 server, WS5 Cage/URL/resource logic.

@@ -37,6 +37,9 @@ public struct SyxxSettings: Codable, Sendable, Equatable {
     // Experience mode: "story" (Storybook / Wardens / Lore) or "general" (Technical English).
     public var experienceMode: String
 
+    // Theme mode: "system" (follow macOS appearance), "dark", or "light".
+    public var themeMode: String
+
     // Versioned first-run lifecycle. Legacy booleans are deliberately not accepted as proof that
     // the current bundled agreement was accepted or the current setup was completed.
     public var settingsSchemaVersion: Int
@@ -55,6 +58,7 @@ public struct SyxxSettings: Codable, Sendable, Equatable {
                 updateCheckEnabled: Bool = true,
                 crashReportingEnabled: Bool = true,
                 experienceMode: String = "story",
+                themeMode: String = "system",
                 settingsSchemaVersion: Int = SyxxSettings.currentSchemaVersion,
                 agreementVersion: String? = nil,
                 agreementSHA256: String? = nil,
@@ -70,6 +74,7 @@ public struct SyxxSettings: Codable, Sendable, Equatable {
         self.updateCheckEnabled = updateCheckEnabled
         self.crashReportingEnabled = crashReportingEnabled
         self.experienceMode = experienceMode
+        self.themeMode = themeMode
         self.settingsSchemaVersion = settingsSchemaVersion
         self.agreementVersion = agreementVersion
         self.agreementSHA256 = agreementSHA256
@@ -90,6 +95,7 @@ public struct SyxxSettings: Codable, Sendable, Equatable {
         case updateCheckEnabled
         case crashReportingEnabled
         case experienceMode
+        case themeMode
         case settingsSchemaVersion
         case agreementVersion
         case agreementSHA256
@@ -115,6 +121,7 @@ public struct SyxxSettings: Codable, Sendable, Equatable {
         updateCheckEnabled = try values.decodeIfPresent(Bool.self, forKey: .updateCheckEnabled) ?? true
         crashReportingEnabled = try values.decodeIfPresent(Bool.self, forKey: .crashReportingEnabled) ?? false
         experienceMode = try values.decodeIfPresent(String.self, forKey: .experienceMode) ?? "story"
+        themeMode = try values.decodeIfPresent(String.self, forKey: .themeMode) ?? "system"
         settingsSchemaVersion = try values.decodeIfPresent(Int.self, forKey: .settingsSchemaVersion) ?? 1
         agreementVersion = try values.decodeIfPresent(String.self, forKey: .agreementVersion)
         agreementSHA256 = try values.decodeIfPresent(String.self, forKey: .agreementSHA256)
@@ -125,6 +132,9 @@ public struct SyxxSettings: Codable, Sendable, Equatable {
 }
 
 public enum SyxxSettingsStore {
+    /// Posted after every successful save so views holding their own copy can reload.
+    public static let didSaveNotification = Notification.Name("SyxxSettingsStore.didSave")
+
     public static var defaultURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".syxx", isDirectory: true)
@@ -158,6 +168,27 @@ public enum SyxxSettingsStore {
     /// Lifecycle gates must use this API so unreadable acceptance never opens the shell.
     public static func loadWithStatus(from url: URL = defaultURL) -> SettingsLoadStatus {
         guard FileManager.default.fileExists(atPath: url.path) else { return .absent }
+
+        // E046: verify file permissions before trusting the contents. A settings file writable
+        // by group or others is a privilege-escalation vector — a co-tenant on a shared machine
+        // could inject malicious preferences (e.g. disable telemetry consent, change resolver IDs).
+        // Reject any file whose POSIX mode grants write access beyond the owner (expected: 0o600
+        // or stricter). Falls through to .corrupt which the load() caller maps to safe defaults
+        // with all network/telemetry features disabled.
+        #if os(macOS) || os(Linux)
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+           let perms = attrs[.posixPermissions] as? Int {
+            // 0o022 = group-write | other-write. Reject if either bit is set.
+            if (perms & 0o022) != 0 {
+                #if DEBUG
+                print("[SyxxSettings] E046: settings file permissions too permissive " +
+                      "(\(String(perms, radix: 8))) — expected 0600 or stricter, falling back to defaults")
+                #endif
+                return .corrupt
+            }
+        }
+        #endif
+
         let data: Data
         do {
             data = try Data(contentsOf: url)
@@ -180,6 +211,7 @@ public enum SyxxSettingsStore {
             let data = try JSONEncoder().encode(settings)
             try data.write(to: url, options: .atomic)
             try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+            NotificationCenter.default.post(name: didSaveNotification, object: nil)
             return true
         } catch {
             return false
@@ -213,5 +245,26 @@ public enum SyxxSettingsStore {
         } catch {
             return .unknown(.unreadableReadBack)
         }
+    }
+}
+
+/// Resolved theme mode from the stored string. "system" follows macOS appearance;
+/// "dark" and "light" override it. Unknown values fall back to system.
+public enum SyxxThemeMode: String, Codable, Sendable, CaseIterable, Equatable {
+    case system
+    case dark
+    case light
+
+    public var displayName: String {
+        switch self {
+        case .system: return "System"
+        case .dark: return "Dark"
+        case .light: return "Light"
+        }
+    }
+
+    /// Parse from the stored string, falling back to `.system` for unrecognized values.
+    public init(rawValueOrSystem: String) {
+        self = SyxxThemeMode(rawValue: rawValueOrSystem) ?? .system
     }
 }

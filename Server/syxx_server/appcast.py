@@ -78,8 +78,10 @@ def _ensure_key():
         return
 
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from cryptography.hazmat.primitives.serialization import (
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey,  # type: ignore[unresolved-import]
+        )
+        from cryptography.hazmat.primitives.serialization import (  # type: ignore[unresolved-import]
             Encoding,
             PublicFormat,
             load_der_private_key,
@@ -98,18 +100,18 @@ def _ensure_key():
         source = "env:SYXX_UPDATE_PRIVATE_KEY"
     elif path:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 material = f.read().strip()
-            source = "path:%s" % path
+            source = f"path:{path}"
         except OSError as e:
             logging_util.error("appcast_key_path_unreadable", path=path, err=str(e))
             return
     elif config.ALLOW_DEV_UPDATE_KEY:
         dev_path = config.UPDATE_DEV_PRIVATE_KEY_PATH
         try:
-            with open(dev_path, "r", encoding="utf-8") as f:
+            with open(dev_path, encoding="utf-8") as f:
                 material = f.read().strip()
-            source = "dev-key:%s" % dev_path
+            source = f"dev-key:{dev_path}"
             logging_util.info(
                 "appcast_using_dev_update_key",
                 path=dev_path,
@@ -189,7 +191,8 @@ def _sha256_file(path):
 
 
 def _package_store_path(platform):
-    return os.path.join(config.UPDATE_PACKAGE_DIR, "%s.json" % platform)
+    """Return the filesystem path of the update manifest for *platform*."""
+    return os.path.join(config.UPDATE_PACKAGE_DIR, f"{platform}.json")
 
 
 def _is_allowlisted_https_url(url):
@@ -298,7 +301,7 @@ def _load_published(platform):
     if not os.path.isfile(path):
         return None
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             record = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
         logging_util.error("appcast_package_unreadable", platform=platform, err=str(e))
@@ -397,12 +400,14 @@ def publish_package(
         "minVersion": min_version,
         "critical": critical,
         "releaseNotes": notes,
-        "packages": [{
-            "url": url,
-            "sha256": sha256,  # already lowercase hex from hashlib
-            "size": int(size),
-            "type": pkg_type,
-        }],
+        "packages": [
+            {
+                "url": url,
+                "sha256": sha256,  # already lowercase hex from hashlib
+                "size": int(size),
+                "type": pkg_type,
+            }
+        ],
         "publishedAt": int(time.time()),
     }
 
@@ -464,12 +469,14 @@ def build_appcast(platform):
         "minVersion": record["minVersion"],
         "critical": record["critical"],
         "releaseNotes": record["releaseNotes"],
-        "packages": [{
-            "url": record["packages"][0]["url"],
-            "sha256": record["packages"][0]["sha256"].lower(),
-            "size": int(record["packages"][0]["size"]),
-            "type": record["packages"][0]["type"],
-        }],
+        "packages": [
+            {
+                "url": record["packages"][0]["url"],
+                "sha256": record["packages"][0]["sha256"].lower(),
+                "size": int(record["packages"][0]["size"]),
+                "type": record["packages"][0]["type"],
+            }
+        ],
         "publishedAt": int(record["publishedAt"]),
     }
 

@@ -225,7 +225,7 @@ public class MatrixUntestedStateTests
     {
         var det = SyxxMatrixIntegration.MakeEngine().Evaluate(bundle);
         return new Conclusion(
-            DateTimeOffset.UnixEpoch,
+            DateTimeOffset.UnixEpoch.UtcDateTime,
             new List<SectionStatusEntry>(),
             new List<EvidenceItem>(),
             new List<Advisory>(),

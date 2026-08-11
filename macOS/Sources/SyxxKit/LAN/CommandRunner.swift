@@ -115,17 +115,40 @@ public struct SystemCommandRunner: CommandRunning {
             }
         }
         var argv = duplicatedArguments + [nil]
+
+        // M2-037: Pass a minimal environment to spawned processes instead of the full
+        // parent environ, which may contain sensitive variables (API keys, tokens, secrets).
+        // Only PATH, LANG, and HOME are forwarded — the minimum needed for system utilities
+        // like dig, traceroute, and networksetup to function correctly.
+        let minimalEnvStrings = [
+            "PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin",
+            "LANG=C",
+            "HOME=\(NSHomeDirectory())"
+        ]
+        var duplicatedEnv = minimalEnvStrings.map { strdup($0) }
+        guard duplicatedEnv.allSatisfy({ $0 != nil }) else {
+            duplicatedEnv.compactMap { $0 }.forEach { free($0) }
+            close(stdoutPipe, stderrPipe)
+            throw CommandRunnerError.launchFailed(executable)
+        }
+        defer {
+            duplicatedEnv.compactMap { $0 }.forEach { free($0) }
+        }
+        var envp = duplicatedEnv + [nil]
+
         var processIdentifier: pid_t = 0
         let spawnCode = executable.withCString { executablePointer in
             argv.withUnsafeMutableBufferPointer { argumentsPointer in
-                posix_spawn(
-                    &processIdentifier,
-                    executablePointer,
-                    &fileActions,
-                    &attributes,
-                    argumentsPointer.baseAddress,
-                    environ
-                )
+                envp.withUnsafeMutableBufferPointer { envPointer in
+                    posix_spawn(
+                        &processIdentifier,
+                        executablePointer,
+                        &fileActions,
+                        &attributes,
+                        argumentsPointer.baseAddress,
+                        envPointer.baseAddress
+                    )
+                }
             }
         }
         guard spawnCode == 0 else {

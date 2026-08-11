@@ -135,7 +135,10 @@ public static class EncryptedDNSConfigurator
         var resolvedPath = SystemToolPath(file);
         var psi = new ProcessStartInfo(resolvedPath, args)
         {
-            RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
         using var p = Process.Start(psi);
         if (p is null) return (-1, "could not start " + resolvedPath);

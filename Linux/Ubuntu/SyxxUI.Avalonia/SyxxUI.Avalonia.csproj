@@ -53,6 +53,10 @@
          only surface with NO crash reporting at all — and it is the FIRST platform to ship, so
          its failures were the ones we would least be able to see. -->
     <ProjectReference Include="..\..\..\Windows\dotNET\Syxx.Telemetry\Syxx.Telemetry.csproj" />
+    <!-- Shared Mirror logic (diff engine, degradation calculator, static content parser).
+         Canonical source: Linux versions (D333, D334, L2-018 fixes). Deduplicates 7 files
+         that were near-identical between Windows and Linux. -->
+    <ProjectReference Include="..\..\..\Windows\dotNET\SyxxUI.Shared\SyxxUI.Shared.csproj" />
   </ItemGroup>
 
   <!-- LINKED, NOT FORKED (plan WS-E1). The honesty-critical presentation layer is framework-neutral

@@ -2,7 +2,7 @@
     x:Class="SyxxUI.Views.LicenseView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{StaticResource IoBgBrush}">
+    Background="{DynamicResource IoBgBrush}">
 
     <Grid Padding="{StaticResource IoPaddingView}">
         <ScrollViewer>
@@ -15,23 +15,23 @@
                                Foreground="{StaticResource IoBlueBrush}" CharacterSpacing="120" />
                     <TextBlock Text="License and Registration"
                                FontFamily="{StaticResource IoFontDisplay}" FontSize="20" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextBrush}" TextWrapping="Wrap" />
                     <TextBlock Text="All local diagnostics are free forever. Pro unlocks the server-backed checks."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                               Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- Current status (real, from LicenseManager) -->
-                <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18">
+                <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18">
                     <StackPanel Spacing="8">
                         <TextBlock Text="CURRENT STATUS" FontFamily="{StaticResource IoFontMono}"
                                    FontSize="10" FontWeight="Bold"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" CharacterSpacing="100" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" CharacterSpacing="100" />
                         <!-- Live region: entitlement state is resolved asynchronously, so Narrator is
                              told when the real answer replaces the "Checking…" placeholder. -->
                         <TextBlock x:Name="StatusText" Text="Checking your license status…"
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="14" FontWeight="Bold"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap"
                                    AutomationProperties.Name="Current license status"
                                    AutomationProperties.LiveSetting="Polite" />
                     </StackPanel>
@@ -45,42 +45,42 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Border Grid.Column="0" Background="{StaticResource IoSurfaceDarkBrush}"
+                    <Border Grid.Column="0" Background="{DynamicResource IoSurfaceDarkBrush}"
                             CornerRadius="12" Padding="18">
                         <StackPanel Spacing="10">
                             <TextBlock Text="Lite" FontFamily="{StaticResource IoFontGrotesk}"
-                                       FontSize="18" FontWeight="Bold" Foreground="{StaticResource IoTextBrush}" />
+                                       FontSize="18" FontWeight="Bold" Foreground="{DynamicResource IoTextBrush}" />
                             <TextBlock Text="Free" FontFamily="{StaticResource IoFontGrotesk}"
-                                       FontSize="24" FontWeight="Bold" Foreground="{StaticResource IoTextBrush}" />
+                                       FontSize="24" FontWeight="Bold" Foreground="{DynamicResource IoTextBrush}" />
                             <StackPanel Spacing="6">
                                 <TextBlock Text="Prophet • resolver accuracy"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                                 <TextBlock Text="Portal • local network and route trace"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                                 <TextBlock Text="Glutton • DNS leak test"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                                 <TextBlock Text="Cage • live query capture"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                                 <TextBlock Text="Witness • environment trust"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Column="2" Background="{StaticResource IoSurfaceDarkBrush}"
+                    <Border Grid.Column="2" Background="{DynamicResource IoSurfaceDarkBrush}"
                             CornerRadius="12" Padding="18"
                             BorderBrush="{StaticResource IoBlueBrush}" BorderThickness="1">
                         <StackPanel Spacing="10">
                             <TextBlock Text="Pro" FontFamily="{StaticResource IoFontGrotesk}"
-                                       FontSize="18" FontWeight="Bold" Foreground="{StaticResource IoTextBrush}" />
+                                       FontSize="18" FontWeight="Bold" Foreground="{DynamicResource IoTextBrush}" />
                             <TextBlock x:Name="PriceText" Text="$3.95 / month"
                                        FontFamily="{StaticResource IoFontGrotesk}"
-                                       FontSize="24" FontWeight="Bold" Foreground="{StaticResource IoTextBrush}" />
+                                       FontSize="24" FontWeight="Bold" Foreground="{DynamicResource IoTextBrush}" />
                             <ComboBox x:Name="PeriodCombo" SelectedIndex="0"
                                       HorizontalAlignment="Center" MinWidth="140"
                                       AutomationProperties.Name="Billing period">
@@ -89,7 +89,7 @@
                             </ComboBox>
                             <TextBlock x:Name="SaveText" Text="Save 58% with yearly"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                       Foreground="{StaticResource IoSuccessGreenBrush}"
+                                       Foreground="{DynamicResource IoSuccessGreenBrush}"
                                        HorizontalAlignment="Center"
                                        Visibility="Collapsed" />
                             <StackPanel Spacing="6">
@@ -98,21 +98,21 @@
                                            Foreground="{StaticResource IoBlueBrush}" />
                                 <TextBlock Text="Mirror • remote vs local asset comparison"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                                 <TextBlock Text="Remote static file hash verification"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                                 <TextBlock Text="Syxx Warp • web structure matching"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                                 <TextBlock Text="Syxx Leak • DNS privacy logging"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
-                                           Foreground="{StaticResource IoTextBrush}" />
+                                           Foreground="{DynamicResource IoTextBrush}" />
                             </StackPanel>
                             <Button x:Name="TrialBtn" Content="Start Pro Trial"
                                     Click="TrialBtn_Click" HorizontalAlignment="Stretch"
                                     Background="{StaticResource IoBlueBrush}"
-                                    Foreground="{StaticResource IoTextBrush}"
+                                    Foreground="{DynamicResource IoTextBrush}"
                                     AutomationProperties.Name="Start Pro trial"
                                     AutomationProperties.HelpText="Opens the checkout page to begin a three-day free trial of Pro features" />
                         </StackPanel>
@@ -120,14 +120,14 @@
                 </Grid>
 
                 <!-- Activate a license key -->
-                <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18">
+                <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18">
                     <StackPanel Spacing="12">
                         <TextBlock Text="Activate a License Key"
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="16" FontWeight="Bold"
-                                   Foreground="{StaticResource IoTextBrush}" />
+                                   Foreground="{DynamicResource IoTextBrush}" />
                         <TextBlock Text="Your license key unlocks the Pro checks. It is validated with the licensing service, then kept on this machine. It never travels alongside your DNS data, so your network findings stay unbound from your identity."
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                             <TextBox x:Name="KeyBox" PlaceholderText="SYXX-XXXX-XXXX-XXXX-XXXX"
                                      Width="320" FontFamily="{StaticResource IoFontMono}"
@@ -136,7 +136,7 @@
                             <Button x:Name="ActivateBtn" Content="Activate"
                                     Click="ActivateBtn_Click"
                                     Background="{StaticResource IoBlueBrush}"
-                                    Foreground="{StaticResource IoTextBrush}"
+                                    Foreground="{DynamicResource IoTextBrush}"
                                     AutomationProperties.Name="Activate license key"
                                     AutomationProperties.HelpText="Validates your license key with the Syxx licensing service and unlocks Pro features" />
                             <!-- Phase 9.5: the licensing round trip is a network call. macOS shows a
@@ -153,24 +153,24 @@
                              outcome without having to hunt for this line. -->
                         <TextBlock x:Name="ActivateStatusText" Text=""
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap"
                                    AutomationProperties.Name="Activation result"
                                    AutomationProperties.LiveSetting="Assertive" />
                         <TextBlock Text="Need a key? Purchasing is completed on syxx.app; activation happens right here."
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="11"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
 
                 <!-- Privacy note -->
-                <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18">
+                <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Privacy and Network Checks"
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="16" FontWeight="Bold"
-                                   Foreground="{StaticResource IoTextBrush}" />
+                                   Foreground="{DynamicResource IoTextBrush}" />
                         <TextBlock Text="Syxx checks for software updates and critical security broadcasts once per launch, in a single request to syxx.app. No tracking parameters are sent."
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
 

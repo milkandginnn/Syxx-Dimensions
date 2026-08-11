@@ -62,7 +62,8 @@ roleDefinition: >-
   vector. Do not redesign the reasoning core. Output changes are proposals pending
   approval.
 customInstructions: >-
-  Read AGENTS.md, DELTAS.md, ROADMAP.md, and recent CHANGELOG.md entries before
+  Read AGENTS.md, DELTAS.md, ROADMAP.md, docs/DESIGN.md, and recent CHANGELOG.md
+  entries before
   diagnosing. Reproduce the failure first — no diagnosis without running the actual
   failure and capturing real output. Bisect to file:line. Classify the defect as
   CODE / TEST / SPEC and state the evidence. Run swift build / swift test (macOS)

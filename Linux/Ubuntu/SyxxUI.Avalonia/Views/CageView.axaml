@@ -1,16 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:SyxxUI.Avalonia.Controls"
              x:Class="SyxxUI.Avalonia.Views.CageView">
   <StackPanel Spacing="20">
-    <StackPanel Spacing="6">
-      <TextBlock Text="CAGE • DNS CAPTURE" FontSize="12" FontWeight="Bold"
-                 Foreground="{StaticResource SyxTextSecondaryBrush}" />
-      <TextBlock Text="Live Query Capture" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
-      <TextBlock Text="The Cage trapped the DNS queries so they could be inspected without escape, their headers and answers laid bare for judgment."
-                 FontSize="16" TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" FontWeight="Bold" />
-      <TextBlock Text="Cage performs live packet capture, extracting DNS header flags, transaction IDs, query entropy, and query rates to detect exfiltration, beaconing, or DNS tunneling."
-                 FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
-    </StackPanel>
+    <ctl:ModuleHeader x:Name="Header" Rune="&#x16BE;" Eyebrow="THE WARDEN &#x00B7; LIVE QUERY CAPTURE" Name="Cage"
+                       AccentBrush="{StaticResource SyxTealBrush}" />
 
     <!-- Honest state: live capture needs root + raw sockets. The GUI does not fake a capture; it
          points the user at the elevated CLI, exactly as the macOS and Windows clients do. Graphical
@@ -27,6 +21,25 @@
         </Border>
         <TextBlock Text="Graphical elevation (pkexec) for one-click capture on Linux is planned but not yet wired."
                    FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+
+    <!-- D282: capture results viewer placeholder. When the Cage CLI output is wired into the GUI
+         (via pkexec elevation or manual capture file browse), this area will render the captured
+         DNS queries with headers and answers. Until then, it shows the honest "no capture loaded"
+         state rather than an empty panel that reads as broken. -->
+    <Border x:Name="CaptureResultsPanel" CornerRadius="12" Padding="18"
+            Background="{StaticResource SyxSurfaceDarkBrush}"
+            BorderBrush="{StaticResource SyxBorderBrush}" BorderThickness="1"
+            IsVisible="False">
+      <StackPanel Spacing="8">
+        <TextBlock Text="CAPTURED QUERIES" FontSize="12" FontWeight="Bold"
+                   Foreground="{StaticResource SyxTealBrush}" />
+        <TextBlock x:Name="CaptureStatusText"
+                   Text="No capture loaded. Run a capture above to see DNS queries here."
+                   FontSize="14" TextWrapping="Wrap"
+                   Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <!-- Future: ItemsRepeater bound to captured DNS query rows (query, type, answer, TTL) -->
       </StackPanel>
     </Border>
   </StackPanel>

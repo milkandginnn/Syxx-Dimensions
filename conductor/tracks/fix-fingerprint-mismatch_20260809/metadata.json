@@ -1,0 +1,13 @@
+{
+  "track_id": "fix-fingerprint-mismatch_20260809",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-08-09",
+  "updated_at": "2026-08-09",
+  "current_phase": null,
+  "current_task": null,
+  "phases": { "total": 3, "completed": 0 },
+  "tasks": { "total": 7, "completed": 0 },
+  "commits": [],
+  "description": "Fix transcript fingerprint mismatch (Swift vs C#) and 2 C# test build errors (DateTimeOffset → DateTime)."
+}

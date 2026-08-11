@@ -4,6 +4,10 @@ import AppKit
 
 /// Phase 3.8: deterministic geometry and source-guard contracts for PurpleScrollView.
 /// Failure cases prove the suite goes red when geometry or call-site discipline regresses.
+///
+/// `@MainActor`: several tests call `PurpleScroller.knobRect(…)` — a static method on an
+/// `NSScroller` subclass, which is main-actor-isolated in the macOS 15 SDK.
+@MainActor
 final class PurpleScrollViewTests: XCTestCase {
 
     func testFullPanelPreferredLengthIs420() {

@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "notEvaluated",
+  "htmlState": "notEvaluated",
+  "manifestState": "malformed",
+  "notes": "signature verified but the manifest has no assets array of objects (Amendment A4).",
+  "signatureState": "verified"
+}

@@ -2,6 +2,11 @@ import Foundation
 import Network
 import OpenTelemetryApi
 
+// MARK: - Data Structures
+//
+// Core types for DNS queries, responses, and metadata. These structures define the
+// wire-level protocol representation and are shared across all transport layers.
+
 /// A structure representing a DNS Query.
 public struct DNSQuery: Sendable {
     public let name: String
@@ -260,9 +265,12 @@ public struct DNSResponse: Codable, Sendable {
         attemptCount = try c.decodeIfPresent(Int.self, forKey: .attemptCount) ?? 1
     }
 
-    /// True when the query could not reach or parse a resolver answer at all
-    /// (as opposed to receiving a valid negative answer such as NXDOMAIN/NODATA).
-    public var didFail: Bool {
+    /// True when the query did not produce a usable answer — either a transport/parse
+    /// failure or an RCODE error (SERVFAIL, REFUSED, etc.). This is broader than a pure
+    /// transport failure: a SERVFAIL or REFUSED means the resolver *responded* with an
+    /// error code, not that the network path failed. Named `didNotSucceed` rather than
+    /// `didFail` to make the RCODE inclusion explicit at every call site.
+    public var didNotSucceed: Bool {
         switch status {
         case .timeout, .transportError, .malformedResponse, .responseIdMismatch,
              .truncated, .servFail, .refused, .rcodeOther:
@@ -288,6 +296,12 @@ public struct SecureResolutionResponse: Codable, Sendable {
     public let provenance: String
     public let reason: String?
 }
+
+// MARK: - DNS Resolver (Orchestration)
+//
+// Top-level resolver coordinating transport selection (UDP/TCP/DoH), query construction,
+// response validation, and telemetry. Public API methods live here; implementation detail
+// is in the Wire Format and Transport sections below.
 
 /// DNS Resolver supporting UDP (with TCP fallback) and DoH (DNS-over-HTTPS).
 public enum DNSResolver {
@@ -423,6 +437,12 @@ public enum DNSResolver {
         // C062: track spoofed packets across attempts so the observation survives a later
         // timeout. A question-mismatch or ID-mismatch is positive evidence of injection.
         var spoofCount = 0
+        // B032: a dedicated Bool for spoof detection. The old code pattern-matched on
+        // `lastError?.contains("spoofed")` — a human-readable string that a reworded error
+        // message would silently break, letting a follow-on timeout overwrite a genuine spoof
+        // observation. The flag is set exactly where a spoof is detected and is immune to
+        // message wording.
+        var sawSpoof = false
         for attempt in 0..<maxUDPAttempts {
             // F006: check for cooperative cancellation at transport layer
             if Task.isCancelled {
@@ -450,9 +470,10 @@ public enum DNSResolver {
                 if parsed.status != .responseIdMismatch {
                     if !responseQuestionMatches(response, expectedName: query.name, expectedType: query.type) {
                         spoofCount += 1  // C062: record the spoof observation
+                        sawSpoof = true  // B032: flag, not string-matching
                         if attempt + 1 < maxUDPAttempts {
                             // C062: never overwrite a spoof observation with a weaker error
-                            if lastError == nil || !(lastError?.contains("spoofed") ?? false) {
+                            if lastError == nil || !sawSpoof {
                                 lastError = "Response question does not match query (spoofed)"
                             }
                             continue
@@ -497,7 +518,8 @@ public enum DNSResolver {
                 // A stray/spoofed packet with the wrong ID: retry rather than trust it.
                 if parsed.status == .responseIdMismatch && attempt + 1 < maxUDPAttempts {
                     spoofCount += 1  // C062: count the ID-mismatch as a spoof observation
-                    if lastError == nil || !(lastError?.contains("spoofed") ?? false) {
+                    sawSpoof = true  // B032: flag, not string-matching
+                    if lastError == nil || !sawSpoof {
                         lastError = parsed.errorMessage
                     }
                     continue
@@ -516,11 +538,11 @@ public enum DNSResolver {
                 lastError = "cancelled"
             } catch DNSResolverError.timeout {
                 // C062: a spoof observation must not be overwritten by a follow-on timeout
-                if !(lastError?.contains("spoofed") ?? false) {
+                if !sawSpoof {
                     lastError = "UDP timeout"
                 }
             } catch {
-                if !(lastError?.contains("spoofed") ?? false) {
+                if !sawSpoof {
                     lastError = error.localizedDescription
                 }
             }
@@ -605,7 +627,11 @@ public enum DNSResolver {
         }
     }
 
-    // MARK: - DNS Packet Construction & Parsing
+    // MARK: Wire Format — Packet Construction
+    //
+    // Builds DNS query packets from structured input: header, question section (with IDNA
+    // punycode conversion), and optional EDNS0 OPT record. Pure byte-level encoding with
+    // no transport dependencies.
 
     /// Legacy packet builder used by tests/tools that do not need the transaction ID.
     /// C132: now throws instead of returning an empty Data on validation failure, so an invalid
@@ -885,6 +911,13 @@ public enum DNSResolver {
             }
         }
     }
+
+    // MARK: Wire Format — Response Parsing
+    //
+    // Decodes raw DNS response packets into typed structures: header flags, RCODE, answer/
+    // authority/additional sections, EDNS0 OPT, and name decompression. Validation and
+    // filtering (off-type, off-name, off-class) are applied here. Pure byte-level decoding
+    // with no transport dependencies.
 
     /// Legacy parse helper returning only records.
     public static func parseResponsePacket(_ data: Data) -> [DNSRecord] {
@@ -1495,7 +1528,39 @@ public enum DNSResolver {
         return true
     }
 
-    // MARK: - Transport
+    // MARK: Wire Format — Shared Response Validation
+    //
+    // Common validation patterns shared by UDP, TCP, and DoH transports. These methods
+    // ensure response integrity (question section matches query) before returning parsed
+    // results to callers.
+
+    /// Validates that a parsed response's question section matches the expected query.
+    /// Returns the response unchanged if validation passes, or a `.responseIdMismatch` error
+    /// response if the question does not match (indicating a spoofed or misdirected response).
+    /// Used by UDP, TCP fallback, and DoH paths to centralize the KDNS-02 validation logic.
+    static func validateResponseQuestion(
+        _ data: Data,
+        parsed: DNSResponse,
+        expectedName: String,
+        expectedType: UInt16,
+        transportLabel: String = ""
+    ) -> DNSResponse {
+        // Skip validation if the response already failed to parse (ID mismatch or malformed)
+        guard parsed.status != .responseIdMismatch else { return parsed }
+        guard responseQuestionMatches(data, expectedName: expectedName, expectedType: expectedType) else {
+            let prefix = transportLabel.isEmpty ? "" : "\(transportLabel) "
+            return DNSResponse(status: .responseIdMismatch,
+                               errorMessage: "\(prefix)response question does not match query")
+        }
+        return parsed
+    }
+
+    // MARK: Transport — UDP / TCP / DoH
+    //
+    // Low-level network transport layer. Sends raw DNS packets over UDP (with TCP fallback
+    // for truncation) and DoH (DNS-over-HTTPS). Each transport handles connection lifecycle,
+    // timeout enforcement, and cancellation propagation. These methods are transport-only;
+    // they do not parse or validate responses (see Wire Format above).
 
     private static func sendUDP(_ packet: Data, to server: String, port: UInt16) async throws -> Data {
         let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(server), port: NWEndpoint.Port(integerLiteral: port))
@@ -1656,6 +1721,8 @@ public enum DNSResolver {
     }
 }
 
+// MARK: - Concurrency Helpers
+
 /// A thread-safe one-shot gate ensuring a checked continuation is resumed at most once,
 /// closing the multiple-resume window in the UDP/TCP state handlers (M06).
 final class ContinuationGate: @unchecked Sendable {
@@ -1670,6 +1737,8 @@ final class ContinuationGate: @unchecked Sendable {
         return true
     }
 }
+
+// MARK: - Response Bridging
 
 private extension DNSResponse {
     /// Bridges the typed response back to the throwing `[DNSRecord]` API used by existing tools.

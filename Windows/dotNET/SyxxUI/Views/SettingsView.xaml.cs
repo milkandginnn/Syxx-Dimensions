@@ -1,6 +1,7 @@
 using System.Linq;
 using Microsoft.UI.Xaml.Controls;
 using Syxx.Kit;
+using SyxxUI.Services;
 
 namespace SyxxUI.Views;
 
@@ -46,10 +47,31 @@ public sealed partial class SettingsView : Page
         CrashReportingToggle.IsOn = _settings.CrashReportingEnabled;
         UpdateCheckToggle.IsOn = _settings.UpdateCheckEnabled;
         NotifyToggle.IsOn = _settings.NotificationsEnabled;
+        // Set theme picker to match stored preference
+        var themeIdx = _settings.ThemeMode?.ToLowerInvariant() switch
+        {
+            "dark" => 1,
+            "light" => 2,
+            _ => 0,
+        };
+        ThemePicker.SelectedIndex = themeIdx;
         _loading = false;
     }
 
     private void Persist() => SaveNote.Text = SyxxSettingsStore.Save(_settings) ? "Saved." : "Could not save settings.";
+
+    private void Theme_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || ThemePicker.SelectedItem is not ComboBoxItem it) return;
+        var mode = (string)it.Tag;
+        _settings.ThemeMode = mode;
+        Persist();
+        // Apply immediately — no restart required
+        if (Application.Current is App app)
+        {
+            app.ThemeManager?.ApplyTheme(mode);
+        }
+    }
 
     private async void EncryptToggle_Toggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {

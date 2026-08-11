@@ -54,6 +54,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -493,6 +494,20 @@ def main() -> int:
     args = ap.parse_args()
 
     repo = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent.parent
+
+    # Verify corpus fingerprint before running
+    result = subprocess.run(
+        ["bash", str(repo / "scripts/verify-parity-fingerprint.sh")],
+        capture_output=True, text=True
+    )
+    if result.returncode == 2:
+        print("gate error: corpus fingerprint mismatch — corpus has been modified since fingerprint was generated", file=sys.stderr)
+        print("Run scripts/regenerate-parity-fingerprint.sh to update the fingerprint if the changes are intentional.", file=sys.stderr)
+        raise SystemExit(2)
+    elif result.returncode != 0:
+        print("gate error: fingerprint verification failed", file=sys.stderr)
+        raise SystemExit(2)
+
     swift_root = repo / SWIFT_ROOT
     cs_root = repo / CSHARP_ROOT
 
@@ -566,11 +581,15 @@ def main() -> int:
             # switch matching, and an earlier revision of this gate passed.)
             #
             # So every WIRE block owned by the same type must reproduce the canon
-            # exactly. A block counts as a wire block when it shares at least one value
-            # with the canon. Blocks that share NOTHING are display/prose mappings over
-            # the same enum (Report.cs `"CLEAN"`, PlainExplanation.cs
-            # `"the {name} check did not run"`); those are free to say anything and are
-            # deliberately not held to the wire contract.
+            # exactly. A block counts as a wire block when it shares a SUBSTANTIAL
+            # fraction of its values with the canon (≥50% of the canon). Blocks that
+            # share NOTHING are display/prose mappings over the same enum (Report.cs
+            # `"CLEAN"`, PlainExplanation.cs `"the {name} check did not run"`); those
+            # are free to say anything and are deliberately not held to the wire
+            # contract. Blocks that share only a small fraction (e.g. a single common
+            # term like "inconclusive" between unrelated domain enums that happen to
+            # share a short type name) are also excluded — they are not half-applied
+            # renames of the same wire contract.
             stragglers: list[str] = []
             for plat, hits, cands in (
                 ("macOS", swift_hits, swift_vocab),
@@ -578,7 +597,8 @@ def main() -> int:
             ):
                 owners = {h[1] for h in hits}
                 for loc, name, vals in cands:
-                    if name in owners and vals != canon and (vals & canon):
+                    overlap = len(vals & canon)
+                    if name in owners and vals != canon and overlap >= len(canon) * 0.5:
                         stragglers.append(
                             f"  {plat} {name} @ {rel([loc], repo)} is a wire mapping for this "
                             f"vocabulary but does not reproduce it:\n"

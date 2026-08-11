@@ -5,6 +5,7 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Exporter;
 using Sentry;
 using Syxx.Kit;
+using SyxxUI.Services;
 
 namespace SyxxUI;
 
@@ -15,10 +16,16 @@ public partial class App : Application
     private IDisposable? _sentry;
     private bool _readyServicesStarted;
 
+    /// Theme manager for dark/light mode switching. Accessible from views via Application.Current.
+    internal ThemeManager? ThemeManager { get; private set; }
+
     public App()
     {
         InitializeComponent();
-        this.Suspending += OnSuspending;
+        // No Suspending subscription: Application.Suspending is UWP-era and does not exist in
+        // WinAppSDK/WinUI 3 (CS0246 on real Windows CI, first build ever). It also never fired
+        // for this unpackaged app — which is why MainWindow.Closed and ProcessExit already call
+        // FlushTelemetry (E160). Removing it loses nothing that ever ran.
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
@@ -27,6 +34,12 @@ public partial class App : Application
         // URIs. Register bundled Jost/Cinzel/etc. from Content-deployed .ttf so IoFont*
         // resolves at runtime. This is safe to call even if the file doesn't exist (no-op).
         RegisterAppFonts();
+
+        // Initialize theme manager and apply stored preference before showing the window
+        ThemeManager = new ThemeManager(this);
+        var settings = SyxxSettingsStore.Load();
+        ThemeManager.ApplyTheme(settings.ThemeMode);
+        ThemeManager.SubscribeToSystemThemeChanges(settings);
 
         _window = new MainWindow();
         _window.Activate();
@@ -145,11 +158,6 @@ public partial class App : Application
         AddFontResourceEx(fontPath, FR_PRIVATE | FR_NOT_ENUM, IntPtr.Zero);
         // Return value == 0 means the font was already registered or the path is invalid;
         // neither is an error worth reporting.
-    }
-
-    private void OnSuspending(object sender, SuspendingEventArgs args)
-    {
-        FlushTelemetry();
     }
 
     /// E160: flush in-flight OTel spans and dispose Sentry before the process exits.

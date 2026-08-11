@@ -1313,6 +1313,30 @@
         "deck-generation",
         "slide-design"
       ]
+    },
+    {
+      "name": "delta-remediation",
+      "source": "./plugins/delta-remediation",
+      "description": "Delta Remediation Command Suite — seven commands forming a complete defect lifecycle from discovery through remediation to verification",
+      "version": "1.0.0",
+      "author": {
+        "name": "Syxx"
+      },
+      "license": "MIT",
+      "category": "quality"
+    },
+    {
+      "name": "syxx-desktop-gui",
+      "source": "./plugins/syxx-desktop-gui",
+      "description": "Cross-platform desktop GUI development — SwiftUI (macOS), WinUI 3 (Windows), Avalonia UI (Linux), Qt 6 (C++), Swift 6, C# 15, .NET 10.0. Pixel-perfect mockup translation, platform-native idioms, responsive desktop layouts, dark/light theming, and accessibility across all desktop targets.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Seth Hobson",
+        "email": "seth@major7apps.com"
+      },
+      "homepage": "https://github.com/wshobson/agents",
+      "license": "MIT",
+      "category": "development"
     }
   ]
 }

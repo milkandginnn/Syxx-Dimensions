@@ -11,12 +11,36 @@ struct SyxxMirrorCLI {
             return CLIExitStatus.completed.rawValue
         }
         let args = argv
+        // D325: parse all flags first, then use remaining positional args as domain.
+        // Previously `--local 8.8.8.8 example.com` parsed "--local" as the domain,
+        // which failed canonicalization. Now flags are consumed first.
         guard args.count >= 2 else {
             print("Usage: syxx mirror <domain> [--local local_resolver]")
             return CLIExitStatus.failure.rawValue
         }
-        
-        let rawDomain = args[1]
+
+        // First pass: extract flags
+        var localResolverOverride: String? = nil
+        var positionalArgs: [String] = []
+        var idx = 0
+        while idx < args.count {
+            let arg = args[idx]
+            if (arg == "--local" || arg == "-l") && idx + 1 < args.count {
+                localResolverOverride = args[idx + 1]
+                idx += 2
+            } else if arg.hasPrefix("-") {
+                // Unknown flag — skip it
+                idx += 1
+            } else {
+                positionalArgs.append(arg)
+                idx += 1
+            }
+        }
+
+        guard let rawDomain = positionalArgs.first, !rawDomain.isEmpty else {
+            print("Usage: syxx mirror <domain> [--local local_resolver]")
+            return CLIExitStatus.failure.rawValue
+        }
         guard let targetDomain = try? DomainCanonical.canonicalize(rawDomain) else {
             print("Error: Invalid domain '\(rawDomain)' — could not canonicalize")
             return CLIExitStatus.failure.rawValue
@@ -30,19 +54,8 @@ struct SyxxMirrorCLI {
             print("   Use --local <resolver> to specify one, or check your network configuration.")
             return CLIExitStatus.inconclusive.rawValue
         }
-        var localResolver = firstSystem
-        
-        var idx = 2
-        while idx < args.count {
-            let arg = args[idx]
-            if arg == "--local" || arg == "-l" {
-                if idx + 1 < args.count {
-                    localResolver = args[idx + 1]
-                    idx += 1
-                }
-            }
-            idx += 1
-        }
+        // D325: use the flag-parsed override instead of the old positional scan
+        var localResolver = localResolverOverride ?? firstSystem
         
         print("Comparing resolution for: \(targetDomain)")
         print("Local resolver: \(localResolver)")

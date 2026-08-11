@@ -10,13 +10,13 @@
   HONESTY (cross-platform bar, mirrored here):
     B030 — "no leak detected" is ONLY stated by the collector's signed attestation;
            absence of evidence is INCONCLUSIVE, never clean.
-    D004 — no valid signature → the verdict reads [UNVERIFIED], never leak/no-leak.
+    D004 — no valid signature → the result reads [UNVERIFIED], never leak/no-leak.
     B066 — a crypto-valid signature by an UNTRUSTED key reads amber, never green.
     B067 — a NotDetected result over a non-enforced transport reads amber.
     E117 — FEATURE STATUS has three distinct states (unknown / locked / unlocked).
            Unknown shows "Loading…", never a red ✗ on first paint.
     E118 — local probe "sent" renders NEUTRAL — green is reserved for the
-           collector's attested verdict below.
+           collector's attested result below.
     B246 — distinguish "no check has run" from "collector ran (no local subdomain)".
     E132 — a probe that FAILED must not render as one that never ran.
     Defect-2 — every reason string passes through ErrorPresenter; raw exception
@@ -25,21 +25,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SyxxUI.Avalonia.ViewModels"
+             xmlns:ctl="using:SyxxUI.Avalonia.Controls"
              x:Class="SyxxUI.Avalonia.Views.GluttonView"
              x:DataType="vm:GluttonViewModel">
   <ScrollViewer Padding="0">
     <StackPanel Spacing="20" Margin="6">
 
-      <!-- Header: eyebrow + lore + Check for Leaks button (macOS layout parity). -->
+      <!-- Header: module header + Check for Leaks button (macOS layout parity). -->
       <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Grid.Column="0" Spacing="6">
-          <TextBlock Text="GLUTTON • DNS LEAK &amp; ENCRYPTION"
-                     FontFamily="{StaticResource SyxTypeEyebrow}" FontSize="12" FontWeight="Bold"
-                     Foreground="{StaticResource SyxRedBrush}" />
-          <TextBlock Text="Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished."
-                     FontFamily="{StaticResource SyxLoreFont}" FontSize="16" FontWeight="Bold"
-                     TextWrapping="Wrap" Foreground="{StaticResource SyxTextBrush}" />
-        </StackPanel>
+        <ctl:ModuleHeader Grid.Column="0" x:Name="Header" Rune="&#x16A6;" Eyebrow="THE DEVOURER &#x00B7; DNS LEAK TEST" Name="Glutton"
+                           AccentBrush="{StaticResource SyxRedBrush}" />
         <!-- E118: the button is the LOCAL probe dispatch — it does NOT make a leak claim. -->
         <Button Grid.Column="1" Content="Check for Leaks"
                 Command="{Binding CheckForLeaksCommand}"
@@ -161,7 +156,7 @@
                              FontFamily="{StaticResource SyxMonoFont}" FontSize="13"
                              Foreground="{StaticResource SyxTextBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" />
-                  <!-- E118: "sent" is neutral; green is reserved for the collector's verdict below. -->
+                  <!-- E118: "sent" is neutral; green is reserved for the collector's result below. -->
                   <TextBlock Grid.Column="2" Text="sent" FontFamily="{StaticResource SyxTypeEyebrow}"
                              FontSize="12" FontWeight="Bold"
                              Foreground="{StaticResource SyxTextSecondaryBrush}"
@@ -215,7 +210,7 @@
                        Foreground="{StaticResource SyxOrangeBrush}" />
           </Border>
 
-          <!-- The verdict panel — rendered from the signed result with honesty gating. -->
+          <!-- The result panel — rendered from the signed result with honesty gating. -->
           <StackPanel Spacing="6" IsVisible="{Binding HasCollectorResult}">
             <TextBlock Text="{Binding LeakResultText}"
                        FontFamily="{StaticResource SyxUiFont}" FontSize="16" FontWeight="Bold"

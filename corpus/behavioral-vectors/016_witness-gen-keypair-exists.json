@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "witness-gen-keypair-exists",
+  "command": "witness",
+  "args": ["--gen-keypair", "--key-file", "fixtures/witness/test-key-existing"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Directory with an existing key file at the specified path (to trigger the refusal without --force)",
+    "artifactPath": "fixtures/witness/test-key-existing/",
+    "artifactFormat": "directory-state"
+  },
+  "expectedExitCode": 3,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# witness --gen-keypair refuses on Undetermined state even with --force; Swift fileExists is fail-open. Both platforms exit 3 when key already exists without --force."
+  ]
+}

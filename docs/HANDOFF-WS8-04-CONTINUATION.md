@@ -99,7 +99,7 @@ traffic, with uniform mapping so pattern-matching survives.
 
 ---
 
-## 5. Errors I made this session. Do not repeat them.
+## 5. Errors I made this session. Do not repeat them
 
 **I reintroduced the inconclusive-as-diagnosis conflation, in code I wrote today.** I placed
 `verdict == .inconclusive` as a branch in a list ordered by cause, and put it in a disjunction
@@ -181,6 +181,7 @@ diagnosis or a threat, and never with deterministic phrasing such as "Syxx diagn
 
 **Tests should assert both directly**, because this has drifted repeatedly and a wording argument
 is a weaker guard than a red test:
+
 - If the state is Untested, NO diagnosis name, hypothesis name, confidence value or evidence item
   appears anywhere in the rendered output.
 - If the state is Inconclusive, no diagnosis name appears in any verdict or diagnosis field, and

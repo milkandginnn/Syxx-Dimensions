@@ -13,7 +13,12 @@ public enum OTelBootstrap {
         // `unknown` (never asked, or a settings file that will not decode) behaves as denied:
         // missing data is not consent.
         guard ifAllowed ?? TelemetryGate.isAllowed else { return }
-        guard let endpoint = URL(string: "https://bugsmasher.syxx.app/v1/traces") else { return }
+        // E041: allow the OTLP endpoint to be overridden via environment variable
+        // (e.g. for local debugging with `SYXX_OTEL_ENDPOINT=http://localhost:4318/v1/traces`).
+        // The hardcoded default is the production collector.
+        let endpointURL = ProcessInfo.processInfo.environment["SYXX_OTEL_ENDPOINT"]
+            ?? "https://bugsmasher.syxx.app/v1/traces"
+        guard let endpoint = URL(string: endpointURL) else { return }
         let exporter = OtlpHttpTraceExporter(endpoint: endpoint)
         let processor = BatchSpanProcessor(spanExporter: exporter)
         OpenTelemetry.registerTracerProvider(tracerProvider:
@@ -52,5 +57,40 @@ public enum OTelBootstrap {
     /// Consent granted again mid-session. Deliberately does not backfill.
     static func resumeOnConsentGranted() {
         SyxxTracer.enable()
+    }
+}
+
+// D367: unified telemetry bootstrap that ensures Sentry and OTel always receive the SAME
+// consent value. Previously, callers could pass different `ifAllowed` to each bootstrap,
+// producing a state where Sentry reported crashes but OTel recorded no traces (or vice versa),
+// making Sentry issues uncorrelatable with trace data.
+//
+// Usage: call TelemetryBootstrap.setup(allowed:) ONCE at app/CLI startup instead of calling
+// SentryBootstrap.setup(), SentryDiagnosticSink.install(), and OTelBootstrap.setup() separately.
+public enum TelemetryBootstrap {
+    /// Install all telemetry (Sentry crash reporting, Sentry diagnostic sink, OTel tracing)
+    /// with a single consent decision. `surface` is forwarded to SentryDiagnosticSink (D331).
+    @discardableResult
+    public static func setup(
+        allowed: Bool = TelemetryGate.isAllowed,
+        serviceName: String = "syxx-macos",
+        surface: String = "gui"
+    ) -> Bool {
+        SentryBootstrap.setup(ifAllowed: allowed)
+        let installed = SentryDiagnosticSink.install(ifAllowed: allowed, surface: surface)
+        OTelBootstrap.setup(serviceName: serviceName, ifAllowed: allowed)
+        return installed
+    }
+
+    /// Withdraw consent: disable tracing, close Sentry, discard buffered data.
+    public static func withdrawConsent() {
+        OTelBootstrap.discardOnConsentWithdrawal()
+        SentryDiagnosticSink.remove()
+    }
+
+    /// Re-grant consent mid-session.
+    public static func grantConsent(serviceName: String = "syxx-macos", surface: String = "gui") {
+        OTelBootstrap.resumeOnConsentGranted()
+        SentryDiagnosticSink.install(ifAllowed: true, surface: surface)
     }
 }

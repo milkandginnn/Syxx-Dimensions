@@ -24,18 +24,15 @@ Display the current state of an active agent team including members, tasks, and 
 
 ### Members Table
 
-Display each team member with their current state:
+Display each team member as a `task-id=member-name` pair that can be copied inline for use with `--assign`:
 
 ```
 Team: {team-name}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Members:
-  Name              Role              Status
-  ─────────────────────────────────────────
-  security-rev      team-reviewer     working on task #2
-  perf-rev          team-reviewer     idle
-  arch-rev          team-reviewer     working on task #4
+  comprehensive-review__code-reviewer-call_abc123def456=security-rev      completed
+  comprehensive-review__code-reviewer-call_def789ghi012=perf-rev          completed
+  comprehensive-review__code-reviewer-call_ghi345jkl678=arch-rev          completed
 ```
 
 ### Tasks Table

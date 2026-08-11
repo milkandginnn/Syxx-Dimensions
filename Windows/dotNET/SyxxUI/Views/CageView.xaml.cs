@@ -27,6 +27,11 @@ namespace SyxxUI.Views;
 /// </summary>
 public sealed partial class CageView : Page
 {
+    private static readonly HashSet<string> _cageProps = new()
+    {
+        nameof(AppViewModel.CageCapturing), nameof(AppViewModel.CageEventsCount), nameof(AppViewModel.CageRows),
+    };
+
     public ObservableCollection<CageDisplayRow> CaptureRows { get; } = [];
 
     private AppViewModel? _vm;
@@ -34,6 +39,15 @@ public sealed partial class CageView : Page
     public CageView()
     {
         InitializeComponent();
+
+        Header.AddContent(new TextBlock
+        {
+            Text = "The Cage trapped the DNS queries so they could be inspected without escape, their headers and answers laid bare for judgment.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoFontLore"],
+            FontSize = 16,
+            Foreground = (Brush)Application.Current.Resources["IoTextMutedBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
     }
 
     // E155: subscribe to PropertyChanged so the pane refreshes when data changes while visible.
@@ -45,7 +59,11 @@ public sealed partial class CageView : Page
         _vm = e.Parameter as AppViewModel;
         if (_vm is not null)
         {
-            _pcHandler = (_, _) => Refresh();
+            _pcHandler = (_, e) =>
+            {
+                if (string.IsNullOrEmpty(e.PropertyName) || _cageProps.Contains(e.PropertyName))
+                    Refresh();
+            };
             _vm.PropertyChanged += _pcHandler;
         }
         Refresh();

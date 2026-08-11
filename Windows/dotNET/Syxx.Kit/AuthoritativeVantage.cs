@@ -1,11 +1,51 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Syxx.Kit;
 
-public enum AuthComparisonStatus { Diverges, Matches, Inconclusive, Untested }
+/// K-07: the member order previously placed `Diverges` before `Matches` — the reverse of the Swift
+/// twin (`AuthoritativeComparison.Status`: matches, diverges, inconclusive, untested). Nothing
+/// serialized this by ordinal yet, so the divergence was latent, but System.Text.Json emits a bare
+/// enum as its NUMERIC value by default: the first thing to serialize this type would have put `0`
+/// on the wire meaning `Diverges` here and `matches` on macOS — a silent inversion of the exact
+/// finding this type exists to carry. Fixed both ways deliberately: the member order now matches
+/// Swift, AND the wire form is pinned explicitly to Swift's lowercase raw values by the converter
+/// below, so ordinal drift can never reach the wire again. Explicit beats positional.
+[JsonConverter(typeof(AuthComparisonStatusJsonConverter))]
+public enum AuthComparisonStatus { Matches, Diverges, Inconclusive, Untested }
+
+public static class AuthComparisonStatusExtensions
+{
+    /// The wire form — identical to the Swift twin's `String` raw values.
+    public static string RawValue(this AuthComparisonStatus s) => s switch
+    {
+        AuthComparisonStatus.Matches => "matches",
+        AuthComparisonStatus.Diverges => "diverges",
+        AuthComparisonStatus.Inconclusive => "inconclusive",
+        AuthComparisonStatus.Untested => "untested",
+        _ => throw new ArgumentOutOfRangeException(nameof(s)),
+    };
+}
+
+public sealed class AuthComparisonStatusJsonConverter : JsonConverter<AuthComparisonStatus>
+{
+    public override AuthComparisonStatus Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => reader.GetString() switch
+        {
+            "matches" => AuthComparisonStatus.Matches,
+            "diverges" => AuthComparisonStatus.Diverges,
+            "inconclusive" => AuthComparisonStatus.Inconclusive,
+            "untested" => AuthComparisonStatus.Untested,
+            var s => throw new JsonException($"unknown AuthComparisonStatus '{s}'"),
+        };
+
+    public override void Write(Utf8JsonWriter writer, AuthComparisonStatus value, JsonSerializerOptions options)
+        => writer.WriteStringValue(value.RawValue());
+}
 
 public sealed record AuthoritativeComparison(
     AuthComparisonStatus Status,
@@ -22,26 +62,54 @@ public static class AuthoritativeVantage
     public const ushort TypeA = 1;
     public const ushort TypeAAAA = 28;
     public const ushort TypeNS = 2;
+    public const ushort TypeCNAME = 5;
 
     public static readonly IReadOnlyList<string> DefaultBootstrapResolvers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"];
 
     public static Func<DNSQuery, Task<DNSResponse>> DefaultQuery =>
         async q => await DNSResolver.QueryUDPDetailedAsync(q);
 
+    /// <summary>Configuration for <see cref="Compare(string, AuthoritativeVantageOptions)"/>.
+    /// Bundles the 8 optional parameters into a single struct.</summary>
+    public sealed record AuthoritativeVantageOptions
+    {
+        public ushort Qtype { get; init; } = TypeA;
+        public IReadOnlyList<string>? ResolverAnswers { get; init; }
+        public IReadOnlyList<string>? BootstrapResolvers { get; init; }
+        public int MaxNameservers { get; init; } = 6;
+        public int MaxServersProbed { get; init; } = 4;
+        public Func<DNSQuery, Task<DNSResponse>>? Query { get; init; }
+        public bool ResolverDidFail { get; init; }
+    }
+
     public static async Task<AuthoritativeComparison> Compare(string domain,
         ushort qtype = TypeA,
-        IReadOnlyList<string> resolverAnswers = null,
+        IReadOnlyList<string>? resolverAnswers = null,
         IReadOnlyList<string>? bootstrapResolvers = null,
         int maxNameservers = 6,
         int maxServersProbed = 4,
         Func<DNSQuery, Task<DNSResponse>>? query = null,
         bool resolverDidFail = false)
     {
-        query ??= DefaultQuery;
-        var bootstraps = bootstrapResolvers ?? DefaultBootstrapResolvers;
-        var resolverSet = new HashSet<string>((resolverAnswers ?? []).Select(NormalizeAddress));
+        return await Compare(domain, new AuthoritativeVantageOptions
+        {
+            Qtype = qtype,
+            ResolverAnswers = resolverAnswers,
+            BootstrapResolvers = bootstrapResolvers,
+            MaxNameservers = maxNameservers,
+            MaxServersProbed = maxServersProbed,
+            Query = query,
+            ResolverDidFail = resolverDidFail,
+        });
+    }
 
-        var nsHosts = await DiscoverNameservers(domain, bootstraps, maxNameservers, query);
+    public static async Task<AuthoritativeComparison> Compare(string domain, AuthoritativeVantageOptions options)
+    {
+        var query = options.Query ?? DefaultQuery;
+        var bootstraps = options.BootstrapResolvers ?? DefaultBootstrapResolvers;
+        var resolverSet = new HashSet<string>((options.ResolverAnswers ?? []).Select(NormalizeAddress));
+
+        var nsHosts = await DiscoverNameservers(domain, bootstraps, options.MaxNameservers, query);
         if (nsHosts.Count == 0)
         {
             return new AuthoritativeComparison(AuthComparisonStatus.Inconclusive,
@@ -57,13 +125,13 @@ public static class AuthoritativeVantage
                 var resp = await query(new DNSQuery(name: host, type: TypeA, server: bs, port: 53));
                 nsIPs.AddRange(resp.Records.Where(r => r.Type == TypeA).Select(r => r.Rdata));
             }
-            if (nsIPs.Count >= maxServersProbed) break;
+            if (nsIPs.Count >= options.MaxServersProbed) break;
         }
         // D018: reject NS IPs that are not public-routable to prevent SSRF to internal hosts
         // via hostile delegation glue (127.0.0.1, 10.x, 169.254.169.254, etc.).
         nsIPs = [.. new HashSet<string>(nsIPs)
             .Where(ip => IPClassifier.Classify(ip) == IPAddressClass.PublicRoutable)
-            .Take(maxServersProbed)];
+            .Take(options.MaxServersProbed)];
         if (nsIPs.Count == 0)
         {
             return new AuthoritativeComparison(AuthComparisonStatus.Inconclusive,
@@ -72,15 +140,23 @@ public static class AuthoritativeVantage
         }
 
         var authSets = new List<HashSet<string>>();
+        // B035 / C060: track whether any authoritative responder returned CNAME records without
+        // address records — this is a delegation, not a genuine NODATA. An empty auth set from a
+        // CNAME-only answer must not produce .diverges.
+        bool sawCNAMEOnly = false;
         foreach (var ip in nsIPs)
         {
-            var resp = await query(new DNSQuery(name: domain, type: qtype, server: ip, port: 53));
+            var resp = await query(new DNSQuery(name: domain, type: options.Qtype, server: ip, port: 53));
             if (!resp.IsAuthoritative) continue;
             if (resp.Status is not (DNSResponseStatus.Success or DNSResponseStatus.NoData or DNSResponseStatus.NXDomain))
                 continue;
             var addrs = new HashSet<string>(resp.Records
-                .Where(r => r.Type == qtype)
+                .Where(r => r.Type == options.Qtype)
                 .Select(r => NormalizeAddress(r.Rdata)));
+            // B035: if the response has CNAME records but no address records of the requested type,
+            // the zone delegates via CNAME and address ground truth is not obtainable here.
+            if (addrs.Count == 0 && resp.Records.Any(r => r.Type == TypeCNAME))
+                sawCNAMEOnly = true;
             authSets.Add(addrs);
         }
         if (authSets.Count < 2)
@@ -95,7 +171,17 @@ public static class AuthoritativeVantage
         var authSet = authSets.GroupBy(x => x, HashSet<string>.CreateSetComparer())
             .MaxBy(g => g.Count())?.Key ?? authSets[0];
 
-        return Classify(resolverSet, authSet, nsHosts, domain, resolverDidFail);
+        // B035: if the consensus auth set is empty but the authoritative answer was a CNAME
+        // delegation (not a genuine NODATA/NXDOMAIN), address ground truth is not obtainable from
+        // this zone. Return inconclusive instead of a fabricated .diverges.
+        if (authSet.Count == 0 && sawCNAMEOnly)
+        {
+            return new AuthoritativeComparison(AuthComparisonStatus.Inconclusive,
+                ResolverAnswers: [.. resolverSet], Nameservers: nsHosts,
+                Detail: "authoritative answer is a CNAME delegation — address ground truth not obtainable from this zone");
+        }
+
+        return Classify(resolverSet, authSet, nsHosts, domain, options.ResolverDidFail);
     }
 
     public static AuthoritativeComparison Classify(HashSet<string> resolverSet, HashSet<string> authSet,
@@ -127,9 +213,16 @@ public static class AuthoritativeVantage
 
         if (!resolverSet.Overlaps(authSet))
         {
+            // K-16 / C015 (macOS twin parity): a same-CDN-provider observation ANNOTATES the
+            // divergence but does NOT erase it. A /13 CDN block (Cloudflare, Akamai) spans millions
+            // of IPs — an attacker sitting in the same provider's address space is not evidence of
+            // benign geo-routing. This branch previously returned Inconclusive, which fell through
+            // `Synthesizer`'s `default:` and emitted NO evidence item at all: the finding did not
+            // merely soften, it disappeared. The `Diverges` result is retained; the provider is
+            // surfaced as a corroboration note for the synthesis layer to weigh.
             var provider = NetworkCohort.SharedProvider(resolverSet.ToList(), authSet.ToList());
             if (provider is not null)
-                return Make(AuthComparisonStatus.Inconclusive, $"recursive and authoritative addresses differ but are all in {provider} ranges — CDN/geo routing, not a rewrite");
+                return Make(AuthComparisonStatus.Diverges, $"recursive and authoritative addresses are disjoint but both lie in {provider} ranges — same-provider softening noted; divergence retained (CDN/geo routing possible but attacker may share the provider's ASN)");
             return Make(AuthComparisonStatus.Diverges, "recursive addresses share nothing with the authoritative set — possible upstream rewrite (corroborate: CDN/geo routing can also cause this)");
         }
 
@@ -140,7 +233,9 @@ public static class AuthoritativeVantage
         Func<DNSQuery, Task<DNSResponse>> query)
     {
         var candidate = domain.EndsWith(".", StringComparison.Ordinal) ? domain[..^1] : domain;
-        for (int i = 0; i < 8; i++)
+        // B314: increased from 8 to 16 label walks — deeply nested names (>8 labels) missed
+        // delegation at the old cap. The labels.Length < 2 guard already terminates early.
+        for (int i = 0; i < 16; i++)
         {
             var labels = candidate.Split('.');
             if (labels.Length < 2) break;

@@ -8,27 +8,8 @@ struct CageView: View {
         ZStack {
             PurpleScrollView(geometry: .fullPanel) {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Warden header: rune tile + eyebrow + name + lore
-                    HStack(alignment: .top, spacing: 15) {
-                        Text("\u{16BE}")
-                            .font(.custom("Cinzel-SemiBold", size: 28))
-                            .frame(width: 54, height: 54)
-                            .background(Color.ioElectric.opacity(0.10))
-                            .cornerRadius(14)
-                            .foregroundColor(Color.ioElectric)
-                            .shadow(color: Color.ioElectric.opacity(0.35), radius: 22)
-                            .accessibilityHidden(true)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("THE WARDEN \u{00B7} LIVE QUERY CAPTURE")
-                                .font(.ioCaption(.bold))
-                                .foregroundColor(Color.ioElectric)
-                                .tracking(0.26)
-
-                            Text("Cage")
-                                .font(.custom("Cinzel-SemiBold", size: 26))
-                                .foregroundColor(.ioText)
-
+                    HStack(alignment: .top) {
+                        ModuleHeader(rune: "\u{16BE}", eyebrow: "THE WARDEN \u{00B7} LIVE QUERY CAPTURE", name: "Cage", accent: .ioCageCyan) {
                             Text("The Cage trapped the DNS queries so they could be inspected without escape, their headers and answers laid bare for judgment.")
                                 .font(.ioLore(16))
                                 .foregroundColor(.ioTextMuted)
@@ -98,6 +79,7 @@ struct CageView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
+                            .background(Color.ioCageCyan.opacity(0.05))
                             .background(Color.ioSurfaceElevated)
                             .cornerRadius(999)
                         }
@@ -267,7 +249,7 @@ struct CageView: View {
                         
                         Text("\(model.cageRemain)s")
                             .font(.ioMonoBold(48))
-                            .foregroundColor(.ioElectric)
+                            .foregroundColor(.ioCageCyan)
                         
                         Button(action: {
                             model.cageHidden = false

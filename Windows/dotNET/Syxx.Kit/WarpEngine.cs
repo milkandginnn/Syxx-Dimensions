@@ -21,7 +21,7 @@ namespace Syxx.Kit
     // server is the only parser. This engine verifies the Ed25519 signature over the received bytes
     // BEFORE any JSON parse (§4), checks freshness/origin/nonce, fetches each DECLARED asset from the
     // client's own vantage under the declared redirect policy (§6), hashes raw bytes, compares to the
-    // manifest, and applies the fail-closed conclusion lattice (§5). "verdict" is banned — result/conclusion.
+    // manifest, and applies the fail-closed conclusion lattice (§5). The v-word is banned — use result/conclusion.
     // =================================================================================================
 
     /// <summary>§4 signature-stage outcome. <c>Malformed</c> is reserved for an unparseable TRANSPORT
@@ -112,6 +112,14 @@ namespace Syxx.Kit
         /// <summary>B085-style 300 000 ms clock-skew tolerance, matching WitnessSigner.</summary>
         internal const ulong SkewToleranceMillis = 300_000;
 
+        /// <summary>Verifier-side ceiling on the manifest-declared freshness window, in seconds
+        /// (spec Amendment A4): <c>effectiveFreshness = min(freshness_seconds, 600)</c>. A signed
+        /// manifest cannot extend its own replayable lifetime past this ceiling, and the clamp is
+        /// applied BEFORE the millisecond conversion so an absurd declared value can never overflow
+        /// the multiplication (an unclamped <c>ulong</c> silently wraps — corpus case 031). Twin
+        /// constant: WarpEngine.swift <c>maxFreshnessWindowSeconds</c>.</summary>
+        internal const ulong MaxFreshnessWindowSeconds = 600;
+
         // ---- §5 conclusion lattice (one pure function) ----
 
         /// <summary>Fail-closed conclusion lattice (§5). Confirmed tampering (invalid signature, or a
@@ -154,10 +162,17 @@ namespace Syxx.Kit
                 var conclusion = Conclude(sig, man, fresh, WarpContentState.NotEvaluated, Array.Empty<WarpContentState>());
                 return new WarpManifestResult
                 {
-                    OriginUrl = originUrl, FinalUrl = finalUrl, KeyId = keyId,
-                    SignatureState = sig, ManifestState = man, FreshnessState = fresh,
-                    HtmlState = WarpContentState.NotEvaluated, DeclaredHtmlSha256 = declaredHtmlSha,
-                    Conclusion = conclusion, InconclusiveReason = reason, RawManifestJson = rawJson
+                    OriginUrl = originUrl,
+                    FinalUrl = finalUrl,
+                    KeyId = keyId,
+                    SignatureState = sig,
+                    ManifestState = man,
+                    FreshnessState = fresh,
+                    HtmlState = WarpContentState.NotEvaluated,
+                    DeclaredHtmlSha256 = declaredHtmlSha,
+                    Conclusion = conclusion,
+                    InconclusiveReason = reason,
+                    RawManifestJson = rawJson
                 };
             }
 
@@ -216,7 +231,8 @@ namespace Syxx.Kit
             {
                 return new WarpManifestResult
                 {
-                    OriginUrl = originUrl, KeyId = keyId,
+                    OriginUrl = originUrl,
+                    KeyId = keyId,
                     SignatureState = WarpSignatureState.InvalidSignature,
                     ManifestState = WarpManifestState.NotEvaluated,
                     FreshnessState = WarpFreshnessState.NotEvaluated,
@@ -239,14 +255,75 @@ namespace Syxx.Kit
 
             using (manifestDoc)
             {
-                string manifestOrigin = GetString(manifest, "origin_url") ?? "";
-                string? finalUrl = GetString(manifest, "final_url");
-                string? declaredHtmlSha = GetString(manifest, "html_sha256")?.ToLowerInvariant();
-                ulong? timestamp = GetUInt(manifest, "timestamp");
-                ulong freshnessSeconds = GetUInt(manifest, "freshness_seconds") ?? 0;
-                var policy = ParsePolicy(GetString(manifest, "redirect_policy"));
-                var allowedRedirects = GetStringArray(manifest, "allowed_redirects");
-                string? manifestNonce = GetString(manifest, "nonce");
+                // §4.4 structural gate on the AUTHENTICATED manifest (spec Amendment A4). Wrapped so
+                // no structural surprise can escape VerifyAsync as an exception: any failure here is
+                // WarpManifestState.Malformed → INCONCLUSIVE. (Property access on a non-object
+                // JsonElement throws InvalidOperationException — previously an unhandled throw.)
+                string manifestOrigin;
+                string? finalUrl, declaredHtmlSha, manifestNonce;
+                ulong? timestamp;
+                ulong freshnessSeconds;
+                WarpRedirectPolicy policy;
+                List<string> allowedRedirects;
+                JsonElement assetsEl;
+                try
+                {
+                    if (manifest.ValueKind != JsonValueKind.Object)
+                    {
+                        return Stopped(WarpSignatureState.Verified, WarpManifestState.Malformed,
+                            WarpFreshnessState.NotEvaluated,
+                            "Signature verified but the manifest root is not a JSON object.",
+                            keyId, rawManifestJson);
+                    }
+                    // Amendment A4 version gate: this client speaks exactly one dialect. Any other
+                    // version — including a well-formed future one — is unverifiable content, never
+                    // a guess at forward-compatible semantics.
+                    if (!string.Equals(GetString(manifest, "warp_manifest_version"), "WARP_MANIFEST_V1",
+                            StringComparison.Ordinal))
+                    {
+                        return Stopped(WarpSignatureState.Verified, WarpManifestState.Malformed,
+                            WarpFreshnessState.NotEvaluated,
+                            "Signature verified but warp_manifest_version is not WARP_MANIFEST_V1 (unsupported dialect).",
+                            keyId, rawManifestJson);
+                    }
+                    // Amendment A4 assets gate: `assets` is REQUIRED, must be an array, and every
+                    // element must be a JSON object. A corrupt asset list must not degrade to
+                    // "nothing declared" (which, with a matching page hash, would be a false
+                    // VERIFIED_MATCH on the Swift twin's old path).
+                    if (!manifest.TryGetProperty("assets", out assetsEl) || assetsEl.ValueKind != JsonValueKind.Array)
+                    {
+                        return Stopped(WarpSignatureState.Verified, WarpManifestState.Malformed,
+                            WarpFreshnessState.NotEvaluated,
+                            "Signature verified but the manifest has no assets array.",
+                            keyId, rawManifestJson);
+                    }
+                    foreach (var element in assetsEl.EnumerateArray())
+                    {
+                        if (element.ValueKind != JsonValueKind.Object)
+                        {
+                            return Stopped(WarpSignatureState.Verified, WarpManifestState.Malformed,
+                                WarpFreshnessState.NotEvaluated,
+                                "Signature verified but a declared asset entry is not a JSON object.",
+                                keyId, rawManifestJson);
+                        }
+                    }
+
+                    manifestOrigin = GetString(manifest, "origin_url") ?? "";
+                    finalUrl = GetString(manifest, "final_url");
+                    declaredHtmlSha = GetString(manifest, "html_sha256")?.ToLowerInvariant();
+                    timestamp = GetUInt(manifest, "timestamp");
+                    freshnessSeconds = GetUInt(manifest, "freshness_seconds") ?? 0;
+                    policy = ParsePolicy(GetString(manifest, "redirect_policy"));
+                    allowedRedirects = GetStringArray(manifest, "allowed_redirects");
+                    manifestNonce = GetString(manifest, "nonce");
+                }
+                catch
+                {
+                    return Stopped(WarpSignatureState.Verified, WarpManifestState.Malformed,
+                        WarpFreshnessState.NotEvaluated,
+                        "Signature verified but the manifest structure is invalid.",
+                        keyId, rawManifestJson);
+                }
 
                 // §4.5 — freshness / origin / nonce (only meaningful on a verified, parsed manifest).
                 var freshness = EvaluateFreshness(nowMs, timestamp, freshnessSeconds, manifestOrigin, originUrl,
@@ -266,8 +343,11 @@ namespace Syxx.Kit
                     var req = new WarpAssetRequest
                     {
                         Url = string.IsNullOrEmpty(manifestOrigin) ? originUrl : manifestOrigin,
-                        FinalUrl = finalUrl, RedirectPolicy = policy,
-                        AllowedRedirects = allowedRedirects, AssetClass = "HTML", IsHtml = true
+                        FinalUrl = finalUrl,
+                        RedirectPolicy = policy,
+                        AllowedRedirects = allowedRedirects,
+                        AssetClass = "HTML",
+                        IsHtml = true
                     };
                     var outcome = await fetch(req).ConfigureAwait(false);
                     if (outcome.Failed) htmlState = WarpContentState.FetchError;
@@ -282,9 +362,9 @@ namespace Syxx.Kit
                 }
                 else htmlState = WarpContentState.FetchError;
 
-                // §4.6 — fetch every DECLARED asset, hash raw bytes, compare.
+                // §4.6 — fetch every DECLARED asset, hash raw bytes, compare. (`assetsEl` is the
+                // A4-gated array: guaranteed an array of JSON objects.)
                 var assetResults = new List<WarpAssetResult>();
-                if (manifest.TryGetProperty("assets", out var assetsEl) && assetsEl.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var a in assetsEl.EnumerateArray())
                     {
@@ -299,7 +379,9 @@ namespace Syxx.Kit
                         {
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, AssetClass = cls,
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                AssetClass = cls,
                                 State = WarpContentState.FetchFailedDeclared
                             });
                             continue;
@@ -307,15 +389,21 @@ namespace Syxx.Kit
 
                         var req = new WarpAssetRequest
                         {
-                            Url = url, FinalUrl = assetFinal, RedirectPolicy = policy,
-                            AllowedRedirects = allowedRedirects, AssetClass = cls, IsHtml = false
+                            Url = url,
+                            FinalUrl = assetFinal,
+                            RedirectPolicy = policy,
+                            AllowedRedirects = allowedRedirects,
+                            AssetClass = cls,
+                            IsHtml = false
                         };
                         var outcome = await fetch(req).ConfigureAwait(false);
                         if (outcome.Failed)
                         {
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, AssetClass = cls,
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                AssetClass = cls,
                                 State = WarpContentState.FetchError
                             });
                         }
@@ -323,8 +411,11 @@ namespace Syxx.Kit
                         {
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, AssetClass = cls,
-                                ByteLen = outcome.Bytes.Length, State = WarpContentState.FetchError
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                AssetClass = cls,
+                                ByteLen = outcome.Bytes.Length,
+                                State = WarpContentState.FetchError
                             });
                         }
                         else
@@ -333,8 +424,11 @@ namespace Syxx.Kit
                             bool matches = sha == declaredSha;
                             assetResults.Add(new WarpAssetResult
                             {
-                                Url = url, DeclaredSha256 = declaredSha, FetchedSha256 = sha,
-                                ByteLen = outcome.Bytes.Length, AssetClass = cls,
+                                Url = url,
+                                DeclaredSha256 = declaredSha,
+                                FetchedSha256 = sha,
+                                ByteLen = outcome.Bytes.Length,
+                                AssetClass = cls,
                                 State = matches ? WarpContentState.Match : WarpContentState.Mismatch,
                                 FetchedBytes = matches ? null : outcome.Bytes
                             });
@@ -359,12 +453,20 @@ namespace Syxx.Kit
 
                 return new WarpManifestResult
                 {
-                    OriginUrl = originUrl, FinalUrl = finalUrl, KeyId = keyId,
-                    SignatureState = WarpSignatureState.Verified, ManifestState = WarpManifestState.Parsed,
-                    FreshnessState = WarpFreshnessState.Fresh, HtmlState = htmlState,
-                    DeclaredHtmlSha256 = declaredHtmlSha, FetchedHtmlSha256 = fetchedHtmlSha,
-                    Assets = assetResults, Conclusion = conclusion, InconclusiveReason = reason,
-                    RawManifestJson = rawManifestJson, LocalHtmlBytes = localHtmlBytes
+                    OriginUrl = originUrl,
+                    FinalUrl = finalUrl,
+                    KeyId = keyId,
+                    SignatureState = WarpSignatureState.Verified,
+                    ManifestState = WarpManifestState.Parsed,
+                    FreshnessState = WarpFreshnessState.Fresh,
+                    HtmlState = htmlState,
+                    DeclaredHtmlSha256 = declaredHtmlSha,
+                    FetchedHtmlSha256 = fetchedHtmlSha,
+                    Assets = assetResults,
+                    Conclusion = conclusion,
+                    InconclusiveReason = reason,
+                    RawManifestJson = rawManifestJson,
+                    LocalHtmlBytes = localHtmlBytes
                 };
             }
         }
@@ -376,7 +478,12 @@ namespace Syxx.Kit
         {
             if (timestamp == null) return WarpFreshnessState.Expired;
             ulong ts = timestamp.Value;
-            if (nowMs > ts && (nowMs - ts) > freshnessSeconds * 1000) return WarpFreshnessState.Expired;
+            // Amendment A4 freshness ceiling: clamp BEFORE the ms conversion. Unclamped, a declared
+            // freshness_seconds near UInt64.max/1000 silently wraps the multiplication (corpus 031
+            // would land on an arbitrary ~384 ms window); after the clamp the product is at most
+            // 600 000 and can never overflow.
+            ulong effectiveFreshnessSeconds = Math.Min(freshnessSeconds, MaxFreshnessWindowSeconds);
+            if (nowMs > ts && (nowMs - ts) > effectiveFreshnessSeconds * 1000) return WarpFreshnessState.Expired;
             if (ts > nowMs && (ts - nowMs) > SkewToleranceMillis) return WarpFreshnessState.FutureDated;
             if (!string.Equals(manifestOrigin, requestedOrigin, StringComparison.Ordinal))
                 return WarpFreshnessState.OriginMismatch;
@@ -416,6 +523,17 @@ namespace Syxx.Kit
         };
 
         // ---- Small helpers ----
+
+        /// <summary>Fresh per-run replay nonce: 16 random bytes, base64url without padding
+        /// (22 chars — fits the server's <c>[A-Za-z0-9_-]{1,64}</c> nonce gate). Generated
+        /// client-side per verification run so the signed manifest must echo it (§4.5) — replay
+        /// resistance no longer rests on the freshness window alone. Twin:
+        /// WarpEngine.swift <c>makeNonce()</c>.</summary>
+        public static string MakeNonce()
+        {
+            var bytes = RandomNumberGenerator.GetBytes(16);
+            return Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+        }
 
         internal static string Sha256Hex(byte[] bytes)
             => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
@@ -486,16 +604,33 @@ namespace Syxx.Kit
         /// </summary>
         private static readonly HttpClient _vantageHttp = CreateVantageClient();
 
+        /// <summary>TEST-ONLY escape hatch for the loopback transport-decode test (which must reach a
+        /// 127.0.0.1 listener the SSRF gate would otherwise refuse): when non-null, replaces
+        /// <see cref="DimensionClient.ResolveValidatedPublicIpAsync"/> inside the vantage
+        /// ConnectCallback. Production never sets this; the SSRF gate stays authoritative.</summary>
+        internal static Func<string, Task<string?>>? ResolveOverrideForTests;
+
         private static HttpClient CreateVantageClient()
         {
             var handler = new SocketsHttpHandler
             {
                 AllowAutoRedirect = false,
+                // §8 transfer-encoding decode: hashing is over envelope-DECODED raw bytes, so the
+                // transport must transparently un-gzip/deflate/brotli. Setting AutomaticDecompression
+                // makes SocketsHttpHandler send the Accept-Encoding header itself and decode the
+                // response; do NOT also add a manual Accept-Encoding header — in .NET that suppresses
+                // the automatic decompression and the engine would hash compressed bytes (a
+                // false MISMATCH on every gzip/br origin).
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                                       | DecompressionMethods.Brotli,
                 ConnectCallback = async (ctx, ct) =>
                 {
                     string host = ctx.DnsEndPoint.Host;
                     int port = ctx.DnsEndPoint.Port;
-                    string? ip = await DimensionClient.ResolveValidatedPublicIpAsync(host).ConfigureAwait(false);
+                    var resolve = ResolveOverrideForTests;
+                    string? ip = resolve != null
+                        ? await resolve(host).ConfigureAwait(false)
+                        : await DimensionClient.ResolveValidatedPublicIpAsync(host).ConfigureAwait(false);
                     if (ip == null)
                         throw new IOException("SSRF protection: host does not resolve to a public IP address.");
                     var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
@@ -515,6 +650,12 @@ namespace Syxx.Kit
             try
             {
                 string current = req.Url;
+                // E006: warn on mixed-script homograph domains (informational, never blocks)
+                if (Uri.TryCreate(current, UriKind.Absolute, out var homographUri)
+                    && homographUri.Host != null)
+                {
+                    WarnHomograph(homographUri.Host);
+                }
                 for (int hop = 0; hop < 6; hop++)
                 {
                     if (!Uri.TryCreate(current, UriKind.Absolute, out var u)
@@ -550,6 +691,32 @@ namespace Syxx.Kit
             catch
             {
                 return WarpFetchOutcome.FailedOutcome;
+            }
+        }
+
+        // ---- E006: Homograph detection ----
+
+        /// <summary>Cyrillic characters that visually resemble ASCII letters (U+0430–U+0445 range).</summary>
+        private static readonly HashSet<char> ConfusableCyrillic = new("асеорхуАСЕОРХУ");
+
+        /// <summary>Log a warning if <paramref name="domain"/> mixes ASCII and confusable Cyrillic
+        /// characters. E006: informational only — never rejects or blocks the fetch.</summary>
+        internal static void WarnHomograph(string domain)
+        {
+            bool hasAscii = false, hasNonAscii = false, hasCyrillicConfusable = false;
+            foreach (char ch in domain)
+            {
+                if (ch < 128) hasAscii = true;
+                else
+                {
+                    hasNonAscii = true;
+                    if (ConfusableCyrillic.Contains(ch)) hasCyrillicConfusable = true;
+                }
+            }
+            if (hasAscii && hasNonAscii && hasCyrillicConfusable)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[WarpEngine] E006: possible Unicode homograph domain: {domain} — mixed ASCII and confusable Cyrillic characters");
             }
         }
     }

@@ -4,6 +4,7 @@ Every resolution the server observes (investigation queries and leak-collector
 lookups) is recorded here, giving a real, queryable history behind the landing
 page's record counter and the paid /api/passive-dns endpoint.
 """
+
 import os
 import time
 
@@ -26,20 +27,29 @@ _PASSIVE_PER_DOMAIN_MAX = _i("SYXX_PASSIVE_PER_DOMAIN_MAX", 100)
 
 
 def ingest(domain, rtype, value, source, resolver=None):
+    """Record a DNS observation into the passive-DNS index.
+
+    Enforces the per-domain cardinality cap (A095/A079) — new distinct values
+    beyond the cap are silently dropped while existing rows still get their
+    hit counter bumped.
+    """
     if not domain or not value:
         return
     # A095/A079: refuse to ingest if this domain already has too many distinct records.
     # Upsert (ON CONFLICT UPDATE) still bumps hits/last_seen for existing records,
     # but new distinct values past the cap are silently dropped.
+    # A081: replaced N+1 SELECT-all-rows with two lightweight queries —
+    # a LIMIT-1 existence check and a capped COUNT subquery.
     if _PASSIVE_PER_DOMAIN_MAX > 0:
-        existing = db.passive_query(domain, _PASSIVE_PER_DOMAIN_MAX + 1)
-        known_values = {(r["rtype"], r["value"]) for r in existing}
-        if (rtype, value) not in known_values and len(existing) >= _PASSIVE_PER_DOMAIN_MAX:
-            return
+        if not db.passive_domain_exists(domain, rtype, value):
+            count = db.passive_domain_count_capped(domain, _PASSIVE_PER_DOMAIN_MAX)
+            if count >= _PASSIVE_PER_DOMAIN_MAX:
+                return
     db.passive_record(domain, rtype, value, source, resolver)
 
 
 def query(domain, limit=200):
+    """Return passive-DNS records for *domain*, stripping resolver PII (A023)."""
     records = db.passive_query(domain, limit)
     # A023: the /api/passive-dns endpoint is cross-readable (no per-record ownership
     # check), so never return the observing resolver IP. For a leak observation it is
@@ -53,6 +63,7 @@ def query(domain, limit=200):
 
 
 def total_records():
+    """Return the total number of passive-DNS records across all domains."""
     return db.passive_count()
 
 
@@ -80,12 +91,17 @@ def baseline(domain, rtype=None, now=None):
         rtype = rtype.upper()
     values = []
     for r in records:
-        values.append({
-            "value": r["value"], "rtype": r["rtype"],
-            "firstSeen": r["first_seen"], "lastSeen": r["last_seen"], "hits": r["hits"],
-            "ageDays": round((r["last_seen"] - r["first_seen"]) / 86400.0, 2),
-            "staleDays": round((now - r["last_seen"]) / 86400.0, 2),
-        })
+        values.append(
+            {
+                "value": r["value"],
+                "rtype": r["rtype"],
+                "firstSeen": r["first_seen"],
+                "lastSeen": r["last_seen"],
+                "hits": r["hits"],
+                "ageDays": round((r["last_seen"] - r["first_seen"]) / 86400.0, 2),
+                "staleDays": round((now - r["last_seen"]) / 86400.0, 2),
+            }
+        )
     # A127: thresholds are configurable via environment variables so operators can
     # tune for fast-rotating CDNs (sub-7-day) without editing source. Defaults match
     # the original hardcoded values for backward compatibility.
@@ -96,8 +112,14 @@ def baseline(domain, rtype=None, now=None):
     # A040: key by (rtype, value) so A and AAAA populations are compared independently.
     # Previously keyed by value alone, so a normal dual-stack evolution (new AAAA
     # alongside established A) was reported as cross-generation drift.
-    established = {(v["rtype"], v["value"]) for v in values if v["ageDays"] >= _ESTABLISHED_AGE_DAYS and v["staleDays"] <= _ESTABLISHED_STALE_DAYS}
-    recently_new = {(v["rtype"], v["value"]) for v in values if v["ageDays"] < _NEW_AGE_DAYS and v["staleDays"] < _NEW_STALE_DAYS}
+    established = {
+        (v["rtype"], v["value"])
+        for v in values
+        if v["ageDays"] >= _ESTABLISHED_AGE_DAYS and v["staleDays"] <= _ESTABLISHED_STALE_DAYS
+    }
+    recently_new = {
+        (v["rtype"], v["value"]) for v in values if v["ageDays"] < _NEW_AGE_DAYS and v["staleDays"] < _NEW_STALE_DAYS
+    }
 
     # A117: tri-state drift. "insufficient-data" when no observation spans >= 7 days;
     # "suspected" when an established value coexists with a brand-new different value;
@@ -114,11 +136,13 @@ def baseline(domain, rtype=None, now=None):
         drift = "none"
 
     return {
-        "domain": domain.lower().rstrip("."), "type": rtype, "recordCount": len(values), "values": values,  # A080
+        "domain": domain.lower().rstrip("."),
+        "type": rtype,
+        "recordCount": len(values),
+        "values": values,  # A080
         "established": sorted(v for _, v in established),
         "recentlyNew": sorted(v for _, v in (recently_new - established)),
         "drift": drift,
-        "driftSuspected": drift == "suspected",  # A117: backward-compat bool alongside tri-state
         "observationDays": round(max(v["ageDays"] for v in values) if values else 0, 1),
         # A187 Fix 2: surface truncation so the caller can distinguish "thin
         # observation" from "server-side LIMIT truncated the evidence set".

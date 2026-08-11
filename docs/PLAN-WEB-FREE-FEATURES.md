@@ -48,7 +48,9 @@ Feature 2 (DNS Leak Test): ALREADY DONE. No work required.
 ## Phase 1: Shared Foundation -- _format_rdata Extension
 
 ### Problem
+
 `resolver.py:161-175` -- `_format_rdata()` only handles 4 record types:
+
 - A (type 1): `socket.inet_ntop(AF_INET, rdata)`
 - AAAA (type 28): `socket.inet_ntop(AF_INET6, rdata)`
 - NS (type 2) / CNAME (type 5): `_read_name(full, rdata_offset)`
@@ -171,6 +173,7 @@ _TYPE_NAMES = {1: "A", 2: "NS", 5: "CNAME", 6: "SOA", 12: "PTR", 15: "MX",
 3. Failure case: truncated rdata for each type should fall back to hex, not crash
 
 ### Dependencies
+
 None. This is the foundation.
 
 ---
@@ -204,6 +207,7 @@ if path == "/api/lookup":
 ```
 
 **Request Parameters:**
+
 | Param | Required | Type | Description |
 |-------|----------|------|-------------|
 | `domain` | Yes | string | Domain name to look up |
@@ -211,6 +215,7 @@ if path == "/api/lookup":
 | `server` | No | string | Resolver IP to query. Default: first PUBLIC_RESOLVER |
 
 **Response Schema:**
+
 ```json
 {
   "domain": "example.com",
@@ -281,6 +286,7 @@ def _route_lookup(self, query):
 ```
 
 #### Testing
+
 - Happy path: `GET /api/lookup?domain=google.com&type=A` returns real A records
 - Failure: `GET /api/lookup?domain=nonexistent-xyz123.test&type=A` returns NXDOMAIN (rcode 3)
 - Failure: `GET /api/lookup?domain=google.com&server=127.0.0.1` returns 400 (private IP)
@@ -298,11 +304,13 @@ This feature is **already fully implemented by Phase 1 + Feature 1**. Once
 `type=CAA`, the CAA inspector works automatically.
 
 **No new code required.** The frontend just needs a button that calls:
+
 ```
 GET /api/lookup?domain=example.com&type=CAA
 ```
 
-#### Response example:
+#### Response example
+
 ```json
 {
   "domain": "example.com",
@@ -315,6 +323,7 @@ GET /api/lookup?domain=example.com&type=CAA
 ```
 
 #### Testing
+
 - `GET /api/lookup?domain=letsencrypt.org&type=CAA` should return CAA records with
   human-readable flags/tag/value, not hex
 - Domain with no CAA records should return empty records array with rcode 0
@@ -364,11 +373,13 @@ if path == "/api/reverse-dns":
 ```
 
 **Request Parameters:**
+
 | Param | Required | Type | Description |
 |-------|----------|------|-------------|
 | `ip` | Yes | string | IPv4 or IPv6 address to reverse-resolve |
 
 **Response Schema:**
+
 ```json
 {
   "ip": "8.8.8.8",
@@ -411,6 +422,7 @@ def _route_reverse_dns(self, query):
 ```
 
 #### Testing
+
 - `GET /api/reverse-dns?ip=8.8.8.8` should return `dns.google`
 - `GET /api/reverse-dns?ip=127.0.0.1` should work (loopback PTR) or return NXDOMAIN
 - Failure: `GET /api/reverse-dns?ip=not-an-ip` returns 400
@@ -434,6 +446,7 @@ if path == "/api/benchmark":
 ```
 
 **Request Parameters:**
+
 | Param | Required | Type | Description |
 |-------|----------|------|-------------|
 | `domain` | Yes | string | Domain to resolve for benchmarking |
@@ -441,6 +454,7 @@ if path == "/api/benchmark":
 | `rounds` | No | int | Number of rounds per resolver. Default: 3, max: 10 |
 
 **Response Schema:**
+
 ```json
 {
   "domain": "example.com",
@@ -540,6 +554,7 @@ def _route_benchmark(self, query):
 ```
 
 #### Testing
+
 - `GET /api/benchmark?domain=google.com` should return timing data for all PUBLIC_RESOLVERS
 - Verify `avg_ms` is mathematically correct from the individual round results
 - Failure: domain that times out should show failures count > 0, avg_ms null
@@ -602,6 +617,7 @@ def _parse_rdap(data):
 ```
 
 **Response Schema (from route):**
+
 ```json
 {
   "domain": "example.com",
@@ -617,6 +633,7 @@ def _parse_rdap(data):
 ```
 
 **SSRF guards:**
+
 - RDAP bootstrap URL is hardcoded to `data.iana.org` (public, well-known)
 - RDAP server URLs come from the IANA bootstrap (trusted source)
 - WHOIS fallback connects only to well-known WHOIS servers (IANA-registered)
@@ -628,6 +645,7 @@ def _parse_rdap(data):
 
 **File:** `Server/syxx_server/app.py`
 **Add import at line 37** (alongside other module imports):
+
 ```python
 from . import (broadcast, config, db, fetcher, fulfillment, investigate, leak, licensing,
                listeners, logging_util, mailer, passivedns, ratelimit, resolver,
@@ -635,12 +653,14 @@ from . import (broadcast, config, db, fetcher, fulfillment, investigate, leak, l
 ```
 
 **Add route in `_dispatch_get()`:**
+
 ```python
 if path == "/api/whois":
     return self._route_whois(query)
 ```
 
 **Route Handler:**
+
 ```python
 def _route_whois(self, query):
     """Free-tier WHOIS/RDAP lookup."""
@@ -659,6 +679,7 @@ def _route_whois(self, query):
 ```
 
 #### Testing
+
 - `GET /api/whois?domain=google.com` should return registrar, dates, nameservers
 - Failure: `.test` TLD should return a clear error (no RDAP/WHOIS for test TLDs)
 - Failure: network timeout should return 502, not hang
@@ -719,12 +740,14 @@ def _spf_verdict(mechanisms):
 ```
 
 **SPF verdict logic:**
+
 - `pass`: SPF record present, ends with `-all` or `~all`
 - `neutral`: SPF record present but ends with `?all` or has no `all` mechanism
 - `fail`: SPF record has `+all` (permits any sender)
 - `none`: No SPF record found
 
 **DMARC verdict logic:**
+
 - `pass`: DMARC record present with `p=reject` or `p=quarantine`
 - `neutral`: DMARC record present with `p=none`
 - `fail`: DMARC record with `p=none` and no `rua` reporting address
@@ -735,18 +758,21 @@ def _spf_verdict(mechanisms):
 **File:** `Server/syxx_server/app.py`
 **Add import:** `from . import email_auth`
 **Add route in `_dispatch_get()`:**
+
 ```python
 if path == "/api/email-auth":
     return self._route_email_auth(query)
 ```
 
 **Request Parameters:**
+
 | Param | Required | Type | Description |
 |-------|----------|------|-------------|
 | `domain` | Yes | string | Domain to check |
 | `dkim_selector` | No | string | DKIM selector (e.g., "google", "default"). If omitted, DKIM is skipped |
 
 **Response Schema:**
+
 ```json
 {
   "domain": "example.com",
@@ -772,6 +798,7 @@ if path == "/api/email-auth":
 ```
 
 #### Testing
+
 - `GET /api/email-auth?domain=google.com` should find SPF, DMARC, and DKIM records
 - `GET /api/email-auth?domain=google.com&dkim_selector=google` should return DKIM data
 - Failure: domain with no email records should return `present: false` for each, not crash
@@ -829,6 +856,7 @@ def _resolve_subdomains(subdomains, server, timeout):
 ```
 
 **SSRF guards:**
+
 - crt.sh API is the only external endpoint queried
 - No user-supplied URLs are fetched
 - Resolution uses only PUBLIC_RESOLVERS
@@ -839,12 +867,14 @@ def _resolve_subdomains(subdomains, server, timeout):
 **File:** `Server/syxx_server/app.py`
 **Add import:** `from . import subdomain_enum`
 **Add route in `_dispatch_get()`:**
+
 ```python
 if path == "/api/subdomains":
     return self._route_subdomains(query)
 ```
 
 **Request Parameters:**
+
 | Param | Required | Type | Description |
 |-------|----------|------|-------------|
 | `domain` | Yes | string | Root domain to enumerate subdomains for |
@@ -852,6 +882,7 @@ if path == "/api/subdomains":
 | `max` | No | int | Maximum results. Default: 100, max: 500 |
 
 **Response Schema:**
+
 ```json
 {
   "domain": "example.com",
@@ -868,6 +899,7 @@ if path == "/api/subdomains":
 ```
 
 #### Testing
+
 - `GET /api/subdomains?domain=google.com` should return real subdomains from CT logs
 - Failure: crt.sh timeout should return partial results with `truncated: true`
 - Failure: domain with no certificates should return empty subdomains, not error
@@ -947,18 +979,21 @@ def _json_list(name, default):
 
 **File:** `Server/syxx_server/app.py`
 **Add route in `_dispatch_get()`:**
+
 ```python
 if path == "/api/propagation":
     return self._route_propagation(query)
 ```
 
 **Request Parameters:**
+
 | Param | Required | Type | Description |
 |-------|----------|------|-------------|
 | `domain` | Yes | string | Domain to check propagation for |
 | `type` | No | string | Record type. Default: A |
 
 **Response Schema:**
+
 ```json
 {
   "domain": "example.com",
@@ -990,6 +1025,7 @@ if path == "/api/propagation":
 ```
 
 **Route Handler:**
+
 ```python
 def _route_propagation(self, query):
     """Free-tier DNS propagation checker: query many global resolvers concurrently."""
@@ -1068,6 +1104,7 @@ def _route_propagation(self, query):
 ```
 
 #### Testing
+
 - `GET /api/propagation?domain=google.com` should return results from 15+ resolvers
 - Verify `propagationPct` is computed correctly from success count
 - Failure: domain that doesn't exist should show `consensus: consistent` (all get NXDOMAIN)
@@ -1086,6 +1123,7 @@ def _route_propagation(self, query):
 
 Full DNSSEC chain validation walks the delegation chain from root to the target
 zone, validating at each step:
+
 1. DS record in parent zone references a DNSKEY in the child zone
 2. DNSKEY in child zone is covered by a valid RRSIG signed by the parent's DS-referenced key
 3. The answer RRSIGs are signed by a DNSKEY in the same zone
@@ -1096,11 +1134,13 @@ Python library (ECDSA with P-256/SHA-256 and RSA/SHA-256 are the dominant algori
 #### Dependency Check
 
 The `cryptography` library must be installed:
+
 ```bash
 pip install cryptography
 ```
 
 Add to `Server/requirements.txt` (or equivalent):
+
 ```
 cryptography>=41.0
 ```
@@ -1219,17 +1259,20 @@ def _verify_rsa_sha256(public_key_bytes, signature_bytes, data_bytes):
 **File:** `Server/syxx_server/app.py`
 **Add import:** `from . import dnssec_validator`
 **Add route in `_dispatch_get()`:**
+
 ```python
 if path == "/api/dnssec":
     return self._route_dnssec(query)
 ```
 
 **Request Parameters:**
+
 | Param | Required | Type | Description |
 |-------|----------|------|-------------|
 | `domain` | Yes | string | Domain to validate DNSSEC chain for |
 
 **Response Schema:**
+
 ```json
 {
   "domain": "example.com",
@@ -1264,6 +1307,7 @@ if path == "/api/dnssec":
 ```
 
 **Route Handler:**
+
 ```python
 def _route_dnssec(self, query):
     """Free-tier DNSSEC chain validator."""
@@ -1282,6 +1326,7 @@ def _route_dnssec(self, query):
 ```
 
 #### Testing
+
 - `GET /api/dnssec?domain=cloudflare.com` should return `verdict: valid` (known DNSSEC-signed domain)
 - `GET /api/dnssec?domain=example.com` should return `verdict: unsigned` or `valid` depending on current state
 - Failure: unsigned domain should return `verdict: unsigned`, not `valid`
@@ -1292,6 +1337,7 @@ def _route_dnssec(self, query):
 #### Risk Assessment
 
 This is the highest-risk feature:
+
 - Cryptographic code must be correct; a bug that returns `valid` on an invalid chain
   is a false-secure verdict (AGENTS.md 1, 5)
 - The `cryptography` library is an additional dependency
@@ -1306,6 +1352,7 @@ This is the highest-risk feature:
 ### Problem Statement
 
 ALL frontend "free" command outputs in index.html are currently FAKE:
+
 - `rr()` at line 591: generates deterministic fake DNS records
 - `fakeIP()` at line 590: generates deterministic fake IPs
 - `nslookup` at line 648: hardcoded `"Server: 1.1.1.1"` + fake records
@@ -1324,6 +1371,7 @@ CODE PATH ARE A LIE."
 #### Step 1: Remove fake helpers
 
 **Delete or replace:**
+
 - `fakeIP()` function (line 590)
 - `rr()` function (line 591)
 
@@ -1353,6 +1401,7 @@ async function freeAPI(path, params) {
 **Replace the switch block at lines 643-657 with real API calls:**
 
 ##### nslookup (replaces line 648)
+
 ```javascript
 case 'nslookup': {
     try {
@@ -1370,6 +1419,7 @@ case 'nslookup': {
 ```
 
 ##### dig (replaces line 649)
+
 ```javascript
 case 'dig': {
     try {
@@ -1390,6 +1440,7 @@ case 'dig': {
 ```
 
 ##### whois (replaces line 651)
+
 ```javascript
 case 'whois': {
     try {
@@ -1409,6 +1460,7 @@ case 'whois': {
 ```
 
 ##### dnssec (replaces line 652)
+
 ```javascript
 case 'dnssec': {
     try {
@@ -1434,6 +1486,7 @@ case 'dnssec': {
 ```
 
 ##### conclude (replaces line 647)
+
 Remove the hardcoded verdict. Replace with an aggregation of the actual results
 from the session's prior commands, or mark as "not yet computed":
 
@@ -1467,6 +1520,7 @@ Add buttons for: `spf`, `subdomains`, `propagation`, `reverse-dns`, `benchmark`
 Add cases for new commands in the switch block:
 
 ##### spf
+
 ```javascript
 case 'spf': {
     try {
@@ -1488,6 +1542,7 @@ case 'spf': {
 ```
 
 ##### subdomains
+
 ```javascript
 case 'subdomains': {
     try {
@@ -1509,6 +1564,7 @@ case 'subdomains': {
 ```
 
 ##### propagation
+
 ```javascript
 case 'propagation': {
     try {
@@ -1528,6 +1584,7 @@ case 'propagation': {
 ```
 
 ##### reverse-dns
+
 ```javascript
 case 'reverse-dns': {
     const ip = d;  // user enters IP in the domain field for this command
@@ -1547,6 +1604,7 @@ case 'reverse-dns': {
 ```
 
 ##### benchmark
+
 ```javascript
 case 'benchmark': {
     try {

@@ -44,13 +44,13 @@ public enum ResolverAttribution {
                                 systemResolvers: Set<String>) -> Report {
         let baselineUnknown = systemResolvers.isEmpty
         var attributions: [Attribution] = []
-        for process in usage.keys.sorted() {
+        for process in usage.keys.ordinalSorted() {
             let resolvers = usage[process] ?? []
             // With no baseline, off-system is unknowable → empty, never a guessed flag.
-            let offSystem = baselineUnknown ? [] : resolvers.subtracting(systemResolvers).sorted()
+            let offSystem = baselineUnknown ? [] : resolvers.subtracting(systemResolvers).ordinalSorted()
             attributions.append(Attribution(
                 process: process,
-                resolvers: resolvers.sorted(),
+                resolvers: resolvers.ordinalSorted(),
                 offSystemResolvers: offSystem,
                 usesHardcodedResolver: !offSystem.isEmpty))
         }
@@ -69,5 +69,14 @@ public enum ResolverAttribution {
             usage[process, default: []].insert(resolver)
         }
         return usage
+    }
+}
+
+extension Sequence where Element == String {
+    /// Sort strings by UTF-8 byte order, matching C# `StringComparer.Ordinal`.
+    /// Bare `sorted()` uses Unicode canonical equivalence (NFD-aware) which can
+    /// produce different order than C#'s ordinal comparison for non-ASCII text.
+    func ordinalSorted() -> [String] {
+        sorted { $0.utf8.lexicographicallyPrecedes($1.utf8) }
     }
 }

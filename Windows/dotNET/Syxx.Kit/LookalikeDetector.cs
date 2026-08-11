@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 namespace Syxx.Kit;
 
@@ -28,10 +29,34 @@ public static class LookalikeDetector
     // matches the macOS table character-for-character.
     private static readonly Dictionary<char, char> Confusables = new()
     {
-        ['а'] = 'a', ['е'] = 'e', ['о'] = 'o', ['р'] = 'p', ['с'] = 'c', ['х'] = 'x', ['у'] = 'y', ['ѕ'] = 's',
-        ['і'] = 'i', ['ј'] = 'j', ['к'] = 'k', ['н'] = 'h', ['м'] = 'm', ['т'] = 't', ['в'] = 'b', ['г'] = 'r',
-        ['ο'] = 'o', ['α'] = 'a', ['ρ'] = 'p', ['ε'] = 'e', ['ν'] = 'v', ['τ'] = 't', ['ι'] = 'i', ['κ'] = 'k',
-        ['0'] = 'o', ['1'] = 'l', ['5'] = 's', ['3'] = 'e',
+        ['а'] = 'a',
+        ['е'] = 'e',
+        ['о'] = 'o',
+        ['р'] = 'p',
+        ['с'] = 'c',
+        ['х'] = 'x',
+        ['у'] = 'y',
+        ['ѕ'] = 's',
+        ['і'] = 'i',
+        ['ј'] = 'j',
+        ['к'] = 'k',
+        ['н'] = 'h',
+        ['м'] = 'm',
+        ['т'] = 't',
+        ['в'] = 'b',
+        ['г'] = 'r',
+        ['ο'] = 'o',
+        ['α'] = 'a',
+        ['ρ'] = 'p',
+        ['ε'] = 'e',
+        ['ν'] = 'v',
+        ['τ'] = 't',
+        ['ι'] = 'i',
+        ['κ'] = 'k',
+        ['0'] = 'o',
+        ['1'] = 'l',
+        ['5'] = 's',
+        ['3'] = 'e',
     };
 
     /// The confusable-folded skeleton: every char mapped to its Latin lookalike, lowercased.
@@ -54,26 +79,42 @@ public static class LookalikeDetector
         return hasLatin && hasOther;
     }
 
-    /// Damerau-ish (Levenshtein) distance, capped: returns cap+1 the moment it is exceeded.
+    /// Damerau-Levenshtein distance in its OPTIMAL STRING ALIGNMENT (OSA) form, capped: returns
+    /// cap+1 the moment it is exceeded so a pair of long unrelated names is cheap to reject.
+    ///
+    /// K-18: this was plain Levenshtein over two rolling rows. Two rows structurally cannot carry
+    /// the transposition term (it reads d[i-2][j-2]), so an adjacent swap like "payapl" vs "paypal"
+    /// measured 2, exceeded the cap of 1, and produced NO finding for a documented typosquat shape
+    /// — a security-relevant false negative. The recurrence now includes the adjacent-transposition
+    /// term and keeps a full matrix, matching the macOS twin's B140 fix character-for-character.
+    ///
+    /// This is OSA, not unrestricted Damerau-Levenshtein: each substring may be edited at most once,
+    /// so a transposed pair is never edited again afterwards. The two variants differ on inputs such
+    /// as "ca" -> "abc" (OSA 3, unrestricted 2). OSA is what the Swift twin implements; the choice is
+    /// pinned by a test so a future change cannot silently switch variants.
     public static int EditDistance(string a, string b, int cap)
     {
         if (Math.Abs(a.Length - b.Length) > cap) return cap + 1;
-        var prev = Enumerable.Range(0, b.Length + 1).ToArray();
-        var curr = new int[b.Length + 1];
-        for (int i = 1; i <= a.Length; i++)
+        int m = a.Length, n = b.Length;
+        // Two rows are insufficient for transposition (needs i-2, j-2); keep a full matrix.
+        var d = new int[m + 1, n + 1];
+        for (int i = 0; i <= m; i++) d[i, 0] = i;
+        for (int j = 0; j <= n; j++) d[0, j] = j;
+        for (int i = 1; i <= m; i++)
         {
-            curr[0] = i;
-            int rowMin = curr[0];
-            for (int j = 1; j <= b.Length; j++)
+            int rowMin = d[i, 0];
+            for (int j = 1; j <= n; j++)
             {
                 int cost = a[i - 1] == b[j - 1] ? 0 : 1;
-                curr[j] = Math.Min(Math.Min(prev[j] + 1, curr[j - 1] + 1), prev[j - 1] + cost);
-                rowMin = Math.Min(rowMin, curr[j]);
+                d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+                // The adjacent-transposition term — the defining Damerau step.
+                if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1])
+                    d[i, j] = Math.Min(d[i, j], d[i - 2, j - 2] + 1);
+                rowMin = Math.Min(rowMin, d[i, j]);
             }
             if (rowMin > cap) return cap + 1;
-            (prev, curr) = (curr, prev);
         }
-        return prev[b.Length];
+        return d[m, n];
     }
 
     /// eTLD+1-ish registrable form (last two labels), lowercased. Multi-part suffixes (co.uk)
@@ -91,7 +132,7 @@ public static class LookalikeDetector
         return string.Join('.', domain.Split('.').Select(label =>
         {
             if (!label.ToLowerInvariant().StartsWith("xn--", StringComparison.Ordinal)) return label;
-            try { return idn.GetUnicode(label); }
+            try { return idn.GetUnicode(label).Normalize(NormalizationForm.FormC); }
             catch (ArgumentException) { return label; }   // malformed A-label — surface it verbatim
         }));
     }

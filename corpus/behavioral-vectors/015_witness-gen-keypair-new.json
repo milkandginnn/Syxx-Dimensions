@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "witness-gen-keypair-new",
+  "command": "witness",
+  "args": ["--gen-keypair", "--key-file", "fixtures/witness/test-key-new"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Temp directory with no existing key file at the specified path",
+    "artifactPath": "fixtures/witness/test-key-new/",
+    "artifactFormat": "directory-state"
+  },
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "witness --gen-keypair presence probe is tri-state only on C# (Present/Absent/Undetermined, refuses on Undetermined even with --force). Swift fileExists is the documented fail-open mode (M-01 on macOS).",
+    "C# prints public key bytes; macOS prints public key bytes. Assert paths/modes/refusals/exit codes, never key bytes (CSPRNG output differs every run)."
+  ]
+}

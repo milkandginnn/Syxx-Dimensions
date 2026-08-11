@@ -58,8 +58,8 @@ roleDefinition: >-
   edit production source, tests, config, AGENTS.md, ROADMAP.md, or DESIGN.md.
   After ledger edits run: python3 scripts/reflow-deltas.py DELTAS.md.
 customInstructions: >-
-  Read AGENTS.md, DELTAS.md, ROADMAP.md, DESIGN.md, PROJECT-STATE.md, and
-  MEMORY.md before beginning any investigation. Grep research/reference-library/
+  Read AGENTS.md, DELTAS.md, ROADMAP.md, docs/DESIGN.md, docs/PROJECT-STATE.md,
+  and MEMORY.md before beginning any investigation. Grep research/reference-library/
   before doing external web searches. Check DELTAS.md for prior findings before
   drafting a new delta. Label findings [CONFIRMED]/[LIKELY]/[SPECULATIVE] and
   cite file:line. Draft deltas in DELTAS.md house format (correct A-F domain, next-

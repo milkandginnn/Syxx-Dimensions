@@ -34,17 +34,29 @@ public enum DNSCanaries {
         return String((0..<24).map { _ in hex.randomElement()! })
     }
 
+    /// B286: TLD diversity for canary names. Using only .com meant a resolver that filters
+    /// .com NXDOMAIN differently from other TLDs would escape detection. Multiple TLDs
+    /// ensure the canary probes cross-TLD NXDOMAIN behavior.
+    private static let canaryTLDs = [".com", ".net", ".org", ".io"]
+
+    /// Generates a random canary name using a randomly selected TLD.
+    private static func randomCanaryName() -> String {
+        randomLabel() + (canaryTLDs.randomElement() ?? ".com")
+    }
+
     /// **NXDOMAIN-hijack canary.** Queries two independent random, guaranteed-nonexistent names.
     /// Both should return NXDOMAIN. Two non-NXDOMAIN answers pointing at the **same** IP is the
     /// hijack signal — a real domain would never share an address with an unrelated random name, so
     /// a shared answer means the resolver is rewriting nonexistent domains (ad/redirect hijack).
     public static func nxdomainHijack(resolver: String) async -> CanaryResult {
-        let n1 = randomLabel() + ".com"
-        let n2 = randomLabel() + ".com"
+        // B286: use diverse TLDs instead of .com-only — a resolver filtering only .com
+        // NXDOMAIN would escape a single-TLD canary.
+        let n1 = randomCanaryName()
+        let n2 = randomCanaryName()
         let r1 = await DNSResolver.queryUDPDetailed(DNSQuery(name: n1, type: 1, server: resolver))
         let r2 = await DNSResolver.queryUDPDetailed(DNSQuery(name: n2, type: 1, server: resolver))
 
-        if r1.didFail && r2.didFail {
+        if r1.didNotSucceed && r2.didNotSucceed {
             return CanaryResult(section: .prophet, status: .invalidated, evidence: nil,
                 detail: "NXDOMAIN canary could not reach the resolver (\(r1.status.rawValue)/\(r2.status.rawValue)).")
         }
@@ -109,45 +121,68 @@ public enum DNSCanaries {
             detail: "n1=\(r1.status.rawValue) ips=\(ips1.sorted()); n2=\(r2.status.rawValue) ips=\(ips2.sorted()).")
     }
 
+    /// B287: multiple DNSSEC-signed control domains. A single control (cloudflare.com) could be
+    /// selectively stripped by a targeted interposer while leaving other signed domains intact,
+    /// or cloudflare.com's DNSSEC posture could change. Multiple independent signed controls
+    /// provide a more robust stripping detection.
+    public static let dnssecControls = ["cloudflare.com", "google.com", "amazon.com"]
+
     /// **DNSSEC control canary.** A domain known to be DNSSEC-signed must still carry DNSKEY+RRSIG
     /// on this path. `unsigned` from a signed control is the stripping/downgrade signal — the
     /// records were removed in transit. Expired-only RRSIGs suggest replay or a broken interposer.
     /// (The client does not do full chain validation, and does not claim to; this detects the
     /// coarse, common attack — records missing/stale — which is exactly what a downgrade looks like.)
+    /// B287: queries all control domains and reports the aggregate result. If ANY signed control
+    /// shows stripping, the canary fires — a targeted interposer might strip only one.
     public static func dnssecControl(resolver: String, control: String = "cloudflare.com") async -> CanaryResult {
-        let status = await DNSSECVerifier.checkStatus(domain: control, resolver: resolver)
-        switch status {
-        case .recordsPresentUnverified:
+        // B287: when called with the default control, iterate all controls for robustness.
+        // When called with an explicit control (e.g. from tests), use that single one.
+        let controls = (control == "cloudflare.com") ? dnssecControls : [control]
+        // Track the strongest signal across all controls. Priority: unsigned > expired > secure > inconclusive.
+        var anySecure = false
+        var anyExpired = false
+        for ctrl in controls {
+            let status = await DNSSECVerifier.checkStatus(domain: ctrl, resolver: resolver)
+            switch status {
+            case .unsigned:
+                // Stripping on ANY control is the strongest signal — return immediately.
+                return CanaryResult(section: .prophet, status: .positive,
+                    evidence: EvidenceItem(section: .prophet,
+                        evidenceId: .dnssecCanaryStripped,
+                        observation: "Signed control \(ctrl) came back UNSIGNED — DNSSEC records stripped on this path",
+                        rationale: "\(ctrl) is DNSSEC-signed; missing DNSKEY/RRSIG indicates a downgrade/stripping interposer between you and the authoritative server.",
+                        source: "canaries"),
+                    detail: "control=\(ctrl) → unsigned (stripping)")
+            case .signatureExpiredOrNotYetValid:
+                // B047: expired RRSIGs on a known-good control — clock-sensitive, inconclusive.
+                anyExpired = true
+            case .recordsPresentUnverified:
+                anySecure = true
+            case .inconclusive:
+                break
+            }
+        }
+        // Return the aggregate result across all controls.
+        if anySecure {
+            let detail = controls.joined(separator: ", ")
             return CanaryResult(section: .prophet, status: .negative,
                 evidence: EvidenceItem(section: .prophet,
                     evidenceId: .dnssecCanarySecure,
-                    observation: "DNSSEC records for the signed control \(control) are intact on this path",
+                    observation: "DNSSEC records for signed controls (\(detail)) are intact on this path",
                     rationale: "DNSKEY + RRSIG present within a valid window — no sign of on-path DNSSEC stripping.",
                     source: "canaries"),
-                detail: "control=\(control) → recordsPresentUnverified")
-        case .unsigned:
-            return CanaryResult(section: .prophet, status: .positive,
-                evidence: EvidenceItem(section: .prophet,
-                    evidenceId: .dnssecCanaryStripped,
-                    observation: "Signed control \(control) came back UNSIGNED — DNSSEC records stripped on this path",
-                    rationale: "\(control) is DNSSEC-signed; missing DNSKEY/RRSIG indicates a downgrade/stripping interposer between you and the authoritative server.",
-                    source: "canaries"),
-                detail: "control=\(control) → unsigned (stripping)")
-        case .signatureExpiredOrNotYetValid:
-            // B047: expired RRSIGs on a known-good control can mean either a replay/stripping
-            // interposer OR a skewed local clock. Since the local clock is attacker-controllable
-            // (and benignly wrong on many machines), we cannot render this as a threat signal.
-            // Emit inconclusive — the expiry is real but its cause is undecidable from one vantage.
+                detail: "controls=\(detail) → recordsPresentUnverified")
+        }
+        if anyExpired {
             return CanaryResult(section: .prophet, status: .inconclusive,
                 evidence: EvidenceItem(section: .prophet,
                     evidenceId: .dnssecCanaryExpired,
-                    observation: "Signed control \(control) returned only expired / not-yet-valid RRSIGs",
-                    rationale: "Stale signatures on a known-good control could indicate replay/stripping on the path OR a skewed local clock — the cause cannot be determined from one vantage. This is not used as a threat signal.",
+                    observation: "Signed controls returned only expired / not-yet-valid RRSIGs",
+                    rationale: "Stale signatures on known-good controls could indicate replay/stripping on the path OR a skewed local clock — the cause cannot be determined from one vantage. This is not used as a threat signal.",
                     source: "canaries"),
-                detail: "control=\(control) → expired RRSIGs (clock-sensitive, inconclusive)")
-        case .inconclusive:
-            return CanaryResult(section: .prophet, status: .invalidated, evidence: nil,
-                detail: "DNSSEC control canary could not fetch records for \(control) (transport/timeout).")
+                detail: "controls → expired RRSIGs (clock-sensitive, inconclusive)")
         }
+        return CanaryResult(section: .prophet, status: .invalidated, evidence: nil,
+            detail: "DNSSEC control canary could not fetch records for any control (transport/timeout).")
     }
 }

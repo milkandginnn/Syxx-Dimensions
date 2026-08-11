@@ -1,0 +1,10 @@
+21:30:46  parsed 4 feature(s); starting at #1 (perm=acceptEdits, test='<model-gated>')
+21:30:46  === [#1/4] 1. Dark mode toggle ===
+You've hit your weekly limit · resets Aug 9 at 7pm (America/Chicago)
+21:30:56  usage/limit or error at #1 (exit 0) — cursor saved, stopping
+23:04:37  parsed 3 feature(s); starting at #1 (perm=acceptEdits, test='<model-gated>')
+23:04:37  === [#1/3] 1. Mirror Module (remember rules/*, including SUBAGENT-RULES.md) ===
+Already on 'feat/1'
+23:04:37    (branch switch skipped)
+You've hit your weekly limit · resets Aug 9 at 7pm (America/Chicago)
+23:04:42  usage/limit or error at #1 (exit 0) — cursor saved, stopping

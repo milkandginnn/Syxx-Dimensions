@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -10,6 +11,11 @@ namespace SyxxUI.Views;
 
 public sealed partial class DashboardView : Page
 {
+    private static readonly HashSet<string> _dashboardProps = new()
+    {
+        nameof(AppViewModel.Conclusion), nameof(AppViewModel.SectionInputs), nameof(AppViewModel.CageEventsCount),
+    };
+
     private AppViewModel? _vm;
 
     public DashboardView()
@@ -27,7 +33,11 @@ public sealed partial class DashboardView : Page
         _vm = e.Parameter as AppViewModel;
         if (_vm is not null)
         {
-            _pcHandler = (_, _) => Refresh();
+            _pcHandler = (_, e) =>
+            {
+                if (string.IsNullOrEmpty(e.PropertyName) || _dashboardProps.Contains(e.PropertyName))
+                    Refresh();
+            };
             _vm.PropertyChanged += _pcHandler;
         }
         Refresh();

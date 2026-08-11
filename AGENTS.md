@@ -1,6 +1,6 @@
-# claude-agents — multi-harness agentic plugin marketplace
+ # claude-agents — multi-harness agentic plugin marketplace
 
-Production-ready agentic-workflow building blocks: **94 plugins** (90 local + 4 external), **203 agents**, **175 skills**, **109 commands**. Native source-of-truth for Claude Code; also consumed by OpenAI Codex CLI, Cursor, OpenCode, and Gemini CLI from a single Markdown source.
+Production-ready agentic-workflow building blocks: **94 plugins** (90 local + 4 external), **164 agents**, **175 skills**, **103 commands**. Native source-of-truth for Claude Code; also consumed by OpenAI Codex CLI, Cursor, OpenCode, and Gemini CLI from a single Markdown source.
 
 This file is the canonical context file. Codex / Cursor / OpenCode read it directly. Claude Code reads it via `CLAUDE.md`, a symlink to this file. Gemini CLI reads it via `gemini-extension.json` (`contextFileName`) / `.gemini/settings.json`.
 
@@ -11,7 +11,7 @@ This file is the canonical context file. Codex / Cursor / OpenCode read it direc
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — top-level architectural overview (adapter framework, source-of-truth invariant, capability matrix summary)
 - **[docs/architecture.md](docs/architecture.md)** — detailed design principles
 - **[docs/plugins.md](docs/plugins.md)** — full plugin catalog (94 plugins by category)
-- **[docs/agents.md](docs/agents.md)** — agent reference (203 agents, model tiers)
+- **[docs/agents.md](docs/agents.md)** — agent reference (164 agents, model tiers)
 - **[docs/agent-skills.md](docs/agent-skills.md)** — skill reference (progressive disclosure model)
 - **[docs/usage.md](docs/usage.md)** — commands, workflows, examples
 - **[docs/authoring.md](docs/authoring.md)** — portable-content style guide (read before adding plugins)
@@ -19,6 +19,10 @@ This file is the canonical context file. Codex / Cursor / OpenCode read it direc
 - **[docs/plugin-eval.md](docs/plugin-eval.md)** — three-layer quality evaluation framework
 - **[docs/round-trip-results.md](docs/round-trip-results.md)** — real-CLI verification recipes
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to contribute
+
+## Required Reading - Rules
+
+- **[SUBAGENTS-RULES.md](rules/SUBAGENT-RULES.md)** — mandatory (NO EXCEPTIONS) rules for managing subagents, including when and how to deplopy them, edit their prompts, and map them to tasks. 
 
 ## Working in this repo
 

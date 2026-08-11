@@ -9,6 +9,11 @@ import SyxxTelemetry
 /// is wrapped into `Syxx.app` (see `bundle-app.sh`), `CFBundleIconFile` already supplies the
 /// Finder icon; this makes the icon appear even when running the bare SwiftPM binary in dev.
 final class SyxxAppDelegate: NSObject, NSApplicationDelegate {
+    /// Provides the current first-run state. Set by SyxxApp after the coordinator is created.
+    /// The delegate uses this to avoid overriding the FirstRunWindowConfigurator's chrome
+    /// transitions for returning users (state already .ready).
+    var firstRunStateProvider: (() -> OnboardingState)?
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Run as a proper foreground app even when launched unbundled (the dev binary has no Info.plist):
         // .regular gives a Dock icon, normal window layering, AND a window that can become KEY — which is
@@ -26,20 +31,27 @@ final class SyxxAppDelegate: NSObject, NSApplicationDelegate {
         // a silent-fallback defect that survived a full release cycle. Fail loud instead.
         Self.registerTypographyOrComplainLoudly()
 
-        // Force window to 1040×613 on launch — SwiftUI's .frame() is a suggestion,
-        // the real size must be set on the NSWindow itself.
+        // Start the window borderless — FirstRunWindowConfigurator (in the SwiftUI
+        // hierarchy) transitions to standard chrome when first-run completes. For
+        // returning users (state already .ready), the configurator adds chrome on
+        // its first layout pass (~1 frame). For first-run users, the borderless
+        // window shows only the EULA or Setup card with no macOS chrome.
         DispatchQueue.main.async {
             if let window = NSApplication.shared.windows.first {
-                let desired = NSRect(x: window.frame.origin.x, y: window.frame.origin.y,
-                                     width: 1040, height: 613)
-                window.setFrame(desired, display: true, animate: false)
-                // 1040×613 is the design floor, not a hard lock (plan §9.5 unlocks resizing;
-                // supersedes the 2026-07-21 min==max jiggle mitigation). The jiggle came from
-                // each view carrying a FIXED ideal frame, so `.contentMinSize` re-sized the
-                // window on every tool switch. ContentView now uses a flexible frame
-                // (min 1040×613, max .infinity), which keeps the user's chosen size stable
-                // across view switches without capping growth.
-                window.contentMinSize = NSSize(width: 1040, height: 613)
+                // Only set borderless for first-run states. For .ready, the
+                // FirstRunWindowConfigurator handles chrome transitions — setting
+                // borderless here would override the configurator's work (FIFO race).
+                if let stateProvider = self.firstRunStateProvider,
+                   stateProvider() == .ready {
+                    // Still set the background color to match the canvas.
+                    window.backgroundColor = NSColor(red: 11/255, green: 5/255, blue: 24/255, alpha: 1)
+                    return
+                }
+                window.styleMask = .borderless
+                window.backgroundColor = NSColor(red: 11/255, green: 5/255, blue: 24/255, alpha: 1)
+                window.setFrame(NSRect(x: 0, y: 0, width: 640, height: 660),
+                                display: true, animate: false)
+                window.center()
             }
         }
     }
@@ -90,6 +102,13 @@ final class SyxxAppDelegate: NSObject, NSApplicationDelegate {
         return report
     }
 
+    // Keep the app alive when the window is closed — the menu bar extra is the
+    // persistent surface. Without this, clicking the traffic-light close button
+    // terminates the process and the menu bar icon disappears.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
     // F014: Bring window to front when clicking the Dock icon.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
@@ -129,11 +148,21 @@ public struct SyxxApp: App {
 
     public var body: some Scene {
         WindowGroup("Syxx \(SyxxConfig.version)") {
-            switch firstRun.state {
-            case .ready:
-                ReadyApplicationView(model: model, settings: firstRun.settings)
-            default:
-                GuidedSetup(coordinator: firstRun)
+            Group {
+                switch firstRun.state {
+                case .ready:
+                    ReadyApplicationView(model: model, settings: firstRun.settings)
+                default:
+                    GuidedSetup(coordinator: firstRun)
+                }
+            }
+            .background(FirstRunWindowConfigurator(state: firstRun.state))
+            .onAppear {
+                // Bridge the coordinator's state to the delegate so the async borderless
+                // guard can check it. Set here (view appearance) before the delegate's
+                // async block is processed on the next run-loop pass.
+                let coordinator = firstRun
+                appDelegate.firstRunStateProvider = { coordinator.state }
             }
         }
         .commands {
@@ -173,8 +202,8 @@ public struct SyxxApp: App {
                 .disabled(firstRun.state != .ready)
             }
         }
-        .windowResizability(.contentMinSize)
-        .windowStyle(.hiddenTitleBar)
+        // Note: .windowStyle(.hiddenTitleBar) removed — FirstRunWindowConfigurator
+        // owns all chrome state exclusively, adding .titled back for .ready state.
 
         MenuBarExtra(isInserted: Binding(
             get: { firstRun.state == .ready },
@@ -183,7 +212,116 @@ public struct SyxxApp: App {
             MenuBarContent().environmentObject(model)
         } label: {
             let ind = TrayIndicators.For(model.conclusion)
-            MenuBarLabel(severity: ind.severity)
+            MenuBarLabel(severity: ind.severity, isEncrypted: model.isEncrypted)
+        }
+    }
+}
+
+// MARK: - First-run window chrome management
+
+/// Manages the main window's chrome and size based on the first-run state. During first-run
+/// (`.agreementRequired`, `.setupRequired`, etc.), the window is borderless — no titlebar,
+/// no traffic lights, no resize handle — and sized to the current card. When setup completes
+/// (`.ready`), the window transitions to standard chrome at 1040×613 with the content's
+/// flexible min-size floor.
+///
+/// Placed as a `.background()` on the WindowGroup root so it runs for every state, including
+/// the `.ready` transition. The `WindowChromeConfigurator` in ContentView handles ongoing
+/// chrome tweaks (fullSizeContentView, toolbar removal) once the main view is visible.
+private struct FirstRunWindowConfigurator: NSViewRepresentable {
+    let state: OnboardingState
+
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        DispatchQueue.main.async { Self.configure(v.window, state: state) }
+        return v
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { Self.configure(nsView.window, state: state) }
+    }
+
+    static func configure(_ window: NSWindow?, state: OnboardingState) {
+        guard let window else { return }
+
+        // Set the window's background color to match the canvas (#0b0518). The AppKit
+        // default (windowBackgroundColor) in dark mode is ~#2e2e2e, which shows as a
+        // gray flash before SwiftUI renders. Setting it here ensures the window color
+        // matches the app's near-black canvas in all states.
+        window.backgroundColor = NSColor(red: 11/255, green: 5/255, blue: 24/255, alpha: 1)
+
+        switch state {
+        case .ready:
+            // Ensure standard chrome with traffic lights. The delegate's async block
+            // skips setting .borderless for returning users (state already .ready),
+            // so we can't guard on .borderless here — the window may already have
+            // .titled but still need explicit traffic-light visibility.
+            //
+            // These operations are idempotent and cheap; SwiftUI may call configure()
+            // multiple times during layout invalidation.
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.toolbar = nil
+            window.isMovableByWindowBackground = true
+            // Explicitly show traffic lights — required even when styleMask is correct,
+            // as the buttons may be hidden from a previous state or AppKit default.
+            window.standardWindowButton(.closeButton)?.isHidden = false
+            window.standardWindowButton(.miniaturizeButton)?.isHidden = false
+            window.standardWindowButton(.zoomButton)?.isHidden = false
+            window.hasShadow = true
+            // Unlock resizing — the ready state allows the user to grow the window
+            // beyond 1040×613 (ContentView uses maxWidth/maxHeight .infinity).
+            window.contentMinSize = NSSize(width: 1040, height: 613)
+            window.contentMaxSize = NSSize(width: CGFloat.greatestFiniteMagnitude,
+                                           height: CGFloat.greatestFiniteMagnitude)
+            var f = window.frame
+            f.size = NSSize(width: 1040, height: 613)
+            window.setFrame(f, display: true, animate: false)
+            window.center()
+
+        default:
+            // First-run: borderless, sized to the current card. Lock min==max to
+            // prevent SwiftUI's .frame(minWidth: 1050) on GuidedSetup from growing
+            // the window behind our back.
+            if !window.styleMask.contains(.borderless) {
+                window.styleMask = .borderless
+            }
+            window.toolbar = nil
+            window.isMovableByWindowBackground = true
+            window.hasShadow = true
+
+            let cardSize = Self.cardSize(for: state)
+            window.contentMinSize = cardSize
+            window.contentMaxSize = cardSize
+
+            // Only reframe if the current size doesn't match — avoids animation
+            // jitter on every SwiftUI layout pass.
+            if abs(window.frame.width - cardSize.width) > 1
+                || abs(window.frame.height - cardSize.height) > 1 {
+                window.setFrame(NSRect(origin: .zero, size: cardSize),
+                                display: true, animate: false)
+                window.center()
+            }
+        }
+    }
+
+    /// Window size per first-run state. Each card has its own backdrop fill; the window
+    /// is sized tightly around it so no empty space shows beyond the card's shadow.
+    private static func cardSize(for state: OnboardingState) -> NSSize {
+        switch state {
+        case .loading:
+            return NSSize(width: 300, height: 200)
+        case .agreementRequired:
+            // EULA card is 600 wide; add 20px horizontal breathing room for the shadow.
+            return NSSize(width: 640, height: 660)
+        case .setupRequired:
+            // Setup card is 640×585; add 20px horizontal, 20px vertical for the shadow.
+            return NSSize(width: 680, height: 625)
+        case .persistenceFailure, .stateUnknown:
+            return NSSize(width: 560, height: 340)
+        case .ready:
+            return NSSize(width: 1040, height: 613)
         }
     }
 }
@@ -245,19 +383,56 @@ enum TrayGlyph {
 
 // MARK: - A6 menu-bar label (white Syxx mark + severity dot)
 
-/// The composed menu-bar label: the white Syxx logo (template-tinted by macOS) with a small
-/// severity-colored status dot. The dot is the state channel; the logo is brand presence. The dot
-/// color is `Color.ioSeverity`, the SAME mapping the grade and result badge use, so the three can
-/// never disagree — and `.unknown` is grey, never the green of a measured-clean network.
+/// The composed menu-bar label: the Syxx logo with a small severity-colored status dot. The dot is
+/// the state channel; the logo is brand presence. When DNS is encrypted, the glyph animates through
+/// white → pink (#ff2d78) → purple (#7c5cff) over a 7-second cycle to signal active encryption.
+/// When DNS is not encrypted, the glyph is a macOS-tinted template image (white on dark bar, dark
+/// on light). The dot color is `Color.ioSeverity`, the SAME mapping the grade and result badge use,
+/// so the three can never disagree — and `.unknown` is grey, never the green of a measured-clean
+/// network.
 struct MenuBarLabel: View {
     let severity: Severity
+    let isEncrypted: Bool
+
+    /// The three colors in the encryption animation cycle.
+    private static let cycleColors: [(r: Double, g: Double, b: Double)] = [
+        (1.0, 1.0, 1.0),          // White
+        (1.0, 0.176, 0.471),      // Pink #ff2d78
+        (0.486, 0.361, 1.0)       // Purple #7c5cff
+    ]
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Image(nsImage: TrayGlyph.syxxTemplateMark)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 17, height: 17)
+            if isEncrypted {
+                TimelineView(.animation) { context in
+                    let elapsed = context.date.timeIntervalSinceReferenceDate
+                    let cyclePosition = elapsed.truncatingRemainder(dividingBy: 7.0) / 7.0
+                    let phase = cyclePosition * 3.0
+                    let fromIndex = Int(phase) % 3
+                    let toIndex = (fromIndex + 1) % 3
+                    let t = phase - Double(Int(phase))
+
+                    let from = Self.cycleColors[fromIndex]
+                    let to = Self.cycleColors[toIndex]
+                    let color = Color(
+                        red: from.r + (to.r - from.r) * t,
+                        green: from.g + (to.g - from.g) * t,
+                        blue: from.b + (to.b - from.b) * t
+                    )
+
+                    Image(nsImage: TrayGlyph.syxxColoredMark)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 17, height: 17)
+                        .colorMultiply(color)
+                }
+            } else {
+                Image(nsImage: TrayGlyph.syxxTemplateMark)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 17, height: 17)
+            }
+
             // The one spot of color. A thin dark ring keeps the dot legible on both light and dark
             // menu bars without depending on the bar's color.
             Circle()
@@ -266,8 +441,9 @@ struct MenuBarLabel: View {
                 .overlay(Circle().stroke(Color.black.opacity(0.35), lineWidth: 0.5))
                 .offset(x: 1, y: 1)
         }
-        // A tray icon is decorative chrome; the tooltip and dropdown carry the words.
-        .accessibilityLabel("Syxx network trust")
+        .accessibilityLabel(isEncrypted
+            ? "Syxx network trust — DNS encrypted"
+            : "Syxx network trust")
     }
 }
 
@@ -276,7 +452,10 @@ extension TrayGlyph {
     /// menu bar controls, so it reads white on a dark bar and dark on a light one. Built once from
     /// the bundled logo; falls back to a shield SF Symbol if the resource is somehow missing (an
     /// empty menu-bar item would be worse than a generic mark).
-    static let syxxTemplateMark: NSImage = {
+    ///
+    /// `nonisolated(unsafe)`: NSImage is not Sendable, but this image is built once at launch on
+    /// the main thread and never mutated — safe to share across actors.
+    nonisolated(unsafe) static let syxxTemplateMark: NSImage = {
         let fallback = NSImage(systemSymbolName: "shield.fill", accessibilityDescription: "Syxx")
             ?? NSImage()
         guard let url = Bundle.module.url(forResource: "Syxx-logo", withExtension: "png"),
@@ -293,6 +472,31 @@ extension TrayGlyph {
         NSRect(origin: .zero, size: logo.size).fill(using: .sourceAtop)
         out.unlockFocus()
         out.isTemplate = true
+        return out
+    }()
+
+    /// The Syxx mark as a NON-TEMPLATE image: same white silhouette as `syxxTemplateMark` but with
+    /// `isTemplate = false`, so AppKit does NOT auto-tint it. This is the base layer for the
+    /// encryption animation — `.colorMultiply()` tints the white pixels through the three-color
+    /// cycle while transparent pixels stay transparent.
+    ///
+    /// `nonisolated(unsafe)`: NSImage is not Sendable, but this image is built once at launch on
+    /// the main thread and never mutated — safe to share across actors.
+    nonisolated(unsafe) static let syxxColoredMark: NSImage = {
+        let fallback = NSImage(systemSymbolName: "shield.fill", accessibilityDescription: "Syxx")
+            ?? NSImage()
+        guard let url = Bundle.module.url(forResource: "Syxx-logo", withExtension: "png"),
+              let logo = NSImage(contentsOf: url) else {
+            // Fallback: NOT a template, so colorMultiply still works.
+            return fallback
+        }
+        let out = NSImage(size: logo.size)
+        out.lockFocus()
+        logo.draw(at: .zero, from: .zero, operation: .sourceOver, fraction: 1)
+        NSColor.white.set()
+        NSRect(origin: .zero, size: logo.size).fill(using: .sourceAtop)
+        out.unlockFocus()
+        // Deliberately NOT a template — colorMultiply handles tinting.
         return out
     }()
 }
@@ -349,7 +553,13 @@ struct MenuBarContent: View {
 
 #if DEBUG
 #Preview {
-    MenuBarLabel(severity: .unknown)
+    MenuBarLabel(severity: .unknown, isEncrypted: false)
+        .padding(24)
+        .syxxPreviewPanel()
+}
+
+#Preview("MenuBarLabel — encrypted") {
+    MenuBarLabel(severity: .unknown, isEncrypted: true)
         .padding(24)
         .syxxPreviewPanel()
 }

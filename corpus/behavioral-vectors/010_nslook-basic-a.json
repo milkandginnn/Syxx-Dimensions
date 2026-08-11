@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "nslook-basic-a",
+  "command": "nslook",
+  "args": ["example.test", "@8.8.8.8"],
+  "group": "fixture",
+  "timeoutSeconds": 10,
+  "fixtureRequirements": {
+    "description": "A-record response for example.test from 8.8.8.8",
+    "artifactPath": "fixtures/nslook/example-test-a.json",
+    "artifactFormat": "dns-response-json"
+  },
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": ["example.test"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [],
+  "notes": "Requires DNS fixture to be deterministic. The resolver is explicit (@8.8.8.8), so the only non-deterministic input is the DNS wire response."
+}

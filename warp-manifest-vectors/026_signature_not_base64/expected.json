@@ -1,0 +1,9 @@
+{
+  "assets": [],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "notEvaluated",
+  "htmlState": "notEvaluated",
+  "manifestState": "notEvaluated",
+  "notes": "signature_ed25519 is not valid base64 (malformed envelope).",
+  "signatureState": "malformed"
+}

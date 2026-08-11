@@ -266,6 +266,13 @@ namespace Syxx.Kit
                 byte protocolNumber = data[9];
                 if (protocolNumber != 17) return null;
 
+                // D146: reject IPv4 fragments — a non-initial fragment has arbitrary bytes where
+                // the UDP/TCP header is assumed, parsing it as a transport header fabricates evidence.
+                // Parity with macOS parseIPUDPHeader which returns nil for any fragment.
+                bool moreFragments = (data[6] & 0x20) != 0;
+                int fragmentOffset = ((data[6] & 0x1F) << 8) | data[7];
+                if (moreFragments || fragmentOffset != 0) return null;
+
                 // KDNS-13: validate UDP length field and ensure DNS payload >= 12 bytes
                 ushort udpLen = (ushort)((data[ihl + 4] << 8) | data[ihl + 5]);
                 if (udpLen < 8 || data.Length < ihl + udpLen) return null;
@@ -293,10 +300,40 @@ namespace Syxx.Kit
             {
                 if (data.Length < 40 + 8) return null;
                 byte nextHeader = data[6];
+
+                // B315: walk IPv6 extension header chain to find UDP (protocol 17).
+                // Extension headers: Hop-by-Hop (0), Routing (43), Fragment (44), Destination Options (60).
+                // Each extension header has: nextHeader(1 byte), headerExtLen(1 byte), then variable data.
+                // Fragment header is fixed at 8 bytes. Hop-by-Hop/Routing/DestOpt length is (hdrExtLen+1)*8.
+                int extOffset = 40;
+                int maxChain = 8; // prevent infinite loop on malformed headers
+                while (maxChain-- > 0 && nextHeader != 17)
+                {
+                    if (extOffset >= data.Length) return null;
+                    switch (nextHeader)
+                    {
+                        case 0:  // Hop-by-Hop
+                        case 43: // Routing
+                        case 60: // Destination Options
+                            if (extOffset + 1 >= data.Length) return null;
+                            nextHeader = data[extOffset];
+                            int extLen = (data[extOffset + 1] + 1) * 8;
+                            extOffset += extLen;
+                            break;
+                        case 44: // Fragment
+                            if (extOffset + 7 >= data.Length) return null;
+                            nextHeader = data[extOffset];
+                            extOffset += 8; // Fragment header is always 8 bytes
+                            break;
+                        default:
+                            return null; // Unknown extension header or non-UDP protocol
+                    }
+                }
                 if (nextHeader != 17) return null;
+                if (extOffset + 8 > data.Length) return null;
 
                 // KDNS-13: validate DNS payload >= 12 bytes on the IPv6 path too
-                int dnsPayloadLen = data.Length - (40 + 8);
+                int dnsPayloadLen = data.Length - (extOffset + 8);
                 if (dnsPayloadLen < 12) return null;
 
                 string GroupHex(int offset) => ((data[offset] << 8) | data[offset + 1]).ToString("x", CultureInfo.InvariantCulture);
@@ -305,7 +342,7 @@ namespace Syxx.Kit
                 for (int i = 0; i < 8; i++) srcGroups.Add(GroupHex(8 + i * 2));
                 for (int i = 0; i < 8; i++) dstGroups.Add(GroupHex(24 + i * 2));
 
-                int udpStart = 40;
+                int udpStart = extOffset;
                 ushort srcPort = (ushort)((data[udpStart] << 8) | data[udpStart + 1]);
                 ushort dstPort = (ushort)((data[udpStart + 2] << 8) | data[udpStart + 3]);
 
@@ -443,10 +480,15 @@ namespace Syxx.Kit
             bool jumped = false;
             int nextOffset = offset;
             var visited = new HashSet<int>();
+            // B301: cap pointer-follow depth at 128 to bound O(n²) on adversarial
+            // non-cyclic pointer chains that traverse the entire packet.
+            int pointerFollows = 0;
+            const int MaxPointerFollows = 128;
 
             while (current < data.Length)
             {
                 if (!visited.Add(current)) return null; // compression loop
+                if (++pointerFollows > MaxPointerFollows) return null; // B301: excessive depth
                 int len = data[current];
                 if (len == 0)
                 {
@@ -652,8 +694,11 @@ namespace Syxx.Kit
             }
         }
 
-        /// `dwLocalPort` in the MIB_UDP*ROW_OWNER_PID structs carries the port in network byte
-        /// order in its low 16 bits (upper bytes undefined). Pure so the byte math is testable.
+        /// D370: `dwLocalPort` in the MIB_UDP*ROW_OWNER_PID structs carries the port in network
+        /// byte order in its low 16 bits (upper bytes undefined on all tested Windows versions
+        /// from Win10 21H2 through Win11 24H2). The swap below converts network → host order.
+        /// The upper 16 bits are masked off explicitly: on some Windows versions the upper word
+        /// may carry scope ID or padding data.
         internal static ushort PortFromUdpTableEntry(uint dwLocalPort)
         {
             return (ushort)(((dwLocalPort & 0xFF) << 8) | ((dwLocalPort >> 8) & 0xFF));
@@ -725,7 +770,11 @@ namespace Syxx.Kit
                 return (null, SignatureTrust.Unverifiable);
             try
             {
+                // SYSLIB0057: X509CertificateLoader has no Authenticode equivalent — CreateFromSignedFile
+                // extracts the embedded signature certificate, not a DER/PEM payload.
+#pragma warning disable SYSLIB0057
                 using var cert = X509Certificate.CreateFromSignedFile(executablePath);
+#pragma warning restore SYSLIB0057
                 // Verify the certificate chain — this checks expiry, revocation, and trust root.
                 using var chain = new X509Chain();
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;

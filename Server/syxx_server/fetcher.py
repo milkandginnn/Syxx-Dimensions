@@ -11,6 +11,7 @@ Residual: a determined attacker could still race DNS between our check and the
 socket connect (rebinding). We pin the connection to the vetted IP to close that
 window for the common case.
 """
+
 import http.client
 import ipaddress
 import socket
@@ -18,22 +19,28 @@ import ssl
 import urllib.parse
 
 from . import config, logging_util, netutil
+from .netutil import PinnedHTTPSConnection as _PinnedHTTPSConnection
 
 if config.FETCH_ALLOW_PRIVATE:
-    logging_util.warn("fetcher_ssrf_disabled",
-                      detail="SYXX_FETCH_ALLOW_PRIVATE=True: private-IP block is disabled. "
-                             "This is a security risk intended for testing only.")
+    logging_util.warn(
+        "fetcher_ssrf_disabled",
+        detail="SYXX_FETCH_ALLOW_PRIVATE=True: private-IP block is disabled. "
+        "This is a security risk intended for testing only.",
+    )
 
 
 class FetchError(Exception):
+    """Base exception for outbound fetch failures."""
     pass
 
 
 class BlockedError(FetchError):
+    """Raised when a fetch target is blocked by the SSRF guard (non-public IP, disallowed port)."""
     pass
 
 
 class TruncatedError(FetchError):
+    """Raised when the response exceeds *max_bytes* and is truncated."""
     pass
 
 
@@ -41,30 +48,6 @@ class TruncatedError(FetchError):
 # fetch an arbitrary public IP:port, turning the server into a blind port scanner /
 # cross-protocol probe. Only the standard web ports are permitted.
 _ALLOWED_PORTS = frozenset({80, 443})
-
-
-class _PinnedHTTPSConnection(http.client.HTTPSConnection):
-    """HTTPSConnection that dials a caller-vetted IP literal and NEVER re-resolves
-    the hostname.
-
-    A067/A088/A090/A100: the stock pattern -- HTTPSConnection(ip) then `conn.host = host`
-    -- makes http.client re-run getaddrinfo(host) inside connect() (self.host is both the
-    dial target and the SNI value), discarding the vetted IP and reopening the DNS-rebind
-    SSRF window (public IP at validation, private IP at connect). Here `pin_ip` is the
-    already-validated numeric address from _resolve_public, so socket.create_connection
-    performs no DNS query and cannot be rebound; the real hostname is still used for SNI
-    and certificate validation."""
-
-    def __init__(self, pin_ip, port, server_hostname, timeout, context):
-        super().__init__(pin_ip, port, timeout=timeout, context=context)
-        self._pin_ip = pin_ip
-        self._server_hostname = server_hostname
-
-    def connect(self):
-        # pin_ip is numeric -> create_connection does not query DNS (no rebind).
-        sock = socket.create_connection((self._pin_ip, self.port), self.timeout,
-                                        self.source_address)
-        self.sock = self._context.wrap_socket(sock, server_hostname=self._server_hostname)
 
 
 def _ip_is_public(ip):
@@ -87,13 +70,13 @@ def _resolve_public(host):
     try:
         infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
     except socket.gaierror as e:
-        raise FetchError("dns resolution failed: %s" % e)
+        raise FetchError(f"dns resolution failed: {e}") from e
     ips = {i[4][0] for i in infos}
     if not ips:
         raise FetchError("no addresses for host")
     for ip in ips:
         if not _ip_is_public(ip):
-            raise BlockedError("blocked non-public address %s for %s" % (ip, host))
+            raise BlockedError(f"blocked non-public address {ip} for {host}")
     # Prefer IPv4 for the pinned connection.
     for ip in ips:
         if ipaddress.ip_address(ip).version == 4:
@@ -101,21 +84,56 @@ def _resolve_public(host):
     return next(iter(ips))
 
 
-import time as _time
+import time as _time  # noqa: E402 — import placed after runtime setup above it, deliberately
+
+
+def _strip_invisible(s):
+    """E005: Strip zero-width and bidi control characters from hostnames.
+
+    These invisible characters (U+200B-U+200F, U+202A-U+202E, U+FEFF) can be
+    embedded in hostnames to create visually identical but distinct domains
+    that bypass SSRF validation or consume separate budget slots."""
+    if not s:
+        return s
+    # Zero-width spaces, joiners, and bidi control characters
+    invisible = (
+        '\u200B',  # Zero Width Space
+        '\u200C',  # Zero Width Non-Joiner
+        '\u200D',  # Zero Width Joiner
+        '\u200E',  # Left-to-Right Mark
+        '\u200F',  # Right-to-Left Mark
+        '\u202A',  # Left-to-Right Embedding
+        '\u202B',  # Right-to-Left Embedding
+        '\u202C',  # Pop Directional Formatting
+        '\u202D',  # Left-to-Right Override
+        '\u202E',  # Right-to-Left Override
+        '\uFEFF',  # Zero Width No-Break Space (BOM)
+    )
+    for char in invisible:
+        s = s.replace(char, '')
+    return s
 
 
 def _one_request(url, timeout, max_bytes, deadline=None):
+    """Execute a single HTTP request with SSRF guards, port allowlisting, and size limits.
+
+    Follows redirects up to the configured hop count, re-validating the destination
+    on each hop (A033).  Raises ``BlockedError`` for non-public targets or disallowed
+    ports, ``TruncatedError`` when the response exceeds *max_bytes*.
+    """
     parts = urllib.parse.urlsplit(url)
     if parts.scheme not in ("http", "https"):
-        raise BlockedError("scheme not allowed: %r" % parts.scheme)
+        raise BlockedError(f"scheme not allowed: {parts.scheme!r}")
     host = parts.hostname
     if not host:
         raise BlockedError("missing host")
+    # E005: strip zero-width and bidi control characters from hostname
+    host = _strip_invisible(host)
     port = parts.port or (443 if parts.scheme == "https" else 80)
     # A033: reject non-web ports. This runs on every hop (fetch() re-enters here per
     # redirect), so an http->https:PORT redirect cannot bypass a first-request-only check.
     if port not in _ALLOWED_PORTS:
-        raise BlockedError("port not allowed: %d" % port)
+        raise BlockedError(f"port not allowed: {port}")
     ip = _resolve_public(host)
 
     # A164: derive per-hop timeout from the remaining deadline budget so the
@@ -145,7 +163,7 @@ def _one_request(url, timeout, max_bytes, deadline=None):
     # which carries any user:pass@ userinfo (credential leak to the target) and is a
     # CRLF-injection surface. hostname is already normalized and separator-free.
     default_port = 443 if parts.scheme == "https" else 80
-    host_header = host if port == default_port else "%s:%d" % (host, port)
+    host_header = host if port == default_port else f"{host}:{port}"
 
     try:
         conn.putrequest("GET", path, skip_host=True, skip_accept_encoding=True)
@@ -199,13 +217,12 @@ def _fetch_loop(url, timeout, max_bytes, max_redirects):
 
     current = url
     for _ in range(max_redirects + 1):
-        status, location, ctype, body, cenc = _one_request(current, timeout, max_bytes,
-                                                            deadline=deadline)
+        status, location, ctype, body, cenc = _one_request(current, timeout, max_bytes, deadline=deadline)
         if status in (301, 302, 303, 307, 308) and location:
             current = urllib.parse.urljoin(current, location)  # re-validated next loop
             continue
         if status >= 400:
-            raise FetchError("upstream status %d" % status)
+            raise FetchError(f"upstream status {status}")
         return body, ctype, cenc, current
     raise FetchError("too many redirects")
 

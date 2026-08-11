@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 using SyxxUI.ViewModels;
 using Syxx.Kit;
 using System.Collections.ObjectModel;
@@ -23,7 +24,7 @@ namespace SyxxUI.Views;
 public sealed partial class ProphetView : Page
 {
     // 12-oracle resolver list shown in the consensus card (replaces the old raw-records list).
-    public ObservableCollection<ResolverRow> ResolverRows { get; } = [];
+    public ObservableCollection<ConsensusResolverRow> ResolverRows { get; } = [];
 
     private AppViewModel? _vm;
 
@@ -33,16 +34,40 @@ public sealed partial class ProphetView : Page
     public ProphetView()
     {
         InitializeComponent();
+
+        Header.AddContent(new TextBlock
+        {
+            Text = "Thus the voyage began: The Prophet names each domain aright, so no false guise may be borne into view.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoFontLore"],
+            FontSize = 17,
+            Foreground = (Brush)Application.Current.Resources["IoTextMutedBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
+        Header.AddContent(new TextBlock
+        {
+            Text = "Prophet compares twelve resolver answers to queries sent for the domain you identify. A match only indicates consistency and does not mean the answers are valid. Resolver answers can be spoofed. Prophet then checks for DNSSEC on the domain, which does communicate trustworthiness.",
+            FontFamily = (FontFamily)Application.Current.Resources["IoTypeBody"],
+            FontSize = 13,
+            Foreground = (Brush)Application.Current.Resources["IoTextSecondaryBrush"],
+            TextWrapping = TextWrapping.Wrap,
+        });
     }
 
-    private static SolidColorBrush SolidBrush(string key) => (SolidColorBrush)Application.Current.Resources[key];
+    // D307: return Brush (not SolidColorBrush) so gradient resources don't cause InvalidCastException.
+    private static Brush SolidBrush(string key) => (Brush)Application.Current.Resources[key];
 
     // Create a semi-transparent copy of a brush for card backgrounds/borders.
     // Mirrors macOS pres.color.opacity(0.05) / pres.color.opacity(0.24).
-    private static SolidColorBrush WithAlpha(SolidColorBrush source, double opacity)
+    // D307: accept Brush base type; only SolidColorBrush supports color extraction.
+    // Falls back to the source brush unchanged for gradient or non-solid resources.
+    private static Brush WithAlpha(Brush source, double opacity)
     {
-        var c = source.Color;
-        return new SolidColorBrush(Color.FromArgb((byte)(c.A * opacity), c.R, c.G, c.B));
+        if (source is SolidColorBrush scb)
+        {
+            var c = scb.Color;
+            return new SolidColorBrush(Color.FromArgb((byte)(c.A * opacity), c.R, c.G, c.B));
+        }
+        return source;
     }
 
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -232,11 +257,13 @@ public sealed partial class ProphetView : Page
 }
 
 // 12-oracle resolver row for the consensus card list (replaces the old RecordRow).
-public sealed class ResolverRow
+// Named ConsensusResolverRow: MirrorView.xaml.cs:232 already defines a DIFFERENT ResolverRow in
+// this same namespace (5 display properties vs these 2) — CS0101 on real Windows CI, first build.
+public sealed class ConsensusResolverRow
 {
     public string Resolver { get; set; } = "";
     public string Ip { get; set; } = "";
-    public ResolverRow(string resolver, string ip)
+    public ConsensusResolverRow(string resolver, string ip)
     {
         Resolver = resolver;
         Ip = ip;

@@ -114,8 +114,10 @@ public partial class LicenseView : UserControl
         }
         catch (Exception ex)
         {
+            // L2-028: redact exception details from user-facing output — internal paths and stack
+            // traces must not be shown to users. Raw detail goes to the diagnostic sink only.
             System.Diagnostics.Debug.WriteLine($"[Syxx] License activation failed: {ex}");
-            ActivateStatusText.Text = $"Activation could not complete: {ex.GetType().Name}";
+            ActivateStatusText.Text = "Activation could not complete. Check your connection and try again.";
             ActivateStatusText.Foreground = Brush("SyxRedBrush");
         }
         finally
@@ -147,9 +149,20 @@ public partial class LicenseView : UserControl
         PriceText.Text = _isMonthly ? "$3.95 / month" : "$19.95 / year";
         if (SaveText != null)
             SaveText.IsVisible = !_isMonthly;
+
+        // L2-029: URL policy gate — only allow http/https schemes to be opened externally.
+        // Prevents SSRF or file:// exploitation if CheckoutUrl is ever tampered.
+        var url = CheckoutUrl;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            System.Diagnostics.Debug.WriteLine($"[Syxx] URL policy gate blocked: {url}");
+            return;
+        }
+
         var psi = new System.Diagnostics.ProcessStartInfo
         {
-            FileName = CheckoutUrl,
+            FileName = url,
             UseShellExecute = true,
         };
         System.Diagnostics.Process.Start(psi);

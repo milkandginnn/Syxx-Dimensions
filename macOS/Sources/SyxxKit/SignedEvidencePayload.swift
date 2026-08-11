@@ -165,6 +165,12 @@ public extension SignedEvidencePayload {
     /// Deterministic UTF-8/ordinal sort shared by every set-valued field, so Swift and C# order
     /// identical string sets identically. (String set members are ASCII in practice — IP literals
     /// and resolver IDs — so byte-ordinal and code-unit ordinal agree.)
+    ///
+    /// NOTE: bare `sorted()` on [String] in Swift uses Unicode canonical equivalence
+    /// (NFD-aware), while C# `StringComparer.Ordinal` sorts by UTF-16 code unit. This
+    /// divergence is currently dormant because all sorted strings are ASCII. If non-ASCII
+    /// strings are ever added, prefer this explicit UTF-8 ordinal comparator over bare
+    /// `sorted()` to maintain cross-platform parity.
     static func sortedUnique(_ values: [String]) -> [String] {
         Array(Set(values)).sorted { $0.utf8.lexicographicallyPrecedes($1.utf8) }
     }
@@ -268,13 +274,13 @@ public extension SignedEvidencePayload {
         perResolver.append(ResolverAnswerRecordsCanonical(
             resolverId: comparison.localServer,
             records: comparison.localOutcome.records.map {
-                .init(name: $0.name, type: $0.type, ttl: UInt32($0.ttl), rdata: $0.rdata)
+                .init(name: $0.name, type: $0.type, ttl: 0, rdata: $0.rdata)
             }))
         for (rid, outcome) in comparison.publicResolverOutcomes {
             perResolver.append(ResolverAnswerRecordsCanonical(
                 resolverId: rid,
                 records: outcome.records.map {
-                    .init(name: $0.name, type: $0.type, ttl: UInt32($0.ttl), rdata: $0.rdata)
+                    .init(name: $0.name, type: $0.type, ttl: 0, rdata: $0.rdata)
                 }))
         }
         perResolver.sort { $0.resolverId.utf8.lexicographicallyPrecedes($1.resolverId.utf8) }

@@ -221,7 +221,7 @@ public struct HonestySignals: Codable, Sendable, Equatable {
 
 public struct HardGateSignal: Codable, Sendable, Equatable {
     public let token: CopyToken
-    /// Wire key `blockedResults` (never "verdict"). States that the hard gate forbids.
+    /// Wire key `blockedResults` (never the banned word). States that the hard gate forbids.
     public let blockedResults: [DeterminationState]
     public let requiredSections: [Section]
     public let unavailableDatapointIds: [String]

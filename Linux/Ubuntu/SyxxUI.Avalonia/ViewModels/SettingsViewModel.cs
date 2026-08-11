@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Syxx.Kit;
+using SyxxUI.Avalonia.Services;
 
 namespace SyxxUI.Avalonia.ViewModels;
 
@@ -17,8 +18,15 @@ public partial class SettingsViewModel : ObservableObject
     private SyxxSettings _settings = SyxxSettingsStore.Load();
     private bool _loading = true;
 
+    /// <summary>
+    /// The three options shown in the Appearance combo box.
+    /// Index 0 = System, 1 = Dark, 2 = Light — kept in sync with <see cref="ThemeModeIndex"/>.
+    /// </summary>
+    public ObservableCollection<string> ThemeModeOptions { get; } = new() { "System", "Dark", "Light" };
+
     public ObservableCollection<string> Resolvers { get; } = new();
 
+    [ObservableProperty] private int _themeModeIndex;
     [ObservableProperty] private int _resolverIndex;
     [ObservableProperty] private bool _useDot;
     [ObservableProperty] private bool _encryptEnabled;
@@ -34,6 +42,12 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel()
     {
         foreach (var r in EncryptedDNSConfig.Catalog) Resolvers.Add(r.DisplayName);
+        ThemeModeIndex = ThemeManager.Normalise(_settings.ThemeMode) switch
+        {
+            ThemeManager.ModeDark => 1,
+            ThemeManager.ModeLight => 2,
+            _ => 0,
+        };
         ResolverIndex = System.Math.Max(0,
             System.Array.FindIndex(EncryptedDNSConfig.Catalog.ToArray(), r => r.Id == _settings.EncryptedDnsResolverId));
         UseDot = _settings.EncryptedDnsTransport == EncryptedDNSTransport.Dot;
@@ -46,14 +60,29 @@ public partial class SettingsViewModel : ObservableObject
     private string CurrentResolverId =>
         EncryptedDNSConfig.Catalog[System.Math.Clamp(ResolverIndex, 0, EncryptedDNSConfig.Catalog.Count - 1)].Id;
 
+    private string ThemeModeFromIndex => ThemeModeIndex switch
+    {
+        1 => ThemeManager.ModeDark,
+        2 => ThemeManager.ModeLight,
+        _ => ThemeManager.ModeSystem,
+    };
+
     private void Persist()
     {
+        _settings.ThemeMode = ThemeModeFromIndex;
         _settings.EncryptedDnsResolverId = CurrentResolverId;
         _settings.EncryptedDnsTransport = UseDot ? EncryptedDNSTransport.Dot : EncryptedDNSTransport.Doh;
         _settings.EncryptedDnsEnabled = EncryptEnabled;
         _settings.TelemetryEnabled = TelemetryEnabled;
         _settings.NotificationsEnabled = NotificationsEnabled;
         SaveNote = SyxxSettingsStore.Save(_settings) ? "Saved." : "Could not save settings.";
+    }
+
+    partial void OnThemeModeIndexChanged(int value)
+    {
+        if (_loading) return;
+        Persist();
+        ThemeManager.ApplyTheme(ThemeModeFromIndex);
     }
 
     partial void OnResolverIndexChanged(int value) { if (!_loading) Persist(); }
@@ -72,9 +101,24 @@ public partial class SettingsViewModel : ObservableObject
         EncryptState = Describe(r, value);
     }
 
+    /// <summary>
+    /// L2-047: two-step data removal confirmation. First click sets ConfirmRemoveData to true,
+    /// showing the confirmation button. Second click actually removes data. This prevents
+    /// accidental destructive operations without requiring a modal dialog.
+    /// </summary>
+    [ObservableProperty] private bool _confirmRemoveData;
+
     [RelayCommand]
     private void RemoveData()
     {
+        if (!ConfirmRemoveData)
+        {
+            ConfirmRemoveData = true;
+            DataNote = "Click 'Confirm remove' to erase all local data. This cannot be undone.";
+            return;
+        }
+
+        ConfirmRemoveData = false;
         Sentinel.Forget();
         HomeBaseline.Forget();
         new AnswerLedger().Forget();

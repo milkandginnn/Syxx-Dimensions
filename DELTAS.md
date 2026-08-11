@@ -12,6 +12,7 @@ When asked to perform `delta analysis`, systematically audit the macOS, Windows,
 ### Scope & Approach
 
 **Read the entire codebase** — macOS client (`macOS/Sources`), Windows client (`Windows/`), and server (`Server/`). Focus on code paths that:
+
 - Produce verdicts (secure/tampered/inconclusive)
 - Generate or sign evidence
 - Handle credentials, keys, or authentication
@@ -19,6 +20,7 @@ When asked to perform `delta analysis`, systematically audit the macOS, Windows,
 - Process untrusted input (DNS packets, HTML, subprocess arguments)
 
 Do not try to read every file line-by-line — instead, **trace critical paths**:
+
 1. Start at CLI entry points (`SyxxCLI.swift`, `Program.cs`) and follow to verdict synthesis
 2. Read all synthesis/aggregation logic (`SynthesisEngine.swift`, `Synthesizer.cs`, `Synthesizer.swift`)
 3. Audit all security-critical modules (LicenseManager, DNSSECVerifier, WitnessSigner, NetworkKeyState)
@@ -52,9 +54,9 @@ If a delta spans multiple domains, file it under the **most severe** applicable 
 5. **Platform Integration**
 6. **Miscellaneous**
 
-### Delta Numbers 
+### Delta Numbers
 
-When recording identified delties, take its sequence order (3-digit format) and then append it to its domain code. For instance, a delta that would be the fourth listed in the Server Components domain would be numbered A004. A delta involving Verdict and Evidence Integrity that would be the 127th recorded delta in its domain would be number B127. Each Monday, renumber deltas sequentially within each domain to fill gaps left by fixed or archived deltas. For example, if A003 and A007 are fixed, the former A008 becomes the new A003, A009 becomes A004, etc. Update all cross-references accordingly. Mark any deltas that should not be renumbered by appending `HOLD -` followed by your tool name inside of brackets above the delta number--e.g., `[HOLD - OPENCODE]` or `[HOLD - CLAUDE]`. Brackets cause XCode to set text    off in red so it is easily readable to the user. 
+When recording identified delties, take its sequence order (3-digit format) and then append it to its domain code. For instance, a delta that would be the fourth listed in the Server Components domain would be numbered A004. A delta involving Verdict and Evidence Integrity that would be the 127th recorded delta in its domain would be number B127. Each Monday, renumber deltas sequentially within each domain to fill gaps left by fixed or archived deltas. For example, if A003 and A007 are fixed, the former A008 becomes the new A003, A009 becomes A004, etc. Update all cross-references accordingly. Mark any deltas that should not be renumbered by appending `HOLD -` followed by your tool name inside of brackets above the delta number--e.g., `[HOLD - OPENCODE]` or `[HOLD - CLAUDE]`. Brackets cause XCode to set text    off in red so it is easily readable to the user.
 
 Priority can be inferred from delta numbering, whereas A- and B-numbered deltas are the highest priority and E- and F-numbered deltas are the lowest priority.
 
@@ -64,6 +66,41 @@ Report findings in `DELTAS.md` format:
 
 ---
 
+- **[E035]**            Telemetry consent toggles persist settings but never stop or start
+                        the live exporters
+- **Status:**           **OPEN** — Found during the completed five-agent audit
+                        2026-08-09.
+- **Criticality:**      Critical. Users can turn telemetry on or off in settings and the
+                        preference is saved, but the running exporter state keeps whatever
+                        it had at startup.
+- **Location:**         Windows/dotNET/SyxxUI/Views/SettingsView.xaml.cs:108-117;
+                        Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/SettingsViewModel.cs:70-90;
+                        Linux/Ubuntu/SyxxUI.Avalonia/Services/LinuxReadyServices.cs:16-53
+- **Issue:**            The Windows and Linux settings handlers only mutate settings and
+                        call `Persist()`. `LinuxReadyServices.Start()` applies telemetry only
+                        once at launch, and there is no corresponding stop/start path when
+                        the user changes the consent toggle later. The UI therefore records
+                        the new preference while the process keeps emitting according to the
+                        old one.
+- **Cross-ref. Delta:** D097 (Windows GUI bootstrap path) and D096 (Linux sink path),
+                        but this issue is the settings-to-runtime disconnect itself.
+- **Fix(es):**          [Fix 1] Restart or reconfigure the live exporter when telemetry
+                        consent changes. [Fix 2] Make the settings UI call into a runtime
+                        apply hook, not just `Persist()`.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/SyxxUI/Views/SettingsView.xaml.cs:108-117
+                        _settings.TelemetryEnabled = TelemetryToggle.IsOn; Persist();
+
+                        // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/SettingsViewModel.cs:70-90
+                        _settings.TelemetryEnabled = TelemetryEnabled;
+                        SaveNote = SyxxSettingsStore.Save(_settings) ? "Saved." : "Could not save settings.";
+
+                        // Linux/Ubuntu/SyxxUI.Avalonia/Services/LinuxReadyServices.cs:16-53
+                        if (settings.TelemetryEnabled) { _tracerProvider = ...Register(...); }
+
+                        ]
+
 - **[Delta Number]**    [Delta Short Description/Name]
 - **Criticality:**      Indicate `Critical / Non-critical`; whether the delta is critical and user was made aware.
 - **Location:**         Filename and line numbers (e.g., `SynthesisEngine.swift:78-84`)
@@ -72,12 +109,13 @@ Report findings in `DELTAS.md` format:
 - **Fix(es):**          Brief suggestion for how to fix (not full implementation)
 
 - **Code Sample:**      [
-                        
+
                         Paste an example of the defective code.
                         For more complex involvement, choose the most severe code example(s) to paste.
                         For more simple code examples, just paste the whole thing.
 
                         ]
+
 ---
 ---
 
@@ -114,14 +152,13 @@ python3 scripts/reflow-deltas.py DELTAS.md
 
 It re-indents every delta field to column 24 and touches only the A–F ledger (instructions, template, worked example, and the Delta-of-the-Week section are left untouched). Column and wrap width are the `VALUE_COL = 24` / `WIDTH = 100` constants at the top of the script.
 
-
 ## Delta Evaluation Instructions
 
 When asked to `evaluate` deltas, you are asked to visit this document and critique the deltas submitted by your peers, i.e., peer vetting. Read each and decide:
 
 - whether you **agree** with the delta or **disagree** with the delta.
 
-- if you **disagree** with the delta, you are asked to explain the basis of your disagreement. 
+- if you **disagree** with the delta, you are asked to explain the basis of your disagreement.
 
 Disagreement can be based on any of three grounds:
 
@@ -152,7 +189,6 @@ When evaluating deltas, you are asked to make comments inline to the comment you
 
 ---
 ---
-
 
 ### Criticality
 
@@ -193,71 +229,16 @@ If none of the above apply, it's probably High or Medium, not Critical.
 #### Reporting Requirement
 
 Stop and report to the user immediately if:
+
 - You find a **Critical-severity defect** (false confidence risk, false verdict, forgeable evidence) — report immediately, don't wait for the full audit. This is critical for all, as many of you do not have persistent context and user has limited usage for all of you.
 - You hit a network/dependency failure (per AGENTS.md "Pause and Report" rules)
 - You're unsure whether a pattern is a bug or intentional design — ask before logging
 
 Do not call the analysis "complete" until you've covered all critical paths above, even if you haven't read every file in the codebase.
-## **A. Server Components**
 
----
-- **[A001]**            Server passivedns.py leaks SQLite database connection on query exception
-- **Status:**           **ALREADY FIXED** — passivedns.py no longer opens its own SQLite
-                        connections. The query path was refactored to delegate to
-                        db.passive_query() (db.py:695-722), which uses try/finally to ensure
-                        conn.close() on every path. The original direct sqlite3.connect() code
-                        cited in this delta no longer exists.
-- **Criticality:**      Critical; unhandled exception during passive DNS query leaks database
-                        connection file descriptors causing resource exhaustion and service failure.
-- **Location:**         Server/syxx_server/passivedns.py:45-82
-- **Issue:**            lookup_domain() opens a database connection via sqlite3.connect() inside a
-                        try block but lacks a context manager or finally: cleanup block. If JSON
-                        parsing or row processing raises an exception, conn.close() is bypassed,
-                        leading to descriptor leakage under hostile or malformed input.
-- **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Wrap sqlite3.connect() in a with context manager or try...finally
-                        block ensuring conn.close() executes on exception.
-- **Code Sample:**      [
 
-                        // Server/syxx_server/passivedns.py:45-52
-                        conn = sqlite3.connect(DB_PATH)
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT query_name, rdata, rtype, first_seen, last_seen FROM passive_dns WHERE query_name = ?", (domain,))
-                        rows = cursor.fetchall()
-
-                        ]
----
----
-- **[A031]**            licensing.py HMAC column name mismatch makes DB-backed offline licenses
-                        permanently fail
-- **Status:**           **OPEN** — Verified in source. licensing.py:289 still reads
-                        `row.get("hmac")`, but db.license_lookup() pops `row_hmac` from the dict
-                        before returning (db.py:465). The key "hmac" never exists in the returned
-                        dict, so stored_hmac is always None and every DB-backed offline license is
-                        rejected. This is the identical issue to A229 — A031 and A229 are the same
-                        delta filed under different audit streams.
-- **Criticality:**      Critical; DB license row lookup returns row_hmac while _validate_offline
-                        reads row.get("hmac"), causing false rejection of valid offline licenses.
-- **Location:**         Server/syxx_server/licensing.py:289-291; Server/syxx_server/db.py:466
-- **Issue:**            db.license_lookup() pops row_hmac before returning the dictionary, and the
-                        column is named row_hmac in the schema. However, _validate_offline()
-                        attempts to read row.get("hmac"), which always returns None, triggering an
-                        invalid HMAC error and rejecting valid offline licenses.
-- **Cross-ref. Delta:** **Same issue as A229.** Remove one to avoid duplicate tracking.
-- **Fix(es):**          [Fix 1] Remove redundant HMAC check in _validate_offline() as
-                        db.license_lookup() already verifies the HMAC and returns None on failure.
-- **Code Sample:**      [
-
-                        // Server/syxx_server/licensing.py:289-291
-                        stored_hmac = row.get("hmac")
-                        if not stored_hmac:
-                            logging_util.warn("offline_license_missing_hmac", msg="DB license row has no HMAC signature — rejecting as untrusted")
-                            return None
-
-                        ]
----
----
-- **[A032]**            Passive DNS drift boolean fallback collapses tri-state
+## **B. Detection Efficacy**
+- **[B001]**            Passive DNS drift boolean fallback collapses tri-state
 - **Status:**           **OPEN** — Verified in source. passivedns.py:123 still emits
                         `"driftSuspected": drift == "suspected"`. The comment says "backward-compat
                         bool alongside tri-state" (A117), but legacy clients reading only the
@@ -280,3980 +261,5022 @@ Do not call the analysis "complete" until you've covered all critical paths abov
                         "driftSuspected": drift == "suspected",
 
                         ]
----
----
-- **[A262]**            _route_checkout uses raw socket peer for idempotency key; all
-                        users behind nginx share one Stripe checkout session
-- **Criticality:**      High; behind the shipped reverse-proxy topology (deploy.sh nginx →
-                        localhost), every checkout idempotency key is keyed on 127.0.0.1,
-                        so two users buying the same SKU within the same hour window are
-                        redirected to the SAME Stripe Checkout Session; the second buyer
-                        sees the first buyer's session, and the first buyer's success_url
-                        with the second buyer's session id.
-- **Location:**         Server/syxx_server/app.py:1168
-- **Issue:**            _route_checkout() builds the Stripe idempotency key from
-                        `self.client_address[0]` (the raw socket peer, always 127.0.0.1
-                        behind nginx) instead of `self._client_ip()` (which reads
-                        X-Real-IP / X-Forwarded-For when the peer is loopback). Every
-                        other route that needs the real client IP uses `_client_ip()`;
-                        the checkout route alone uses the raw socket peer, making all
-                        users behind the same proxy share a single idempotency key per
-                        (sku, hour_window).
-- **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Replace `self.client_address[0]` with `self._client_ip()`
-                        at line 1168 so the idempotency key is scoped to the real client.
-- **Code Sample:**      [
-
-                        // Server/syxx_server/app.py:1166-1169
-                        window = int(time.time()) // 3600
-                        client_ip = self.client_address[0]
-                        idem_key = "checkout-%s-%s-%d" % (sku, hashlib.sha256(client_ip.encode()).hexdigest()[:16], window)
-
-                        ]
----
----
-- **[A263]**            _route_create_monitor default checks value "prophet" is not valid
-                        JSON, so monitors created without explicit checks silently fail
-- **Criticality:**      Medium; a monitor created via POST /api/monitors with no `checks`
-                        field in the body gets the default string "prophet", which is not
-                        a JSON array. The scheduler calls `json.loads("prophet")` which
-                        raises JSONDecodeError every tick; the monitor is created and
-                        appears healthy but never runs a single check, silently.
-- **Location:**         Server/syxx_server/app.py:2433;
-                        Server/syxx_server/scheduler.py:63
-- **Issue:**            _route_create_monitor() defaults `checks` to the bare string
-                        `"prophet"` when the caller omits the field. The scheduler's
-                        `_run_one()` calls `json.loads(monitor.get("checks", "[]"))`;
-                        `json.loads("prophet")` raises `JSONDecodeError` (the string is
-                        not quoted, so it's not valid JSON). The exception is caught by the
-                        scheduler's catch-all, logged as `monitor_tick_error`, and the
-                        monitor silently fails every tick forever. The user sees the
-                        monitor in their list and has no indication it is broken.
-- **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Change the default from `"prophet"` to `'["investigate"]'`
-                        (valid JSON array) so a monitor created with no explicit checks
-                        runs the investigate check.
-                        [Fix 2] Validate that `checks` is valid JSON before storing it,
-                        returning 400 if not.
-- **Code Sample:**      [
-
-                        // Server/syxx_server/app.py:2433
-                        checks = payload.get("checks", "prophet")
-
-                        // Server/syxx_server/scheduler.py:63
-                        checks = json.loads(monitor.get("checks", "[]"))
-
-                        ]
----
----
-- **[A264]**            Signed appcast manifest ships with empty package SHA-256 and size
-- **Criticality:**      Critical; a signed update manifest with no package integrity data allows
-                        package substitution to go undetected.
-- **Location:**         Server/syxx_server/appcast.py:98-103, 117-120
-- **Issue:**            build_appcast() returns a manifest whose packages[0] has sha256 ""
-                        and size 0. The comment says these are populated by
-                        publish_package(), but publish_package() is never wired into the
-                        production /api/appcast path. The manifest is then Ed25519-signed
-                        at lines 117-120, so the client receives a cryptographically valid
-                        attestation for a package whose integrity it cannot verify. If the
-                        file server or CDN hosting the package is compromised, the client has
-                        no hash to detect the tampering. This defeats the Witness update-trust
-                        mission: the signature is present, but the package evidence it signs is
-                        empty. The current state should be inconclusive or no update available
-                        until real package hashes are published.
-- **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Integrate publish_package() into the release pipeline and
-                        persist the computed SHA-256, size, and URL so build_appcast()
-                        returns real data.
-                        [Fix 2] Until real hashes are available, return None from
-                        build_appcast() so /api/appcast returns 404 instead of signing a
-                        placeholder.
-- **Code Sample:**      [
-
-                        // Server/syxx_server/appcast.py:94-120
-                        # Build the package entry
-                        # In production, the URL would point to the actual download location.
-                        # The SHA-256 would be computed when the package is published.
-                        # For now, we return the update URL as a placeholder.
-                        packages = [{
-                            "url": update_url,
-                            "sha256": "",  # Populated when package is published
-                            "size": 0,
-                            "type": pkg_type,
-                        }]
-
-                        manifest = {
-                            "platform": platform,
-                            "version": version,
-                            "build": "",  # Could be derived from git
-                            "minVersion": "1.0.0",  # Minimum version that can update to this
-                            "critical": False,  # Critical updates bypass user opt-out
-                            "releaseNotes": "Update available.",
-                            "packages": packages,
-                            "publishedAt": int(time.time()),
-                        }
-
-                        # Sign the manifest (everything except "signature")
-                        payload = _canon(manifest)
-                        import base64
-                        sig = _COLLECTOR_PRIV_KEY.sign(payload)
-                        manifest["signature"] = base64.b64encode(sig).decode("ascii")
-
-                        ]
----
----
-- **[A265]**            DOM-based XSS via unescaped DNS record values in index.html terminal
-- **Criticality:**      Critical; DNS TXT record values are rendered as HTML without escaping.
-- **Location:**         Server/index.html:686, 698-701, 761, 765
-- **Issue:**            fmtRecords() (lines 698-701) concatenates raw r.value strings from
-                        DNS records into a terminal string, and mrun() (line 686) appends
-                        that string to innerHTML. DNS TXT records can contain arbitrary
-                        attacker-controlled text, including HTML and JavaScript. A user who
-                        queries a domain with a malicious TXT payload can execute the
-                        attacker's script in the origin of syxx.app. Because the session
-                        token is stored in localStorage (A244), this can lead to session
-                        theft or privileged API calls. The rendered output should be clean
-                        only after escaping or encoding; until then it must be treated as
-                        tampered and not injected into the DOM.
-- **Cross-ref. Delta:** Related to A237-A240 (XSS in leaktest.html pages), but the
-                        vulnerable surface is in index.html and the vector is DNS record
-                        values, not resolver IPs.
-- **Fix(es):**          [Fix 1] Escape HTML special characters in fmtRecords() before
-                        concatenating values, or build the rows with DOM methods that set
-                        textContent instead of innerHTML.
-                        [Fix 2] Make mrun() use textContent insertion for untrusted output,
-                        or escape the entire out argument before assigning it to innerHTML.
-- **Code Sample:**      [
-
-                        // Server/index.html:686
-                        function mrun(typed,out){const t=mel();t.innerHTML+=MP+typed+'\n'+out+'\n\n';t.scrollTop=t.scrollHeight;}
-
-                        // Server/index.html:698-701
-                        function fmtRecords(records){
-                          if(!records||!records.length) return D('  (no records)');
-                          return records.map(r=>{ const v = typeof r.value==='object' ? JSON.stringify(r.value) : r.value; return '  '+(r.ttl||300)+'\t'+(r.type||'?')+'\t'+v; }).join('\n');
-                        }
-
-                        // Server/index.html:761
-                        try{ const data=await freeAPI('/api/lookup',{domain:d,type:ty}); mrun('',data.server+'#53\n\n'+(data.rcodeName==='NOERROR'?G(';; '+data.rcodeName):Y(';; '+data.rcodeName))+'\n'+fmtRecords(data.records)); }catch(e){ mrun('',R('lookup failed: '+e.message)); }
-
-                        ]
----
----
-- **[A266]**            Monitor notification email stored in plaintext, contradicting zero-knowledge
-                        privacy claims
-- **Criticality:**      Critical; PII is retained in plaintext in the same database the privacy
-                        policy claims holds only blind indexes and ciphertext.
-- **Location:**         Server/syxx_server/app.py:2435; Server/syxx_server/db.py:1028
-- **Issue:**            _route_create_monitor() (app.py:2435) accepts notify_email from the
-                        request body and passes it directly to db.monitor_create(), which
-                        inserts it into the monitors table as plain TEXT (db.py:1028). The
-                        public privacy page at Server/index.html:407-408 states that a
-                        database dump reveals no emails, only blind indexes and ciphertext,
-                        and that the operator has no decryption key and cannot read your
-                        identity. The monitor email is stored in the same SQLite database in
-                        plaintext, making those guarantees false for any Pro user who
-                        creates a monitor. This is a PII retention issue that erodes the
-                        trust infrastructure the Witness discipline depends on. The privacy
-                        state should be tampered while the server holds readable PII it claims
-                        not to hold; it should only become clean after the email is stored as
-                        a blind index or ciphertext, or the policy is updated to disclose and
-                        justify plaintext retention.
-- **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Store a one-way blind index or encrypted blob for the monitor
-                        email, decrypting only inside the mailer path with a key not held by
-                        the app server.
-                        [Fix 2] Remove notify_email storage until the privacy architecture
-                        supports it; or update the privacy policy to explicitly disclose that
-                        monitor notification emails are retained in plaintext and validate the
-                        email format.
-                        [Fix 3] Add a retention policy and purge monitors and monitor_results
-                        after the user-specified need expires.
-- **Code Sample:**      [
-
-                        // Server/syxx_server/app.py:2435
-                        notify_email = (payload.get("notify_email") or "").strip() or None
-
-                        // Server/syxx_server/db.py:1026-1028
-                        conn.execute(
-                            "INSERT INTO monitors(id,subject,domain,checks,interval_hours,notify_email,created_at,next_run) "
-                            "VALUES(?,?,?,?,?,?,?,?)",
-                            (monitor_id, subject, domain, checks, interval_hours, notify_email, now, now + interval_hours * 3600),
-                        )
-
-                        ]
----
-
----
-- **[A267]**            /api/monitors create — unbounded interval + no monitor cap + unvalidated
-                        domain → outbound-fetch amplification / self-DoS
-- **Criticality:**      Critical (auto-enhanced: unbounded resource use / DoS + server-as-
-                        amplifier);
-                        user NOT made aware. Gated behind a paid entitlement, but one leaked/trial key
-                        is sufficient to weaponize.
-- **Location:**         Server/syxx_server/app.py:2418-2447 (esp. 2432-2434, 2439);
-                        Server/syxx_server/scheduler.py:60-70, 138-155;
-                        Server/syxx_server/db.py:1020-1028, 1060-1078
-- **Issue:**            _route_create_monitor() has three compounding gaps every other authenticated
-                        route guards against: (1) interval_hours=int(payload.get("interval_hours",24))
-                        has no try/except and no clamp — interval_hours=0/negative makes next_run<=now
-                        (db.py:1074) so monitors_due re-selects the monitor every 60s tick forever; a
-                        non-numeric value throws → 500. (2) No per-subject monitor cap and no dedicated
-                        rate limit (create_api_key/bulk/lookalike each have explicit budgets), so a
-                        caller can persist thousands of monitors that survive restarts. (3) domain is
-                        never validated (valid_domain() never called) — arbitrary strings flow into
-                        investigate.investigate(domain) and warp.build_baseline each tick. Combined: N
-                        attacker-chosen monitors × interval=0 ⇒ N full multi-vantage investigations +
-                        N outbound HTTPS fetches every 60s indefinitely. SSRF pinning protects
-                        destinations but nothing bounds volume/cadence.
-- **Cross-ref. Delta:** Same route as A263 (checks default) and A266 (notify_email PII); NEW and
-                        distinct — neither covers interval bounds, the missing per-subject cap, nor the
-                        missing valid_domain gate.
-- **Fix(es):**          [Fix 1] Clamp: try: interval_hours = max(1, min(int(...),8760)) except
-                        (ValueError,TypeError,OverflowError): return 400 — mirror A153 pattern used two
-                        routes above.
-                        [Fix 2] if not domain or not investigate.valid_domain(domain) or len>253: 400.
-                        [Fix 3] Enforce per-subject monitor cap (db.monitor_count → 409/429) and/or a
-                        dedicated ratelimit budget, consistent with the other write routes.
-- **Code Sample:**      [
-
-                        # Server/syxx_server/app.py:2432-2439
-                        domain = (payload.get("domain") or "").strip()
-                        checks = payload.get("checks", "prophet")
-                        interval_hours = int(payload.get("interval_hours", 24))   # no try/except, no bounds
-                        notify_email = (payload.get("notify_email") or "").strip() or None
-                        if not domain:                                            # valid_domain() never called
-                            return self._json_error(400, "missing domain")
-                        db.monitor_create(monitor_id, ent.subject, domain, checks, interval_hours, notify_email)
-
-                        ]
----
-
----
-- **[A268]**            DoT leak-collector observation path bypasses the per-source rate limit the
-                        UDP
-                        collector enforces (A034 transport-parity gap)
-- **Criticality:**      Non-critical (defense-in-depth / transport-parity gap). Does not meet the
-                        DoS
-                        auto-critical bar because row growth is independently bounded (see mitigations);
-                        the residual is write-transaction pressure above the intended per-source ceiling
-                        and an inconsistent security control across transports.
-- **Location:**         Server/syxx_server/dot_listener.py:143-147 (the _answer collector path),
-                        contrasted with Server/syxx_server/dns_authoritative.py:337-346 (UDP path that
-                        gates the same write with _dns_rate_ok)
-- **Issue:**            A034 added a per-source sliding-window rate limit (_dns_rate_ok, 50 queries
-                        /
-                        60 s / source IP) gating the collector's DB write on the UDP path. The DoT
-                        collector path records the identical observation but omits that gate entirely.
-                        With DOT_MAX_CONN=128 × DOT_MAX_QUERIES_PER_CONN=100 (config.py:455-456) and
-                        connection cycling, a client can drive leak.observe — a DB read (leak_token_get)
-                        plus an INSERT OR IGNORE write-transaction attempt (BEGIN IMMEDIATE) per in-zone
-                        query — far above the 50/60 s ceiling the UDP path imposes. Under WAL these
-                        write-transaction attempts serialize against every other writer (license mint,
-                        kv idempotency, monitor writes), so sustained DoT collector traffic is write-path
-                        contention the UDP path is specifically designed to cap.
-- **Cross-ref. Delta:** A034 (FIXED) added _dns_rate_ok but wired it only into the UDP _serve_dns
-                        loop;
-                        the DoT observation path (added later for encrypted-transport collection) was
-                        never brought to parity. A119 (FIXED) covers the DoT accept-loop/handshake DoS
-                        but not the observation rate limit. NEW gap. (Honest mitigations bounding
-                        severity: A009 writes nothing for never-issued tokens — 128-bit unguessable;
-                        idx_leak_obs_unique dedups (token,resolver_ip,qtype) so rows cannot grow
-                        unboundedly; A119 conn caps bound per-conn throughput.)
-- **Fix(es):**          [Fix 1] Gate the DoT observation write with the same limiter: in
-                        dot_listener._answer, call dns_authoritative._dns_rate_ok(client_ip) before
-                        leak.observe(...), mirroring the UDP path (and logging_util.incr(
-                        "dns_rate_limited") on deny so both transports report identically).
-                        [Fix 2] Better: move the _dns_rate_ok gate into a shared helper (e.g.
-                        dns_authoritative.observe_if_allowed(token, ip, qtype)) that both the UDP loop
-                        and DoT handler call, so a future third transport cannot silently reintroduce
-                        the same parity gap.
-- **Code Sample:**      [
-
-                        # Server/syxx_server/dot_listener.py:144-147  (ungated — should mirror UDP gate)
-                        response, leak_hit = dns_authoritative._build_response(msg)
-                        if leak_hit is not None:
-                            leak.observe(leak_hit[0], client_ip, leak_hit[1])   # no _dns_rate_ok(client_ip) check
-                        return response
-
-                        # Server/syxx_server/dns_authoritative.py:343-346  (UDP path — gated)
-                        if _dns_rate_ok(addr[0]):
-                            leak.observe(leak_hit[0], addr[0], leak_hit[1])
-                        else:
-                            logging_util.incr("dns_rate_limited")
-
-                        ]
----
----
-- **[A269]**            Leak-collector rate-limit dictionary grows without bound from spoofed UDP
-                        source IPs (memory-exhaustion DoS)
-- **Criticality:**      Critical; unauthenticated, source-spoofable remote memory-exhaustion DoS on
-                        the trust-anchor server; the code comment falsely claims pruning exists
-- **Location:**         Server/syxx_server/dns_authoritative.py:24-52 (_dns_rate_buckets /
-                        _dns_rate_ok)
-- **Issue:**            A034 added a per-source sliding-window rate limiter (_dns_rate_buckets, a
-                        plain dict) to gate the leak collector's DB write on the UDP path. The dict
-                        adds one permanent [count, window_start] entry per distinct source IP and is
-                        never pruned or capped: _dns_rate_ok only overwrites an existing key on
-                        window rollover, and nothing ever removes a stale key or enforces a maximum
-                        dictionary size. The module docstring at line 26 claims the dict is
-                        maintained "with periodic pruning", which is false; no pruning code exists
-                        anywhere in the file or its callers. Because the authoritative UDP listener
-                        answers any labeled in-zone query without requiring a real leak token, and
-                        UDP source addresses are trivially spoofed, an attacker can send queries
-                        under <label>.leak.syxx.app using millions of distinct forged source IPs.
-                        Each one inserts a new permanent dictionary entry, so the process memory
-                        grows without bound until it is OOM-killed, taking down the DNS-leak
-                        collector, the HTTP API, the DoT listener, and the licensing/webhook paths
-                        on the same process. This is exactly the failure class ratelimit.py was
-                        hardened against for its own bucket store, which has both a stale-entry
-                        prune (SRV-045) and a hard _MAX_BUCKETS cap (A083); the collector's parallel
-                        limiter has neither protection.
-- **Cross-ref. Delta:** A034 (FIXED, added the limiter but not a bounded store); A083/SRV-045
-                        (FIXED, the exact prune-plus-cap pattern in ratelimit.py that this limiter
-                        lacks); adjacent to A268 (which is about applying the limiter on the DoT
-                        transport, not the limiter's own unbounded state).
-- **Fix(es):**          [Fix 1] Give _dns_rate_buckets the same discipline as ratelimit.py: prune
-                        entries whose window_start is older than a stale-window threshold, and
-                        enforce a hard _MAX_BUCKETS cap that evicts the least-recently-seen source
-                        when exceeded, both inside _dns_rate_ok under the existing _dns_rate_lock.
-                        [Fix 2] Correct the line-26 docstring to describe the pruning that actually
-                        exists once it is added.
-                        [Fix 3] Prefer factoring a single shared bounded limiter that both the UDP
-                        path and the DoT collector path (A268) call, so a future third transport
-                        cannot reintroduce the same unbounded-state gap.
-- **Code Sample:**      [
-
-
-                        // Server/syxx_server/dns_authoritative.py:24-52
-                        _dns_rate_lock = _threading.Lock()
-                        _dns_rate_buckets = {}  # ip -> [count, window_start]
-                        _DNS_RATE_LIMIT = 50
-                        _DNS_RATE_WINDOW = 60
-
-                        def _dns_rate_ok(source_ip):
-                            """Return True if source_ip is within the per-source rate limit."""
-                            now = int(time.time())
-                            with _dns_rate_lock:
-                                entry = _dns_rate_buckets.get(source_ip)
-                                if entry is None:
-                                    _dns_rate_buckets[source_ip] = [1, now]   # unbounded insert, no prune, no cap
-                                    return True
-                                count, window_start = entry
-                                if now - window_start >= _DNS_RATE_WINDOW:
-                                    _dns_rate_buckets[source_ip] = [1, now]
-                                    return True
-                                if count >= _DNS_RATE_LIMIT:
-                                    return False
-                                entry[0] = count + 1
-                                return True
-                        # Module docstring (line 26) claims: "with periodic pruning." No pruning code exists.
-
-
-                        ]
----
----
-- **[A270]**            Email-authentication check reports total DNS failure as a determinate
-                        "partial" instead of inconclusive
-- **Criticality:**      Low; honesty/tri-state collapse on an ancillary free-tier tool, not a DNS-
-                        tampering verdict, but it does render "we could not measure this" as a
-                        determinate-sounding label
-- **Location:**         Server/syxx_server/email_auth.py:160-171 (_overall), 13-27 (check)
-- **Issue:**            When every DNS query for an SPF/DMARC/DKIM check fails (resolver outage or
-                        network block), _check_spf and _check_dmarc both return conclusion
-                        "inconclusive" and _check_dkim returns "missing". _overall then receives
-                        ["inconclusive", "inconclusive", "missing"]: no member equals "fail", and
-                        not every member is in {"pass", "softfail", "neutral", "partial"}, so the
-                        function falls through to its final `return "partial"`. A run in which
-                        nothing could actually be measured is therefore reported to the caller as
-                        overall="partial", which reads as "email authentication is partially
-                        configured" rather than "we could not determine this." The per-protocol
-                        fields still say inconclusive/missing, which bounds the practical harm, but
-                        the summary field itself violates the no-verdict-before-evidence spirit by
-                        turning a total measurement failure into a determinate posture.
-- **Cross-ref. Delta:** None found in DELTAS.md / DELTAS-fixed.md.
-- **Fix(es):**          [Fix 1] In _overall, detect the case where every input is non-determinate
-                        (each value in {"inconclusive", "missing"}, none in the pass/fail sets) and
-                        return "inconclusive" in that case, before falling through to the default
-                        "partial".
-- **Code Sample:**      [
-
-
-                        // Server/syxx_server/email_auth.py:160-171
-                        def _overall(spf_v, dmarc_v, dkim_v):
-                            results = [spf_v, dmarc_v, dkim_v]
-                            if any(v == "fail" for v in results):
-                                return "fail"
-                            if all(v in ("pass", "softfail", "neutral", "partial") for v in results):
-                                return "pass"
-                            return "partial"   # all-inconclusive/missing also lands here
-
-
-                        ]
----
-
----
-- **[A271]**            Unresolved merge-conflict markers make the production server
-                        unimportable
-- **Criticality:**      Critical; user made aware. The server cannot start, so DNS investigation,
-                        leak attestation, licensing, monitoring, and payment fulfillment are all
-                        unavailable.
-- **Location:**         Server/syxx_server/config.py:112-119;
-                        Server/syxx_server/app.py:865-879, 920-941, 1426-1446;
-                        Server/syxx_server/leak.py:110-123;
-                        Server/syxx_server/fulfillment.py:316-340;
-                        Server/syxx_server/resolver.py:919-924
-- **Issue:**            Five production Python modules contain literal `<<<<<<< Updated upstream`,
-                        `=======`, and `>>>>>>> Stashed changes` merge-conflict markers. Python
-                        rejects the files before any route can run. A real test discovery run
-                        executed on 2026-08-01 reported 22 import errors, beginning with syntax
-                        errors in config.py and app.py. This is not an isolated failing feature:
-                        config.py is imported by most server modules, app.py is the HTTP entry
-                        point, resolver.py supplies the determinative DNS paths, leak.py signs
-                        collector evidence, and fulfillment.py handles paid license delivery.
-- **Cross-ref. Delta:** None found in DELTAS.md, DELTAS-fixed.md, or DELTAS-rejected.md. The
-                        individual branches contain changes previously associated with A013,
-                        A113, A150, A181, and A196, but the unresolved merge state itself is new.
-- **Fix(es):**          [Fix 1] Resolve every conflict by reconciling the security properties from
-                        both branches rather than choosing one side wholesale, then remove all
-                        conflict markers.
-                        [Fix 2] Add a repository gate that rejects conflict markers in production
-                        source and deployment scripts before build or deployment.
-                        [Fix 3] Re-run the complete server suite and one real server startup plus
-                        DNS investigation after resolution. Treat every newly exposed test failure
-                        as a separate delta rather than weakening the test.
-- **Code Sample:**      [
-
-                        // Server/syxx_server/resolver.py:919-924
-                        <<<<<<< Updated upstream
-                            "verdict": "authoritative" if resp["rcode"] in (0, 3) else "inconclusive"}
-                        =======
-                            "conclusion": conclusion}
-                        >>>>>>> Stashed changes
-
-                        ]
----
-
----
-- **[A272]**            Server returns hard tampered on a single authoritative snapshot when the
-                        independent clean vantage is unavailable
-- **Criticality:**      Critical; user made aware. A benign geo-distributed or rotating answer can
-                        be falsely accused of tampering, and the route exposes that accusation as
-                        a final conclusion.
-- **Location:**         Server/syxx_server/app.py:330-368, 1715-1758;
-                        Server/tests/test_routes.py:274-291
-- **Issue:**            `_route_diff` compares the client's local answer set with one
-                        authoritative-walk snapshot. When they are disjoint, `auth_usable` makes
-                        the assessment `divergent`. If the independent clean-vantage query failed,
-                        `_diff_result` still returns `tampered`. The surrounding comment admits
-                        that ordinary round-robin or geo rotation can produce the same pattern and
-                        that the clean vantage is the only implemented discriminator, but the code
-                        deliberately issues the accusation without that datum. The regression test
-                        pins this false-accusation policy instead of requiring corroboration. This
-                        revives the unresolved authoritative-snapshot portion of archived A012.
-- **Cross-ref. Delta:** A012 in DELTAS-fixed.md fixed the clean-vantage-only disjointness path, but
-                        its own evaluation recorded the residual authoritative/CDN caveat. This
-                        entry revives only that still-live residual risk and is not a duplicate of
-                        the fixed fallback-reference defect.
-- **Fix(es):**          [Fix 1] When the clean vantage is unavailable, return `inconclusive` for a
-                        disjoint local-versus-authoritative snapshot unless another independent,
-                        validated signal corroborates tampering.
-                        [Fix 2] Preserve `tampered` only when at least two independent verified
-                        vantages support the authoritative set and the local set remains disjoint,
-                        or when a stronger cryptographic proof establishes the expected RRset.
-                        [Fix 3] Replace the test that pins one-snapshot `tampered` with happy and
-                        failure cases covering stable authoritative data, benign rotation, clean-
-                        vantage outage, and independently corroborated tampering.
-- **Code Sample:**      [
-
-                        // Server/syxx_server/app.py:353-368
-                        if dns_assessment == "divergent":
-                            # clean_answers may be empty because the corroborating vantage failed
-                            if clean_answers is not None and local_set is not None:
-                                if local_set.issubset(clean_answers) and not local_set.isdisjoint(clean_answers):
-                                    return "inconclusive"
-                            return "tampered"
-
-                        ]
----
-
-## **B. Detection Efficacy**
-
----
-- **[B270]**            dnsSpoofing and localCompromise require the witness section, which is
-                        .untested
-                        on every first run — a decisive spoof is force-downgraded to inconclusive on a
-                        fresh install (both platforms)
-- **Criticality:**      Non-critical; systematic first-run missed-CONFIRMATION (result is
-                        honest-inconclusive with an overhang, not a false clean — no false confidence).
-- **Location:**         macOS/Sources/SyxxKit/Synthesis/SyxxMatrixIntegration.swift:112, 196;
-                        macOS/Sources/SyxxCLI/SyxxCLI.swift:869-873;
-                        Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs:252, 336
-- **Issue:**            The witness adapter returns .untested (unusable) when both drifts and
-                        configChanges are nil, which the CLI passes on the first run (no trusted baseline
-                        yet, B160/B087). Because dnsSpoofing and localCompromise list witness as a
-                        required section, the required-section hard gate (fail-closed) suppresses both
-                        diagnoses on every first run — even when dnsSpoofing's decisive
-                        authoritativeMismatch (weight 1.20) fires from a real cross-vantage divergence.
-                        The gated diagnosis reaches the overhang and the result is .inconclusive, never
-                        .threatDetected. SAFE direction, but over-conservative for a decisive standalone
-                        signal; identical on both platforms (spec issue, not divergence).
-- **Cross-ref. Delta:** Related to B160/B087 (witness untested-on-no-baseline wiring, intentional).
-                        New:
-                        the interaction of that wiring with requiredSections gating on the two
-                        witness-dependent threat diagnoses.
-- **Fix(es):**          [Fix 1] Reconsider whether witness should be a hard-REQUIRED section for
-                        dnsSpoofing/localCompromise given their decisive indicators come from
-                        Prophet/Mirror/Cage — demote witness to a corroborating (non-gating) input, or
-                        let a decisive-class support indicator satisfy the gate. Route to
-                        syxx-neural-engineer.
-                        [Fix 2] If the gate is intentional, make the first-run overhang copy explicitly
-                        tell the user "establish a baseline and re-scan to confirm."
----
-
-- **[B271]**            Disjoint CDN Rotation Still Classified Unstable on Windows (macOS Fixed by
-                        B079)
-- **Criticality:**      Critical; benign load balancing across disjoint edge pools becomes a
-                        positive instability/tamper signal on Windows while macOS reports
-                        inconclusive.
-- **Location:**         Windows/dotNET/Syxx.Kit/AnswerStabilityProbe.cs:83-84;
-                        macOS/Sources/SyxxKit/AnswerStabilityProbe.swift:103-107 (fixed twin)
-- **Issue:**            When answer sets change with no address common to every sample, Windows
-                        Classify returns Unstable ("unstable/flapping") but macOS returns
-                        Inconclusive since B079. CDNs routinely rotate between disjoint healthy edge
-                        pools, and without ASN/CNAME/authority corroboration ordinary load balancing
-                        is indistinguishable from instability. B079 was marked FIXED 2026-07-30 but
-                        only the Swift twin was changed; the C# twin was left behind. Windows users
-                        see a false instability signal, and Synthesizer.cs:209-213 turns it into a
-                        Positive (corroborate-grade) finding on clean CDN traffic.
-- **Cross-ref. Delta:** Related B079 (fixed on macOS only; Windows twin never updated).
-- **Fix(es):**          [Fix 1] Mirror the B079 change: classify disjoint rotation as Inconclusive
-                        with a corroborate hint, matching AnswerStabilityProbe.swift:103-107.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/AnswerStabilityProbe.cs:83
-                        return Make(AnswerStabilityStatus.Unstable, ttlHonored,
-                            "answer sets change with no shared address across samples");
-
-                        ]
----
-
-- **[B272]**            Windows Synthesizer.Prophet Has No Rotating Case; Benign Round-Robin
-                        Becomes Section Inconclusive
-- **Criticality:**      Non-critical; a clean load-balanced answer knocks the Windows Prophet
-                        section to inconclusive (lowered confidence) where macOS records negative.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:207-233, 254-255;
-                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:169
-- **Issue:**            The Windows stability switch handles Unstable, TtlAnomaly, Inconclusive,
-                        Untested, and Stable but has no AnswerStabilityStatus.Rotating case, so a
-                        benign round-robin result (shared addresses, AnswerStabilityProbe.cs:79-80)
-                        falls through to the default arm and adds SectionStatus.Inconclusive. macOS
-                        maps .rotating to .negative (clean) at Synthesizer.swift:169. Same evidence,
-                        different section status: a clean answer degrades Windows confidence where
-                        macOS stays clean. B195 fixed the Inconclusive/Untested split in this same
-                        switch but never added the Rotating case.
-- **Cross-ref. Delta:** Related B195 (same switch; Inconclusive/Untested split fixed, Rotating case
-                        still missing).
-- **Fix(es):**          [Fix 1] Add case AnswerStabilityStatus.Rotating:
-                        subs.Add(SectionStatus.Negative),
-                        matching Synthesizer.swift:169.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:254-255
-                        default:
-                            subs.Add(SectionStatus.Inconclusive);
-                            break;
-
-                        ]
----
-
-- **[B273]**            Windows MatrixDeterminativeEngine.Pct Still Takes Math.Abs — Negative Margin
-                        Renders Positive (macOS Fixed by B169)
-- **Criticality:**      Non-critical; latent — reachable when minimumMarginForProbable <= 0 in a
-                        custom JSON-loadable ThresholdProfile. A negative margin would render as a
-                        positive percentage on Windows while macOS shows the true signed value.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1182-1183;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:1046-1050
-                        (fixed twin)
-- **Issue:**            margin is strength - competitorBestStrength and genuinely signed. macOS
-                        dropped abs() from pct() (B169) so a negative margin renders with its true
-                        sign; Windows Pct still applies Math.Abs, so margin -0.20 renders "20%"
-                        instead of "-20%". The C# comment at :1179-1181 claims to be the twin of
-                        Swift's pct but documents the pre-B169 code. Divergence in the determinative
-                        core's evidence rendering, currently gated out of the default path (tier gate
-                        requires margin >= threshold) but reachable under a custom ThresholdProfile
-                        with minimumMarginForProbable <= 0; ThresholdProfile is public and
-                        JSON-loadable, per B169.
-- **Cross-ref. Delta:** Related B169 (fixed on macOS only; Windows twin never updated).
-- **Fix(es):**          [Fix 1] Drop Math.Abs from Pct so signed margin renders with its true sign,
-                        matching MatrixDeterminativeEngine.swift:1049-1050.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1182-1183
-                        private static string Pct(double x)
-                            => $"{(int)Math.Round(Clamp01(Math.Abs(x)) * 100, MidpointRounding.AwayFromZero)}%";
-
-                        ]
----
----
-- **[B274]**            Linux Dashboard action buttons (Conduct All Scans, Flush DNS Cache, Enable
-                        Unbound DNS, Begin the trial) have no command bindings, so clicking them
-                        runs nothing
-- **Criticality:**      High; the primary "run every discipline" affordance on the Linux Dashboard
-                        is a tool that fails to run at all when a user invokes it through the
-                        button; there is no error, no scan, and no feedback
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:55-65 (Conduct All
-                        Scans), 69-83 (Flush DNS Cache), 84-98 (Enable Unbound DNS), 280-283 (Begin
-                        the trial)
-- **Issue:**            These four controls are styled as buttons (Border containing a TextBlock,
-                        primary-brush background, icon glyph) but carry no Command binding and no
-                        Click handler anywhere in the XAML; a full-file grep for Command= or Click=
-                        on DashboardView.axaml returns zero matches. The view's own header comment
-                        (lines 11-13) already flags them as "styled but not yet bound to commands
-                        (the VM currently exposes none)." A user who clicks "Conduct All Scans" on
-                        the Linux client, expecting the same one-button orchestrated run the macOS
-                        and Windows first-run flows provide, gets no scan, no navigation, and no
-                        indication anything happened. Because this is the primary entry point into
-                        every discipline on this client, it is a detection-efficacy gap distinct
-                        from a rendering bug: the tool structurally cannot be invoked from here.
-- **Cross-ref. Delta:** ROADMAP PR-item "Linux Dashboard and main window controls are visual no-ops"
-                        (PR-11) names the general symptom with no delta id on file; this is the
-                        house-format filing for the Dashboard action row specifically.
-- **Fix(es):**          [Fix 1] Add DashboardViewModel commands (RunAllCommand, FlushCacheCommand,
-                        EnableUnboundCommand, StartTrialCommand) that call the same real
-                        orchestration paths the other views use, and bind each control's Command to
-                        them.
-                        [Fix 2] Until the commands exist, visually disable the controls or label
-                        them "coming soon" so they do not present as functional.
-- **Code Sample:**      [
-
-
-                        <!-- Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:55-65 -->
-                        <Border CornerRadius="12" Padding="16,11" Background="{StaticResource SyxPrimaryButtonBrush}" ...>
-                          <StackPanel Orientation="Horizontal" Spacing="12">
-                            <TextBlock Text="⚔" .../>
-                            <StackPanel VerticalAlignment="Center">
-                              <TextBlock Text="Conduct All Scans" .../>   <!-- no Command, no Click -->
-                            </StackPanel>
-                          </StackPanel>
-                        </Border>
-                        <!-- grep -c "Command=|Click=" DashboardView.axaml == 0 -->
-
-
-                        ]
----
----
-- **[B275]**            Windows hardcoded CHAOS-class filter silently discards version.bind answers,
-                        so the VersionBind resolver-identity probe can never detect a disclosed
-                        banner
-- **Criticality:**      Medium-High; the probe runs and always reports Withheld/Untested, even
-                        against a resolver that actually discloses its identity, so the forwarder-
-                        on-public-path interception hint it feeds can never fire
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:804-805 (`if (r.Cls != 1)
-                        continue;`); VersionBindProbe.cs:43,55
-- **Issue:**            VersionBindProbe.Probe sends a CHAOS-class (qclass=3) TXT query for
-                        version.bind. The response is parsed by
-                        DNSResolver.ParseResponsePacketDetailed, whose answer loop hardcodes `if
-                        (r.Cls != 1) continue;` (class 1 is IN); every CHAOS-class TXT answer is
-                        therefore discarded before the probe ever sees it, the response status
-                        becomes NoData, and Classify finds no TXT record and returns Withheld. The
-                        macOS twin extracts the queried question's QCLASS and filters `r.cls !=
-                        questionClass` (DNSResolver.swift:1048-1053, 1160), so a genuine CHAOS
-                        answer survives and VersionBind can actually report "disclosed" plus the
-                        resolver's software banner. Windows has no expectedClass parameter threaded
-                        through the parser at all, so the probe is structurally dead on every
-                        Windows client regardless of what the resolver actually answers.
-- **Cross-ref. Delta:** B255 (existing audit stub: "Windows CLASS filter hardcoded to IN — breaks
-                        CHAOS queries"); C057 (macOS fix, DELTAS-fixed.md). This is the house-format
-                        filing with the concrete probe-level impact verified live.
-- **Fix(es):**          [Fix 1] Port C057: thread the queried question's class (expectedClass)
-                        through ParseResponsePacketDetailed and filter on `r.Cls != questionClass`
-                        instead of the hardcoded literal 1.
-                        [Fix 2] Add an offClassAnswerCount counter, and when the class filter drops
-                        every answer, return an inconclusive/malformed status rather than a plain
-                        NoData so the difference between "nothing answered" and "something answered
-                        off-class" is preserved.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/DNSResolver.cs:804-805
-                        // B069: reject off-class RRs to prevent class-smuggled addresses.
-                        if (r.Cls != 1) continue;
-
-
-                        ]
----
----
-- **[B276]**            Windows DNS capture hex-dumps CNAME/NS/PTR record data instead of decoding
-                        it, so captured CNAME chains cannot be compared for rewrite detection
-- **Criticality:**      Medium; a captured CNAME target is unreadable and two logically-identical
-                        CNAME targets need not compare equal, because a hex dump preserves packet-
-                        local compression offsets rather than the resolved name
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSCapture.cs:418-437 (FormatRData handles only
-                        A/AAAA, else hex)
-- **Issue:**            The Windows capture parser's FormatRData decodes only record type 1 (A) and
-                        type 28 (AAAA); every other record type, including CNAME (5), NS (2), and
-                        PTR (12), is rendered as a raw hex dump of the RDATA bytes. The macOS twin's
-                        formatRData decodes name-type RDATA (types 2, 5, 12) against the full
-                        captured packet, so two vantage points that returned the same CNAME target
-                        produce comparably lowercased strings. On Windows, because DNS name
-                        compression pointers are packet-local offsets, the same logical CNAME target
-                        captured in two different packets can hex-dump to two different byte
-                        sequences even when the resolved name is identical, and a genuinely
-                        rewritten CNAME cannot be distinguished from noise at all since neither is
-                        readable. This silently defeats CNAME-chain rewrite detection from captured
-                        evidence on Windows and makes the forensic report materially less useful to
-                        a human reader than its macOS counterpart.
-- **Cross-ref. Delta:** C017 (macOS fix, DELTAS-fixed.md); adjacent to B260 (IPv6 hex rendering, a
-                        different field) but distinct.
-- **Fix(es):**          [Fix 1] Port C017 to the Windows capture parser: for RDATA types 2, 5, and
-                        12, decode the name via the existing TryParseName routine against the full
-                        packet buffer (honoring compression pointers), and lowercase the result for
-                        stable cross-vantage comparison, exactly as FormatRData does for A/AAAA
-                        today.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/DNSCapture.cs:433-436
-                        var sb = new StringBuilder();
-                        for (int j = 0; j < rdLength; j++) sb.Append(data[offset + j].ToString("x2", CultureInfo.InvariantCulture));
-                        return sb.ToString();   // CNAME/NS/PTR fall through to this hex path
-
-
-                        ]
----
----
-- **[B277]**            Windows DNS response parser discards authority-section, EDNS, and byte-
-                        length evidence on ServFail, Refused, and Truncated responses, weakening the
-                        check that tells a genuine denial from an injected one
-- **Criticality:**      Medium; the parser already computes this evidence for these response codes
-                        and then throws it away, so responses that most need scrutiny (server
-                        failure, refusal, truncation) carry less forensic detail than a clean
-                        success response
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:661-663 (Truncated), 665-668
-                        (ServFail), 686-689 (Refused)
-- **Issue:**            These three branches return `new DNSResponse { Status = ..., ResponseCode =
-                        ... }` with no AuthorityRecords, Edns, AuthorityMalformed, or
-                        ResponseByteLength populated, even though the parser has already computed
-                        the authority section and EDNS info by this point in the function. The
-                        NXDomain and NoData branches immediately below DO populate all of these
-                        fields. The macOS twin populates the same evidence on ServFail, Refused, and
-                        Truncated (DNSResolver.swift:957-1010) specifically because a real
-                        authenticated negative response needs its authority section (SOA, or
-                        NSEC/NSEC3 in a signed zone) to be told apart from an injected block, and
-                        the injection detection this evidence feeds cannot run on Windows for these
-                        three response classes. Windows also has no RcodeOther status, so any non-
-                        standard RCODE (BADVERS, FORMERR, NOTIMP) collapses into the generic
-                        TransportError bucket instead of being distinguished.
-- **Cross-ref. Delta:** B257 (existing audit stub: missing RcodeOther); C069/C128 (macOS fix,
-                        DELTAS-fixed.md). The evidence-discard on ServFail/Refused/Truncated is a
-                        new, adjacent gap not covered by the B257 stub.
-- **Fix(es):**          [Fix 1] Populate AuthorityRecords, Edns, EdnsMalformed, AuthorityMalformed,
-                        and ResponseByteLength on the ServFail, Refused, and Truncated branches,
-                        matching the NXDomain/NoData branches immediately below them and the macOS
-                        twin.
-                        [Fix 2] Add a RcodeOther status so BADVERS/FORMERR/NOTIMP are distinguished
-                        from a genuine transport failure, keeping declaration order identical to
-                        macOS per the existing wire-parity contract noted at DNSResolver.cs:84-89.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/DNSResolver.cs:665-668
-                        if (combinedResponseCode == 2)
-                        {
-                            return new DNSResponse { Status = DNSResponseStatus.ServFail, ResponseCode = combinedResponseCode };
-                            // no AuthorityRecords / Edns / AuthorityMalformed / ResponseByteLength populated
-                        }
-
-
-                        ]
----
-
-- **[B281]**            Prophet Consensus Flags Near-Identical Pool Answers As Possible Tampering
-                        (records.first truncation + count-based disagreement)
-- **Criticality:**      Critical; a false positive on the flagship module's primary output, reported
-                        from a real owner run (2026-08-02, on a VPN). Prophet queried multiple
-                        resolvers for one domain; some returned 140.82.113.3 and others 140.82.113.4
-                        (regional/policy variants of GitHub's own pool, inside its announced
-                        140.82.112.0/20) and Prophet rendered the split as disagreement / possible
-                        tampering. Reproduced live 2026-08-02: 1.1.1.1 -> 140.82.112.4, 8.8.8.8 ->
-                        140.82.114.3, 9.9.9.9 -> 140.82.114.4 (three GitHub pool members, all
-                        140.82.0.0/16).
-- **Location:**         macOS/Sources/SyxxApp/ProphetView.swift:152-165 (evaluateConsensus: the
-                        whole test is `Set(active.map { $0.ip })`, count==1 agree else disagree);
-                        macOS/Sources/SyxxApp/AppModel.swift:1022 (oracle reduces each resolver to
-                        ONE string via `res.records.first?.rdata`); shared policy now at
-                        macOS/Sources/SyxxKit/Synthesis/CrossVantageConsensus.swift and
-                        Windows/dotNET/Syxx.Kit/Synthesis/CrossVantageConsensus.cs; Mirror consumer
-                        at macOS/Sources/SyxxKit/VantageComparer.swift:235 (evaluate disjoint
-                        branch) and Windows/dotNET/Syxx.Kit/VantageComparer.cs:287.
-- **Issue:**            Two defects. (1) records.first truncation: DNSResolver returns
-                        CNAME(5)/RRSIG(46) alongside the answer, so for a CDN-fronted name the first
-                        record is often a CNAME target compared as if it were an address; and two
-                        resolvers returning DIFFERENT multi-address RRsets that happen to share a
-                        first element collapse to one string and render as AGREEMENT in success-
-                        green (a false clean the honesty spine forbids). (2) count-based
-                        disagreement: any set with more than one distinct string is called
-                        disagreement/tampering, so benign geo/pool spread of one operator reads as
-                        an attack. VantageComparer (Mirror) already fixed the type filter as C117
-                        and models divergence, but Prophet's consensus path never touches
-                        VantageComparer (reached only via ProbePlan.runMirror /
-                        compareVantagePoints), so the reported false positive came from
-                        evaluateConsensus. Both callers must decide agreement through ONE shared
-                        function over full A/AAAA RRsets, or they drift (the B271/B272 failure
-                        mode).
-- **Cross-ref. Delta:** B079 (macOS classified disjoint CDN rotation Inconclusive — stability probe,
-                        not cross-vantage), B271 (Windows twin never updated), B272 (Windows
-                        Synthesizer.Prophet has no Rotating case). Prior art on the same "benign
-                        spread misread as instability/tampering" theme. See also B282 (Windows
-                        DetectUnanimousTampering bool-vs-tristate) and B283 (stale
-                        VantageComparerTests) filed alongside.
-- **Fix(es):**          [Fix 1] New shared Kit policy CrossVantageConsensus (Swift + C# twins)
-                        decides agreement over FULL A/AAAA RRsets (addressSet type-filter, C117) —
-                        identical RRsets = match; a blocking answer beside routable = mismatch; any
-                        other difference judged ONLY against an attacker-independent DoH consensus
-                        (dohCorroboratedPool, >=2 independent DoH; Do53/UDP never counted); same
-                        responsible network (/16 v4, /32 v6), mixed family, or no reference =
-                        inconclusive; different responsible network = mismatch.
-                        [Fix 2] Mirror VantageComparer.evaluate disjoint branch delegates to
-                        CrossVantageConsensus.classifyDivergence against the DoH consensus only (was
-                        an unconditional redirection), so the owner's same-/16 case now reads
-                        inconclusive while a different-network redirect still reads mismatch (B010
-                        preserved).
-                        [Fix 3] SHARED cross-platform golden vector at
-                        corpus/b281-consensus/decision-table.json, loaded and asserted by BOTH
-                        suites (fails CI on any macOS/Windows divergence). [Fix 4 — HANDED OFF, not
-                        landed: SyxxApp lane, concurrent editor] ProphetView.evaluateConsensus +
-                        AppModel oracle must call CrossVantageConsensus over full RRsets instead of
-                        records.first / Set-count. [Fix 5 — CUT per adversarial review] no VPN
-                        branch: a tunnel interface proves nothing about egress, `ppp` matches every
-                        PPPoE ISP link, and a VPN operator is itself an adversary; the owner's VPN
-                        case resolves to inconclusive, which already removes the false tampering
-                        without minting an exculpating claim. Owner should confirm the VPN cut.
-- **Code Sample:**      [
-
-                        AUTHORITATIVE DECISION TABLE (owner, 2026-08-02, as amended by adversarial
-                        review the same day). Applies over FULL A/AAAA RRsets, via one shared function.
-
-                        | Answers                     | Explanation available          | Result       |
-                        |-----------------------------|--------------------------------|--------------|
-                        | identical normalized RRset  | n/a                            | match        |
-                        | differ                      | blocking answer beside routable| mismatch     |
-                        | differ                      | diff responsible network vs the| mismatch     |
-                        |                             |   attacker-independent DoH ref |              |
-                        | differ                      | same responsible network / NAT | inconclusive |
-                        |                             |   64 mixed family vs DoH ref    |              |
-                        | differ                      | no attacker-independent ref     | inconclusive |
-
-                        VPN row (owner's original rule) CUT: an environmental tunnel fact may not
-                        grant a match (PPPoE false-positive, egress unproven, VPN=on-path adversary).
-
-                        "STRENGTH OF DISAGREEMENT" (the one under-specified input) — defined from
-                        evidence the probe already collects, NOT a magic constant:
-                          * STRONG (=> mismatch): a blocking/non-routable answer beside routable ones
-                            (redirect-to-block), OR a candidate address in a DIFFERENT responsible
-                            network from the ATTACKER-INDEPENDENT DoH consensus. Responsible network is
-                            proxied by IPv4 /16 and IPv6 /32 — deliberately COARSE (one operator owns
-                            many /24s), erring toward WITHHOLDING an accusation. Family-aware: a
-                            NAT64/DNS64 cross-family answer is not comparable, never a forced mismatch.
-                          * WEAK/ambiguous (=> inconclusive): same responsible network as the DoH
-                            consensus, or NO attacker-independent reference at all. We never silently
-                            normalize a disagreement into agreement, and never accuse without evidence.
-                          * The DoH reference is attacker-independent against a PORT-53 HIJACKER only,
-                            NOT against a TLS-MITM with a client-trusted root (DoH is unpinned,
-                            DNSResolver.swift) — documented limitation.
-
-                        REAL RUN (2026-08-02, live): github.com via 1.1.1.1/8.8.8.8/9.9.9.9 returned
-                        140.82.112.4 / 140.82.114.3 / 140.82.114.4 (three pool members, one /16) ==>
-                        CrossVantageConsensus.classifyPeerConsensus = inconclusive (was: possible
-                        tampering). VPN-independent by design (branch cut).
-
-                        ]
----
-
-- **[B282]**            Windows DetectUnanimousTampering Returns bool; undetermined Collapses To No-
-                        Tampering (macOS Is Tri-State)
-- **Criticality:**      Critical; a potential false clean. macOS detectUnanimousTampering returns
-                        the tri-state UnanimousTamperResult (tampered / notTampered / undetermined)
-                        so insufficient DoH corroboration maps to INCONCLUSIVE (C046/C056). The
-                        Windows twin returns bool, so undetermined collapses to false = no-
-                        tampering: a UDP-unanimous run whose DoH cannot corroborate reads clean on
-                        Windows where macOS is inconclusive.
-- **Location:**         Windows/dotNET/Syxx.Kit/VantageComparer.cs:365 (DetectUnanimousTampering ->
-                        bool) and :292 (call site: `redirection = DetectUnanimousTampering(...)`);
-                        macOS twin macOS/Sources/SyxxKit/VantageComparer.swift
-                        (detectUnanimousTampering -> UnanimousTamperResult, undetermined ->
-                        inconclusiveFromUnanimous). Surfaced during B281 parity work.
-- **Cross-ref. Delta:** B281 (same file; shared cross-vantage policy). C046/C056 (the tri-state that
-                        Windows never received).
-- **Fix(es):**          [Fix 1] Port UnanimousTamperResult to C#
-                        (Tampered/NotTampered/Undetermined); change DetectUnanimousTampering to
-                        return it; at the call site map Tampered -> redirection, Undetermined -> an
-                        inconclusive flag (as B281 does with inconclusiveFromDivergence),
-                        NotTampered -> no change. Add the failure-case test (UDP unanimous + <2 DoH
-                        corroboration => inconclusive, not clean).
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/VantageComparer.cs:365 (returns bool; no undetermined)
-                        public static bool DetectUnanimousTampering(...)
-                        // macOS returns UnanimousTamperResult with .undetermined -> inconclusive.
-
-                        ]
----
-
-- **[B283]**            macOS VantageComparerTests Assert A Superseded Pre-C025/C046 Contract (4-5
-                        Tests Red At HEAD)
-- **Criticality:**      Non-critical (test/spec drift, not a shipped defect); but it hides
-                        regressions. Four to five tests expect redirection=true for UDP-unanimity
-                        scenarios, while the committed evaluate() (C025 DoH-preference baseline +
-                        C046 undetermined->inconclusive) returns degraded/inconclusive. Proven
-                        independent of B281 by stashing the B281 edits: the tests are red at HEAD.
-- **Location:**         macOS/Tests/SyxxKitTests/VantageComparerTests.swift:56
-                        (testSingleDoHDisagreementIsNotTamper), :69
-                        (testNoDoHOutcomesFallsBackToUDPOnly), :97/:99
-                        (testUDPUnanimousAllDoHBlocked_IsInconclusive), :120
-                        (testPartialDoHFailureWithOneSuccessIsNotInconclusive); code at
-                        macOS/Sources/SyxxKit/VantageComparer.swift:179-181 (DoH-preferred baseline,
-                        sufficientBaseline>=2) and detectUnanimousTampering (undetermined).
-- **Cross-ref. Delta:** B281 (surfaced during its real-run bar). C025 (DoH-preferred baseline).
-                        C046/C056 (undetermined tri-state).
-- **Fix(es):**          [Fix 1] Rule on which contract is authoritative. If C025/C046 stand (they
-                        are the more honest position: UDP unanimity cannot be corroborated without
-                        an independent transport), update these tests to expect
-                        inconclusive/degraded and document the C046 rationale in each. Do NOT soften
-                        to green: a failing honesty test is data. If instead UDP-unanimity SHOULD be
-                        a detection signal, the defect is in evaluate() and belongs re-opened there.
-- **Code Sample:**      [
-
-                        // VantageComparerTests.swift:56 expects redirection for a single-DoH baseline,
-                        // but evaluate() returns degraded (baselines.count < 2 => sufficientBaseline false).
-                        XCTAssertTrue(result.redirection, "C046: a lone DoH answer (<2) is not corroboration ...")
-
-                        ]
----
-
-## **C. Verdict & Evidence Integrity**
-
----
-- **[C001]**            NetworkStateReport collapses tri-state .unknown VPN and CaptivePortal to
-                        boolean false
-- **Status:**           **OPEN** — Verified in source on both platforms. macOS
-                        NetworkKeyState.swift:702-703 still has `vpnActive: vpn.state == .yes` and
-                        `captivePortalDetected: captive.state == .yes`. Windows
-                        NetworkKeyState.cs:657-658 still has `VpnActive = vpn.State == ...Yes` and
-                        `CaptivePortalDetected = captive.State == ...Yes`. Both platforms do expose
-                        typed ConditionState views (Vpn/CaptivePortal fields) alongside the legacy
-                        booleans, but any caller reading the boolean properties gets the collapsed
-                        tri-state. Related to D139 (parity audit).
-- **Criticality:**      Critical; user was made aware. Timed-out or failed VPN/captive portal probes
-                        collapse to boolean false, rendering false clean verdicts on degraded
-                        networks.
-- **Location:**         macOS/Sources/SyxxKit/NetworkKeyState.swift:702-703;
-                        Windows/dotNET/Syxx.Kit/NetworkKeyState.cs:694-696
-- **Issue:**            NetworkStateReport.generateReport() evaluates vpnActive as vpn.state == .yes
-                        and captivePortalDetected as captive.state == .yes. When a probe returns
-                        .unknown due to timeout or network error, it collapses to boolean false ("No
-                        VPN" / "No Captive Portal"), presenting a false clean/secure verdict on
-                        missing evidence.
-- **Cross-ref. Delta:** Related to D139 (ConditionState tri-state vs Bool parity finding).
-- **Fix(es):**          [Fix 1] Preserve ConditionState tri-state (.yes / .no / .unknown) on
-                        NetworkStateReport on both platforms.
-                        [Fix 2] Update callers in AppModel.swift and AppViewModel.cs to treat .unknown as inconclusive rather than false.
-- **Code Sample:**      [
-
-                        // macOS/Sources/SyxxKit/NetworkKeyState.swift:702-703
-                        vpnActive: vpn.state == .yes,
-                        captivePortalDetected: captive.state == .yes,
-
-                        ]
----
----
-- **[C002]**            DashboardView returns hardcoded PASSED while MirrorView reports TAMPERING
-                        DETECTED for identical run data
-- **Status:**           **OPEN** — Verified in source. DashboardView.swift:357-362 now checks
-                        `isInconclusive` and `isDegraded` before returning "PASSED", but does NOT
-                        check `isRedirectionDetected`. A mirror result with redirection detected
-                        (but neither inconclusive nor degraded) falls through to "PASSED". Meanwhile
-                        MirrorView.swift:309 correctly returns "TAMPERING DETECTED" when
-                        `isRedirectionDetected` is true. The contradictory verdict persists.
-- **Criticality:**      Critical; user was made aware. Contradictory verdicts across GUI views where
-                        main dashboard renders clean on tampered runs.
-- **Location:**         macOS/Sources/SyxxApp/DashboardView.swift:357-362;
-                        macOS/Sources/SyxxApp/MirrorView.swift:309
-- **Issue:**            DashboardView returns a hardcoded "PASSED" string for the Mirror module chip
-                        without checking comparison.isRedirectionDetected or validating cross-
-                        vantage data completeness. MirrorView returns "TAMPERING DETECTED" for the
-                        exact same comparison output, violating Protocol Section 5 (no
-                        mocked/contradictory production output).
-- **Cross-ref. Delta:** Related to DOCDELTAS J001.
-- **Fix(es):**          [Fix 1] Refactor DashboardView Mirror chip evaluation to derive status
-                        directly from comparison.isRedirectionDetected and comparison.status.
-                        [Fix 2] Return "INCONCLUSIVE" when vantage comparison data is incomplete.
-- **Code Sample:**      [
-
-                        // macOS/Sources/SyxxApp/DashboardView.swift:357-362
-                        guard model.isPro else { return "LOCKED · PRO" }
-                        return "PASSED"
-
-                        ]
----
----
-- **[C003]**            Empty KeygenPublicKeyHex causes valid license signatures to fail and return
-                        NetworkError
-- **Status:**           **ALREADY FIXED** — KeygenPublicKeyDerHex is now populated with a 91-byte
-                        P-256 ECDSA SubjectPublicKeyInfo DER key (182 hex chars) at
-                        LicenseManager.cs:420. The key was migrated from Ed25519 to P-256 ECDSA
-                        and populated. VerifyKeygenSignature now performs full ECDSA-SHA256
-                        verification with Date header freshness check. macOS twin
-                        (LicenseManager.swift:72) has the same key. Note: E185 in the crypto audit
-                        appears stale — it cites an empty Ed25519 key that no longer exists.
-- **Criticality:**      Critical; user was made aware. Hardcoded empty public key string causes
-                        signature verification to always fail, rejecting valid subscriptions.
-- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:420-430, 526-535
-- **Issue:**            KeygenPublicKeyHex is hardcoded to an empty string (""). When a valid
-                        license is checked (meta.valid == true), it triggers VerifyKeygenSignature,
-                        which returns false due to the empty key string, causing the application to
-                        return LicenseValidationResult.NetworkError for valid licenses.
-- **Cross-ref. Delta:** E185 (crypto audit) cites same empty-key issue but appears stale.
-- **Fix(es):**          [Fix 1] Populate KeygenPublicKeyHex with the production Keygen Ed25519
-                        public key.
-                        [Fix 2] Handle unconfigured key state explicitly without misclassifying signature failure as a network error.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:420-430
-                        private static readonly string KeygenPublicKeyHex = "";
-                        private static bool VerifyKeygenSignature(...) {
-                            if (string.IsNullOrEmpty(KeygenPublicKeyHex)) return false;
-
-                        ]
----
----
-- **[C161]**            Windows default matrix spec omits mappableIndicators
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:359-385;
-                        Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs:340-365;
-                        macOS/Sources/SyxxKit/Synthesis/SyxxMatrixIntegration.swift:206-237
-- **Issue:**            macOS MatrixSpec carries a mappableIndicators set (B156) and the builder
-                        populates it from SynthesisEngine.indicatorMapping. The engine then
-                        normalizes coverage over only the rules whose indicators can actually be
-                        observed. Windows MatrixSpec has no MappableIndicators property and
-                        SyxxMatrixBuilder.BuildDefaultSpec returns a spec built only from diagnoses
-                        and thresholds. The engine therefore divides observedSupportWeight by the
-                        total weight of every support rule, including unmapped rules such as
-                        routeClean, trustedWitnessOK, and localEvidenceSealValid. This permanently
-                        caps coverage below the probable and conclusive thresholds, so a threat that
-                        reaches the reporting tier on macOS can fall below tier on Windows. The
-                        result can be a false inconclusive or, when the suppressed threat leaves no
-                        overhang, a false clean.
-- **Cross-ref. Delta:** Related to B156 (fixed in macOS; Windows twin still missing). Related to
-                        C158-C160 (cross-platform parity audit).
-- **Fix(es):**          [Fix 1] Add a MappableIndicators property to MatrixSpec and expose it in
-                        DefaultSpecJson.
-                        [Fix 2] Populate MappableIndicators in SyxxMatrixBuilder.BuildDefaultSpec
-                        from the set of indicators reachable via SynthesisEngine.indicatorMapping.
-                        [Fix 3] In MatrixDeterminativeEngine.ComputeRawScore, compute
-                        totalSupportWeight from only the mappable support rules.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:359-385
-                        public sealed record MatrixSpec
-                        {
-                            [JsonPropertyName("diagnoses")] public IReadOnlyList<DiagnosisSpec> Diagnoses { get; init; }
-                            [JsonPropertyName("thresholds")] public ThresholdProfile Thresholds { get; init; }
-                            [JsonPropertyName("knownSections")] public IReadOnlySet<SectionId> KnownSections { get; init; }
-                        }
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/SyxxMatrixIntegration.cs:340-365
-                        return new MatrixSpec(
-                            diagnoses: new[]
-                            {
-                                clean,
-                                dnsSpoofing,
-                                censorshipBlocking,
-                                transportDowngrade,
-                                dnsInterception,
-                                contentTampering,
-                                dnsPrivacyLeak,
-                                localCompromise,
-                            },
-                            thresholds: new ThresholdProfile(...));
-
-                        // macOS/Sources/SyxxKit/Synthesis/SyxxMatrixIntegration.swift:206-237
-                        let mappableIndicators = Set(
-                            SynthesisEngine.indicatorMapping.values.map { $0.0.id }
-                        )
-                        return MatrixSpec(
-                            diagnoses: [...],
-                            thresholds: ThresholdProfile(...),
-                            mappableIndicators: mappableIndicators
-                        )
-
-                        ]
----
----
-- **[C162]**            Windows raw scoring ignores producing-section usability for indicators
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:924-980;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:780-846
-- **Issue:**            macOS rawScore checks sectionByID for each indicator and skips any support
-                        or
-                        exclusionary observation whose producing section is invalidated, untested, or
-                        locked. Windows ComputeRawScore looks up indicators only by indicatorById and
-                        never consults the section that produced them. An indicator from a failed or
-                        invalidated section can still support a diagnosis, contradict a rival, or even
-                        hard-exclude a diagnosis. This violates the fail-closed contract: a required
-                        section may gate a diagnosis while the diagnosis still receives support from
-                        that same failed section, producing a false threatDetected or a false clean.
-- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
-- **Fix(es):**          [Fix 1] In the support-rule loop, the exclude-rule loop, and the hard-
-                        exclusion
-                        loop, require the producing section to exist and be usable before the
-                        observation contributes.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:924-951
-                        foreach (var rule in supportRules)
-                        {
-                            if (!indicatorById.TryGetValue(rule.IndicatorId, out var obs) || obs.ObservedStrength is not { } s) { continue; }
-                            observedSupportWeight += rule.Weight;
-                            var alignment = rule.ExpectedStrength > 0 ? Math.Min(1.0, s / rule.ExpectedStrength) : s;
-                            var aligned = Math.Pow(alignment, rule.DecayExponent);
-                            var effective = aligned * Clamp01(obs.Quality);
-                            var contribution = rule.Weight * effective;
-                            if (obs.Contradictory)
-                            {
-                                contradictionMass += contribution;
-                            }
-                            else
-                            {
-                                alignedSupport += contribution;
-                                if (effective > 0)
-                                {
-                                    groups.Add(rule.IndependenceGroup);
-                                    r.SupportingIndicators.Add(rule.IndicatorId);
-                                    if (rule.EvidenceClass == EvidenceClass.Decisive) { r.HasDecisive = true; }
-                                    if (rule.EvidenceClass == EvidenceClass.Major) { r.MajorCount += 1; }
-                                }
-                            }
-                        }
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:971-980
-                        foreach (var exId in d.ExclusionaryIndicators)
-                        {
-                            if (indicatorById.TryGetValue(exId, out var obs) && obs.ObservedStrength is { } s
-                                && !obs.Contradictory && s >= ExclusionFiringThreshold)
-                            {
-                                r.HardExclusion = exId;
-                                break;
-                            }
-                        }
-
-                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:780-785
-                        for rule in supportRules {
-                            guard let obs = indicatorByID[rule.indicatorID], let s = obs.observedStrength else { continue }
-                            if let producing = sectionByID[obs.section], !producing.status.isUsable { continue }
-                            observedSupportWeight += rule.weight
-                            ...
-                        }
-
-                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:840-846
-                        for exID in d.exclusionaryIndicators {
-                            if let obs = indicatorByID[exID], let s = obs.observedStrength,
-                               !obs.contradictory, s >= Self.exclusionFiringThreshold,
-                               obs.quality >= Self.exclusionQualityFloor,
-                               sectionByID[obs.section]?.status.isUsable ?? false {
-                                r.hardExclusion = exID
-                                break
-                            }
-                        }
-
-                        ]
----
----
-- **[C163]**            Windows raw scoring omits completed-observation quality floor
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:928-930;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:797-799
-- **Issue:**            macOS clamps the effective quality of a completed observation to at least
-                        the
-                        minimumFitForProbable threshold, so a thin-but-completed section still
-                        contributes enough fit to reach the probable tier. Windows uses the raw
-                        quality directly with no floor. A decisive observation on a 50% complete
-                        section yields effective = aligned * 0.5 and fit can fall below 0.62, so the
-                        diagnosis is suppressed as belowTier or absent. The same evidence reaches a
-                        confirmed threat on macOS. This produces a false inconclusive or a false
-                        clean when a real threat signal fires.
-- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
-- **Fix(es):**          [Fix 1] In ComputeRawScore, compute qualityFloor = minimumFitForProbable
-                        when
-                        obs.Quality > 0, then effectiveQuality = max(Clamp01(obs.Quality), qualityFloor).
-                        Use effectiveQuality in the support-rule effective value.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:928-930
-                        var aligned = Math.Pow(alignment, rule.DecayExponent);
-                        var effective = aligned * Clamp01(obs.Quality);
-                        var contribution = rule.Weight * effective;
-
-                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:797-799
-                        let qualityFloor = spec.thresholds.minimumFitForProbable
-                        let effectiveQuality = max(clamp01(obs.quality), obs.quality > 0 ? qualityFloor : 0)
-                        let effective = aligned * effectiveQuality
-
-                        ]
----
----
-- **[C164]**            Windows hard-exclusion path lacks quality and section-usability guards
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:728-741,
-                        971-980;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:596-600,
-                        840-846
-- **Issue:**            macOS requires an exclusionary indicator to clear an exclusionQualityFloor
-                        of
-                        0.5 and requires its producing section to be usable before it can hard-exclude
-                        a diagnosis. Windows only checks that the observed strength is at least
-                        ExclusionFiringThreshold (0.5) and that the observation is not contradictory. A
-                        degraded, low-quality, or untrusted exclusionary observation can therefore rule
-                        out a threat diagnosis on Windows. This suppresses real threats and can license
-                        a false clean when the only evidence against a diagnosis was unreliable.
-- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
-- **Fix(es):**          [Fix 1] Add const double ExclusionQualityFloor = 0.5 in
-                        MatrixDeterminativeEngine.
-                        [Fix 2] In the hard-exclusion loop, require obs.Quality >=
-                        ExclusionQualityFloor and the producing section to be usable.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:728-741
-                        private const double ExclusionFiringThreshold = 0.5;
-                        private const double OverhangFloor = 0.30;
-                        private static readonly DiagnosisId CleanId = new("clean");
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:971-980
-                        foreach (var exId in d.ExclusionaryIndicators)
-                        {
-                            if (indicatorById.TryGetValue(exId, out var obs) && obs.ObservedStrength is { } s
-                                && !obs.Contradictory && s >= ExclusionFiringThreshold)
-                            {
-                                r.HardExclusion = exId;
-                                break;
-                            }
-                        }
-
-                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:596-600
-                        private static let exclusionQualityFloor = 0.5
-
-                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:840-846
-                        for exID in d.exclusionaryIndicators {
-                            if let obs = indicatorByID[exID], let s = obs.observedStrength,
-                               !obs.contradictory, s >= Self.exclusionFiringThreshold,
-                               obs.quality >= Self.exclusionQualityFloor,
-                               sectionByID[obs.section]?.status.isUsable ?? false {
-                                r.hardExclusion = exID
-                                break
-                            }
-                        }
-
-                        ]
----
----
-- **[C165]**            Windows margin computation treats gated and hard-excluded diagnoses as
-                        rivals
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:792-873;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:653-691
-- **Issue:**            macOS builds an emittableIDs set after applying required-section gates and
-                        hard
-                        exclusions, then uses only emittable diagnoses as rivals when computing margins.
-                        Windows computes the margin in Pass 3 before checking gates and hard
-                        exclusions, and CompetitorBestStrength includes every diagnosis except self and
-                        allowed co-occurrences. A diagnosis that is gated because its required section
-                        is missing or invalidated, or a diagnosis that is hard-excluded, can therefore
-                        outrank a real diagnosis and steal its margin. This drops the real diagnosis
-                        below the probable tier on Windows while macOS emits it, producing a false
-                        inconclusive or false clean.
-- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
-- **Fix(es):**          [Fix 1] Restructure Evaluate to classify emittable diagnoses before
-                        computing
-                        margins. Exclude gated and hard-excluded diagnoses from the competitor set.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:792-802
-                        double CompetitorBestStrength(DiagnosisSpec d)
-                        {
-                            var allowed = new HashSet<DiagnosisId>(d.AllowedCooccurrenceWith);
-                            var best = 0.0;
-                            foreach (var other in Spec.Diagnoses)
-                            {
-                                if (other.Id == d.Id || allowed.Contains(other.Id)) { continue; }
-                                best = Math.Max(best, raws.TryGetValue(other.Id, out var r) ? r.Strength : 0);
-                            }
-                            return best;
-                        }
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:847-873
-                        foreach (var d in Spec.Diagnoses)
-                        {
-                            if (ct.IsCancellationRequested) { return CancelledResult; }
-                            if (!raws.TryGetValue(d.Id, out var raw)) { continue; }
-                            var margin = MatrixRounding.Round6(raw.Strength - CompetitorBestStrength(d));
-                            if (raw.Gate is { } gate) { ... continue; }
-                            if (raw.HardExclusion is { } ex) { ... continue; }
-                            ...
-                        }
-
-                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:653-691
-                        var emittableIDs = Set<DiagnosisID>()
-                        var suppressed: [SuppressedDiagnosis] = []
-                        for d in spec.diagnoses {
-                            guard let raw = raws[d.id] else { continue }
-                            if let gate = raw.gate { ... continue }
-                            if let ex = raw.hardExclusion { ... continue }
-                            emittableIDs.insert(d.id)
-                        }
-                        func competitorBestStrength(for d: DiagnosisSpec) -> Double {
-                            let allowed = Set(d.allowedCooccurrenceWith)
-                            var best = 0.0
-                            for other in spec.diagnoses where other.id != d.id && !allowed.contains(other.id) && emittableIDs.contains(other.id) {
-                                best = max(best, raws[other.id]?.strength ?? 0)
-                            }
-                            return best
-                        }
-
-                        ]
----
----
-- **[C166]**            Windows assemble filters hard-excluded entries from the clean-blocking
-                        overhang
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1080-1120;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:936-972
-- **Issue:**            macOS keeps hardExcluded suppressed entries in the overhang used to block
-                        clean
-                        because a degraded, low-quality exclusion must not license a clean result. It
-                        only filters them from the user-visible surfaceSuppressed list. Windows filters
-                        HardExcluded out of the overhang check in Assemble and also returns the full
-                        suppressed list without the surfaceSuppressed filter. A Windows run with only a
-                        low-quality exclusion can therefore emit clean while macOS reports inconclusive.
-                        It also surfaces ruled-out diagnoses as unverified threats to consumers.
-- **Cross-ref. Delta:** Related to C158-C160 (cross-platform parity audit).
-- **Fix(es):**          [Fix 1] Compute the clean-blocking overhang from the full suppressed list
-                        without filtering HardExcluded.
-                        [Fix 2] Return a surfaceSuppressed list that excludes HardExcluded so
-                        downstream surfaces do not display ruled-out diagnoses as unverified threats.
-- **Code Sample:**      [
 
-                        // Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1105-1117
-                        var overhang = suppressed
-                            .Where(s => s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded && s.RawSupport >= OverhangFloor)
-                            .ToList();
-                        if (emitted.TryGetValue(CleanId, out var clean) && overhang.Count == 0)
-                        {
-                            var cleanEmitted = clean.Score;
-                            return new DeterminativeResult(
-                                DeterminativeState.Clean,
-                                new List<DiagnosisScore> { cleanEmitted },
-                                suppressed,
-                                $"No tampering was detected...");
-                        }
-
-                        // macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:943-967
-                        let surfaceSuppressed = suppressed.filter { $0.reason != .hardExcluded }
-                        let threats = emitted
-                            .filter { $0.key != cleanID }
-                            .map { $0.value.0 }
-                            .sorted { rankOrder($0, $1) }
-                        ...
-                        let overhang = suppressed.filter { $0.rawSupport >= Self.overhangFloor }
-                        if let cleanEmitted = emitted[cleanID]?.0, overhang.isEmpty {
-                            return DeterminativeResult(
-                                state: .clean,
-                                diagnoses: [cleanEmitted],
-                                suppressed: surfaceSuppressed,
-                                explanation: "No tampering was detected...")
-                        }
-
-                        ]
----
----
-- **[C167]**            Windows Mirror warp adapter ignores most content-warp mismatch signals
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:417-429;
-                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:309-341
-- **Issue:**            macOS mirror(warp:) inspects inline script identity, script hashes, script
-                        structure, stylesheet structure, and iframe structure. Any detected structural
-                        difference produces a scriptMismatch evidence item with Positive section
-                        status, mapped to the liveQueryContentRewrite indicator that feeds the
-                        contentTampering diagnosis. Windows Mirror only checks
-                        IsScriptStructureIdentical and emits a single Inconclusive evidence item when
-                        it differs. Style, iframe, inline-injection, and hash-mismatch attacks are
-                        therefore ignored, and even a script-structure mismatch is treated as weaker
-                        evidence than on macOS. The contentTampering diagnosis cannot fire from warp
-                        evidence on Windows, producing a false clean or false inconclusive.
-- **Cross-ref. Delta:** Related to WSK-029 (fixed in macOS; Windows twin still missing). Related to
-                        C158-C160 (cross-platform parity audit).
-- **Fix(es):**          [Fix 1] Port the macOS warp logic to Synthesizer.cs: inspect all mismatch
-                        fields, emit detailed EvidenceItem.ScriptMismatch evidence, and use Positive
-                        section status for detected tampering.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:417-429
-                        if (warp is not null)
-                        {
-                            if (string.IsNullOrEmpty(warp.LocalHtml) || string.IsNullOrEmpty(warp.RemoteHtml)) subs.Add(SectionStatus.Invalidated);
-                            else if (!warp.IsScriptStructureIdentical)
-                            {
-                                ev.Add(EvidenceItem.Create(Section.Mirror, EvidenceId.ScriptMismatch,
-                                    "Fetched page's script structure differs from the reference copy",
-                                    "Scripts injected / removed between you and the server may indicate on-path content tampering, but script changes can also result from benign causes such as ad rotation, A/B tests, or CDN variations. This observation requires corroboration from other sources before reaching any conclusion."));
-                                subs.Add(SectionStatus.Inconclusive);
-                            }
-                            else subs.Add(SectionStatus.Negative);
-                        }
-
-                        // macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:309-341
-                        if let w = warp {
-                            if w.localHTML.isEmpty || w.remoteHTML.isEmpty { subs.append(.invalidated) }
-                            else if !w.isSecure {
-                                let detail: String
-                                if !w.isInlineScriptIdentical { detail = "Inline script content differs between local and reference copies" }
-                                else if !w.mismatchedScriptHashes.isEmpty { detail = "Script hash mismatch: \(w.mismatchedScriptHashes.prefix(2).joined(separator: ", "))" }
-                                else if !w.isScriptStructureIdentical { detail = "Script structure differs between local and reference copies" }
-                                else if !w.isStylesheetStructureIdentical { detail = "Stylesheet structure differs between local and reference copies" }
-                                else if !w.isIframeStructureIdentical { detail = "Iframe structure differs between local and reference copies" }
-                                else { detail = "Content integrity check detected differences" }
-                                ev.append(EvidenceItem(section: .mirror, evidenceId: .scriptMismatch, observation: detail, rationale: "Content differences between local and reference copies may indicate on-path tampering, but can also result from benign causes such as CDN variations or A/B tests. Requires corroboration."))
-                                subs.append(.positive)
-                            } else { subs.append(.negative) }
-                        }
-
-                        ]
----
----
-- **[C168]**            runAllWardens() misrepresents timed-out probes as completed
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:493-560
-- **Issue:**            runAllWardens() appends each tool name to the ran list unconditionally
-                        after the timeout guard, even when the withTimeout result is nil because the
-                        probe timed out or failed. The defer then prints `Completed: Prophet, Mirror, ...`
-                        listing the tool as having run and produced evidence. This violates the Honesty
-                        Protocol: the GUI output falsely claims a discipline completed when it actually
-                        produced no data. The per-tool timeout message is also overwritten by the final
-                        completion line. Timed-out or failed probes should be reported separately from
-                        genuinely completed probes, and the completion message must not count them as
-                        evidence-producing runs.
-- **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Only append a tool name to ran when the withTimeout outcome is
-                        non-nil (i.e., the probe actually completed and returned a result).
-                        [Fix 2] Collect timed-out or failed tools into a separate list and include it in
-                        the completion message, e.g., `Completed: X. Timed out: Y. Skipped: Z.`
-                        [Fix 3] Preserve the per-tool timeout or failure output in the dashboard log so
-                        the user can see which disciplines failed instead of a single misleading summary.
-- **Code Sample:**      [
-
-                        // macOS/Sources/SyxxApp/AppModel.swift:493-497
-                        defer {
-                            // B236: emit an honest completion message listing what actually ran.
-                            let proSkipped = skipped.isEmpty ? "" : " Skipped: \(skipped.joined(separator: ", "))."
-                            self.selection = .dashboard
-                            self.output = "Completed: \(ran.joined(separator: ", ")).\(proSkipped)"
-                            SentrySDK.addBreadcrumb({ let b = Breadcrumb(level: .info, category: "gui.state"); b.message = "Wardens scan complete: \(ran.joined(separator: ","))"; return b }())
-                            self.runningTool = nil
-                            self.scanCorrelationId = nil
-                        }
-
-                        // macOS/Sources/SyxxApp/AppModel.swift:504-519
-                        let prophetOutcome = await Self.withTimeout(seconds: Self.timeout(for: .prophet)) { [weak self] in
-                            await self?.runLookup() ?? ""
-                        }
-                        guard !Task.isCancelled else { return }
-                        ran.append("Prophet")
-                        if prophetOutcome == nil { self.output = "Prophet timed out." }
-                        // Mirror (Pro only)
-                        if isPro {
-                            selection = .mirror
-                            output = "Running Mirror…"
-                            let mirrorOutcome = await Self.withTimeout(seconds: Self.timeout(for: .mirror)) { [weak self] in
-                                await self?.runCompare() ?? ""
-                            }
-                            guard !Task.isCancelled else { return }
-                            ran.append("Mirror")
-                            if mirrorOutcome == nil { self.output = "Mirror timed out." }
-                        } else {
-                            skipped.append("Mirror")
-                        }
-
-                        ]
----
----
-- **[C169]**            Windows FirstRunScan falls back to 8.8.8.8 and grades the public resolver as
-                        the user's network
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/FirstRunScan.cs:62-66
-- **Issue:**            When NetworkKeyState.GetSystemDNSServers() returns no resolvers,
-                        FirstRunScan.RunAsync
-                        prints a single-line warning and substitutes 8.8.8.8 as the local resolver. All
-                        Prophet, Mirror, Portal, and Glutton-local probes are then run against Google's
-                        public resolver, not the user's actual DNS path. The resulting Conclusion and
-                        ReportCard can award the user's network an A or B grade with the headline "This
-                        network looks clean," even though the user's network was never measured. The
-                        warning is not carried into the ReportCard headline, reasons, or FirstRunCommand
-                        results screen, so a fallback scan is indistinguishable from a real clean scan
-                        in the final output.
-- **Cross-ref. Delta:** Related to E169 (macOS hardcoded default resolver) and D145 (FirstRunScan
-                        resolver-substitution tracking). Distinct because it is the Windows first-run scan
-                        path that produces the false letter grade.
-- **Fix(es):**          [Fix 1] If no system resolver is detectable, do not substitute a public
-                        resolver;
-                        return Grade.Ungraded with a top reason such as "the system DNS resolver could not
-                        be detected, so the network was not measured."
-                        [Fix 2] If a fallback is required for a partial scan, append a permanent caveat to
-                        the ReportCard headline and reasons stating the result was measured against
-                        8.8.8.8, not the user's resolver.
-                        [Fix 3] Record the resolver-substitution fact in SectionInputs/FirstRunResult so
-                        every downstream surface (CLI, GUI, signed reports) is forced to disclose it before
-                        rendering a clean grade.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/FirstRunScan.cs:62-66
-                        if (localResolver == null)
-                        {
-                            Console.WriteLine("⚠️ System resolver undetectable — falling back to 8.8.8.8");
-                            localResolver = "8.8.8.8";
-                        }
-
-                        ]
----
-
----
-- **[C170]**            Invalidated sibling sub-probe silently erases a decisive threat indicator
-                        from
-                        the determination (adversarially-triggerable dampener)
-- **Criticality:**      Critical; user NOT made aware. Latent false-clean + current silent drop of a
-                        real, fired threat indicator. Attacker-triggerable.
-- **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:75-83;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:785, 823, 840-846
-- **Issue:**            combine() collapses a section's heterogeneous sub-statuses into ONE status,
-                        and
-                        per the B062 fix .invalidated now wins over .positive. That collapsed status is
-                        reused as the per-indicator usability gate: rawScore skips every indicator whose
-                        producing section is not usable. So if one sub-probe returns .invalidated while
-                        an independent sibling fires a real .positive, the section collapses to
-                        .invalidated and the positive's indicator is dropped from scoring — contributes 0
-                        to observedSupport, not even admitted to the honesty overhang. Concrete: Mirror
-                        warp returns empty HTML (.invalidated) while authoritative diverges (.positive →
-                        authoritativeMismatch, decisive, weight 1.20); Mirror collapses to .invalidated,
-                        authoritativeMismatch is skipped in both the support loop and the hard-exclusion
-                        loop. Today → generic .inconclusive (decisive spoof de-specified); becomes an
-                        outright false .clean once the affirmative-clean indicators are wired. Attacker
-                        hides an authoritative divergence by also breaking the content fetch.
-- **Cross-ref. Delta:** Goes beyond B062 (fixed 2026-07-30, closed as "no known scenario emits both"
-                        —
-                        a concrete scenario now exists). Interacts with B162/B163; distinct from the
-                        Windows combine-order gap below.
-- **Fix(es):**          [Fix 1] Decouple per-indicator usability from the collapsed section status:
-                        key
-                        an indicator's usability on the validity of the datapoint that produced it, not
-                        the section-wide combine() result.
-                        [Fix 2] If section-level collapse is retained, ensure any mapped .positive whose
-                        observation fired is still admitted to the overhang (counts toward
-                        observedSupport) so it can only be downgraded to "seen but unconfirmed," never
-                        erased. Route to syxx-neural-engineer; must land on both platforms.
-- **Code Sample:**      [
-
-                        // Synthesizer.swift:75-83
-                        static func combine(_ subs: [SectionStatus]) -> SectionStatus {
-                            let ran = subs.filter { $0 != .untested }
-                            if ran.isEmpty { return .untested }
-                            if ran.contains(.invalidated) { return .invalidated }   // one invalidated probe...
-                            if subs.contains(.positive) { return .positive }          // ...suppresses this positive
-                        }
-                        // MatrixDeterminativeEngine.swift:785
-                        if let producing = sectionByID[obs.section], !producing.status.isUsable { continue }
-
-                        ]
----
-
----
-- **[C171]**            Windows Prophet treats a Truncated response as a clean Negative; macOS
-                        treats it
-                        as Invalidated (false clean-support + parity divergence)
-- **Criticality:**      Critical; user NOT made aware. A truncated/unusable answer becomes clean-
-                        support
-                        on Windows and inflates Prophet completeness; diverges from macOS.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:63-65, 143-154;
-                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:115
-- **Issue:**            Windows DidFail enumerates Timeout, TransportError, MalformedResponse,
-                        ResponseIdMismatch but NOT DNSResponseStatus.Truncated (which exists —
-                        DNSResolver.cs:100). In the Prophet resolution arm a Truncated status fails
-                        DidFail, is not NXDomain/Refused/ServFail, and falls through to
-                        subs.Add(SectionStatus.Negative) — a conclusive clean datapoint that also counts
-                        toward DatapointCompleteness. macOS maps .truncated to .invalidated (B161).
-                        Identical truncated response ⇒ macOS Prophet .invalidated (blocks clean),
-                        Windows .negative (clean support, higher completeness). Truncation is a known
-                        interference/censorship primitive; an attacker sets TC to force "unusable" on
-                        macOS but "clean" on Windows.
-- **Cross-ref. Delta:** Sibling to B161 (macOS truncated→invalidated); not covered by B257 or
-                        C161-C167.
-- **Fix(es):**          [Fix 1] Add DNSResponseStatus.Truncated to Windows DidFail so truncated →
-                        Invalidated, matching Synthesizer.swift:115 / B161.
-                        [Fix 2] Add a golden vector for a truncated response asserting Prophet
-                        Invalidated on both platforms.
-- **Code Sample:**      [
-
-                        // Synthesizer.cs:63-65
-                        private static bool DidFail(DNSResponse r) =>
-                            r.Status is DNSResponseStatus.Timeout or DNSResponseStatus.TransportError
-                                     or DNSResponseStatus.MalformedResponse or DNSResponseStatus.ResponseIdMismatch;
-                        // Synthesizer.cs:143-154
-                        if (DidFail(resolution)) subs.Add(SectionStatus.Invalidated);
-                        else if (resolution.Status is ...NXDomain or ...Refused or ...ServFail) { ...Inconclusive; }
-                        else subs.Add(SectionStatus.Negative);   // Truncated lands here
-
-                        ]
----
-
----
-- **[C172]**            Windows combine() checks Positive before Invalidated — B062 fix never
-                        ported;
-                        section status diverges from macOS on identical evidence
-- **Criticality:**      Critical; user NOT made aware. Same evidence yields a different section
-                        status
-                        (and thus different verdict) across platforms.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:104-116, 118-130;
-                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:78-79
-- **Issue:**            macOS combine() was corrected under B062 so .invalidated takes precedence
-                        over
-                        .positive. Both Windows combine helpers still evaluate Positive FIRST
-                        (subs.Contains(Positive) at :109 and :123) and check Invalidated afterward. For a
-                        section holding both .invalidated and .positive sub-statuses, macOS returns
-                        Invalidated and Windows returns Positive. This propagates into the matrix
-                        engine's EvidenceUsability (positive→usable vs invalidated→not-usable), changing
-                        hard-gating and the final determination on byte-identical evidence. Compounded by
-                        C170: neither platform's current behavior is correct, so the parity fix must be
-                        coordinated with the C170 design decision, not a blind B062 port.
-- **Cross-ref. Delta:** B062 (macOS, fixed) — Windows twin never landed. Interacts with C170
-                        (resolve
-                        together). Not covered by C161-C167 (those are MatrixDeterminativeEngine.cs).
-- **Fix(es):**          [Fix 1] Reorder both Windows combine helpers to check Invalidated before
-                        Positive, matching Synthesizer.swift:78-79 — pending the C170 design decision so
-                        both platforms adopt the same per-datapoint-aware resolution.
-                        [Fix 2] Add a parity golden vector for a section with mixed {invalidated,
-                        positive} sub-statuses.
-- **Code Sample:**      [
-
-                        // Synthesizer.cs:109-112 (and 123-126)
-                        if (subs.Contains(SectionStatus.Positive)) return new SectionEvidence(SectionStatus.Positive, ...); // FIRST
-                        var ran = subs.Where(s => s != SectionStatus.Untested).ToList();
-                        if (ran.Contains(SectionStatus.Invalidated)) return ...Invalidated;   // too late
-                        // Synthesizer.swift:78-79 (B062 order)
-                        if ran.contains(.invalidated) { return .invalidated }
-                        if subs.contains(.positive) { return .positive }
-
-                        ]
----
-
----
-- **[C173]**            GUI Mirror/Witness/Testify paths silently substitute a public resolver as
-                        "local" → false "no tampering" + signed misleading evidence
-- **Criticality:**      Critical (auto-enhanced twice: silent fallback to a public resolver when the
-                        system resolver is undetectable; substituted answer feeds cryptographically
-                        signed witness/testify evidence). User NOT made aware (Windows has an explicit
-                        // TODO acknowledging the missing notice).
-- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:86, 433, 949, 966-978 (974), 1173,
-                        1829;
-                        Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:447-452, 715-720;
-                        (correct contrast: SyxxKit/Synthesis/FirstRunScan.swift:61-76;
-                        SyxxCLI/Commands/SyxxWitness.swift:172-177)
-- **Issue:**            When getSystemDNSServers() returns empty (VPN kill-switch, captive portal,
-                        scutil/interface enumeration failure), these GUI view-model paths silently
-                        substitute a public resolver (macOS server default 8.8.8.8; Windows literal
-                        1.1.1.1) and pass it to VantageComparer.compareVantagePoints(localServer:).
-                        Because the substitute is itself public, it agrees with the public vantage set →
-                        isRedirectionDetected == false → panel prints "✅ No tampering detected" labeled
-                        Local (8.8.8.8). In runWitness/runTestify (macOS) and the Witness seal (Windows)
-                        that same comparison is cryptographically signed — a valid, verifiable
-                        WitnessSnapshot attesting "no redirection" about a public resolver mislabeled as
-                        the user's local resolver. No local resolver was ever measured. AppModel.swift
-                        sets resolverSubstituted nowhere (grep-confirmed), so the B174 mitigation
-                        (Synthesizer caps Mirror at .degraded when the flag is set) never engages.
-- **Cross-ref. Delta:** NOT covered. B174 (fixed) added resolverSubstituted only to FirstRunScan;
-                        MACX-158/WIN-116 (fixed) fixed the CLI witness; WINX-126 (fixed) fixed CLI
-                        guided-Prophet fallback. The GUI ViewModel layer was untouched; the runWitness
-                        line cited in DELTAS-fixed.md (:497-554) is stale — current runWitness is at
-                        :1160-1180, confirming live, uncovered code.
-- **Fix(es):**          [Fix 1] When getSystemDNSServers().first is nil, do NOT substitute a public
-                        resolver on Mirror/Witness/Testify. Either refuse (as runLeak() at :990-996
-                        already does) or substitute AND set resolverSubstituted=true so the B174 cap and
-                        substitution disclosure engage.
-                        [Fix 2] Thread resolverWasSubstituted into compareVantagePoints/ComparisonResult
-                        so a substituted comparison can never render as a clean localOutcome, and
-                        WitnessTestifyPlanner.seal refuses to sign (or marks the snapshot inconclusive)
-                        when local was substituted.
-                        [Fix 3] Resolve the Windows // TODO: Add UI notification for fallback
-                        (AppViewModel.cs:451) as part of Fix 1.
-- **Code Sample:**      [
-
-                        // macOS AppModel.swift:949 (runCompare) — no resolverSubstituted set anywhere here
-                        let local = NetworkKeyState.getSystemDNSServers().first ?? server   // server default "8.8.8.8"
-                        else { summary = "✅ No tampering detected" }                        // :974 false clean
-                        // macOS AppModel.swift:1173 (runWitness) — substitute flows into a SIGNED snapshot
-                        let local = NetworkKeyState.getSystemDNSServers().first ?? server
-                        // Windows AppViewModel.cs:447-452
-                        var local = NetworkKeyState.GetSystemDNSServers().FirstOrDefault();
-                        if (local == null) { local = "1.1.1.1"; /* TODO: Add UI notification for fallback */ }
-
-                        ]
----
-
----
-- **[C174]**            MergedDatapoint.isConflicting false-fires a cross-vantage DISCREPANCY on
-                        benign partially-overlapping multi-A answers; macOS pairwise logic contradicts
-                        its own B170 intent and D142 would propagate it to Windows
-- **Criticality:**      Non-critical (report FACTS surface, not the matrix determination state —
-                        .conflicts/isConflicting has no determinative consumer, verified). But it is a
-                        false tampering-INDICATION: the ⚠ DISCREPANCY line reads to a user as
-                        redirection/poisoning, fired on benign CDN/round-robin traffic. Cross-platform
-                        divergent.
-- **Location:**         macOS/Sources/SyxxKit/Synthesis/Report.swift:39-57 (isConflicting, B170
-                        pairwise
-                        loop :48-56); Windows twin Windows/dotNET/Syxx.Kit/Synthesis/Report.cs:21-38
-- **Issue:**            For the set-valued key target_answer, the documented contract is: conflict
-                        iff
-                        the SECTIONS' answer-sets are disjoint — "Multi-A/AAAA domains with partially
-                        overlapping IPs between sections are benign" (Report.swift:44), and B170's own
-                        rationale says A1:[mirror], A2:[mirror,prophet], A3:[prophet] must be BENIGN even
-                        though A2 bridges them. But the implementation flags a conflict whenever any two
-                        VALUES have disjoint SECTION-sets (for i,j: if allSets[i].isDisjoint(allSets[j])
-                        return true). On that exact example it evaluates A1{mirror} vs A3{prophet} →
-                        disjoint → true, the opposite of intent. Concretely, when Prophet and Mirror both
-                        query a CDN/round-robin domain with overlapping-but-not-identical A sets (Mirror
-                        {1.1.1.1,2.2.2.2}, Prophet {1.1.1.1,3.3.3.3}, sharing 1.1.1.1), the correct test
-                        (sections share 1.1.1.1 → benign) is overridden because 2.2.2.2{mirror} vs
-                        3.3.3.3{prophet} are disjoint → ⚠ DISCREPANCY. False accusation in a surfaced
-                        honesty line, on the most common benign case (multi-homed/CDN DNS). Windows uses
-                        a different wrong relation (each value vs allSets[0] only), so the platforms
-                        diverge by value ordering.
-- **Cross-ref. Delta:** D142 (tracks the pairwise-vs-first-anchored divergence, but its proposed fix
-                        adopts the buggy macOS relation — NEW gap: the macOS relation itself is wrong vs
-                        the stated per-section-overlap intent). Related to B039/B040/KSYN-12 (which
-                        established the "partial overlap is benign" contract this violates).
-- **Fix(es):**          [Fix 1] Replace both implementations with the intended relation: build each
-                        SECTION's value-set (section → {values it reported}), then conflict iff any two
-                        participating sections' value-sets are disjoint (both non-empty). Shared-IP CDN
-                        case benign; fully-disjoint cross-vantage answer a real conflict.
-                        [Fix 2] Redirect D142's fix so Windows adopts the CORRECTED algorithm, not the
-                        current macOS pairwise loop.
-                        [Fix 3] Golden vector: Mirror{1.1.1.1,2.2.2.2}, Prophet{1.1.1.1,3.3.3.3} MUST be
-                        non-conflicting on both platforms; Mirror{1.1.1.1}, Prophet{9.9.9.9} MUST be
-                        conflicting.
-- **Code Sample:**      [
-
-                        // macOS Report.swift:48-56 — flags A1{mirror} vs A3{prophet} even when A2 bridges
-                        let allSets = values.map { Set($0.sections) }
-                        for i in 0..<allSets.count {
-                            guard !allSets[i].isEmpty else { continue }
-                            for j in (i + 1)..<allSets.count {
-                                guard !allSets[j].isEmpty else { continue }
-                                if allSets[i].isDisjoint(with: allSets[j]) { return true }   // wrong axis
-                            }
-                        }
-                        return false
-                        // Windows Report.cs:32-36 — different wrong relation (anchored on allSets[0])
-                        var allSets = Values.Select(v => new HashSet<Section>(v.Sections)).ToList();
-                        var first = allSets[0];
-                        for (int i = 1; i < allSets.Count; i++)
-                            if (!allSets[i].Overlaps(first)) return true;
-                        return false
-
-                        ]
----
-
-- **[C175]**            Windows WitnessSigner runs time/trust/display checks BEFORE Ed25519
-                        verification — a forged snapshot renders authentic-but-expired/untracked
-- **Criticality:**      Critical; user not made aware. A fabricated snapshot with a past
-                        expiresAt renders .Expired ("authentic but lapsed") and an off-trust-set
-                        forged key renders .UntrustedSigner — both asserting authenticity with no
-                        cryptographic check performed.
-- **Location:**         Windows/dotNET/Syxx.Kit/WitnessSigner.cs:256-321 (expired, futureDated,
-                        stale, untrustedSigner, displayMismatch returned before crypto);
-                        :323-335 (signature verify LAST);
-                        macOS/Sources/SyxxKit/WitnessSigner.swift:264-284 (fixed twin, crypto first)
-- **Issue:**            VerifySnapshotDetailed evaluates the time-based checks (.Expired at :257,
-                        .FutureDated at :265, .Stale at :274), the trust check (.UntrustedSigner at
-                        :280), and the display-integrity check (.DisplayMismatch at :320) against the
-                        snapshot's evidence fields BEFORE parsing the public key and verifying the
-                        Ed25519 signature at :323-335. Those timestamps, keyId, and trust claims are
-                        only trustworthy after the signature validates. A wholly fabricated file with
-                        a past expiresAt returns .Expired, and a fabricated off-trust-set key returns
-                        .UntrustedSigner, on Windows; the same file on macOS returns .InvalidSignature
-                        (B184). "No verdict before evidence" is inverted: Windows asserts an
-                        authentic-but-lapsed document about bytes that were never cryptographically
-                        checked. The audit appendix flagged this as E183 (Cryptographic Audit
-                        2026-07-30) but it was never promoted to a house-format delta.
-- **Cross-ref. Delta:** Related B184 (fixed on macOS only; Windows twin never updated). First
-                        noted unfiled in the Cryptographic Audit appendix as E183 (DELTAS.md:1851-1853).
-- **Fix(es):**          [Fix 1] Reorder VerifySnapshotDetailed to match macOS
-                        (WitnessSigner.swift:264-357): parse key/signature material, verify the
-                        Ed25519 signature, recompute keyId, display-integrity, THEN trust, THEN time
-                        checks.
-                        [Fix 2] Test: a fabricated snapshot with a past expiresAt must return
-                        InvalidSignature, not Expired; a fabricated off-trust-set key must return
-                        InvalidSignature, not UntrustedSigner.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/WitnessSigner.cs:256-260 — expiry judged before crypto
-                        ulong nowMillis = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                        if (snapshot.Evidence.ExpiresAt.HasValue && nowMillis > snapshot.Evidence.ExpiresAt.Value)
-                        {
-                            return SnapshotVerification.Expired;
-                        }
-                        // :323-335 — the signature check that should have come first
-                        return Algorithm.Verify(publicKey, payloadBytes, sigData)
-                            ? SnapshotVerification.Valid
-                            : SnapshotVerification.InvalidSignature;
-
-                        ]
----
-
-- **[C176]**            Windows SignedEvidencePayload lacks perResolverAnswers — macOS-signed
-                        snapshots fail verification on Windows; no answer-swap protection
-- **Criticality:**      Critical; honest macOS-signed witness evidence reads as tampered on
-                        Windows, and Windows-signed snapshots carry none of the B098 answer-swap
-                        binding.
-- **Location:**         Windows/dotNET/Syxx.Kit/SignedEvidencePayload.cs:28-57, 104-177 (no
-                        perResolverAnswers anywhere in the file);
-                        macOS/Sources/SyxxKit/SignedEvidencePayload.swift:43, 257-285 (build),
-                        290-294 (canonicalBytes)
-- **Issue:**            B098 added perResolverAnswers to the macOS SignedEvidencePayload so each
-                        resolver's records are signed individually (sorted by resolverId) and an
-                        answer swapped between resolvers invalidates the signature. The Windows twin
-                        never received the field: Build (:104) omits it, CanonicalBytes (:57) does
-                        not encode it, and the Windows verifier (WitnessSigner.cs:149-150, 289, 328)
-                        rebuilds and re-signs the struct without it. A real snapshot signed on macOS
-                        contains the field, so Windows verification of HONEST evidence fails
-                        (InvalidSignature/DisplayMismatch); the macOS verify of a Windows-signed
-                        snapshot rebuilds with the field present and cannot byte-match either. The
-                        E011 canonical-DTO byte-identity contract is broken, and Windows has none of
-                        the B098 answer-swap protection.
-- **Cross-ref. Delta:** Related B098 (DELTAS-fixed.md:45548, marked FIXED but macOS-anchored; the
-                        C# half never landed); related B215 (admits the C# fixture gap, not the
-                        missing field). First identified unfiled by the 2026-07-31 parity sweep.
-- **Fix(es):**          [Fix 1] Add perResolverAnswers (list of ResolverAnswerRecordsCanonical) to
-                        the Windows SignedEvidencePayload, populate it in Build() from the local and
-                        public resolver outcomes sorted by resolverId, and encode it in
-                        CanonicalBytes with the same nil-omission rules as macOS.
-                        [Fix 2] Golden-vector parity test: sign on macOS and verify on Windows, and
-                        vice versa; swap an answer between resolvers and assert InvalidSignature on
-                        both.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/SignedEvidencePayload.cs:28-57 — struct with no
-                        // perResolverAnswers; macOS builds+signs it at SignedEvidencePayload.swift:257-285
-                        public sealed class SignedEvidencePayload
-                        {
-                            public string QueryId { get; set; } = string.Empty;
-                            public List<ResolverQueryOutcomeCanonical> ResolverQueryOutcomes { get; set; } = new();
-                            public ComparisonResultCanonical ComparisonResult { get; set; } = new();
-                            // <-- MISSING: perResolverAnswers
-
-                        ]
----
-- **[C177]**            Windows WitnessTestifyPlanner lacks the C107 gates — a degraded or
-                        failed-resolver comparison is sealed as a signed AnswerDrift with an empty
-                        "previous answer"
-- **Criticality:**      High; a fabricated empty previousAnswer becomes a measured prior in
-                        cryptographically signed witness evidence on Windows; macOS suppresses it.
-- **Location:**         Windows/dotNET/Syxx.Kit/Trust/WitnessTestifyPlanner.cs:72-96;
-                        macOS/Sources/SyxxKit/Trust/WitnessTestifyPlanner.swift:68-88
-- **Issue:**            macOS driftIfRedirected (:71) returns nil when the comparison is degraded
-                        or inconclusive (C107), (:81) selects the first public outcome that actually
-                        has records, and (:86) refuses to build a drift when no public resolver
-                        returned records — "an empty previousAnswer presented as a measured prior is
-                        a fabricated measurement (§4)". The Windows twin has none of the three
-                        guards: no IsDegraded/IsInconclusive gate, FirstOrDefault() over all
-                        outcomes (:83), and no empty-records refusal, so a failed resolver produces
-                        PreviousAnswer = "" inside a sealed, signed AnswerDrift. C107 appears in no
-                        ledger; the C154 comment (:77-79) only stabilises ordering, it does not gate.
-- **Cross-ref. Delta:** None (C107 unfiled). Related to C175/C176 (witness evidence integrity).
-- **Fix(es):**          [Fix 1] Mirror the macOS guards: return null when the comparison
-                        IsDegraded or IsInconclusive, select the first sorted outcome with non-empty
-                        records, and return null when no public resolver returned records.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Trust/WitnessTestifyPlanner.cs:80-86
-                        var firstPublic = comparison.PublicResolverOutcomes
-                            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
-                            .Select(kv => kv.Value)
-                            .FirstOrDefault();
-                        var publicIPs = firstPublic is null
-                            ? string.Empty
-                            : string.Join(", ", firstPublic.Records.Select(r => r.Rdata));
-
-                        ]
----
-- **[C178]**            Windows Cage report attributes the resolver by the forgeable QR bit;
-                        macOS uses the port-53 side (C042)
-- **Criticality:**      Medium; attacker-controlled packet metadata decides which IP the capture
-                        report names as the resolver on Windows.
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSCaptureReportGenerator.cs:87-90;
-                        macOS/Sources/SyxxKit/DNSCaptureReportGenerator.swift:101-102, 106
-- **Issue:**            macOS (C042) keys resolver attribution on network.sourcePort == 53 — the
-                        port-53 side of the exchange is the DNS server regardless of the QR header,
-                        which is payload metadata an attacker can forge. Windows keys the report's
-                        resolver list on record.Packet.Qr == "Query" (cs:87): a response carrying a
-                        spoofed QR bit attributes traffic to the wrong side. The Windows port-53
-                        map (:95) is used only for the process-to-resolver join, so the report's
-                        top-resolvers attribution follows forgeable data while the join does not.
-- **Cross-ref. Delta:** None (C042 was never filed). First identified unfiled by the 2026-07-31
-                        parity sweep.
-- **Fix(es):**          [Fix 1] Key the report's resolverIP on SourcePort == 53 (matching
-                        macOS:101), leaving the QR-based path only where macOS also uses it.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/DNSCaptureReportGenerator.cs:87
-                        string resolverIP = record.Packet.Qr == "Query" ? record.Network.DestIP : record.Network.SourceIP;
-
-                        ]
----
-- **[C179]**            Windows Exfil assessment never records listsEvaluated — a stub-only
-                        blocklist "no match" reads as an evaluated negative (C082 Fix 2)
-- **Criticality:**      Medium; a run with only built-in stub lists (~50 domains) silently reads
-                        as an evaluated negative against real blocklists.
-- **Location:**         Windows/dotNET/Syxx.Kit/Forensics/Forensics.cs:300-337 (ExfilAssessment),
-                        :362 (Assess signature);
-                        macOS/Sources/SyxxKit/Forensics/ExfilAnalyzer.swift:34, 80, 119-123, 161
-- **Issue:**            macOS C082 Fix 2 threads listsEvaluated through ExfilAssessment and Assess
-                        so a "no match" on stub-only lists appends "blocklist coverage: built-in
-                        stub lists only" (ExfilAnalyzer.swift:121-123). The Windows ExfilAssessment
-                        has no ListsEvaluated and Assess (:362) has no listsEvaluated parameter, so
-                        a stub-only run's unflagged result is indistinguishable from one evaluated
-                        against real blocklists. C082 Fix 1 (honest list names) landed on Windows;
-                        Fix 2 did not.
-- **Cross-ref. Delta:** Related C082 (DELTAS-fixed.md:55664, marked FIXED 2026-07-30; Fix 2 never
-                        landed on Windows).
-- **Fix(es):**          [Fix 1] Add ListsEvaluated to the Windows ExfilAssessment and Assess, and
-                        append the stub-coverage caveat when false and no list flagged the domain.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Forensics/Forensics.cs:362
-                        public static ExfilAssessment Assess(string domain, IReadOnlyList<double>? timestamps = null,
-                            ... /* no listsEvaluated parameter */
-
-                        ]
----
-- **[C180]**            Windows Exfil analyzer still turns a single real signal into false Benign
-                        evidence — C045 Fix 1 never landed on Windows
-- **Criticality:**      High; a real high-entropy or beaconing signal renders clean on Windows
-                        while macOS records inconclusive.
-- **Location:**         Windows/dotNET/Syxx.Kit/Forensics/Forensics.cs:417-424;
-                        macOS/Sources/SyxxKit/Forensics/ExfilAnalyzer.swift:139-144
-- **Issue:**            C045 Fix 1 (one signal is inconclusive, never benign) was applied to macOS
-                        only: ExfilAnalyzer.swift:139-144 routes signalCount == 1 to .inconclusive
-                        with the signal retained in rationale. Windows Forensics.cs:417-424 still
-                        routes signalCount == 1 to Benign with "no encoded-label or beaconing
-                        signal" — a false claim, since the real signal was already appended to
-                        rationale. Synthesis maps benign to negative/clean, so a real exfil signal
-                        becomes false-clean Cage evidence on Windows. C045 was archived to
-                        DELTAS-fixed.md as "CONFIRMED — INCOMPLETE FIX"; the open Windows half is
-                        unfiled.
-- **Cross-ref. Delta:** Related C045 (DELTAS-fixed.md:45926, tagged CONFIRMED — INCOMPLETE FIX;
-                        Fix 2 zero-mean math did land on Windows, Fix 1 did not).
-- **Fix(es):**          [Fix 1] Add the signalCount == 1 branch to Windows Assess:
-                        ExfilSuspicion.Inconclusive with the signal retained, matching
-                        ExfilAnalyzer.swift:139-144.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Forensics/Forensics.cs:417-424
-                        else
-                        {
-                            suspicion = ExfilSuspicion.Benign;
-                            rationale.Add(beaconConclusive ? "no encoded-label or beaconing signal" : "no encoded-label signal");
-                        }
-
-                        ]
----
----
-- **[C181]**            Windows signed incident report can be forged into "nothing was compared" by
-                        editing fields outside the signed payload, while the signature still
-                        verifies
-- **Criticality:**      Critical; a validly-signed report attesting real tampering can be silently
-                        downgraded to look like an empty, non-tampering run, and syxx witness verify
-                        still reports the signature Valid
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/SignedIncidentReport.cs:63-64;
-                        macOS/Sources/SyxxKit/Synthesis/SignedIncidentReport.swift:64 (gold);
-                        Windows/dotNET/Syxx.Kit/SignedEvidencePayload.cs:141-142 (signed payload
-                        uses only the typed fields);
-                        Windows/dotNET/Syxx.Kit/WitnessSigner.cs:285-321 (display-integrity guard
-                        rebuilds from typed fields only)
-- **Issue:**            The Windows renderer decides whether to print "INCONCLUSIVE. Nothing was
-                        compared." by checking whether the legacy fields comparison.LocalRecords and
-                        comparison.PublicResolverResults are empty. Those two fields are not part of
-                        SignedEvidencePayload.Build, which reads LocalOutcome.Records and
-                        PublicResolverOutcomes instead, and they are not checked by
-                        VerifySnapshotDetailed's display-integrity guard either. That means
-                        LocalRecords and PublicResolverResults can be edited in the snapshot JSON
-                        without breaking the Ed25519 seal and without tripping a display mismatch.
-                        Because the empty-comparison branch is checked first in the render chain, an
-                        attacker who edits a validly-signed snapshot whose typed fields show a real
-                        divergence (isRedirectionDetected true) to empty out the two legacy fields
-                        makes the renderer print "Nothing was compared" while the signature itself
-                        still verifies as Valid. A real, signed tampering finding is suppressed
-                        under a report that still displays as cryptographically authentic. macOS
-                        closed this exact gap (B179) by moving the same guard onto the signed typed
-                        fields; the Windows twin was never updated.
-- **Cross-ref. Delta:** B179 (macOS, FIXED 2026-07-30, DELTAS-fixed.md; Windows twin never landed).
-                        Adjacent to the C158-C167 Windows matrix-engine parity cluster but distinct,
-                        since this is the attestation renderer, not the engine.
-- **Fix(es):**          [Fix 1] Change the Windows guard to test
-                        comparison.LocalOutcome.Records.Count == 0 and
-                        comparison.PublicResolverOutcomes.Count == 0, the signed and display-
-                        integrity-covered fields, matching SignedIncidentReport.swift:64.
-                        [Fix 2] Add a regression test: sign a snapshot with a real divergence, edit
-                        LocalRecords/PublicResolverResults to empty in the raw JSON, and confirm
-                        verify still returns Valid while the rendered Conclusion still reads
-                        DIVERGES rather than "Nothing was compared."
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/SignedIncidentReport.cs:63-64 (defective, unsigned legacy fields)
-                        if ((comparison.LocalRecords is null || comparison.LocalRecords.Count == 0) &&
-                            (comparison.PublicResolverResults is null || comparison.PublicResolverResults.Count == 0))
-                            lines.Add("    Conclusion:   INCONCLUSIVE. Nothing was compared.");
-
-                        // macOS/Sources/SyxxKit/Synthesis/SignedIncidentReport.swift:64 (gold, signed typed fields)
-                        if comparison.localOutcome.records.isEmpty && comparison.publicResolverOutcomes.isEmpty {
-
-
-                        ]
----
----
-- **[C182]**            Windows and Linux clients accept a leak-collector attestation signed by an
-                        untrusted key as a real leak/no-leak result
-- **Criticality:**      Critical; a MITM who signs a forged collector response with their own
-                        Ed25519 keypair gets a trusted-looking result on Windows and Linux even when
-                        a collector trust set is configured; macOS refuses the same forgery
-- **Location:**         Windows/dotNET/Syxx.Kit/LeakDetector.cs:416 (SignatureKeyTrusted computed)
-                        vs :419-424 (DeriveResult called, trust never consulted); DeriveResult
-                        :637-690 (sigValid==true branch returns a real verdict with no trust
-                        parameter at all); macOS/Sources/SyxxKit/LeakDetector.swift:412-427 (gold:
-                        forces .inconclusive when sigKeyTrusted == false)
-- **Issue:**            RunCollectorTestAsync loads the configured collector trust set and computes
-                        built.SignatureKeyTrusted via CheckTrustSet, but the actual leak result is
-                        derived by DeriveResult, whose signature takes only a bare sigValid boolean
-                        and never receives SignatureKeyTrusted at all. The sigValid==true branch
-                        parses the signed payload and returns a real Detected or NotDetected verdict
-                        with no trust-set gate anywhere in that path. The macOS twin closes exactly
-                        this gap: after reconciling the result, if sigKeyTrusted == false it returns
-                        .inconclusive with the reason "Collector signature is valid but the signing
-                        key is not trusted; result cannot be verified." Under a deployment that
-                        configures SYXX_COLLECTOR_TRUSTED_KEYS, an attacker (on-path, or behind an
-                        unpinned TLS connection, since the D003 default posture is notConfigured)
-                        who signs a forged payload with their own valid Ed25519 key gets a trusted-
-                        looking leak or no-leak verdict on Windows and Linux, which shares this code
-                        via Syxx.Kit, while macOS refuses it outright. SignatureKeyTrusted becomes
-                        decorative metadata on Windows rather than a gate on the result, which is
-                        precisely the trust-anchor bug D011 was written to close, and the fix landed
-                        macOS-only.
-- **Cross-ref. Delta:** D011 (DELTAS-fixed.md, marked FIXED 2026-07-30, macOS-anchored; the
-                        collector verdict-gate half never landed on Windows). Related D004 (the
-                        invalid-signature gate, which did land on Windows) and D003 (unpinned
-                        transport). Distinct from C175/C176/E201 (the witness snapshot path, not the
-                        leak/Glutton collector path).
-- **Fix(es):**          [Fix 1] Pass built.SignatureKeyTrusted into DeriveResult, or gate
-                        immediately after it in RunCollectorTestAsync: when a trust set is
-                        configured and SignatureKeyTrusted == false, force LeakResult.Inconclusive
-                        with the macOS reason string before returning.
-                        [Fix 2] Add a parity golden vector: a valid signature over an honest payload
-                        signed by a key not in the configured trust set must return Inconclusive on
-                        both platforms.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/LeakDetector.cs:414-424
-                        if (sigValid == true)
-                            built.SignatureKeyTrusted = CheckTrustSet(built.PublicKey, trustedPublicKeys);
-
-                        var (dResult, dObserved, dReason) = DeriveResult(
-                            sigValid, built.SignedPayload, verifyResp.Leaked, outerObserved, expectedResolvers,
-                            tokenLabel, baseDomain);        // SignatureKeyTrusted is never passed or consulted
-                        built.Result = dResult;             // an untrusted-but-valid key still yields a real verdict
-
-                        // Gold standard, macOS LeakDetector.swift:416-427:
-                        //   if sigKeyTrusted == false { return LeakTestResult(result: .inconclusive, ...
-                        //     errorReason: "Collector signature is valid but the signing key is not trusted; result cannot be verified.") }
-
-
-                        ]
----
----
-- **[C183]**            Windows Witness view renders a green "no tampering detected" claim from
-                        signature validity alone, contradicting the sealed comparison it is
-                        displaying
-- **Criticality:**      Critical; a valid Ed25519 signature only proves the snapshot was not altered
-                        after signing; it says nothing about whether the sealed comparison found
-                        tampering, and this exact false-clean class was already fixed on macOS
-- **Location:**         Windows/dotNET/SyxxUI/Views/WitnessView.xaml.cs:199-203
-- **Issue:**            When _vm.WitnessValid is true, the view prints the green line "Testimony
-                        validated — signature matches; no tampering detected." A valid signature
-                        proves only that the snapshot has not been altered since it was signed; it
-                        says nothing about whether the comparison sealed inside that snapshot
-                        actually found redirection. A snapshot that sealed a genuine "TAMPERING
-                        DETECTED" comparison therefore still renders this green "no tampering
-                        detected" line on Windows, because the branch never inspects the
-                        comparison's own result. macOS fixed exactly this defect (B053), rewriting
-                        the equivalent case to "Signature intact — snapshot is authentic. Review the
-                        snapshot's own result for tampering findings," which correctly separates
-                        signature integrity from the network verdict. The Windows twin was never
-                        updated, and its own code comment at lines 181-185 incorrectly claims the
-                        wording "mirrors macOS WitnessView.witnessResultDisplay EXACTLY." The Linux
-                        client already has the corrected wording ("the seal is valid and the
-                        testimony is intact"), so Windows is the only client still shipping the
-                        false-clean line.
-- **Cross-ref. Delta:** B053 (macOS, FIXED 2026-07-30, DELTAS-fixed.md). New delta: Windows parity
-                        port.
-- **Fix(es):**          [Fix 1] Port the B053 wording to Windows: on WitnessValid, render "Signature
-                        intact — snapshot is authentic. Review the snapshot's own result for
-                        tampering findings," and never assert "no tampering detected" from signature
-                        validity alone.
-                        [Fix 2] Add a Windows regression test pinning the corrected string so the
-                        parity gap cannot silently return.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/SyxxUI/Views/WitnessView.xaml.cs:199-203
-                        else if (_vm.WitnessValid)
-                        {
-                            (glyph, colorKey, text) = (checkGlyph, "IoSuccessGreenBrush",
-                                "Testimony validated — signature matches; no tampering detected.");
-                        }
-
-
-                        ]
 ---
----
-- **[C184]**            Windows Glutton view renders a green "no leak" result without ever checking
-                        whether the collector's transport identity was actually verified
-- **Criticality:**      Critical; a "no DNS leak" result is a privacy guarantee to the user; Windows
-                        shows it green purely on signature validity, so an on-path attacker
-                        impersonating the collector over an unpinned connection still produces a
-                        green "no leak"
-- **Location:**         Windows/dotNET/SyxxUI/Views/GluttonView.xaml.cs:177, 199-213
-- **Issue:**            The gate that decides whether the leak view can render green is `bool
-                        attested = leak.SignatureValid == true && leak.SignatureKeyTrusted !=
-                        false;`, which never consults transport pinning. macOS gates the same green
-                        path on `transportPinning == .enforced` (B067) specifically because a valid
-                        signature proves only that a signed payload was not altered, not that the
-                        connection to the collector was actually the collector and not an on-path
-                        impersonator; the default transport posture is unpinned (notConfigured). A
-                        grep of the entire Windows SyxxUI tree for transportPinning or
-                        TransportPinning returns zero hits, confirming the check is entirely absent
-                        from the view. A secondary, smaller divergence: Windows treats a null
-                        (unevaluated) SignatureKeyTrusted as sufficient for green (`!= false` is
-                        true when null), where the current macOS logic treats a null trust result as
-                        amber. Both mean Windows shows green in situations where macOS shows amber
-                        or refuses to render green at all.
-- **Cross-ref. Delta:** B067 (macOS, FIXED 2026-07-30, DELTAS-fixed.md); B066 (DELTAS-fixed.md, the
-                        null-trust nuance). New delta: Windows parity port.
-- **Fix(es):**          [Fix 1] Gate the green NotDetected path on `leak.TransportPinning ==
-                        TransportPinning.Enforced` in addition to the existing signature checks;
-                        render an amber "[UNVERIFIED]/inconclusive" state otherwise, matching macOS
-                        gluttonResultColor.
-                        [Fix 2] Treat a null SignatureKeyTrusted as amber, not green, matching
-                        current macOS behavior.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/SyxxUI/Views/GluttonView.xaml.cs:177 — no transportPinning gate
-                        bool attested = leak.SignatureValid == true && leak.SignatureKeyTrusted != false;
-                        if (!attested) { /* amber */ return; }
-                        // ... falls through to a green "NotDetected" render with no transport-pinning check anywhere
-
-
-                        ]
----
----
-- **[C185]**            Linux Witness silently substitutes the public resolver 8.8.8.8 as the user's
-                        local resolver and cryptographically signs a "no redirection" claim about it
-- **Criticality:**      Critical; the substituted 8.8.8.8 agrees with the public vantage consensus
-                        by construction, so the signed snapshot attests "no tampering" about a
-                        public resolver mislabeled as the user's own, and the user's actual DNS path
-                        is never measured at all
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs:107-108
-- **Issue:**            When GetSystemDNSServers() returns no resolvers, which happens under a VPN
-                        kill-switch, a captive portal, or an enumeration failure, the code silently
-                        falls back to `string local = servers.Count > 0 ? servers[0] : "8.8.8.8";`
-                        with no warning of any kind, runs the vantage comparison against that
-                        address, and on success signs the resulting snapshot and reports it "Sealed"
-                        in green. No resolverSubstituted flag is ever set, so none of the existing
-                        downstream caps or disclosure mechanisms engage. Because 8.8.8.8 is itself a
-                        public resolver, it naturally agrees with the public vantage consensus, so
-                        the comparison almost always reads clean; the signed evidence then falsely
-                        attests that the user's local resolver shows no redirection, when in reality
-                        no local resolver was ever tested. This is the same class of defect already
-                        tracked as C173, but at a call site C173's location list does not cover, and
-                        it is worse than the analogous Mirror gap because there is not even a
-                        transient warning shown before the seal.
-- **Cross-ref. Delta:** C173 (OPEN; the Linux WitnessViewModel is not in its enumerated location
-                        list); C169 (the Windows FirstRunScan analogue of the same substitution
-                        pattern).
-- **Fix(es):**          [Fix 1] When servers.Count == 0, refuse to substitute for Witness entirely:
-                        fail the seal with a message such as "the system DNS resolver could not be
-                        detected, so there is no local answer to witness."
-                        [Fix 2] Alternatively, thread a resolverSubstituted flag into the snapshot
-                        so WitnessTestifyPlanner marks the result inconclusive, or refuses to sign,
-                        whenever the local vantage was substituted.
-- **Code Sample:**      [
-
-
-                        // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs:107-108
-                        var servers = NetworkKeyState.GetSystemDNSServers();
-                        string local = servers.Count > 0 ? servers[0] : "8.8.8.8";
-                        SectionInputs r;
-                        try { r = await _runMirror(Domain.Trim(), local, false); }
-                        // ... on success, the resulting snapshot is signed and reported "Sealed" with no substitution disclosure
-
-
-                        ]
----
----
-- **[C186]**            Linux Mirror substitutes the public resolver 8.8.8.8 as "local" and then
-                        overwrites its own substitution warning with a green "MATCHES" tamper
-                        verdict
-- **Criticality:**      Critical; the amber substitution warning is set and then immediately
-                        overwritten by the comparison result, so the user only ever sees a green
-                        false-clean tamper verdict about a resolver that is not theirs
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/MirrorViewModel.cs:38-45, 82-83
-- **Issue:**            When the system resolver list is empty, `string local = servers.Count > 0 ?
-                        servers[0] : "8.8.8.8";` substitutes the public resolver, and the code does
-                        briefly set an amber MatchLine warning ("System resolver undetectable —
-                        falling back to 8.8.8.8") at that point. However, RunMirrorAsync then runs
-                        the actual comparison against 8.8.8.8, and its completion handler
-                        unconditionally overwrites MatchLine and MatchBrush regardless of whether a
-                        substitution occurred, ending on the green "MATCHES — the local answer
-                        agrees with the public resolver consensus" branch, since 8.8.8.8 trivially
-                        agrees with the public consensus. The net effect is that the amber warning
-                        is visible for at most an instant before being replaced by a green false-
-                        clean result, and the final state the user actually reads gives no
-                        indication that their own resolver was never tested. C173's enumerated
-                        location list does not include this Linux MirrorViewModel path.
-- **Cross-ref. Delta:** C173 (OPEN; the Linux MirrorViewModel is not in its enumerated location
-                        list).
-- **Fix(es):**          [Fix 1] When servers.Count == 0, either refuse the comparison outright and
-                        report inconclusive without ever calling RunMirrorAsync, or carry the
-                        substitution fact through to the completion handler so the final rendered
-                        line cannot read "MATCHES" and instead caps at inconclusive/degraded with
-                        the "measured against 8.8.8.8, not your resolver" caveat still visible.
-- **Code Sample:**      [
-
-
-                        // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/MirrorViewModel.cs:38-45, 82-83
-                        string local = servers.Count > 0 ? servers[0] : "8.8.8.8";
-                        if (servers.Count == 0) { MatchLine = "⚠️ System resolver undetectable — falling back to 8.8.8.8"; MatchBrush = Brushes.Orange; }
-                        // ... RunMirrorAsync runs against 8.8.8.8, then unconditionally overwrites the line:
-                        else { MatchLine = "MATCHES — the local answer agrees with the public resolver consensus."; MatchBrush = new SolidColorBrush(Color.Parse("#3FD08A")); }
-
-
-                        ]
----
----
-- **[C187]**            Linux Dashboard hardcodes "Disabled — traffic already encrypted (VPN)" on
-                        the encrypted-DNS tile with no measurement behind it
-- **Criticality:**      Critical; the tile positively asserts the user's DNS traffic is already
-                        encrypted with zero measurement; on a machine with no VPN running plain
-                        unencrypted DNS, the Dashboard still tells the user their traffic is
-                        protected
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:109-110
-- **Issue:**            The encrypted-DNS status caption is a static XAML literal, `Text="Disabled —
-                        traffic already encrypted (VPN)"`, not bound to any encryption or VPN
-                        measurement anywhere in the view model. The view's own header comment
-                        acknowledges the tile is "shown in its conservative already-encrypted state
-                        pending an additive availability signal," but describing "already encrypted"
-                        as the conservative resting state has it backwards: the honest resting state
-                        when nothing has been measured is "not determined," not a positive
-                        encryption claim. The macOS twin drives the same tile entirely from a real
-                        tri-state encrypted-DNS status read, defaulting to "Status not determined"
-                        when that status is nil. This is a textbook fabricated-value-shown-as-
-                        measured defect: a user on the Linux client with no VPN and cleartext Do53
-                        sees a reassuring, false claim about their own traffic.
-- **Cross-ref. Delta:** Adjacent to C001 (NetworkStateReport VPN/CaptivePortal tri-state collapse);
-                        no existing delta id covers this specific fabricated string.
-- **Fix(es):**          [Fix 1] Bind the tile caption to a real encrypted-DNS status read, at parity
-                        with the macOS tri-state caption logic: render "Status not determined" until
-                        a measurement exists, "Not encrypted" for a confirmed cleartext path, and
-                        only claim encryption on a positive, measured read.
-- **Code Sample:**      [
-
-
-                        <!-- Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:109-110 -->
-                        <TextBlock Text="Enable Encrypted DNS" .../>
-                        <TextBlock Text="Disabled — traffic already encrypted (VPN)" FontSize="10.5"
-                                   Foreground="{StaticResource SyxTextMutedBBrush}" />   <!-- static literal, no binding -->
-
-
-                        ]
----
----
-- **[C188]**            Windows silently discards a DNS answer spoof it actually observed when the
-                        retry that follows it times out, reporting a proven injection as a plain
-                        inconclusive timeout
-- **Criticality:**      Critical; an attacker who injects one wrong-question or wrong-transaction-ID
-                        packet and then simply lets the genuine reply time out guarantees Syxx-on-
-                        Windows never reports the injection it demonstrably saw
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:236-245, 297-299
-- **Issue:**            In QueryUDPDetailedAsync, when the response question does not match the
-                        query on the first UDP attempt (evidence of a spoofed reply), the code
-                        records lastError and simply continues to the next attempt. If that second
-                        attempt then times out, the loop falls through to the generic `return new
-                        DNSResponse { Status = DNSResponseStatus.Timeout, ... }`, and the spoof
-                        observation is lost entirely; nothing in the returned DNSResponse carries
-                        any trace that a spoofed packet was ever seen, because the Windows
-                        DNSResponse type has no equivalent of a spoof counter at all. The macOS twin
-                        tracks a spoofCount across attempts specifically so this scenario is
-                        preserved: it returns .responseIdMismatch with spoofedPacketCount > 0 when a
-                        spoof was observed before a later timeout, precisely so "a query that saw a
-                        spoofed packet and then timed out is not silently reported as .timeout."
-                        Identical hostile traffic therefore produces "tampering observed" on macOS
-                        and an unremarkable "inconclusive timeout" on Windows, which is a platform-
-                        divergent false negative on active, on-path DNS spoofing.
-- **Cross-ref. Delta:** B268 (existing audit stub noting the missing spoofedPacketCount/attemptCount
-                        fields); C062 (macOS fix, DELTAS-fixed.md). This delta is the behavioral
-                        consequence the B268 stub does not spell out.
-- **Fix(es):**          [Fix 1] Port C062 to Windows: add spoofedPacketCount and attemptCount fields
-                        to DNSResponse, track the spoof count across retry attempts, and return
-                        ResponseIdMismatch rather than Timeout whenever spoofCount > 0 after the
-                        retry loop exhausts, matching the macOS return contract.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/DNSResolver.cs:238-242
-                        if (attempt + 1 < MaxUDPAttempts)
-                        {
-                            lastError = "Response question does not match query (spoofed)";
-                            continue;
-                        }
-                        // Windows/dotNET/Syxx.Kit/DNSResolver.cs:297-299
-                        return new DNSResponse { Status = DNSResponseStatus.Timeout, ErrorMessage = lastError ?? "UDP query failed." };
-                        // the spoofed-response observation carried in lastError is discarded; DNSResponse has no field to carry it
-
-
-                        ]
----
----
-- **[C189]**            Windows Prophet silently substitutes the public resolver 1.1.1.1 when the
-                        system resolver is undetectable and presents the returned records as the
-                        user's own
-- **Criticality:**      High; RunProphetAsync grades resolver accuracy against Cloudflare 1.1.1.1
-                        while the user's actual DNS path is completely invisible, and the returned
-                        records are rendered without any substitution notice
-- **Location:**         Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:393-399
-- **Issue:**            When no system resolver is detectable, `var resolver =
-                        string.IsNullOrWhiteSpace(Server) ?
-                        NetworkKeyState.GetSystemDNSServers().FirstOrDefault() ?? "1.1.1.1" :
-                        Server;` falls back to 1.1.1.1 with no user-visible notice. The following
-                        `if` block that is meant to handle this case contains only a `// TODO: Add
-                        UI notification for fallback`, so no substitution flag is ever set and no
-                        notice is ever produced anywhere downstream. The rendered Prophet records,
-                        and any Dashboard warden chip derived from them, therefore present as though
-                        the user's own resolver was measured, when in fact the query ran against
-                        Cloudflare's public resolver the whole time. This is the same substitution
-                        class as C169 and C173, but at a call site neither delta's location list
-                        enumerates.
-- **Cross-ref. Delta:** C169 (Windows FirstRunScan 8.8.8.8 analogue); C173 (GUI Mirror/Witness
-                        substitution; Prophet is not in its enumerated location list).
-- **Fix(es):**          [Fix 1] When no system resolver is detectable, do not silently substitute a
-                        public resolver for Prophet; surface "the system DNS resolver could not be
-                        detected, so nothing was measured," or set a substitution flag that forces
-                        every Prophet-derived surface to disclose the answers came from 1.1.1.1.
-                        [Fix 2] Resolve the standing TODO at line 398 as part of this fix.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:393-399
-                        var resolver = string.IsNullOrWhiteSpace(Server)
-                            ? NetworkKeyState.GetSystemDNSServers().FirstOrDefault() ?? "1.1.1.1"
-                            : Server;
-                        if (string.IsNullOrWhiteSpace(Server) && NetworkKeyState.GetSystemDNSServers().FirstOrDefault() == null)
-                        { // TODO: Add UI notification for fallback - currently no logging surface in ViewModel }
-
-
-                        ]
----
----
-- **[C190]**            HomeBaseline trust anchor is saved and loaded with no integrity tag on
-                        either platform, so a locally-overwritten baseline file is trusted
-                        unquestioningly
-- **Criticality:**      Medium; a local attacker or malware that overwrites home-baseline.json can
-                        plant any baseline it chooses, and the next "matches home" comparison treats
-                        the poisoned file as the known-good anchor; symmetric across platforms, so
-                        it is a coverage gap rather than a divergence
-- **Location:**         Windows/dotNET/Syxx.Kit/Trust/Trust.cs:390-401 (HomeBaseline.Save, no
-                        IntegrityTag.SignAndWrite), :406-424 (HomeBaseline.Load, no
-                        IntegrityTag.Verify); macOS/Sources/SyxxKit/Trust/Sentinel.swift:209-214
-                        (save, no signAndWrite), :216-240 (load, no verify)
-- **Issue:**            AnswerLedger and the Sentinel snapshot both sign their state on save and
-                        reject an unsigned or tampered file on load under D030, on both platforms.
-                        HomeBaseline, the C5 anchor that every other network is diffed against and
-                        that directly drives the "matches home" false-clean risk, does neither: Save
-                        writes plain JSON protected only by 0600 file permissions, and Load decodes
-                        it without any HMAC check at all, on both macOS and Windows. Because D030's
-                        own stated threat model is an attacker capable of writing the file, and file
-                        permissions are the only barrier here, a local attacker or piece of malware
-                        that overwrites home-baseline.json can plant a baseline of its choosing; the
-                        next comparison against "home" then reads the poisoned file as ground truth,
-                        and a genuinely different, tampered network can be made to compare as
-                        matching home.
-- **Cross-ref. Delta:** D030 (HMAC integrity for baseline/sentinel snapshots, fixed for AnswerLedger
-                        and Sentinel but never extended to HomeBaseline on either platform); related
-                        C5/C145 (HomeBaseline).
-- **Fix(es):**          [Fix 1] Extend D030 to HomeBaseline on both platforms: Save/save must call
-                        IntegrityTag.SignAndWrite/signAndWrite, and Load/load must call
-                        IntegrityTag.Verify/verify, returning a Corrupted/corrupt result (never a
-                        silent nil or "no baseline") on a missing or mismatched HMAC, mirroring the
-                        existing Sentinel.LoadSnapshot pattern.
-                        [Fix 2] Add a mutation test on each platform: tamper home-baseline.json and
-                        assert the load path rejects it as corrupt rather than diffing the current
-                        network against it.
-- **Code Sample:**      [
-
-
-                        // Windows Trust.cs:390-401 HomeBaseline.Save — no SignAndWrite (cf. AnswerLedger.Save:150)
-                        public static void Save(NetworkConfigSnapshot snapshot, string? path = null) {
-                            File.WriteAllText(tmpPath, JsonSerializer.Serialize(snapshot));
-                            File.Move(tmpPath, path, overwrite: true);
-                            SyxxPaths.RestrictToOwner(path);          // no IntegrityTag.SignAndWrite
-                        }
-                        // Trust.cs:413-423 HomeBaseline.Load — no Verify
-                        var decoded = JsonSerializer.Deserialize<NetworkConfigSnapshot>(File.ReadAllText(path));
-                        return decoded != null ? (Success, decoded) : (Corrupted, null);   // no IntegrityTag.Verify
-                        // macOS Sentinel.swift:216-219 HomeBaseline.load — same gap, no IntegrityTag.verify
-                        public static func load(from url: URL = HomeBaseline.defaultURL) -> NetworkConfigSnapshot? {
-                            guard let data = try? Data(contentsOf: url) else { return nil }
-                            return try? JSONDecoder().decode(NetworkConfigSnapshot.self, from: data)
-                        }
-
-
-                        ]
----
----
-- **[C191]**            Linux Dashboard warden status chips are static hardcoded text and stay "NOT
-                        RUN" even after a real scan has actually completed
-- **Criticality:**      Medium; Prophet, Mirror-Lite, Portal, and Glutton-local all genuinely run on
-                        Linux, yet the Dashboard tiles that are supposed to reflect them are literal
-                        strings never updated by a real result, so the Dashboard cannot ever show a
-                        completed scan
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:138 (Prophet "NOT
-                        RUN"), 158 (Mirror "LOCKED · PRO"), 178 (Portal "NOT RUN"), 198 (Glutton
-                        "LOCKED · PRO"), 217 (Cage "NOT RUN"), 237 (Witness "LOCKED · PRO");
-                        DashboardViewModel.cs (no warden-state properties)
-- **Issue:**            Each of the six warden chips on the Linux Dashboard is a plain TextBlock
-                        literal (Text="NOT RUN" or Text="LOCKED · PRO"), and DashboardViewModel.cs
-                        exposes only Resolver/TrustScore/Alerts-style properties, with no binding
-                        path anywhere from a completed discipline run back to these chip labels. The
-                        "Council's Conclusion" and "Chronicle" panels on the same view are likewise
-                        static ("No conclusion yet," "No events recorded yet."). This does not
-                        produce a false PASSED or green result, so it is conservative rather than
-                        dangerous, but it does mean stale, hardcoded text is presented as if it were
-                        live status, and the Dashboard structurally cannot reflect what actually
-                        happened in a session the user just ran from the same client.
-- **Cross-ref. Delta:** Same underlying surface as B274 (the button no-ops) and the general ROADMAP
-                        "Linux visual no-op controls" item; folds into the same DashboardViewModel
-                        wiring work.
-- **Fix(es):**          [Fix 1] Add per-warden state, a Pro gate, and resolver/trust properties to
-                        DashboardViewModel, and bind the six chips to them at parity with the macOS
-                        DashboardView.wardenState pattern, so each chip reflects the real per-
-                        discipline result (NOT RUN / INCONCLUSIVE / DEGRADED / etc.) instead of a
-                        static literal.
-- **Code Sample:**      [
-
-
-                        <!-- Linux/Ubuntu/SyxxUI.Avalonia/Views/DashboardView.axaml:138, 158 -->
-                        <TextBlock Text="NOT RUN" FontSize="8.5" FontWeight="SemiBold" .../>   <!-- literal, not {Binding} -->
-                        <TextBlock Text="LOCKED · PRO" FontSize="8.5" FontWeight="SemiBold" .../>
-
-
-                        ]
----
----
-- **[C192]**            macOS Dashboard reports "PASSED" for the Portal warden chip merely because
-                        some network data was detected, implying a route-clean verdict Portal never
-                        actually rendered
-- **Criticality:**      Medium; Portal is a network and path enumeration discipline that does not
-                        itself produce a secure/tampered verdict; seeing "PASSED" on its chip reads
-                        as "the route was checked and is clean," which is not what happened
-- **Location:**         macOS/Sources/SyxxApp/DashboardView.swift:363-368
-- **Issue:**            The Portal branch of wardenState() returns "NOT RUN" when there is no
-                        report, "NO DATA" when both dnsServers and activeInterfaces are empty, and
-                        otherwise unconditionally returns "PASSED" for any non-empty report, with no
-                        clean or verified determination behind that label at all. Portal renders no
-                        separate tamper or route-integrity verdict elsewhere in the app that the
-                        word "PASSED" could be corroborating; the chip is purely reassurance dressed
-                        up as a pass/fail outcome. This is the same wardenState() function C002
-                        already covers for the Mirror branch's missing isRedirectionDetected check,
-                        but the Portal branch's defect is distinct: it is not that a real signal is
-                        being ignored, it is that "PASSED" is asserted with no underlying signal to
-                        check at all.
-- **Cross-ref. Delta:** C002 (OPEN; same wardenState() function, but the Mirror branch). This is the
-                        adjacent, previously unfiled Portal branch.
-- **Fix(es):**          [Fix 1] Replace "PASSED" in the Portal branch with a neutral, factual label
-                        such as "SCANNED" or an interface count, carrying no pass/clean semantics,
-                        or drive the chip from an actual Portal determination if and when one
-                        exists. Pass/clean vocabulary should be reserved for a genuine clean
-                        verdict.
-- **Code Sample:**      [
-
-
-                        // macOS/Sources/SyxxApp/DashboardView.swift:363-368
-                        case "Portal":
-                            guard let r = model.portalReport else { return "NOT RUN" }
-                            if r.dnsServers.isEmpty && r.activeInterfaces.isEmpty { return "NO DATA" }
-                            return "PASSED"
-
-
-                        ]
----
----
-- **[C193]**            Windows matrix engine can append the "clean" diagnosis into its own honesty
-                        overhang, so a gated clean result can be narrated as an unverified possible
-                        threat
-- **Criticality:**      Low; currently latent because no clean-affirming indicator is plumbed into
-                        the Windows evidence adapters yet, so clean.observedSupport is structurally
-                        zero and never crosses the overhang floor in the shipped wiring today;
-                        becomes live the moment such a signal is plumbed or a caller builds a bundle
-                        directly
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:823-833 (gate
-                        branch) and 835-845 (hardExclusion branch);
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:660 and 670
-                        (gold, both carry a `d.id != cleanID` guard)
-- **Issue:**            macOS guards both the gate and the hard-exclusion suppressed-append sites
-                        with `d.id != Self.cleanID`, so the clean diagnosis can never itself enter
-                        the honesty overhang. Windows guards only its belowTier append site and
-                        omits the equivalent guard on the gate and hard-exclusion append sites. If
-                        clean is ever gated, for example because its required Prophet or Witness
-                        section is untested or invalidated, and its observedSupport happens to clear
-                        the overhang floor of 0.30, Windows will append clean to the suppressed list
-                        with a MissingRequiredSection or InvalidatedRequiredSection reason. The
-                        overhang filter in Assemble excludes only HardExcluded entries, so a gated
-                        clean entry enters the overhang, and the abstain narration would announce
-                        the "clean" pattern itself as "a possible threat signal (Clean) that could
-                        not be verified," inverting its meaning. This does not fire today because no
-                        clean-support indicator is currently wired into the Windows evidence
-                        adapters, but it is a structural correctness gap, not a hypothetical one,
-                        and it would become live the instant clean-affirming signals are plumbed.
-- **Cross-ref. Delta:** B168 (macOS, FIXED 2026-07-30, DELTAS-fixed.md; Windows twin never landed).
-                        Adjacent to C165/C166 but not fixed by either; a minimal C165 fix would not
-                        necessarily port this guard.
-- **Fix(es):**          [Fix 1] Add the `d.Id != CleanId &&` condition to the ObservedSupport checks
-                        at MatrixDeterminativeEngine.cs:825 and :837, matching
-                        MatrixDeterminativeEngine.swift:660 and :670.
-- **Code Sample:**      [
-
-
-                        // Windows MatrixDeterminativeEngine.cs:825 (gate) and :837 (hardExclusion) — guard missing
-                        if (raw.ObservedSupport >= OverhangFloor)
-                        // macOS MatrixDeterminativeEngine.swift:660 / :670 — guarded
-                        if d.id != Self.cleanID && raw.observedSupport >= Self.overhangFloor {
-
-
-                        ]
----
----
-- **[C194]**            Windows required-section gate stops checking the remaining required sections
-                        entirely as soon as one is missing, instead of continuing to check the rest
-- **Criticality:**      Low; currently latent under the shipped default spec, which sets
-                        HardGateOnMissingRequiredSections true so both platforms already break on
-                        the first missing section; only reachable via a loaded or custom spec with
-                        that flag set to false
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:985-993;
-                        macOS/Sources/SyxxKit/Synthesis/MatrixDeterminativeEngine.swift:852-862
-- **Issue:**            macOS replaced an unconditional break in the missing-required-section branch
-                        with a `continue` whenever hardGateOnMissingRequiredSections is false, so
-                        that invalidated or otherwise-unusable checks on the remaining required
-                        sections, governed by separate flags, are still evaluated even after one
-                        required section is found missing. The Windows twin still breaks
-                        unconditionally as soon as any required section is absent, which short-
-                        circuits the loop and skips the FailClosedOnInvalidatedRequiredSections and
-                        usability gates for every subsequent required section in the list. Under the
-                        shipped default spec both platforms already hard-gate on the first missing
-                        section, so this is not reachable today, but a loaded or custom
-                        ThresholdProfile with the flag disabled would let Windows silently skip
-                        checking a later invalidated or unusable required section that macOS would
-                        still catch.
-- **Cross-ref. Delta:** B166 (macOS, part of the B15x/B16x series FIXED 2026-07-30; Windows twin
-                        never landed). Adjacent to C165, not covered by C161-C167.
-- **Fix(es):**          [Fix 1] When a required section is absent and
-                        HardGateOnMissingRequiredSections is false, `continue` the loop instead of
-                        `break`, matching MatrixDeterminativeEngine.swift:858-861.
-- **Code Sample:**      [
 
-
-                        // Windows MatrixDeterminativeEngine.cs:985-993 (unconditional break)
-                        if (!sectionById.TryGetValue(reqSection, out var section)) {
-                            if (Spec.Thresholds.HardGateOnMissingRequiredSections) { r.Gate = ...MissingRequiredSection... }
-                            break;
-                        }
-                        // macOS MatrixDeterminativeEngine.swift:852-862 (continue when the flag is off)
-                        guard let section = sectionByID[reqSection] else {
-                            if spec.thresholds.hardGateOnMissingRequiredSections { r.gate = ...; break }
-                            continue // B166
-                        }
-
-
-                        ]
----
----
-- **[C195]**            Linux Prophet overwrites its own 8.8.8.8 substitution warning with the
-                        record count, so the caveat that the resolver was substituted is lost even
-                        though the resolver name survives
-- **Criticality:**      Low; like the Mirror and Witness gaps, ProphetViewModel falls back to a
-                        public resolver and shows an amber warning that a successful lookup then
-                        replaces; the successor line does name the resolver, so a careful user can
-                        still see it is not their own, which is why this ranks lower than the
-                        Mirror/Witness cases
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ProphetViewModel.cs:32-40, 63
-- **Issue:**            When the system resolver list is empty, `string resolver = ...
-                        (servers.Count > 0 ? servers[0] : "8.8.8.8") ...` substitutes the public
-                        resolver and sets an amber warning at line 39; the successful-lookup path at
-                        line 63 then overwrites StatusLine with `$"{res.Records.Count} record(s) via
-                        {resolver}"`, which does name "8.8.8.8" explicitly, so the substitution is
-                        not fully hidden the way it is in the Mirror case. The amber caveat itself,
-                        however, is still lost once the lookup succeeds, and Prophet renders no
-                        clean/tampered verdict of its own for this line to mislead.
-- **Cross-ref. Delta:** Same substitution family as C173/C169 and the Linux Mirror (C186) and
-                        Witness (C185) findings above; lower severity because the resolver name
-                        survives in the surviving line.
-- **Fix(es):**          [Fix 1] When servers.Count == 0, keep the substitution caveat visible
-                        alongside the record count, for example by prepending "measured against
-                        8.8.8.8, not your resolver," rather than replacing the warning outright, and
-                        consider refusing to substitute for consistency with the Mirror and Witness
-                        fixes above.
-- **Code Sample:**      [
-
-
-                        // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ProphetViewModel.cs:32-40, 63
-                        string resolver = string.IsNullOrWhiteSpace(ResolverIp) ? (servers.Count > 0 ? servers[0] : "8.8.8.8") : ResolverIp.Trim();
-                        if (string.IsNullOrWhiteSpace(ResolverIp) && servers.Count == 0) { StatusLine = "⚠️ System resolver undetectable — falling back to 8.8.8.8"; }
-                        // ... on success:
-                        StatusLine = $"{res.Records.Count} record(s) via {resolver}";
-
-
-                        ]
----
-
----
-- **[C197]**            Witness creation promotes failed or unverified self-verification to a
-                        successful signed testimony on all three clients
-- **Criticality:**      Critical; user made aware. Evidence that fails its own signature check, or
-                        is never checked, is retained and exposed as a successfully signed witness
-                        artifact.
-- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:1221-1255;
-                        Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs:144-173;
-                        Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:735-758;
-                        Windows/dotNET/Syxx.Kit/Trust/WitnessTestifyPlanner.cs:57-64
-- **Issue:**            The macOS Run-All witness path self-verifies the newly created snapshot,
-                        but every outcome, including invalid signature, malformed input,
-                        unsupported format, expiration, or no verification result, falls through
-                        to storing the snapshot and setting `witnessTestimonyState = .signed`. The
-                        comment explicitly says the snapshot is signed regardless of the outcome.
-                        Linux similarly maps the detailed verification result to text and color,
-                        then unconditionally sets `TestimonyState = Signed`; it even paints every
-                        non-valid outcome with the same amber brush. Windows is weaker: its planner
-                        creates the snapshot and returns a successful `Outcome` without any
-                        self-verification, and the view model immediately sets `Signed`. A signing
-                        implementation regression, corrupted canonical payload, wrong key
-                        derivation, or malformed artifact can therefore become the witness result
-                        instead of failing closed.
-- **Cross-ref. Delta:** C175/E183 concern the order of checks when verifying an existing Windows
-                        snapshot. C177 concerns missing degraded-comparison gates. Neither covers
-                        creation-time self-verification being absent or ignored.
-- **Fix(es):**          [Fix 1] Move creation-time self-verification into
-                        `WitnessTestifyPlanner.Seal` on Swift and C#, returning a typed
-                        success/failure/unknown outcome only after `SnapshotVerification.Valid`.
-                        [Fix 2] On macOS and Linux, retain and expose the snapshot only for `.valid`;
-                        map every other verification case to the appropriate failed or unknown
-                        testimony lifecycle state and clear the snapshot/signature fields.
-                        [Fix 3] Add cross-platform failure tests that corrupt the just-created
-                        signature and canonical payload and assert no client reaches `Signed` or
-                        retains the artifact. Add a real sign-and-verify run for the happy path.
-- **Code Sample:**      [
-
-                        // macOS/Sources/SyxxApp/AppModel.swift:1251-1255
-                        // The snapshot is signed regardless of the self-verify outcome; surface it to the tab.
-                        witnessSnapshot = snap
-                        witnessSignature = snap.signature
-                        witnessTestimonyState = .signed
-
-                        // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs:173
-                        TestimonyState = WitnessTestimonyState.Signed;
-
-                        ]
----
----
-- **[C198]**            Linux GUI Prophet/Mirror/Witness silently fabricate 8.8.8.8 as "local"
-                        when the system resolver is undetectable and run the audit anyway
-- **Status:**           **FIXED IN CODE 2026-08-01** (owner approved parity-first); real-run
-                        verification on a Linux host and CI re-run still owed.
-- **Criticality:**      High; Linux runs the audit against a public resolver the user never chose,
-                        so a tampered local path can render clean and no gate exists (macOS now gates
-                        via D278's resolverState; Linux has no such machine)
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ProphetViewModel.cs:32-40;
-                        Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/MirrorViewModel.cs:38-45;
-                        Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs:107-108
-- **Issue:**            When `NetworkKeyState.GetSystemDNSServers()` returns empty, ProphetViewModel
-                        falls back to "8.8.8.8" (line 34) and MirrorViewModel likewise (line 39);
-                        WitnessViewModel falls back silently (line 108). Prophet and Mirror at least
-                        print a warning line, but all three RUN the audit against the fabricated
-                        resolver, and Witness seals a comparison made against it. macOS now refuses to
-                        run Prophet until the resolver is measured (AppModel.swift:939-944), so the
-                        three clients diverge: macOS gates, Linux fabricates-and-runs. The fabricated
-                        resolver agrees with the public vantage set, so redirection can be reported as
-                        not detected even though no local resolver was ever measured.
-- **Cross-ref. Delta:** C189 (Windows Prophet substitution, AppViewModel.cs:393-399) and C173
-                        (Windows/Mac Mirror/Witness substitution) cover the sibling call sites on
-                        macOS and Windows; no existing delta enumerates the Linux ViewModels.
-- **Fix(es):**          [Fix 1] Bring the Linux ViewModels to the macOS shape: when no system
-                        resolver is measurable, refuse to run Prophet/Mirror/Witness with the same
-                        owner-approved gate copy macOS uses ("System resolver not yet measured..." /
-                        "System resolver could not be determined. Check your network connection, then
-                        retry."), never fabricate "8.8.8.8".
-                        [Fix 2] Introduce a resolver-state (checking/measured/unavailable) machine
-                        on the Linux client mirroring macOS resolverState, and have every run path
-                        gate on it before auditing.
-- **Code Sample:**      [
-
-                        // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ProphetViewModel.cs:33-35
-                        string resolver = string.IsNullOrWhiteSpace(ResolverIp)
-                            ? (servers.Count > 0 ? servers[0] : "8.8.8.8")
-                            : ResolverIp.Trim();
-
-                        // Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/MirrorViewModel.cs:38-39
-                        var servers = NetworkKeyState.GetSystemDNSServers();
-                        string local = servers.Count > 0 ? servers[0] : "8.8.8.8";
-
-                        ]
----
 
 ## **D. Platform Integration & Resource Safety**
-
----
-- **[D001]**            Windows retains orphaned VerdictAction.cs symbol contradicting macOS
-                        ResultAction.swift parity
-- **Status:**           **REOPENED 2026-08-01** — The current tree contains both
-                        `Synthesis/VerdictAction.cs` and `Synthesis/ResultAction.cs`. The former
-                        still declares `VerdictAction` / `VerdictActions`, and a current source
-                        search returns live matches throughout that file. The prior fixed-state
-                        assertion is no longer true. D143 is an exact duplicate of this reopened
-                        lifecycle regression.
-- **Criticality:**      Non-critical; platform naming and symbol parity divergence between macOS
-                        Swift and Windows C#.
-- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/VerdictAction.cs:7-25;
-                        Windows/dotNET/Syxx.Kit/Synthesis/ResultAction.cs:7-25
-- **Issue:**            macOS/Sources/SyxxKit/Synthesis/VerdictAction.swift was renamed to
-                        ResultAction.swift to comply with the project rule prohibiting the word
-                        verdict in code. Windows retains VerdictAction.cs, declaring record
-                        VerdictAction and class VerdictActions while citing the deleted macOS file
-                        in its header comment.
-- **Cross-ref. Delta:** D143 is the duplicate compact finding for the same two-file regression.
-- **Fix(es):**          [Fix 1] Rename Windows/dotNET/Syxx.Kit/Synthesis/VerdictAction.cs to
-                        ResultAction.cs.
-                        [Fix 2] Rename record VerdictAction to record ResultAction and static class VerdictActions to static class ResultActions matching macOS.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/Synthesis/VerdictAction.cs:7-8
-                        // macOS/Sources/SyxxKit/Synthesis/VerdictAction.swift
-                        public record VerdictAction
-
-                        ]
----
----
-- **[D146]**            Windows DNS capture parser never rejects IPv4 fragments, so a non-initial
-                        fragment's arbitrary payload bytes are parsed as if they were a UDP and DNS
-                        header, fabricating records that were never sent
-- **Criticality:**      High; a captured non-initial IPv4 fragment has no real transport header at
-                        the offset the parser assumes one exists, so it fabricates a UDP/DNS packet
-                        out of whatever bytes happen to sit there; macOS rejects fragments outright
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSCapture.cs:261-291 (IPv4 path)
-- **Issue:**            The Windows IPv4 capture branch checks only that the protocol number is 17
-                        (UDP) and never inspects the IP header's flags-and-fragment-offset bytes at
-                        offsets 6-7. A non-initial IPv4 fragment carries protocol 17 in its header
-                        but has no UDP header of its own; its payload is an arbitrary continuation
-                        of a larger packet's data. The parser reads that arbitrary payload as if it
-                        were a UDP header followed by a DNS message anyway, which can fabricate
-                        plausible-looking but entirely fictitious DNS records in the forensic
-                        capture report. The macOS twin's parseIPUDPHeader explicitly reads the
-                        flags-and-fragment field, computes the more-fragments flag and fragment
-                        offset, and returns nil for any fragment at all, specifically because "a
-                        non-initial fragment has arbitrary bytes where the UDP/TCP header is
-                        assumed, parsing it as a transport header fabricates evidence." Fragmented
-                        DNS responses are not rare: large TXT records, DNSSEC answers, and any
-                        oversized response can fragment at the IP layer. Whether this is reachable
-                        in practice depends on whether Windows Cage applies a port-53 filter before
-                        this parser runs; Windows capture uses a raw SIO_RCVALL socket
-                        (CageCommand.cs:379) with no transport-port BPF filter ahead of this code,
-                        so fragments do reach the parser.
-- **Cross-ref. Delta:** C021 (macOS fix, DELTAS-fixed.md). B258 covers only the IPv6 "Fragment"
-                        extension header case; the IPv4 case is not covered by any existing audit
-                        stub.
-- **Fix(es):**          [Fix 1] In the IPv4 branch, read the flags-and-fragment-offset bytes at
-                        data[6..7] and return null whenever the more-fragments flag is set or the
-                        fragment offset is non-zero, matching the macOS parseIPUDPHeader contract.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/DNSCapture.cs:266-267
-                        byte protocolNumber = data[9];
-                        if (protocolNumber != 17) return null;
-                        // no check of the fragment flags/offset at data[6..7] before treating the payload as a UDP+DNS packet
-
-
-                        ]
----
----
-- **[D147]**            Windows DNS response parser has no cap on answer count and no shared
-                        pointer-jump budget, so a single crafted response is far more expensive to
-                        parse than the macOS budget allows
-- **Criticality:**      Medium-Low; not a crash, but a single crafted 64KB UDP DNS response with
-                        thousands of pointer-dense records is an amplifiable per-packet CPU cost on
-                        Windows that the macOS parser specifically bounds against
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:737-775 (answer loop, no cap),
-                        1044-1114 (ParseName, only a per-name visited set)
-- **Issue:**            The Windows answer-parsing loop runs up to ANCOUNT iterations with no
-                        maximum answer cap, and each individual ParseName call is bounded only by a
-                        per-call visited-pointer set, not by any budget shared across the whole
-                        response. The macOS twin caps answerCount at 256 and returns
-                        MalformedResponse above that (D020), and shares a single 1024-entry pointer-
-                        jump budget across the entire parse of one response (JumpBudget). Without
-                        either protection, a crafted 64KB UDP DNS response containing a large
-                        ANCOUNT and pointer-dense name compression can force on the order of
-                        hundreds of millions of parsing operations per packet on Windows, worst case
-                        roughly proportional to the number of records times the packet size, where
-                        the macOS budget caps the same input cheaply.
-- **Cross-ref. Delta:** D020 (macOS fix). New for Windows; not covered by any existing B255-B269
-                        audit stub.
-- **Fix(es):**          [Fix 1] Cap answerCount at 256, returning MalformedResponse above that
-                        threshold, and thread a single shared jump budget through ParseName across
-                        the whole response parse, matching the macOS D020 contract.
-- **Code Sample:**      [
-
-
-                        // Windows/dotNET/Syxx.Kit/DNSResolver.cs:737
-                        for (int i = 0; i < answerCount; i++)
-                        {
-                            // no maxAnswers guard; ParseName below is bounded only by a per-call visited set, not a
-                            // shared cross-name jump budget
-                        }
-
-
-                        ]
----
-
----
-- **[D279]**            Bundled typography silently fell back to the system font: faces moved into
-                        family subfolders Bundle.module cannot recurse, registration errors discarded
-- **Status:**           **FIXED 2026-08-02 (Phase 0)** — flat faces restored to the Resources root,
-                        fail-loud tri-state registration, packaging gate, and mutation-proven
-                        failure-case tests all landed. Filed after the fact so the defect class and
-                        its three compounding silences are on record.
-                        **Parity landed 2026-08-02 (Phase 0 parity):** the same defect class on
-                        the .NET clients (nested unreachable faces, no fail-loud registration,
-                        no registration tests, a Jost-led shared guard script) is fixed [Fix 4].
-                        WinUI render-level resolution stays INCONCLUSIVE until a Windows build
-                        runs; Avalonia render-level resolution stays INCONCLUSIVE until a real
-                        GUI run on a Linux display host. Neither is marked pass.
-- **Criticality:**      Critical (quick guide §5: silently hides a failure from the user); user made
-                        aware. No verdict surface involved — but the app rendered every designed face
-                        as the system font with no error at any layer, and the only symptom was "the
-                        app looks slightly wrong". A full release cycle shipped in the wrong
-                        typography while the suite was green.
-- **Location:**         macOS/Sources/SyxxApp/Views/Components/IoDesignSystem.swift:387-396
-                        (bundledResourceURL — non-recursive lookup); SyxxApp.swift:489-491 pre-fix
-                        (CTFontManagerRegisterFontsForURL CFError discarded with `_ =`);
-                        macOS/bundle-app.sh:128-129 pre-fix (`2>/dev/null || true` on the .ttf copy)
-- **Issue:**            Three compounding silences. (1) The flat .ttf faces were moved into family
-                        subfolders (Resources/Cinzel/, etc.); Bundle.module.url(forResource:
-                        withExtension:) does not recurse, so every lookup returned nil and no face
-                        was ever registered. (2) The CoreText registration error was discarded, so
-                        the failure was invisible even where registration was attempted. (3) The
-                        bundler copied fonts with the failure swallowed, so a zero-font bundle built
-                        "successfully". Every Font.custom(...) then silently rendered as the system
-                        font — a verdict-before-evidence class defect in the presentation layer: the
-                        app asserted a designed surface it never verified.
-- **Cross-ref. Delta:** F071 (done 2026-08-02) — the Phase 3.7 contract suite left red by the
-                        follow-on Wave 1 body retarget, found during the Phase 0 coverage audit.
-- **Fix(es):**          [Fix 1] Flat faces restored to Sources/SyxxApp/Resources/ root; a
-                        manifest-driven assertion in bundle-app.sh:134-153 fails the build when any
-                        declared face is missing; `|| true` removed from the .ttf copy.
-                        [Fix 2] registerTypographyOrComplainLoudly (SyxxApp.swift:27, 49-91) — a
-                        tri-state FontRegistrationReport verified by NSFont resolution (never by the
-                        CoreText return value), Logger.fault + stderr on any shortfall,
-                        assertionFailure on total failure.
-                        [Fix 3] TypographyRegistrationTests (8/8 green) with inline failure cases:
-                        missing resource, partial registration, PostScript-name mismatch,
-                        root-placement invariant, OFL license presence, and an NSFont
-                        no-substitution guard proving the detector can detect.
-                        [Fix 4] Phase 0 parity (2026-08-02): 24 faces + 8 OFL synced sha256
-                        byte-identical to the macOS gold standard into
-                        Windows/dotNET/SyxxUI/Assets/Fonts/ and
-                        Linux/Ubuntu/SyxxUI.Avalonia/Assets/Fonts/; nested staging extracts
-                        deleted; body/bodyLight retargeted to Cormorant Garamond and the
-                        navLabel (Spectral Light) role added at
-                        Windows/dotNET/SyxxUI/Styles/IoDesignSystem.xaml:77-105 and
-                        Linux/Ubuntu/SyxxUI.Avalonia/App.axaml:166-190; twin failure-case
-                        suites Windows/dotNET/Syxx.Tests/TypographyAssetsTests.cs (59/59)
-                        and Linux/Ubuntu/SyxxUI.Avalonia.Tests/TypographyAssetsTests.cs
-                        (59/59), both mutation-proven (body → Jost turns exactly the
-                        role-map guards red; revert green); shared guard
-                        scripts/test-typography-assets.sh rewritten to the 24-face manifest
-                        with all-platform byte-identity, no-nested-faces, and
-                        no-Jost-in-body checks (exit 0). Avalonia Debug + Release builds 0
-                        errors; Linux tests 111/111.
----
----
-- **[D278]**            macOS app deadlocks on launch: runProcess waits on a semaphore only the
-                        cancelled timeout work item could signal
-- **Criticality:**      Critical; user-reported and reproduced 2026-08-01 on a green build. The
-                        product is unusable: the window never completes its first frame, guided
-                        setup cannot present on a fresh install, and the Dock icon cannot raise
-                        the window. Every rendered GUI acceptance gate in the current plan is
-                        unreachable while this stands.
-- **Location:**         macOS/Sources/SyxxKit/NetworkKeyState.swift:130, 135-149, 157-158;
-                        reached from macOS/Sources/SyxxApp/AppModel.swift:826 (checkStartup) via
-                        NetworkKeyState.swift:169 (getSystemDNSServers) and :187
-                        (getScopedResolvers); entered at
-                        macOS/Sources/SyxxApp/ContentView.swift:98 (.onAppear, main actor)
-- **Issue:**            done.signal() is reachable only from inside timerWork
-                        (NetworkKeyState.swift:136 and :147). The fast path calls
-                        timerWork.cancel() at :157 and then done.wait() at :158
-                        unconditionally. When the subprocess exits before the deadline, which is
-                        the normal case for `scutil --dns`, the cancelled work item never runs,
-                        nothing signals the semaphore, and the main actor blocks forever. The
-                        comment at :154-156 asserts the main thread "skips done.wait() entirely",
-                        but the code contains no such skip: a comment describing an intended fix
-                        was accepted as evidence the fix existed. Measured with `sample` on a live
-                        launch: 3379 of 4144 main-thread samples in semaphore_wait_trap beneath
-                        runProcess. This is a regression from the C096 timeout change, which
-                        converted a guaranteed 3-second stall into a permanent hang. Secondary
-                        architectural defect in the same path: checkStartup runs a synchronous
-                        subprocess on the main actor at all, so even a correct 3-second bound
-                        would freeze first paint.
-- **Cross-ref. Delta:** C096 (fixed) introduced the cancellable timer whose cancellation creates
-                        this deadlock. C112 (fixed) documents why the reader FileHandle must not
-                        be closed from the timer thread; preserve that constraint in any redesign.
-                        Related in kind but not identical: the 2026-07-24 publication audit PR-03
-                        and PR-20 record blocking waitUntilExit and semaphore waits on the main
-                        actor at startup, which this delta now supersedes with a measured
-                        reproduction. No existing delta covers the unsignalled-semaphore defect.
-- **Fix(es):**          [Fix 1] Wait only when the timer actually fired. Capture whether cancel()
-                        won the race and skip done.wait(), or adopt the Windows twin's shape at
-                        Windows/dotNET/Syxx.Kit/NetworkKeyState.cs:318, which uses a bounded
-                        WaitForExit(TimeSpan) returning a status and has no semaphore handshake.
-                        Preserve SIGTERM, the grace period, SIGKILL escalation, and the
-                        didTimeout-to-nil contract.
-                        [Fix 2] Move resolver and encrypted-DNS cache population off the main
-                        actor in checkStartup. Until the values arrive, every surface reading them
-                        must render an explicit checking/unknown state; a nil cache must never
-                        render as a measured resolver. Preserve the F011 constraint that view
-                        bodies perform no synchronous calls.
-                        [Fix 3] Add the failure cases: a fast-subprocess test bounded by an
-                        XCTest expectation shorter than the process timeout, so a regression fails
-                        instead of hanging the suite; a hung-subprocess test proving nil at the
-                        deadline with no surviving child; and a mutation restoring the
-                        unconditional done.wait() that must turn the first test red.
-                        [Fix 4] Real-run bar: sample the launched bundle and prove no main-thread
-                        frame waits beneath runProcess; with a fresh HOME prove guided setup
-                        presents and the Dock icon raises the window.
-- **Platform:**         macOS only. Windows uses the bounded bool-returning WaitForExit and Linux
-                        links Syxx.Kit, so both are already correct. This is the rare case where
-                        macOS is brought to the twin rather than the reverse.
-
-- **[D277]**            Unresolved merge-conflict markers break the macOS app, determinative core,
-                        privileged helper, and deployment scripts
-- **Criticality:**      Critical; user made aware. The macOS GUI and shared synthesis core cannot
-                        compile, the privileged helper is not buildable, and the Windows and Unix
-                        deployment scripts are syntactically contaminated.
-- **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:29-77, 123-309,
-                        495-520;
-                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:683-706;
-                        macOS/Sources/SyxxApp/ContentView.swift:35-65, 71-94, 185-208, 219-335,
-                        461-523;
-                        macOS/Sources/DeepSyxx/main.swift:3-6, 21-34, 41-102, 295-389;
-                        scripts/deploy.sh:304-315; scripts/win-build.ps1:12-55
-- **Issue:**            Literal Git conflict markers remain in the macOS determinative engine,
-                        GUI entry surface, and root-privileged helper. The competing branches do
-                        not merely differ cosmetically: they contain different synthesis data
-                        structures, GUI lifecycle paths, and privileged operations. Selecting one
-                        side without reconciling its security and honesty invariants could restore
-                        already-fixed false-verdict or privilege defects. The same contamination
-                        is present in the Unix deployment script and Windows build script, so the
-                        release path cannot be trusted even where platform source itself parses.
-- **Cross-ref. Delta:** None found in DELTAS.md, DELTAS-fixed.md, or DELTAS-rejected.md. D001 and
-                        D143 concern an obsolete duplicate symbol, not unresolved merge state.
-- **Fix(es):**          [Fix 1] Resolve the synthesis conflicts by preserving the current matrix
-                        engine, tri-state evidence contracts, required-section gates, and complete
-                        probe accounting from both sides.
-                        [Fix 2] Resolve ContentView and DeepSyxx conflicts against the approved GUI
-                        lifecycle and privileged-helper contracts, then run an honesty-surface
-                        audit before accepting output behavior.
-                        [Fix 3] Reconcile both deployment scripts and add a cross-platform conflict-
-                        marker gate to CI before any compiler, packager, or deploy step.
-                        [Fix 4] Build Debug and Release app bundles and perform real GUI, helper,
-                        and synthesis runs after resolution.
-- **Code Sample:**      [
-
-                        // macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:29
-                        <<<<<<< Updated upstream
-                        // competing determinative-core implementation
-                        =======
-                        // competing stashed implementation
-                        >>>>>>> Stashed changes
-
-                        ]
----
-
-## **E. Security & Hardening**
-
----
-- **[E001]**            LicenseManager Unprotect swallows DPAPI decryption exceptions as null
-- **Status:**           **OPEN** — Verified in source. LicenseManager.cs:181-184 still has
-                        `catch { return null; }` around the DPAPI DecryptLegacy call. Keystore
-                        corruption or OS permission failures remain indistinguishable from "no key
-                        stored". E166 (crypto audit: "DpapiSecretStore does not zero decrypted
-                        plaintext") is related but distinct.
-- **Criticality:**      Non-critical; tri-state violation collapsing keystore or permission error
-                        into empty state.
-- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:175-185
-- **Issue:**            Unprotect function uses a bare catch { return null; } block around DPAPI
-                        decryption. Keystore corruption or OS permission failures are swallowed,
-                        making system errors indistinguishable from no key stored.
-- **Cross-ref. Delta:** Related to E166 (DPAPI plaintext not zeroed) — distinct but in same area.
-- **Fix(es):**          [Fix 1] Surface decryption failures as a distinct tri-state/Result error
-                        state rather than returning null.
-- **Code Sample:**      [
-
-                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:175-185
-                        catch { return null; }
-
-                        ]
----
----
-- **[E002]**            SyncTrialAnchorWithServerAsync swallows network exceptions silently
-- **Status:**           **OPEN** — Verified in source. LicenseManager.cs:248-249 still has
-                        `catch { }` followed by `return null;` in SyncTrialAnchorWithServerAsync.
-                        All network exceptions (timeout, DNS failure, TLS error, HTTP errors) are
-                        silently swallowed. The caller cannot distinguish "server unreachable" from
-                        "server returned an error" from "no trial anchor exists".
-- **Criticality:**      Non-critical; tri-state violation hiding network connectivity errors during
-                        trial sync.
-- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:232-250
-- **Issue:**            SyncTrialAnchorWithServerAsync catches and swallows all network exceptions
-                        with catch { } return null;. Connectivity errors are treated as an empty
-                        state instead of surfacing the network failure.
+- **[D001]**            Passive DNS drift boolean fallback collapses tri-state
+- **Status:**           **OPEN** — Verified in source. passivedns.py:123 still emits
+                        `"driftSuspected": drift == "suspected"`. The comment says "backward-compat
+                        bool alongside tri-state" (A117), but legacy clients reading only the
+                        boolean cannot distinguish "insufficient-data" from "none" — both collapse
+                        to false, violating the no-result-before-evidence rule the comment itself
+                        cites.
+- **Criticality:**      Non-critical; API response JSON includes legacy driftSuspected boolean
+                        alongside tri-state drift string.
+- **Location:**         Server/syxx_server/passivedns.py:121
+- **Issue:**            baseline() computes a tri-state drift string ("insufficient-data",
+                        "suspected", "none"), but then collapses it into a boolean driftSuspected
+                        field in response JSON, turning "insufficient-data" and "none" into false
+                        for legacy clients.
 - **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Log and propagate network exceptions as an explicit error outcome.
+- **Fix(es):**          [Fix 1] Remove driftSuspected boolean from API response JSON forcing clients
+                        to handle tri-state drift string.
 - **Code Sample:**      [
 
-                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:232-250
-                        catch { } return null;
+                        // Server/syxx_server/passivedns.py:121
+                        "driftSuspected": drift == "suspected",
 
                         ]
+
 ---
----
-- **[E200]**            DimensionService live control-content fetch lacks certificate pinning
-- **Criticality:**      Critical; user not yet made aware.
-- **Location:**         macOS/Sources/SyxxApp/DimensionService.swift:84-88, 121-126
-- **Issue:**            DimensionService fetches startup, broadcast, and whats-new control content
-                        over
-                        URLSession.shared with only HTTPS host allow-listing. The default session trusts
-                        the system root store and any installed certificate, so a MITM with a compromised
-                        CA can serve a malicious Broadcast containing a url that the GUI presents as a
-                        vendor action link. The cached response is HMAC-protected (D037), but the live fetch
-                        path is not pinned, so a force refresh or first launch can install a malicious
-                        broadcast or update pointer. This is a trust-infrastructure/control-content attack that
-                        can redirect users to phishing or malware URLs. The broadcast should be treated as
-                        untrusted and not rendered as a clickable vendor action until the transport is pinned
-                        to the real server key.
-- **Cross-ref. Delta:** None.
-- **Fix(es):**          [Fix 1] Pin the server certificate/SPKI for the approved HTTPS hosts
-                        (*.syxx.app, syxx.app) and reject the connection if the presented certificate
-                        does not match the pinned key.
-                        [Fix 2] Until pinning is in place, do not present Broadcast.url as a trusted
-                        vendor action link; render it as plain text and require the user to copy/paste it.
-                        [Fix 3] Validate that Broadcast.url is an HTTPS URL on an approved host before
-                        using it, and default to no action if validation fails.
+
+
+- **[D002]**            Swift origin_url comparison diverges from C# due to Unicode normalization
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. Swift String.== uses canonical equivalence (NFC = NFD);
+                        C# StringComparison.Ordinal compares UTF-16 code units (NFC != NFD).
+- **Criticality:**      Non-critical; structural cross-platform parity violation. If a manifest's
+                        origin_url contains Unicode in a different normalization form than the
+                        client's requestedOrigin, Swift proceeds to content verification while C#
+                        returns originMismatch -> INCONCLUSIVE.
+- **Location:**         macOS/Sources/SyxxKit/WarpEngine.swift:307;
+                        Windows/dotNET/Syxx.Kit/WarpEngine.cs:455
+- **Issue:**            Swift's String.== uses Unicode canonical equivalence — NFC and NFD forms of
+                        the same string compare equal. C#'s StringComparison.Ordinal compares UTF-16
+                        code units byte-by-byte — NFC and NFD compare as different. This is a
+                        structural parity violation between the two client engines. The shared
+                        corpus doesn't exercise URLs with non-ASCII characters, so this divergence
+                        is not caught by the oracle.
+- **Cross-ref. Delta:** Related to D005 (same-origin redirect host comparison divergence).
+- **Fix(es):**          [Fix 1] Normalize both strings to NFC before comparison on both platforms.
+                        Swift: .precomposedStringWithCanonicalMapping. C#: .Normalize(NormalizationForm.FormC).
 - **Code Sample:**      [
 
-                        // macOS/Sources/SyxxApp/DimensionService.swift:84-88
-                        let (data, _) = try await URLSession.shared.data(from: url)
-                        let decoded = try JSONDecoder().decode(StartupResponse.self, from: data)
-                        cacheResponse(decoded)
-                        return decoded
+                        // macOS/Sources/SyxxKit/WarpEngine.swift:307
+                        if manifestOrigin != requestedOrigin { return .originMismatch }
 
-                        // macOS/Sources/SyxxApp/DimensionService.swift:121-126
-                        guard let url = URL(string: "\(baseURL)/api/broadcast") else { return nil }
-                        do {
-                            let (data, _) = try await URLSession.shared.data(from: url)
-                            let wrapper = try JSONDecoder().decode([String: Broadcast?].self, from: data)
-                            return wrapper["broadcast"] ?? nil
-                        }
+                        // Windows/dotNET/Syxx.Kit/WarpEngine.cs:455
+                        if (!string.Equals(manifestOrigin, requestedOrigin,
+                            StringComparison.Ordinal))
 
                         ]
----
 
 ---
-- **[E201]**            Windows WitnessSigner never recomputes/validates KeyId at verify — B099 fix
-                        is
-                        macOS-only; keyId is forgeable on signed snapshots (parity regression)
-- **Criticality:**      Non-critical (Medium); security-integrity + evidence-parity. Not auto-
-                        critical
-                        because the trust decision keys on the full PublicKey, not keyId, so relabeling
-                        does not bypass the trust set. It IS forgeable signed-evidence metadata: any
-                        Windows consumer (GUI, server, third-party verifier) that displays or keys off
-                        keyId (rotation identity) is misled, and the Windows verifier returns .Valid for
-                        a snapshot whose keyId was attacker-relabeled. Elevated because a security delta
-                        marked FIXED and archived is still live on one platform.
-- **Location:**         Windows/dotNET/Syxx.Kit/WitnessSigner.cs:232-342 (VerifySnapshotDetailed —
-                        KeyId
-                        referenced nowhere; only set at sign time :142,164); parity target that guards
-                        it: macOS/Sources/SyxxKit/WitnessSigner.swift:286-292
-- **Issue:**            keyId is an envelope field, not part of SignedEvidencePayload, so the
-                        Ed25519
-                        signature does not cover it. macOS closes this (B099) by recomputing keyId from
-                        the verified public key and returning .displayMismatch on any mismatch. Windows
-                        performs the B037/D083 display-integrity checks (queryId, comparisonResult,
-                        resolverQueryOutcomes, timestamp, expiresAt, formatVersion) but OMITS the keyId
-                        recomputation entirely. An attacker holding any valid Windows-signed snapshot can
-                        rewrite KeyId to an arbitrary value (impersonate a different rotation identity or
-                        a known-trusted key's ID) and VerifySnapshotDetailed still returns
-                        SnapshotVerification.Valid.
-- **Cross-ref. Delta:** B099 — filed for BOTH platforms, marked FIXED 2026-07-30 (qwen-code) in
-                        DELTAS-fixed.md, vetted "Confirmed both platforms." NEW GAP: the landed fix is
-                        macOS-only; the Windows half was archived-as-fixed without the code change — an
-                        incomplete-fix / parity regression, not a re-file of an open delta. Distinct from
-                        E183 (ordering of Windows checks, time before Ed25519) and E199 (keyId length =
-                        64 bits): even with E183 fixed, Windows would still never check keyId.
-- **Fix(es):**          [Fix 1] In VerifySnapshotDetailed, after the display-integrity guard,
-                        recompute
-                        keyId from the parsed public key —
-                        Convert.ToHexString(SHA256.HashData(pubKeyData)).ToLower()[..16] — and return
-                        SnapshotVerification.DisplayMismatch when snapshot.KeyId differs. Mirrors macOS.
-                        [Fix 2] Add a Windows parity test that relabels KeyId on a valid snapshot and
-                        asserts DisplayMismatch (macOS has this via B099); wire it into the
-                        SIGNED_PAYLOAD parity gate so the two verifiers cannot diverge on this again.
+
+
+- **[D003]**            Swift same-origin host comparison is case-sensitive, violating DNS case-
+                        insensitivity
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. URL.host preserves original case; "example.com" != "Example.COM"
+                        in Swift but DNS is case-insensitive.
+- **Criticality:**      Non-critical; a legitimate same-origin redirect with case variation is
+                        rejected as a policy violation, producing false fetchError -> INCONCLUSIVE.
+                        C# (Uri.Host normalizes to lowercase) and Python (urlsplit lowercases) are
+                        immune. This is a cross-platform behavioral divergence.
+- **Location:**         macOS/Sources/SyxxKit/WarpEngine.swift:608
+- **Issue:**            hopPermittedByPolicy uses from.host == to.host for same-origin enforcement.
+                        URL.host preserves the original case from the URL string. A redirect from
+                        https://example.com/ to https://Example.COM/path would be rejected as a
+                        policy violation. Any real-world CDN or load-balancer that redirects with
+                        varying hostname case would cause the Swift client to fail-closed into
+                        INCONCLUSIVE for every asset.
+- **Cross-ref. Delta:** Related to D004 (redirectReconciles case sensitivity).
+- **Fix(es):**          [Fix 1] Add .lowercased() to both host comparisons in hopPermittedByPolicy.
 - **Code Sample:**      [
 
-                        // Windows VerifySnapshotDetailed (WitnessSigner.cs) — guard checks queryId/
-                        // comparisonResult/outcomes/timestamp/expiresAt/formatVersion but NOT keyId:
-                        if (rebuilt.QueryId != snapshot.Evidence.QueryId ||
-                            !rebuilt.ComparisonResult.CanonicalEquals(...) ||
-                            !ResolverQueryOutcomeCanonical.SequenceCanonicalEquals(...) ||
-                            displayTimestampMillis != snapshot.Evidence.Timestamp ||
-                            displayExpiresAtMillis != snapshot.Evidence.ExpiresAt ||
-                            snapshot.FormatVersion != snapshot.Evidence.FormatVersion)
-                        { return SnapshotVerification.DisplayMismatch; }
-                        // <-- MISSING: no snapshot.KeyId vs SHA256(publicKey) check anywhere in method.
-
-                        // macOS parity (WitnessSigner.swift:289-291) — present:
-                        let recomputedKeyId = SHA256.hash(data: pubKeyData).prefix(8)...joined()
-                        if snapshot.keyId != recomputedKeyId { return .displayMismatch }
+                        // macOS/Sources/SyxxKit/WarpEngine.swift:608
+                        case .sameOrigin:
+                            return from.scheme == to.scheme
+                                && from.host == to.host
+                                && (from.port ?? -1) == (to.port ?? -1)
 
                         ]
+
 ---
 
-- **[E202]**            Windows LicenseManager verifies the Keygen signature only when meta.valid
-                        is true — a forged unsigned "invalid" response revokes Pro unchecked
-- **Criticality:**      High; an on-path interceptor sending an unsigned meta.valid=false body
-                        silently revokes Pro on Windows, bypassing the offline-grace path macOS
-                        preserves.
-- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:524-537;
-                        macOS/Sources/SyxxKit/LicenseManager.swift:565-579
-- **Issue:**            D066 fixed the macOS side: verifyKeygenSignature runs regardless of
-                        meta.valid and an unverifiable response returns .networkError so the
-                        offline-grace path applies (LicenseManager.swift:566-578). On Windows the
-                        VerifyKeygenSignature call sits INSIDE `if (validation?.Meta.Valid == true)`
-                        (cs:526-536), so a forged unsigned meta.valid=false body is trusted as
-                        Invalid and returns LicenseValidationResult.Invalid with no crypto check —
-                        silently revoking Pro capability on a machine whose license was valid. The
-                        D066 fixed entry claims "Both platforms now verify ... before trusting
-                        meta.valid OR meta.invalid", which the live Windows code contradicts.
-- **Cross-ref. Delta:** Related D066 (DELTAS-fixed.md:46124, marked FIXED 2026-07-30; the "both
-                        platforms" claim is contradicted by live Windows code).
-- **Fix(es):**          [Fix 1] Move VerifyKeygenSignature outside the Meta.Valid block: verify
-                        the Ed25519 signature whenever a validation body is received and return
-                        LicenseValidationResult.NetworkError when it fails, matching
-                        LicenseManager.swift:566-578.
-                        [Fix 2] Failure test: an unsigned meta.valid=false body must return
-                        NetworkError (grace), never Invalid.
+
+- **[D004]**            Swift redirectReconciles uses case-sensitive URL comparison against server's
+                        lowercase final_url
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. URL.absoluteString preserves hostname case from HTTP response;
+                        the server's final_url (via urlsplit) is always lowercase.
+- **Criticality:**      Non-critical; case mismatch causes fetchError -> INCONCLUSIVE for every
+                        asset under same-origin or list redirect policy. C# Uri.AbsoluteUri
+                        normalizes to lowercase and is immune.
+- **Location:**         macOS/Sources/SyxxKit/WarpEngine.swift:444-445
+- **Issue:**            redirectReconciles compares terminalURL (from
+                        URLResponse.url?.absoluteString,
+                        preserving hostname case from HTTP response) against the manifest's finalURL
+                        (server-generated, always lowercase). If the HTTP response Location header
+                        has "https://Example.COM/path" and the manifest declares
+                        "https://example.com/path", the == comparison fails.
+- **Cross-ref. Delta:** Related to D003 (same-origin host case sensitivity).
+- **Fix(es):**          [Fix 1] Normalize URLs before comparison: lowercase scheme and host,
+                        normalize port. Apply to terminalURL, requestURL, and finalURL.
 - **Code Sample:**      [
 
-                        // Windows/dotNET/Syxx.Kit/LicenseManager.cs:526-536
-                        if (validation?.Meta.Valid == true)
-                        {
-                            string requestPath = $"/v1/accounts/{accountID}/licenses/actions/validate-key";
-                            if (!VerifyKeygenSignature(resBytes, response, requestPath, "post"))
-                            {
-                                SyxxDiagnostics.Breadcrumb(...);
-                                return LicenseValidationResult.NetworkError;
+                        // macOS/Sources/SyxxKit/WarpEngine.swift:441-446
+                        static func redirectReconciles(policy: WarpRedirectPolicy,
+                            requestURL: String, finalURL: String?,
+                            terminalURL: String) -> Bool {
+                            switch policy {
+                            case .none:
+                                return terminalURL == requestURL
+                            case .sameOrigin, .list:
+                                if let finalURL { return terminalURL == finalURL }
+                                return terminalURL == requestURL
                             }
                         }
-                        return (validation?.Meta.Valid ?? false) ? LicenseValidationResult.Valid : LicenseValidationResult.Invalid;
 
                         ]
+
 ---
----
-- **[E203]**            Windows DNS capture parser writes attacker-controlled label bytes into the
-                        terminal readout and saved report with no escaping, letting a hostile
-                        response rewrite terminal lines or inject fabricated report rows
-- **Criticality:**      High; the forensic capture report is evidence a user is meant to trust and
-                        read directly; a wire-controlled domain name containing ANSI escape
-                        sequences or embedded newlines can rewrite what the user sees on screen or
-                        forge additional lines inside the saved report
-- **Location:**         Windows/dotNET/Syxx.Kit/DNSCapture.cs:471 (TryParseName), 392-398 (answer
-                        name written verbatim)
-- **Issue:**            Windows DNSCapture.TryParseName decodes each DNS label with
-                        `Encoding.UTF8.GetString(data, current + 1, len)` and appends it to the name
-                        unmodified; ParseDNSPacket then writes that raw label sequence straight into
-                        DNSAnswerReport.Name and DNSQuestionReport.QuestionName, with no control-
-                        character escaping anywhere in the path. A hostile response is free to place
-                        terminal control sequences (ANSI escapes, backspace, embedded newlines)
-                        inside a DNS label, since a label is just an arbitrary length-prefixed byte
-                        string on the wire. The macOS capture parser closed exactly this gap (C081)
-                        by escaping C0/C1 control characters and backslash at parse time, in the
-                        parser's own words, precisely because a wire-controlled name "can rewrite
-                        terminal lines or inject fabricated rows into the saved report." No such
-                        escaping exists anywhere in the Windows capture path.
-- **Cross-ref. Delta:** C081 (macOS fix, DELTAS-fixed.md). Not covered by any existing B255-B269
-                        audit stub.
-- **Fix(es):**          [Fix 1] Port the macOS C081 escapeLabelForPresentation routine into the
-                        Windows capture name parser so every label is escaped at parse time, before
-                        it can reach either the console or the saved report.
+
+
+- **[D005]**            same-origin redirect host comparison is platform-dependent (NFC vs Ordinal)
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. Swift String.== uses canonical equivalence; C# string == uses
+                        StringComparison.Ordinal. Redirect enforcement diverges for Unicode hosts.
+- **Criticality:**      Non-critical; structural parity violation. A redirect permitted by one
+                        engine and rejected by the other would cause divergent conclusions.
+- **Location:**         macOS/Sources/SyxxKit/WarpEngine.swift:608;
+                        Windows/dotNET/Syxx.Kit/WarpEngine.cs:635
+- **Issue:**            Swift URL.host comparison uses String.== (canonical equivalence). C#
+                        Uri.Host comparison uses string == (Ordinal, byte-by-byte). The same
+                        redirect hop could be permitted by one engine and rejected by the other,
+                        causing a divergence in same-origin redirect policy enforcement. The spec
+                        \xc2\xa76 redirect policy must be applied identically.
+- **Cross-ref. Delta:** Related to D002 (origin_url comparison divergence), D003 (case sensitivity).
+- **Fix(es):**          [Fix 1] Normalize hostnames to lowercase NFC before comparison in both
+                        engines. Swift: .lowercased().precomposedStringWithCanonicalMapping.
+                        C#: .ToLowerInvariant().Normalize(NormalizationForm.FormC).
 - **Code Sample:**      [
 
+                        // macOS/Sources/SyxxKit/WarpEngine.swift:608
+                        return from.scheme == to.scheme
+                            && from.host == to.host
+                            && (from.port ?? -1) == (to.port ?? -1)
 
-                        // Windows/dotNET/Syxx.Kit/DNSCapture.cs:470-474
-                        if ((len & 0xC0) != 0 || current + 1 + len > data.Length) return null;
-                        string label = Encoding.UTF8.GetString(data, current + 1, len);   // no control-character escaping
-                        parts.Add(label);
-                        current += len + 1;
-
+                        // Windows/dotNET/Syxx.Kit/WarpEngine.cs:635
+                        target.Scheme == u.Scheme && target.Host == u.Host
+                            && target.Port == u.Port
 
                         ]
+
 ---
----
-- **[E204]**            The DNS capture parser on both platforms silently drops or substitutes non-
-                        UTF-8 label bytes, fabricating a shorter or altered domain name in the
-                        trusted forensic report
-- **Criticality:**      Medium; a hostile response with a non-UTF-8 label produces a fabricated
-                        domain string in evidence the user is meant to trust; both resolver-path
-                        parsers already reject the same input for exactly this reason, but neither
-                        capture-path parser does
-- **Location:**         macOS/Sources/SyxxKit/DNSCapture.swift:699-701 (silently skips a non-UTF-8
-                        label); Windows/dotNET/Syxx.Kit/DNSCapture.cs:471 (Encoding.UTF8.GetString
-                        substitutes U+FFFD for invalid bytes)
-- **Issue:**            The macOS capture parseName routine only appends a label when `String(bytes:
-                        labelBytes, encoding: .utf8)` succeeds, so a non-UTF-8 label is silently
-                        dropped from the reconstructed name, yielding a shorter domain string than
-                        what was actually on the wire. The Windows capture TryParseName uses
-                        Encoding.UTF8.GetString, which silently substitutes the Unicode replacement
-                        character U+FFFD for invalid byte sequences, yielding an altered domain
-                        string instead. Both platforms' own resolver-path parsers (not the capture
-                        path) already treat this exact input differently and correctly: they throw a
-                        hard parse failure on a non-UTF-8 label (macOS C064, Windows E022), with the
-                        explicit rationale that silently substituting or dropping such bytes
-                        fabricates a different name than what was actually queried or answered. The
-                        capture-path parsers on both platforms still emit the fabricated name
-                        straight into DNSAnswerReport/DNSQuestionReport, which is the evidence
-                        surface a user is meant to trust for process attribution and forensic
-                        review.
-- **Cross-ref. Delta:** C064 (macOS resolver-path fix), E022 (Windows resolver-path fix); this delta
-                        is new specifically for the capture path, which neither of those covers, and
-                        is not in any existing B255-B269 audit stub.
-- **Fix(es):**          [Fix 1] In both capture-path parseName/TryParseName functions, treat a non-
-                        UTF-8 label as a hard parse failure (return nil on macOS, return null on
-                        Windows) rather than dropping or substituting bytes, and mark the enclosing
-                        packet report partial (isPartial) so the gap is disclosed rather than
-                        silently smoothed over.
+
+
+- **[D006]**            Swift UInt64 crash on negative system clock value
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. UInt64() traps at runtime on negative values; a misconfigured
+                        system clock causes a hard crash instead of INCONCLUSIVE.
+- **Criticality:**      Non-critical; turns a recoverable state (bad clock -> futureDated or
+                        expired) into a denial-of-service for the content-integrity check. C# twin
+                        is immune (unchecked ulong cast wraps).
+- **Location:**         macOS/Sources/SyxxKit/WarpEngine.swift:501
+- **Issue:**            Date().timeIntervalSince1970 returns a TimeInterval (Double). If the system
+                        clock is set to before January 1, 1970, this returns a negative Double.
+                        UInt64() traps at runtime (fatal error) on negative values. The production
+                        code path (SyxxWarp.swift:41 calls runVantageCheck without passing nowMs)
+                        always hits this fallback.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Guard against negative values before UInt64 conversion; use 0 as a
+                        safe floor. Freshness will almost certainly fail (future-dated or expired),
+                        which is correct.
 - **Code Sample:**      [
 
+                        // macOS/Sources/SyxxKit/WarpEngine.swift:501
+                        let now = nowMs ?? UInt64(Date().timeIntervalSince1970 * 1000)
 
-                        // macOS/Sources/SyxxKit/DNSCapture.swift:699-701
-                        if let label = String(bytes: labelBytes, encoding: .utf8) {
-                            parts.append(label)   // a non-UTF-8 label is silently dropped, shortening the name
+                        ]
+
+---
+
+
+- **[D007]**            Cross-platform nowMs generation uses inconsistent mechanisms (float vs
+                        integer)
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. Python and Swift use float-based paths; C# uses native integer
+                        milliseconds.
+- **Criticality:**      Non-critical; Double ULP at current epoch is ~0.000238 ms, well below the
+                        1 ms target. Latent inconsistency for future precision changes.
+- **Location:**         Server/syxx_server/warp.py:309;
+                        macOS/Sources/SyxxKit/WarpEngine.swift:501;
+                        Windows/dotNET/Syxx.Kit/WarpEngine.cs:517
+- **Issue:**            Three platforms generate nowMs using three different mechanisms: Python
+                        int(time.time() * 1000) (float truncation), Swift UInt64(Date()... * 1000)
+                        (float truncation), C# (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                        (native integer). The float-based paths are needlessly indirect. Any future
+                        change to the multiplication factor (e.g., microseconds) would silently lose
+                        precision.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Python: use time.time_ns() // 1_000_000 (Python 3.7+). Swift:
+                        document the float precision assumption. C#: already correct.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/warp.py:309
+                        int(time.time() * 1000)
+
+                        # macOS/Sources/SyxxKit/WarpEngine.swift:501
+                        UInt64(Date().timeIntervalSince1970 * 1000)
+
+                        # Windows/dotNET/Syxx.Kit/WarpEngine.cs:517
+                        (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+
+                        ]
+
+---
+
+
+## **E. Security & Hardening**
+- **[E003]**            No key rotation, expiration, or revocation support in trust store
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. Both WarpManifestPinning implementations load a static flat
+                        dictionary with no per-key metadata.
+- **Criticality:**      Non-critical; multi-key pinning is supported but the operator must manually
+                        replace the entire key file to rotate. No transition mode or remote
+                        revocation.
+- **Location:**         macOS/Sources/SyxxKit/WarpManifestPinning.swift:19-48;
+                        Windows/dotNET/Syxx.Kit/WarpManifestPinning.cs:22-66
+- **Issue:**            Both implementations parse a flat [key_id: raw_public_key_bytes] dictionary
+                        from environment variables or a persisted key file. There is no mechanism
+                        for key expiration (valid_until), graceful rotation (transition period with
+                        deprecation warning), or key revocation (revoked list). If a signing key is
+                        compromised, the operator must race to update the key file on every client.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Extend the trust-set format to carry per-key metadata: expires,
+                        revoked, transition. [Fix 2] Consider a structured JSON format for the key
+                        file with per-key objects.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/WarpManifestPinning.swift:19-48
+                        public static func parse(_ raw: String) -> [String: Data] {
+                            var out: [String: Data] = [:]
+                            // ... flat key_id -> pubkey mapping, no metadata
+                            return out
                         }
-                        // Windows/dotNET/Syxx.Kit/DNSCapture.cs:471
-                        string label = Encoding.UTF8.GetString(data, current + 1, len);   // substitutes U+FFFD, altering the name
-
 
                         ]
+
 ---
+
 
 ## **F. Miscellaneous**
+- **[F001]**            Sample F-domain Deltas
+- **Status:**           **OPEN** — Verified in source. passivedns.py:123 still emits
+                        [...]
+                        cites.
+- **Criticality:**      Non-critical; API response JSON includes [...]
+                        alongside tri-state drift string.
+- **Location:**         Server/syxx_server/passivedns.py:121
+- **Issue:**            baseline() computes a tri-state [...]
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Remove driftSuspected [...]
+- **Code Sample:**      [
+
+                        // Server/syxx_server/passivedns.py:121
+                        "driftSuspected": drift == "suspected",
+
+                        ]
 
 ---
 
 
+- **[F002]**            Swift client comment says "transfer-encoding" but describes Content-Encoding
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. The comment header says "§8 transfer-encoding note" but the body
+                        correctly describes Content-Encoding handling by URLSession.
+- **Criticality:**      Non-critical; documentation inconsistency. The comment body is correct and
+                        the warning about double-decoding is important.
+- **Location:**         macOS/Sources/SyxxKit/WarpEngine.swift:540
+- **Issue:**            The comment header line says "transfer-encoding note" but the body correctly
+                        references Content-Encoding (URLSession transparently decodes gzip/br).
+                        This perpetuates the same terminology conflation as A004.
+- **Cross-ref. Delta:** Related to A004 (_envelope_decode naming), F003 (C# comment).
+- **Fix(es):**          [Fix 1] Change header to "§8 Content-Encoding note."
+- **Code Sample:**      [
 
-# Linux/Ubuntu Infrastructure Security Audit (2026-07-30)
+                        // macOS/Sources/SyxxKit/WarpEngine.swift:540
+                        // §8 transfer-encoding note: URLSession/CFNetwork transparently
+                        // decodes Content-Encoding gzip/br, so `data` below is ALWAYS
+                        // the decoded plaintext...
 
-Source: security-auditor + linux-infra-admin persona audit of all deployment scripts, CI, and packaging.
-
-**[D128]** CRITICAL — Installer-template runs as root with secrets in inline Environment= lines
-**Location:** `scripts/installer-template.sh:~87`
-**Issue:** Systemd unit runs as root and embeds every secret as inline `Environment=` directives. Any local user can read them via `systemctl show syxx-server`. Contradicts `deploy.sh` which uses a dedicated user and 0600 env file.
-**Fix:** Mirror deploy.sh pattern: create syxx service user, write secrets to /etc/syxx/syxx.env with chmod 600, reference via EnvironmentFile.
-
-**[D129]** HIGH — Installer-template missing systemd hardening directives
-**Location:** `scripts/installer-template.sh:~87`
-**Issue:** Lacks 20+ hardening directives that deploy.sh applies (CapabilityBoundingSet, NoNewPrivileges, ProtectSystem=strict, ProtectHome, MemoryDenyWriteExecute, etc.)
-
-**[D130]** HIGH — Silent firewall-cmd failures mask exposed ports
-**Location:** `scripts/installer-template.sh:~130`
-**Issue:** All firewall-cmd commands use `|| true`, silently continuing if firewalld isn't running.
-
-**[D131]** MEDIUM — syxx cage non-functional under strict snap confinement
-**Location:** `Linux/snap/snapcraft.yaml:33-36`
-**Issue:** CAP_NET_RAW cannot be granted to strictly-confined snap. Cage always reports "untested."
-
-**[D132]** MEDIUM — Sentry auth token passed as CLI argument (process-listing leak)
-**Location:** `.github/workflows/ci.yml:~155`
-**Issue:** `--auth-token` readable via /proc/<pid>/cmdline on shared CI runners.
-
-**[D133]** MEDIUM — eval used to execute dynamically constructed SSH/SCP commands
-**Location:** `scripts/install-cert-remote.sh:~100,110,120`
-**Issue:** eval in deployment scripts is a dangerous pattern.
-
-**[D134]** MEDIUM — No payload integrity verification in self-contained installer
-**Location:** `scripts/installer-template.sh:~end`
-**Issue:** Base64-encoded tarball has no checksum. Tampering goes undetected.
-
-**[D135]** HIGH — Nginx missing client_body_buffer_size limit
-**Location:** `scripts/deploy.sh:~380`
-
-**[D136]** MEDIUM — Installer nginx config missing all MOTD subdomains
-**Location:** `scripts/installer-template.sh:~110`
-
-**[D137]** MEDIUM — Sentry API token with excessive scopes persisted indefinitely
-**Location:** `scripts/deploy-sentry.sh:~145`
-
-**[D138]** HIGH — systemctl show leaks non-secret operational Environment values
-**Location:** `scripts/deploy.sh:~200`
-
-*Plus 18 additional findings (L004, L007-L009, L012-L020, L025-L030) — full report in agent output.*
+                        ]
 
 ---
 
-# Windows Client Security Audit (2026-07-30)
 
-Source: security-auditor + csharp-developer persona audit of 165 .cs files across Syxx.Kit, Syxx, SyxxUI, Syxx.Tests.
+- **[F003]**            C# client comment says "transfer-encoding" but describes Content-Encoding
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. The comment header says "§8 transfer-encoding decode" but
+                        describes AutomaticDecompression which handles Content-Encoding.
+- **Criticality:**      Non-critical; documentation inconsistency. The comment body is correct and
+                        the warning about manual Accept-Encoding headers is important.
+- **Location:**         Windows/dotNET/Syxx.Kit/WarpEngine.cs:600
+- **Issue:**            The comment references "transfer-encoding" but describes
+                        AutomaticDecompression which handles Content-Encoding (the Accept-Encoding /
+                        Content-Encoding negotiation). The warning about manual Accept-Encoding
+                        headers suppressing automatic decompression is correct and important.
+- **Cross-ref. Delta:** Related to A004 (_envelope_decode naming), F002 (Swift comment).
+- **Fix(es):**          [Fix 1] Change to "§8 Content-Encoding decode." Update "transport" to
+                        "HTTP client" for clarity.
+- **Code Sample:**      [
 
-**Overall assessment:** Strong defense-in-depth posture. Findings are residual risks, not critical vulnerabilities.
+                        // Windows/dotNET/Syxx.Kit/WarpEngine.cs:600
+                        // §8 transfer-encoding decode: hashing is over envelope-DECODED
+                        // raw bytes, so the transport must transparently un-gzip/deflate/
+                        // brotli. Setting AutomaticDecompression makes SocketsHttpHandler
+                        // send the Accept-Encoding header itself and decode the response...
 
-**[E163]** MEDIUM — LinuxSecretStore pinned schema never freed, raw P/Invoke struct layout risk
-**Location:** `Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs:~270-310`
-**Issue:** 64-byte pinned managed memory block with hand-written offsets. GCHandle and StringToCoTaskMemUTF8 allocations never freed. Struct layout may differ across libsecret versions.
-
-**[E164]** LOW-MEDIUM — LinuxSecretStore file-fallback chmod 0600 is best-effort with silent failure
-**Location:** `Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs:~165`
-**Issue:** chmod subprocess wrapped in try/catch that swallows failure. File may remain 0644.
-
-**[E165]** LOW — PortalView.RunTracert target interpolated without SystemToolPath resolution
-**Location:** `SyxxUI/Views/PortalView.xaml.cs:~160`
-**Issue:** `tracert` launched by name, not resolved to absolute path under SystemDirectory.
-
-**[E166]** LOW-MEDIUM — DpapiSecretStore does not zero decrypted plaintext from memory
-**Location:** `Windows/dotNET/Syxx.Kit/DpapiSecretStore.cs:~75-85`
-**Issue:** Decrypted byte array never explicitly zeroed; persists in managed heap until GC.
-
-**[E167]** LOW — DoH template URL not validated as HTTPS before netsh registration
-**Location:** `Windows/dotNET/Syxx.Kit/EncryptedDNSConfigurator.cs:~75`
-
-*Positive: Ed25519 update verification, DNS spoofing detection, WebView2 lockdown, SystemToolPath hardening, telemetry redaction, file permission hardening all confirmed strong.*
+                        ]
 
 ---
 
-# macOS Client Security Audit (2026-07-30)
 
-Source: security-auditor + swift-expert persona audit of 46+ Swift files.
+- **[F004]**            Reference evaluator freshness check diverges structurally from client
+                        engines
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. The reference evaluator (_build_vectors.py) omits the now_ms > ts
+                        guard and overflow check that the client engines carry.
+- **Criticality:**      Non-critical; all 31 corpus cases pass identically on both paths. Structural
+                        alignment between the oracle and engines reduces risk of future divergence.
+- **Location:**         warp-manifest-vectors/_build_vectors.py:228-230
+- **Issue:**            The reference evaluator computes freshness without the now_ms > ts guard
+                        before computing now_ms - ts. In Python this is functionally harmless
+                        (arbitrary-precision integers), but the two code paths are semantically
+                        different. The Swift client also carries an overflowed guard (belt-and-
+                        braces against unclamped values) that the oracle lacks.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Align the reference evaluator to match the client engines' guard
+                        structure. Low-priority cleanup — current behavior is correct.
+- **Code Sample:**      [
 
-**[E168]** CRITICAL — DNSCryptProxyConfig: PATH/which fallback for root-executed binary
-**Location:** `macOS/Sources/SyxxKit/DNSCryptProxyConfig.swift:157-164`
-**Issue:** Falls back to `/usr/bin/which dnscrypt-proxy` — attacker controlling PATH injects malicious binary running as root. Homebrew candidates are admin-writable.
+                        # warp-manifest-vectors/_build_vectors.py:228-230
+                        freshness_seconds = min(freshness_seconds,
+                            MAX_FRESHNESS_WINDOW_SECONDS)
+                        if not isinstance(ts, int) or now_ms - ts > freshness_seconds * 1000:
+                            result["freshnessState"] = "expired"
 
-**[E169]** MEDIUM — DNS leakage via hardcoded default resolver 8.8.8.8
-**Location:** `macOS/Sources/SyxxKit/DNSResolver.swift:41`
-
-**[E170]** MEDIUM — Hardcoded Cloudflare DoH for all secure resolution
-**Location:** `macOS/Sources/SyxxKit/DNSResolver.swift:~250`
-
-**[E171]** MEDIUM — DNSCrypt bootstrap resolvers hardcoded as plaintext DNS
-**Location:** `macOS/Sources/SyxxKit/DNSCryptProxyConfig.swift:105`
-
-**[E172]** HIGH — DeepSyxx XPC: installPfRules accepts arbitrary client rules without content validation
-**Location:** `macOS/Sources/DeepSyxx/main.swift:96-107`
-
-**[E173]** HIGH — DeepSyxx XPC: setDNSServers accepts arbitrary server list without format validation
-**Location:** `macOS/Sources/DeepSyxx/main.swift:133-202`
-
-**[E174]** HIGH — WKContentRuleList compilation failure silently drops external resource block
-**Location:** `macOS/Sources/SyxxApp/RemoteContentView.swift:~195-210`
-
-**[E175]** MEDIUM — loadHTMLString with baseURL enables relative URL loading
-**Location:** `macOS/Sources/SyxxApp/RemoteContentView.swift:~310`
-
-**[E176]** MEDIUM — keygenPublicKeyHex empty — license response signatures not verified
-**Location:** `macOS/Sources/SyxxKit/LicenseManager.swift:74`
-
-**[E177]** MEDIUM — AppcastVerifier pinnedPublicKeysBase64 empty — no update can verify
-**Location:** `macOS/Sources/SyxxKit/UpdateService.swift:~237`
-
-**[E178]** LOW — DeepSyxx PF temp file in NSTemporaryDirectory with default umask
-**[E179]** LOW — Sentry auto-breadcrumb tracking captures interaction patterns
-**[E180]** LOW — telemetryEnabled defaults to true in init()
-**[E181]** LOW — DNSCrypt state directory may have overly broad permissions
-**[E182]** LOW — TracerouteRunner: no input validation on target parameter
-
-*Positive: XPC code-signing validation, Keychain accessibility, Cage capture file security, ContentWarp SSRF, telemetry redaction, update signature verification, RemoteUrlPolicy, witness verification all confirmed strong.*
+                        ]
 
 ---
 
-# Cross-Platform Parity Audit (2026-07-30)
 
-Source: code-reviewer + network-engineer persona audit comparing macOS Swift vs Windows C# implementations.
+- **[F005]**            Test vector builder serializes envelope.json without sort_keys=True
+- **Status:**           **OPEN** — Found during warp content-integrity multi-reviewer audit
+                        2026-08-09. The inner manifest (signed payload) correctly uses sort_keys=True
+                        via canonical_manifest_bytes(); the envelope itself is not signed.
+- **Criticality:**      Non-critical; JSON object key order is semantically insignificant, and the
+                        envelope is not part of the signed bytes. Consistency concern only.
+- **Location:**         warp-manifest-vectors/_build_vectors.py:521
+- **Issue:**            The envelope dict (manifest_b64, signature_ed25519, key_id) is serialized
+                        without sort_keys=True. The inner manifest is correctly serialized with
+                        sort_keys=True. The envelope is not signed — it's just the transport
+                        container. The client parses it by key name, not by key order.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] For consistency with the rest of the corpus builder, add
+                        sort_keys=True to the json.dumps call for envelope.json.
+- **Code Sample:**      [
 
-**[C158]** CRITICAL — authoritativeDivergesConfirmed strength: 0.80 (macOS) vs 0.95 (Windows)
-**macOS:** `SynthesisEngine.swift:~195` → 0.80
-**Windows:** `SynthesisEngine.cs:~263` → 0.95
-**Fix:** Align Windows to 0.80 (B092 rationale is load-bearing).
+                        # warp-manifest-vectors/_build_vectors.py:521
+                        (case_dir / "envelope.json").write_text(
+                            json.dumps(envelope, indent=2) + "\n")
 
-**[C159]** HIGH — DenialOfExistence.NotADenial: skip (macOS) vs .negative (Windows)
-**Fix:** Align Windows to macOS — break/skip the datapoint (B061 rationale correct).
-
-**[C160]** CRITICAL — DNSSEC expired RRSIG: .inconclusive (macOS) vs .positive (Windows)
-**macOS:** `DNSCanaries.swift` → .inconclusive (clock skew undecidable)
-**Windows:** `DNSCanaries.cs` → .positive (threat)
-**Fix:** Align Windows to .inconclusive. False-positive threat on Windows.
-
-**[D139]** CRITICAL — Sentinel DnsEncrypted: ConditionState tri-state (macOS) vs Bool (Windows)
-**Fix:** Change Windows to ConditionState. C090 explicitly calls out this defect class.
-
-**[D140]** HIGH — NXDOMAIN canary missing CNAME-hijack and both-answered detection on Windows
-**Fix:** Port C071 checks to Windows NxdomainHijackAsync.
-
-**[D141]** MEDIUM — IsUsableDNSServer: link-local NOT excluded (macOS) vs excluded (Windows)
-**Fix:** Remove LinkLocal exclusion from Windows per RFC 8106.
-
-**[D142]** HIGH — MergedDatapoint.IsConflicting: pairwise (macOS) vs anchored-on-first (Windows)
-**Fix:** Replace Windows with macOS pairwise algorithm (B170 fix).
-
-**[D143]** MEDIUM — Windows has duplicate ResultAction.cs AND VerdictAction.cs
-**[D144]** MEDIUM — PlainExplanation: macOS truncates despite with "+N more"; Windows drops silently
-**[D145]** MEDIUM — FirstRunScan: Glutton tracking and resolverSubstituted divergence
-
-*Plus 35 additional findings (P002-P049) in agent output.*
+                        ]
 
 ---
 
-# DNS Protocol Correctness Audit (2026-07-30)
 
-Source: network-engineer + all language specialists persona audit comparing macOS/Windows/Python DNS implementations.
+- **[A015]**            app.py is a 3,425-line God module mixing 5 distinct concerns
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Critical. High merge-conflict surface; diff subsystem untestable in
+                        isolation; impossible to reason about one concern without navigating
+                        the entire HTTP handler.
+- **Location:**         Server/syxx_server/app.py
+- **Issue:**            The `Handler` class and module-level helpers mix HTTP routing, DNS
+                        diff/comparison orchestration, Stripe checkout/purchase flow, leak
+                        token verification, SEO meta tag injection, and static file serving.
+                        `_diff_content` and `_diff_result` (165 lines) are defined at module
+                        level in app.py but belong in a dedicated diff module. `_route_diff`
+                        alone is ~120 lines.
+- **Cross-ref. Delta:** Related to A020, A024, A028.
+- **Fix(es):**          [Fix 1] Extract `_diff_content` and `_diff_result` into a dedicated
+                        `diff.py` module. [Fix 2] Extract Stripe checkout into a `billing.py`
+                        module. [Fix 3] Extract SEO injection into `seo.py` (consolidating
+                        with existing seo.py). [Fix 4] Keep app.py as the HTTP router only,
+                        delegating to extracted modules.
+- **Code Sample:**      [
 
-**Overall pattern:** macOS is most hardened. Windows missing 12 distinct hardening features across capture and probe layers.
+                        # Server/syxx_server/app.py:265-354 (representative)
+                        async def _diff_content(client_ip, domain, clean_scripts):
+                            """Compare client-submitted scripts vs clean vantage."""
+                            # ~90 lines of diff logic in the HTTP routing module
+                            ...
+                        async def _diff_result(client_ip, domain, answers, author):
+                            """Compare client DNS answers vs authoritative."""
+                            # ~75 lines of diff logic in the HTTP routing module
+                            ...
 
-**[B255]** HIGH — Windows CLASS filter hardcoded to IN — breaks CHAOS queries
-**Location:** `Windows/dotNET/Syxx.Kit/DNSResolver.cs:~908`
-**Issue:** `if (r.Cls != 1) continue;` — macOS correctly compares against queried QCLASS (C057 fix).
-
-**[B256]** MEDIUM-HIGH — Windows off-name filter omits DNSSEC record types (RRSIG/DNSKEY)
-**Location:** `Windows/dotNET/Syxx.Kit/DNSResolver.cs:~912`
-**Issue:** Only checks A/AAAА. macOS also checks RRSIG(46)/DNSKEY(48) — prevents attacker injecting signed records from unrelated zones.
-
-**[B257]** MEDIUM — Windows missing RcodeOther status — non-standard RCODEs collapse to TransportError
-**Location:** `Windows/dotNET/Syxx.Kit/DNSResolver.cs:~863`
-
-**[B258]** HIGH — Windows IPv6 extension headers not walked — DNS packets invisible behind Hop-by-Hop/Routing/Fragment
-**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~358-365`
-
-**[B259]** MEDIUM-HIGH — Windows TCP DNS on port 53 not captured
-**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~336,358`
-
-**[B260]** MEDIUM — Windows IPv6 addresses rendered as uncompressed hex — never match system resolver list
-**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~369-371`
-
-**[B261]** MEDIUM — Windows dnsPayloadLength from buffer tail, not UDP length — counts Ethernet padding as DNS
-**Location:** `Windows/dotNET/Syxx.Kit/DNSCapture.cs:~341`
-
-**[B262]** HIGH — Windows DNSSECVerifier missing C059 owner/signer binding and C125 DNSKEY field validation
-**Location:** `Windows/dotNET/Syxx.Kit/DNSSECVerifier.cs:~130-145`
-**Issue:** Attacker can substitute valid DNSKEY+RRSIG from any signed zone to defeat stripping canary.
-
-**[B263]** MEDIUM — Windows amplification probe missing EDNS0 + TCP-fallback detection
-**[B264]** MEDIUM — Windows FilteringProbe missing control-resolver validation — globally nonexistent domains reported as "filtered"
-**[B265]** MEDIUM — Windows CNAMEChainProbe missing loop/cap/conflict detection
-**[B266]** LOW-MEDIUM — Windows DNSCapture missing isPartial field
-**[B267]** MEDIUM — Windows ResponseQuestionMatches omits QDCOUNT and QCLASS validation
-**[B268]** MEDIUM — Windows DNSResponse missing spoofedPacketCount and attemptCount
-**[B269]** LOW-MEDIUM — Python server _parse_response lacks class filtering and ANCOUNT validation
+                        ]
 
 ---
 
-# Python Server Security Audit (2026-07-30)
 
-Source: security-auditor + python-pro persona audit of 33 .py files, 2 .sh files, 9 scripts, 14 HTML files, CI config.
+- **[B011]**            No integration tests on macOS — all 889 active tests are unit tests
+                        with mocks
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. The core value proposition — detecting DNS tampering — cannot
+                        be verified by the test suite. A regression in the DNS wire-format
+                        parser or synthesis engine would pass all unit tests but break the
+                        product.
+- **Location:**         macOS/Tests/ (889 test methods, all unit tests)
+- **Issue:**            All 889 active test methods are unit tests. There are no tests that
+                        resolve DNS queries against a real resolver, no tests that verify the
+                        Cage capture pipeline end-to-end, and no tests that exercise the full
+                        synthesis pipeline from raw DNS responses to a `Conclusion`.
+- **Cross-ref. Delta:** B002 (quarantined tests), B012 (no integration tests on any platform).
+- **Fix(es):**          [Fix 1] Add integration tests against a known-good public resolver
+                        (8.8.8.8) for basic DNS resolution. [Fix 2] Add integration tests
+                        against a test matrix of known probe inputs for the synthesis engine.
+                        [Fix 3] Gate integration tests behind an environment flag.
+- **Code Sample:**      [
 
-**Overall assessment:** Exceptionally thorough security engineering. SSRF protection, SQL parameterization, timing-safe HMAC, rate limiting, path traversal guards, DNS spoofing defenses all confirmed strong.
+                        // No integration tests exist.
+                        // All 889 tests use mocks for DNS resolution.
+                        // The full pipeline (DNS query → probe → synthesis →
+                        //   conclusion) is never exercised by tests.
 
-**[A229]** CRITICAL — licensing.py HMAC column name mismatch makes DB-backed offline licenses permanently fail
-**Location:** `Server/syxx_server/licensing.py` (`_validate_offline`)
-**Issue:** `row.get("hmac")` but column is `row_hmac` (popped by db.license_lookup). Every DB-backed offline license silently rejected.
-
-**[A230]** MEDIUM — HSTS set on untrusted X-Forwarded-Proto from non-proxy sources
-**Location:** `Server/syxx_server/app.py` (`_security_headers`)
-**Issue:** Not gated on loopback peer, unlike `_client_ip()`.
-
-**[A231]** MEDIUM — PTR hostnames attacker-influenced, outside Ed25519 signature
-**Location:** `Server/syxx_server/leak.py` (`_enrich_observations_with_hostnames`)
-
-**[A232]** MEDIUM — Keygen webhooks lack timestamp validation, allowing indefinite replay
-**Location:** `Server/syxx_server/app.py` (`_route_keygen_webhook`)
-
-**[A233]** MEDIUM — deploy.sh SYXX_DB_PATH shell-interpolated into Python string literal (code injection)
-**Location:** `Server/scripts/deploy.sh:~76`
-
-**[A234]** LOW-MEDIUM — DNS rate-limiter bucket dict has no cardinality cap
-**[A235]** LOW — Keygen API response body read without size limit
-**[A236]** LOW — Static asset files read entirely into memory without size limit
-
----
-
-# Cryptographic Audit (2026-07-30)
-
-Source: security-auditor + penetration-tester persona audit of all crypto operations across all 3 platforms.
-
-**[E183]** CRITICAL — Windows signature verification order inverted (time checks before Ed25519)
-**Location:** `Windows/dotNET/Syxx.Kit/WitnessSigner.cs:VerifySnapshotDetailed`
-**Issue:** Expired/future-dated/trust checks run BEFORE signature verification. Fabricated snapshot with past expiresAt returns `.Expired` not `.InvalidSignature`. macOS correctly verifies signature FIRST (B184).
-
-**[E184]** CRITICAL — Windows IntegrityTag HMAC key stored as raw unencrypted bytes on disk
-**Location:** `Windows/dotNET/Syxx.Kit/Trust/Trust.cs:IntegrityTag.LoadOrCreateKey`
-**Issue:** `File.WriteAllBytes(path, key)` — no DPAPI, no ACL. Docs claim "DPAPI-protected" but implementation is raw bytes.
-
-**[E185]** HIGH — Keygen Ed25519 public key empty on all 3 platforms
-**Location:** macOS/Windows/Server LicenseManager
-**Issue:** Anti-MITM defense against compromised CA is inert. Fail-safe but security feature not deployed.
-
-**[E186]** HIGH — macOS LicenseManager Keychain items use weak accessibility class
-**Location:** `macOS/Sources/SyxxKit/LicenseManager.swift`
-**Issue:** `kSecAttrAccessibleAfterFirstUnlock` without `ThisDeviceOnly` or `kSecUseDataProtectionKeychain`. WitnessKeyManager uses the correct stronger class.
-
-**[E187]** MEDIUM — DPAPI blobs in Roaming profile (should be Local)
-**[E188]** MEDIUM — Collector vs witness key ID scheme inconsistent
-**[E189]** MEDIUM — Windows IntegrityTag key file has no ACL
-**[E190]** MEDIUM — macOS witness private key cached as non-zeroizable String
-**[E191]** LOW — v1 license row HMAC uses pipe-delimited format
-**[E192]** MEDIUM — Witness trust set loaded without integrity verification
-**[E193]** MEDIUM — Trial HMAC key derivable from leaked backup + public UUID
-**[E194]** LOW — Leak tokens use 128-bit entropy (convention is 256-bit)
-**[E195]** MEDIUM — IntegrityTag docs claim DPAPI, implementation uses raw file
-**[E196]** LOW — Unpinned collector transport accepted without rejection
-**[E197]** HIGH — macOS LicenseManager missing kSecUseDataProtectionKeychain flag
-**[E198]** LOW — Session tokens valid 60min after license revocation
-**[E199]** MEDIUM — Witness key ID uses only 64 bits
-
-*Positive: Ed25519 throughout, cryptographic RNG everywhere, constant-time comparison, fail-closed defaults, save-time key validation, canonical signing format, SPKI pinning, HMAC integrity on DB rows.*
+                        ]
 
 ---
 
-# Test Integrity Audit (2026-07-30)
 
-Source: qa-expert + code-reviewer persona audit of 90 Swift, 47 C#, 25 Python test files + 2 gate scripts.
+- **[B012]**            No integration tests on any platform — cannot verify DNS tampering
+                        detection end-to-end
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. This is the single most important testing gap. The product's
+                        core mission cannot be verified by automated tests.
+- **Location:**         All platforms (macOS, Windows, Linux, Server)
+- **Issue:**            No platform has integration tests that exercise the full pipeline:
+                        DNS query → probe evaluation → synthesis engine → conclusion.
+                        Unit tests verify individual components, but the end-to-end detection
+                        of DNS tampering is never verified programmatically.
+- **Cross-ref. Delta:** B011 (macOS integration tests), B002 (quarantined tests).
+- **Fix(es):**          [Fix 1] Create a test matrix of known DNS inputs (clean, tampered,
+                        censored, spoofed). [Fix 2] Build integration tests that run the full
+                        pipeline against these inputs. [Fix 3] Gate on an environment flag and
+                        run in CI on a schedule.
+- **Code Sample:**      [
 
-**Overall assessment:** Exceptionally well-engineered. No CRITICAL or HIGH defects. Mutation proofs pervasive. No mock-only DNS tests. No production DB writes.
+                        # No integration tests exist on any platform.
+                        # The full pipeline is:
+                        #   DNS query → parse response → probe evaluation →
+                        #   evidence collection → synthesis engine → conclusion
+                        # This is never verified end-to-end by automated tests.
 
-**[F049]** LOW — [done] Stale "verdict" in test_scheduler.py:82 docstring
-**[F050]** LOW — [done] Stale "verdict" in test_payments.py:727 comment
-**[F051]** MEDIUM — [done] Vacuous test: testD083_TamperedDisplayFormatVersion asserts nothing
-**[F052]** MEDIUM — Known B252 gap: DoH outcomes not covered by Ed25519 signature
-**[F053]** LOW — Honesty-coverage-gate covers 7/~78 guards (gap disclosed)
-**[F054]** LOW — Windows DNS capture attribution owed a real elevated-host run
-**[F055]** LOW — AppModelWitnessTests rely on real network for core assertions
-**[F056]** LOW — testRapidReTestify has acknowledged probabilistic detection power
-**[F057]** LOW — C# SkippableFact silently passes on non-Windows
-**[F058]** LOW — Parity gate SIGNED_PAYLOAD_KEYS validation is narrow (1 key)
-**[F059]** LOW — [done] test_scheduler backup test has conditional directory assertion
-**[F060]** LOW — [done] test_scheduler run_one test has conditional result assertion
-**[F061]** CRITICAL — [done] Vacuous assertion on truncated packet handling in Server/tests/test_dns_authoritative.py:57-58
-**[F062]** HIGH — [done] Missing response-drop assertions on malformed DNS inputs in Server/tests/test_dns_authoritative.py:82, 94
-**[F063]** MEDIUM — [done] HtmlAssetParserTests.cs:10-58 lacks negative/failure test cases for malformed HTML and dangerous URI schemes
-**[F064]** MEDIUM — [done] AgreementResourceTests.swift:5 lacks negative test verifying tampered contract text or hash mismatch is rejected
-
-
-
-
----
-
-# Server HTML Frontend Audit (2026-07-31)
-
-Source: security-auditor persona audit of 15 HTML files (4,334 lines).
-
-**[A237]** HIGH — DOM-based XSS: resolver IP/hostname in innerHTML unescaped (leaktest.html:305)
-**[A238]** HIGH — DOM-based XSS: attestation keyId in innerHTML unescaped (leaktest.html:312)
-**[A239]** HIGH — Same as A237 (duplicate page leak-test.html:315)
-**[A240]** HIGH — Same as A238 (duplicate page leak-test.html:322)
-**[A241]** HIGH — CSRF: checkout GET lacks CSRF token (index.html:630)
-**[A242]** MEDIUM — Production server IP 198.71.60.193 hardcoded in Warp demo
-**[A243]** LOW — Private IP in demo UI
-**[A244]** HIGH — Session token in localStorage (XSS-accessible) (index.html:667)
-**[A245]** MEDIUM — XOR obfuscation presented as "encryption" (index.html:617)
-**[A246]** LOW — Duplicate leak-test pages now in sync but cosmetically diverged
-**[A247]** MEDIUM — Green "safe" result when test cannot confirm safety (leaktest.html:275)
-**[A248]** MEDIUM — Same as A247 (duplicate page)
-**[A249]** MEDIUM — No CSP or X-Frame-Options meta tag on leak-test pages
-**[A250]** MEDIUM — Same as A249 (duplicate page)
-**[A251]** MEDIUM — Legal pages (terms/privacy/refund) lack clickjacking protection
-**[A252]** LOW — Stripe session_id reflected in DOM (purchase-success.html:76)
-**[A253]** MEDIUM — terms.html is DRAFT with [OWNER DECISION] placeholders
-**[A254]** MEDIUM — privacy.html is DRAFT pending owner approval
-**[A255]** LOW — purchase-cancel.html missing X-Frame-Options
-**[A256]** MEDIUM — Unresolved [OWNER DECISION] in refund-policy.html:80 (live-served)
-**[A257]** LOW — Internal telemetry endpoints named in docs/help.html
-**[A258]** LOW — Inline onclick in docs/api.html breaks under strict CSP
-**[A259]** LOW — beta_ack.html references unrelated products (Nnyx, Zzyn)
-**[A260]** LOW — {{BASE}} template variable in served email template
-**[A261]** LOW — Hardcoded fallback DNS zone could mask server misconfiguration
-
-# Corpus Generation Infrastructure Audit (2026-07-31)
-
-Source: qa-expert persona audit of 10 corpus files cross-referenced against live engine code.
-
-**[F065]** CRITICAL — seeds.json uses "expectedVerdict" but test loader expects "expectedResult" — entire Stage0 golden corpus suite broken
-**Location:** `corpus/stage0/seeds.json` (all 11 vectors)
-**Issue:** Swift `VectorDTO` declares `expectedResult` but JSON key is `expectedVerdict`. Decoding throws `keyNotFound`. Both platforms affected.
-**Fix:** Rename `"expectedVerdict"` → `"expectedResult"` in all 11 vectors.
-
-**[F066]** CRITICAL — witness golden vectors still use "verdict" wire key — both cross-platform test suites broken
-**Location:** `corpus/witness-crossplatform/witness-macos-degraded.json:77`, `witness-macos-answers.json:191`
-**Issue:** JSON uses `"verdict"` in `comparisonResult` but both platforms now expect `"conclusion"` (E011 rename). Swift throws on decode, C# silently defaults to empty string causing signature mismatch.
-**Fix:** Regenerate both fixtures with current code (`SYXX_GENERATE_FIXTURES=1 swift test --filter WitnessCrossPlatformFixtureGenerator`). Re-sign required.
-
-**[F067]** LOW — Degraded fixture predates B098 fields (stale shape, optional so non-breaking). Subsumed by F066 fix.
-
-**[F068]** MEDIUM — Matrix engine has 8 diagnoses but only 3 golden vectors cover 1 diagnosis pathway
-**Location:** `corpus/matrix/vectors/`
-**Issue:** Missing golden vectors for: clean state, suppressed diagnoses, co-occurring diagnoses, exclusion firing, threshold boundaries, untested state, multi-section evidence.
-
-**[F069]** MEDIUM — No redirection=true probe parity vector — DNS hijack detection has no golden vector
-**Location:** `corpus/probe-parity/probe-parity.json`
-**Issue:** Only AGREE and TIMEOUT vectors exist. The probe layer's primary contract (detecting hijacks) is unverified by golden corpus. Requires real capture on intercepted network.
-
-**[F070]** LOW — Stale line reference in generate.py docstring (appcast.py:56-58 → 57-59)
-
-**[F071]** MEDIUM — [done 2026-08-02] TypographyResourcesTests left red after the Phase A body retarget — stale Jost-body contract never updated
-**Location:** `macOS/Tests/SyxxAppTests/TypographyResourcesTests.swift:14-17, 68-69, 78-79, 122-123, 132-135`
-**Issue:** Phase A Wave 1 retargeted the body role to Cormorant Garamond (owner decision), added the `navLabel` role, and bundled Spectral / Cormorant Garamond / Marcellus SC faces, but never updated the Phase 3.7 contract suite. Result: 8 assertions across 4 tests were red — the suite expected Jost body, 13 faces, 10 roles, 14pt body; the code produces Cormorant Garamond body, 23 faces, 11 roles, 15.5pt (optically rescaled). Classification per Verification & Honesty Protocol §4: test-design error (stale contract against an approved spec change), not a code defect. A red suite left unfiled also masks any future real regression in the same file.
-**Fix:** Contract updated to the approved mapping (Cormorant Garamond body at 300/400, `navLabel` → Spectral-Light, 23-face manifest, 15.5pt body default); `TypographyRegistrationTests` family guard extended from 5 to all 8 bundled families; stale comments corrected (`IoDesignSystem.swift` body-case comment no longer claims Marcellus SC is the intended body face; `SyxxApp.swift` no longer says "five-family"). Mutation-proven: body → Jost-Regular turns exactly `testBodyWeightsAreRestrictedTo300And400` and `testSemanticRolePostScriptNames` red; revert restores 15/15 + 8/8 green. Debug + Release builds green.
-
-**Parity addendum (2026-08-02):** two more instances of the same stale-contract class found and fixed during Phase 0 parity. (1) `Windows/dotNET/Syxx.Tests/TypographyResourcesTests.cs:92-108` still asserted the retired Jost-body mapping after the Windows Phase A retarget; updated to the approved map (24-face manifest, 8 OFLs, `IoTypeNavLabel`, Cormorant Garamond/Spectral declarations) and mutation-proven (body → Jost turns exactly `DesignSystemExposesSemanticTypeKeys` + `DesignSystemDeclarationsMatchOwnerApprovedRoleMap` red; revert green). (2) `scripts/test-typography-assets.sh` asserted the pre-Phase-0 layout (`font.resourceName` in SyxxApp.swift after the registration loop moved to IoDesignSystem.swift) and a Jost-led 13-face manifest; rewritten to the 24-face manifest with the Phase 0 structure asserted instead. Classification unchanged: test-design error per Protocol §4, not code defects.
-
-# Delta Analysis Audit — 2026-08-01 (Cline, pinned to 788c5de0)
-
-Source: honesty-audit skill + subagent-driven cross-platform audit. 7 subagents deployed
-(security-auditor, code-reviewer, swift-expert, csharp-developer, python-pro, network-engineer,
-qa-expert). Team async runs were lost to session interruptions; findings below are from direct
-source-grounded verification at the pinned commit. Existing delta IDs B001-B273, C158-C177,
-D129-D139, E163-E182, A238-A261, F065-F070 were read in full to avoid duplication.
+                        ]
 
 ---
 
-- **[D274]**            Windows ContentWarp SSRF TOCTOU/DNS-Rebinding Gap (D019 macOS-Only Twin)
-- **Criticality:**      Critical; a DNS-rebinding attacker can bypass SSRF on Windows and fetch
-                        internal content that reads as the "local" baseline, corrupting the warp
-                        comparison on the platform that ships first (Linux references this assembly).
-- **Location:**         Windows/dotNET/Syxx.Kit/ContentWarp.cs:65-77 (local HTML fetch),
-                        :105 (local script hash fetch);
-                        macOS/Sources/SyxxKit/ContentWarp.swift:95-97, :136 (fixed twin).
-- **Issue:**            macOS ContentWarp pins every HTTP request to the SSRF-validated IP via
-                        `pinnedRequest(for: targetURL, validatedIP: targetIP)` (ContentWarp.swift:97,
-                        :136) to close the TOCTOU/DNS-rebinding window that D019 identified. The
-                        Windows twin calls `ValidateURLForSSRFAsync(targetURLStr)` to check the
-                        resolved IP, but then issues `client.GetAsync(targetURLStr)` which
-                        re-resolves the hostname, reopening the TOCTOU window. An attacker who
-                        controls DNS can return a public IP for the SSRF check, then rebind to an
-                        internal IP (169.254.169.254, 127.0.0.1, RFC1918) before `GetAsync` connects.
-                        The same gap exists for script hash fetches: macOS pins
-                        (ContentWarp.swift:130-136) but Windows does `client.GetByteArrayAsync(url)`
-                        (ContentWarp.cs:105) with no IP pinning. D019 was filed as macOS-only; the
-                        Windows twin was never updated with the pinning fix, violating platform
-                        parity (AGENTS.md: macOS is gold standard; Windows must match).
-- **Cross-ref. Delta:** D019 (filed macOS-only; Windows twin never updated).
-- **Fix(es):**          [Fix 1] Mirror the D019 pinning fix: resolve once via
-                        `ValidateURLForSSRFAsync`, then connect to the validated IP with the original
-                        Host header (and SNI for HTTPS), never re-resolving the hostname. Apply to
-                        both the local HTML fetch (:77) and every script hash fetch (:105). An
-                        `HttpClientHandler` with a custom `ConnectCallback` that dials the vetted
-                        `IPAddress` while sending the original host as SNI is the .NET equivalent of
-                        the macOS `pinnedRequest` pattern.
-                        [Fix 2] Add a regression test: point a script src at a two-answer rebinding
-                        host and assert the Windows client connects to the first (validated) answer,
-                        not the rebinded internal one.
----
 
-- **[D275]**            Linux SeverityColor Maps Unknown to Info Purple, Not Neutral Grey (Parity
-                        Divergence from macOS/Windows)
-- **Criticality:**      High; an unmeasured state renders in the same colour as an informational
-                        finding, which can mislead a user into thinking something was measured and
-                        found informational when it was never measured at all. This is the purple
-                        variant of the green-on-inconclusive defect class this project exists to
-                        refuse.
-- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Presentation/SeverityColor.cs:30
-                        (default/Unknown maps to #A79CC4, the Info purple);
-                        Windows/dotNET/SyxxUI/Presentation/SeverityBrush.cs:27
-                        (correct twin: Unknown maps to IoTextSecondaryBrush, neutral grey);
-                        macOS Color.ioSeverity(.unknown) maps to .ioTextSecondary
-                        (macOS/Tests/_quarantine/TrayGlyphTests.swift:25-26, neutral).
-- **Issue:**            Linux `SeverityColor.For` maps `Severity.Unknown` (and any future/unmapped
-                        case) via the default arm to `#A79CC4` (line 30), which is the SAME colour
-                        as `Severity.Info` (line 25: `Severity.Info => Color.Parse("#A79CC4")`).
-                        The file's own header comment (lines 12-13) states "Unknown/ungraded is a
-                        neutral grey" and "A state we did not establish must never render in the
-                        success colour," but the implementation contradicts the documented contract:
-                        #A79CC4 is Info purple, not neutral grey. Windows correctly maps Unknown to
-                        `IoTextSecondaryBrush` (neutral grey, line 27) and macOS maps it to
-                        `.ioTextSecondary`. Linux is the outlier, and Linux is the first-ship
-                        platform (ROADMAP.md:27), so this divergence ships to users first.
-- **Cross-ref. Delta:** B088 (macOS Dashboard green-on-threat), B097 (Windows ProphetView
-                        No+Unknown collapse), F013/F018/F019 (macOS Dashboard green on unmeasured).
-- **Fix(es):**          [Fix 1] Change the default arm at SeverityColor.cs:30 from
-                        `Color.Parse("#A79CC4")` (Info purple) to a neutral grey matching the Windows
-                        `IoTextSecondaryBrush` tone (e.g. `Color.Parse("#8B8B9A")`), satisfying the
-                        file's own documented contract and restoring three-platform parity.
-                        [Fix 2] Add a parity test: assert `SeverityColor.For(Severity.Unknown)` does
-                        not equal `SeverityColor.For(Severity.Info)` on Linux, matching the
-                        Windows/macOS twins where the two are distinct.
----
+- **[B013]**            _diff_content lives in app.py but belongs in a dedicated diff module
+                        alongside warp.py dependencies
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. The diff content function is in the HTTP routing module but
+                        depends on `warp.build_baseline()` — a cross-cutting dependency.
+- **Location:**         Server/syxx_server/app.py:265-354
+- **Issue:**            The diff content function is defined in `app.py` but depends on
+                        `warp.build_baseline()` and `warp.parse_assets()`. This creates a
+                        dependency from the HTTP routing module to the Warp/baseline module.
+                        The diff logic should be in a dedicated `diff.py` module that both
+                        `app.py` and `warp.py` can import.
+- **Cross-ref. Delta:** A015, A020, A024, A028.
+- **Fix(es):**          [Fix 1] Extract into `diff.py` along with `_diff_result`.
+                        [Fix 2]
+                        `app.py` delegates to `diff.py` for all comparison logic.
+- **Code Sample:**      [
 
-- **[D276]**            Windows ContentWarp Lacks D023 Script-Count Cap (Fan-Out DoS macOS-Only
-                        Twin Gap)
-- **Criticality:**      Medium; a hostile page with hundreds of `<script src>` tags causes the
-                        Windows client to attempt hundreds of sequential HTTP fetches (each up to
-                        the 10s timeout), enabling slow-loris-style resource exhaustion on the
-                        first-ship platform.
-- **Location:**         Windows/dotNET/Syxx.Kit/ContentWarp.cs:94-112 (local script hash loop,
-                        no count cap);
-                        macOS/Sources/SyxxKit/ContentWarp.swift:121-127 (maxScripts = 50, fixed
-                        twin).
-- **Issue:**            macOS ContentWarp caps script fetches at 50 (`let maxScripts = 50`,
-                        `guard index < maxScripts else { localScriptHashes[url] =
-                        "ERROR_SCRIPT_CAP_EXCEEDED"; continue }`, ContentWarp.swift:121-127) to
-                        prevent fan-out DoS from hostile pages with hundreds of scripts (D023 fix).
-                        The Windows twin loops through `localAssets.Scripts` (ContentWarp.cs:96)
-                        with no count cap. The Windows twin has the D023 timeout (line 60:
-                        `Timeout = TimeSpan.FromSeconds(10)`) but is missing the script-count cap
-                        half of the D023 fix. D023 was filed as macOS-only; the Windows twin was
-                        never updated with the count cap.
-- **Cross-ref. Delta:** D023 (filed macOS-only; Windows twin timeout present, script cap missing).
-- **Fix(es):**          [Fix 1] Add `const int MaxScripts = 50;` before the script fetch loop and
-                        `if (index >= MaxScripts) { localScriptHashes[url] =
-                        "ERROR_SCRIPT_CAP_EXCEEDED"; continue; }` inside the loop, matching the
-                        macOS twin.
-                        [Fix 2] Add a regression test: feed a page with 100 script tags and assert
-                        only 50 are fetched, with the remainder marked ERROR_SCRIPT_CAP_EXCEEDED.
+                        # app.py:265 — diff logic in HTTP module depending on warp
+                        async def _diff_content(client_ip, domain, clean_scripts):
+                            baseline = await warp.build_baseline(domain)
+                            ...
+
+                        ]
 
 ---
 
-- **[C196]**            Windows DetectUnanimousTampering Returns Bool Instead of Tri-State
-                        (C046/C056 macOS-Only Twin Gap)
-- **Criticality:**      Critical; the Windows twin collapses "could not tell" (insufficient DoH
-                        baselines, captive portal, enterprise TLS filter) into "no tampering,"
-                        producing a false clean on a live on-path interceptor. This is the exact
-                        defect class the macOS enum comment names: "Bool is the wrong return type
-                        — it cannot distinguish 'no tampering' from 'could not tell'."
-- **Location:**         Windows/dotNET/Syxx.Kit/VantageComparer.cs:347 (returns `bool`),
-                        :274 (assigned directly to `bool redirection`);
-                        macOS/Sources/SyxxKit/VantageComparer.swift:77-82 (enum
-                        `UnanimousTamperResult` with `.tampered`/`.undetermined`/`.notTampered`),
-                        :320-368 (implementation), :244-254 (`.undetermined` maps to inconclusive).
-- **Issue:**            The macOS `detectUnanimousTampering` was upgraded (C046/C056) to return a
-                        tri-state `UnanimousTamperResult` so that `.undetermined` — returned when
-                        DoH is unavailable, fewer than 2 DoH endpoints have records, or the RCODE
-                        set is ambiguous — flows to `inconclusiveFromUnaminous = true` and the
-                        final result carries `inconclusive: true` (VantageComparer.swift:247-251,
-                        307). The Windows twin `DetectUnanimousTampering` still returns `bool`
-                        (VantageComparer.cs:347) and is assigned directly to `redirection`
-                        (VantageComparer.cs:274). Every path that returns `false` on macOS as
-                        `.notTampered` is identical on Windows, but every path that returns
-                        `.undetermined` on macOS (lines 345, 355) returns `false` on Windows —
-                        the same value as `.notTampered`. The Windows `Evaluate` method does have
-                        a separate `dohBlockedWhileUdpUnanimous` check (VantageComparer.cs:331-337)
-                        that catches the "all DoH failed" sub-case, but it does NOT cover the
-                        "fewer than 2 DoH endpoints with records" case (macOS line 355:
-                        `if dohSets.count < 2 { return .undetermined }`) or the "DoH outcomes
-                        nil/empty" case (macOS line 345: `guard let dohOutcomes = dohOutcomes,
-                        !dohOutcomes.isEmpty else { return .undetermined }`). In those cases
-                        Windows returns `redirection = false` with `inconclusive = false` — a
-                        clean result on a unanimous-UDP pattern that could not be independently
-                        verified. The C046/C056 fix was filed as macOS-only
-                        (DELTAS-fixed.md:45999 confirms the macOS fix); the Windows twin was never
-                        updated. This violates the honesty spine §3 (tri-state, never boolean) and
-                        AGENTS.md platform parity (macOS is gold standard; Windows must match).
-- **Cross-ref. Delta:** C046/C056 (filed macOS-only; Windows twin never updated). B010 (original
-                        unanimous-tampering detection, both platforms). B270 (witness
-                        required-section gating suppressing decisive signals).
-- **Fix(es):**          [Fix 1] Port the `UnanimousTamperResult` enum to Windows (or an equivalent
-                        tri-state), update `DetectUnanimousTampering` to return it, and update
-                        `Evaluate` to map `.undetermined` to `Inconclusive = true` (matching
-                        macOS VantageComparer.swift:247-251, 307).
-                        [Fix 2] Add a parity test: feed identical inputs where DoH has only 1
-                        endpoint with records and assert Windows returns `Inconclusive = true`
-                        (matching macOS), not `Inconclusive = false`.
+
+- **[C004]**            SynthesisEngine incomplete indicator mapping — 4 clean-support
+                        indicators intentionally not wired (see B010)
+- **Status:**           **DUPLICATE** — See B010.
+- **Criticality:**      See B010.
+- **Location:**         See B010.
+- **Issue:**            See B010.
+- **Cross-ref. Delta:** B010 (primary tracking).
+- **Fix(es):**          See B010.
+- **Code Sample:**      [
+
+                        # See B010 for full details.
+
+                        ]
 
 ---
 
-- **[B278]**            Windows CNAMEChainProbe Lacks ChainCompletion Tracking (B075 macOS-Only Twin
-                        Gap)
-- **Criticality:**      High; a hostile cyclic CNAME chain (loop) or an overlong chain (cap
-                        exceeded) is silently compared as an ordinary chain on Windows, where
-                        macOS returns inconclusive and refuses to compare. A looped chain is a
-                        common CNAME-injection hijack technique, and comparing it as normal means
-                        the hijack reads as a consistent or no-CNAME result instead of malformed
-                        evidence. Windows also lacks the C072 conflicting-CNAME detection (same
-                        owner, different targets), which macOS treats as an immediate injection
-                        signature.
-- **Location:**         Windows/dotNET/Syxx.Kit/CNAMEChainProbe.cs:36-41 (`ChainAt` returns
-                        `List<string>` with no completion state), :54-69 (`ReconstructChain`
-                        returns `List<string>` with no completion), :43-51 (`Classify` called
-                        with no completion info);
-                        macOS/Sources/SyxxKit/CNAMEChainProbe.swift:51-55 (`chainAt` returns
-                        `(chain, completion)`), :88-93 (`ChainCompletion` enum:
-                        terminal/loop/capExceeded/conflictingCNAME), :59-67 (loop/capExceeded
-                        returns inconclusive, refuses to compare), :57-62
-                        (conflictingCNAME returns divergent immediately).
-- **Issue:**            The macOS `CNAMEChainProbe` was upgraded (B075) to track WHY chain
-                        reconstruction stopped via a `ChainCompletion` enum with four cases:
-                        `.terminal` (normal), `.loop` (hostile cyclic chain), `.capExceeded`
-                        (hostile overlong chain), and `.conflictingCNAME` (C072: same owner,
-                        different targets — an injection signature). When the test chain hits a
-                        loop or cap, macOS returns `.inconclusive` with "malformed evidence, not
-                        comparable" (CNAMEChainProbe.swift:64-67) instead of comparing. When a
-                        reference chain hits a loop or cap, macOS also returns `.inconclusive`
-                        (CNAMEChainProbe.swift:78-81). When conflicting CNAMEs are detected,
-                        macOS returns `.divergent` immediately as an injection signature
-                        (CNAMEChainProbe.swift:59-62). The Windows twin has NO `ChainCompletion`
-                        enum. `ReconstructChain` (CNAMEChainProbe.cs:54-69) returns a plain
-                        `List<string>` — a loop is silently broken by `if (!seen.Add(target))
-                        break` (line 65) and the partial chain is returned as if it were a
-                        complete terminal chain. `ChainAt` (CNAMEChainProbe.cs:36-41) returns
-                        only a `List<string>`, discarding any completion state. `Classify`
-                        (CNAMEChainProbe.cs:72-93) receives no completion info and compares the
-                        partial/looped chain as if it were normal. The C072 conflicting-CNAME
-                        detection is entirely absent on Windows — the `cnameMap` dictionary
-                        (CNAMEChainProbe.cs:57-58) silently overwrites duplicate owners with the
-                        last-seen target, erasing the conflict. B075 was filed as macOS-only;
-                        the Windows twin was never updated with the completion tracking.
-- **Cross-ref. Delta:** B075 (filed macOS-only; Windows twin never updated). C072
-                        (conflicting-CNAME injection signature, macOS-only). PROPOSALS.md Part F
-                        #7 / Part D #2 (full CNAME chain collection — Windows drops CNAMEs
-                        entirely per WINX-037).
-- **Fix(es):**          [Fix 1] Port the `ChainCompletion` enum to Windows (or an equivalent
-                        struct), update `ReconstructChain` to return
-                        `(List<string>, ChainCompletion)`, update `ChainAt` to propagate it,
-                        and update `Probe` to return `.Inconclusive` when the test or any
-                        reference chain hits a loop or cap (matching macOS
-                        CNAMEChainProbe.swift:64-67, 78-81).
-                        [Fix 2] Add C072 conflicting-CNAME detection: when building `cnameMap`,
-                        detect a duplicate owner with a different target and return
-                        `.Divergent` immediately (matching macOS
-                        CNAMEChainProbe.swift:59-62).
-                        [Fix 3] Add a parity test: feed a self-referential CNAME chain
-                        (loop) and assert Windows returns `CNAMEChainStatus.Inconclusive`
-                        (matching macOS), not `Consistent` or `NoCNAME`.
+
+- **[D008]**            23 duplicate test files in macOS _quarantine/ — .phase32-active-dup and
+                        .phase3-compile-break suffixes
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Dead weight that inflates grep results, confuses code search,
+                        and could be accidentally re-enabled.
+- **Location:**         macOS/Tests/_quarantine/
+- **Issue:**            The `_quarantine/` directory contains 23 files that are exact
+                        duplicates of active test files with `.phase32-active-dup` suffix
+                        (e.g., `SynthesisEngineTests.swift.phase32-active-dup`). 4 files
+                        have `.phase3-compile-break` suffixes and fail to compile. These are
+                        artifacts of a prior migration and provide no value.
+- **Cross-ref. Delta:** B002 (quarantined tests).
+- **Fix(es):**          [Fix 1] Delete all `.phase32-active-dup` and `.phase3-compile-break`
+                        files. The active originals exist in `Tests/SyxxKitTests/` and
+                        `Tests/SyxxAppTests/`.
+- **Code Sample:**      [
+
+                        # macOS/Tests/_quarantine/ — 23 dead files:
+                        # SynthesisEngineTests.swift.phase32-active-dup
+                        # SynthesizerDatapointWiringTests.swift.phase32-active-dup
+                        # FusionRuleBakeoffTests.swift.phase32-active-dup
+                        # ... 20 more .phase32-active-dup files
+                        # SyxxKitTests.swift.phase32-compile-break
+                        # ... 3 more .phase3-compile-break files
+
+                        ]
 
 ---
 
-- **[B279]**            Windows DenialOfExistenceProbe Checks hasNSEC Before SOA Ancestry (C126
-                        macOS-Only Twin Gap)
-- **Criticality:**      High; an injected NSEC record from any zone bypasses the SOA ancestry check
-                        on Windows, allowing a censor to forge an NSEC from an unrelated zone and
-                        have the denial graded as `.nsecProven` (authenticated) instead of
-                        `.contradictory` (injected). This is the exact defect C126 fixed on macOS.
-- **Location:**         Windows/dotNET/Syxx.Kit/DenialOfExistenceProbe.cs:66-73 (hasNSEC checked
-                        first at :66-67, SOA ancestry second at :69-73);
-                        macOS/Sources/SyxxKit/DenialOfExistenceProbe.swift:105-116 (SOA ancestry
-                        first at :109-113, hasNSEC second at :114-116).
-- **Issue:**            The macOS `classify` was upgraded (C126) to evaluate SOA ancestry FIRST,
-                        before hasNSEC. The macOS comment (lines 105-108) explains why: "NSEC
-                        presence may then upgrade a *consistent* denial, never rescue an
-                        inconsistent one. Previously, hasNSEC short-circuited the SOA check,
-                        allowing an injected NSEC from any zone to bypass the only real test."
-                        On macOS, if an SOA exists but is not an ancestor of the queried name,
-                        the result is `.contradictory` regardless of whether NSEC is present
-                        (DenialOfExistenceProbe.swift:109-113). Only if the SOA IS a valid
-                        ancestor does hasNSEC upgrade the result to `.nsecProven` (line 114-116).
-                        The Windows twin still checks hasNSEC first (DenialOfExistenceProbe.cs:66-
-                        67): if NSEC is present, it returns `.nsecProven` immediately without
-                        ever checking SOA ancestry. An attacker who injects an NSEC record from
-                        any zone (e.g., `attacker.com` NSEC for a query about `victim.com`)
-                        gets a `.nsecProven` (authenticated denial) on Windows, while macOS
-                        correctly returns `.contradictory` (injected). C126 was filed as
-                        macOS-only; the Windows twin was never updated with the reordered check.
-- **Cross-ref. Delta:** C126 (filed macOS-only; Windows twin never updated). B071 (malformed
-                        authority section, both platforms fixed).
-- **Fix(es):**          [Fix 1] Reorder the Windows `Classify` to check SOA ancestry BEFORE
-                        hasNSEC, matching macOS DenialOfExistenceProbe.swift:105-116. If an SOA
-                        exists but is not an ancestor, return `.Contradictory` immediately,
-                        regardless of NSEC presence.
-                        [Fix 2] Add a parity test: feed a negative response with an NSEC from an
-                        unrelated zone and a non-ancestor SOA, and assert Windows returns
-                        `DenialStatus.Contradictory` (matching macOS), not
-                        `DenialStatus.NsecProven`.
+
+- **[D009]**            Mirror/ engine duplicated between Linux and Windows — 7 files, ~850
+                        lines each, with divergent fixes
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Critical. The Linux versions are objectively better (ReDoS protection,
+                        async support, D333/D334 fixes). The Windows versions are stale.
+                        Any bugfix must be manually ported.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/ (7 files);
+                        Windows/dotNET/SyxxUI/Mirror/ (7 files)
+- **Issue:**            The entire Mirror/ static-content comparison engine is duplicated
+                        between Linux and Windows with only namespace differences. The Linux
+                        version has D333 (source-line-count normalization), D334 (empty-string
+                        CountLines fix), ReDoS protection (5-second regex timeout), async
+                        support (DiffAsync with CancellationToken), and `IReadOnlyList`
+                        return types. The Windows version has none of these improvements.
+                        The DiffEngine's own XML doc says it "delegates LCS computation to
+                        TextDiff.Unified (shared Syxx.Kit)" — the entire engine should be
+                        in Syxx.Kit, shared once.
+- **Cross-ref. Delta:** C003 (HasChanges divergence), D010 (SummaryLine drift), D011 (ReDoS
+                        on Windows), D012 (DiffAsync Linux-only), D013 (IReadOnlyList vs List).
+- **Fix(es):**          [Fix 1] Extract the Mirror/ engine to `Syxx.Kit` (or a new
+                        `Syxx.Kit.Mirror` package). [Fix 2] Use the Linux implementation as
+                        the canonical baseline. [Fix 3] Windows consumes it from Syxx.Kit.
+- **Code Sample:**      [
+
+                        // Linux/.../Mirror/DiffEngine.cs     — 102 lines (async, CT)
+                        // Windows/.../Mirror/DiffEngine.cs   — 94 lines (sync only)
+                        // Linux/.../Mirror/MirrorBundle.cs   — 122 lines (D334 fix)
+                        // Windows/.../Mirror/MirrorBundle.cs — 94 lines (pre-fix)
+                        // Linux/.../Mirror/DiffResult.cs     — 112 lines (computed)
+                        // Windows/.../Mirror/DiffResult.cs   — 99 lines (constructor)
+                        // Linux/.../Mirror/MirrorResult.cs   — 69 lines (IsPartial)
+                        // Windows/.../Mirror/MirrorResult.cs — 46 lines (no IsPartial)
+                        // Linux/.../Mirror/DegradationCalc.cs — 103 lines (D333)
+                        // Windows/.../Mirror/DegradationCalc.cs — 72 lines (no D333)
+                        // Linux/.../Mirror/StaticContentParser.cs — 262 lines (ReDoS)
+                        // Windows/.../Mirror/StaticContentParser.cs — 190 lines (no ReDoS)
+                        // Linux/.../Mirror/DegradationScore.cs — 52 lines
+                        // Windows/.../Mirror/DegradationScore.cs — 60 lines
+
+                        ]
 
 ---
 
-- **[B280]**            Windows DenialOfExistenceProbe Lacks NXDOMAIN vs NODATA Distinction (C127
-                        macOS-Only Twin Gap)
-- **Criticality:**      Medium; a NODATA response (name exists, type does not) with no SOA is
-                        graded as `.bareDenial` (likely injected) on Windows, while macOS grades
-                        it as `.inconclusive`. This is a false positive: many resolvers omit SOA
-                        on cached NODATA (RFC 2308 §5 makes it a SHOULD only for authoritative
-                        answers), so a benign cached NODATA reads as a synthesis/injection signal
-                        on Windows.
-- **Location:**         Windows/dotNET/Syxx.Kit/DenialOfExistenceProbe.cs:10-16 (no
-                        `negativeKind` field on the record), :82 (both NXDOMAIN and NODATA
-                        with no SOA/NSEC return `.bareDenial`);
-                        macOS/Sources/SyxxKit/DenialOfExistenceProbe.swift:33-36
-                        (`NegativeKind` enum: `nameDoesNotExist` / `typeHasNoData`), :42
-                        (`negativeKind` field on the record), :81-87 (kind determined from
-                        status), :126-133 (NXDOMAIN returns `.bareDenial`, NODATA returns
-                        `.inconclusive`).
-- **Issue:**            The macOS `DenialOfExistenceProbe` was upgraded (C127) to distinguish
-                        NXDOMAIN (the name itself does not exist) from NODATA (the name exists
-                        but has no RR of the requested type) per RFC 2308 §2.1/§2.2, via a
-                        `NegativeKind` enum. This distinction matters at the tail of `classify`:
-                        for NXDOMAIN with no SOA and no NSEC, macOS returns `.bareDenial`
-                        ("a genuine authoritative NXDOMAIN includes an SOA; corroborate") because
-                        a real NXDOMAIN should carry an SOA. For NODATA with no SOA and no NSEC,
-                        macOS returns `.inconclusive` ("a missing SOA on a type-negative is not
-                        evidence of synthesis") because RFC 2308 §5 makes SOA-on-NODATA a SHOULD
-                        only for authoritative answers, and many resolvers omit it on cached
-                        NODATA (DenialOfExistenceProbe.swift:126-133). The Windows twin has no
-                        `NegativeKind` enum and no `negativeKind` field
-                        (DenialOfExistenceProbe.cs:10-16). At the tail of `Classify`, both
-                        NXDOMAIN and NODATA with no SOA and no NSEC fall through to the same
-                        `.bareDenial` return (DenialOfExistenceProbe.cs:82). A benign cached
-                        NODATA (e.g., querying AAAA for a name that only has A records, through
-                        a resolver that omits SOA on cached NODATA) reads as `.bareDenial`
-                        (likely injected) on Windows, a false positive. C127 was filed as
-                        macOS-only; the Windows twin was never updated with the distinction.
-- **Cross-ref. Delta:** C127 (filed macOS-only; Windows twin never updated). B279 (C126 SOA
-                        ancestry order, same file, same pass). PROPOSALS.md Part A #6
-                        (authenticated denial of existence — the NXDOMAIN/NODATA distinction is
-                        foundational to it).
-- **Fix(es):**          [Fix 1] Add a `NegativeKind` enum to Windows
-                        (`NameDoesNotExist` / `TypeHasNoData`), add a `NegativeKind?` field to
-                        the `DenialOfExistence` record, determine it from the response status in
-                        `Classify` (NXDOMAIN → `NameDoesNotExist`, NoData/Success →
-                        `TypeHasNoData`), and split the tail: NXDOMAIN with no SOA/NSEC returns
-                        `.BareDenial`, NODATA with no SOA/NSEC returns `.Inconclusive`
-                        (matching macOS DenialOfExistenceProbe.swift:126-133).
-                        [Fix 2] Add a parity test: feed a NODATA response (NoData status, no
-                        answers, no SOA, no NSEC) and assert Windows returns
-                        `DenialStatus.Inconclusive` (matching macOS), not
-                        `DenialStatus.BareDenial`.
+
+- **[D010]**            MirrorBundle.SummaryLine implementation drift — Linux has D334 fix,
+                        Windows does not
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. The Linux version has a documented fix (D334: empty content
+                        returns 0 lines, not 1) and avoids the string.Split allocation.
+                        The Windows version has the old behavior.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/MirrorBundle.cs:107-122;
+                        Windows/dotNET/SyxxUI/Mirror/MirrorBundle.cs:83-93
+- **Issue:**            Linux `CountLines` uses a manual loop that correctly returns 0 for
+                        empty strings and avoids allocation. Windows uses `Split('\n').Length`
+                        which allocates a string array and returns 1 for empty strings.
+- **Cross-ref. Delta:** D009 (Mirror/ engine duplication).
+- **Fix(es):**          [Fix 1] Backport the D334 fix to Windows.
+                        [Fix 2] Extract the Mirror/
+                        engine to Syxx.Kit (D009) so there is only one implementation.
+- **Code Sample:**      [
+
+                        // Linux (D334 fix — manual loop, correct for empty)
+                        private static int CountLines(string text) {
+                            if (string.IsNullOrEmpty(text)) return 0;
+                            int count = 1;
+                            for (int i = 0; i < text.Length; i++)
+                                if (text[i] == '\n') count++;
+                            return count;
+                        }
+                        // Windows (pre-fix — allocates, wrong for empty)
+                        int htmlLines = string.IsNullOrEmpty(HtmlContent)
+                            ? 0 : HtmlContent.Split('\n').Length;
+
+                        ]
+
+---
+
+
+- **[D011]**            Windows StaticContentParser lacks ReDoS protection — Linux has 5-second
+                        regex timeout
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Adversarial HTML input with pathological backtracking
+                        (e.g., deeply nested unclosed <style> tags) could hang the Windows
+                        client indefinitely.
+- **Location:**         Windows/dotNET/SyxxUI/Mirror/StaticContentParser.cs (entire file);
+                        Linux/Ubuntu/SyxxUI.Avalonia/Mirror/StaticContentParser.cs:118
+- **Issue:**            The Linux version adds a 5-second regex timeout on all 6
+                        `Regex.Matches` calls. The Windows version has no timeout at all.
+                        The Linux version is hardened; the fix must be ported to Windows.
+- **Cross-ref. Delta:** D009 (Mirror/ engine duplication).
+- **Fix(es):**          [Fix 1] Backport the 5-second regex timeout to Windows.
+                        [Fix 2] Extract the Mirror/ engine to Syxx.Kit (D009) so there is
+                        only one implementation.
+- **Code Sample:**      [
+
+                        // Linux (hardened)
+                        private static readonly TimeSpan RegexTimeout =
+                            TimeSpan.FromSeconds(5);
+                        var matches = Regex.Matches(html, pattern,
+                            RegexOptions.IgnoreCase, RegexTimeout);
+
+                        // Windows (unprotected)
+                        var matches = Regex.Matches(html, pattern,
+                            RegexOptions.IgnoreCase);
+
+                        ]
+
+---
+
+
+- **[D012]**            DiffEngine.DiffAsync only exists on Linux — no async variant on Windows
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. Quality-of-life improvement that should be available on both
+                        platforms.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/DiffEngine.cs:15-19
+- **Issue:**            Linux has `DiffAsync` with `CancellationToken` support and
+                        `IReadOnlyList<DiffLine>` return type. Windows has no async variant.
+- **Cross-ref. Delta:** D009 (Mirror/ engine duplication).
+- **Fix(es):**          [Fix 1] Backport `DiffAsync` to Windows.
+                        [Fix 2] Extract the Mirror/
+                        engine to Syxx.Kit (D009) so there is only one implementation.
+- **Code Sample:**      [
+
+                        // Linux-only
+                        public static Task<IReadOnlyList<DiffLine>> DiffAsync(
+                            string remote, string local, int context = 2,
+                            CancellationToken cancellationToken = default)
+                        {
+                            return Task.Run(() =>
+                                (IReadOnlyList<DiffLine>)Diff(remote, local, context),
+                                cancellationToken);
+                        }
+
+                        ]
+
+---
+
+
+- **[D013]**            DiffResult uses IReadOnlyList on Linux, List on Windows — type divergence
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. The Linux version is more correct (immutable API surface), but
+                        the type difference prevents sharing a single DiffResult type.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/DiffResult.cs;
+                        Windows/dotNET/SyxxUI/Mirror/DiffResult.cs
+- **Issue:**            Linux exposes `IReadOnlyList<DiffLine>` for `HtmlDiff`, `CssDiff`,
+                        `JsDiff`, and `LinesFor()`. Windows exposes `List<DiffLine>`. The
+                        Linux version is more correct but the type difference means the two
+                        platforms can't share a single `DiffResult` type without a breaking
+                        change on Windows.
+- **Cross-ref. Delta:** D009 (Mirror/ engine duplication).
+- **Fix(es):**          [Fix 1] Standardize on `IReadOnlyList<DiffLine>` on both platforms.
+                        [Fix 2] Extract the Mirror/ engine to Syxx.Kit (D009).
+- **Code Sample:**      [
+
+                        // Linux (correct — immutable)
+                        public IReadOnlyList<DiffLine> HtmlDiff { get; }
+                        // Windows (mutable)
+                        public List<DiffLine> HtmlDiff { get; }
+
+                        ]
+
+---
+
+
+- **[D014]**            AppModel.swift is a 2,354-line God class with 63 @Published vars and
+                        60 methods
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Critical. Every tool change, every new feature, every state variable
+                        gets added here. Testing individual tools requires instantiating the
+                        entire 2,354-line class. Sentry breadcrumb calls are scattered inline
+                        (7 locations) rather than through a decorator.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift (2,354 lines)
+- **Issue:**            `AppModel` is the single `@MainActor ObservableObject` that owns
+                        every piece of state for the entire GUI. It directly orchestrates DNS
+                        lookups, Mirror comparisons, DNS leak tests, traceroute, Cage live
+                        capture (100+ lines of NDJSON parsing), Witness signing/verification,
+                        Unbound resolver toggling, license validation, continuous monitoring,
+                        Dimension startup checks, and notification delivery. It also owns the
+                        `DashboardLog` ring buffer.
+- **Cross-ref. Delta:** D015 (runAllWardens duplicates run), D016 (no ViewModel layer).
+- **Fix(es):**          [Fix 1] Extract per-tool ViewModels (ProphetViewModel, CageViewModel,
+                        WitnessViewModel, etc.) that own their own @Published state.
+                        [Fix 2] AppModel becomes a navigation coordinator only.
+                        [Fix 3] Replace inline Sentry calls with a decorator pattern.
+- **Code Sample:**      [
+
+                        // AppModel.swift — single class containing:
+                        // 63 @Published vars
+                        // 60 methods
+                        // runLookup(), runCompare(), runLeak(), startTraceroute(),
+                        // startRealCapture() (100+ lines), runWitness(),
+                        // runAllWardens(), run(), execute(), applyLicense(),
+                        // monitor, notifications, dimension checks, DashboardLog
+
+                        ]
+
+---
+
+
+- **[D015]**            runAllWardens() duplicates run() logic — timeout, Sentry, state management
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. Adding a seventh warden requires updating both methods.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:632-745, 746-866
+- **Issue:**            `runAllWardens()` manually sequences all six wardens with individual
+                        `withTimeout` calls, `selection` switching, and `isPro` gating.
+                        `run()` dispatches through `execute()`. Both methods duplicate the
+                        same timeout pattern, Sentry breadcrumbs, and
+                        `runningTool`/`scanCorrelationId` management.
+- **Cross-ref. Delta:** D014 (AppModel God class).
+- **Fix(es):**          [Fix 1] `runAllWardens()` should call `run()` for each tool in
+                        sequence. [Fix 2] Both should delegate to a shared `runTool(_ tool:
+                        Tool)` method.
+- **Code Sample:**      [
+
+                        // AppModel.swift:632-745 — runAllWardens()
+                        // AppModel.swift:746-866 — run()
+                        // Both duplicate: withTimeout, selection switching,
+                        //   SentrySDK.addBreadcrumb, runningTool/scanCorrelationId
+
+                        ]
+
+---
+
+
+- **[D016]**            No ViewModel layer on macOS — views directly import SyxxKit types
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Changing a SyxxKit type signature forces changes in multiple
+                        view files. Views cannot be tested independently of SyxxKit.
+- **Location:**         macOS/Sources/SyxxApp/ (34 files import SyxxKit directly)
+- **Issue:**            Every SyxxApp view imports `SyxxKit` directly. Views reference
+                        `DNSRecord`, `ComparisonResult`, `WitnessSnapshot`, `NetworkStateReport`
+                        directly in their body and subview builders. There is no intermediate
+                        ViewModel layer that transforms SyxxKit domain models into
+                        view-specific display models.
+- **Cross-ref. Delta:** D014 (AppModel God class).
+- **Fix(es):**          [Fix 1] Introduce per-tool ViewModels that own @Published display
+                        state. [Fix 2] Views should only depend on their ViewModel, not on
+                        SyxxKit directly. [Fix 3] ViewModels map SyxxKit domain types to
+                        view-specific types.
+- **Code Sample:**      [
+
+                        // Every SyxxApp view:
+                        import SyxxKit
+                        // Direct references to SyxxKit types in view bodies:
+                        // DNSRecord, ComparisonResult, WitnessSnapshot,
+                        // NetworkStateReport, etc.
+
+                        ]
+
+---
+
+
+- **[D017]**            CLI commands have no shared protocol — 15 files with identical
+                        `static func run(_ argv: [String]) async -> Int32` signatures
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. Adding a new CLI command requires copy-pasting the arg-parsing
+                        boilerplate. Changing the exit-code convention requires touching 15
+                        files. Cage and Witness commands duplicate business logic from AppModel.
+- **Location:**         macOS/Sources/SyxxCLI/Commands/ (15 files)
+- **Issue:**            Every CLI command duplicates the same structural pattern: a `static
+                        func run(_ argv: [String]) async -> Int32` that manually parses argv,
+                        validates arguments, and orchestrates the operation. No shared
+                        protocol, no `ParsableCommand` conformance, no common argument parsing.
+                        `SyxxCage.swift` (623 lines) and `SyxxWitness.swift` (582 lines)
+                        contain substantial business logic that should live in SyxxKit.
+- **Cross-ref. Delta:** D018 (SyxxCLI monolithic parser).
+- **Fix(es):**          [Fix 1] Define a `SyxxCommand` protocol with a shared
+                        `run(arguments:)` method. [Fix 2] Move Cage/Witness business logic
+                        into SyxxKit services. [Fix 3] Adopt `ArgumentParser` for declarative
+                        argument parsing.
+- **Code Sample:**      [
+
+                        // 15 files, identical pattern:
+                        // Commands/SyxxProphet.swift
+                        static func run(_ argv: [String]) async -> Int32 { ... }
+                        // Commands/SyxxMirror.swift
+                        static func run(_ argv: [String]) async -> Int32 { ... }
+                        // ... 13 more
+                        // SyxxCage.swift  — 623 lines, business logic in CLI
+                        // SyxxWitness.swift — 582 lines, business logic in CLI
+
+                        ]
+
+---
+
+
+- **[D018]**            SyxxCLI.swift — 1,133-line monolithic CLI parser, no ArgumentParser
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Adding a new subcommand requires touching the monolithic
+                        router. Help text is manually maintained.
+- **Location:**         macOS/Sources/SyxxCLI/SyxxCLI.swift (1,133 lines)
+- **Issue:**            The main CLI entry point is a single file that manually routes
+                        subcommands, parses flags, and handles help text via a large switch
+                        statement. It does not use `ArgumentParser` (Apple's Swift argument
+                        parser). Each subcommand is dispatched via a large switch.
+- **Cross-ref. Delta:** D017 (CLI no shared protocol).
+- **Fix(es):**          [Fix 1] Adopt `ArgumentParser` for declarative command structure.
+                        [Fix 2] Each command becomes a self-contained `ParsableCommand` struct.
+- **Code Sample:**      [
+
+                        // SyxxCLI.swift — 1,133 lines
+                        // Manual subcommand routing via switch statement
+                        // Manual flag parsing per subcommand
+                        // Manual help text
+
+                        ]
+
+---
+
+
+- **[D019]**            Dual telemetry — Sentry + OTel side-by-side with SyxxDiagnostics layer
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. Three telemetry APIs with different semantics. A developer
+                        adding a new feature must decide which system to use and often
+                        duplicates — Sentry breadcrumbs and OTel spans for the same event.
+- **Location:**         macOS/Sources/SyxxTelemetry/ (3 files);
+                        macOS/Sources/SyxxKit/ and macOS/Sources/SyxxApp/ (scattered calls)
+- **Issue:**            59 Sentry references, 29 OTel references, 32 SyxxDiagnostics
+                        references. AppModel has 7 inline `SentrySDK.addBreadcrumb` calls.
+                        The `SyxxDiagnostics` layer is a fourth abstraction that doesn't
+                        fully replace either.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Consolidate on one telemetry abstraction — `SyxxTracer` as
+                        the single API surface. [Fix 2] Sentry and OTel as backends.
+                        [Fix 3] Remove inline `SentrySDK` calls from AppModel.
+- **Code Sample:**      [
+
+                        // Three telemetry systems in use:
+                        // SentrySDK.addBreadcrumb(...) — 7 calls in AppModel alone
+                        // SyxxTracer (OTel) — 29 references
+                        // SyxxDiagnostics — 32 references
+                        // All three track the same events with different APIs
+
+                        ]
+
+---
+
+
+- **[D020]**            Syxx.Kit is a kitchen-sink module — 80+ files in flat namespace, no
+                        internal boundaries
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. Every consumer gets the entire surface area. Internal types
+                        that should be `internal` are `public` because everything lives in
+                        one project. No way to take a dependency on "just DNS resolution."
+- **Location:**         Windows/dotNET/Syxx.Kit/ (80+ .cs files)
+- **Issue:**            A single project contains: DNS resolution/transport, packet capture,
+                        synthesis engine, matrix engine, leak detection, lookalike detection,
+                        forensics/log analysis, encryption (NSec), witness wire format, LAN
+                        cartography, configuration, licensing, platform abstraction, secret
+                        storage, probe running, telemetry, and content warp. `InternalsVisibleTo`
+                        grants expose internals that should be proper public API boundaries.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Split into bounded packages: `Syxx.Kit.Dns`,
+                        `Syxx.Kit.Synthesis`, `Syxx.Kit.Capture`, `Syxx.Kit.Leak`, etc.
+                        [Fix 2] Each package has a clear public API surface.
+- **Code Sample:**      [
+
+                        // Syxx.Kit — single project containing:
+                        // DNSResolver, CaptureEngine, SynthesisEngine,
+                        // MatrixDeterminativeEngine, LeakDetector, WitnessWireJson,
+                        // LookalikeDetector, Forensics, LAN cartography,
+                        // Configuration, Licensing, Platform, SecretStore,
+                        // ProbeRunner, Telemetry, ContentWarp
+                        // All 80+ files in flat namespace Syxx.Kit
+
+                        ]
+
+---
+
+
+- **[D021]**            No mocking library in C# tests — 15,903 lines of test code with ad-hoc
+                        inline fakes
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. Every test file reinvents its own fake infrastructure. Changing
+                        DNSResponse shape requires touching every hand-rolled fake.
+- **Location:**         Windows/dotNET/Syxx.Tests/ (63 test files, 15,903 lines)
+- **Issue:**            Zero mocking libraries (no Moq, NSubstitute, or FakeItEasy). Zero
+                        assertion libraries (no FluentAssertions or Shouldly). Tests use
+                        `Func<DNSQuery, Task<DNSResponse>>` lambdas as inline fakes. The
+                        `Mock()` lambda in `SynthesisEngineTests.cs` is 35 lines of
+                        hand-rolled test doubles. No shared `TestDNSResolver` or
+                        `TestLeakCollector` — each test file builds its own.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add Moq + FluentAssertions to test projects.
+                        [Fix 2] Build
+                        shared test fakes (`TestDNSResolver`, `TestLeakCollector`).
+                        [Fix 3] Reduce test code duplication by sharing test infrastructure.
+- **Code Sample:**      [
+
+                        // SynthesisEngineTests.cs:24-58 — 35 lines of hand-rolled fake
+                        Func<DNSQuery, Task<DNSResponse>> mock = async (query) => {
+                            if (query.Domain == "clean.example.com")
+                                return new DNSResponse { ... };
+                            if (query.Domain == "tampered.example.com")
+                                return new DNSResponse { ... };
+                            // ... more hand-rolled fake logic
+                        };
+                        // No Moq, no NSubstitute, no shared test infrastructure
+
+                        ]
+
+---
+
+
+- **[D022]**            SyxxUI.Tests is a dead "UNVERIFIED SCAFFOLDING" test project — cannot
+                        build or run
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. A test project that cannot be built or run on any CI system is
+                        dead code. It consumes maintenance attention and creates a false sense
+                        of coverage.
+- **Location:**         Windows/dotNET/SyxxUI.Tests/SyxxUI.Tests.csproj
+- **Issue:**            The project's own .csproj header declares itself "UNVERIFIED
+                        SCAFFOLDING — no Windows/.NET WinUI3 toolchain was available to
+                        restore, build, or run this project." It is explicitly not wired into
+                        CI. It targets `net10.0-windows10.0.26100.0` with `UseWinUI=true`.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Either wire it into CI (requires a Windows runner) or remove
+                        it. [Fix 2] If kept, add a CI job on a Windows runner.
+- **Code Sample:**      [
+
+                        // SyxxUI.Tests.csproj header:
+                        // "UNVERIFIED SCAFFOLDING — no Windows/.NET WinUI3
+                        //  toolchain was available to restore, build, or run
+                        //  this project."
+                        // "NOT done here (flagged, not fixed): this project is
+                        //  not wired into .github/workflows/ci.yml"
+
+                        ]
+
+---
+
+
+- **[D023]**            No central package version management — versions repeated across 7
+                        .csproj files
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Version drift between projects (e.g., OTel at 1.9.0 vs 1.16.0)
+                        carried known CVEs. No `Directory.Packages.props` or `global.json`
+                        SDK pin.
+- **Location:**         Windows/dotNET/ (all 7 .csproj files)
+- **Issue:**            Package versions are repeated across projects: `Sentry` 4.13.0 in 3
+                        projects, `OpenTelemetry` 1.16.0 in 2 projects, `xunit` 2.9.2 in 3
+                        projects, `xunit.runner.visualstudio` 2.8.2 in 3 projects. No
+                        `Directory.Packages.props` for centralized version management. No
+                        `Directory.Build.props` for shared MSBuild properties.
+- **Cross-ref. Delta:** D024 (no global.json).
+- **Fix(es):**          [Fix 1] Add `Directory.Packages.props` for centralized package
+                        versioning. [Fix 2] Add `Directory.Build.props` for shared MSBuild
+                        properties (`Nullable`, `ImplicitUsings`, `TreatWarningsAsErrors`).
+- **Code Sample:**      [
+
+                        // Sentry 4.13.0: in Syxx.csproj, SyxxUI.csproj,
+                        //   Syxx.Telemetry.csproj
+                        // OpenTelemetry 1.16.0: in SyxxUI.csproj,
+                        //   Syxx.Telemetry.csproj
+                        // xunit 2.9.2: in 3 test projects
+                        // Comment in Syxx.Telemetry.csproj:
+                        //   "OTel was at 1.9.0 while SyxxUI was at 1.16.0"
+                        // No Directory.Packages.props exists
+
+                        ]
+
+---
+
+
+- **[D024]**            No global.json or Directory.Build.props — no SDK pin, no shared
+                        MSBuild properties
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. Different developer machines may use different SDK versions,
+                        producing different builds or warnings.
+- **Location:**         Windows/dotNET/ (missing files)
+- **Issue:**            No `global.json` to pin the .NET SDK version. No `Directory.Build.props`
+                        for shared properties (`Nullable`, `ImplicitUsings`,
+                        `TreatWarningsAsErrors`, `AnalysisLevel`). Each of the 7 `.csproj`
+                        files independently declares `<Nullable>enable</Nullable>` and
+                        `<ImplicitUsings>enable</ImplicitUsings>`.
+- **Cross-ref. Delta:** D023 (no central package versioning).
+- **Fix(es):**          [Fix 1] Add `global.json` pinning the .NET 10.0 SDK.
+                        [Fix 2] Add
+                        `Directory.Build.props` with shared MSBuild properties.
+- **Code Sample:**      [
+
+                        // Missing from Windows/dotNET/:
+                        // global.json — SDK version pin
+                        // Directory.Build.props — shared properties:
+                        //   <Nullable>enable</Nullable>
+                        //   <ImplicitUsings>enable</ImplicitUsings>
+                        //   <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+                        //   <AnalysisLevel>latest</AnalysisLevel>
+
+                        ]
+
+---
+
+
+- **[D025]**            _retired-fonts directory left in source tree — dead assets still tracked
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. Dead assets increase checkout size, confuse new developers, and
+                        risk accidental re-reference.
+- **Location:**         Windows/dotNET/_retired-fonts/
+- **Issue:**            A directory of retired font assets still present in the repository.
+                        Not referenced by any `.csproj` but still tracked in git.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Delete the directory or move to an archival location outside
+                        the active source tree.
+- **Code Sample:**      [
+
+                        # Windows/dotNET/_retired-fonts/
+                        # Dead assets, not referenced by any .csproj
+                        # Still tracked in git
+
+                        ]
+
+---
+
+
+- **[D026]**            SyxxUI.Logic.Tests is an empty/near-empty test project
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. Adds CI overhead with no benefit. Compiles production code but
+                        has no tests to exercise it.
+- **Location:**         Windows/dotNET/SyxxUI.Logic.Tests/SyxxUI.Logic.Tests.csproj
+- **Issue:**            The project file references `Syxx.Kit` and compiles `FirstRunViewModel.cs`
+                        from the production code, but no test `.cs` files were found.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Either add tests or remove the project.
+                        [Fix 2] If kept, add
+                        at least one test to justify the CI overhead.
+- **Code Sample:**      [
+
+                        // SyxxUI.Logic.Tests.csproj
+                        // References Syxx.Kit
+                        // Compiles FirstRunViewModel.cs from production
+                        // No test .cs files found
+
+                        ]
+
+---
+
+
+- **[D027]**            No BenchmarkDotNet for performance-critical paths — undetectable
+                        regressions
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. Performance regressions in the capture loop or matrix engine
+                        evaluation are undetectable until a user reports slowness.
+- **Location:**         Windows/dotNET/ (no benchmark project)
+- **Issue:**            The codebase has no performance benchmarks despite containing: packet
+                        capture loop, DNS packet parsing, matrix engine evaluation (O(n²)
+                        diagnosis × indicator scoring), and JSON serialization of witness
+                        snapshots.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add a `BenchmarkDotNet` project with benchmarks for
+                        `ParseIPUDPHeader`, `ParseDNSPacket`, `MatrixDeterminativeEngine.
+                        Evaluate`, and `WitnessWireJson` serialization. [Fix 2] Run benchmarks
+                        in CI to catch regressions.
+- **Code Sample:**      [
+
+                        # No benchmark project exists.
+                        # Performance-critical paths without benchmarks:
+                        # - Packet capture loop
+                        # - DNS packet parsing
+                        # - Matrix engine evaluation (O(n²))
+                        # - Witness JSON serialization
+
+                        ]
+
+---
+
+
+- **[D028]**            Hardcoded color values across 34 locations on Linux — no shared design
+                        tokens
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Changing a theme color requires touching 4-6 files.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ (8 files, 34 Color.Parse() calls)
+- **Issue:**            The same hex colors appear in multiple files: `#F2B33D` (amber) in 6
+                        locations, `#FF5C7A` (red) in 4 locations, `#3FD08A` (green) in 3
+                        locations, `#FF4D6D` (critical) in 3 locations. `SeverityColor.cs`
+                        centralizes severity-to-color mapping, but all other files define
+                        their own `static readonly` brushes. ViewModels can't access
+                        `App.axaml` resource dictionary tokens without `Application.Current`.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Create a centralized `SyxxBrushes` or `DesignTokens` class.
+                        [Fix 2] Have ViewModels reference the shared tokens.
+- **Code Sample:**      [
+
+                        // #F2B33D (amber) — 6 locations:
+                        // WitnessViewModel, ProphetViewModel, MirrorViewModel,
+                        // DegradationBadge, SeverityColor, WhatsNewViewModel
+                        // #FF5C7A (red) — 4 locations:
+                        // SeverityColor, MirrorViewModel, ProphetViewModel,
+                        // WhatsNewViewModel
+                        // #3FD08A (green) — 3 locations
+                        // #FF4D6D (critical) — 3 locations
+
+                        ]
+
+---
+
+
+- **[D029]**            6 Linux ViewModels have zero test coverage — ~700 lines untested
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. The D278 "no resolver" gate and Defect-2 error-surface branches
+                        are present in every ViewModel but only tested in 3 of 9. A regression
+                        in the untested ViewModels would silently break the honesty contract.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/ (6 files)
+- **Issue:**            The test project has 14 test files covering Mirror/ engine, Witness,
+                        Glutton, and Prophet — but six ViewModels have zero tests:
+                        `DashboardViewModel` (81 lines), `MirrorViewModel` (119 lines),
+                        `PortalViewModel` (87 lines), `ShellViewModel` (92 lines),
+                        `ConclusionsViewModel` (125 lines), `UpdateViewModel` (121 lines).
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add ViewModel tests for the 6 untested ViewModels.
+                        [Fix 2] Verify the D278 gate and Defect-2 error branches in each.
+- **Code Sample:**      [
+
+                        // 6 ViewModels with zero tests:
+                        // DashboardViewModel.cs    — 81 lines
+                        // MirrorViewModel.cs       — 119 lines
+                        // PortalViewModel.cs       — 87 lines
+                        // ShellViewModel.cs        — 92 lines
+                        // ConclusionsViewModel.cs  — 125 lines
+                        // UpdateViewModel.cs       — 121 lines
+                        // Total: ~700 lines untested
+
+                        ]
+
+---
+
+
+- **[D030]**            GluttonViewModel (643 lines) and WitnessViewModel (522 lines) are
+                        God classes — 5-6 distinct responsibilities each
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      High. `SignAsync` in WitnessViewModel has 5 nested try/catch blocks.
+                        Extraction would make each component testable in isolation.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/GluttonViewModel.cs (643 lines);
+                        Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs (522 lines)
+- **Issue:**            GluttonViewModel handles 5 responsibilities: feature/license status,
+                        VPN/encryption card, leak probe dispatch, collector-attested
+                        verification, and `RenderLeakResult` honesty gate (120 lines).
+                        WitnessViewModel handles 6 responsibilities: signing workflow
+                        (`SignAsync`, 150 lines, 5 nested try/catch), self-verify, external
+                        verify, external-verify rendering, key import, and state management.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Extract `LeakHonestyGate` from GluttonViewModel.
+                        [Fix 2]
+                        Extract `WitnessVerifyPresenter` from WitnessViewModel. [Fix 3]
+                        Reduce each ViewModel to a single responsibility.
+- **Code Sample:**      [
+
+                        // GluttonViewModel.cs — 5 responsibilities:
+                        // 1. Feature/license status (E117, ~50 lines)
+                        // 2. VPN/encryption status card (~40 lines)
+                        // 3. Local leak probe dispatch (~80 lines)
+                        // 4. Collector-attested verification (~80 lines)
+                        // 5. RenderLeakResult honesty gate (~120 lines)
+                        // WitnessViewModel.cs — 6 responsibilities:
+                        // 1. SignAsync (150 lines, 5 nested try/catch)
+                        // 2. ApplyVerification 3. VerifyExternal
+                        // 4. ApplyExternalVerification 5. ImportKey
+                        // 6. State management
+
+                        ]
+
+---
+
+
+- **[D031]**            lazy var monitor in AppModel is not thread-safe under Swift 6
+                        strict concurrency
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Latent data race. Swift 6's strict concurrency checking may
+                        flag this. The `lazy` pattern is incompatible with `@MainActor`
+                        isolation guarantees.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:277
+- **Issue:**            `lazy var monitor: MonitorScheduler = MonitorScheduler(...)` is
+                        declared on a `@MainActor` class. Under Swift 6, `lazy var`
+                        initialization is not actor-isolated — the synthesized getter can be
+                        called from any context. The `MonitorScheduler` initializer captures
+                        `[weak self]` and calls `UNUserNotificationCenter` APIs.
+- **Cross-ref. Delta:** D014 (AppModel God class).
+- **Fix(es):**          [Fix 1] Replace `lazy var` with an explicitly initialized stored
+                        property or a computed property backed by an optional. [Fix 2]
+                        Initialize `monitor` in an `init()` or via a factory method.
+- **Code Sample:**      [
+
+                        // AppModel.swift:277
+                        lazy var monitor: MonitorScheduler = MonitorScheduler(
+                            interval: 300,
+                            onEvent: { [weak self] event in
+                                // UNUserNotificationCenter calls
+                            }
+                        )
+
+                        ]
+
+---
+
+
+- **[D032]**            Legacy DispatchQueue and @escaping patterns remain despite Swift 6
+                        migration target
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. Mixing DispatchQueue with Swift 6 actors creates potential
+                        actor isolation violations.
+- **Location:**         macOS/Sources/SyxxKit/NetworkKeyState.swift:233;
+                        macOS/Sources/SyxxKit/UnboundManager.swift:390;
+                        macOS/Sources/SyxxKit/DNSCryptProxyManager.swift:16;
+                        macOS/Sources/SyxxKit/CommandRunner.swift:172-181;
+                        macOS/Sources/SyxxApp/RemoteContentView.swift:283-392;
+                        macOS/Sources/SyxxApp/WelcomeView.swift:247-258
+- **Issue:**            Despite the project targeting Swift 6.0 and having 408 async/await
+                        usage points, several files still use `DispatchQueue.global().async`,
+                        `DispatchQueue.main.async`, and `@escaping` completion handlers.
+                        `UnboundManager` and `DNSCryptProxyManager` maintain their own
+                        `DispatchQueue` serial queues.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace `DispatchQueue.global().async` with `Task.detached`.
+                        [Fix 2] Replace serial `DispatchQueue` instances with Swift actors.
+                        [Fix 3] Replace `DispatchQueue.main.asyncAfter` with `Task.sleep` +
+                        `@MainActor`.
+- **Code Sample:**      [
+
+                        // NetworkKeyState.swift:233
+                        DispatchQueue.global(qos: .userInitiated).async { ... }
+                        // CommandRunner.swift:172-181
+                        DispatchQueue.global().async { ... }
+                        // RemoteContentView.swift:283-392
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { ... }
+                        // UnboundManager.swift:390
+                        private let queue = DispatchQueue(label: "syxx.unbound")
+
+                        ]
+
+---
+
+
+- **[D033]**            URLSession delegate completion handlers remain — last @escaping
+                        network patterns
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. These are the only places where the old URLSession delegate
+                        pattern is used instead of async URLSession methods.
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:1012-1029;
+                        macOS/Sources/SyxxKit/WarpEngine.swift:625-664
+- **Issue:**            Both `LeakDetector` and `WarpEngine` implement `URLSessionDelegate`
+                        methods inline with `completionHandler` callbacks for SPKI pinning
+                        and redirect blocking. These are the last remaining `@escaping`
+                        completion-handler patterns in the network layer.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace with `URLSessionDelegate`-based `AsyncSequence`
+                        patterns. [Fix 2] Use `URLSession.data(for:delegate:)` with an async
+                        delegate.
+- **Code Sample:**      [
+
+                        // LeakDetector.swift:1012-1029
+                        func urlSession(_ session: URLSession,
+                            didReceive challenge: URLAuthenticationChallenge,
+                            completionHandler: @escaping (...) -> Void) {
+                            // SPKI pinning
+                            completionHandler(...)
+                        }
+                        // WarpEngine.swift:625-664
+                        func urlSession(_ session: URLSession,
+                            task: URLSessionTask,
+                            willPerformHTTPRedirection: ...,
+                            completionHandler: @escaping (...) -> Void) {
+                            // Redirect blocking
+                            completionHandler(...)
+                        }
+
+                        ]
+
+---
+
+
+- **[F006]**            Regex documentation only on Linux StaticContentParser — Windows lacks
+                        limitation docs
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. The Linux version explicitly documents 4 regex limitations;
+                        Windows has none.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/StaticContentParser.cs (L2-012);
+                        Windows/dotNET/SyxxUI/Mirror/StaticContentParser.cs
+- **Issue:**            The Linux version documents 4 regex limitations (nested <style>,
+                        CDATA, attribute ordering, unquoted src) and the ReDoS protection.
+                        The Windows version has none of this documentation.
+- **Cross-ref. Delta:** D009, D011.
+- **Fix(es):**          [Fix 1] Copy documentation from Linux to Windows.
+                        [Fix 2] Extract the
+                        Mirror/ engine to Syxx.Kit (D009) so there is only one copy.
+- **Code Sample:**      [
+
+                        // Linux StaticContentParser.cs:1-12
+                        // Documents 4 regex limitations:
+                        // - nested <style> tags
+                        // - CDATA sections
+                        // - attribute ordering
+                        // - unquoted src attributes
+                        // + ReDoS protection (5-second timeout)
+                        // Windows has none of this documentation
+
+                        ]
+
+---
+
+
+- **[F007]**            Cross-platform architecture documentation missing — no unified
+                        module map across all 4 platforms
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Medium. No single document shows how SyxxKit (macOS), Syxx.Kit
+                        (Windows), SyxxUI.Avalonia (Linux), and syxx_server (Server) relate
+                        to each other or share concepts.
+- **Location:**         Project root (no cross-platform architecture doc)
+- **Issue:**            The `ARCHITECTURE.md` at the project root covers the plugin
+                        marketplace structure, not the Syxx product architecture. There is no
+                        document showing the synthesis pipeline across platforms, the shared
+                        concepts (DNS resolution, probe evaluation, matrix engine), or the
+                        cross-platform parity requirements.
+- **Cross-ref. Delta:** A019, E012.
+- **Fix(es):**          [Fix 1] Create a cross-platform architecture document showing: shared
+                        concepts (DNS, synthesis, matrix), platform-specific implementations,
+                        data flow from query → conclusion, and parity requirements.
+- **Code Sample:**      [
+
+                        # No cross-platform product architecture doc exists.
+                        # ARCHITECTURE.md covers plugin marketplace, not Syxx.
+                        # Shared concepts across platforms:
+                        # - DNS resolution (Swift, C#, Python)
+                        # - Probe evaluation (Swift, C#)
+                        # - Synthesis/Matrix engine (Swift, C#)
+                        # - Collector-attested leak detection (C#, Python)
+                        # - Witness wire format (Swift, C#)
+
+                        ]
+
+---
+
+
+- **[F008]**            StaticContentParser regex-based HTML parsing is inherently fragile
+                        across both platforms
+- **Status:**           **OPEN** — Found during codebase-cleanup tech-debt scan 2026-08-09.
+- **Criticality:**      Low. The Linux version documents the limitations, but the fact that
+                        limitations exist at all is a smell that regex-based HTML parsing is
+                        inherently fragile.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/StaticContentParser.cs;
+                        Windows/dotNET/SyxxUI/Mirror/StaticContentParser.cs
+- **Issue:**            Both platforms use regex to parse HTML for scripts, stylesheets, and
+                        inline content. The Linux version documents 4 known limitations
+                        (nested <style>, CDATA, attribute ordering, unquoted src). Regex is
+                        not a robust HTML parser — it will fail on valid but unexpected HTML
+                        structures. A proper HTML parser (e.g., HtmlAgilityPack or AngleSharp)
+                        would be more robust.
+- **Cross-ref. Delta:** D009, D011, F006.
+- **Fix(es):**          [Fix 1] Evaluate replacing regex-based parsing with HtmlAgilityPack
+                        or AngleSharp. [Fix 2] If keeping regex, add comprehensive tests for
+                        the documented limitations.
+- **Code Sample:**      [
+
+                        // Both platforms use regex for HTML parsing:
+                        // Regex.Matches(html, @"<script[^>]*src=[""']([^""']+)[""']")
+                        // Regex.Matches(html, @"<link[^>]*href=[""']([^""']+)[""']")
+                        // Regex.Matches(html, @"<style[^>]*>(.*?)</style>")
+                        // Known limitations:
+                        // - nested <style> tags not handled
+                        // - CDATA sections not parsed
+                        // - attribute ordering assumed
+                        // - unquoted src/href not supported
+
+                        ]
+
+---
+
+
+- **[B014]**            sentry-sdk 47 minor versions behind — missing OTel interop fixes could
+                        cause silent error data loss in production monitoring
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      High. Sentry is the error telemetry pipeline for the Server. Missing
+                        47 versions of bug fixes and OTel interop improvements means
+                        production errors may be silently dropped or misattributed.
+- **Location:**         Server/requirements.txt (constraint: `sentry-sdk[opentelemetry]>=2.19`)
+- **Issue:**            Every version between 2.19 and 2.66.1 contains bug fixes for OTel
+                        span export, error context capture, and performance improvements.
+                        Without these fixes, production monitoring is degraded.
+- **Cross-ref. Delta:** A033 (same issue, Server domain).
+- **Fix(es):**          [Fix 1] Pin to `sentry-sdk[opentelemetry]>=2.66.0`.
+- **Code Sample:**      [
+
+                        # Server/requirements.txt
+                        sentry-sdk[opentelemetry]>=2.19  # ← 47 versions behind
+                        # Latest: 2.66.1
+
+                        ]
+
+---
+
+
+- **[D034]**            sentry-cocoa pinned to 8.x — 1 major version behind, 8.x end-of-life
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      High. 8.x is end-of-life — no more bug fixes or security patches.
+                        9.0.0 shipped July 2025 (over a year ago). 9.x requires
+                        swift-tools-version 6.0 and macOS 14 minimum, which the project
+                        already meets.
+- **Location:**         Package.swift; macOS/Package.swift
+                        (constraint: `.package(url: "...sentry-cocoa.git", from: "8.43.0")`)
+- **Issue:**            The `from: "8.43.0"` constraint prevents SPM from resolving to 9.x.
+                        Resolved version is 8.58.4 (latest 8.x). Latest overall is 9.25.0.
+                        9.0.0 breaking changes: `SentryIntegrationProtocol` removed,
+                        `SentryLevel` type change, performance V2 mandatory, user feedback
+                        API replaced. Migration requires API surface changes.
+- **Cross-ref. Delta:** A033 (Python sentry-sdk), D036 (NuGet Sentry).
+- **Fix(es):**          [Fix 1] Update constraint to `from: "9.0.0"` in both Package.swift
+                        files. [Fix 2] Audit SyxxTelemetry for SentryIntegrationProtocol
+                        usage and SentryLevel references. [Fix 3] Test sentry-cocoa
+                        integration after migration.
+- **Code Sample:**      [
+
+                        // Package.swift
+                        .package(url: "https://github.com/getsentry/sentry-cocoa.git",
+                                 from: "8.43.0")  // ← 1 major behind
+                        // Resolves to 8.58.4. Latest: 9.25.0
+
+                        ]
+
+---
+
+
+- **[D035]**            opentracing-objc and thrift-swift are transitive deps from unmaintained
+                        undefinedlabs repos — no security patching
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      High. Both packages are from `undefinedlabs` (acquired by Datadog in
+                        2021). 0 stars, 0 watchers, no activity since acquisition. If a
+                        vulnerability is discovered, there is no maintainer to ship a fix.
+- **Location:**         Package.resolved (transitive via opentelemetry-swift → grpc-swift)
+- **Issue:**            `opentracing-objc` 0.5.2 and `thrift-swift` 1.1.2 are pulled in
+                        transitively by `opentelemetry-swift` (the OTLP gRPC exporter). They
+                        use outdated Swift patterns and have no maintainer. If the project
+                        only uses the HTTP exporter (not gRPC), these may be dead transitive
+                        dependencies.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Verify whether gRPC export is actually used.
+                        [Fix 2] If only
+                        HTTP export is used, drop the gRPC exporter product dependency to
+                        eliminate these transitives. [Fix 3] File an issue with
+                        opentelemetry-swift asking them to replace these dependencies.
+- **Code Sample:**      [
+
+                        # Package.resolved — transitive deps:
+                        # opentelemetry-swift → grpc-swift →
+                        #   thrift-swift 1.1.2 (undefinedlabs, 0 stars)
+                        #   opentracing-objc 0.5.2 (undefinedlabs, 0 stars)
+                        # Both unmaintained since Datadog acquisition (2021)
+
+                        ]
+
+---
+
+
+- **[D036]**            Sentry NuGet is 2 major versions behind — 4.13.0 → 6.8.0 across 3
+                        projects
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      High. Three projects (`Syxx`, `Syxx.Telemetry`, `SyxxUI`) are on
+                        Sentry 4.13.0. Latest is 6.8.0 — a gap of two major versions (5.x
+                        and 6.x). Missing bug fixes, performance improvements, and new
+                        platform support.
+- **Location:**         Windows/dotNET/Syxx/Syxx.csproj;
+                        Windows/dotNET/Syxx.Telemetry/Syxx.Telemetry.csproj;
+                        Windows/dotNET/SyxxUI/SyxxUI.csproj
+                        (all: `<PackageReference Include="Sentry" Version="4.13.0" />`)
+- **Issue:**            All three projects pin Sentry 4.13.0. The `Syxx.Telemetry.csproj`
+                        has an exemplary comment documenting the OpenTelemetry version pin
+                        rationale — but no equivalent warning exists for the Sentry lag.
+- **Cross-ref. Delta:** A033 (Python sentry-sdk), D034 (Swift sentry-cocoa).
+- **Fix(es):**          [Fix 1] Review Sentry 5.0 and 6.0 changelogs for breaking changes.
+                        [Fix 2] Plan staged upgrade: 4.13 → 5.x → 6.x with test validation
+                        at each step. [Fix 3] Add version-pin documentation similar to the
+                        OTel comment in Syxx.Telemetry.csproj.
+- **Code Sample:**      [
+
+                        <!-- Syxx.csproj, Syxx.Telemetry.csproj, SyxxUI.csproj -->
+                        <PackageReference Include="Sentry" Version="4.13.0" />
+                        <!-- Latest: 6.8.0 — 2 major versions behind -->
+
+                        ]
+
+---
+
+
+- **[D037]**            Missing Directory.Packages.props for centralized NuGet version
+                        management
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Medium. While there is currently no version drift across 9 .csproj
+                        files, this is fragile. A future developer adding a package could
+                        introduce a different version. Centralized management would also make
+                        upgrading Sentry (used in 3 projects) a single-line change.
+- **Location:**         Windows/dotNET/ (no Directory.Packages.props exists)
+- **Issue:**            Package versions are repeated across 7 .csproj files. No
+                        `Directory.Packages.props` for centralized versioning. No
+                        `Directory.Build.props` for shared MSBuild properties (`Nullable`,
+                        `ImplicitUsings`, `TreatWarningsAsErrors`).
+- **Cross-ref. Delta:** D023 (SDK pin), D024 (Directory.Build.props).
+- **Fix(es):**          [Fix 1] Add `Directory.Packages.props` with all package versions.
+                        [Fix 2] Add `Directory.Build.props` for shared MSBuild properties.
+- **Code Sample:**      [
+
+                        # Missing from Windows/dotNET/:
+                        # Directory.Packages.props — centralized NuGet versions
+                        # Directory.Build.props — shared MSBuild properties
+
+                        ]
+
+---
+
+
+- **[D038]**            Microsoft.NET.Test.Sdk is 1 major version behind — 17.11.1 → 18.8.1
+                        across 4 test projects
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Medium. 17.x → 18.x is a major bump. May bring new test platform
+                        features. No known CVEs.
+- **Location:**         4 test .csproj files (all: `Version="17.11.1"`)
+- **Issue:**            All 4 test projects pin 17.11.1. Latest is 18.8.1.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Evaluate 18.x compatibility.
+                        [Fix 2] Upgrade if no breaking
+                        changes.
+- **Code Sample:**      [
+
+                        <!-- 4 test projects -->
+                        <PackageReference Include="Microsoft.NET.Test.Sdk"
+                                          Version="17.11.1" />
+                        <!-- Latest: 18.8.1 -->
+
+                        ]
+
+---
+
+
+- **[D039]**            xunit.runner.visualstudio is 1 major version behind — 2.8.2 → 3.1.5
+                        across 4 test projects
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Medium. 2.x → 3.x is a major bump. Since the project uses xunit
+                        2.9.2 (not xunit v3), runner 3.x may have compatibility constraints.
+                        Verify the migration path before upgrading.
+- **Location:**         4 test .csproj files (all: `Version="2.8.2"`)
+- **Issue:**            All 4 test projects pin 2.8.2. Latest is 3.1.5. Must verify xunit
+                        v2 → v3 runner compatibility.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Verify xunit v2 compatibility with runner 3.x.
+                        [Fix 2]
+                        Upgrade if compatible, or stay on 2.x if not.
+- **Code Sample:**      [
+
+                        <!-- 4 test projects -->
+                        <PackageReference Include="xunit.runner.visualstudio"
+                                          Version="2.8.2" />
+                        <!-- Latest: 3.1.5 — check xunit v2 compat -->
+
+                        ]
+
+---
+
+
+- **[D040]**            Microsoft.Windows.SDK.BuildTools is 1 major version behind
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Medium. Tied to Windows SDK tooling. Upgrade requires testing WinUI
+                        packaging.
+- **Location:**         SyxxUI.csproj; SyxxUI.Tests.csproj
+                        (all: `Version="10.0.26100.4654"`)
+- **Issue:**            Current is 10.0.26100.4654. Latest is 10.0.28000.2526.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Evaluate SDK compatibility.
+                        [Fix 2] Upgrade if no breaking
+                        changes.
+- **Code Sample:**      [
+
+                        <!-- SyxxUI.csproj, SyxxUI.Tests.csproj -->
+                        <PackageReference Include="Microsoft.Windows.SDK.BuildTools"
+                                          Version="10.0.26100.4654" />
+                        <!-- Latest: 10.0.28000.2526 -->
+
+                        ]
+
+---
+
+
+- **[D041]**            OpenTelemetry NuGet is 1 minor version behind — 1.16.0 → 1.17.0
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Low. Minor version bump, likely safe. No known CVEs. The project
+                        already documents the prior CVE fix (GHSA-g94r-2vxg-569j +
+                        GHSA-4625-4j76-fww9) in Syxx.Telemetry.csproj.
+- **Location:**         Syxx.Telemetry.csproj; SyxxUI.csproj (all: `Version="1.16.0"`)
+- **Issue:**            Both projects pin 1.16.0. Latest is 1.17.0.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Bump to 1.17.0.
+                        [Fix 2] Update the version-pin documentation
+                        comment.
+- **Code Sample:**      [
+
+                        <!-- Syxx.Telemetry.csproj, SyxxUI.csproj -->
+                        <PackageReference Include="OpenTelemetry" Version="1.16.0" />
+                        <!-- Latest: 1.17.0 -->
+
+                        ]
+
+---
+
+
+- **[D042]**            Microsoft.WindowsAppSDK is 1 minor version behind — 2.2.0 → 2.3.1
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Low. Minor version bump. Test WinUI packaging before deploying.
+- **Location:**         SyxxUI.csproj; SyxxUI.Tests.csproj (all: `Version="2.2.0"`)
+- **Issue:**            Both projects pin 2.2.0. Latest is 2.3.1.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Bump to 2.3.1.
+                        [Fix 2] Test WinUI packaging.
+- **Code Sample:**      [
+
+                        <!-- SyxxUI.csproj, SyxxUI.Tests.csproj -->
+                        <PackageReference Include="Microsoft.WindowsAppSDK"
+                                          Version="2.2.0" />
+                        <!-- Latest: 2.3.1 -->
+
+                        ]
+
+---
+
+
+- **[D043]**            Package.resolved drift between root and macOS/ Swift build environments
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Low. Two build environments produce slightly different dependency
+                        graphs. Not a functional issue but means builds are not reproducible.
+- **Location:**         Package.resolved (root); macOS/Package.resolved
+- **Issue:**            `macOS/Package.resolved` and root `Package.resolved` diverge on
+                        `swift-certificates` (1.19.3 vs 1.19.4) and `swift-nio-http2`
+                        (1.44.0 vs 1.45.0). The root resolved file is slightly newer.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Delete both Package.resolved files and re-resolve from a
+                        single canonical environment. [Fix 2] Or commit only one resolved
+                        file and add the other to .gitignore.
+- **Code Sample:**      [
+
+                        # Package.resolved (root):
+                        #   swift-certificates: 1.19.4
+                        #   swift-nio-http2: 1.45.0
+                        # macOS/Package.resolved:
+                        #   swift-certificates: 1.19.3  ← older
+                        #   swift-nio-http2: 1.44.0     ← older
+
+                        ]
+
+---
+
+
+- **[E013]**            colorthief is unmaintained since Feb 2017 — Python 2 only, will not
+                        install on Python 3.12+
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Critical. Last release February 2017 (9.5 years ago). PyPI
+                        classifiers: Python 2.6, 2.7 only. "Development Status :: 4 - Beta".
+                        The `requires-python` metadata may block installation, or the package
+                        may use syntax incompatible with Python 3.
+- **Location:**         tools/yt-design-extractor/pyproject.toml
+                        (constraint: `"colorthief>=0.2.1"`)
+- **Issue:**            This package is unmaintained and will not work on modern Python.
+                        It is used in the yt-design-extractor tool for color palette
+                        extraction from YouTube thumbnails.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace with Pillow's built-in color analysis
+                        (`Image.getcolors()`, `Image.quantize()`) or `colorgram.py`.
+                        [Fix 2] Remove `colorthief` from pyproject.toml.
+- **Code Sample:**      [
+
+                        # tools/yt-design-extractor/pyproject.toml
+                        "colorthief>=0.2.1",  # UNMAINTAINED since Feb 2017
+                        # Python 2 only per PyPI classifiers
+
+                        ]
+
+---
+
+
+- **[F009]**            Multiple Python packages behind latest — pyyaml, typer, ruff, ty,
+                        pytesseract, youtube-transcript-api
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Low. No known CVEs in the gaps. Minor version and patch bumps.
+- **Location:**         plugins/plugin-eval/pyproject.toml; tools/yt-design-extractor/pyproject.toml
+- **Issue:**            `pyyaml` 6.0 → 6.0.3 (3 patch), `typer` 0.26.8 → 0.27.1 (1 minor),
+                        `ruff` 0.15.21 → 0.16.2 (1 minor), `ty` 0.0.59 → 0.0.69 (10 patch),
+                        `pytesseract` 0.3.10 → 0.3.13 (3 patch), `youtube-transcript-api`
+                        0.6.0 → 1.2.4 (1 major).
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Bump all to latest.
+                        [Fix 2] For youtube-transcript-api,
+                        verify 1.x API compatibility (may have breaking changes).
+- **Code Sample:**      [
+
+                        # plugin-eval/pyproject.toml
+                        "pyyaml>=6.0",     # Latest: 6.0.3
+                        "typer>=0.26.8",   # Latest: 0.27.1
+                        "ruff>=0.15.21",   # Latest: 0.16.2
+                        "ty>=0.0.59",      # Latest: 0.0.69
+                        # yt-design-extractor/pyproject.toml
+                        "pytesseract>=0.3.10",           # Latest: 0.3.13
+                        "youtube-transcript-api>=0.6.0", # Latest: 1.2.4
+
+                        ]
+
+---
+
+
+- **[F010]**            Node.js package.json is empty — no metadata, no private flag, no
+                        engine requirements
+- **Status:**           **OPEN** — Found during codebase-cleanup deps-audit 2026-08-09.
+- **Criticality:**      Low. The file is an empty object `{}`. At minimum, it should declare
+                        `"name": "Syxx"`, `"private": true`, and a `"version"` field to
+                        prevent accidental publication and provide metadata for tooling.
+- **Location:**         package.json (root)
+- **Issue:**            The root `package.json` contains only `{}`. It has no name, no
+                        private flag, no version, and no engine requirements. While no npm
+                        dependencies exist today, this file should be properly initialized
+                        for future use.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Populate with `"name": "Syxx"`, `"private": true`,
+                        `"version": "1.0.0"`, `"engines": { "node": ">=20.0.0" }`.
+- **Code Sample:**      [
+
+                        // package.json (root)
+                        {}
+
+                        ]
+
+---
+
+
+- **[D044]**            cli-surface-gate.py (1,295 lines) has zero tests — only enforcement
+                        mechanism for CLI surface parity
+- **Status:**           **OPEN** — Found during comprehensive-review code-review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      Critical. The gate is the only thing preventing silent CLI-surface
+                        divergence between platforms. If it has a bug (e.g., a false negative
+                        in flag extraction), parity regressions ship unnoticed. The script
+                        itself refactored flag comparison logic (commit f433760) without
+                        tests.
+- **Location:**         scripts/cli-surface-gate.py (1,295 lines, no test file)
+- **Issue:**            A production-quality validation script that extracts CLI argument
+                        surfaces from both Swift and C# source, compares them, and enforces
+                        parity. No test file exists anywhere in the repo.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Create `scripts/tests/test_cli_surface_gate.py` with
+                        fixture-based tests for the three extraction levels (TOP, GLOBAL,
+                        SUBCOMMAND), including edge cases like `--verbose` vs `--version`
+                        disambiguation.
+- **Code Sample:**      [
+
+                        # scripts/cli-surface-gate.py — 1,295 lines
+                        # No test file exists anywhere in the repo.
+                        # CLI surface extraction from Swift and C# source.
+                        # Flag comparison logic refactored without tests.
+
+                        ]
+
+---
+
+
+- **[D045]**            DicePassphrase generator missing from Swift — C# has full generator,
+                        Swift only has wordlist data
+- **Status:**           **OPEN** — Found during comprehensive-review architecture review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      Critical. macOS cannot generate witness-key passphrases using the
+                        DicePassphrase method. C# doc states: "On Linux it is load-bearing…
+                        On macOS it is additive." The macOS side of this additive feature
+                        is missing. Swift wordlist doc comments reference types that don't
+                        exist in the Swift codebase.
+- **Location:**         macOS/Sources/SyxxKit/DicePassphraseWordlist.swift (102 lines);
+                        Windows/dotNET/Syxx.Kit/DicePassphrase.cs (316 lines);
+                        Linux/Ubuntu/SyxxUI.Avalonia.Tests/DicePassphraseTests.cs (337 lines)
+- **Issue:**            C# has `DicePassphrase.cs` (316 lines, full generator + verifier)
+                        AND `DicePassphraseWordlist.cs` (108 lines). Swift has ONLY
+                        `DicePassphraseWordlist.swift` (102 lines). The wordlist doc comments
+                        reference `DicePassphrase.wordlistSHA256` and
+                        `DicePassphrase.canonicalWordlistText` — types that don't exist.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Port `DicePassphrase.cs` to Swift as
+                        `macOS/Sources/SyxxKit/DicePassphrase.swift`. [Fix 2] Or update
+                        wordlist doc comments to state the generator is C#-only.
+- **Code Sample:**      [
+
+                        // DicePassphraseWordlist.swift:4,10,19 — doc comments:
+                        // References DicePassphrase.wordlistSHA256 (doesn't exist)
+                        // References DicePassphrase.canonicalWordlistText (doesn't exist)
+                        // C# has DicePassphrase.cs (316 lines) — Swift has no equivalent
+
+                        ]
+
+---
+
+
+- **[D046]**            CaptureEventGate is not thread-safe — Dictionary accessed without
+                        synchronization
+- **Status:**           **OPEN** — Found during comprehensive-review code-review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      High. The daemon's poller thread calls `Filter()` every second. If
+                        a diagnostic/HTTP endpoint also calls `Filter()`, concurrent access
+                        to `_lastEmitted` Dictionary races, causing
+                        `InvalidOperationException` or silent corruption.
+- **Location:**         Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs:407
+- **Issue:**            `private readonly Dictionary<CaptureEventKind, DateTime> _lastEmitted`
+                        is accessed in `Filter()` without a lock or `ConcurrentDictionary`.
+                        The comment says "The daemon calls ... once a second," implying
+                        single-thread usage, but the class is `public sealed` with no
+                        threading documentation.
+- **Cross-ref. Delta:** B021 (CaptureEvents zero tests).
+- **Fix(es):**          [Fix 1] Document "single-threaded only" on the class.
+                        [Fix 2] Or
+                        use `ConcurrentDictionary<CaptureEventKind, DateTime>`. [Fix 3] Or
+                        add a `lock` around `_lastEmitted` access.
+- **Code Sample:**      [
+
+                        // CaptureEvents.cs:407
+                        public sealed class CaptureEventGate
+                        {
+                            private readonly Dictionary<CaptureEventKind, DateTime>
+                                _lastEmitted = new();
+                            // Filter() accesses _lastEmitted without lock
+                            if (_lastEmitted.TryGetValue(ev.Kind, out var last) ...)
+                            _lastEmitted[ev.Kind] = now;
+                        }
+
+                        ]
+
+---
+
+
+- **[D047]**            CageRedundancyCorrelator — macOS-only pure logic, no C# twin exists
+- **Status:**           **OPEN** — Found during comprehensive-review architecture review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      High. The correlator is pure logic (no I/O, no root, no BPF) and
+                        explicitly documented as reusable by "a future Windows Cage twin."
+                        No C# twin exists in Windows/dotNET/Syxx.Kit/. The Cage capture
+                        feature exists on Windows, so the correlator is useful cross-platform.
+- **Location:**         macOS/Sources/SyxxKit/CageRedundancyCorrelator.swift (235 lines)
+- **Issue:**            The file states: "A future Windows Cage twin can reuse it
+                        unchanged." Yet no C# twin exists. This is a cross-platform parity
+                        gap — macOS has two-capture-stream correlation; Windows does not.
+- **Cross-ref. Delta:** B018 (zero tests), D050 (performance: four set copies).
+- **Fix(es):**          [Fix 1] Port to C# as `Windows/dotNET/Syxx.Kit/CageRedundancyCorrelator.cs`.
+                        The port should be mechanical since it's pure logic with declared
+                        Codable/Sendable types. [Fix 2] Or document as deliberate gap.
+- **Code Sample:**      [
+
+                        // CageRedundancyCorrelator.swift — header:
+                        // "PLATFORM SCOPE. The correlator is PURE logic — no I/O,
+                        //  no root, no BPF — so it lives in SyxxKit and is
+                        //  exhaustively testable. A future Windows Cage twin
+                        //  can reuse it unchanged;"
+                        // No C# twin exists in Windows/dotNET/Syxx.Kit/
+
+                        ]
+
+---
+
+
+- **[D048]**            DNSPathConfirmation — macOS-only daemon communication, no C# equivalent
+                        for encrypted-DNS verification
+- **Status:**           **OPEN** — Found during comprehensive-review architecture review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      High. The definitive-tier encrypted-DNS question (Q1+Q3 confirmed
+                        from the privileged daemon) cannot be answered on Windows. The
+                        file's comments say the daemon sees "both the resolver configuration
+                        AND the DNSCrypt proxy process" — Windows has no equivalent
+                        verification path.
+- **Location:**         macOS/Sources/SyxxKit/DNSPathConfirmation.swift (318 lines)
+- **Issue:**            This file communicates with the DeepSyxx launchd daemon over XPC.
+                        It's inherently macOS-specific at the transport layer, but the
+                        `EncryptedDNSFlavor` enum and tri-state logic are reusable. No
+                        equivalent exists for Windows.
+- **Cross-ref. Delta:** B019 (zero tests).
+- **Fix(es):**          [Fix 1] Document this as a deliberate platform gap (like Cage's BPF
+                        dependency). [Fix 2] If Windows has an equivalent privileged
+                        observation path, port the logic layer. [Fix 3] Explicitly note in
+                        file header that this is macOS-only by design.
+- **Code Sample:**      [
+
+                        // DNSPathConfirmation.swift — communicates with DeepSyxx daemon
+                        // over XPC. Sees both resolver config AND DNSCrypt proxy process.
+                        // No Windows equivalent exists.
+
+                        ]
+
+---
+
+
+- **[D049]**            CI Linux packaging jobs never executed — all `fixed-unverified`, P-00
+                        will fail because untracked debian/postinst files
+- **Status:**           **OPEN** — Found during comprehensive-review architecture review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      High. The PARITY-LEDGER.md explicitly states: "Nothing in the Linux
+                        packaging section is `verified-by-CI` yet. The four jobs… are
+                        committed… and have never executed." P-00 requires untracked
+                        `debian/postinst`, `postrm`, and `polkit/app.syxx.policy` files
+                        that are not in the repo. The CI job `package-deb` will fail at
+                        its first step.
+- **Location:**         .github/workflows/ci.yml (jobs: package-deb, install-smoke-deb,
+                        package-snap, linux-secret-store)
+- **Issue:**            The Linux packaging pipeline (P-00 through P-18) is entirely in
+                        `fixed-unverified` state. A clean checkout cannot build a `.deb`
+                        because required files are untracked. Do not merge until at least
+                        one CI run completes.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] `git add` the untracked debian/postinst, postrm, and polkit
+                        files. [Fix 2] Run CI on this branch to convert `fixed-unverified`
+                        to `verified-by-CI`. [Fix 3] Verify build_deb.sh and snapcraft.yaml
+                        reference correct project paths.
+- **Code Sample:**      [
+
+                        # PARITY-LEDGER.md:
+                        # "Nothing in the Linux packaging section is
+                        #  `verified-by-CI` yet. The four jobs… are committed…
+                        #  and have never executed."
+                        # P-00: untracked debian/postinst, postrm, polkit files
+
+                        ]
+
+---
+
+
+- **[D050]**            CageRedundancyCorrelator builds four dictionary + four set copies +
+                        four sorts — unnecessary intermediate allocations
+- **Status:**           **OPEN** — Found during comprehensive-review performance review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      High. For 500 queries per stream, this is ~4,000 dictionary
+                        insertions + 4 Set copies (~2,000 elements) + 4 set operations.
+                        The four Set copies are unnecessary — set operations already create
+                        new Sets internally.
+- **Location:**         macOS/Sources/SyxxKit/CageRedundancyCorrelator.swift:130-225
+- **Issue:**            The `correlate` method builds eight data structures from two input
+                        arrays. The four Set copies (daemonKeys, cageKeys, daemonXids,
+                        cageXids) are intermediate variables that can be eliminated by
+                        calling `.intersection()` and `.subtracting()` directly on
+                        `Set(daemonByKey.keys)`.
+- **Cross-ref. Delta:** B018 (zero tests), D047 (no C# twin).
+- **Fix(es):**          [Fix 1] Eliminate intermediate Set copies: `let matchedKeys =
+                        Set(daemonByKey.keys).intersection(cageByKey.keys)`.
+- **Code Sample:**      [
+
+                        // CageRedundancyCorrelator.swift:130-225
+                        let daemonKeys = Set(daemonByKey.keys)  // unnecessary copy
+                        let cageKeys = Set(cageByKey.keys)      // unnecessary copy
+                        let matchedKeys = daemonKeys.intersection(cageKeys)
+                        // These copies are redundant — set operations create new sets
+
+                        ]
+
+---
+
+
+- **[D051]**            WarpEngine.ResolveOverrideForTests is mutable internal static — not
+                        thread-safe for parallel tests
+- **Status:**           **OPEN** — Found during comprehensive-review code-review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      Medium. Two test classes running in parallel will clobber each
+                        other's override. This is the same "shared mutable static"
+                        anti-pattern that `LinuxSecretStore` explicitly fixed with
+                        `_instanceDir`.
+- **Location:**         Windows/dotNET/Syxx.Kit/WarpEngine.cs
+- **Issue:**            `internal static Func<string, Task<string?>>? ResolveOverrideForTests;`
+                        is a single global that two test classes running in parallel will
+                        clobber for each other. The `LinuxSecretStore` diff acknowledges
+                        this exact problem and fixed it.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Follow the same pattern `LinuxSecretStore` used — add an
+                        instance-level override on `WarpEngine`. [Fix 2] Or pass the
+                        resolver as a parameter rather than a static hook.
+- **Code Sample:**      [
+
+                        // WarpEngine.cs
+                        internal static Func<string, Task<string?>>?
+                            ResolveOverrideForTests;
+                        // Shared mutable static — two parallel test classes clobber
+
+                        ]
+
+---
+
+
+- **[D052]**            Mirror module is Linux-only — 3 separate implementations across
+                        platforms, D286 says changes MUST be manually ported
+- **Status:**           **OPEN** — Found during comprehensive-review architecture review
+                        (ultra effort) 2026-08-09. Previously noted in D009 but severity
+                        escalated after confirming 3 independent implementations exist.
+- **Criticality:**      Medium. The D286 architectural note says "macOS and Windows clients
+                        carry their own equivalent implementations" and "changes here MUST
+                        be manually ported." Three separate implementations of the same
+                        diff/content-comparison logic will inevitably diverge.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/ (7 files, ~1,050 lines)
+- **Issue:**            The Mirror module (DiffEngine, MirrorBundle, DegradationCalculator,
+                        StaticContentParser) is purely logical — it should be extractable
+                        to a shared library (Syxx.Kit). The D286 note explicitly recommends
+                        this but it hasn't been done.
+- **Cross-ref. Delta:** D009 (Mirror/ engine duplication), C003 (HasChanges divergence),
+                        D010 (SummaryLine drift), D011 (ReDoS on Windows).
+- **Fix(es):**          [Fix 1] Extract Mirror into Syxx.Kit so all three platforms consume
+                        a single source of truth. [Fix 2] Prioritize before implementations
+                        diverge further.
+- **Code Sample:**      [
+
+                        // D286 architectural note:
+                        // "macOS and Windows clients carry their own equivalent
+                        //  implementations. Changes here MUST be manually ported
+                        //  to the macOS and Windows mirror implementations."
+                        // Three separate implementations of same logic.
+
+                        ]
+
+---
+
+
+- **[D053]**            No observability additions in macOS SwiftUI witness key changes —
+                        violates observability-as-code rule
+- **Status:**           **OPEN** — Found during comprehensive-review best practices review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      Medium. The `WitnessKeyWriteGate` guards against an irreversible
+                        operation (overwriting the signing key). If reached in production,
+                        there will be no telemetry to diagnose what happened. The project's
+                        observability-as-code rule requires OTel/Sentry instrumentation
+                        alongside new features.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift (WitnessKeyAbsence,
+                        WitnessKeyWriteGate, witnessKeyWriteGate(), externalSnapshotJson,
+                        noKey paths)
+- **Issue:**            The diff adds significant new code paths for witness key management
+                        but contains zero Sentry breadcrumbs, OTel spans, or os_log calls
+                        alongside these additions. The Avalonia side added Sentry/OTel
+                        runtime toggling; the macOS side added no instrumentation.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add Sentry breadcrumbs at each `WitnessKeyWriteGate` return
+                        path. [Fix 2] Add Sentry breadcrumb at `saveWitnessKey` call site.
+                        [Fix 3] Instrument the `noKey` path with an OTel span.
+- **Code Sample:**      [
+
+                        // AppModel.swift — new witness key code paths:
+                        // WitnessKeyAbsence enum, WitnessKeyWriteGate enum,
+                        // witnessKeyWriteGate(), externalSnapshotJson,
+                        // noKey(WitnessKeyAbsence) case
+                        // Zero Sentry breadcrumbs, zero OTel spans
+
+                        ]
+
+---
+
+
+- **[F011]**            CHANGELOG.md has zero substantive additions for 803-file / 55K-line
+                        diff — only whitespace changes
+- **Status:**           **OPEN** — Found during comprehensive-review best practices review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      Critical. This diff spans 803 files, 55K insertions, 16K deletions
+                        including a new 7-command delta remediation suite, behavioral vector
+                        runner, parity fingerprint system, CLI surface gate, live theme
+                        switching, and dozens of cross-platform parity fixes. None appears
+                        in the CHANGELOG. A release manager would see only formatting tweaks.
+- **Location:**         CHANGELOG.md (174 lines added, all whitespace-only)
+- **Issue:**            Every non-blank line in the CHANGELOG diff is a whitespace-only
+                        change (blank-line insertions, `+` → `-` list-marker changes).
+                        Zero new content was added for a massive feature branch.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add a dated CHANGELOG section covering major workstreams:
+                        delta remediation suite, parity fingerprint, behavioral vectors,
+                        CLI surface gate, theme switching, witness key gates, build error
+                        fixes, and plan-lane docs.
+- **Code Sample:**      [
+
+                        # CHANGELOG.md diff — all whitespace changes:
+                        # + (blank line additions)
+                        # + → - (list marker changes)
+                        # No new content for 803-file / 55K-line diff
+
+                        ]
+
+---
+
+
+- **[F012]**            DELTAS.md text corruption in A031 delta entry — missing spaces:
+                        "while_validate_offline" and "However,_validate_offline()"
+- **Status:**           **OPEN** — Found during comprehensive-review architecture review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      High. These corruptions are in the Criticality and Issue fields of
+                        a delta entry. They make the text harder to parse and suggest a
+                        tool or manual edit removed spaces during a prior formatting pass.
+- **Location:**         DELTAS.md:245,249 (A031 delta entry)
+- **Issue:**            `while_validate_offline` should be `while _validate_offline`.
+                        `However,_validate_offline()` should be `However, _validate_offline()`.
+                        Missing spaces in two locations in the A031 entry.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Restore missing spaces.
+                        [Fix 2] Run
+                        `python3 scripts/reflow-deltas.py DELTAS.md` to reindent.
+                        [Fix 3] Manually verify A031 reads correctly after fix.
+- **Code Sample:**      [
+
+                        # DELTAS.md:245,249 — A031 delta entry:
+                        # "while_validate_offline" → should be "while _validate_offline"
+                        # "However,_validate_offline()" → should be "However, _validate_offline()"
+
+                        ]
+
+---
+
+
+- **[F013]**            Generated artifacts incomplete — `make generate` likely not run before
+                        commit; some harnesses missing delta remediation and security review
+- **Status:**           **OPEN** — Found during comprehensive-review best practices review
+                        (ultra effort) 2026-08-09.
+- **Criticality:**      Medium. The delta remediation and security review plugin additions
+                        were hand-committed to select generated directories. Some harnesses
+                        (Gemini skills, Copilot security rules) are missing the new plugins.
+                        `make garden` drift detection would likely fail.
+- **Location:**         .opencode/commands/, .codex/agents/, .cursor/rules/, .copilot/rules/,
+                        skills/, agents/, commands/
+- **Issue:**            `.opencode/commands/` has delta remediation, `.codex/agents/` has
+                        partial coverage, `.cursor/rules/` has partial coverage.
+                        `.copilot/rules/` is missing security review. `skills/` and
+                        `agents/` (Gemini) are missing delta remediation entirely.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Run `make generate-all` from the project root.
+                        [Fix 2]
+                        Verify all harness directories receive the new plugins. [Fix 3]
+                        Commit the full set.
+- **Code Sample:**      [
+
+                        # Generated artifact coverage:
+                        # .opencode/commands/ — ✅ complete
+                        # .codex/agents/      — ⚠️ partial
+                        # .cursor/rules/      — ⚠️ partial
+                        # .copilot/rules/     — ❌ missing security review
+                        # skills/ (Gemini)    — ❌ missing delta remediation
+                        # agents/ (Gemini)    — ❌ missing delta remediation
+
+                        ]
+
+---
+
+
+- **[D054]**            C# DNSResponse drops the spoof/attempt telemetry fields present on
+                        macOS
+- **Status:**           **OPEN** — Found during delta analysis (-deep) of feat/1 branch
+                        2026-08-09. Parity agent P1.
+- **Criticality:**      Medium. Windows telemetry and diagnostics that rely on attempt and
+                        spoofed-packet counts lose the data macOS records for the same
+                        transport — cross-platform evidence divergence.
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:130-176;
+                        macOS/Sources/SyxxKit/DNSResolver.swift:186-194, 259-260
+- **Issue:**            The C# `DNSResponse` does not expose the attempt/spoofed-packet
+                        telemetry macOS carries. Metrics, span tags, and diagnostic reports
+                        keyed on those fields silently degrade on Windows.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Port the macOS `AttemptCount`/`SpoofedPacketCount` fields
+                        onto the C# `DNSResponse` and populate them in the UDP/DoH paths.
+                        [Fix 2] Emit them as OTel span tags on both platforms.
+- **Code Sample:**      [
+
+                        // DNSResolver.cs:130-176 (C#) — DNSResponse lacks
+                        // AttemptCount / SpoofedPacketCount present in the Swift twin
+                        // (DNSResolver.swift:186-194, 259-260)
+
+                        ]
+
+---
+
+
+- **[D055]**            SyxxDiagnostics run-attribution ledger is never populated in
+                        production on either platform — every run reports
+                        `unattributed_degradation`
+- **Status:**           **OPEN** — Found during delta analysis (-deep) of feat/1 branch
+                        2026-08-09. Observability agent finding.
+- **Criticality:**      High. Run-context attribution (run_id, attribution_complete) is only
+                        exercised by tests; production runs always emit
+                        `result.unattributed_degradation` with `syxx.run_id` = "none",
+                        so run-level telemetry attribution is dead on delivery.
+- **Location:**         macOS/Sources/SyxxKit/SyxxDiagnostics.swift:111, 148;
+                        macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:827, 844;
+                        macOS/Sources/SyxxTelemetry/SentryDiagnosticSink.swift:65;
+                        Windows/dotNET/Syxx.Kit/SyxxDiagnostics.cs:111-112, 134
+- **Issue:**            `SyxxDiagnostics.run` (Swift TaskLocal :111) and `RunContext.Run`
+                        (C# AsyncLocal :111-112) are only ever set by test helpers
+                        (ResultProvenanceTests.swift:74, 91). No production entry point
+                        (AppModel runAllWardens / CLI run) establishes a RunContext, so
+                        Synthesizer always sees an unattributed run: it emits
+                        `unattributed_degradation` (Synthesizer.swift:844) and records
+                        `syxx.attribution_complete = false`, and the Sentry sink always
+                        tags `syxx.run_id = "none"`.
+- **Cross-ref. Delta:** D019 (dual telemetry architecture) — distinct; D055 is the
+                        missing run attribution wiring, not the sink count.
+- **Fix(es):**          [Fix 1] Establish a RunContext at the real run entry points
+                        (AppModel runAllWardens, CLI run) on both platforms. [Fix 2] Assert
+                        in a production-path test that run_id is non-"none" after a real run.
+- **Code Sample:**      [
+
+                        // SyxxDiagnostics.swift:111 / SyxxDiagnostics.cs:111-112
+                        //   Swift:  @TaskLocal public static var run: RunContext?
+                        //   C#:     public static RunContext? Run { get => _run.Value; ... }
+                        // Set only by tests — no production entry point assigns it.
+
+                        ]
+
+---
+
+
+- **[D056]**            runAllWardens() timeout path produces no error capture — operational
+                        failure invisible to Sentry
+- **Status:**           **OPEN** — Found during delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Critical. When a scan times out after 60-120s, the user sees a
+                        message but the failure is invisible to Sentry as an event. This is
+                        a genuine operational failure that should be captured for trend
+                        analysis.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:789
+- **Issue:**            `runAllWardens()` adds only a breadcrumb on timeout at line 789.
+                        When a scan times out, no `SyxxDiagnostics.capture()` or
+                        `SentrySDK.capture()` is called. The same pattern at lines 660-668
+                        where individual warden timeouts set only `self.output` with zero
+                        telemetry.
+- **Cross-ref. Delta:** D015 (runAllWardens duplicates run), D058 (no error capture in UI).
+- **Fix(es):**          [Fix 1] Add `SyxxDiagnostics.capture()` on scan timeout with the
+                        scanCorrelationId, elapsed time, and timed-out warden names.
+                        [Fix 2] Add individual warden timeout captures in the runAllWardens
+                        loop.
+- **Code Sample:**      [
+
+                        // AppModel.swift:789 — timeout breadcrumb only
+                        SentrySDK.addBreadcrumb(Breadcrumb(
+                            level: .info, category: "gui.state",
+                            message: "Wardens scan timed out"
+                        ))
+                        // No SyxxDiagnostics.capture() or SentrySDK.capture()
+
+                        ]
+
+---
+
+
+- **[D057]**            flushDNSCache() has zero telemetry — no breadcrumb, span, or error
+                        capture
+- **Status:**           **OPEN** — Found during delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      High. A DNS cache flush failure is a meaningful diagnostic signal
+                        but produces no telemetry. If the command fails (exit code ≠ 0 or
+                        throws), the error is only shown in the UI.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:718-743
+- **Issue:**            `flushDNSCache()` spawns a `Task.detached` that runs `dscacheutil
+                        -flushcache`. No breadcrumb, no span, no error capture. If the
+                        command fails, the error is only shown in the UI — no Sentry event,
+                        no OTel span, no diagnostic record.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add a breadcrumb before and after the flush.
+                        [Fix 2] Add
+                        `SyxxDiagnostics.capture()` on non-zero exit code. [Fix 3] Add an
+                        OTel span for the flush operation.
+- **Code Sample:**      [
+
+                        // AppModel.swift:718-743
+                        Task.detached {
+                            let task = Process()
+                            task.launchPath = "/usr/sbin/dscacheutil"
+                            task.arguments = ["-flushcache"]
+                            task.launch()
+                            task.waitUntilExit()
+                            // No telemetry on success or failure
+                        }
+
+                        ]
+
+---
+
+
+- **[D058]**            Neither macOS App nor Windows UI capture errors to Sentry as events
+                        — breadcrumbs only, no issue creation
+- **Status:**           **OPEN** — Found during delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      High. The `SentryDiagnosticSink` bridge is installed and working,
+                        but only `SyxxKit` (the core) calls `SyxxDiagnostics.capture()`. The
+                        UI layer produces breadcrumbs only, meaning UI-level errors never
+                        create Sentry issues.
+- **Location:**         macOS/Sources/SyxxApp/ (0 SentrySDK.capture calls);
+                        Windows/dotNET/SyxxUI/ (0 SentrySdk.CaptureException calls)
+- **Issue:**            `SentrySDK.capture()` returns 0 results in `SyxxApp/`;
+                        `SentrySdk.CaptureException()` returns 0 results in `SyxxUI/`. The
+                        `AppModel` scan methods add breadcrumbs on success/failure but never
+                        capture errors as Sentry events. The `SentryDiagnosticSink` bridge
+                        is installed and working, but only `SyxxKit` calls `capture()`.
+- **Cross-ref. Delta:** D059 (macOS ErrorPresenter), D060 (Windows ErrorPresenter), D019
+                        (dual telemetry).
+- **Fix(es):**          [Fix 1] Add `SyxxDiagnostics.capture()` calls at UI error sites.
+                        [Fix 2] Ensure the SentryDiagnosticSink bridge is called from UI
+                        error paths, not just from SyxxKit.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxApp/ — 0 SentrySDK.capture() calls
+                        // Windows/dotNET/SyxxUI/ — 0 SentrySdk.CaptureException() calls
+                        // All error reporting is breadcrumb-only at the UI layer
+
+                        ]
+
+---
+
+
+- **[D059]**            macOS ErrorPresenter only uses breadcrumb, never captures errors as
+                        Sentry events
+- **Status:**           **OPEN** — Found during delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      High. When a user-facing error is presented, the full diagnostic
+                        event (with fingerprint, impact, error class) is not captured. The
+                        breadcrumb is ephemeral; the event is what creates a Sentry issue.
+- **Location:**         macOS/Sources/SyxxApp/ErrorPresenter.swift:23
+- **Issue:**            `ErrorPresenter` calls `SyxxDiagnostics.breadcrumb(category:
+                        "gui.error", ...)` but never `SyxxDiagnostics.capture()`. The
+                        breadcrumb is ephemeral (scrolls off in 100 events); the capture
+                        is what creates a durable Sentry issue with fingerprint and impact.
+- **Cross-ref. Delta:** D058 (no error capture in UI), D060 (Windows counterpart).
+- **Fix(es):**          [Fix 1] Add `SyxxDiagnostics.capture()` alongside the existing
+                        breadcrumb call. [Fix 2] Include error class, impact, and user-
+                        visible message in the capture.
+- **Code Sample:**      [
+
+                        // ErrorPresenter.swift:23
+                        SyxxDiagnostics.breadcrumb(
+                            category: "gui.error",
+                            message: message
+                        )
+                        // No SyxxDiagnostics.capture() call
+
+                        ]
+
+---
+
+
+- **[D060]**            Windows ErrorPresenter only uses breadcrumb, never captures errors
+                        as Sentry events
+- **Status:**           **OPEN** — Found during delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      High. Mirrors the macOS gap exactly. Compounded by the fact that
+                        ErrorPresenter.cs is linked into both WinUI and Avalonia (Linux)
+                        builds.
+- **Location:**         Windows/dotNET/SyxxUI/ErrorPresenter.cs:47
+- **Issue:**            `ErrorPresenter` calls `SyxxDiagnostics.Breadcrumb()` but never
+                        `SyxxDiagnostics.Capture()`. Same pattern as macOS ErrorPresenter
+                        (D059). This file is linked into both WinUI and Avalonia builds,
+                        so the gap affects both Windows and Linux.
+- **Cross-ref. Delta:** D058 (no error capture in UI), D059 (macOS counterpart).
+- **Fix(es):**          [Fix 1] Add `SyxxDiagnostics.Capture()` alongside the existing
+                        breadcrumb call. [Fix 2] Ensure it works in both WinUI and Avalonia
+                        build configurations.
+- **Code Sample:**      [
+
+                        // ErrorPresenter.cs:47
+                        SyxxDiagnostics.Breadcrumb(
+                            category: "gui.error",
+                            message: message
+                        );
+                        // No SyxxDiagnostics.Capture() call
+
+                        ]
+
+---
+
+
+- **[D061]**            ConclusionsView.runSynthesis() uses inline SentrySDK.addBreadcrumb
+                        bypassing SyxxDiagnostics bridge
+- **Status:**           **OPEN** — Found during delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Medium. Inconsistent with SynthesisEngine.swift:62 which uses
+                        SyxxDiagnostics.breadcrumb() for the same conceptual event. The
+                        inline path lacks redaction and surface tagging.
+- **Location:**         macOS/Sources/SyxxApp/ConclusionsView.swift:492
+- **Issue:**            `runSynthesis()` adds a synthesis breadcrumb directly via
+                        `SentrySDK.addBreadcrumb()` rather than through
+                        `SyxxDiagnostics.breadcrumb()`. Inconsistent with
+                        `SynthesisEngine.swift:62` which uses the structured bridge for the
+                        same event. The inline path lacks redaction, surface tagging, and
+                        run_id correlation.
+- **Cross-ref. Delta:** D019 (dual telemetry), D056 (missing captures).
+- **Fix(es):**          [Fix 1] Replace `SentrySDK.addBreadcrumb()` with
+                        `SyxxDiagnostics.breadcrumb()` for consistency.
+- **Code Sample:**      [
+
+                        // ConclusionsView.swift:492
+                        SentrySDK.addBreadcrumb(Breadcrumb(
+                            level: .info, category: "synthesis",
+                            message: "Synthesis complete"
+                        ))
+                        // Should use SyxxDiagnostics.breadcrumb() instead
+
+                        ]
+
+---
+
+
+- **[D062]**            Cross-platform SentryDiagnosticSink platform tag inconsistency —
+                        macOS hardcodes "macos", Windows receives no tag, Linux passes "linux"
+- **Status:**           **OPEN** — Found during delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Medium. Sentry queries filtering by platform are unreliable because
+                        the tag is set differently (or not at all) on each platform.
+- **Location:**         macOS/Sources/SyxxKit/SentryDiagnosticSink.swift:65;
+                        Windows/dotNET/Syxx.Kit/SentryDiagnosticSink.cs;
+                        Linux/Ubuntu/SyxxUI.Avalonia/LinuxReadyServices.cs:44
+- **Issue:**            macOS hardcodes `tags["syxx.platform"] = "macos"`. Linux passes
+                        `platform: "linux"` as a parameter. The Windows
+                        `SentryDiagnosticSink` API accepts a `platform` parameter but the
+                        call sites (Program.cs:39, App.xaml.cs:65) do not pass it — Windows
+                        events are tagged with the default. Sentry queries filtering by
+                        `syxx.platform` are unreliable.
+- **Cross-ref. Delta:** D019 (dual telemetry).
+- **Fix(es):**          [Fix 1] Ensure all three platforms consistently set
+                        `syxx.platform` at Sentry init time. [Fix 2] Use a build-time
+                        constant rather than a runtime parameter.
+- **Code Sample:**      [
+
+                        // macOS SentryDiagnosticSink.swift:65
+                        tags["syxx.platform"] = "macos"  // hardcoded
+                        // Linux LinuxReadyServices.cs:44
+                        platform: "linux"  // passed as parameter
+                        // Windows Program.cs:39 — platform parameter not passed
+                        // => default tag value
+
+                        ]
+
+---
+
+
+- **[D063]**            DiffEngine helper methods accept narrower types on Windows than Linux
+                        — List<DiffLine> vs IReadOnlyList<DiffLine>
+- **Status:**           **OPEN** — Found during delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Low. Callers on Windows that receive IReadOnlyList from DiffResult
+                        need to cast or convert to call the helper methods.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/DiffEngine.cs:68-92
+                        (IReadOnlyList); Windows/dotNET/SyxxUI/Mirror/DiffEngine.cs:78-96
+                        (List)
+- **Issue:**            Linux `ChangeCount`/`AdditionCount`/`RemovalCount` accept
+                        `IReadOnlyList<DiffLine>`. Windows accepts only `List<DiffLine>`.
+                        Callers receiving `IReadOnlyList<DiffLine>` from `DiffResult` (D013
+                        fix) need to cast or convert.
+- **Cross-ref. Delta:** D013 (DiffResult IReadOnlyList vs List).
+- **Fix(es):**          [Fix 1] Change Windows helper methods to accept
+                        `IReadOnlyList<DiffLine>`. [Fix 2] Extract the Mirror/ engine to
+                        Syxx.Kit (D009).
+- **Code Sample:**      [
+
+                        // Linux (correct — accepts broader interface)
+                        public static int ChangeCount(IReadOnlyList<DiffLine> diffs)
+                        // Windows (narrower — accepts only List)
+                        public static int ChangeCount(List<DiffLine> diffs)
+
+                        ]
+
+---
+
+
+- **[D064]**            StaticContentParser.ParsedContent — CssUrls/JsUrls type divergence
+                        between Linux and Windows
+- **Status:**           **OPEN** — Found during delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Low. Same pattern as D013 and D063 — mutable List on Windows vs
+                        immutable IReadOnlyList on Linux.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Mirror/StaticContentParser.cs:38-39
+                        (IReadOnlyList); Windows/dotNET/SyxxUI/Mirror/StaticContentParser.cs:
+                        24-25 (List)
+- **Issue:**            Linux returns immutable `IReadOnlyList<string>` for `CssUrls` and
+                        `JsUrls`. Windows returns mutable `List<string>`. Consumers can
+                        mutate the returned lists on Windows.
+- **Cross-ref. Delta:** D013 (DiffResult type divergence), D009 (Mirror engine duplication).
+- **Fix(es):**          [Fix 1] Change Windows `ParsedContent.CssUrls` and `JsUrls` to
+                        `IReadOnlyList<string>`. [Fix 2] Extract the Mirror/ engine to
+                        Syxx.Kit (D009).
+- **Code Sample:**      [
+
+                        // Linux (immutable)
+                        public IReadOnlyList<string> CssUrls { get; init; }
+                        // Windows (mutable)
+                        public List<string> CssUrls { get; set; }
+
+                        ]
+
+---
+
+
+- **[D065]**            macOS SynthesisEngine uses preconditionFailure for unmapped sections;
+                        C# uses graceful fallback — crash vs silent degradation asymmetry
+- **Status:**           **OPEN** — Found during delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Medium. A new section added on one platform behaves differently —
+                        macOS crashes (preconditionFailure), C# silently maps to Prophet.
+                        The worst of both worlds: neither crashes consistently nor degrades
+                        consistently.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:88-91;
+                        Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:330-335
+- **Issue:**            When a `Section` value cannot be mapped to `SyxxSection`, macOS calls
+                        `preconditionFailure` (crashes in debug, undefined in release). C#
+                        maps it to `SyxxSection.Prophet` as a sentinel and logs a warning.
+                        A future section added to the shared model would crash macOS but
+                        silently degrade on C# — the section is effectively invisible on C#
+                        without any indication of the defect.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Align both platforms — either both crash (preferable for
+                        invariants) or both log-and-sentinel (preferable for production
+                        resilience). [Fix 2] Add a parity test that new sections behave
+                        identically.
+- **Code Sample:**      [
+
+                        // macOS (crashes)
+                        guard let section = SyxxSection(rawValue: section.rawValue) else {
+                            preconditionFailure("unmapped section")
+                        }
+                        // C# (silently degrades)
+                        var section = SynthesisSectionExtensions.FromSection(s);
+                        // Falls back to Prophet sentinel
+
+                        ]
+
+---
+
+
+- **[D066]**            LeakDetector subdomain format divergence — macOS prepends "id-";
+                        C# does not
+- **Status:**           **OPEN** — Found during delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Medium. If the collector's authoritative DNS server expects "id-"
+                        prefixed subdomains and C# sends `{uuid}.leak.syxx.app`, the
+                        collector may not find the token in its database.
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:229-231
+                        (`id-{uuid}.{baseDomain}`); Windows/dotNET/Syxx.Kit/LeakDetector.cs:
+                        242-245 (`{uuid}.{baseDomain}`)
+- **Issue:**            macOS generates `id-{uuid}.leak.syxx.app`. C# generates
+                        `{uuid}.leak.syxx.app`. If the collector server expects the `id-`
+                        prefix, C# leak tests will fail to correlate, returning false
+                        negatives or errors.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Align the formats — either add `id-` prefix to C# or remove
+                        it from macOS. [Fix 2] Verify the collector server's expected format
+                        and match it on both platforms.
+- **Code Sample:**      [
+
+                        // macOS LeakDetector.swift:229
+                        let subdomain = "id-\(uuid).\(baseDomain)"
+                        // C# LeakDetector.cs:242
+                        var subdomain = $"{uuid}.{baseDomain}";
+                        // Collector server may expect one format or the other
+
+                        ]
+
+---
+
+
+- **[D067]**            All 6 section adapters run eagerly in Synthesizer.conclude() regardless
+                        of which sections executed — ~30% of adapter work is redundant
+- **Status:**           **OPEN** — Found during delta-analysis performance audit 2026-08-09.
+- **Criticality:**      Medium. On a 6-section scan, adapters for sections that never ran
+                        still process nil inputs, building empty EvidenceItem arrays and
+                        computing DatapointCompleteness.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:744-752
+- **Issue:**            `conclude()` builds a tuple array of all 6 adapters and executes
+                        them all every time, even when a section's inputs are entirely nil
+                        (`.untested`). Each adapter builds `[EvidenceItem]` arrays, runs
+                        `combine()` on sub-statuses, and computes `DatapointCompleteness`.
+                        The `prophet` adapter alone is ~200 lines of `if let` chains.
+                        Sections that never ran should be skipped.
+- **Cross-ref. Delta:** B003 (Synthesizer duplicated switch blocks).
+- **Fix(es):**          [Fix 1] Guard each adapter invocation with a check for `.untested`
+                        status. [Fix 2] Return an empty `SectionEvidence` immediately for
+                        untested sections without processing nil inputs.
+- **Code Sample:**      [
+
+                        // Synthesizer.swift:744-752
+                        let sections: [(Section, SectionEvidence)] = [
+                            (.prophet, EvidenceAdapters.prophet(...)),
+                            (.mirror, EvidenceAdapters.mirror(...)),
+                            (.portal, EvidenceAdapters.portal(...)),
+                            (.glutton, EvidenceAdapters.glutton(...)),
+                            (.cage, EvidenceAdapters.cage(...)),
+                            (.witness, EvidenceAdapters.witness(...)),
+                        ]
+                        // All 6 run regardless of whether the section was tested
+
+                        ]
+
+---
+
+
+- **[D068]**            SectionInputs.warp field marked LEGACY but still public and Codable —
+                        dead code or misleading comment
+- **Status:**           **OPEN** — Found during deep delta-analysis correctness audit
+                        2026-08-09.
+- **Criticality:**      Low. If never populated and never read, it is dead code. If it IS
+                        read, the comment is misleading.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:60
+- **Issue:**            `SectionInputs.warp` is annotated "LEGACY warp result... No longer
+                        populated." It is a `WarpResult?` public property on a `Sendable`
+                        struct. Either remove or clarify.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Remove if dead.
+                        [Fix 2] Update comment if still used.
+- **Code Sample:**      [
+
+                        // Synthesizer.swift:60
+                        /// LEGACY warp result (WARP_ASSEMBLY / proxy path, retired)
+                        /// — kept as a compile shim... No longer populated.
+
+                        ]
+
+---
+
+
+- **[D069]**            SynthesisEngine.mapEvidenceToIndicators uses #if DEBUG for C063
+                        missing-completeness guard — invisible in production
+- **Status:**           **OPEN** — Found during deep delta-analysis correctness audit
+                        2026-08-09.
+- **Criticality:**      Medium. A real defect in production is invisible because the stderr
+                        write and assert are compiled out in release builds.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:140-152
+- **Issue:**            `#if DEBUG` block writes to stderr; `assert` on next line also
+                        compiled out. Missing completeness silently defaults to quality=0.0
+                        with no observability signal.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace `#if DEBUG` stderr write with `SyxxDiagnostics.
+                        capture` call (available in release).
+- **Code Sample:**      [
+
+                        // SynthesisEngine.swift:147-152
+                        #if DEBUG
+                        FileHandle.standardError.write(...)
+                        #endif
+                        assert(rawCompleteness == nil || rawCompleteness! > 0, ...)
+
+                        ]
+
+---
+
+
+- **[D070]**            C# Assemble overhang filter lacks documentation for HardExcluded
+                        asymmetry with BelowTier
+- **Status:**           **OPEN** — Found during deep delta-analysis correctness audit
+                        2026-08-09.
+- **Criticality:**      Low. The Swift version documents the rationale; C# does not.
+- **Location:**         Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1198
+- **Issue:**            `Assemble` filters overhang to `Reason != HardExcluded`. Swift has
+                        the same filter documented as "hard exclusion is not an overhang —
+                        it was affirmatively ruled out." C# lacks this rationale.
+- **Cross-ref. Delta:** B026-B031.
+- **Fix(es):**          [Fix 1] Add comment explaining why HardExcluded is excluded from
+                        the overhang.
+- **Code Sample:**      [
+
+                        // C#: s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded
+                        // No doc comment explaining the asymmetry
+
+                        ]
+
+---
+
+
+- **[D071]**            DNSResolver UDP retry count differs — Swift 2, C# 3
+- **Status:**           **OPEN** — Found during deep delta-analysis parity audit 2026-08-09.
+- **Criticality:**      High. Same network conditions produce different outcomes. Swift
+                        returns .timeout where C# succeeds on the third attempt.
+- **Location:**         macOS/Sources/SyxxKit/DNSResolver.swift:305;
+                        Windows/dotNET/Syxx.Kit/DNSResolver.cs:200
+- **Issue:**            Swift: `maxUDPAttempts = 2`. C#: `MaxUDPAttempts = 3`. Both use
+                        2000ms receive timeout per attempt. Affects every probe.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Align both to 3.
+                        [Fix 2] Make configurable via ProbeBudget.
+- **Code Sample:**      [
+
+                        // Swift: private static let maxUDPAttempts = 2
+                        // C#:   private const int MaxUDPAttempts = 3;
+
+                        ]
+
+---
+
+
+- **[D072]**            DNSResponse missing 4 diagnostic fields in C# — OffClassAnswerCount,
+                        ConflictingCNAMEOwnerCount, SpoofedPacketCount, AttemptCount
+- **Status:**           **OPEN** — Found during deep delta-analysis parity audit 2026-08-09.
+- **Criticality:**      High. Injection detection and latency diagnostics are thinner on
+                        Windows/Linux because these observations are silently dropped.
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:130-170
+- **Issue:**            Swift tracks offClassAnswerCount, conflictingCNAMEOwnerCount,
+                        spoofedPacketCount, and attemptCount. C# has no equivalent fields.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add the four fields to C# DNSResponse.
+                        [Fix 2] Populate in
+                        UDP response parser. [Fix 3] Wire into Synthesizer evidence path.
+- **Code Sample:**      [
+
+                        // Swift DNSResolver.swift:174-194
+                        public let offClassAnswerCount: Int
+                        public let conflictingCNAMEOwnerCount: Int
+                        public let spoofedPacketCount: Int
+                        public let attemptCount: Int
+                        // C# — none of these exist
+
+                        ]
+
+---
+
+
+- **[D073]**            ProbeBudget defaults not overridable via environment variables in C#
+- **Status:**           **OPEN** — Found during deep delta-analysis parity audit 2026-08-09.
+- **Criticality:**      High. CI/calibration runs cannot extend probe budgets on Windows/
+                        Linux. Swift reads SYXX_BUDGET_* env vars; C# hardcodes values.
+- **Location:**         Windows/dotNET/Syxx.Kit/ProbeBudget.cs:75-93
+- **Issue:**            Swift reads `SYXX_BUDGET_PROPHET_TOTAL` etc. C# has hardcoded
+                        `DefaultProphet => new(TimeSpan.FromSeconds(45), ...)` with no env
+                        var lookup. Same for DefaultMirror, DefaultPortal, DefaultGlutton.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add env var lookups in C# factory properties.
+- **Code Sample:**      [
+
+                        // Swift: ProcessInfo...environment["SYXX_BUDGET_PROPHET_TOTAL"]
+                        // C#:   public static ProbeBudget DefaultProphet =>
+                        //         new(TimeSpan.FromSeconds(45), ...)  // hardcoded
+
+                        ]
+
+---
+
+
+- **[D074]**            Config buildEnvironment differs — no DEBUG detection in C#
+- **Status:**           **OPEN** — Found during deep delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Medium. DEBUG builds of C# clients report "production" to Sentry,
+                        polluting the production project.
+- **Location:**         Windows/dotNET/Syxx.Kit/SyxxConfig.cs:56-57
+- **Issue:**            Swift: `#if DEBUG return "development"`. C#: reads
+                        `SYXX_ENVIRONMENT` env var only, no `#if DEBUG` check.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add `#if DEBUG` preprocessor check returning "development".
+- **Code Sample:**      [
+
+                        // Swift: #if DEBUG return "development"
+                        // C#:   Environment.GetEnvironmentVariable("SYXX_ENVIRONMENT")
+                        //         ?? "production"  // no DEBUG check
+
+                        ]
+
+---
+
+
+- **[D075]**            Config dimensionBaseURL source differs — UserDefaults vs env var
+- **Status:**           **OPEN** — Found during deep delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Medium. macOS GUI configures dimension URL in UserDefaults; C# client
+                        reads SYXX_DIMENSION_URL env var — different sources, different values.
+- **Location:**         macOS/Sources/SyxxKit/SyxxConfig.swift:43-46;
+                        Windows/dotNET/Syxx.Kit/SyxxConfig.cs:60-61
+- **Issue:**            Swift reads `UserDefaults.standard.string(forKey: "dimension_base_url")`.
+                        C# reads `Environment.GetEnvironmentVariable("SYXX_DIMENSION_URL")`.
+- **Cross-ref. Delta:** D076 (sentryDSN same pattern).
+- **Fix(es):**          [Fix 1] Both platforms should read from same source.
+                        [Fix 2] C# should
+                        check config file/registry; Swift should also support env var.
+- **Code Sample:**      [
+
+                        // Swift: UserDefaults.standard.string(forKey: "dimension_base_url")
+                        // C#:   Environment.GetEnvironmentVariable("SYXX_DIMENSION_URL")
+
+                        ]
+
+---
+
+
+- **[D076]**            Config sentryDSN source differs — UserDefaults+env var vs env var only
+- **Status:**           **OPEN** — Found during deep delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Medium. macOS GUI writes sentry_dsn to UserDefaults; C# client only
+                        checks SENTRY_DSN env var. Crash reporting silently absent on C#.
+- **Location:**         macOS/Sources/SyxxKit/SyxxConfig.swift:33-37;
+                        Windows/dotNET/Syxx.Kit/SyxxConfig.cs:63-68
+- **Issue:**            Swift: checks SENTRY_DSN env var, falls back to UserDefaults. C#:
+                        checks only SENTRY_DSN env var.
+- **Cross-ref. Delta:** D075 (dimensionBaseURL same pattern).
+- **Fix(es):**          [Fix 1] Add config-file or registry fallback for C# SentryDsn.
+- **Code Sample:**      [
+
+                        // Swift: ProcessInfo...["SENTRY_DSN"] ?? UserDefaults...["sentry_dsn"]
+                        // C#:   Environment.GetEnvironmentVariable("SENTRY_DSN")  // only
+
+                        ]
+
+---
+
+
+- **[D077]**            SectionStatusEntry has extra nullable fields in C# not in Swift —
+                        schema divergence
+- **Status:**           **OPEN** — Found during deep delta-analysis parity audit 2026-08-09.
+- **Criticality:**      Low. C# has datapointsObserved/datapointsExpected (nullable,
+                        JsonIgnore WhenWritingNull). Swift has 3 fields; C# has 5. Latent
+                        asymmetry.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/Conclusion.swift:157-165;
+                        Windows/dotNET/Syxx.Kit/Synthesis/Conclusion.cs:303-318
+- **Issue:**            Different JSON shapes for the same logical object. Swift's Codable
+                        ignores unknown keys by default, but strict decoding would reject
+                        C# output.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add fields to Swift or remove from C#.
+                        [Fix 2] Align schema.
+- **Code Sample:**      [
+
+                        // Swift: 3 fields (section, status, completeness)
+                        // C#:    5 fields (+ datapointsObserved, datapointsExpected)
+
+                        ]
+
+---
+
+
+- **[D078]**            Redundant DNS queries across sections — same domain queried 3+ times
+                        per full scan
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      Critical. 200–600ms redundant latency per full scan. ResolverConsensus
+                        Store exists but is never populated by Prophet/Mirror UI paths.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:639,1138,1160;
+                        macOS/Sources/SyxxKit/ResolverConsensusEngine.swift:130,173
+- **Issue:**            `runAllWardens` → `runLookup` (12-oracle fan-out) → `runCompare`
+                        → `runLocalDeltaFanOut` (3 UDP + 3 DoH). Cloudflare/Google/Quad9
+                        queried 3+ times for same domain. `ResolverConsensusStore` exists at
+                        ResolverConsensusStore.swift:43 but only `runUnified()` populates it.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Populate ResolverConsensusStore from Prophet/Mirror paths.
+                        [Fix 2] Reuse cached results across sections in the same scan.
+- **Code Sample:**      [
+
+                        // ResolverConsensusStore.swift:43 — exists but underutilized
+                        // runUnified() populates it; Prophet/Mirror UI paths do not
+
+                        ]
+
+---
+
+
+- **[D079]**            Sync socket I/O in Capture hot loop — async facade over sync Poll/Receive
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      Critical. At 10,000 DNS packets/sec: 10,000 thread-pool thread-
+                        seconds wasted per second of capture. 100ms Poll timeout means 10
+                        sync polls/second even when idle.
+- **Location:**         Windows/dotNET/Syxx.Kit/Capture/CaptureEngine.cs:163-176, 181-198
+- **Issue:**            `socket.Poll(100000, SelectRead)` + `socket.Receive(buffer)` block
+                        thread-pool threads. The `async Task` shell is a facade over entirely
+                        synchronous I/O.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Use `Socket.ReceiveAsync` with `SocketAsyncEventArgs` pooling.
+                        [Fix 2] Replace 100ms Poll with async wait via `Socket.ReceiveAsync`.
+- **Code Sample:**      [
+
+                        // CaptureEngine.cs:163-169
+                        socket.Poll(100000, SelectMode.SelectRead);  // SYNC 100ms
+                        int bytesRead = socket.Receive(buffer);       // SYNC blocking
+
+                        ]
+
+---
+
+
+- **[D080]**            Sync-over-async deadlock risk in MonitorScheduler — GetResult() inside
+                        lock
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      Critical. Production crash risk. `.GetAwaiter().GetResult()` inside
+                        `lock(_runLock)` blocks calling thread on async DNS + file I/O. If
+                        TickOnceAsync needs to resume on a thread holding _runLock → deadlock.
+- **Location:**         Windows/dotNET/Syxx.Kit/MonitorScheduler.cs:70, 79-88
+- **Issue:**            `RunOnce()`:79 acquires `lock(_runLock)` then calls `_tick()`:88 →
+                        `ContinuousMonitor.TickOnceAsync().GetAwaiter().GetResult()`:70.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Move the async call outside the lock.
+                        [Fix 2] Use
+                        `Task.Run(() => TickOnceAsync()).GetAwaiter().GetResult()` or
+                        restructure to avoid sync-over-async.
+- **Code Sample:**      [
+
+                        // MonitorScheduler.cs:79-88
+                        lock (_runLock) {
+                            _tick();  // → TickOnceAsync().GetAwaiter().GetResult()
+                        }
+
+                        ]
+
+---
+
+
+- **[D081]**            6–9 heap allocations per captured packet — 60K–90K allocs/s at 10K pps
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      High. 2.4–3.6 MB/s GC pressure at 10,000 packets/sec. byte[] copies
+                        are the largest allocations. Lists allocated even for zero-result
+                        packets.
+- **Location:**         Windows/dotNET/Syxx.Kit/Capture/CaptureEngine.cs:181-198
+- **Issue:**            Per-packet: `new byte[bytesRead]`, `new byte[payloadLen]`,
+                        `new List<DNSQuestionReport>()`, `new List<DNSAnswerReport>()`,
+                        `new StringBuilder()`, `new DNSCaptureRecord`. Lists allocated even
+                        for packets with zero questions/answers.
+- **Cross-ref. Delta:** D079 (sync I/O in same loop).
+- **Fix(es):**          [Fix 1] Pool byte[] buffers with ArrayPool.
+                        [Fix 2] Lazily allocate
+                        lists only when questions/answers exist. [Fix 3] Use
+                        ObjectPool<DNSCaptureRecord>.
+- **Code Sample:**      [
+
+                        // CaptureEngine.cs:181-198 — per-packet allocations
+                        byte[] buffer = new byte[bytesRead];       // pool
+                        byte[] payload = new byte[payloadLen];     // pool
+                        var questions = new List<DNSQuestionReport>(); // lazy
+                        var answers = new List<DNSAnswerReport>();    // lazy
+
+                        ]
+
+---
+
+
+- **[D082]**            Live capture polls file every 400ms — 150 wakes/min, 400ms display
+                        latency
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      High. No FSEvents/DispatchSource.FileSystemEvent — pure polling adds
+                        up to 400ms latency between packet capture and GUI display.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:1640-1655, 1750-1814
+- **Issue:**            `startRealCapture()` → `while !Task.isCancelled` → `readNewRows()` →
+                        `FileManager.attributesOfItem` (stat) → `FileHandle.readDataToEndOfFile`
+                        → `Task.sleep(.milliseconds(400))`. 150 iterations per 60-second
+                        capture.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace polling with `DispatchSource.makeFileSystemObjectSource`
+                        or `FSEvents` for event-driven tail.
+- **Code Sample:**      [
+
+                        // AppModel.swift:1655
+                        try await Task.sleep(for: .milliseconds(400))  // polling
+
+                        ]
+
+---
+
+
+- **[D083]**            JSONEncoder created per-packet in capture — 100+ encoder instances/sec
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      High. `JSONEncoder` initialization is ~10–20µs. At 100+ queries/sec:
+                        100+ encoder instances plus temporary Data buffer and String per encode.
+- **Location:**         macOS/Sources/SyxxCLI/SyxxCage.swift:570-576
+- **Issue:**            `let encoder = JSONEncoder()` inside per-packet function. Should be
+                        `static let` for reuse.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Move encoder to `static let` at type level.
+- **Code Sample:**      [
+
+                        // SyxxCage.swift:570 — per-packet allocation
+                        let encoder = JSONEncoder()  // should be static let
+                        encoder.encode(record)
+
+                        ]
+
+---
+
+
+- **[D084]**            5-pass over inWindow records in CaptureEventClassifier — 5× predicate
+                        evaluations
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      Medium. 5,000 records → 25,000 predicate evaluations instead of
+                        5,000. Where().ToList() also materializes a copy.
+- **Location:**         Windows/dotNET/Syxx.Kit/Capture/CaptureEvents.cs:207-252
+- **Issue:**            PASS 1: time filter. PASS 2: Any(Outbound). PASS 3: Where(Inbound).
+                        ToList(). PASS 4: foreach rcode tally. PASS 5: Count(Outbound).
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Single-pass tally with counters for inbound/outbound/rcode.
+- **Code Sample:**      [
+
+                        // CaptureEvents.cs:207-252 — 5 separate iterations
+                        foreach (r in records) { ... }  // PASS 1
+                        inWindow.Any(r => "Outbound")   // PASS 2
+                        inWindow.Where(...).ToList()    // PASS 3
+                        foreach (r in inbound) { ... }  // PASS 4
+                        inWindow.Count(r => "Outbound") // PASS 5
+
+                        ]
+
+---
+
+
+- **[D085]**            Missing ConfigureAwait(false) in 90% of library async calls — UI thread
+                        contention
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      Medium. Only 27 ConfigureAwait(false) across 224 .cs files. Every
+                        uncaptured await schedules continuation back to UI thread, causing
+                        thread-pool starvation and UI jank.
+- **Location:**         Windows/dotNET/Syxx.Kit/ (LeakDetector.cs, DNSResolver.cs,
+                        DimensionClient.cs, etc.)
+- **Issue:**            LeakDetector.RunCollectorTestAsync alone has 4+ uncaptured awaits.
+                        DimensionClient.WarpRawAssetAsync, DNSResolver async chain all affected.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add ConfigureAwait(false) to all library async calls that
+                        don't need to resume on the UI thread.
+- **Code Sample:**      [
+
+                        // LeakDetector.cs:261 — uncaptured await
+                        var response = await httpClient.SendAsync(request);
+                        // Should be:
+                        var response = await httpClient.SendAsync(request)
+                            .ConfigureAwait(false);
+
+                        ]
+
+---
+
+
+- **[D086]**            Full O(m×n) matrix in Damerau-Levenshtein per brand comparison — 57MB
+                        GC for 1000 domains
+- **Status:**           **OPEN** — Found during deep delta-analysis performance audit
+                        2026-08-09.
+- **Criticality:**      Medium. The OSA recurrence only needs rows i-2, i-1, and i. A 3-row
+                        rolling array would reduce allocation from O(m×n) to O(3n).
+- **Location:**         Windows/dotNET/Syxx.Kit/LookalikeDetector.cs:79
+- **Issue:**            `var d = new int[m + 1, n + 1]` allocates full matrix. For 30-char
+                        domain × 15 brands: 15 × 31 × 31 = 14,415 ints per call. 1000+
+                        domains in forensics: 57MB of GC pressure.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Use 3-row rolling array instead of full matrix.
+- **Code Sample:**      [
+
+                        // LookalikeDetector.cs:79
+                        var d = new int[m + 1, n + 1];  // O(m×n) — use 3-row rolling
+
+                        ]
+
+---
+
+
+- **[D087]**            run_id is always "none" — scanCorrelationId never propagated to
+                        SyxxDiagnostics.run
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Critical. Every Sentry event across all platforms has run_id="none".
+                        Zero correlation between events, spans, and breadcrumbs from the same
+                        scan. Synthesizer always sees unattributed_degradation.
+- **Location:**         macOS/Sources/SyxxKit/SyxxDiagnostics.swift:111;
+                        macOS/Sources/SyxxApp/AppModel.swift:635, 750;
+                        Windows/dotNET/Syxx.Kit/SyxxDiagnostics.cs:138
+- **Issue:**            `scanCorrelationId` is set on ViewModel but never propagated to
+                        `SyxxDiagnostics.run`. `SentryDiagnosticSink` always tags
+                        `syxx.run_id = SyxxDiagnostics.run?.id ?? "none"`.
+- **Cross-ref. Delta:** D055 (missing run attribution wiring), D089 (correlation on spans).
+- **Fix(es):**          [Fix 1] Set SyxxDiagnostics.run at scan entry points (AppModel.
+                        runAllWardens, CLI run). [Fix 2] Wire scanCorrelationId into run.id.
+- **Code Sample:**      [
+
+                        // AppModel.swift:635 — scanCorrelationId set, never propagated
+                        scanCorrelationId = corrId
+                        // SentryDiagnosticSink.swift:65 — always "none"
+                        tags["syxx.run_id"] = SyxxDiagnostics.run?.id ?? "none"
+
+                        ]
+
+---
+
+
+- **[D088]**            Breadcrumbs in AppModel/AppViewModel bypass SyxxDiagnostics → skip
+                        redaction — PII leak vector
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      High. Any breadcrumb containing a domain name or IP is exported
+                        verbatim to Sentry instead of being redacted through the
+                        SentryDiagnosticSink bridge.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift:638,647,753,776,780,789,864;
+                        Windows/dotNET/SyxxUI/ViewModels/AppViewModel.cs:368,386,423,490,507,
+                        545,579,593,628,639
+- **Issue:**            GUI layers call SentrySDK.addBreadcrumb() directly instead of
+                        SyxxDiagnostics.breadcrumb(). The SyxxDiagnostics path applies
+                        redaction (domain/IP/home-path stripping); the direct path does not.
+- **Cross-ref. Delta:** D019 (dual telemetry).
+- **Fix(es):**          [Fix 1] Replace all direct SentrySDK breadcrumb calls with
+                        SyxxDiagnostics.breadcrumb().
+- **Code Sample:**      [
+
+                        // AppModel.swift:638 — direct Sentry, no redaction
+                        SentrySDK.addBreadcrumb(Breadcrumb(...))
+                        // Should be:
+                        SyxxDiagnostics.breadcrumb(category: "gui.state", ...)
+
+                        ]
+
+---
+
+
+- **[D089]**            scanCorrelationId not attached to OTel spans — cannot join breadcrumbs
+                        to spans in collector
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Medium. A query in the collector cannot join a scan's breadcrumbs
+                        to its spans.
+- **Location:**         macOS/Sources/SyxxKit/ProbeRunner.swift:70-88;
+                        Windows/dotNET/Syxx.Kit/ProbeRunner.cs:110
+- **Issue:**            scanCorrelationId is set on ViewModel but never passed as a tag to
+                        probe.* or dns.query.* spans.
+- **Cross-ref. Delta:** D087 (run_id always none), D055 (missing run attribution).
+- **Fix(es):**          [Fix 1] Pass scanCorrelationId as a span attribute at probe entry.
+- **Code Sample:**      [
+
+                        // ProbeRunner.swift:70 — no correlation tag
+                        SyxxTracer.span("probe.\(label)")
+                        // Should include: attributes["syxx.scan_id"] = scanCorrelationId
+
+                        ]
+
+---
+
+
+- **[D090]**            Cross-platform span naming convention inconsistent — server uses
+                        "server.*", clients use "dns.*", "probe.*", "syxx.*"
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Low. No shared prefix for cross-service span grouping in collector.
+- **Location:**         Server/syxx_server/app.py (span creation sites);
+                        macOS/Sources/SyxxKit/ (ProbeRunner, DNSResolver, Synthesizer)
+- **Issue:**            Server: "server.warp", "server.diff", "server.authoritative".
+                        Clients: "dns.query.udp", "probe.Prophet", "syxx.synthesis.synthesize".
+                        No shared "syxx." prefix across all spans.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Standardize on "syxx.*" prefix for all spans.
+                        [Fix 2] Add
+                        "syxx.platform" attribute to all spans.
+- **Code Sample:**      [
+
+                        // Server: "server.warp"
+                        // macOS: "dns.query.udp", "probe.Prophet"
+                        // C#:    "syxx.synthesis.synthesize"
+                        // No shared prefix for cross-service grouping
+
+                        ]
+
+---
+
+
+- **[D091]**            DNS resolution error path has span outcome but no SyxxDiagnostics.
+                        capture() — invisible to Sentry
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Medium. DNS errors recorded in OTel spans but not as Sentry events.
+- **Location:**         macOS/Sources/SyxxKit/DNSResolver.swift:366-388;
+                        Windows/dotNET/Syxx.Kit/DNSResolver.cs:207-255
+- **Issue:**            `resolveSecurely` catch block sets span.setOutcome(.inconclusive) but
+                        never calls SyxxDiagnostics.capture().
+- **Cross-ref. Delta:** D058 (no error capture in UI).
+- **Fix(es):**          [Fix 1] Add SyxxDiagnostics.capture() in the DNS error path.
+- **Code Sample:**      [
+
+                        // DNSResolver.swift:383 — span outcome set, no capture
+                        classify: { .inconclusive }  // span only
+                        // No SyxxDiagnostics.capture() call
+
+                        ]
+
+---
+
+
+- **[D092]**            SyxxDiagnostics.isReporting and isActive are duplicate APIs — both
+                        check sink != nil
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Low. Two names for the same condition creates confusion.
+- **Location:**         macOS/Sources/SyxxKit/SyxxDiagnostics.swift:128, 139
+- **Issue:**            Both `isReporting` and `isActive` check the same condition
+                        (`sink != nil`). `isReporting` is documented but `isActive` is the
+                        one checked by the settings UI.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Deprecate one, document the canonical name.
+- **Code Sample:**      [
+
+                        // SyxxDiagnostics.swift:128 — isReporting
+                        // SyxxDiagnostics.swift:139 — isActive (same condition)
+                        public static var isReporting: Bool { sink != nil }
+                        public static var isActive: Bool { sink != nil }
+
+                        ]
+
+---
+
+
+- **[D093]**            No SyxxDiagnostics.capture() in probe timeout/error path — probe
+                        failures generate no Sentry events
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Low. A probe that times out or throws is recorded in the span but
+                        generates no Sentry event.
+- **Location:**         macOS/Sources/SyxxKit/ProbeRunner.swift:88-115;
+                        Windows/dotNET/Syxx.Kit/ProbeRunner.cs:110-185
+- **Issue:**            Probe runner creates OTel spans and sets syxx.outcome tags but does
+                        not call SyxxDiagnostics.capture() on failure.
+- **Cross-ref. Delta:** D091 (DNS error no capture).
+- **Fix(es):**          [Fix 1] Add SyxxDiagnostics.capture() on probe failure.
+- **Code Sample:**      [
+
+                        // ProbeRunner.swift:88-115 — span outcome set, no capture
+
+                        ]
+
+---
+
+
+- **[D094]**            C# SyxxDiagnostics.Install uses Interlocked.Exchange but reads use
+                        Volatile.Read — memory barrier asymmetry
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Low. Technically correct but fragile — future reader may not realize
+                        write side needs stronger barrier.
+- **Location:**         Windows/dotNET/Syxx.Kit/SyxxDiagnostics.cs:128
+- **Issue:**            `Install()` uses `Interlocked.Exchange(ref _sink, sink)` (full
+                        barrier) but `Capture()` and `Breadcrumb()` use `Volatile.Read(ref
+                        _sink)` (acquire-only).
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add comment documenting the asymmetry.
+                        [Fix 2] Or use
+                        Interlocked.CompareExchange for reads too.
+- **Code Sample:**      [
+
+                        // Install: Interlocked.Exchange(ref _sink, sink)  // full barrier
+                        // Read:   Volatile.Read(ref _sink)                // acquire-only
+
+                        ]
+
+---
+
+
+- **[D095]**            Linux Avalonia client has no ViewModel-level breadcrumbs — parity gap
+                        with macOS and Windows
+- **Status:**           **OPEN** — Found during deep delta-analysis observability audit
+                        2026-08-09.
+- **Criticality:**      Low. Linux scans produce no lifecycle breadcrumbs (scan-start, scan-
+                        complete). macOS AppModel and Windows AppViewModel both have them.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ (no SentrySdk.AddBreadcrumb or
+                        SyxxDiagnostics.Breadcrumb in ViewModel files)
+- **Issue:**            Linux client delegates to shared Syxx.Kit/Syxx.Telemetry, but its
+                        ViewModel layer has no scan lifecycle breadcrumbs.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add scan-start and scan-complete breadcrumbs to Linux
+                        ViewModels.
+- **Code Sample:**      [
+
+                        // No breadcrumb calls in Linux ViewModel layer
+                        // macOS: 7 inline SentrySDK.addBreadcrumb in AppModel
+                        // Windows: 11 inline SentrySdk.AddBreadcrumb in AppViewModel
+                        // Linux: 0
+
+                        ]
+
+---
+
+
+- **[D096]**            Linux diagnostic sink installs Sentry capture without initializing
+                        the Sentry SDK first
+- **Status:**           **OPEN** — Found during the completed five-agent audit
+                        2026-08-09.
+- **Criticality:**      Critical. The sink path can record capture calls, but without a live
+                        Sentry SDK initialization those events never reach the backend.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Services/LinuxReadyServices.cs:24-53;
+                        Windows/dotNET/Syxx.Telemetry/SentryDiagnosticSink.cs:80-96
+- **Issue:**            Linux turns Sentry on by calling `SentryDiagnosticSink.Install()`
+                        at runtime, but the surrounding startup path never initializes the
+                        Sentry SDK the way the Windows client does. The sink can therefore
+                        exist without a live capture pipeline, dropping diagnostic events.
+- **Cross-ref. Delta:** D058 (UI capture gap) and D062 (platform tagging), but this is
+                        the Linux initialization path specifically.
+- **Fix(es):**          [Fix 1] Initialize Sentry before installing the diagnostic sink.
+                        [Fix 2] Make the install helper fail closed or log an explicit
+                        warning when Sentry is unavailable.
+- **Code Sample:**      [
+
+                        // Linux/Ubuntu/SyxxUI.Avalonia/Services/LinuxReadyServices.cs:24-53
+                        ApplySentryState(settings.CrashReportingEnabled);
+                        global::Syxx.Telemetry.SentryDiagnosticSink.Install(
+                            surface: "gui",
+                            platform: "linux",
+                            ifAllowed: true);
+
+                        // Windows/dotNET/Syxx.Telemetry/SentryDiagnosticSink.cs:96
+                        SentrySdk.CaptureEvent(e);
+
+                        ]
+
+---
+
+
+- **[D097]**            Windows GUI bypasses shared OTel bootstrap and swallows exporter
+                        startup failures
+- **Status:**           **OPEN** — Found during the completed five-agent audit
+                        2026-08-09.
+- **Criticality:**      Critical. The GUI can enter a state where telemetry is requested but
+                        the exporter never starts, and the failure is hidden behind a silent
+                        catch.
+- **Location:**         Windows/dotNET/SyxxUI/App.xaml.cs:88-103;
+                        Windows/dotNET/Syxx.Telemetry/OTelBootstrap.cs:39-87
+- **Issue:**            The Windows app constructs its own tracer provider with
+                        `Sdk.CreateTracerProviderBuilder()` and catches all exceptions
+                        without surfacing them, instead of using the shared
+                        `OTelBootstrap.Register()` path that already reports init failures
+                        through `SyxxDiagnostics.Capture()`. If exporter startup fails, the
+                        GUI continues as if telemetry is live.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Route the GUI through `OTelBootstrap.Register()`.
+                        [Fix 2]
+                        Surface exporter-startup failures through diagnostics instead of
+                        swallowing them.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/SyxxUI/App.xaml.cs:88-103
+                        try {
+                            _tracerProvider = Sdk.CreateTracerProviderBuilder()...Build();
+                        } catch {
+                            // Telemetry is best-effort after explicit setup consent.
+                        }
+
+                        // Windows/dotNET/Syxx.Telemetry/OTelBootstrap.cs:39-87
+                        return Sdk.CreateTracerProviderBuilder()...Build();
+                        SyxxDiagnostics.Capture(...);
+
+                        ]
+
+---
+
+
+- **[E021]**            Session cookie syxx_session lacks Secure flag
+- **Status:**           **OPEN** — Found during deep delta-analysis security audit
+                        2026-08-09.
+- **Criticality:**      High. HSTS mitigates for returning visitors, but first visit or
+                        misconfiguration exposes session token.
+- **Location:**         Server/syxx_server/app.py (cookie setting)
+- **Issue:**            syxx_session cookie documented as httpOnly but no Secure flag observed.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add Secure flag.
+                        [Fix 2] Add __Host- prefix.
+- **Code Sample:**      [
+
+                        // No Secure flag on syxx_session cookie
+
+                        ]
+
+---
+
+
+- **[E034]**            security.txt may lack Expires field — RFC 9116 compliance
+- **Status:**           **OPEN** — Found during deep delta-analysis security audit
+                        2026-08-09.
+- **Criticality:**      Low. RFC 9116 recommends expiration to ensure contact info is current.
+- **Location:**         Server/syxx_server/app.py:163
+- **Issue:**            .well-known/security.txt served but no Expires field observed.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add Expires field.
+- **Code Sample:**      [
+
+                        // .well-known/security.txt — no Expires field
+
+                        ]
+
+---
+
+
+- **[E047]**            Keystore passphrase-derived key held in memory for 15-minute idle
+                        window — memory dump exposure
+- **Status:**           **OPEN** — Found during deepest delta-analysis security scan
+                        2026-08-09.
+- **Criticality:**      Low. Argon2id-derived 32-byte key in memory for 15 min after last
+                        use. Memory dump or swap would expose key.
+- **Location:**         Windows/dotNET/Syxx.Kit/LinuxSecretStore.cs (KeystorePassphraseSession)
+- **Issue:**            IdleTimeout=15min. Key zeroed on expiry but accessible during window.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Reduce idle timeout to 5 minutes.
+                        [Fix 2] Use ProtectedMemory
+                        (Windows) or mlock (Linux) to prevent swap.
+- **Code Sample:**      [
+
+                        // KeystorePassphraseSession — IdleTimeout = 15 min
+
+                        ]
+
+---
+
+
+- **[E052]**            CLI re-spawns self under sudo using CommandLine.arguments[0] — symlink
+                        attack risk
+- **Status:**           **OPEN** — Found during deepest delta-analysis security scan
+                        2026-08-09.
+- **Criticality:**      Low. Attacker controlling argv[0] via symlink or exec -a could execute
+                        different binary with sudo. Sudo requires authentication.
+- **Location:**         macOS/Sources/SyxxCLI/SyxxCLI.swift:882-886
+- **Issue:**            CommandLine.arguments[0] used to re-spawn under sudo. Not resolved
+                        through realpath().
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Use Bundle.main.executablePath or resolve through realpath().
+- **Code Sample:**      [
+
+                        // SyxxCLI.swift:882-886 — re-spawn under sudo
+                        CommandLine.arguments[0]  // not resolved
+
+                        ]
+
+---
+
+
+- **[D098]**            C# DNS parser drops all header evidence on truncated responses — EDNS,
+                        flags, wire-size silently lost
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      High. Truncated response with EDNS0 OPT, AA=1, RA=1, AD=1 → C#
+                        returns only Status, ResponseCode, IsTruncated, AuthorityRecords. All
+                        other fields default to null/false/0. Swift preserves everything.
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:689-703
+- **Issue:**            Truncated return path omits Edns, EdnsMalformed, IsAuthoritative,
+                        RecursionAvailable, AuthenticatedData, ResponseByteLength.
+- **Cross-ref. Delta:** D072 (DNSResponse missing 4 fields).
+- **Fix(es):**          [Fix 1] Populate all parsed fields in the truncated return.
+- **Code Sample:**      [
+
+                        // DNSResolver.cs:689-703 — truncated path
+                        return new DNSResponse {
+                            Status = Truncated, ResponseCode = ...,
+                            IsTruncated = true, AuthorityRecords = ...
+                            // Missing: Edns, IsAuthoritative, RecursionAvailable,
+                            //   AuthenticatedData, ResponseByteLength
+                        };
+
+                        ]
+
+---
+
+
+- **[D099]**            C# DNS parser drops all header evidence on ServFail responses
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      High. SERVFAIL with EDNS0, AA=1, authority records → C# returns only
+                        Status and ResponseCode. Indistinguishable from ServFail with no data.
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:706-707
+- **Issue:**            ServFail return path omits all parsed header fields.
+- **Cross-ref. Delta:** D098 (truncated same pattern), D100 (Refused same pattern).
+- **Fix(es):**          [Fix 1] Populate same fields as NXDomain branch.
+- **Code Sample:**      [
+
+                        // DNSResolver.cs:706-707
+                        return new DNSResponse {
+                            Status = ServFail, ResponseCode = ...
+                            // Missing: all header fields
+                        };
+
+                        ]
+
+---
+
+
+- **[D100]**            C# DNS parser drops all header evidence on Refused responses
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      High. Same defect as D099 but for RCODE=5 (REFUSED).
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:724-725
+- **Issue:**            Refused return path omits all parsed header fields.
+- **Cross-ref. Delta:** D098, D099.
+- **Fix(es):**          [Fix 1] Populate same fields as NXDomain branch.
+- **Code Sample:**      [
+
+                        // DNSResolver.cs:724-725
+                        return new DNSResponse {
+                            Status = Refused, ResponseCode = ...
+                            // Missing: all header fields
+                        };
+
+                        ]
+
+---
+
+
+- **[D101]**            C# DNS parser misclassifies non-standard RCODEs as TransportError —
+                        FORMERR/NOTIMP/BADVERS indistinguishable from unreachable
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      High. RCODE 1 (FORMERR), 4 (NOTIMP), 16 (BADVERS) return
+                        TransportError on C# — same status as "server unreachable." Swift
+                        uses .rcodeOther (distinct status).
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:726-727
+- **Issue:**            `combinedResponseCode != 0` → `TransportError`. Swift uses `.rcodeOther`
+                        for non-standard RCODEs.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Return RcodeOther for non-standard RCODEs.
+- **Code Sample:**      [
+
+                        // C#: non-zero RCODE → TransportError (wrong)
+                        // Swift: non-standard RCODE → .rcodeOther (correct)
+
+                        ]
+
+---
+
+
+- **[D102]**            C# LicenseManager silently returns Invalid on Keygen HTTP 200 with
+                        unexpected JSON shape — paying subscriber locked out
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      High. MITM/captive portal returning structurally different JSON causes
+                        silent Invalid result. Signature never verified (gated behind
+                        meta.Valid). Offline grace never activates (result is Invalid, not
+                        NetworkError). Swift verifies signature regardless and returns
+                        .networkError on verification failure.
+- **Location:**         Windows/dotNET/Syxx.Kit/LicenseManager.cs:611-614
+- **Issue:**            `JsonSerializer.Deserialize` succeeds on wrong-shape JSON. Meta gets
+                        default (Valid=false). Signature check skipped. Returns Invalid.
+- **Cross-ref. Delta:** E017 (hardcoded key), E018 (algorithm mismatch).
+- **Fix(es):**          [Fix 1] Verify signature before checking meta.Valid.
+                        [Fix 2] Require
+                        Keygen-Signature header; return NetworkError if absent.
+- **Code Sample:**      [
+
+                        // LicenseManager.cs:611-614
+                        var validation = JsonSerializer.Deserialize<...>(resJson);
+                        if (validation?.Meta.Valid == true) { // only verified when Valid
+                            if (!VerifyKeygenSignature(...)) return NetworkError;
+                        }
+                        return (validation?.Meta.Valid ?? false) ? Valid : Invalid;
+
+                        ]
+
+---
+
+
+- **[D103]**            C# DNS parser answer-section class filter hardcoded to IN(1) —
+                        CHAOS-class answers silently dropped
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. CHAOS-class DNS queries (version.bind TXT CHAOS for resolver
+                        fingerprinting) have answers silently dropped. Swift uses questionClass.
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:844
+- **Issue:**            `if (r.Cls != 1) continue` — hardcoded IN(1). CHAOS answers (class 3)
+                        dropped. Swift extracts QCLASS from question section.
+- **Cross-ref. Delta:** D072 (DNSResponse missing fields).
+- **Fix(es):**          [Fix 1] Extract questionClass from question section.
+                        [Fix 2] Use it
+                        instead of hardcoded 1.
+- **Code Sample:**      [
+
+                        // DNSResolver.cs:844
+                        if (r.Cls != 1) continue;  // hardcoded IN(1)
+                        // Swift: if r.cls != questionClass { offClassCount += 1; continue }
+
+                        ]
+
+---
+
+
+- **[D104]**            C# DNS parser ParseName lacks global pointer-jump budget — CPU DoS
+                        vector via deeply chained pointers
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Hostile DNS response with many records, each containing deeply
+                        pointer-chained names, causes O(n²) CPU. Per-call visited set is reset
+                        each invocation. Swift uses shared JumpBudget (1024 cap).
+- **Location:**         Windows/dotNET/Syxx.Kit/DNSResolver.cs:1083
+- **Issue:**            `ParseName` uses local `HashSet<int>()` visited set, fresh per call.
+                        No global budget across calls in a single response parse.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add global jump budget (1024) passed through all ParseName
+                        calls. [Fix 2] Decrement on each pointer jump; throw on exhaustion.
+- **Code Sample:**      [
+
+                        // DNSResolver.cs:1083
+                        var visited = new HashSet<int>();  // fresh per call, no global budget
+                        // Swift: JumpBudget class shared across all parseName calls
+
+                        ]
+
+---
+
+
+- **[D105]**            SynthesisEngine all-untested with indicators returns .inconclusive
+                        instead of .untested — dishonest state classification
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. When all sections are .untested but indicators are present
+                        (internal inconsistency), engine proceeds to scoring instead of
+                        returning .untested. Same on both platforms.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:649-653;
+                        Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:848-852
+- **Issue:**            `allUntested && noIndicators` guard skips .untested early return when
+                        indicators present. All-untested + indicators = internal inconsistency
+                        that should return .untested, not proceed to scoring.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Tighten guard to `if allUntested` (drop noIndicators conjunct).
+- **Code Sample:**      [
+
+                        // SynthesisEngine.swift:649-653
+                        if allUntested && noIndicators { return .untested }
+                        // Should be: if allUntested { return .untested }
+
+                        ]
+
+---
+
+
+- **[D106]**            WitnessWireJson outer response path has no required-field validation
+                        after deserialization
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Low. Unknown JSON keys silently ignored (forward-compatible by design).
+                        Typo in field name silently accepted with default value. The signed
+                        attestation path guards against this but the outer unsigned path does not.
+- **Location:**         Windows/dotNET/Syxx.Kit/LeakDetector.cs:284-286
+- **Issue:**            JsonSerializerOptions has PropertyNameCaseInsensitive=true but no
+                        UnmappedMemberHandling. ParseSignedAttestation guards required fields;
+                        outer VerifyTokenAsync does not.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Verify required fields non-null after deserialization in
+                        VerifyTokenAsync and RunCollectorTestAsync.
+- **Code Sample:**      [
+
+                        // LeakDetector.cs:284-286
+                        PropertyNameCaseInsensitive = true
+                        // No UnmappedMemberHandling or required-field validation
+
+                        ]
+
+---
+
+
+- **[D107]**            GluttonView "No probes dispatched" label visible when probes ARE
+                        dispatched — visibility gated on HasSubdomain instead of probe count
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Once a subdomain exists, both the label and the probe results
+                        ItemsControl render simultaneously.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Views/GluttonView.axaml:142
+- **Issue:**            TextBlock "No probes dispatched" has IsVisible bound to HasSubdomain
+                        (true once subdomain exists) instead of LeakProbeResults.Count == 0.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Gate visibility on LeakProbeResults.Count == 0 or add
+                        HasNoProbeResults computed property.
+- **Code Sample:**      [
+
+                        <!-- GluttonView.axaml:142-143 -->
+                        <TextBlock Text="No probes dispatched."
+                                   IsVisible="{Binding HasSubdomain}" />
+                        <!-- Should be: IsVisible="{Binding !HasProbeResults}" -->
+
+                        ]
+
+---
+
+
+- **[D108]**            Settings pane missing crash reporting toggle — user cannot disable
+                        Sentry after onboarding
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. CrashReporting toggle exists only in FirstRunViewModel.
+                        SettingsViewModel has TelemetryEnabled, NotificationsEnabled, etc.
+                        but no CrashReportingEnabled. LinuxReadyServices.ApplySentryState()
+                        is callable but never invoked from Settings after onboarding.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/SettingsViewModel.cs
+- **Issue:**            No CrashReportingEnabled property. No ToggleSwitch in SettingsView.
+                        ApplySentryState() only called at startup.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add CrashReportingEnabled to SettingsViewModel.
+                        [Fix 2] Wire
+                        OnChanged to LinuxReadyServices.ApplySentryState(). [Fix 3] Add
+                        ToggleSwitch in SettingsView.axaml.
+- **Code Sample:**      [
+
+                        // SettingsViewModel — has TelemetryEnabled, NotificationsEnabled,
+                        // EncryptEnabled, UseDot — but no CrashReportingEnabled
+
+                        ]
+
+---
+
+
+- **[D109]**            GluttonViewModel constructor fire-and-forget async calls silently
+                        swallow exceptions — loading cards stuck forever
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. LoadFeatureStatusAsync() and CheckStatusAsync() called as
+                        `_ = ...` with no try/catch. Exceptions silently swallowed; Feature
+                        Status card stays at "Loading..." forever.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/GluttonViewModel.cs:170-171
+- **Issue:**            Discarded Task means exception never surfaces. No ContinueWith or
+                        try/catch wrapping.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Wrap in try/catch that sets error status text.
+                        [Fix 2] Use
+                        ContinueWith to surface errors.
+- **Code Sample:**      [
+
+                        // GluttonViewModel.cs:170-171
+                        _ = LoadFeatureStatusAsync();  // fire-and-forget, no error handling
+                        _ = CheckStatusAsync();        // fire-and-forget, no error handling
+
+                        ]
+
+---
+
+
+- **[D110]**            Dashboard action buttons all hardcoded "Not yet available" with no
+                        VM-driven state — feature gating requires XAML rewrite
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Low. Buttons statically disabled in XAML with hardcoded text.
+                        DashboardViewModel has no properties to control states.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/DashboardViewModel.cs
+- **Issue:**            "Conduct All Scans", "Flush DNS Cache", "Enable Unbound DNS",
+                        "Enable Encrypted DNS" all hardcoded IsEnabled=False.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add bool properties to DashboardViewModel and bind XAML.
+- **Code Sample:**      [
+
+                        // DashboardView.axaml
+                        <Button IsEnabled="False">
+                            <TextBlock Text="Not yet available" />
+                        </Button>
+
+                        ]
+
+---
+
+
+- **[D111]**            PortalViewModel resolver line has no severity brush on empty-resolver
+                        state — warning renders as normal text
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Low. "No DNS servers discovered" renders in default text color
+                        instead of warning amber. MirrorViewModel sets amber for same case.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/PortalViewModel.cs:49-51
+- **Issue:**            No brush set for empty-resolver case. MirrorViewModel.cs:79-83 sets
+                        Amber for same condition.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Set ResolverBrush to amber when servers.Count == 0.
+- **Code Sample:**      [
+
+                        // PortalViewModel.cs:49-51
+                        ResolversLine = servers.Count == 0
+                            ? "No DNS servers discovered"
+                            : string.Join(", ", servers);
+                        // No brush set for empty case
+
+                        ]
+
+---
+
+
+- **[D112]**            WitnessViewModel SelfVerifyCommand relies on CommunityToolkit source
+                        generator for private method — fragile binding
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Low. [RelayCommand] on private method generates public property.
+                        Works at runtime but fragile if toolkit changes or method visibility
+                        changes.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WitnessViewModel.cs:474
+- **Issue:**            `private void SelfVerify()` with [RelayCommand] generates public
+                        SelfVerifyCommand property. XAML binds to it. Currently works but
+                        fragile.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Document the intentional pattern. No code change needed.
+- **Code Sample:**      [
+
+                        // WitnessViewModel.cs:474
+                        [RelayCommand]
+                        private void SelfVerify() { ... }
+
+                        ]
+
+---
+
+
+- **[D113]**            CageView hardcoded CLI command "sudo syxx cage --duration 30" in XAML
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Low. Binary name and duration hardcoded. If binary renamed or
+                        duration adjusted, UI text becomes stale.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/Views/CageView.axaml:30
+- **Issue:**            TextBlock text is hardcoded CLI command string.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Move to ViewModel property or shared constant.
+- **Code Sample:**      [
+
+                        <!-- CageView.axaml:30 -->
+                        <TextBlock Text="sudo syxx cage --duration 30" />
+
+                        ]
+
+---
+
+
+- **[D114]**            WhatsNewViewModel IsFromCache and ProvenanceText only set in fallback
+                        path — inert in normal path
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Low. Normal (non-fallback) code path never sets IsFromCache or
+                        ProvenanceText. XAML bindings remain at defaults.
+- **Location:**         Linux/Ubuntu/SyxxUI.Avalonia/ViewModels/WhatsNewViewModel.cs
+- **Issue:**            LoadAsync() normal path sets HasBroadcast, StatusText, etc. but never
+                        IsFromCache or ProvenanceText.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Set IsFromCache/ProvenanceText in normal path or remove
+                        unused bindings.
+- **Code Sample:**      [
+
+                        // LoadAsync() normal path — never sets IsFromCache
+                        // or ProvenanceText
+
+                        ]
+
+---
+
+
+- **[D115]**            C# LeakDetector signed payload field name mismatch — expects "leaked"
+                        but server sends "queriesObserved" — all Windows collector-verified
+                        leak tests broken
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      High. Server signs payload with "queriesObserved" field. C#
+                        SignedLeakAttestation expects [JsonPropertyName("leaked")]. dto.Leaked
+                        is null → parse returns null → DeriveResult returns Inconclusive.
+                        Every collector-verified leak test on Windows is broken.
+- **Location:**         Windows/dotNET/Syxx.Kit/LeakDetector.cs:608-615, 803
+- **Issue:**            C# has `[JsonPropertyName("leaked")] public bool? Leaked`. Swift
+                        extracts "leaked" then falls back to "queriesObserved". C# has no
+                        fallback.
+- **Cross-ref. Delta:** D116 (replay protection missing from Swift).
+- **Fix(es):**          [Fix 1] Add `[JsonPropertyName("queriesObserved")]` property to
+                        SignedLeakAttestation. [Fix 2] Derive Leaked from it in
+                        ParseSignedAttestation.
+- **Code Sample:**      [
+
+                        // C# LeakDetector.cs:803
+                        [JsonPropertyName("leaked")] public bool? Leaked
+                        // Server sends: {"queriesObserved": true, ...}
+                        // Swift fallback: if let queriesObserved = json["queriesObserved"]
+
+                        ]
+
+---
+
+
+- **[D116]**            Swift LeakDetector missing B216 replay protection — accepts replayed
+                        attestations that C# correctly rejects
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      High. Relay can capture valid attestation for token T1/zone
+                        leak.syxx.app and replay against T2/syxx.app. C# detects mismatch
+                        and returns Inconclusive. Swift accepts replayed attestation and may
+                        return .notDetected (false clean).
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:346-410
+- **Issue:**            Swift runCollectorTest does not check token, zone, or resolverCount
+                        consistency. C# DeriveResult (lines 648-668) checks all three.
+- **Cross-ref. Delta:** D115 (field name mismatch).
+- **Fix(es):**          [Fix 1] Add extractSignedToken, extractSignedZone, and
+                        resolverCount-consistency check to Swift, mirroring C# B216 gates.
+- **Code Sample:**      [
+
+                        // Swift LeakDetector.swift:346-410 — no token/zone/resolverCount check
+                        // C# DeriveResult lines 648-668:
+                        // if (tokenLabel != signed.Token) return Inconclusive
+                        // if (baseDomain != signed.Zone) return Inconclusive
+
+                        ]
+
+---
+
+
+- **[D117]**            LeakDetector keyId computation length divergence — C# uses 4 bytes
+                        (8 hex), Swift uses 8 bytes (16 hex) — trusted key sync broken
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Server sends keyId as 8 bytes SHA-256 (16 hex). C# computes
+                        4 bytes (8 hex) and rejects with "keyId mismatch." Trusted signing
+                        key never persisted on Windows.
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:887;
+                        Windows/dotNET/Syxx.Kit/LeakDetector.cs:1002
+- **Issue:**            Swift: SHA256.hash(data:).prefix(8) → 16 hex chars. C#:
+                        Convert.ToHexString(keyHash, 0, 4) → 8 hex chars. Doc comments say
+                        "first 8 bytes" but implementations diverge.
+- **Cross-ref. Delta:** D080 (WitnessKeyManager same divergence pattern).
+- **Fix(es):**          [Fix 1] Align on 8 bytes (16 hex chars).
+                        [Fix 2] Verify against
+                        server's actual keyId computation.
+- **Code Sample:**      [
+
+                        // Swift: SHA256.hash(data:).prefix(8).hex → 16 hex chars
+                        // C#: Convert.ToHexString(keyHash, 0, 4) → 8 hex chars
+
+                        ]
+
+---
+
+
+- **[D118]**            VerifyResponse.leaked type divergence — Swift Bool? vs C# bool
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Server omits "leaked" key → Swift decodes nil, C# decodes
+                        false. Same JSON produces different in-memory values. Legacy
+                        unauthenticated path can fork results.
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:575;
+                        Windows/dotNET/Syxx.Kit/LeakDetector.cs:794
+- **Issue:**            Swift: `let leaked: Bool?`. C#: `public bool Leaked { get; set; }`
+                        (non-nullable, defaults to false).
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Change C# to `bool? Leaked`.
+                        [Fix 2] Treat null as "no claim."
+- **Code Sample:**      [
+
+                        // Swift: let leaked: Bool?  (nil when absent)
+                        // C#:    public bool Leaked { get; set; }  (false when absent)
+
+                        ]
+
+---
+
+
+- **[D119]**            Swift VerifyResponse has "inconclusive" field; C# doesn't — schema
+                        asymmetry
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Server sends {"inconclusive": true}. Swift decodes it; C#
+                        silently ignores. Latent fork if future code consumes this field.
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:581
+- **Issue:**            Swift has `let inconclusive: Bool?`. C# VerifyResponse has no
+                        Inconclusive property.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add `bool? Inconclusive` to C# or remove from Swift.
+- **Code Sample:**      [
+
+                        // Swift: let inconclusive: Bool?
+                        // C#: no Inconclusive property
+
+                        ]
+
+---
+
+
+- **[D120]**            LeakDetector empty-servers result divergence — Swift .error vs C#
+                        .Inconclusive
+- **Status:**           **OPEN** — Found during fast delta-analysis 2026-08-09.
+- **Criticality:**      Low. No system DNS resolvers → macOS returns .error, Windows returns
+                        .Inconclusive. Same for all-dispatch-failed guard.
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:298;
+                        Windows/dotNET/Syxx.Kit/LeakDetector.cs:338
+- **Issue:**            Same input produces different LeakResult values across platforms.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Align on Inconclusive (C# choice — "no evidence gathered"
+                        is more honest than .error which implies product defect).
+- **Code Sample:**      [
+
+                        // Swift: return LeakTestResult(result: .error, ...)
+                        // C#:    Result = LeakResult.Inconclusive
+
+                        ]
+
+---
+
+
+- **[D121]**            LAN: Windows NetworkAddressClassifier missing publicRoutable — public
+                        IPs silently classified as Other and probed
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. macOS classifies public IPs as .publicRoutable (not probeable).
+                        Windows classifies as Other (probeable). TCP-connect scan of public
+                        IP proceeds without user awareness.
+- **Location:**         macOS/Sources/SyxxKit/LAN/NetworkAddressClassifier.swift:64-67;
+                        Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:48-75
+- **Issue:**            No PublicRoutable enum member in C#. Falls through to Other which
+                        IsProbeable returns true for.
+- **Cross-ref. Delta:** D122-D125 (other LAN parity gaps).
+- **Fix(es):**          [Fix 1] Add PublicRoutable to C# LANAddressKind enum.
+                        [Fix 2]
+                        Implement public-IP detection check.
+- **Code Sample:**      [
+
+                        // macOS: .publicRoutable → NOT probeable
+                        // Windows: no PublicRoutable → falls to Other → IS probeable
+
+                        ]
+
+---
+
+
+- **[D122]**            LAN: Windows missing directed-broadcast detection — subnet broadcast
+                        addresses classified as probeable devices
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. 192.168.1.255 classified as Other (probeable) on Windows;
+                        .broadcast on macOS (not probeable). Counted as real device.
+- **Location:**         macOS/Sources/SyxxKit/LAN/NetworkAddressClassifier.swift:34-45;
+                        Windows/dotNET/Syxx.Kit/LAN/LanCartography.cs:48-75
+- **Issue:**            C# checks only global broadcast 255.255.255.255. No directed-broadcast
+                        detection for last-octet 255/0 on private ranges.
+- **Cross-ref. Delta:** D121.
+- **Fix(es):**          [Fix 1] Add directed-broadcast detection mirroring Swift C114 block.
+- **Code Sample:**      [
+
+                        // macOS: detects 192.168.1.255 as .broadcast
+                        // Windows: 192.168.1.255 → Other (probeable device)
+
+                        ]
+
+---
+
+
+- **[D123]**            LAN: Windows missing snapshot persistence — cross-run diff impossible
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. macOS persists to ~/.syxx/lan-snapshot.json enabling device-
+                        change detection. Windows has no equivalent. Every run starts from
+                        nothing. Rogue device between runs never flagged.
+- **Location:**         macOS/Sources/SyxxKit/LAN/LANCartographer.swift:557-656;
+                        Windows — no equivalent code
+- **Issue:**            grep confirms no saveSnapshot/loadSnapshot in C# codebase.
+- **Cross-ref. Delta:** D121, D122.
+- **Fix(es):**          [Fix 1] Port SaveSnapshot/LoadSnapshot to C#.
+                        [Fix 2] Call from
+                        LanCommand.Run after rendering.
+- **Code Sample:**      [
+
+                        // macOS: saveSnapshot() → ~/.syxx/lan-snapshot.json (0600)
+                        // Windows: no equivalent — every run starts from nothing
+
+                        ]
+
+---
+
+
+- **[D124]**            LAN CLI: Windows missing ARP-unauthenticated warning (C106)
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. macOS prints trust caveat about ARP spoofing. Windows renders
+                        device grid with no disclaimer.
+- **Location:**         macOS/Sources/SyxxCLI/Commands/SyxxLan.swift:66-68;
+                        Windows/dotNET/Syxx/Commands/LanCommand.cs:70-107
+- **Issue:**            No equivalent warning in Windows CLI output.
+- **Cross-ref. Delta:** D121-D123.
+- **Fix(es):**          [Fix 1] Add C106 warning block after device grid.
+- **Code Sample:**      [
+
+                        // macOS: "⚠️ ARP bindings are unauthenticated..."
+                        // Windows: no equivalent warning
+
+                        ]
+
+---
+
+
+- **[D125]**            Leak CLI: Windows Confirmed output suppresses 🚨 DNS LEAK CONFIRMED
+                        headline — primary signal invisible
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. macOS prints unmistakable 🚨 headline. Windows prints only
+                        "N resolver(s) observed" — reads as informational, not alarming.
+- **Location:**         macOS/Sources/SyxxCLI/Commands/SyxxLeak.swift:88;
+                        Windows/dotNET/Syxx/Commands/LeakCommand.cs:128-129
+- **Issue:**            Exit code correctly 1 (threat) but stdout has no clear leak signal.
+- **Cross-ref. Delta:** D126 (NotDetected hardcoded count).
+- **Fix(es):**          [Fix 1] Mirror macOS headline text.
+- **Code Sample:**      [
+
+                        // macOS: "🚨 DNS LEAK CONFIRMED — N resolver(s) observed..."
+                        // Windows: "N resolver(s) observed" — no headline
+
+                        ]
+
+---
+
+
+- **[D126]**            Leak CLI: Windows NotDetected hardcodes "1 resolver" instead of real
+                        count
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Collector observes 3 resolvers but Windows prints "1 resolver
+                        observed." User comparing to dashboard sees mismatch.
+- **Location:**         Windows/dotNET/Syxx/Commands/LeakCommand.cs:132
+- **Issue:**            Hardcoded "1 resolver" regardless of ObservedResolvers.Count.
+- **Cross-ref. Delta:** D125.
+- **Fix(es):**          [Fix 1] Use ObservedResolvers.Count dynamically.
+- **Code Sample:**      [
+
+                        // LeakCommand.cs:132 — hardcoded "1 resolver"
+                        // Should use ObservedResolvers.Count
+
+                        ]
+
+---
+
+
+- **[D127]**            Sentinel CLI: Windows collapses VPN and DNS-encrypted tri-states to
+                        binary — "unknown" rendered as "no"
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. macOS honestly reports "unknown." Windows reports "no,"
+                        implying confirmed off when status was undetermined.
+- **Location:**         macOS/Sources/SyxxCLI/Commands/SyxxSentinel.swift:24,26;
+                        Windows/dotNET/Syxx/Commands/SentinelCommand.cs:50-51
+- **Issue:**            C# DnsEncrypted is bool (not ConditionState). VPN ternary collapses
+                        Unknown to "no."
+- **Cross-ref. Delta:** D128, D129.
+- **Fix(es):**          [Fix 1] Change DnsEncrypted to ConditionState.
+                        [Fix 2] Render all
+                        three states.
+- **Code Sample:**      [
+
+                        // macOS: "yes", "no", or "unknown"
+                        // Windows VPN: current.VpnActive == Yes ? "yes" : "no"
+                        // Windows DNS: current.DnsEncrypted ? "yes" : "no" (bool!)
+
+                        ]
+
+---
+
+
+- **[D128]**            Sentinel CLI: Windows missing corrupt-baseline quarantine and
+                        auto-recovery
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. macOS quarantines corrupt file, establishes fresh baseline,
+                        self-heals. Windows prints error and exits — corrupt file persists
+                        indefinitely.
+- **Location:**         macOS/Sources/SyxxCLI/Commands/SyxxSentinel.swift:89-99;
+                        Windows/dotNET/Syxx/Commands/SentinelCommand.cs:86-90
+- **Issue:**            No quarantine or re-establish logic on Windows.
+- **Cross-ref. Delta:** D129 (missing change log).
+- **Fix(es):**          [Fix 1] Port quarantine-and-reestablish logic.
+- **Code Sample:**      [
+
+                        // macOS: quarantine corrupt → establish fresh → self-heal
+                        // Windows: print error → exit → corrupt file persists
+
+                        ]
+
+---
+
+
+- **[D129]**            Sentinel CLI: Windows missing persistent change log (C109)
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. macOS logs changes to ~/.syxx/sentinel-changes.jsonl. Windows
+                        prints to stdout only — changes lost when baseline rolls forward.
+- **Location:**         macOS/Sources/SyxxCLI/Commands/SyxxSentinel.swift:115-142;
+                        Windows/dotNET/Syxx/Commands/SentinelCommand.cs
+- **Issue:**            grep confirms no sentinel-changes or changeLog in C# codebase.
+- **Cross-ref. Delta:** D128.
+- **Fix(es):**          [Fix 1] Port appendChangeLog to C#.
+- **Code Sample:**      [
+
+                        // macOS: appendChangeLog → ~/.syxx/sentinel-changes.jsonl
+                        // Windows: stdout only — changes lost on baseline roll
+
+                        ]
+
+---
+
+
+- **[D130]**            LAN CLI: Windows off-LAN resolver message is categorical; macOS is
+                        conditional — honesty divergence
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. macOS: "not conclusive" (ARP cache is not a probe). Windows:
+                        "reached through the gateway" (unestablished claim).
+- **Location:**         macOS/Sources/SyxxCLI/Commands/SyxxLan.swift:75-79;
+                        Windows/dotNET/Syxx/Commands/LanCommand.cs:106
+- **Issue:**            Windows overclaims certainty about resolver reachability.
+- **Cross-ref. Delta:** D121-D124.
+- **Fix(es):**          [Fix 1] Mirror macOS conditional wording.
+- **Code Sample:**      [
+
+                        // macOS: "...not conclusive — resolver may be off-LAN or dead"
+                        // Windows: "...reached through the gateway (off-LAN)"
+
+                        ]
+
+---
+
+
+- **[D131]**            Forensics CLI: Windows never sets non-zero exit code — all threats
+                        return 0
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. macOS returns 1 for flagged/beacon/exfil. Windows Run method
+                        is void, never sets Environment.ExitCode. CI pipelines reading
+                        $LASTEXITCODE treat flagged domain as clean.
+- **Location:**         macOS/Sources/SyxxCLI/Commands/SyxxForensics.swift:39-82;
+                        Windows/dotNET/Syxx/Commands/ForensicsCommand.cs:10-119
+- **Issue:**            Run method is void. All subcommands return via `return;` with no
+                        exit code.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Set Environment.ExitCode = 1 in threat branches.
+- **Code Sample:**      [
+
+                        // macOS: exit(1) for flagged/beacon/exfil
+                        // Windows: void Run() — always exits 0
+
+                        ]
+
+---
+
+
+- **[D132]**            macOS LANCartographer has zero telemetry instrumentation
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. Entire LAN discovery subsystem (~380 lines) has zero spans,
+                        zero breadcrumbs, zero OSLog entries. Security-critical feature
+                        completely invisible to observability stack.
+- **Location:**         macOS/Sources/SyxxKit/LAN/LANCartographer.swift (entire file)
+- **Issue:**            snapshot(), diff(), saveSnapshot(), loadSnapshot() — no telemetry.
+- **Cross-ref. Delta:** D133-D135 (DimensionClient same pattern).
+- **Fix(es):**          [Fix 1] Add SyxxTracer spans to all LAN operations.
+- **Code Sample:**      [
+
+                        // LANCartographer.swift — zero SyxxTracer, SyxxDiagnostics,
+                        // or OSLog calls in entire file
+
+                        ]
+
+---
+
+
+- **[D133]**            macOS and Windows DimensionClient — zero spans on all API calls
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. Four network operations (authoritative, diff, warpManifest,
+                        warpRawAsset) have zero spans on both platforms. SyxxTracer exists
+                        in same module but Dimension layer was never instrumented.
+- **Location:**         macOS/Sources/SyxxKit/DimensionClient.swift (entire file);
+                        Windows/dotNET/Syxx.Kit/DimensionClient.cs (entire file)
+- **Issue:**            Server-confirmation subsystem is a telemetry black hole.
+- **Cross-ref. Delta:** D132 (LAN same pattern), D134 (Windows bare catches).
+- **Fix(es):**          [Fix 1] Add SyxxTracer spans to all Dimension API calls.
+- **Code Sample:**      [
+
+                        // DimensionClient — zero SyxxTracer.StartSpan() calls
+                        // despite SyxxTracer defined in same assembly
+
+                        ]
+
+---
+
+
+- **[D134]**            Windows DimensionClient — six bare catch blocks swallow all errors
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. TLS failure, DNS error, JSON parse error, socket timeout all
+                        produce same output: null. All failure modes indistinguishable.
+- **Location:**         Windows/dotNET/Syxx.Kit/DimensionClient.cs:104,145,183,214,239,266
+- **Issue:**            Six `catch { return null; }` blocks with no logging, metric, or
+                        breadcrumb.
+- **Cross-ref. Delta:** D133.
+- **Fix(es):**          [Fix 1] Log exception type and message.
+                        [Fix 2] Return typed
+                        DimensionOutcome instead of null.
+- **Code Sample:**      [
+
+                        // DimensionClient.cs — six instances of:
+                        catch { return null; }  // no logging, no metric
+
+                        ]
+
+---
+
+
+- **[D135]**            macOS DimensionService — silent fallback on all failure paths
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. fetchStartup, fetchBroadcast, fetchWhatsNewURL all catch
+                        errors and silently fall back to cache/hardcoded default. No
+                        breadcrumb or diagnostic signal.
+- **Location:**         macOS/Sources/SyxxApp/DimensionService.swift:82-95, 108-117
+- **Issue:**            Dimension server unreachable → app appears healthy serving stale data
+                        with no telemetry to prove it.
+- **Cross-ref. Delta:** D133.
+- **Fix(es):**          [Fix 1] Add SyxxDiagnostics.breadcrumb() on all fallback paths.
+- **Code Sample:**      [
+
+                        // DimensionService.swift — catch all errors, fallback silently
+                        // No breadcrumb, no OSLog, no diagnostic signal
+
+                        ]
+
+---
+
+
+- **[D136]**            No end-to-end scan trace correlation — no trace_id propagates between
+                        client and server
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. Server OTel spans have no W3C trace context extraction. Clients
+                        never inject trace context into outgoing requests. A user's complete
+                        diagnostic flow crosses 6+ network round-trips but cannot be
+                        reconstructed as a single trace.
+- **Location:**         Cross-cutting (all client and server telemetry)
+- **Issue:**            "Why did this user's scan show inconclusive" is operationally
+                        impossible to answer from telemetry alone.
+- **Cross-ref. Delta:** D087 (run_id always none).
+- **Fix(es):**          [Fix 1] Generate trace_id at scan start.
+                        [Fix 2] Inject into all
+                        outgoing HTTP headers. [Fix 3] Extract on server side.
+- **Code Sample:**      [
+
+                        // No trace_id, scan_id, or correlation_id propagates
+                        // between client and server anywhere in the codebase
+
+                        ]
+
+---
+
+
+- **[D137]**            macOS RemoteContentView — server-side Ed25519 signature on What's New
+                        HTML is never verified by any client
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Server signs HTML with collector's Ed25519 key (D041) but
+                        neither macOS nor Windows client fetches or verifies the signature.
+                        Defense is inert.
+- **Location:**         macOS/Sources/SyxxApp/RemoteContentView.swift:369-416;
+                        Server/syxx_server/app.py:1195-1198
+- **Issue:**            loadContent fetches HTML via URLSession, injects CSS reset, loads
+                        into WKWebView — no signature fetched, parsed, or verified.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Implement client-side Ed25519 verification.
+                        [Fix 2] Or
+                        remove server-side signing and misleading comment.
+- **Code Sample:**      [
+
+                        // app.py:1197 — "sign the What's-New HTML with Ed25519"
+                        // RemoteContentView.swift:369-416 — no verification anywhere
+
+                        ]
+
+---
+
+
+- **[D138]**            macOS WelcomeView — unbounded recursive polling timer in scan
+                        completion check
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Recursive asyncAfter with no maximum retry count or timeout.
+                        Hung warden → eternal "Scanning..." spinner with no cancel option.
+- **Location:**         macOS/Sources/SyxxApp/WelcomeView.swift:196-206
+- **Issue:**            checkScanComplete() reschedules every 1s indefinitely.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add max iteration count or monotonic deadline (120s).
+                        [Fix 2] Offer retry/skip on timeout.
+- **Code Sample:**      [
+
+                        // WelcomeView.swift:196-206
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            checkScanComplete()  // recursive — no upper bound
+                        }
+
+                        ]
+
+---
+
+
+- **[E054]**            macOS What's New HTML server signature never verified — defense is
+                        inert (see D137)
+- **Status:**           **DUPLICATE** — See D137.
+- **Cross-ref. Delta:** D137.
+
+---
+
+
+- **[E055]**            Server Warp routes leak internal network topology via error messages
+- **Status:**           **DUPLICATE** — See A078.
+- **Cross-ref. Delta:** A078.
+
+---
+
+
+- **[F014]**            DNS collector has no query volume metric — capacity planning impossible
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      High. _serve_dns processes every UDP datagram but never increments
+                        a counter. Only dns_rate_limited (rejected) is measured. Cannot
+                        determine total queries, responses sent, or leak-zone vs REFUSED ratio.
+- **Location:**         Server/syxx_server/dns_authoritative.py:371-438
+- **Issue:**            No logging_util.incr("dns_queries_received") or equivalent.
+- **Cross-ref. Delta:** F015 (observation metric also missing).
+- **Fix(es):**          [Fix 1] Add query/response counters at top of serving loop.
+- **Code Sample:**      [
+
+                        # dns_authoritative.py:371-438 — main serving loop
+                        # No counter for total queries received
+
+                        ]
+
+---
+
+
+- **[F015]**            DNS collector has no metric for recorded observations — core business
+                        metric unmeasured
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. leak.observe() succeeds but no counter incremented. Cannot
+                        determine legitimate observations per unit time.
+- **Location:**         Server/syxx_server/dns_authoritative.py:428-433
+- **Issue:**            Only rejected queries are counted. Successful observations are not.
+- **Cross-ref. Delta:** F014.
+- **Fix(es):**          [Fix 1] Add counter after successful leak.observe().
+- **Code Sample:**      [
+
+                        # dns_authoritative.py:428-433
+                        leak.observe(...)  # success — no counter incremented
+
+                        ]
+
+---
+
+
+- **[F016]**            macOS @Published SwiftUI invalidation cascade — 63 properties, ~15
+                        writes per scan, each triggers full view-tree invalidation
+- **Status:**           **OPEN** — Found during deepest delta-analysis 2026-08-09.
+- **Criticality:**      Medium. Each @Published write fires objectWillChange.send(),
+                        invalidating every observing view. Each await boundary is a new
+                        run-loop tick → separate invalidation cycle. ~15-75ms wasted per scan.
+- **Location:**         macOS/Sources/SyxxApp/AppModel.swift (all 63 @Published properties)
+- **Issue:**            runAllWardens writes ~15 distinct @Published properties across
+                        multiple await suspension points.
+- **Cross-ref. Delta:** D014 (AppModel God class).
+- **Fix(es):**          [Fix 1] Extract per-tool ViewModels.
+                        [Fix 2] Use Observable macro
+                        (iOS 17+) for fine-grained invalidation.
+- **Code Sample:**      [
+
+                        // AppModel.swift — 63 @Published properties
+                        // Each write invalidates ALL observing views
+                        // Each await boundary = new tick = new invalidation
+
+                        ]
+
+---
+
+---
+
+
+- **[D139]**            `Synthesizer.Prophet` maps `ResolverLatencyStatus.Unreachable` to
+                        `.degraded` on macOS but `.invalidated` on Windows — cross-platform
+                        Prophet section status divergence
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. `.invalidated` blocks threat diagnoses that require a usable
+                        Prophet section (Windows); `.degraded` does not (macOS). An identical
+                        run on the two platforms can produce different verdicts when the
+                        resolver latency probe is unreachable.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:163-168;
+                        Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:207-224
+- **Issue:**            macOS `case .slow, .degraded, .unreachable: subs.append(.degraded)`.
+                        Windows `case Unreachable: subs.Add(SectionStatus.Invalidated)`.
+                        The Windows comment (B193) says macOS should be changed to
+                        `.invalidated`, but neither platform has been updated to agree.
+- **Cross-ref. Delta:** D012 (this filing supersedes D012 from the parity sub-agent).
+- **Fix(es):**          [Fix 1] Decide the canonical mapping. `.invalidated` is semantically
+                        sounder (an unreachable probe produced no data). Update macOS
+                        `Synthesizer.swift` to map `.unreachable` → `.invalidated`, matching
+                        Windows B193 intent.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:165
+                        case .slow, .degraded, .unreachable: subs.append(.degraded)   // macOS
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:220-221
+                        case ResolverLatencyStatus.Unreachable:
+                            subs.Add(SectionStatus.Invalidated);                      // Windows
+
+                        ]
+
+---
+
+
+- **[D140]**            `Synthesizer.Mirror` WARP inconclusive emits `EvidenceId.ScriptMismatch`
+                        on Windows (0.75-strength threat indicator) but `scriptMismatchInconclusive`
+                        on macOS (unmapped, zero strength) — false threat signal on Windows
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. An inconclusive WARP check (e.g. CDN 429, upstream timeout)
+                        on Windows injects a 0.75-strength `LiveQueryContentRewrite` indicator
+                        into the matrix engine, potentially producing a false `ThreatDetected`
+                        verdict. macOS correctly contributes zero strength for an inconclusive
+                        result.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:352-357;
+                        Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:462-468
+- **Issue:**            Windows `case WarpConclusion.INCONCLUSIVE` emits
+                        `EvidenceId.ScriptMismatch` — the same ID used for a confirmed
+                        tampering detection. macOS uses `EvidenceId.scriptMismatchInconclusive`
+                        (C199), which is absent from `indicatorMapping` and contributes nothing.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Change Windows `EvidenceId.ScriptMismatch` in the INCONCLUSIVE
+                        arm to `EvidenceId.ScriptMismatchInconclusive`, exactly as macOS C199.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:354-356 (correct)
+                        evidenceId: .scriptMismatchInconclusive   // unmapped — zero strength
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:463 (defective)
+                        EvidenceId.ScriptMismatch                 // mapped at 0.75 strength
+
+                        ]
+
+---
+
+
+- **[D141]**            `FilteringProbe` missing B139 control-resolver cross-check on Windows —
+                        false-positive filtering detection for domains that have gone offline
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. A probe domain that stops resolving globally (de-registered,
+                        registry hold) reads as `Active` filtering on Windows — a false
+                        positive telling the user their filter is blocking requests that the
+                        domain no longer services. macOS demotes these to `Unknown` via B139.
+- **Location:**         macOS/Sources/SyxxKit/FilteringProbe.swift:82-101;
+                        Windows/dotNET/Syxx.Kit/FilteringProbe.cs:66-74
+- **Issue:**            macOS verifies through an independent control resolver that a
+                        NXDOMAIN/NODATA result means the domain should resolve before
+                        classifying it as sinkholed. Windows `ProbeAsync` has no control-
+                        resolver confirmation step at all.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add a `controlResolver` parameter and the B139 cross-check
+                        loop to `FilteringProbe.ProbeAsync` in Windows.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/FilteringProbe.swift:92-99 (correct)
+                        if initial == .sinkholed {
+                            let controlResp = await DNSResolver.queryUDPDetailed(
+                                DNSQuery(name: domain, type: 1, server: controlResolver))
+                            if controlResp.status == .nxDomain || controlResp.status == .noData {
+                                perDomain[domain] = .unknown; continue
+                            }
+                        }
+
+                        // Windows/dotNET/Syxx.Kit/FilteringProbe.cs:66-74 (missing cross-check)
+                        perDomain[domain] = Classify(resp);   // ← no control-resolver step
+
+                        ]
+
+---
+
+
+- **[D142]**            `SynthesisEngine.indicatorMapping` missing `exfilSuspicious` on Windows —
+                        suspicious DNS exfiltration patterns produce zero indicator strength
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. A capture returning suspicious-but-unconfirmed exfil patterns
+                        contributes 0.35-strength `LocalEnvironmentCompromised` on macOS but
+                        zero on Windows. A Windows user with suspicious DNS activity sees a
+                        weaker matrix determination than a macOS user in identical conditions.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:291-292;
+                        Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:310
+- **Issue:**            macOS `indicatorMapping` maps `.exfilSuspicious →
+                        (.localEnvironmentCompromised, 0.35)`.
+                        Windows `IndicatorMapping` contains only `ExfilLikely` (0.60) with no
+                        `ExfilSuspicious` entry.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add `[EvidenceId.ExfilSuspicious] =
+                        (SyxxIndicator.LocalEnvironmentCompromised, 0.35)`
+                        to the Windows `IndicatorMapping` dictionary.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/Synthesis/SynthesisEngine.swift:291-292
+                        .exfilSuspicious: (.localEnvironmentCompromised, 0.35),   // present
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/SynthesisEngine.cs:310
+                        // ExfilSuspicious entry is absent                         // missing
+
+                        ]
+
+---
+
+
+- **[D143]**            `DNSResponse.DidFail` excludes `RcodeOther` on Windows — unhandled
+                        RCODEs (FORMERR, NOTIMP, BADVERS) reported as non-failure
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. A resolver returning RCODE 4 (NOTIMP) is treated as a
+                        non-failure on Windows, allowing a probe to proceed on a response
+                        that signifies the resolver cannot answer. macOS correctly maps
+                        unhandled RCODEs to `rcodeOther` with `didFail = true`.
+- **Location:**         macOS/Sources/SyxxKit/DNSResolver.swift:267-271;
+                        Windows/dotNET/Syxx.Kit/DNSResolver.cs:169-175
+- **Issue:**            Windows `DidFail` property lists `Timeout, TransportError,
+                        MalformedResponse, ResponseIdMismatch, Truncated, ServFail, Refused`
+                        but omits `RcodeOther`. Additionally, Windows parser emits
+                        `TransportError` for unknown RCODEs while macOS emits `RcodeOther`,
+                        so the two platforms use different status values for the same wire
+                        condition.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add `or DNSResponseStatus.RcodeOther` to Windows `DidFail`.
+                        [Fix 2] Update the Windows parser to emit `RcodeOther` (not
+                        `TransportError`) for non-zero, non-handled RCODEs.
+- **Code Sample:**      [
+
+                        // Windows/dotNET/Syxx.Kit/DNSResolver.cs:169-175
+                        public bool DidFail => Status is DNSResponseStatus.Timeout
+                            or DNSResponseStatus.TransportError
+                            ...
+                            or DNSResponseStatus.Refused;
+                            // ← RcodeOther absent
+
+                        ]
+
+---
+
+
+- **[D144]**            `LeakDetector` empty-servers returns `.inconclusive` on Windows but
+                        `.error` on macOS — divergent Glutton section status
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. macOS maps `LeakResult.error` → Glutton `.invalidated`.
+                        Windows maps `.inconclusive` differently. Identical physical condition
+                        (no DNS resolvers configured) produces different section status and
+                        matrix attenuation across platforms.
+- **Location:**         macOS/Sources/SyxxKit/LeakDetector.swift:291-295;
+                        Windows/dotNET/Syxx.Kit/LeakDetector.cs:334-342
+- **Issue:**            No resolvers configured: macOS returns `LeakResult.error`;
+                        Windows returns `LeakResult.Inconclusive`. The macOS approach is
+                        semantically correct — nothing was dispatched, so this is an
+                        execution failure, not an ambiguous measurement.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Change Windows empty-servers early-return to
+                        `LeakResult.Error` to match macOS and align Glutton section status.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/LeakDetector.swift:291-295
+                        return LeakTestResult(result: .error, ...)   // macOS
+
+                        // Windows/dotNET/Syxx.Kit/LeakDetector.cs:337-341
+                        return new LeakTestResult { Result = LeakResult.Inconclusive, ... }  // Windows
+
+                        ]
+
+---
+
+
+- **[D145]**            `Synthesizer.Prophet` `DenialStatus.NotADenial` adds clean support on
+                        Windows (`.negative`) but is skipped on macOS (B061) — inflates
+                        Prophet completeness on Windows
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. Adding `.negative` for `NotADenial` (the domain resolved —
+                        the check doesn't apply) inflates the Prophet section's sub-count,
+                        potentially pushing a borderline `inconclusive` Prophet section to
+                        `negative` on Windows with no macOS counterpart.
+- **Location:**         macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:231-232;
+                        Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:306-308
+- **Issue:**            macOS B061: `case .notADenial: break` — contributes nothing to
+                        subs. Windows B195 comment contradicts B061 and adds
+                        `subs.Add(SectionStatus.Negative)` for `NotADenial`.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Remove `subs.Add(SectionStatus.Negative)` from the Windows
+                        `NotADenial` arm and correct the B195 comment to align with macOS B061.
+- **Code Sample:**      [
+
+                        // macOS/Sources/SyxxKit/Synthesis/Synthesizer.swift:231-232
+                        case .notADenial: break   // contributes nothing — B061
+
+                        // Windows/dotNET/Syxx.Kit/Synthesis/Synthesizer.cs:306-308
+                        case DenialStatus.NotADenial:
+                            subs.Add(SectionStatus.Negative);   // ← inflates completeness
+
+                        ]
+
+---
+
+
+- **[E056]**            `_route_checkout` uses raw `self.client_address[0]` (socket peer, always
+                        `127.0.0.1` behind nginx) for Stripe idempotency key — all users in
+                        the same hour window share one Stripe checkout session
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. Two users requesting the same SKU in the same 1-hour window
+                        both receive the same Stripe session URL. User B is directed to User A's
+                        payment page. This is a session-fixation variant exposing payment and
+                        billing details.
+- **Location:**         Server/syxx_server/app.py:1308-1310
+- **Issue:**            `client_ip = self.client_address[0]` is the raw TCP socket peer —
+                        always `127.0.0.1` when behind nginx. Every checkout request in the
+                        same window for the same SKU produces the identical idempotency key.
+                        Stripe deduplicates on this key and returns the first session to all
+                        subsequent callers.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace `self.client_address[0]` with `self._client_ip()`
+                        (the existing helper that reads X-Forwarded-For), matching all other
+                        routes.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:1308-1310
+                        window = int(time.time()) // 3600
+                        client_ip = self.client_address[0]    # ← ALWAYS 127.0.0.1 behind nginx
+                        idem_key = f"checkout-{sku}-{hashlib.sha256(client_ip.encode()).hexdigest()[:16]}-{window}"
+
+                        ]
+
+---
+
+
+- **[E057]**            Free-tier leak-test verify path uses `allow_any_subject=True` — DNS
+                        eavesdropper can claim another user's leak token, read their resolver
+                        PII, and consume (DoS) the token
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. DNS is cleartext. A passive eavesdropper observing
+                        `<label>.leak.syxx.app` queries can call `/api/leaktest/check?token=<label>`
+                        to read User A's resolver IPs (PII) and atomically consume the token,
+                        preventing User A from ever receiving their result. The paid-tier path
+                        is correctly subject-gated; the free path is not.
+- **Location:**         Server/syxx_server/app.py:2396-2416
+- **Issue:**            `_route_leaktest_check` passes `allow_any_subject=True` to
+                        `leak.verify`, bypassing token ownership entirely. Any caller who
+                        knows the label (readable from DNS) can drain the result.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Bind the free-tier token to the issuing client IP at creation
+                        time and verify it at check time (without `allow_any_subject=True`).
+                        [Fix 2] Alternatively, require a short-lived HMAC challenge proving
+                        knowledge of the token before returning results.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:2407-2410
+                        result, label = leak.verify(token, client_ip, allow_any_subject=True)
+                        # ↑ ownership check bypassed — any caller with the label wins
+
+                        ]
+
+---
+
+
+- **[E058]**            `_ACTIVATE_FAILURES` reset path sets `count = 0` but retains the
+                        original `first_time` anchor — lockout threshold can never fire;
+                        brute-force proceeds indefinitely
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. An attacker submitting `threshold - 1` failed activation
+                        attempts, waiting for `_ACTIVATE_LOCKOUT_WINDOW` to expire, then
+                        repeating gets the counter reset to 0 on every cycle. The lockout
+                        threshold is never reached. License key brute-force proceeds at
+                        `(threshold - 1) / window` = 9 guesses per 15 minutes indefinitely.
+- **Location:**         Server/syxx_server/app.py:1641-1648
+- **Issue:**            When `elapsed >= _ACTIVATE_LOCKOUT_WINDOW`, the increment path
+                        sets `count = 0` but writes `(count + 1, first_time)` — the
+                        `first_time` anchor is the original failure time, now in the past.
+                        The next call computes `elapsed >= window` again (still true),
+                        resets again, and the lockout never fires.
+- **Cross-ref. Delta:** A012 (same dict — restart resets; this is the within-session bypass).
+- **Fix(es):**          [Fix 1] On window expiry, write `(1, time.time())` — a fresh
+                        anchor and a fresh count of 1 for the current attempt, not 0.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:1641-1648
+                        count, first_time = self._ACTIVATE_FAILURES[client_ip]
+                        elapsed = time.time() - first_time
+                        if elapsed >= self._ACTIVATE_LOCKOUT_WINDOW:
+                            count = 0   # ← count reset but first_time stays in the past
+                        self._ACTIVATE_FAILURES[client_ip] = (count + 1, first_time)
+                        # next call: elapsed is still >= window → resets again indefinitely
+
+                        ]
+
+---
+
+
+- **[E059]**            Server OTel spans emit verbatim queried domain names to the OTLP
+                        collector — DNS investigation requests are browsing-history PII
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. Per SyxxDiagnostics.swift:42-44: "A DNS query stream IS
+                        a browsing history." The server emits the exact domain to a
+                        third-party OTLP endpoint on every `/api/investigate`,
+                        `/api/authoritative`, `/api/diff`, `/api/trace`, and `/api/baseline`
+                        request with no redaction path.
+- **Location:**         Server/syxx_server/app.py:2019, 2044, 2091, 2176, 2237
+- **Issue:**            `span.set_attribute("investigate.domain", domain)` and similarly
+                        named attributes on other routes emit the verbatim user-supplied
+                        hostname. The server has no equivalent of `TelemetryRedaction` from
+                        SyxxKit. The OTLP export bypasses `_emit`/`_redact_emails`.
+- **Cross-ref. Delta:** E060 (client IP also in spans).
+- **Fix(es):**          [Fix 1] Apply server-side domain redaction: emit label-count,
+                        name-length, and `is_idn` flag instead of the raw hostname. Add an
+                        allowlist of Syxx canary domains safe to emit verbatim.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:2019
+                        span.set_attribute("investigate.domain", domain)  # ← verbatim user hostname
+
+                        ]
+
+---
+
+
+- **[E060]**            Server OTel spans emit verbatim client IP address on `/api/exposure`
+                        and `/api/leaktest/start` — real public IP is PII
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Critical. The resolved real client IP is written to `exposure.ip`
+                        and `leak.client_ip` span attributes and exported to the OTLP
+                        endpoint unconditionally. This correlates a specific IP address with
+                        the security queries a user is making.
+- **Location:**         Server/syxx_server/app.py:2280, 2390
+- **Issue:**            `span.set_attribute("exposure.ip", ip)` and
+                        `span.set_attribute("leak.client_ip", client_ip)` emit the full
+                        IPv4/IPv6 address. The OTLP pipeline has no redaction step.
+- **Cross-ref. Delta:** E059 (domain PII in spans).
+- **Fix(es):**          [Fix 1] Replace with a one-way hash or emit only the IP class
+                        (`"public_ipv4"`, `"private"`, `"loopback"`).
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:2280
+                        span.set_attribute("exposure.ip", ip)          # ← verbatim public IPv4
+
+                        # Server/syxx_server/app.py:2390
+                        span.set_attribute("leak.client_ip", client_ip)  # ← verbatim IP
+
+                        ]
+
+---
+
+
+- **[E061]**            `HomeBaseline.save` writes without HMAC protection; `loadOutcome`
+                        reads without `IntegrityTag.verify` — home baseline is forgeable by
+                        a local attacker
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. A local attacker who can write `~/.syxx/home-baseline.json`
+                        can substitute any chosen baseline, causing `HomeBaseline.compare`
+                        to report `matchesHome: true` for an attacker-controlled config —
+                        suppressing all legitimate diff signals with no detection.
+- **Location:**         macOS/Sources/SyxxKit/Trust/Sentinel.swift:209-213, 223-240
+- **Issue:**            `HomeBaseline.save` writes raw JSON without `IntegrityTag.signAndWrite`.
+                        `HomeBaseline.loadOutcome` reads without `IntegrityTag.verify`.
+                        Contrast with `Sentinel.saveSnapshot`/`loadSnapshotOutcome` which
+                        correctly apply HMAC on both save and load.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Apply `IntegrityTag.signAndWrite` in `HomeBaseline.save`.
+                        [Fix 2] Apply `IntegrityTag.verify` in `HomeBaseline.loadOutcome`,
+                        treating a verification failure as absent (not trusted).
+- **Code Sample:**      [
+
+                        // Sentinel.swift:209-213 — HomeBaseline.save (missing HMAC)
+                        try JSONEncoder().encode(snapshot).write(to: url, options: .atomic)
+                        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ...)
+                        // ← no IntegrityTag.signAndWrite
+
+                        // Sentinel.swift:90 — Sentinel.saveSnapshot (correct)
+                        try IntegrityTag.signAndWrite(data, for: url)   // ← HMAC protected
+
+                        ]
+
+---
+
+
+- **[B049]**            `server.investigate` OTel span always ends with `StatusCode.UNSET` —
+                        investigation failures are indistinguishable from successes in APM
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. A systematic failure in `investigate.investigate()` (resolver
+                        bug, dependency outage) produces zero APM signal. `span.end()` is
+                        called before the `if err:` branch, so the span is already closed
+                        before the failure is tested.
+- **Location:**         Server/syxx_server/app.py:2017-2026
+- **Issue:**            The `server.investigate` span is started and ended unconditionally
+                        with no status, outcome attribute, or error classification. Error
+                        paths are unreachable from the span because `span.end()` fires first.
+- **Cross-ref. Delta:** E059 (same span also leaks domain PII).
+- **Fix(es):**          [Fix 1] Set `span.set_status(StatusCode.ERROR, err)` before ending
+                        the span on the error path. Move `span.end()` to a `finally` block
+                        or use a context manager.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:2021-2026
+                        result, err = investigate.investigate(domain)
+                        if span:
+                            span.end()                   # ← ends before error is tested
+                        if err:
+                            return self._json_error(400, err)
+
+                        ]
+
+---
+
+
+- **[B050]**            `server.warp` span is never ended on `BlockedError` or `FetchError` —
+                        leaked-open spans accumulate unboundedly in the `BatchSpanProcessor`
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. Repeated fetch failures (persistent block-list mis-classification,
+                        CDN outages) cause unbounded span accumulation in the OTel
+                        `BatchSpanProcessor`, a slow memory leak with zero error rate signal
+                        visible in the collector.
+- **Location:**         Server/syxx_server/app.py:1784-1793
+- **Issue:**            The `server.warp` span is started inside the `try` block. On
+                        `BlockedError` and `FetchError` exception paths, neither `span.end()`
+                        nor `span.set_status` is called. Spans are also never ended on
+                        the deprecated `build_baseline` path when it raises.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Wrap the span lifetime in a `finally` block. Set
+                        `span.set_status(StatusCode.ERROR, ...)` in each except clause.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/app.py:1784-1793
+                        try:
+                            span = _OTEL_TRACER.start_span("server.warp") if _OTEL_TRACER else None
+                            result = warp.build_baseline(target)
+                            if span: span.end()          # ← only on success
+                        except fetcher.BlockedError as e:
+                            return self._json_error(400, …)   # span leaks
+                        except fetcher.FetchError as e:
+                            return self._json_error(502, …)   # span leaks
+
+                        ]
+
+---
+
+
+- **[B051]**            `ContinuousMonitor.sampleDNSAndRecord` silently swallows all DNS
+                        transport errors — probe failure mode invisible, no span, no diagnostic
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. A transport bug causing `queryUDPDetailed` to throw (not just
+                        timeout-status) silently produces `0/3 succeeded` with no per-domain
+                        error class, no OTel event, and no `SyxxDiagnostics` breadcrumb.
+                        A systematic probe regression is invisible at the individual-failure
+                        level. The monitoring tick path has no OTel span at all.
+- **Location:**         macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:359-361
+- **Issue:**            `catch { // DNS failure for a sample domain must not crash the loop }`
+                        — the entire catch body is a comment. No diagnostic signal is emitted.
+                        No span wraps `sampleDNSAndRecord` or `tickOnce`.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Add a `SyxxDiagnostics.breadcrumb` call in the catch block
+                        with domain and `type(of: error)`. [Fix 2] Wrap `sampleDNSAndRecord`
+                        in a `SyxxTracer.span("monitor.dns_sample_round")` span with
+                        `attempted` and `succeeded` attributes.
+- **Code Sample:**      [
+
+                        // ContinuousMonitor.swift:359-361
+                        } catch {
+                            // DNS failure for a sample domain must not crash the loop
+                            // ← no breadcrumb, no span, no counter
+                        }
+
+                        ]
+
+---
+
+
+- **[F017]**            `_recv_exact` in `resolver.py` accumulates TCP response bytes with
+                        `buf += chunk` — O(n²) allocation on fragmented reads
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Non-critical. For a 16 KB DNS-over-TCP response received in
+                        256-byte chunks (64 iterations), ~512 KB of byte copying occurs
+                        instead of 16 KB. Under concurrent TCP fallback load this degrades
+                        latency and increases peak RSS.
+- **Location:**         Server/syxx_server/resolver.py:416-423
+- **Issue:**            `buf += chunk` allocates a new `bytes` object of
+                        `len(buf) + len(chunk)` on every iteration. `bytes` is immutable
+                        in Python so every `+=` copies all previously accumulated bytes.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace with a `bytearray`/`memoryview` accumulator using
+                        `recv_into` for zero-copy accumulation and a single final `bytes(buf)`
+                        conversion.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/resolver.py:416-423
+                        buf = b""
+                        while len(buf) < n:
+                            chunk = sock.recv(n - len(buf))
+                            if not chunk: raise DNSError("connection closed")
+                            buf += chunk   # ← O(n²): new allocation + copy per iteration
+
+                        ]
+
+---
+
+
+- **[F018]**            `ContinuousMonitor.sampleDNSAndRecord` resolves three sample domains
+                        serially — worst-case 3× the per-domain timeout per monitoring tick
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      Non-critical. On a captive portal or throttled network each domain
+                        can timeout independently (~2 s each), pinning the monitoring tick
+                        for up to 6 s. Concurrent queries collapse this to ~2 s.
+- **Location:**         macOS/Sources/SyxxKit/Trust/ContinuousMonitor.swift:322-362
+- **Issue:**            `for domain in sampleDomains` iterates three domains sequentially
+                        inside a single `async` function. There is no `withTaskGroup` or
+                        `async let` fan-out. The tick budget is `3 × query_timeout` in the
+                        worst case.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Replace the `for` loop with a `withTaskGroup` fan-out,
+                        running all three queries concurrently and collecting results.
+- **Code Sample:**      [
+
+                        // ContinuousMonitor.swift:322-330
+                        for domain in sampleDomains {   // ← sequential, not concurrent
+                            attempted += 1
+                            do {
+                                ...
+                                response = await DNSResolver.queryUDPDetailed(
+                                    DNSQuery(name: domain, type: 1, server: firstResolver))
+                            }
+                        }
+
+                        ]
+
+---
+
+
+- **[F019]**            `resolver.py` `resolve_authoritative` fires synchronous DNSKEY round-
+                        trip inside answer path — adds up to 3 s to every authoritative lookup
+- **Status:**           **OPEN** — Found during delta-analysis (deep) 2026-08-10.
+- **Criticality:**      High. `_zone_is_signed` is called unconditionally in the return-dict
+                        construction after the authoritative answer is already found. On a
+                        slow or unresponsive nameserver this adds the full `timeout=3 s` to
+                        the caller's authoritative API response. The server handler thread is
+                        pinned for the full duration.
+- **Location:**         Server/syxx_server/resolver.py:1002
+- **Issue:**            `"dnskeyObserved": _zone_is_signed(zone, used_ip, timeout)` is a
+                        synchronous socket call embedded in a dict literal. It is issued
+                        after the walk has already completed. The remaining deadline budget
+                        (`deadline` parameter) is not shared with this call — it uses a
+                        fresh `timeout` argument.
+- **Cross-ref. Delta:** None.
+- **Fix(es):**          [Fix 1] Return `dnskeyObserved: None` and let the caller issue
+                        the DNSKEY query concurrently. [Fix 2] At minimum, cap the
+                        `_zone_is_signed` call with the remaining walk deadline rather
+                        than a fresh 3 s budget.
+- **Code Sample:**      [
+
+                        # Server/syxx_server/resolver.py:1002
+                        "dnskeyObserved": _zone_is_signed(zone, used_ip, timeout),
+                        # ↑ synchronous round-trip after answer found — adds up to 3 s
+
+                        ]
+
+---
+

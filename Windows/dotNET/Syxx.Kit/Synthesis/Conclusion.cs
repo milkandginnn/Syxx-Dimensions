@@ -20,7 +20,9 @@ namespace Syxx.Kit;
 /// ValidatedDecisiveActs, Stage5, HypothesisProbability, WeightRubric, BenignExplanation.
 /// Replaced by `Determination: DeterminativeResult?` — the matrix engine's tri-state result.
 public sealed record Conclusion(
-    [property: JsonPropertyName("generatedAt")] DateTimeOffset GeneratedAt,
+    [property: JsonPropertyName("generatedAt")]
+    [property: JsonConverter(typeof(AppleReferenceDateJsonConverter))]
+    DateTime GeneratedAt,
     [property: JsonPropertyName("sectionStatuses")] IReadOnlyList<SectionStatusEntry> SectionStatuses,
     [property: JsonPropertyName("evidence")] IReadOnlyList<EvidenceItem> Evidence,
     [property: JsonPropertyName("advisories")] IReadOnlyList<Advisory> Advisories,
@@ -104,6 +106,7 @@ public enum EvidenceId
     DnssecCanaryExpired,
     Redirection,
     ScriptMismatch,
+    ScriptMismatchInconclusive,
     CaptivePortalActive,
     DnsUnencrypted,
     DnsEncrypted,
@@ -151,6 +154,7 @@ public sealed class EvidenceIdJsonConverter : JsonConverter<EvidenceId>
             "dnssecCanaryExpired" => EvidenceId.DnssecCanaryExpired,
             "redirection" => EvidenceId.Redirection,
             "scriptMismatch" => EvidenceId.ScriptMismatch,
+            "scriptMismatchInconclusive" => EvidenceId.ScriptMismatchInconclusive,
             "captivePortalActive" => EvidenceId.CaptivePortalActive,
             "dnsUnencrypted" => EvidenceId.DnsUnencrypted,
             "dnsEncrypted" => EvidenceId.DnsEncrypted,
@@ -200,6 +204,7 @@ public static partial class EvidenceIdExtensions
         EvidenceId.DnssecCanaryExpired => "dnssecCanaryExpired",
         EvidenceId.Redirection => "redirection",
         EvidenceId.ScriptMismatch => "scriptMismatch",
+        EvidenceId.ScriptMismatchInconclusive => "scriptMismatchInconclusive",
         EvidenceId.CaptivePortalActive => "captivePortalActive",
         EvidenceId.DnsUnencrypted => "dnsUnencrypted",
         EvidenceId.DnsEncrypted => "dnsEncrypted",
@@ -239,15 +244,15 @@ public sealed class SectionJsonConverter : JsonConverter<Section>
 {
     public override Section Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "prophet" => Section.Prophet,
-        "mirror" => Section.Mirror,
-        "portal" => Section.Portal,
-        "glutton" => Section.Glutton,
-        "cage" => Section.Cage,
-        "witness" => Section.Witness,
-        var s => throw new JsonException($"unknown Section '{s}'"),
-    };
+        {
+            "prophet" => Section.Prophet,
+            "mirror" => Section.Mirror,
+            "portal" => Section.Portal,
+            "glutton" => Section.Glutton,
+            "cage" => Section.Cage,
+            "witness" => Section.Witness,
+            var s => throw new JsonException($"unknown Section '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, Section value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {
@@ -276,15 +281,15 @@ public sealed class SectionStatusJsonConverter : JsonConverter<SectionStatus>
 {
     public override SectionStatus Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "untested" => SectionStatus.Untested,
-        "invalidated" => SectionStatus.Invalidated,
-        "inconclusive" => SectionStatus.Inconclusive,
-        "degraded" => SectionStatus.Degraded,
-        "positive" => SectionStatus.Positive,
-        "negative" => SectionStatus.Negative,
-        var s => throw new JsonException($"unknown SectionStatus '{s}'"),
-    };
+        {
+            "untested" => SectionStatus.Untested,
+            "invalidated" => SectionStatus.Invalidated,
+            "inconclusive" => SectionStatus.Inconclusive,
+            "degraded" => SectionStatus.Degraded,
+            "positive" => SectionStatus.Positive,
+            "negative" => SectionStatus.Negative,
+            var s => throw new JsonException($"unknown SectionStatus '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, SectionStatus value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {
@@ -301,16 +306,19 @@ public sealed class SectionStatusJsonConverter : JsonConverter<SectionStatus>
 public sealed record SectionStatusEntry(
     [property: JsonPropertyName("section")] Section Section,
     [property: JsonPropertyName("status")] SectionStatus Status,
-    [property: JsonPropertyName("completeness")] double Completeness = 1.0,
-    [property: JsonPropertyName("datapointsObserved")]
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    double Completeness = 1.0,
     int? DatapointsObserved = null,
-    [property: JsonPropertyName("datapointsExpected")]
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     int? DatapointsExpected = null)
 {
     // Clamp completeness to [0,1] at construction time, matching macOS Conclusion.swift:164
+    [property: JsonPropertyName("completeness")]
     public double Completeness { get; init; } = Math.Max(0.0, Math.Min(1.0, Completeness));
+
+    [property: JsonPropertyName("datapointsObserved"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DatapointsObserved { get; init; } = DatapointsObserved;
+
+    [property: JsonPropertyName("datapointsExpected"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DatapointsExpected { get; init; } = DatapointsExpected;
 }
 
 /// Colour/urgency buckets, mapped to the Io severity palette in the GUI. Used only by
@@ -322,15 +330,15 @@ public sealed class SeverityJsonConverter : JsonConverter<Severity>
 {
     public override Severity Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "clean" => Severity.Clean,
-        "info" => Severity.Info,
-        "warning" => Severity.Warning,
-        "high" => Severity.High,
-        "critical" => Severity.Critical,
-        "unknown" => Severity.Unknown,
-        var s => throw new JsonException($"unknown Severity '{s}'"),
-    };
+        {
+            "clean" => Severity.Clean,
+            "info" => Severity.Info,
+            "warning" => Severity.Warning,
+            "high" => Severity.High,
+            "critical" => Severity.Critical,
+            "unknown" => Severity.Unknown,
+            var s => throw new JsonException($"unknown Severity '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, Severity value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {
@@ -360,10 +368,10 @@ public sealed class AdvisoryIdJsonConverter : JsonConverter<AdvisoryId>
 {
     public override AdvisoryId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString() switch
-    {
-        "openResolverExposure" => AdvisoryId.OpenResolverExposure,
-        var s => throw new JsonException($"unknown AdvisoryId '{s}'"),
-    };
+        {
+            "openResolverExposure" => AdvisoryId.OpenResolverExposure,
+            var s => throw new JsonException($"unknown AdvisoryId '{s}'"),
+        };
     public override void Write(Utf8JsonWriter writer, AdvisoryId value, JsonSerializerOptions options)
         => writer.WriteStringValue(value switch
         {
@@ -386,6 +394,7 @@ public static partial class EvidenceIdExtensions
         EvidenceId.DnssecCanaryExpired => "Expired DNSSEC Canary Check",
         EvidenceId.Redirection => "DNS Redirection Detected",
         EvidenceId.ScriptMismatch => "Script Structure Divergence",
+        EvidenceId.ScriptMismatchInconclusive => "Inconclusive Content Warp Check",
         EvidenceId.CaptivePortalActive => "Active Captive Portal Detected",
         EvidenceId.DnsUnencrypted => "Unencrypted DNS Queries",
         EvidenceId.DnsEncrypted => "Encrypted DNS Queries",

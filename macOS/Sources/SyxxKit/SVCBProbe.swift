@@ -61,7 +61,7 @@ public enum SVCBProbe {
                 recordSets[server] = resp.records
                     .filter { $0.type == typeHTTPS }
                     .compactMap { canonicalizeSvcbRdata($0.rdata) }
-                    .sorted()
+                    .ordinalSorted()
             case .success, .noData, .nxDomain:
                 absent.append(server)          // resolver answered, no HTTPS record present
             default:
@@ -74,8 +74,8 @@ public enum SVCBProbe {
     static func classify(present: [String], absent: [String], failed: [String],
                          recordSetsByServer: [String: [String]]? = nil) -> SVCBFinding {
         func make(_ s: SVCBFinding.Status, _ d: String) -> SVCBFinding {
-            SVCBFinding(status: s, presentAt: present.sorted(), absentAt: absent.sorted(),
-                        failedAt: failed.sorted(), detail: d)
+            SVCBFinding(status: s, presentAt: present.ordinalSorted(), absentAt: absent.ordinalSorted(),
+                        failedAt: failed.ordinalSorted(), detail: d)
         }
         // B074: require at least two independent usable vantages. A single responder (or a
         // spoofer answering while dropping the rest) is thin evidence, not a clean signal.

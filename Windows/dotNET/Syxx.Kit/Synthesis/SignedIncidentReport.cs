@@ -120,7 +120,7 @@ public static class SignedIncidentReport
         {
             lines.Add("");
             lines.Add("    \u26A0 DoH Cross-Check (UNSIGNED \u2014 not covered by the Ed25519 seal):");
-            foreach (var (provider, outcome) in comparison.DohOutcomes.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            foreach (var (provider, outcome) in (comparison.DohOutcomes ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
             {
                 var status = outcome.Status == DNSResponseStatus.Success ? "records" : outcome.Status.ToString();
                 var ips = string.Join(", ", outcome.Records.Select(r => r.Rdata));

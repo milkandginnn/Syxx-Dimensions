@@ -46,6 +46,9 @@ public enum ResolverConsensusStore {
     /// Record (overwrite) the latest consensus snapshot for its domain.
     public static func record(_ snapshot: ResolverConsensusSnapshot) {
         lock.lock(); defer { lock.unlock() }
+        // NOTE: Keys are lowercased for case-insensitive lookup (C# twin uses
+        // StringComparer.OrdinalIgnoreCase which preserves original casing; Swift's
+        // lowercased keys are functionally equivalent since lookups are also lowercased).
         byDomain[snapshot.domain.lowercased()] = snapshot
     }
 

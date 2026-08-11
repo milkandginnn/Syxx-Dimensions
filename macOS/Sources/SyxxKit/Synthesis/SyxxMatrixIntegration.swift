@@ -198,15 +198,6 @@ public struct SyxxMatrixBuilder {
             mutuallyExclusiveWith: [SyxxDiagnosis.clean.id]
         )
 
-        // B156: the set of indicator IDs that have at least one reachable EvidenceId mapping.
-        // Support rules referencing unmapped indicators (e.g. resolverAgreement,
-        // remoteLocalDivergence, trustedWitnessOK) are excluded from the coverage denominator,
-        // preventing unmapped rules from creating permanent dead weight that hard-caps coverage
-        // below the minimum thresholds and makes entire diagnoses unreachable.
-        let mappableIndicators = Set(
-            SynthesisEngine.indicatorMapping.values.map { $0.0.id }
-        )
-
         return MatrixSpec(
             diagnoses: [
                 clean,
@@ -233,7 +224,7 @@ public struct SyxxMatrixBuilder {
                 hardGateOnMissingRequiredSections: true,
                 failClosedOnInvalidatedRequiredSections: true
             ),
-            mappableIndicators: mappableIndicators
+            mappableIndicators: nil
         )
     }
 }
@@ -333,9 +324,15 @@ public enum SyxxMatrixIntegration {
 
     public static func defaultSpecJSON(prettyPrinted: Bool = true) throws -> String {
         let encoder = JSONEncoder()
-        if prettyPrinted {
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        }
+        // Task 8.4 (2026-08-05): `.withoutEscapingSlashes` — the canonical spec form uses an
+        // unescaped `/`. JSONEncoder escapes it (`\/`) by default; System.Text.Json on the C# side
+        // deliberately does not (UnsafeRelaxedJsonEscaping in MatrixCanonicalJson), and unescaped
+        // is also what jq/python emit, which keeps oracle diffs reviewable. `.sortedKeys` applies
+        // in both modes so the emission is deterministic regardless of formatting. This function's
+        // only callers are the parity/oracle tests — no wire format or signature depends on it.
+        encoder.outputFormatting = prettyPrinted
+            ? [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+            : [.sortedKeys, .withoutEscapingSlashes]
         let data = try encoder.encode(SyxxMatrixBuilder().buildDefaultSpec())
         return String(decoding: data, as: UTF8.self)
     }

@@ -10,6 +10,13 @@ struct SyxxSpeedCLI {
             return CLIExitStatus.completed.rawValue
         }
         let args = argv
+        // D324: check for --help/-h before treating args[1] as domain. Without this,
+        // `syxx speed --help` queries the DNS resolver for the domain "--help".
+        if args.contains("--help") || args.contains("-h") {
+            print("Usage: syxx speed [domain]   (ranks all configured resolvers by latency)")
+            print("  domain defaults to google.com if omitted")
+            return CLIExitStatus.completed.rawValue
+        }
         let domain = args.count >= 2 ? args[1] : "google.com"
 
         print("\n  Resolver Speed Benchmark for: \(domain)")

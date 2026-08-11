@@ -251,7 +251,7 @@ namespace Syxx.Kit
 
                 // B184: cryptographic verification MUST precede time-based and trust checks. A wholly
                 // fabricated snapshot with a past ExpiresAt previously returned Expired — asserting the
-                // file is an authentic-but-lapsed document. No verdict before evidence: the signature
+                // file is an authentic-but-lapsed document. No result before evidence: the signature
                 // must be valid before any claim about the snapshot's age or trust anchor. Windows and
                 // Linux (via SyxxUI.Avalonia's ProjectReference to this Kit) now honor this order,
                 // matching the macOS reference (WitnessSigner.swift:268-288).
@@ -275,7 +275,7 @@ namespace Syxx.Kit
                 }
 
                 // 2. Verify the Ed25519 signature — the load-bearing check, moved ahead of every
-                // time/trust/display verdict so a forged snapshot is never masked as expired/stale/
+                // time/trust/display result so a forged snapshot is never masked as expired/stale/
                 // untrusted. This is the C175 fix.
                 if (!Algorithm.Verify(publicKey, payloadBytes, sigData))
                 {

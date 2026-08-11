@@ -110,7 +110,7 @@ public sealed class SentryDiagnosticSink : IDiagnosticSink
             data: redacted,
             level: level switch
             {
-                DiagnosticSeverity.Fatal => BreadcrumbLevel.Critical,
+                DiagnosticSeverity.Fatal => BreadcrumbLevel.Fatal,
                 DiagnosticSeverity.Error => BreadcrumbLevel.Error,
                 _ => BreadcrumbLevel.Warning,
             });

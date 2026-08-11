@@ -185,7 +185,7 @@ public final class AnswerLedger: @unchecked Sendable {
         var seenKeys = Set<String>()
         var anchors: [Int] = []
         for (i, e) in _entries.enumerated() {
-            let key = "\(e.domain)|\(e.queryType)"
+            let key = "\(e.domain)|\(e.queryType)|\(e.networkKey ?? "")"
             if !seenKeys.contains(key) {
                 seenKeys.insert(key)
                 anchors.append(i)

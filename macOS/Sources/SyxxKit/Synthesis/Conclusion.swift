@@ -133,6 +133,7 @@ public enum EvidenceId: String, Codable, Sendable {
     case authoritativeDivergesConfirmed
     case gatewayDhcpOffLinkDNS
     case attributionIncomplete   // C058 — a material fraction of capture records carried no process identity (run-quality caveat, never a threat-naming datapoint)
+    case scriptMismatchInconclusive  // C199 — warp could not determine whether content was modified (distinct from confirmed tampering)
 }
 
 /// The six canonical disciplines a piece of evidence can come from.
@@ -270,6 +271,7 @@ public extension EvidenceId {
         case .authoritativeDivergesConfirmed:    return "Confirmed Authoritative Nameserver Divergence"
         case .gatewayDhcpOffLinkDNS:              return "Off-Subnet DHCP DNS Configuration"
         case .attributionIncomplete:             return "Incomplete Process Attribution"
+        case .scriptMismatchInconclusive:        return "Content Integrity Check Inconclusive"
         }
     }
 }

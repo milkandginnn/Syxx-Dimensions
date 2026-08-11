@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Syxx.Kit;
 using Xunit;
 
@@ -139,7 +141,10 @@ namespace Syxx.Tests
                 Packet = new DNSPacketReport { Qr = "Query" },   // forged QR on an inbound packet
                 Network = new NetworkContextReport
                 {
-                    SourceIP = "8.8.8.8", DestIP = "10.0.0.5", SourcePort = 53, DestPort = 54321,
+                    SourceIP = "8.8.8.8",
+                    DestIP = "10.0.0.5",
+                    SourcePort = 53,
+                    DestPort = 54321,
                     Direction = "Inbound Response"
                 }
             };
@@ -155,10 +160,12 @@ namespace Syxx.Tests
     {
         private static NetworkConfigSnapshot Snap(List<string> resolvers, bool vpn = false, bool enc = false,
                                                   List<string>? ifaces = null) => new()
-        {
-            Resolvers = resolvers, ActiveInterfaces = ifaces ?? new() { "en0" },
-            VpnActive = vpn ? ConditionState.Yes : ConditionState.No, DnsEncrypted = enc
-        };
+                                                  {
+                                                      Resolvers = resolvers,
+                                                      ActiveInterfaces = ifaces ?? new() { "en0" },
+                                                      VpnActive = vpn ? ConditionState.Yes : ConditionState.No,
+                                                      DnsEncrypted = enc
+                                                  };
 
         // Acceptance bar: a different network lists the REAL deltas from home.
         // Fail state: don't diff -> "matches home" on a network that plainly differs.
@@ -332,12 +339,21 @@ namespace Syxx.Tests
             Assert.Contains("loopback", result.Evidence, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// AMENDED DELIBERATELY (E1, Aug 2026 — house rule 4). The assertion is unchanged: a
+        /// resolver whose transport WAS read and found unencrypted must report No, with "plain"
+        /// evidence. What changed is that the fixture now states that the read happened, instead of
+        /// inheriting it from ScopedResolver.DoHReadState's default.
+        ///
+        /// That default used to be No, so this test was silently asserting over a defaulted claim —
+        /// "we read the configuration and found no encryption" obtained by leaving a field alone.
+        /// The default is now Unknown, so the read has to be declared. Without this line the honest
+        /// answer is Unknown, and the test would be pinning an unearned measurement.
         [Fact]
         public void EncryptedDNSStatusNoForPlainUDP()
         {
             var scoped = new List<ScopedResolver>
             {
-                new() { Address = "8.8.8.8", IsScoped = false }
+                new() { Address = "8.8.8.8", IsScoped = false, DoHReadState = ConditionState.No }
             };
             var result = NetworkKeyState.EncryptedDNSStatusCore(new[] { "8.8.8.8" }, scoped);
             Assert.Equal(ConditionState.No, result.State);
@@ -352,39 +368,12 @@ namespace Syxx.Tests
             Assert.Contains("No resolvers", result.Evidence);
         }
 
-        [Fact]
-        public void ParseResolvectlStatusCapturesDoHPerLink()
-        {
-            const string sample = """
-                Link 2 (wlan0)
-                    Current Scopes: DNS
-                         DNS Servers: 1.1.1.1#cloudflare-dns.com
-                      DNSOverHTTPS: yes
-                """;
-            var resolvers = NetworkKeyState.ParseResolvectlStatus(sample);
-            Assert.Single(resolvers);
-            Assert.Equal("1.1.1.1", resolvers[0].Address);
-            Assert.Equal("wlan0", resolvers[0].Interface);
-            Assert.Equal(DnsProtocol.Doh, resolvers[0].Protocol);
-            Assert.Equal((ushort)443, resolvers[0].Port);
-            Assert.Contains("cloudflare-dns.com", resolvers[0].MatchDomains);
-        }
-
-        [Fact]
-        public void ParseResolvectlStatusCapturesDoTPerLink()
-        {
-            const string sample = """
-                Link 3 (eth0)
-                         DNS Servers: 9.9.9.9
-                      DNS Over TLS: yes
-                """;
-            var resolvers = NetworkKeyState.ParseResolvectlStatus(sample);
-            Assert.Single(resolvers);
-            Assert.Equal("9.9.9.9", resolvers[0].Address);
-            Assert.Equal("eth0", resolvers[0].Interface);
-            Assert.Equal(DnsProtocol.Dot, resolvers[0].Protocol);
-            Assert.Equal((ushort)853, resolvers[0].Port);
-        }
+        // P-22: the two tests that used to sit here hand-wrote `resolvectl` output formats that
+        // systemd-resolved has never emitted (`DNSOverHTTPS: yes` and `DNS Over TLS: yes`). They
+        // were green against a parser that could not read a single real machine. They have been
+        // deleted, not softened, and replaced by ResolvectlCorpusTests below, which drives the
+        // parser from corpus/resolvectl-status/ — fixtures whose shape is traceable to systemd's
+        // own printing code, each carrying its source URL and its provenance marker.
     }
 
 
@@ -464,9 +453,12 @@ namespace Syxx.Tests
             var path = TempPath();
             var s = new SyxxSettings
             {
-                EncryptedDnsEnabled = true, EncryptedDnsResolverId = "quad9",
-                EncryptedDnsTransport = EncryptedDNSTransport.Dot, ScanResolverId = "google",
-                NotificationsEnabled = false, TelemetryEnabled = false
+                EncryptedDnsEnabled = true,
+                EncryptedDnsResolverId = "quad9",
+                EncryptedDnsTransport = EncryptedDNSTransport.Dot,
+                ScanResolverId = "google",
+                NotificationsEnabled = false,
+                TelemetryEnabled = false
             };
             Assert.True(SyxxSettingsStore.Save(s, path));
             var loaded = SyxxSettingsStore.Load(path);
@@ -557,6 +549,410 @@ namespace Syxx.Tests
     //  dropped prefix can silently re-introduce the B030 false-negative class the Glutton leak
     //  test was written to refuse.
     // =========================================================================
+    /// P-06 / P-22 — the Linux resolver-truth corpus.
+    ///
+    /// Loads corpus/resolvectl-status/**, which replaces two tests that hand-wrote `resolvectl`
+    /// formats that do not exist. A missing fixture THROWS: a vacuously-green corpus test is
+    /// exactly the green-that-lies this corpus was created to end.
+    ///
+    /// Every fixture is currently DERIVED-FROM-DOCUMENTATION — reconstructed from systemd's own
+    /// printing code and manpages, not captured from a running host. See
+    /// corpus/resolvectl-status/PENDING-OWNER-VERIFICATION.md.
+    public class ResolvectlCorpusTests
+    {
+        private static string CorpusRoot([CallerFilePath] string thisFile = "")
+        {
+            // thisFile = <repo>/Windows/dotNET/Syxx.Tests/ConfigAndPolicyTests.cs
+            var dir = Path.GetDirectoryName(thisFile)
+                      ?? throw new InvalidOperationException("Cannot resolve source directory.");
+            return Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "corpus", "resolvectl-status"));
+        }
+
+        /// Reads a fixture and strips its leading `#` provenance header, so the parser sees exactly
+        /// what the tool prints.
+        private static string Fixture(string relativePath)
+        {
+            var path = Path.Combine(CorpusRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+                throw new FileNotFoundException(
+                    $"resolvectl corpus fixture not found at {path}. The corpus is missing — this test " +
+                    "must never pass without it.", path);
+            var text = File.ReadAllText(path);
+            if (text.Trim().Length == 0)
+                throw new InvalidOperationException($"resolvectl corpus fixture {path} is empty.");
+            return StripHeader(text);
+        }
+
+        private static string StripHeader(string text)
+        {
+            var lines = text.Split('\n');
+            int i = 0;
+            while (i < lines.Length && lines[i].TrimStart().StartsWith("#", StringComparison.Ordinal)) i++;
+            return string.Join("\n", lines.Skip(i));
+        }
+
+        // ---- The four P-06 parser defects, one test each ----------------------------------
+
+        /// ★ Defect 1 — the Global block was unreachable, and it is where resolved.conf DNS lives.
+        /// The replaced parser skipped every line before the first `Link` header, returned zero
+        /// resolvers on this machine, fell through to /etc/resolv.conf and adopted the stub.
+        [Fact]
+        public void GlobalBlockResolversAreDiscovered()
+        {
+            var resolvers = NetworkKeyState.ParseResolvectlStatus(Fixture("fixtures/systemd-249-global-only.txt"));
+
+            Assert.Equal(new[] { "1.1.1.1", "1.0.0.1" }, resolvers.Select(r => r.Address).ToArray());
+            Assert.All(resolvers, r => Assert.Null(r.Interface));      // Global is not link-scoped
+            Assert.All(resolvers, r => Assert.False(r.IsScoped));
+        }
+
+        /// ★ Defect 4 — a multi-server row is space-separated, not one opaque token. The replaced
+        /// parser added `192.168.1.1 8.8.8.8` as a single entry, which parses as no valid address,
+        /// so the link contributed zero resolvers.
+        [Fact]
+        public void MultiServerRowYieldsEveryServer()
+        {
+            var resolvers = NetworkKeyState.ParseResolvectlStatus(Fixture("fixtures/systemd-249-stub-dot-off.txt"));
+
+            Assert.Equal(new[] { "192.168.1.1", "8.8.8.8" }, resolvers.Select(r => r.Address).ToArray());
+            Assert.All(resolvers, r => Assert.Equal("wlp3s0", r.Interface));
+            // Links whose Current Scopes is "none" contribute nothing.
+            Assert.DoesNotContain(resolvers, r => r.Interface == "enp0s31f6" || r.Interface == "docker0");
+            // `+DefaultRoute` means this link carries the default route, so its resolvers are not scoped.
+            Assert.All(resolvers, r => Assert.False(r.IsScoped));
+            // `-DNSOverTLS` is a real read with a definite answer: not encrypted, and we know it.
+            Assert.All(resolvers, r => Assert.Null(r.Protocol));
+            Assert.All(resolvers, r => Assert.Equal(ConditionState.No, r.DoHReadState));
+            Assert.All(resolvers, r => Assert.Equal(new[] { "lan" }, r.MatchDomains.ToArray()));
+        }
+
+        /// Defects 2 and 3 — the DoT branch matched a literal systemd has never printed, and the
+        /// DoH branch was dead by construction (systemd-resolved implements no DoH at all).
+        [Fact]
+        public void StrictDnsOverTlsIsDetectedFromProtocolsToken()
+        {
+            var resolvers = NetworkKeyState.ParseResolvectlStatus(Fixture("fixtures/systemd-249-dot-strict.txt"));
+
+            Assert.All(resolvers, r => Assert.Equal(DnsProtocol.Dot, r.Protocol));
+            Assert.All(resolvers, r => Assert.Equal((ushort)853, r.Port));
+            Assert.Contains(resolvers, r => r.Address == "9.9.9.9");
+            Assert.Contains(resolvers, r => r.Address == "2620:fe::fe");
+
+            // The `#dns.quad9.net` suffix is the DoT certificate name, NOT a match domain. The
+            // replaced parser filed it as one, making every DoT resolver look domain-scoped.
+            Assert.All(resolvers, r => Assert.Empty(r.MatchDomains));
+
+            // `Fallback DNS Servers` are systemd's compiled-in last resort, used only when nothing
+            // else is configured. Reporting them would attribute queries to servers that are not
+            // answering them.
+            Assert.DoesNotContain(resolvers, r => r.Address == "8.8.8.8" || r.Address == "8.8.4.4");
+        }
+
+        /// Opportunistic DoT silently falls back to cleartext and the client cannot tell which
+        /// happened. Encrypted would be a fabricated assurance; plaintext a fabricated alarm.
+        [Fact]
+        public void OpportunisticDnsOverTlsIsUnknownNotEncryptedAndNotPlaintext()
+        {
+            var resolvers = NetworkKeyState.ParseResolvectlStatus(Fixture("fixtures/systemd-249-dot-opportunistic.txt"));
+
+            Assert.NotEmpty(resolvers);
+            Assert.All(resolvers, r => Assert.Null(r.Protocol));
+            Assert.All(resolvers, r => Assert.Equal(ConditionState.Unknown, r.DoHReadState));
+
+            var status = NetworkKeyState.EncryptedDNSStatusCore(
+                resolvers.Select(r => r.Address).ToList(), resolvers);
+            Assert.Equal(ConditionState.Unknown, status.State);
+        }
+
+        /// The older per-setting-line generation (systemd v245, Ubuntu 20.04 LTS) is still live.
+        /// Its continuation lines are the trap: `DNSSEC NTA:` continues onto unlabelled lines, and
+        /// a parser that treats any unlabelled line as more DNS servers ingests reverse-DNS zones
+        /// as resolvers.
+        [Fact]
+        public void LegacySettingLineGenerationIsParsedAndContinuationsAreAttributed()
+        {
+            var resolvers = NetworkKeyState.ParseResolvectlStatus(
+                Fixture("fixtures/systemd-245-legacy-setting-lines.txt"));
+
+            Assert.Equal(new[] { "192.168.1.1", "8.8.8.8" }, resolvers.Select(r => r.Address).ToArray());
+            Assert.DoesNotContain(resolvers, r => r.Address.Contains("in-addr.arpa", StringComparison.Ordinal));
+            Assert.All(resolvers, r => Assert.Null(r.Protocol));
+            Assert.All(resolvers, r => Assert.Equal(ConditionState.No, r.DoHReadState));
+        }
+
+        /// Wrapped continuation lines are more DNS servers; `Current Scopes` must be tokenised,
+        /// because "mDNS/IPv4" contains the letters "DNS" but is not a unicast-DNS scope.
+        [Fact]
+        public void WrappedServerRowsAreCollectedAndMdnsOnlyScopeIsNotDns()
+        {
+            var resolvers = NetworkKeyState.ParseResolvectlStatus(
+                Fixture("fixtures/systemd-249-wrapped-and-mdns-scope.txt"));
+
+            Assert.Equal(
+                new[] { "192.168.1.1", "fd00::1", "8.8.8.8", "8.8.4.4", "2001:4860:4860::8888" },
+                resolvers.Select(r => r.Address).ToArray());
+            Assert.Equal((ushort)5353, resolvers.Single(r => r.Address == "2001:4860:4860::8888").Port);
+            Assert.All(resolvers, r => Assert.Equal(new[] { "lan", "corp.example" }, r.MatchDomains.ToArray()));
+            Assert.DoesNotContain(resolvers, r => r.Interface == "virbr0");
+        }
+
+        /// The P-22 pin itself: the two literals the replaced parser looked for appear in NOTHING
+        /// this corpus contains, including any real capture the owner adds. If a future capture
+        /// ever contains one, this test fails and the deletion above must be revisited — which is
+        /// the point of asserting it rather than asserting it in prose.
+        [Fact]
+        public void DeadBranchLiteralsAppearInNoRealShapedOutput()
+        {
+            var files = CorpusFiles().ToList();
+            Assert.NotEmpty(files);
+            foreach (var file in files)
+            {
+                // The provenance headers discuss these literals by name; what must not contain
+                // them is the output itself.
+                var body = StripHeader(File.ReadAllText(file));
+                Assert.DoesNotContain("DNS Over TLS:", body, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("DNSOverHTTPS", body, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        /// The corpus must never claim to have been witnessed when it has not been. Each fixture
+        /// declares exactly one provenance marker, and CAPTURED-FROM-REAL-HOST may only be claimed
+        /// by a file that actually came off a machine (captured/*.pack.txt).
+        [Fact]
+        public void EveryFixtureDeclaresItsProvenanceHonestly()
+        {
+            Assert.True(File.Exists(Path.Combine(CorpusRoot(), "PENDING-OWNER-VERIFICATION.md")),
+                "The corpus must record what has not been verified against a real host.");
+
+            foreach (var file in CorpusFiles().Where(f => !f.Contains(Path.Combine("corpus", "resolvectl-status", "captured"), StringComparison.Ordinal)))
+            {
+                var text = File.ReadAllText(file);
+                bool derived = text.Contains("DERIVED-FROM-DOCUMENTATION", StringComparison.Ordinal);
+                bool captured = text.Contains("CAPTURED-FROM-REAL-HOST", StringComparison.Ordinal);
+                Assert.True(derived ^ captured,
+                    $"{file} must declare exactly one provenance marker. A fixture whose shape nobody " +
+                    "can point to a source for is the defect this corpus exists to prevent.");
+                Assert.False(captured,
+                    $"{file} claims CAPTURED-FROM-REAL-HOST but lives outside captured/. Only a real " +
+                    "pack may make that claim.");
+            }
+        }
+
+        /// Real captures, when the owner supplies them. Absent one, this asserts nothing about a
+        /// real machine and does not pretend to — the honest statement of that is in
+        /// PENDING-OWNER-VERIFICATION.md and in EveryFixtureDeclaresItsProvenanceHonestly above.
+        [Fact]
+        public void CapturedPacksParseAndAgreeWithResolvConf()
+        {
+            var dir = Path.Combine(CorpusRoot(), "captured");
+            var packs = Directory.Exists(dir) ? Directory.GetFiles(dir, "*.pack.txt") : Array.Empty<string>();
+
+            foreach (var pack in packs)
+            {
+                var text = File.ReadAllText(pack);
+                var status = Section(text, "--- STATUS", "--- RESOLVCONF");
+                var resolvConf = Section(text, "--- RESOLVCONF", "--- MODE");
+
+                Assert.True(status.Contains("Global", StringComparison.Ordinal),
+                    $"{pack}: expected a Global section. Its absence means systemd-resolved is not " +
+                    "running and this pack is INCONCLUSIVE, not a pass.");
+                Assert.Contains("Link ", status, StringComparison.Ordinal);
+
+                var reading = NetworkKeyState.ReadLinuxResolvers(status, resolvConf);
+
+                // The declared expectation: a running systemd-resolved names its upstream servers,
+                // so the reading must come from resolvectl and never silently from the stub.
+                Assert.NotEqual(LinuxResolverSource.Undetermined, reading.Source);
+                if (reading.Source == LinuxResolverSource.SystemdStubOnly)
+                    Assert.Empty(reading.Resolvers);
+                else
+                    Assert.NotEmpty(reading.Resolvers);
+                Assert.DoesNotContain(reading.Resolvers, r => r.Address == "127.0.0.53" || r.Address == "127.0.0.54");
+                Assert.NotEmpty(reading.Evidence);
+            }
+        }
+
+        private static string Section(string text, string start, string end)
+        {
+            int s = text.IndexOf(start, StringComparison.Ordinal);
+            if (s < 0) return string.Empty;
+            s += start.Length;
+            int e = text.IndexOf(end, s, StringComparison.Ordinal);
+            return e < 0 ? text[s..] : text[s..e];
+        }
+
+        private static IEnumerable<string> CorpusFiles()
+            => Directory.GetFiles(CorpusRoot(), "*", SearchOption.AllDirectories)
+                        .Where(f => !f.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(f => f, StringComparer.Ordinal);
+
+        // ---- The stub: what happens when resolvectl tells us nothing --------------------------
+
+        /// ★ The consequence the seat exists to remove. /etc/resolv.conf on a stock Ubuntu Desktop
+        /// names only the systemd stub, which forwards to upstream servers it does not disclose.
+        /// The honest outcome is neither "the stub is your resolver" nor a substituted guess: it is
+        /// undetermined, with evidence.
+        [Fact]
+        public void StubOnlyResolvConfIsUndeterminedNotAMeasuredResolver()
+        {
+            var reading = NetworkKeyState.ReadLinuxResolvers(null, Fixture("resolvconf/stub.conf"));
+
+            Assert.Equal(LinuxResolverSource.SystemdStubOnly, reading.Source);
+            Assert.Empty(reading.Resolvers);
+            Assert.Contains("127.0.0.53", reading.Evidence, StringComparison.Ordinal);
+            Assert.Contains("undetermined", reading.Evidence, StringComparison.OrdinalIgnoreCase);
+
+            // And nothing downstream may turn that into a result.
+            var status = NetworkKeyState.EncryptedDNSStatusCore(
+                reading.Resolvers.Select(r => r.Address).ToList(), reading.Resolvers);
+            Assert.Equal(ConditionState.Unknown, status.State);
+        }
+
+        /// A loopback resolver that is NOT the systemd stub is a resolver the user genuinely runs
+        /// (unbound, dnsmasq, stubby, pi-hole) and IS the server answering their queries. Blanket
+        /// loopback exclusion would blind the comparison and leak probes on exactly the machines
+        /// whose owners took the most care.
+        [Fact]
+        public void NonStubLoopbackResolverIsKept()
+        {
+            var reading = NetworkKeyState.ReadLinuxResolvers(null, Fixture("resolvconf/local-resolver.conf"));
+
+            Assert.Equal(LinuxResolverSource.ResolvConf, reading.Source);
+            Assert.Equal(new[] { "127.0.0.1" }, reading.Resolvers.Select(r => r.Address).ToArray());
+
+            // ...and its upstream still cannot be vouched for, so encryption stays Unknown.
+            var status = NetworkKeyState.EncryptedDNSStatusCore(new[] { "127.0.0.1" }, reading.Resolvers);
+            Assert.Equal(ConditionState.Unknown, status.State);
+        }
+
+        /// resolv.conf carries no transport information, so a resolver sourced from it must be
+        /// Unknown, never a silent "plaintext".
+        [Fact]
+        public void ResolvConfResolversCarryUnknownTransport()
+        {
+            var reading = NetworkKeyState.ReadLinuxResolvers(null, Fixture("resolvconf/uplink.conf"));
+
+            Assert.Equal(LinuxResolverSource.ResolvConf, reading.Source);
+            Assert.Equal(new[] { "192.168.1.1", "8.8.8.8" }, reading.Resolvers.Select(r => r.Address).ToArray());
+            Assert.All(reading.Resolvers, r => Assert.Equal(ConditionState.Unknown, r.DoHReadState));
+            Assert.Equal(ConditionState.Unknown,
+                NetworkKeyState.EncryptedDNSStatusCore(
+                    reading.Resolvers.Select(r => r.Address).ToList(), reading.Resolvers).State);
+        }
+
+        /// resolvectl is authoritative when it answers: the stub in resolv.conf must not displace
+        /// the real upstream servers it reported.
+        [Fact]
+        public void ResolvectlWinsOverStubResolvConf()
+        {
+            var reading = NetworkKeyState.ReadLinuxResolvers(
+                Fixture("fixtures/systemd-249-global-only.txt"),
+                Fixture("resolvconf/stub.conf"));
+
+            Assert.Equal(LinuxResolverSource.Resolvectl, reading.Source);
+            Assert.Equal(new[] { "1.1.1.1", "1.0.0.1" }, reading.Resolvers.Select(r => r.Address).ToArray());
+        }
+
+        /// Neither source readable is Undetermined — not an empty clean result.
+        [Fact]
+        public void NothingReadableIsUndetermined()
+        {
+            var reading = NetworkKeyState.ReadLinuxResolvers(null, null);
+            Assert.Equal(LinuxResolverSource.Undetermined, reading.Source);
+            Assert.Empty(reading.Resolvers);
+            Assert.NotEmpty(reading.Evidence);
+        }
+    }
+
+    /// T-01 — ConditionState was the one tri-state with no JSON converter, so it serialised as its
+    /// ORDINAL NUMBER. Trust.NetworkConfigSnapshot.VpnActive is persisted with that encoding and
+    /// compared across samples by ContinuousMonitor, so the field's meaning was positional.
+    public class ConditionStateWireTests
+    {
+        private sealed class Holder
+        {
+            public ConditionState State { get; set; }
+        }
+
+        [Theory]
+        [InlineData(ConditionState.Yes, "yes")]
+        [InlineData(ConditionState.No, "no")]
+        [InlineData(ConditionState.Unknown, "unknown")]
+        public void SerialisesAsTheSwiftRawValue(ConditionState state, string expected)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(new Holder { State = state });
+            Assert.Contains($"\"{expected}\"", json, StringComparison.Ordinal);
+            Assert.Equal(state, System.Text.Json.JsonSerializer.Deserialize<Holder>(json)!.State);
+        }
+
+        [Fact]
+        public void UnknownIsNotCollapsedIntoNoOnRoundTrip()
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(new Holder { State = ConditionState.Unknown });
+            Assert.DoesNotContain("\"no\"", json, StringComparison.Ordinal);
+            Assert.Equal(ConditionState.Unknown,
+                System.Text.Json.JsonSerializer.Deserialize<Holder>(json)!.State);
+        }
+
+        /// Baselines written before the converter existed hold the bare ordinal. A failed read is
+        /// reported as a CORRUPTED baseline, i.e. a visible loss of the user's home baseline, so
+        /// the legacy encoding must still load.
+        [Theory]
+        [InlineData(0, ConditionState.Yes)]
+        [InlineData(1, ConditionState.No)]
+        [InlineData(2, ConditionState.Unknown)]
+        public void LegacyOrdinalBaselinesStillLoad(int ordinal, ConditionState expected)
+        {
+            var decoded = System.Text.Json.JsonSerializer.Deserialize<Holder>($"{{\"State\":{ordinal}}}");
+            Assert.Equal(expected, decoded!.State);
+        }
+
+        /// An unrecognised value is corrupt data, not Unknown. Folding it into Unknown would
+        /// manufacture a tri-state answer out of a parse failure.
+        [Fact]
+        public void UnrecognisedValueThrowsRatherThanBecomingUnknown()
+        {
+            Assert.ThrowsAny<System.Text.Json.JsonException>(
+                () => System.Text.Json.JsonSerializer.Deserialize<Holder>("{\"State\":\"maybe\"}"));
+            Assert.ThrowsAny<System.Text.Json.JsonException>(
+                () => System.Text.Json.JsonSerializer.Deserialize<Holder>("{\"State\":7}"));
+        }
+    }
+
+    /// P-07 — LinkLocal must NOT be excluded from usable resolvers, aligning with the macOS twin.
+    /// RFC 8106 RDNSS permits link-local resolver addresses and home routers commonly advertise
+    /// fe80:: resolvers, so a blanket exclusion drops the real system resolver.
+    public class UsableDnsServerParityTests
+    {
+        [Theory]
+        [InlineData("fe80::1")]                 // RFC 8106 RDNSS — a router-advertised resolver
+        [InlineData("fe80::1%eth0")]            // ...as some tools render it (scope-id form)
+        [InlineData("169.254.1.1")]             // IPv4 link-local
+        public void LinkLocalResolversSurviveDiscovery(string address)
+        {
+            var reading = NetworkKeyState.ReadLinuxResolvers(null, $"nameserver {address}\n");
+
+            // A scope-id suffix is not a parseable address, so it is classified Invalid and drops.
+            // The plain forms must survive; that is the P-07 alignment.
+            if (address.Contains('%', StringComparison.Ordinal))
+                return;
+
+            Assert.Equal(new[] { address }, reading.Resolvers.Select(r => r.Address).ToArray());
+        }
+
+        [Theory]
+        [InlineData("0.0.0.0")]                 // Unspecified
+        [InlineData("224.0.0.251")]             // Multicast (mDNS)
+        [InlineData("192.0.2.1")]               // Documentation
+        [InlineData("fec0:0:0:ffff::1")]        // deprecated site-local — the Windows placeholder
+        [InlineData("not-an-address")]          // Invalid
+        public void NonResolverAddressesAreStillExcluded(string address)
+        {
+            var reading = NetworkKeyState.ReadLinuxResolvers(null, $"nameserver {address}\n");
+            Assert.Empty(reading.Resolvers);
+        }
+    }
+
     public class VpnPrefixParityTests
     {
         [Theory]

@@ -50,7 +50,7 @@ public class ResultProvenanceTests : IDisposable
 
     private static Conclusion Make(IReadOnlyList<SectionStatusEntry> statuses,
                                    DeterminativeResult? determination)
-        => new(DateTimeOffset.UnixEpoch, statuses, Array.Empty<EvidenceItem>(),
+        => new(DateTimeOffset.UnixEpoch.UtcDateTime, statuses, Array.Empty<EvidenceItem>(),
                Array.Empty<Advisory>(), determination);
 
     /// A null determination is "the engine could not run" — categorically NOT Inconclusive.
@@ -94,9 +94,9 @@ public class ResultProvenanceTests : IDisposable
 
         Synthesizer.ReportResultProvenance(Make(statuses, det));
 
-        var evt = Assert.Single(_sink.Events.Where(e => e.ErrorClass == "result.unattributed_degradation"));
+        var evt = Assert.Single(_sink.Events, e => e.ErrorClass == "result.unattributed_degradation");
         Assert.Equal("cage", evt.Tags!["syxx.section"]);
-        Assert.Equal("False", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
+        Assert.Equal("false", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
     }
 
     /// The converse — an explained degradation must NOT be flagged, or the invariant cries wolf.
@@ -119,8 +119,8 @@ public class ResultProvenanceTests : IDisposable
 
         Synthesizer.ReportResultProvenance(Make(statuses, det));
 
-        Assert.Empty(_sink.Events.Where(e => e.ErrorClass == "result.unattributed_degradation"));
-        Assert.Equal("True", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
+        Assert.DoesNotContain(_sink.Events, e => e.ErrorClass == "result.unattributed_degradation");
+        Assert.Equal("true", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
     }
 
     /// Abstentions are the interesting case; a decided run is routine.

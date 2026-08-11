@@ -2,60 +2,52 @@
     x:Class="SyxxUI.Views.WitnessView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pres="using:SyxxUI.Presentation"
     Background="Transparent">
 
     <Grid Padding="32,18,32,32">
         <ScrollViewer>
             <StackPanel Spacing="24">
 
-                <!-- Header (parity with macOS WitnessView). -->
-                <StackPanel Spacing="8">
-                    <TextBlock Text="WITNESS • SIGNED RESOLUTION"
-                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                               Foreground="{StaticResource IoBlueBrush}" />
-                    <TextBlock Text="And the Witness testified: when local and remote records matched, when they held steady over time, and when no leak betrayed the encrypted path, the DNS was healthy. When they did not, the network, and its eyes, were lying indeed."
-                               FontFamily="{StaticResource IoFontLore}" FontSize="18" FontWeight="Bold"
-                               Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
-                    <TextBlock Text="Witness (the syxx witness and syxx sentinel commands) is the environment's trust baseline. It registers snapshots, monitors configuration drift, checks historical stability (&quot;holding steady over time&quot;), and cryptographically signs a tamper-proof 'testimony' of the network state."
-                               FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
-                </StackPanel>
+                <!-- Header -->
+                <pres:ModuleHeader x:Name="Header" Rune="&#x16C9;" Eyebrow="THE SEALBEARER &#xB7; ENVIRONMENT TRUST" Name="Witness"
+                                   AccentBrush="{StaticResource IoRedBrush}" />
 
                 <!-- Form -->
-                <Border Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
-                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                        BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                     <StackPanel Spacing="14" MaxWidth="640" HorizontalAlignment="Left">
                         <StackPanel Spacing="6">
                             <TextBlock Text="What domain would you like to check?"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                       Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                       Foreground="{DynamicResource IoTextSecondaryBrush}" />
                             <TextBlock Text="Which name shall the Witness set down as testimony? The Witness resolves this domain and seals the result, so its truth can be proven in days to come. (The record is signed with an Ed25519 key. Should even a single character be altered afterward, the seal breaks and the tampering is revealed.)"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="11"
-                                       Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                             <TextBox x:Name="DomainBox" PlaceholderText="Domain (e.g., github.com)" />
                         </StackPanel>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="Tell the witness a secret that you can remember (essentially, a password):"
+                            <TextBlock Text="Provide the Ed25519 signing key (base64) that seals your testimony — paste an existing key, or click Generate Keypair below to create one:"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                       Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                             <TextBlock Text="Entrust the Witness with the private key by which your testimony is sealed. It rests upon this machine alone and is never sent abroad; only the seal it makes travels with your evidence. (Whoever holds this key could forge testimony in your name. Guard it well.)"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="11"
-                                       Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                             <PasswordBox x:Name="KeyBox" PlaceholderText="Ed25519 private key (base64)…" />
                             <!-- D052 (Windows half): a failed DPAPI key save is a real, distinct
                                  failure, not silently discarded. Set from code-behind on the actual
                                  exception message; hidden when there is nothing to report. -->
                             <TextBlock x:Name="KeyErrorText" Text="" Visibility="Collapsed"
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                                       Foreground="{StaticResource IoWarningAmberBrush}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource IoWarningAmberBrush}" TextWrapping="Wrap" />
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <Button x:Name="TestifyBtn" Content="Witness Testimony"
                                     Click="TestifyBtn_Click"
                                     Background="{StaticResource IoBlueBrush}"
-                                    Foreground="{StaticResource IoTextBrush}" />
+                                    Foreground="{DynamicResource IoTextBrush}" />
                             <Button x:Name="VerifyBtn" Content="Verify Testimony"
                                     Click="VerifyBtn_Click" />
                             <!-- E045: generate a new Ed25519 keypair and store it via DPAPI.
@@ -69,9 +61,9 @@
 
                 <!-- Testimony output -->
                 <Border x:Name="TestimonyPanel" Visibility="Collapsed"
-                        Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                        Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
                         MaxWidth="820" HorizontalAlignment="Left"
-                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                     <StackPanel Spacing="12">
                         <!-- Pending / signed content — shown while running or after a successful seal.
                              B195: hidden when the sealing probe FAILED so the neutral "Not yet signed"
@@ -79,17 +71,17 @@
                         <StackPanel x:Name="TestimonyPendingPanel" Spacing="12">
                             <TextBlock x:Name="CreatingTestimonyText" Text=""
                                        FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                                       Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource IoTextBrush}" TextWrapping="Wrap" />
                             <StackPanel Spacing="6">
                                 <TextBlock Text="SNAPSHOT SIGNATURE"
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                                           Foreground="{StaticResource IoTextSecondaryBrush}" />
-                                <Border Background="{StaticResource IoBackgroundDarkBrush}"
+                                           Foreground="{DynamicResource IoTextSecondaryBrush}" />
+                                <Border Background="{DynamicResource IoBackgroundDarkBrush}"
                                         CornerRadius="8" Padding="12"
-                                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                                        BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                                     <TextBlock x:Name="SignatureText" Text="Not yet signed"
                                                FontFamily="{StaticResource IoFontMono}" FontSize="14"
-                                               Foreground="{StaticResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                                               Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
                                 </Border>
                             </StackPanel>
                         </StackPanel>
@@ -99,15 +91,15 @@
                              notVerified/noKey vocabulary of the validation conclusion and macOS's failed row.
                              Text is set from code-behind on the real failure reason. -->
                         <Border x:Name="TestimonyFailurePanel" Visibility="Collapsed"
-                                Background="{StaticResource IoBackgroundDarkBrush}"
+                                Background="{DynamicResource IoBackgroundDarkBrush}"
                                 CornerRadius="8" Padding="12"
-                                BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                                BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE711;" FontSize="16" VerticalAlignment="Top"
-                                          Foreground="{StaticResource IoWarningAmberBrush}" />
+                                          Foreground="{DynamicResource IoWarningAmberBrush}" />
                                 <TextBlock x:Name="TestimonyFailureText" Text=""
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                                           Foreground="{StaticResource IoWarningAmberBrush}" TextWrapping="Wrap" />
+                                           Foreground="{DynamicResource IoWarningAmberBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -118,28 +110,52 @@
                      text here: an unverified, keyless, empty, or failed check must never render as a
                      green pass. Tamper/forgery states render red, freshness/trust states amber. -->
                 <Border x:Name="ValidationPanel" Visibility="Collapsed"
-                        Background="{StaticResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                        Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
                         MaxWidth="820" HorizontalAlignment="Left"
-                        BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                     <StackPanel Spacing="14">
                         <TextBlock Text="TESTIMONY VALIDATION REPORT:"
                                    FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
-                                   Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" />
 
                         <StackPanel x:Name="ValidationMetaPanel" Spacing="4" />
 
-                        <Border Background="{StaticResource IoBackgroundDarkBrush}"
+                        <Border Background="{DynamicResource IoBackgroundDarkBrush}"
                                 CornerRadius="8" Padding="12"
-                                BorderBrush="{StaticResource IoBorderSubtleBrush}" BorderThickness="1">
+                                BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon x:Name="ResultIcon" Glyph="&#xE711;" FontSize="16"
                                           VerticalAlignment="Top"
-                                          Foreground="{StaticResource IoTextSecondaryBrush}" />
+                                          Foreground="{DynamicResource IoTextSecondaryBrush}" />
                                 <TextBlock x:Name="ResultText" Text=""
                                            FontFamily="{StaticResource IoFontGrotesk}" FontSize="14"
-                                           Foreground="{StaticResource IoTextBrush}" TextWrapping="Wrap" />
+                                           Foreground="{DynamicResource IoTextBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Item 5(b)-Windows: verify a testimony sealed on ANOTHER device by pasting its
+                     snapshot JSON. Routes through the SAME VerifySnapshotDetailed + result switch as
+                     self-verify (renders into the ValidationPanel above via code-behind). Parity with
+                     Linux WitnessView.axaml's "VERIFY A TESTIMONY" block. New copy below is
+                     owner-approved (button label, help line, placeholder). -->
+                <Border Background="{DynamicResource IoSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+                        MaxWidth="820" HorizontalAlignment="Left"
+                        BorderBrush="{DynamicResource IoBorderSubtleBrush}" BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="VERIFY A TESTIMONY"
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" />
+                        <TextBlock Text="Paste a signed testimony (JSON) sealed on any device to check whether its signature holds."
+                                   FontFamily="{StaticResource IoFontGrotesk}" FontSize="13"
+                                   Foreground="{DynamicResource IoTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <TextBox x:Name="ExternalSnapshotBox"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96"
+                                 FontFamily="{StaticResource IoFontMono}" FontSize="12"
+                                 PlaceholderText="{}{ &quot;targetDomain&quot;: &quot;github.com&quot;, &quot;signature&quot;: … }" />
+                        <Button x:Name="ExternalVerifyBtn" Content="Verify pasted testimony"
+                                Click="ExternalVerifyBtn_Click" HorizontalAlignment="Left" />
                     </StackPanel>
                 </Border>
 
@@ -149,7 +165,7 @@
                             Click="FreeBtn_Click" HorizontalAlignment="Right" />
                     <TextBlock Text="Free the witness to clear the current testimony."
                                FontFamily="{StaticResource IoFontGrotesk}" FontSize="12"
-                               Foreground="{StaticResource IoTextSecondaryBrush}"
+                               Foreground="{DynamicResource IoTextSecondaryBrush}"
                                HorizontalAlignment="Right" />
                 </StackPanel>
 

@@ -1,0 +1,3 @@
+syxx key 2.0.0
+
+Usage: syxx key   (reports resolver / interface / VPN / captive-portal / encrypted-DNS state)

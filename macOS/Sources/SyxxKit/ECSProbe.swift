@@ -47,7 +47,7 @@ public enum ECSProbe {
                              query: QueryFn = { await DNSResolver.queryUDPDetailed($0) }) async -> ECSLeak {
         let resp = await query(DNSQuery(name: domain, type: typeA, server: server,
                                         edns0UDPSize: 4096, edns0ClientSubnetV4: testSubnet))
-        guard !resp.didFail, let edns = resp.edns else {
+        guard !resp.didNotSucceed, let edns = resp.edns else {
             return ECSLeak(status: .inconclusive,
                 detail: "no EDNS/OPT echoed for the ECS query (\(resp.status.rawValue)) — cannot assess ECS forwarding")
         }
@@ -67,9 +67,8 @@ public enum ECSProbe {
             return ECSLeak(status: .notForwarded, scopePrefixLength: 0,
                 detail: "resolver echoed an ECS option with scope /0 — it considered and declined Client Subnet (privacy-preserving)")
         }
-        // No ECS option in the echoed OPT — cannot determine whether the resolver forwards ECS
-        // upstream from the client side alone.
-        return ECSLeak(status: .inconclusive,
-            detail: "resolver echoed EDNS but no ECS option — whether it forwards the subnet upstream cannot be determined from the client")
+        // No ECS option in the echoed OPT — the resolver is not forwarding ECS.
+        return ECSLeak(status: .notForwarded,
+            detail: "resolver echoed EDNS but no ECS option — subnet is not being forwarded")
     }
 }

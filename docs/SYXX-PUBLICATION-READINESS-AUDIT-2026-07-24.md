@@ -116,6 +116,7 @@ The primary button at `macOS/Sources/SyxxApp/DashboardView.swift:111-120` promis
 - **Flawed Test Gate**: The unit test at `macOS/Tests/SyxxAppTests/AppModelWitnessTests.swift:229-251` executes a single Witness run through a separate method, failing to test `runAllWardens()` or detect omitted wardens.
 
 **Required UX Specification**:
+
 - **Single-Pane Progress**: Remain on the Dashboard view without switching active tabs.
 - **In-Place Status**: Update the primary button caption in-place to scroll active scan stages (*"Running Prophet..."* $\rightarrow$ *"Running Mirror..."* $\rightarrow$ *"Checking Network..."*).
 - **Evidence Persistence**: Save all returned scan outcomes to state.
@@ -428,6 +429,7 @@ Leak Detection previously worked but broke due to three compounding flaws:
 3. **AppModel Bypass**: `AppModel.swift:733` in `runLeak()` manually returned a local-only `.inconclusive` string without calling `runCollectorVerification()`.
 
 **Code Fix Specification**:
+
 - In `leak.py:147` & `LeakDetector.swift:114`, prepend `id-` to labels so subdomains always start with a letter (`id-b32token.leak.syxx.app`).
 - In `LeakDetector.swift:328`, update `VerifyResponse` to `let leaked: Bool?`.
 - In `AppModel.swift:733`, replace local short-circuit with a call to `await runCollectorVerification()`.
@@ -446,6 +448,7 @@ Witness testimony and verification fail due to two defects:
 2. **Spurious Private Key Guard on Public Verification**: `AppModel.swift:1499-1504` in `witnessVerify()` guards on `WitnessKeyManager.hasKey`. Verification requires only the *public* key (embedded in the `WitnessSnapshot` payload). Requiring the local private key breaks third-party testimony verification.
 
 **Code Fix Specification**:
+
 - In `WitnessSigner.swift:105`, assert `guard keyData.count == 32 else { throw WitnessSignerError.invalidPrivateKey }`.
 - In `AppModel.swift:1499`, remove the `WitnessKeyManager.hasKey` check from `witnessVerify()` so signatures verify using the snapshot's embedded public key.
 
@@ -464,6 +467,7 @@ The GUI layout exhibits "jiggling" button spacing, window frame resizing, and lo
 3. **Flexible Button Padding**: `SidebarItem` buttons use flexible vertical padding without fixed height constraints (`.frame(height: 36)`), causing spacing between buttons to expand and contract depending on active view labels.
 
 **Code Fix Specification**:
+
 - Enforce explicit sidebar frame in `ContentView.swift`: `.frame(width: 236).frame(maxHeight: .infinity)`.
 - Apply `.fixedSize()` to `SidebarItem` rows and explicit `.frame(height: 36)`.
 - Add `.clipped()` to `Image("Syxx-logo")`.
@@ -481,6 +485,7 @@ The GUI layout exhibits "jiggling" button spacing, window frame resizing, and lo
 3. **Unbounded `lsof` Fork Storm**: `DNSCapture.swift:586-607` synchronously spawns `/usr/sbin/lsof` per captured packet missing process metadata, exhausting thread pools and CPU under active network traffic.
 
 **Code Fix Specification**:
+
 - Wrap all `Process` executions in `withCheckedThrowingContinuation` using `process.terminationHandler`.
 - Drain task groups completely after cancellation.
 - Gate `lsof` calls behind an actor-isolated cache with a concurrency semaphore cap.

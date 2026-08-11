@@ -7,6 +7,7 @@ This document carries every item the audit found still unimplemented, in depende
 `file:line` seams and per-item acceptance bars.
 
 **What actually landed in the predecessor plan** (committed, byte-parity both platforms unless noted):
+
 - **WS1 engine verdict-shape:** Ph3.1 cautious rule + lineage table; Ph4.1 class-set `Bel` confidence;
   Ph4.2 mechanism-class partition + concrete headline; Ph4.3 `classMargin` + within-class; Ph5.1
   cross-vantage discrepancy as scored DST mass (CDN = zero); Stage-5 headline / provenance
@@ -182,6 +183,7 @@ by Tier-1's A013).
   (`broadcast.py:42`); F030 test-harness stub leak.
 
 ### Keygen.sh + Stripe — production readiness (blockers)
+
 - **Keygen:** a stock deploy DENIES every live validation — `deploy.sh` never provisions
   `SYXX_KEYGEN_PUBLIC_KEY` and never sets `SYXX_DEV_MODE`, so with D040 fail-closed + a hardcoded non-empty
   `KEYGEN_ACCOUNT_ID`, `/api/auth/activate` returns 402 for all real keys. A056 Date-replay unremediated.
@@ -221,6 +223,7 @@ in `~/Desktop/Shared/Syxx-Windows/`. macOS SwiftUI + `Syxx.Kit`/console + Server
 ---
 
 ## Handoff
+
 - **`syxx-neural-executor`** — WS1 phases (Ph5.2/6/7 + S5.1), the Windows cautious-combination parity fix,
   answer-matrix feeds.
 - **`syxx-engineer`** — WS2 probes/transports, WS4 server, WS5 Cage/URL/resource logic.

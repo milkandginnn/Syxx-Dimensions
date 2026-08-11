@@ -74,9 +74,9 @@ namespace Syxx.Tests
         [Fact]
         public void ParseResponsePacketDetailedMapsRCodes()
         {
-            Assert.Equal(DNSResponseStatus.ServFail,  DNSResolver.ParseResponsePacketDetailed(PacketWithRCode(2)).Status);
-            Assert.Equal(DNSResponseStatus.NXDomain,  DNSResolver.ParseResponsePacketDetailed(PacketWithRCode(3)).Status);
-            Assert.Equal(DNSResponseStatus.Refused,   DNSResolver.ParseResponsePacketDetailed(PacketWithRCode(5)).Status);
+            Assert.Equal(DNSResponseStatus.ServFail, DNSResolver.ParseResponsePacketDetailed(PacketWithRCode(2)).Status);
+            Assert.Equal(DNSResponseStatus.NXDomain, DNSResolver.ParseResponsePacketDetailed(PacketWithRCode(3)).Status);
+            Assert.Equal(DNSResponseStatus.Refused, DNSResolver.ParseResponsePacketDetailed(PacketWithRCode(5)).Status);
         }
 
         /// <summary>

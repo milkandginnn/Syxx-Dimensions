@@ -15,11 +15,14 @@ APP="Syxx.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/LaunchServices"
 
+[ -f "$BINDIR/syxx-gui" ] || { echo "ERROR: syxx-gui binary not found at $BINDIR/syxx-gui"; exit 1; }
 cp "$BINDIR/syxx-gui" "$APP/Contents/MacOS/Syxx"
+[ -f "Sources/SyxxApp/Resources/Syxx.icns" ] || { echo "ERROR: Syxx.icns not found at Sources/SyxxApp/Resources/Syxx.icns"; exit 1; }
 cp Sources/SyxxApp/Resources/Syxx.icns "$APP/Contents/Resources/Syxx.icns"
 # Bundle the unified `syxx` CLI so the GUI's Cage can re-exec it (with the `cage` subcommand) for
 # real, admin-authorized packet capture. locateCageBinary() looks for `syxx` in Resources first.
 swift build -c "$CONFIG" --product syxx
+[ -f "$BINDIR/syxx" ] || { echo "ERROR: syxx CLI binary not found at $BINDIR/syxx"; exit 1; }
 cp "$BINDIR/syxx" "$APP/Contents/Resources/syxx"
 
 # D073: post-build assertion — the bundled CLI must exist and be executable. A silent build

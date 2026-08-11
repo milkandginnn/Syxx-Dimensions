@@ -352,6 +352,16 @@
       "license": "MIT"
     },
     {
+      "name": "delta-remediation",
+      "source": "./plugins/delta-remediation",
+      "version": "1.0.0",
+      "description": "Delta Remediation Command Suite \u2014 seven commands forming a complete defect lifecycle from discovery through remediation to verification",
+      "author": {
+        "name": "Syxx",
+        "email": ""
+      }
+    },
+    {
       "name": "dependency-management",
       "source": "./plugins/dependency-management",
       "version": "1.2.1",
@@ -954,6 +964,17 @@
       "source": "./plugins/systems-programming",
       "version": "1.2.3",
       "description": "Systems programming with Rust, Go, C, and C++ for performance-critical and low-level development",
+      "author": {
+        "name": "Seth Hobson",
+        "email": "seth@major7apps.com"
+      },
+      "license": "MIT"
+    },
+    {
+      "name": "syxx-desktop-gui",
+      "source": "./plugins/syxx-desktop-gui",
+      "version": "1.0.0",
+      "description": "Cross-platform desktop GUI development \u2014 SwiftUI (macOS), WinUI 3 (Windows), Avalonia UI (Linux), Qt 6 (C++), Swift 6, C# 15, .NET 10.0. Pixel-perfect mockup translation, platform-native idioms, responsive desktop layouts, dark/light theming, and accessibility across all desktop targets.",
       "author": {
         "name": "Seth Hobson",
         "email": "seth@major7apps.com"

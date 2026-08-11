@@ -4,6 +4,7 @@ import SyxxKit
 
 struct GuidedSetupSelection: Equatable {
     var experienceMode: String
+    var themeMode: String
     var resolverID: String
     var transport: EncryptedDNSTransport
     var encryptedDNSEnabled: Bool
@@ -16,6 +17,7 @@ struct GuidedSetupSelection: Equatable {
     /// Safer encryption default is OFF unless the user explicitly enables it.
     static let safeDefaults = GuidedSetupSelection(
         experienceMode: "story",
+        themeMode: "system",
         resolverID: EncryptedDNSConfig.defaultResolverID,
         transport: .doh,
         encryptedDNSEnabled: false,
@@ -249,6 +251,7 @@ final class FirstRunCoordinator: ObservableObject {
         var candidate = settings
         candidate.settingsSchemaVersion = SyxxSettings.currentSchemaVersion
         candidate.experienceMode = selection.experienceMode
+        candidate.themeMode = selection.themeMode
         candidate.encryptedDNSResolverID = selection.resolverID
         candidate.encryptedDNSTransport = selection.transport
         candidate.encryptedDNSEnabled = selection.encryptedDNSEnabled
@@ -296,6 +299,7 @@ final class FirstRunCoordinator: ObservableObject {
     private static func makeFirstRunSettings() -> SyxxSettings {
         var settings = SyxxSettings.default
         settings.experienceMode = GuidedSetupSelection.safeDefaults.experienceMode
+        settings.themeMode = GuidedSetupSelection.safeDefaults.themeMode
         settings.encryptedDNSResolverID = GuidedSetupSelection.safeDefaults.resolverID
         settings.encryptedDNSTransport = GuidedSetupSelection.safeDefaults.transport
         settings.encryptedDNSEnabled = GuidedSetupSelection.safeDefaults.encryptedDNSEnabled

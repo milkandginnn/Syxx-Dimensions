@@ -180,6 +180,12 @@ final class PrivilegeManager {
     private var connection: NSXPCConnection?
     private var isInstalling = false
     private var installationContinuation: CheckedContinuation<Void, Error>?
+    /// Session-scoped flag: once an install has been attempted (successfully or not), do not
+    /// re-prompt for the password within the same process lifetime. A failed install that leaves
+    /// the helper unregistered would otherwise re-prompt on every subsequent privileged operation
+    /// (Cage capture, DNS flush), producing a loop of password dialogs the user cannot escape
+    /// without quitting the app.
+    private var hasAttemptedInstall = false
 
     private init() {}
 
@@ -201,7 +207,7 @@ final class PrivilegeManager {
         }
 
         isInstalling = true
-        defer { 
+        defer {
             isInstalling = false
             installationContinuation = nil
         }
@@ -212,20 +218,53 @@ final class PrivilegeManager {
         // for an upgrade, and no signature or version was ever checked.
         let helperLabel = "com.milkandgin.deepsyxx" as CFString
         var needsInstall = true
+        let bundledVersion = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
         if let jobDict = legacySMJobCopyDictionary(kSMDomainSystemLaunchd, helperLabel)?.takeRetainedValue() as? [String: Any],
-           let installedVersion = jobDict["CFBundleVersion"] as? String,
-           let bundledVersion = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
-            if installedVersion == bundledVersion {
-                needsInstall = false
+           let installedVersion = jobDict["CFBundleVersion"] as? String {
+            if let bundled = bundledVersion {
+                // Bundled build: compare versions — mismatch triggers re-bless.
+                if installedVersion == bundled {
+                    needsInstall = false
+                } else {
+                    SyxxDiagnostics.breadcrumb(
+                        category: "gui.privilege",
+                        message: "helper version mismatch: installed=\(installedVersion), bundled=\(bundled) — re-blessing",
+                        level: .warning)
+                }
             } else {
+                // Unbundled dev build (no CFBundleVersion in Bundle.main): the helper is registered
+                // in launchd and we cannot compare versions, so assume it is current. Re-blessing
+                // an unbundled build would re-prompt on every call because the version comparison
+                // can never succeed (bundledVersion is nil, so installedVersion == nil is false).
+                needsInstall = false
                 SyxxDiagnostics.breadcrumb(
                     category: "gui.privilege",
-                    message: "helper version mismatch: installed=\(installedVersion), bundled=\(bundledVersion) — re-blessing",
+                    message: "unbundled build: helper already registered (v\(installedVersion)), skipping install",
                     level: .warning)
             }
         }
+        // If hasAttemptedInstall is set, skip the install even if needsInstall is true — a prior
+        // attempt within this process already prompted the user, and re-prompting creates a loop.
+        if needsInstall && hasAttemptedInstall {
+            SyxxDiagnostics.breadcrumb(
+                category: "gui.privilege",
+                message: "skipping helper install: already attempted this session",
+                level: .warning)
+            needsInstall = false
+        }
         if needsInstall {
-            try await installHelper()
+            hasAttemptedInstall = true
+            do {
+                try await installHelper()
+            } catch {
+                // C011: a failed install must not permanently suppress retry. Clear the flag so the
+                // next ensureHelperInstalled() re-prompts instead of being short-circuited by the
+                // "already attempted this session" check above. UI follow-up: no retry affordance
+                // exists for the install state in this file or its direct view; the state reset is
+                // the core fix, surface a "Retry installation" action at the call site as needed.
+                hasAttemptedInstall = false
+                throw error
+            }
         }
 
         // Connect to the helper via XPC

@@ -128,7 +128,8 @@ public sealed partial class FirstRunViewModel : ObservableObject
                 NotificationsEnabled,
                 TelemetryEnabled,
                 UpdateCheckEnabled,
-                CrashReportingEnabled);
+                CrashReportingEnabled,
+                ThemeMode: "system");
         var result = _coordinator.CompleteSetup(selection);
         State = _coordinator.State;
         FailureMessage = result switch

@@ -9,27 +9,8 @@ struct GluttonView: View {
     var body: some View {
         PurpleScrollView(geometry: .fullPanel) {
         VStack(alignment: .leading, spacing: 24) {
-                // Warden header: rune tile + eyebrow + name + lore
-                HStack(alignment: .top, spacing: 15) {
-                    Text("\u{16A6}")
-                        .font(.custom("Cinzel-SemiBold", size: 28))
-                        .frame(width: 54, height: 54)
-                        .background(Color.ioCriticalRed.opacity(0.10))
-                        .cornerRadius(14)
-                        .foregroundColor(Color.ioCriticalRed)
-                        .shadow(color: Color.ioCriticalRed.opacity(0.35), radius: 22)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("THE DEVOURER \u{00B7} DNS LEAK TEST")
-                            .font(.ioCaption(.bold))
-                            .foregroundColor(Color.ioCriticalRed)
-                            .tracking(0.26)
-
-                        Text("Glutton")
-                            .font(.custom("Cinzel-SemiBold", size: 26))
-                            .foregroundColor(.ioText)
-
+                HStack(alignment: .top) {
+                    ModuleHeader(rune: "\u{16A6}", eyebrow: "THE DEVOURER \u{00B7} DNS LEAK TEST", name: "Glutton", accent: .ioGluttonPink) {
                         Text("Alas, the Glutton hungered for encrypted packets and demanded that any leak in the sealed DNS traffic be found and named, for a single crack was enough to render him famished.")
                             .font(.ioLore(16))
                             .foregroundColor(.ioTextMuted)
@@ -95,9 +76,10 @@ struct GluttonView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.ioGluttonPink.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioGluttonPink.opacity(0.15), lineWidth: 1))
 
                     // VPN / DNS Encryption status — real portalReport
                     VStack(alignment: .leading, spacing: 8) {
@@ -127,9 +109,10 @@ struct GluttonView: View {
                     }
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.ioGluttonPink.opacity(0.05))
                     .background(Color.ioSurfaceDark)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioBorderSubtle, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.ioGluttonPink.opacity(0.15), lineWidth: 1))
                 }
 
                 // Local Probes Table — real probe results

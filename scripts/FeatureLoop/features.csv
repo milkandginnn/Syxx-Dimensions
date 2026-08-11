@@ -1,15 +1,38 @@
-1. Dark mode toggle
-a. Detect the system color-scheme preference on first load
-b. Persist the user's explicit choice across sessions
-c. Expose a toggle in the top nav that overrides the system default
-2. CSV import with column mapping
-a. Let the user map source columns to target fields
-b. Show a dry-run preview of the first 20 rows before committing
-c. Reject malformed rows and offer a downloadable error report
-3. Full-text search across notes
-a. Rank results by relevance and recency
-b. Highlight the matched snippet in each result
-c. Support quoted phrases and -exclusions in the query
-4. Weekly activity email digest
-a. Opt-in per user, sent Monday morning in their timezone
-b. Summarize the top five items from the past seven days
+1. Mirror Module (remember rules/*, including SUBAGENT-RULES.md)
+a. Beginning with the macoS version, requires two terminal-like interfaces side by side (should mock the terminal/shell of the host OS, e.g. Ubuntu Terminal v. macOS Terminal v. Windows Powershell styles)
+b. Requires an input for a domain or web address
+c. Requires a button that inputs the domain or web address into a variable.
+d. Once the domain or web address is received, contacts the server to initiate highly secure remote capture of static web contents
+e. Static web contents includes initial index.html or other page .html file (prior to any javascript execution)
+f. Static web contents includes javascript files.
+g. Static web contents includes initial CSS files (prior to javascript execution)
+h. If pre-JS-execution resources cannot be found, concatonates static elements of the available .html file, i.e. <slot> and <template> tag contnets and javascript files, degrades the contribution to the conclusion.
+i. Initiates local retrieval of static web contents from the same domain web server/URL by highly secure encryption protocol.
+j. The remote server then must concatonate the static web components.
+k. The remote server then must encrypt the the concatonated file and away retrival call from client.
+l. The local client (Syxx) must simultaneosly and securely pull the same static web components for identical treatment.
+m. The local client must then securely retrieve the static web component bundle from the server.
+n. The local client must then decrypt the remote server's static web component file while keeping it siloed from the local copy to prevent contamination.
+o. The local client must then display its version of the concatonated static web components file and display it next to the remote server's version.
+p. The local clioent must then markup both files similarly to a git diff markup to make it easy to spot differences between the two files.
+q. The local client must then calculate how much, if at all, the result must be degraded for conclusion purposes, based on the number of differences and the authenticity of the two documents.
+r. The local client must then give the user an opportunity to explore the files, side-by-side and marked up, to manually evaluate differences.
+s. The client's elements should be styled to be consistent with the mockup styles and typography located '/Users/masterrabbit/Software/Syxx/Syxx GUI Mockups/Syxx macOS GUI Mxups.html' and '/Users/masterrabbit/Downloads/Syxx Type Specimen.html'
+t. Debug each of the elements a-s, above.
+u. Repeat implementations a-t for the Linux version.
+v. Repeat implementations a-s for the Windows version.
+w. Create features-implemented.CSV and transport each line from this document to the new one beginning on the first free row.
+2. Dark/Light Mode
+a. Beginning with macOS, access system settings to determine whether dark or light mode is enabled, setting the system setting as the default.
+a. Create a Guided Setup option for Dark Mode and Light Mode.
+b. Create a SettingsView option dor Dark or Light Mode.
+c. Ensure each toggle changes Dark Mode to Light Mode and Light Mode to Dark Mode.
+d. The existing version should be considered the Dark Mode version.
+e. The Light Mode version should invert the brightness/darkness profile of each UI element.
+f. Module highlight colors should be inverted so that they are slightly darker than the dark mode alternatives.
+g. Debug of the elements a-f, above.
+h. Repeat steps a-g for the Linux version.
+i. Repeat steps a-g for the Windows version.
+j. Transport each line from this document to the new one beginning on the first free row.
+3. Stop when fully implemented and debugged.
+

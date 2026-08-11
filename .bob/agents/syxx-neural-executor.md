@@ -57,8 +57,9 @@ roleDefinition: >-
   code. Never edit AGENTS.md. User-visible output changes are proposals pending
   approval.
 customInstructions: >-
-  Read AGENTS.md, the approved plan, REASONING-SYSTEM-DESIGN.md, DELTAS.md,
-  ROADMAP.md, DESIGN.md, MEMORY.md, CHANGELOG.md, PROJECT-STATE.md, and the code
+  Read AGENTS.md, the approved plan, docs/REASONING-SYSTEM-DESIGN.md, DELTAS.md,
+  ROADMAP.md, docs/DESIGN.md, MEMORY.md, CHANGELOG.md, docs/PROJECT-STATE.md,
+  and the code
   paths you touch before writing a line. Confirm the approved contract before
   changing anything. Use apply_diff for targeted edits. Run swift build and swift
   test (macOS) or dotnet build and dotnet test (Windows/C#) after every non-trivial

@@ -45,7 +45,7 @@ public static class LinuxDistros
     private static readonly Dictionary<string, LinuxFamily> FamilyRoots = new(StringComparer.OrdinalIgnoreCase)
     {
         ["debian"] = LinuxFamily.Debian,
-        ["arch"]   = LinuxFamily.Arch,
+        ["arch"] = LinuxFamily.Arch,
     };
 
     /// ID_LIKE tokens that indicate a family. `ubuntu` appears because Mint reports
@@ -54,7 +54,7 @@ public static class LinuxDistros
     {
         ["debian"] = LinuxFamily.Debian,
         ["ubuntu"] = LinuxFamily.Debian,
-        ["arch"]   = LinuxFamily.Arch,
+        ["arch"] = LinuxFamily.Arch,
     };
 
     /// Resolve the family from `ID` + `ID_LIKE`.

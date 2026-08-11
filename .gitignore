@@ -92,3 +92,33 @@ DerivedData/
 .env
 **/.env
 *.bak
+
+# E008: WARP manifest test keys — regenerated at build time from deterministic
+# seeds in _build_vectors.py. Never commit private key material.
+warp-manifest-vectors/keys/*.pem
+warp-manifest-vectors/keys/*.key_id
+# Public halves of the test keypairs carry no private material and stay tracked.
+!warp-manifest-vectors/keys/*.pub.pem
+
+# Installed skill packs — vendored clones, not source (win-dev-skills embeds its
+# own .git and a prebuilt winui-search.exe). Provenance is pinned in skills-lock.json.
+mac-dev-skills/
+win-dev-skills/
+win-dev-skills-qwen/
+
+# Qwen Code session scratch
+.qwen/tmp/
+
+# Python bytecode / venvs
+__pycache__/
+*.pyc
+plugins/*/.venv/
+
+# Generated output artifacts (catalog exports, session transcripts, tool dumps)
+outputs-catalog-*
+transcript.*.json
+t.net.json
+
+# MCPmarket plugin bundle — .mcp.json inside carries a live bearer token
+mcpmarket-me/
+mcpmarket-plugin-me-claude.zip

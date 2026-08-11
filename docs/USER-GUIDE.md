@@ -264,6 +264,7 @@ If you have questions, run into problems, or need help understanding your result
 **feedback@milkandgin.com**
 
 When reporting an issue, please include:
+
 - Your platform (Linux, Windows, or macOS) and version.
 - The Syxx version (found in **Settings > About** or by running `syxx --version`).
 - A description of what happened and what you expected.

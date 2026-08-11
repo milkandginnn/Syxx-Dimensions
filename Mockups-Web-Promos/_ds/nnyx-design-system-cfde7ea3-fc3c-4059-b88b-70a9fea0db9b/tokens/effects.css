@@ -49,4 +49,16 @@
   /* Hover lift values seen across components */
   --hover-scale: 1.02; /* @kind other */
   --hover-scale-lg: 1.05; /* @kind other */
+
+  /* ---- Unified design system bridge ---- */
+  --glow-cyan: var(--glow-blue);
+  --glow-violet: 0 0 8px rgba(140, 92, 245, 0.30), 0 0 12px rgba(140, 92, 245, 0.20);
+  --glow-critical: 0 0 8px rgba(245, 64, 94, 0.30), 0 0 12px rgba(245, 64, 94, 0.20);
+  --radius-badge: 4px;
+  --radius-chip: 6px;
+  --radius-button: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-pill: 999px;
+  --ease-smooth: var(--ease-spring);
 }

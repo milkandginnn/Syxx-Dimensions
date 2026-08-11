@@ -15,6 +15,7 @@ No API keys needed: every command exercised here is local-only (`agent list`,
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -64,14 +65,29 @@ class TestOpenCodeSmoke:
         """Stage the generated .opencode/ + opencode.json in a tmpdir so we don't
         need to install into the user's ~/.opencode/."""
         d = tmp_path_factory.mktemp("opencode-smoke")
-        shutil.copytree(WORKTREE / ".opencode", d / ".opencode")
-        shutil.copy(WORKTREE / "opencode.json", d / "opencode.json")
+        # OpenCode discovers agents/commands/skills from its config dir, not from
+        # the project's .opencode/ tree. Install the generated artifacts into the
+        # temp config dir so `opencode agent list` can discover them.
+        config_dir = d / ".config" / "opencode"
+        for subdir in ("agents", "commands", "skills"):
+            src = WORKTREE / ".opencode" / subdir
+            if src.is_dir():
+                dst = config_dir / subdir
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if dst.exists():
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
         return d
 
     def test_opencode_agent_list_succeeds(self, opencode_workdir: Path):
         """`opencode agent list` must exit 0 — failure indicates an agent frontmatter
         bug, mode/model schema violation, or permission-block parse error."""
-        proc = _run(["opencode", "agent", "list"], cwd=opencode_workdir)
+        env = {
+            **os.environ,
+            "HOME": str(opencode_workdir),
+            "OPENCODE_CONFIG_DIR": str(opencode_workdir / ".config" / "opencode"),
+        }
+        proc = _run(["opencode", "agent", "list"], cwd=opencode_workdir, env=env)
         assert proc.returncode == 0, (
             f"opencode agent list failed (rc={proc.returncode}):\n"
             f"--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}"
@@ -79,7 +95,12 @@ class TestOpenCodeSmoke:
 
     def test_opencode_discovers_every_source_agent(self, opencode_workdir: Path):
         """Every source agent in plugins/*/agents/ must show up in `opencode agent list`."""
-        proc = _run(["opencode", "agent", "list"], cwd=opencode_workdir)
+        env = {
+            **os.environ,
+            "HOME": str(opencode_workdir),
+            "OPENCODE_CONFIG_DIR": str(opencode_workdir / ".config" / "opencode"),
+        }
+        proc = _run(["opencode", "agent", "list"], cwd=opencode_workdir, env=env)
         assert proc.returncode == 0
         listed = set()
         for line in proc.stdout.splitlines():

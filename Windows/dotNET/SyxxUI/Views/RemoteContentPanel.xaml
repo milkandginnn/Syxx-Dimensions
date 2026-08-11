@@ -3,7 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Microsoft.UI.Xaml.Controls"
-    Background="{StaticResource IoBgBrush}">
+    Background="{DynamicResource IoBgBrush}">
 
     <Grid>
         <controls:WebView2 x:Name="ContentWebView"
@@ -12,18 +12,18 @@
 
         <Grid x:Name="OfflineOverlay"
               Visibility="Collapsed"
-              Background="{StaticResource IoBgBrush}">
+              Background="{DynamicResource IoBgBrush}">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="12">
                 <TextBlock Text="No Connection"
                            FontFamily="{StaticResource IoFontGrotesk}"
                            FontSize="22" FontWeight="Bold"
-                           Foreground="{StaticResource IoTextBrush}" />
+                           Foreground="{DynamicResource IoTextBrush}" />
                 <TextBlock Text="Syxx What's New could not be loaded.&#x0a;Please connect to the internet and try again."
                            FontFamily="{StaticResource IoFontGrotesk}"
                            FontSize="14"
-                           Foreground="{StaticResource IoTextSecondaryBrush}"
+                           Foreground="{DynamicResource IoTextSecondaryBrush}"
                            TextWrapping="Wrap"
                            HorizontalTextAlignment="Center"
                            MaxWidth="320" />

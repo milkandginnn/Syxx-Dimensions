@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "cage-attribution-and-size",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "cageAttributionRate": 0.97,
+    "responseSize": {
+      "status": "normal",
+      "sampleCount": 40,
+      "maxBytes": 512,
+      "oversizedCount": 0,
+      "detail": "sizes within the ordinary DNS range"
+    }
+  }
+}

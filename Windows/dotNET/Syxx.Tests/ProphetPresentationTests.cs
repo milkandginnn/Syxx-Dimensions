@@ -41,7 +41,7 @@ public class ProphetPresentationTests
         Assert.Equal(0, result.ActiveCount);
         // Failure case: if the filter dropped "[unreachable]" instead of keeping it, an
         // implementation that counted all rows would report ActiveCount=2 and this asserts red.
-        Assert.Equal(0, result.UniqueIPs.Count);
+        Assert.Empty(result.UniqueIPs);
     }
 
     [Fact]
@@ -237,12 +237,12 @@ public class ProphetPresentationTests
         // interpolate to a leading-space-only " returned no..." with no subject.
         var pres = ProphetPresentation.BuildDnssecPresentation(DNSSECStatus.Unsigned, "");
 
-Assert.StartsWith("this domain", pres.Detail, StringComparison.Ordinal);
-Assert.DoesNotContain("{}", pres.Detail);
-// Failure case: removing the `display` substitution guard would interpolate the empty
-// domain to a leading space; this Assert.False reds.
-Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
-    "empty domain interpolated to a leading-space subject; the 'this domain' guard is missing");
+        Assert.StartsWith("this domain", pres.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("{}", pres.Detail);
+        // Failure case: removing the `display` substitution guard would interpolate the empty
+        // domain to a leading space; this Assert.False reds.
+        Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
+            "empty domain interpolated to a leading-space subject; the 'this domain' guard is missing");
     }
 
     [Theory]
@@ -250,10 +250,10 @@ Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
     [InlineData(DNSSECStatus.RecordsPresentUnverified)]
     [InlineData(DNSSECStatus.SignatureExpiredOrNotYetValid)]
     [InlineData(DNSSECStatus.Inconclusive)]
-    public void Dnssec_AllStates_NeverEmitBannedVerdictWord(DNSSECStatus status)
+    public void Dnssec_AllStates_NeverEmitBannedWord(DNSSECStatus status)
     {
         var pres = ProphetPresentation.BuildDnssecPresentation(status, "example.com");
-        // AGENTS.md: the word "verdict" is banned in user-facing text.
+        // AGENTS.md: the banned word must never appear in user-facing text.
         Assert.DoesNotContain("verdict", pres.Title, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("verdict", pres.Detail, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("verdict", pres.StatusLabel, StringComparison.OrdinalIgnoreCase);
@@ -278,7 +278,7 @@ Assert.False(pres.Detail.StartsWith(" ", StringComparison.Ordinal),
     [InlineData(ProphetPresentation.ResolverConsensus.Insufficient, 1)]
     [InlineData(ProphetPresentation.ResolverConsensus.Agree, 3)]
     [InlineData(ProphetPresentation.ResolverConsensus.Disagree, 3)]
-    public void ConsensusLabel_AllStates_NoEmDashes_AndNoBannedVerdictWord(
+    public void ConsensusLabel_AllStates_NoEmDashes_AndNoBannedWord(
         ProphetPresentation.ResolverConsensus state, int activeCount)
     {
         // This is the guard that was missing: the unmeasured-latency fragment previously rendered

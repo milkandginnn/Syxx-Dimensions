@@ -1,0 +1,25 @@
+{
+  "assets": [
+    {
+      "class": "JS",
+      "state": "match",
+      "url": "https://example.test/app.js"
+    },
+    {
+      "class": "CSS",
+      "state": "match",
+      "url": "https://example.test/styles.css"
+    },
+    {
+      "class": "JS",
+      "state": "match",
+      "url": "https://cdn.example.test/vendor.js"
+    }
+  ],
+  "conclusion": "INCONCLUSIVE",
+  "freshnessState": "fresh",
+  "htmlState": "fetchError",
+  "manifestState": "parsed",
+  "notes": "the origin page could not be fetched from the client vantage; missing data is never a clean pass.",
+  "signatureState": "verified"
+}

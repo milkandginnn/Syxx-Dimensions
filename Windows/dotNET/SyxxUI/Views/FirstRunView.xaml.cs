@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Syxx.Kit;
+using SyxxUI.Services;
 using SyxxUI.ViewModels;
 
 namespace SyxxUI.Views;
@@ -35,6 +36,7 @@ public sealed partial class FirstRunView : UserControl
         CrashReportingToggle.IsOn = model.CrashReportingEnabled;
         TelemetryToggle.IsOn = model.TelemetryEnabled;
         RenderState();
+        RenderThemeSelection();
     }
 
     private async void AcceptButton_Click(object sender, RoutedEventArgs e)
@@ -146,6 +148,7 @@ public sealed partial class FirstRunView : UserControl
         if (state == OnboardingState.SetupRequired)
         {
             RenderExperienceSelection();
+            RenderThemeSelection();
         }
         if (FailurePanel.Visibility == Visibility.Visible)
         {
@@ -181,4 +184,53 @@ public sealed partial class FirstRunView : UserControl
 
     private static Brush ResourceBrush(string key) =>
         (Brush)Application.Current.Resources[key];
+
+    private void ThemeSystemButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_model is null) return;
+        _model.ThemeMode = "system";
+        RenderThemeSelection();
+        ApplyThemeLive("system");
+    }
+
+    private void ThemeDarkButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_model is null) return;
+        _model.ThemeMode = "dark";
+        RenderThemeSelection();
+        ApplyThemeLive("dark");
+    }
+
+    private void ThemeLightButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_model is null) return;
+        _model.ThemeMode = "light";
+        RenderThemeSelection();
+        ApplyThemeLive("light");
+    }
+
+    private void RenderThemeSelection()
+    {
+        if (_model is null) return;
+
+        var mode = _model.ThemeMode.ToLowerInvariant();
+        ThemeSystemSelectedIcon.Visibility = mode == "system" ? Visibility.Visible : Visibility.Collapsed;
+        ThemeDarkSelectedIcon.Visibility = mode == "dark" ? Visibility.Visible : Visibility.Collapsed;
+        ThemeLightSelectedIcon.Visibility = mode == "light" ? Visibility.Visible : Visibility.Collapsed;
+
+        ThemeSystemButton.BorderBrush = ResourceBrush(mode == "system" ? "IoBlueBrush" : "IoBorderSubtleBrush");
+        ThemeDarkButton.BorderBrush = ResourceBrush(mode == "dark" ? "IoBlueBrush" : "IoBorderSubtleBrush");
+        ThemeLightButton.BorderBrush = ResourceBrush(mode == "light" ? "IoBlueBrush" : "IoBorderSubtleBrush");
+        ThemeSystemButton.BorderThickness = new Thickness(mode == "system" ? 2 : 1);
+        ThemeDarkButton.BorderThickness = new Thickness(mode == "dark" ? 2 : 1);
+        ThemeLightButton.BorderThickness = new Thickness(mode == "light" ? 2 : 1);
+    }
+
+    private static void ApplyThemeLive(string mode)
+    {
+        if (Application.Current is App app)
+        {
+            app.ThemeManager?.ApplyTheme(mode);
+        }
+    }
 }

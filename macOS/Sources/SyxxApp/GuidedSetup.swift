@@ -57,68 +57,62 @@ struct GuidedSetup: View {
                 EmptyView()
             }
         }
-        .frame(minWidth: 1050, minHeight: 613)
+        // Note: .frame(minWidth: 1050, minHeight: 613) removed — FirstRunWindowConfigurator
+        // owns all window sizing per state, locking min==max to prevent SwiftUI from
+        // growing the window behind its back.
     }
 }
 
 private struct AgreementGate: View {
     @ObservedObject var coordinator: FirstRunCoordinator
-    @State private var accepted = false
-    @State private var showAcceptanceAlert = false
 
     var body: some View {
+        // Mockup: 600px card, rgba(28,17,52,.85) + glass, border rgba(160,140,255,.24),
+        // radius 18, shadow 0 40px 100px rgba(0,0,0,.6). No checkbox — "Decline" text
+        // link + "Agree & Continue →" gradient button.
         VStack(spacing: 0) {
             VStack(spacing: 5) {
                 Text("⚖")
                     .font(.system(size: 30))
+                    .padding(.bottom, 6)
                 Text("End-User License Agreement")
-                    .font(.ioTitle2())
+                    .font(.custom("Cinzel-SemiBold", size: 22))
                     .foregroundStyle(Color.ioText)
                 Text("Please read these terms before continuing.")
-                    .font(.ioLore(14))
-                    .foregroundStyle(Color.ioTextSecondary)
+                    .font(.custom("EBGaramond-Italic", size: 14))
+                    .foregroundStyle(Color.ioTextMuted)
+                    .padding(.top, 4)
             }
             .padding(.vertical, 14)
+            .padding(.horizontal, 30)
             .frame(maxWidth: .infinity)
 
-            Divider().overlay(Color.ioBorderSubtle)
+            Divider().overlay(Color(white: 1, opacity: 0.06))
 
             PurpleScrollView(geometry: .compact) {
                 Text(coordinator.agreementText)
-                    .font(.ioBody())
-                    .foregroundStyle(Color.ioText)
+                    .font(.custom("EBGaramond-Regular", size: 14.5))
+                    .foregroundStyle(Color.ioTextSecondary)
                     .lineSpacing(3)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
                     .padding(.vertical, 20)
             }
-            .frame(height: 300)
+            .frame(maxHeight: 320)
 
-            Toggle("I have read and agree to the terms above.", isOn: $accepted)
-                .toggleStyle(.checkbox)
-                .font(.ioBody())
-                .foregroundStyle(Color.ioText)
-                .padding(.horizontal, 30)
-                .padding(.bottom, 12)
-                .accessibilityHint("Required before Syxx can continue")
-
-            Divider().overlay(Color.ioBorderSubtle)
+            Divider().overlay(Color(white: 1, opacity: 0.06))
 
             HStack {
                 Button("Decline") { NSApplication.shared.terminate(nil) }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.ioTextSecondary)
+                    .foregroundStyle(Color.ioTextMuted)
                     .keyboardShortcut(.cancelAction)
                     .accessibilityHint("Quits Syxx without saving acceptance")
 
                 Spacer()
 
                 Button("Agree & Continue →") {
-                    guard accepted else {
-                        showAcceptanceAlert = true
-                        return
-                    }
                     _ = coordinator.acceptAgreement()
                 }
                 .buttonStyle(IoFilledButtonStyle(color: .ioBlue))
@@ -129,18 +123,10 @@ private struct AgreementGate: View {
             .padding(.vertical, 16)
         }
         .frame(width: 600)
-        .background(Color.ioSurfaceDark.opacity(0.96))
+        .background(Color(red: 28/255, green: 17/255, blue: 52/255).opacity(0.85))
         .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.ioBorderSubtle))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color(red: 160/255, green: 140/255, blue: 255/255).opacity(0.24), lineWidth: 1))
         .shadow(color: .black.opacity(0.6), radius: 50, y: 24)
-        .alert(
-            "End-User License Agreement",
-            isPresented: $showAcceptanceAlert
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("You must accept the EULA in order to use Syxx. You have not yet accepted the EULA.")
-        }
     }
 }
 
@@ -189,55 +175,53 @@ private struct SetupChoices: View {
                         )
                     }
 
+                    sectionLabel("Appearance")
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Choose how Syxx looks. System follows your macOS appearance setting.")
+                            .font(.ioSmall())
+                            .foregroundStyle(Color.ioTextSecondary)
+
+                        Picker("Theme", selection: Binding(
+                            get: { SyxxThemeMode(rawValueOrSystem: selection.themeMode) },
+                            set: { selection.themeMode = $0.rawValue }
+                        )) {
+                            ForEach(SyxxThemeMode.allCases, id: \.self) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityLabel("Appearance theme")
+                        .accessibilityHint("Choose between System, Dark, or Light appearance")
+                    }
+
                     sectionLabel("Step 2 · Confirm your defaults")
 
-                    HStack(alignment: .top, spacing: 30) {
-                        VStack(spacing: 0) {
-                            Picker("Resolver", selection: $selection.resolverID) {
-                                ForEach(resolvers) { resolver in
-                                    Text(resolver.displayName).tag(resolver.id)
-                                }
+                    VStack(spacing: 0) {
+                        Picker("Resolver", selection: $selection.resolverID) {
+                            ForEach(resolvers) { resolver in
+                                Text(resolver.displayName).tag(resolver.id)
                             }
-                            .accessibilityHint("Where lookups are sent")
-                            settingDivider
-
-                            Picker("Encrypted transport", selection: $selection.transport) {
-                                Text("DoH (HTTPS)").tag(EncryptedDNSTransport.doh)
-                                Text("DoT (TLS)").tag(EncryptedDNSTransport.dot)
-                            }
-                            settingDivider
-
-                            setupToggle(
-                                "Encrypt all DNS queries",
-                                detail: "Recommended when DNS is cleartext",
-                                value: $selection.encryptedDNSEnabled
-                            )
-                            setupToggle(
-                                "Notify me on trust changes",
-                                detail: "Alerts when the network's trust changes",
-                                value: $selection.notificationsEnabled
-                            )
                         }
-                        .frame(maxWidth: .infinity)
+                        .accessibilityHint("Where lookups are sent")
+                        settingDivider
 
-                        VStack(spacing: 0) {
-                            setupToggle(
-                                "Check for updates automatically",
-                                detail: "Contacts syxx.app after setup to check for updates and news",
-                                value: $selection.updateCheckEnabled
-                            )
-                            setupToggle(
-                                "Send crash reports",
-                                detail: "Shares diagnostics after setup when enabled",
-                                value: $selection.crashReportingEnabled
-                            )
-                            setupToggle(
-                                "Send anonymous usage statistics",
-                                detail: "Shares app operation telemetry after setup when enabled",
-                                value: $selection.telemetryEnabled
-                            )
+                        Picker("Encrypted transport", selection: $selection.transport) {
+                            Text("DoH (HTTPS)").tag(EncryptedDNSTransport.doh)
+                            Text("DoT (TLS)").tag(EncryptedDNSTransport.dot)
                         }
-                        .frame(maxWidth: .infinity)
+                        settingDivider
+
+                        setupToggle(
+                            "Encrypt all DNS queries",
+                            detail: "Recommended when DNS is cleartext",
+                            value: $selection.encryptedDNSEnabled
+                        )
+                        setupToggle(
+                            "Notify me on trust changes",
+                            detail: "Alerts when the network's trust changes",
+                            value: $selection.notificationsEnabled
+                        )
                     }
                 }
                 .padding(.horizontal, 30)
@@ -285,7 +269,7 @@ private struct SetupChoices: View {
             .padding(.horizontal, 30)
             .padding(.vertical, 12)
         }
-        .frame(width: 960, height: 585)
+        .frame(width: 640, height: 585)
         .background(Color.ioSurfaceDark.opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.ioBorderSubtle))
@@ -304,7 +288,10 @@ private struct SetupChoices: View {
     }
 
     private func experienceCard(mode: String, title: String, description: String) -> some View {
-        Button {
+        // Mockup: Story selected = violet (#7c5cff), General selected = teal (#2dd4bf).
+        let isSelected = selection.experienceMode == mode
+        let accent: Color = mode == "story" ? .ioBlue : .ioSuccessGreen
+        return Button {
             selection.experienceMode = mode
         } label: {
             VStack(alignment: .leading, spacing: 8) {
@@ -313,9 +300,9 @@ private struct SetupChoices: View {
                         .font(.ioTitle3())
                         .foregroundStyle(Color.ioText)
                     Spacer()
-                    if selection.experienceMode == mode {
+                    if isSelected {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.ioBlue)
+                            .foregroundStyle(accent)
                     }
                 }
                 Text(description)
@@ -329,14 +316,14 @@ private struct SetupChoices: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(
-                        selection.experienceMode == mode ? Color.ioBlue : Color.ioBorderSubtle,
-                        lineWidth: selection.experienceMode == mode ? 2 : 1
+                        isSelected ? accent : Color.ioBorderSubtle,
+                        lineWidth: isSelected ? 2 : 1
                     )
             )
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(selection.experienceMode == mode ? .isSelected : [])
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func setupToggle(

@@ -130,6 +130,7 @@ final class WitnessTestifyParityTests: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
+        WitnessKeyManager.useDataProtectionKeychain = false
         backedUpKey = WitnessKeyManager.loadKey()
     }
 

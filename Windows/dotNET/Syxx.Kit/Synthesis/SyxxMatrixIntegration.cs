@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -197,9 +199,67 @@ public sealed class SyxxMatrixBuilder
 {
     public SyxxMatrixBuilder() { }
 
+    /// B007: loads the default matrix spec from the embedded JSON resource
+    /// (<c>Synthesis/default-spec.json</c>), falling back to the inline
+    /// <see cref="BuildDefaultSpec"/> if the resource is missing or malformed.
+    ///
+    /// <para>The embedded resource is a copy of <c>corpus/matrix/default-spec.frozen.json</c>,
+    /// the same file used by <c>MatrixGoldenCorpusTests</c> for byte-for-byte parity. A drift
+    /// between the resource and <see cref="BuildDefaultSpec"/> is caught by that test.</para>
+    ///
+    /// <para>Fallback is logged as a diagnostic so a missing resource surfaces in telemetry
+    /// rather than silently using the inline path.</para>
+    public MatrixSpec LoadDefaultSpec()
+    {
+        try
+        {
+            var assembly = typeof(SyxxMatrixBuilder).Assembly;
+            var resourceName = "Syxx.Kit.Synthesis.default-spec.json";
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is null)
+            {
+                SyxxDiagnostics.Capture(new DiagnosticEvent(
+                    ErrorClass: "spec.resource_missing",
+                    Component: "SyxxMatrixBuilder",
+                    Section: null,
+                    Impact: MeasurementImpact.NoDetermination,
+                    Severity: DiagnosticSeverity.Warning,
+                    Underlying: $"B007: embedded resource '{resourceName}' not found; falling back to inline BuildDefaultSpec()",
+                    Fingerprint: new[] { "spec.resource_missing", resourceName },
+                    Tags: null));
+                return BuildDefaultSpec();
+            }
+
+            using var reader = new StreamReader(stream);
+            var json = reader.ReadToEnd();
+            var spec = JsonSerializer.Deserialize<MatrixSpec>(json)
+                ?? throw new InvalidOperationException("deserialized spec was null");
+            spec.Validate();
+            return spec;
+        }
+        catch (Exception ex) when (ex is not MatrixEngineException)
+        {
+            // Malformed resource or deserialization failure — log and fall back.
+            SyxxDiagnostics.Capture(new DiagnosticEvent(
+                ErrorClass: "spec.resource_malformed",
+                Component: "SyxxMatrixBuilder",
+                Section: null,
+                Impact: MeasurementImpact.NoDetermination,
+                Severity: DiagnosticSeverity.Warning,
+                Underlying: $"B007: failed to load embedded spec resource: {ex.GetType().Name}: {ex.Message}; falling back to inline BuildDefaultSpec()",
+                Fingerprint: new[] { "spec.resource_malformed", ex.GetType().Name },
+                Tags: null));
+            return BuildDefaultSpec();
+        }
+    }
+
     /// Transcribed constant-for-constant from `SyxxMatrixIntegration.swift` `buildDefaultSpec()`
     /// (rules :79-199, thresholds :212-226). A transcription typo in any constant is a
     /// same-evidence-different-result parity defect; the Phase 5 spec byte-oracle pins this.
+    ///
+    /// B007: this is now the FALLBACK path. The primary path loads from the embedded JSON
+    /// resource via <see cref="LoadDefaultSpec"/>. Kept for correctness: if the resource is
+    /// missing or corrupted, the engine still runs with the inline spec.
     public MatrixSpec BuildDefaultSpec()
     {
         var prophet = SyxxSection.Prophet.Id();
@@ -337,6 +397,12 @@ public sealed class SyxxMatrixBuilder
             exclusionaryIndicators: Array.Empty<IndicatorId>(),
             mutuallyExclusiveWith: new[] { SyxxDiagnosis.Clean.Id() });
 
+        // B156: the set of indicator IDs that have at least one reachable EvidenceId mapping.
+        // Currently passed as null (matching the Swift twin) — all rules count toward the
+        // coverage denominator. B010: the four clean-support indicators (resolverAgreement,
+        // routeClean, trustedWitnessOK, localEvidenceSealValid) are now wired in
+        // SynthesisEngine.IndicatorMapping, so mappableIndicators could be populated; kept as
+        // null for Swift parity until the macOS twin wires the same mappings.
         return new MatrixSpec(
             diagnoses: new[]
             {
@@ -362,7 +428,8 @@ public sealed class SyxxMatrixBuilder
                 MinimumIndependentSupportGroupsForConclusive: 2,
                 RequireDecisiveOrTwoMajorsForConclusive: true,
                 HardGateOnMissingRequiredSections: true,
-                FailClosedOnInvalidatedRequiredSections: true));
+                FailClosedOnInvalidatedRequiredSections: true),
+            mappableIndicators: null);
     }
 }
 
@@ -404,8 +471,9 @@ public sealed record SyxxRunInput(
 
 public static class SyxxMatrixIntegration
 {
+    /// B007: loads from the embedded JSON resource first, falling back to inline BuildDefaultSpec().
     public static MatrixDeterminativeEngine MakeEngine()
-        => new(new SyxxMatrixBuilder().BuildDefaultSpec());
+        => new(new SyxxMatrixBuilder().LoadDefaultSpec());
 
     public static DeterminativeResult Evaluate(SyxxRunInput input, CancellationToken ct = default)
         => MakeEngine().Evaluate(input.ToEvidenceBundle(), ct);
@@ -419,9 +487,12 @@ public static class SyxxMatrixIntegration
     /// KNOWN CROSS-PLATFORM CAVEAT (report, don't hide): Swift encodes the `knownSections`
     /// Set as an array in per-process hash order, so the Swift dump of that ONE field is not
     /// byte-stable across launches; the Phase 5 canonical rule must sort it on both platforms.
+    ///
+    /// B007: serializes the loaded spec (resource-first, inline fallback) so the output always
+    /// reflects what the engine is actually using at runtime.
     public static string DefaultSpecJson(bool prettyPrinted = true)
     {
-        var node = JsonSerializer.SerializeToNode(new SyxxMatrixBuilder().BuildDefaultSpec())
+        var node = JsonSerializer.SerializeToNode(new SyxxMatrixBuilder().LoadDefaultSpec())
             ?? throw new InvalidOperationException("default spec serialized to null");
         return MatrixCanonicalJson.SortedKeys(node, prettyPrinted);
     }

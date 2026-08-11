@@ -1,0 +1,8 @@
+{
+  "track_id": "reverify-test-integrity_20260808",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-08-08",
+  "updated_at": "2026-08-08",
+  "description": "Re-verify all 15 findings from check-test-adequacy_20260808 on a clean checkout. Detection-only — no code changes."
+}

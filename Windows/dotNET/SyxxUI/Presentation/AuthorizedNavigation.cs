@@ -15,7 +15,7 @@ namespace SyxxUI.Presentation;
 /// never be refused by <see cref="RemoteUrlPolicy"/> — the gate is not merely bypassed, it is
 /// never consulted. Three call sites did exactly that (DashboardView.xaml:224 and :253,
 /// SettingsView.xaml:67) while every other navigation path on Windows already failed closed
-/// through <see cref="RemoteUrlPolicy.AuthorizeForNavigation(string, out RemoteUrlPolicy.Evaluation)"/>:
+/// through <see cref="RemoteUrlPolicy.AuthorizeForNavigation(string, out RemoteUrlPolicy.Result)"/>:
 /// MainWindow.xaml.cs:198 and :243, WelcomeView.xaml.cs:18, LicenseView.xaml.cs:132 and :222,
 /// RemoteContentPanel.xaml.cs:123 and :221, DimensionService.cs:200.
 ///
@@ -67,7 +67,7 @@ internal static class AuthorizedNavigation
         }
     }
 
-    private static async Task ShowRefusalAsync(RemoteUrlPolicy.Evaluation eval, XamlRoot? xamlRoot)
+    private static async Task ShowRefusalAsync(RemoteUrlPolicy.Result eval, XamlRoot? xamlRoot)
     {
         if (xamlRoot is null)
         {

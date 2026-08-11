@@ -9,7 +9,8 @@ using Syxx.Kit;
 
 namespace Syxx.Commands
 {
-    /// <summary>`syxx cage` — port-53 DNS packet capture (requires Administrator). Body moved verbatim
+    /// <summary>`syxx cage` — port-53 DNS packet capture (requires root/sudo on Linux and macOS,
+    /// Administrator on Windows; this one binary is all three). Body moved verbatim
     /// from the former SyxxCage tool; args[0] is the first real argument (the subcommand token was
     /// stripped by the dispatcher). The guided flow re-execs this unified binary with `cage`.
     ///
@@ -25,8 +26,12 @@ namespace Syxx.Commands
     {
         public static async Task RunAsync(string[] args)
         {
+            // E14 copy fix: this said "requires administrator", which is Windows-only vocabulary.
+            // The same binary is the Linux CLI, where the requirement is root/CAP_NET_RAW and the
+            // instruction a user can act on is `sudo`. The error path at :124 already said "sudo";
+            // only the usage line still said otherwise. Swift twin: SyxxCage.swift:61.
             if (SyxxConfig.HandleGlobalFlags(args, "syxx cage",
-                "Usage: syxx cage [--duration <seconds>] [--keep]   (captures port-53 DNS packets; requires administrator)")) return;
+                "Usage: syxx cage [--duration <seconds>] [--keep] [--output <dir>]   (captures port-53 DNS packets; requires root/sudo on Linux and macOS, Administrator on Windows)")) return;
             double duration = 10.0; // Default 10 seconds for quick run
             bool keepRaw = false; // --keep retains the raw NDJSON capture (it embeds process paths)
             string? explicitOutDir = null; // D108: launcher-supplied output dir (avoids cross-token mismatch)
@@ -51,7 +56,20 @@ namespace Syxx.Commands
                 // captures directory. Without this, an elevated child resolves LocalApplicationData
                 // under the elevated token (a different user profile), so writes go to the admin's
                 // profile while the launcher tails the original user's profile — silent mismatch.
-                else if (args[idx] == "--out" && idx + 1 < args.Length)
+                //
+                // C-13: `--output`/`-o` are accepted as aliases. This command was the only one in
+                // the CLI spelling it `--out`; `syxx witness` and macOS's `syxx cage`
+                // (SyxxCage.swift:89) both use `--output`/`-o`, so a user carrying a command line
+                // between the two platforms had the flag silently IGNORED rather than rejected —
+                // the capture then wrote to the default directory while the caller watched another.
+                // `--output` is the documented spelling; `--out` stays accepted forever because
+                // D108's launcher invocations already ship with it.
+                //
+                // NOTE the type divergence, deliberately preserved: here the value is a DIRECTORY,
+                // on macOS it is a FILE path. Reconciling that is capture-path work, not flag work,
+                // and is routed out in the E14 report.
+                else if ((args[idx] == "--out" || args[idx] == "--output" || args[idx] == "-o")
+                    && idx + 1 < args.Length)
                 {
                     explicitOutDir = args[idx + 1];
                     idx++;

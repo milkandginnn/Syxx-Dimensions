@@ -83,7 +83,7 @@ def _ip_is_public(ip):
     return True
 ```
 
-2. **`resolver.py`** — Import check: `ipaddress` is already imported at line 8. No new imports needed.
+1. **`resolver.py`** — Import check: `ipaddress` is already imported at line 8. No new imports needed.
 
 **Tests:**
 
@@ -110,6 +110,7 @@ def test_native_public_v4_v6_unaffected():
 ```
 
 **Ripple effects:**
+
 - Affects all DNS glue/IP validation in `resolve_authoritative()` and `_query_sections()`.
 - Must verify `fetcher.py` already handles this (it does — lines 70-97).
 - No client-side parity needed (server-only SSRF guard).
@@ -121,10 +122,12 @@ def test_native_public_v4_v6_unaffected():
 **Location:** `Server/syxx_server/resolver.py:188-196` (answer parsing in `_parse_response`); `Server/syxx_server/resolver.py:528-548` (`_read_records`)
 
 **Current state:** In `_parse_response()` at line 195-196:
+
 ```python
 rdata = data[offset:offset + rdlength]
 offset += rdlength
 ```
+
 Python slicing silently truncates beyond bounds, so `data[offset:offset + rdlength]` with `offset + rdlength > len(data)` returns a short slice. The record is then formatted with potentially truncated rdata. In `_read_records()` at lines 542-544 there IS a bounds check (`if offset + rdlength > len(data): break`) which is correct.
 
 **Code changes:**
@@ -167,6 +170,7 @@ def test_parse_response_truncated_rdlength():
 ```
 
 **Ripple effects:**
+
 - All DNS parsing paths (`_parse_response`, `_parse_sections`, `_read_records`) must be consistent.
 - `_read_records` already has the check; only `_parse_response` needs it.
 
@@ -200,7 +204,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
     # ... rest unchanged ...
 ```
 
-2. **`resolver.py:197-199`** — Caller drops `None` values:
+1. **`resolver.py:197-199`** — Caller drops `None` values:
 
 ```python
     value = _format_rdata(rtype, rdata, data, rdata_offset)
@@ -211,7 +215,7 @@ def _format_rdata(rtype, rdata, full, rdata_offset):
     records.append({"type": _TYPE_NAMES.get(rtype, str(rtype)), "value": value})
 ```
 
-3. **`resolver.py:546`** — Same guard in `_read_records()`:
+1. **`resolver.py:546`** — Same guard in `_read_records()`:
 
 ```python
     val = _format_rdata(rtype, data[offset:offset + rdlength], data, rdata_offset)
@@ -247,6 +251,7 @@ def test_malformed_a_does_not_reach_passive_dns():
 ```
 
 **Ripple effects:**
+
 - `investigate._resolve_all` (investigate.py) filters on `r["type"] in ("A","AAAA")` and feeds results into `passive_dns`. After this fix, malformed records never reach that path.
 - `/api/diff` answer sets are also protected.
 - Both `_parse_response()` and `_read_records()` callers are covered.
@@ -264,6 +269,7 @@ def test_malformed_a_does_not_reach_passive_dns():
 **Location:** `Server/syxx_server/resolver.py:620-629`
 
 **Current state:** `_rrsig_window_valid()` already checks BOTH inception and expiration (lines 624-629). The function was previously named `_check_rrsig_expiry()` and only checked expiration. **This delta is already fixed in the current code.** The function now:
+
 - Checks `inception <= expiration` (serial, line 624-625)
 - Checks span < MAX_RRSIG_VALIDITY_SPAN (line 626-627)
 - Checks `inception <= now <= expiration` (lines 628-629)
@@ -377,7 +383,7 @@ def _zone_is_signed(zone, servers, timeout, now=None):
     return None  # split or inconclusive
 ```
 
-2. **`resolver.py:713`** — Update the call site in `resolve_authoritative()`:
+1. **`resolver.py:713`** — Update the call site in `resolve_authoritative()`:
 
 ```python
     # Old: _zone_is_signed(zone, used_ip, timeout)
@@ -401,6 +407,7 @@ def test_zone_is_signed_all_unreachable():
 ```
 
 **Ripple effects:**
+
 - `_zone_is_signed()` is called only from `resolve_authoritative()` at line 713.
 - The function signature changes from `(zone, server, timeout, now)` to `(zone, servers, timeout, now)`.
 - No client-side parity needed (server-only DNSSEC oracle).
@@ -449,6 +456,7 @@ def test_diff_auth_servfail_not_clean():
 ```
 
 **Ripple effects:**
+
 - Affects `/api/diff`, `/api/authoritative`, `/api/trace`.
 - Client-side consumers must handle the new `"server-error"` verdict value.
 
@@ -459,11 +467,14 @@ def test_diff_auth_servfail_not_clean():
 **Location:** `Server/syxx_server/app.py:189-196,228-229`
 
 **Current state:** `_diff_verdict()` at line 228:
+
 ```python
 if dns_assessment == "divergent" or c == "injected":
     return "tampered"
 ```
+
 And `_diff_content()` at lines 195-196:
+
 ```python
 if injected_hosts:
     assessment = "injected"
@@ -520,6 +531,7 @@ def test_diff_verdict_dns_only_divergent_tampered():
 ```
 
 **Ripple effects:**
+
 - All callers of `_diff_verdict()` produce the new behavior.
 - Client-side synthesis engine must handle `inconclusive` from this path.
 - Cross-ref A018, A012 (baseline-divergence handling).
@@ -531,10 +543,12 @@ def test_diff_verdict_dns_only_divergent_tampered():
 **Location:** `Server/syxx_server/app.py:235-274` (`_clean_vantage_answers`)
 
 **Current state:** `_clean_vantage_answers()` at lines 263-264:
+
 ```python
 if answers:
     counts[answers] = counts.get(answers, 0) + 1
 ```
+
 When a resolver responds with an empty answer set (NXDOMAIN, NODATA), it is silently skipped. This means a censorship scenario where 2 of 3 resolvers return empty (blocked) and 1 returns the real answer would report the real answer as "corroborated" by 1 vantage (but it needs 2), producing `inconclusive` instead of detecting censorship.
 
 **Code changes:**
@@ -603,6 +617,7 @@ def test_clean_vantage_empty_vantages_tracked():
 ```
 
 **Ripple effects:**
+
 - The return signature changes from `set()` to `(set(), set())`.
 - All callers of `_clean_vantage_answers()` must be updated.
 - The `_route_diff()` caller at line 1202 must destructure the new return value.
@@ -646,6 +661,7 @@ def test_build_baseline_preserves_malformed_utf8():
 ```
 
 **Ripple effects:**
+
 - Affects baseline building and diff accuracy.
 - Client-side decoding must use `errors="replace"` for parity (cross-platform A094).
 - The `_diff_content()` in `app.py` compares local vs clean scripts; encoding parity is critical.
@@ -663,6 +679,7 @@ After careful analysis: the regex `r"<script\b[^>]*>"` correctly matches `<scrip
 **Actual vulnerability:** `<script/src="evil.js">` — the `/` is NOT whitespace after `script`, so `\b` fails. But `\b` is a zero-width assertion between `t` and `/`, and `\b` matches between a word char and a non-word char. So `<script/src>` would actually match because `\b` succeeds between `t` and `/`.
 
 After re-analysis: the regex IS correct for the common bypass cases. The real concern is edge cases like:
+
 - `<SCRIPT>` with uppercase (handled by `re.IGNORECASE`)
 - `<script >` with space before `>` (handled by `[^>]*`)
 - `<script\nsrc="x">` with newline (handled by `[^>]*` since newline is not `>`)
@@ -699,7 +716,7 @@ Actually, this is overengineered. The simplest robust fix:
 _SCRIPT_TAG = re.compile(r"<script(?=[^a-zA-Z])[^>]*>", re.IGNORECASE)
 ```
 
-This matches `<script ` (space), `<script>`, `<script/`, `<script\n`, etc.
+This matches `<script` (space), `<script>`, `<script/`, `<script\n`, etc.
 
 **Tests:**
 
@@ -726,6 +743,7 @@ def test_script_tag_regex_not_in_comment():
 ```
 
 **Ripple effects:**
+
 - Affects script extraction and diff accuracy.
 - Must maintain parity with client-side script extraction.
 - A094 cross-lane parity item (comment stripping must be byte-identical).
@@ -743,6 +761,7 @@ def test_script_tag_regex_not_in_comment():
 **Location:** `Server/syxx_server/fulfillment.py:122,160-164`
 
 **Current state:**
+
 - Line 122: `db.kv_set("stripe_cust:" + str(obj["customer"]), license_id)` — single slot per customer
 - Lines 160-164: subscription deleted event reads `stripe_cust:<customer>` and suspends whatever it points to
 
@@ -767,7 +786,7 @@ If a customer buys a monthly subscription (mints license A), then buys a yearly 
             db.kv_set("stripe_cust:" + str(obj["customer"]), license_id)
 ```
 
-2. **`fulfillment.py:158-164`** — Suspend by subscription ID:
+1. **`fulfillment.py:158-164`** — Suspend by subscription ID:
 
 ```python
         suspended = False
@@ -783,7 +802,7 @@ If a customer buys a monthly subscription (mints license A), then buys a yearly 
                 suspended = _keygen_suspend_license(license_id)
 ```
 
-3. **`db.py`** — No schema change needed; the KV store already supports arbitrary key patterns.
+1. **`db.py`** — No schema change needed; the KV store already supports arbitrary key patterns.
 
 **Tests:**
 
@@ -805,6 +824,7 @@ def test_one_time_purchase_no_subscription():
 ```
 
 **Ripple effects:**
+
 - All Stripe webhook handlers in `fulfillment.py`.
 - Must handle both subscription-based and one-time purchase flows.
 - `kv_set` and `kv_get` are already general-purpose.
@@ -853,6 +873,7 @@ def test_checkout_rate_limited():
 ```
 
 **Ripple effects:**
+
 - Affects Stripe integration and user experience.
 - Must balance security with legitimate checkout flow.
 
@@ -909,6 +930,7 @@ def test_public_endpoint_cors_wildcard():
 ```
 
 **Ripple effects:**
+
 - Affects all paid API endpoints.
 - Must balance security with legitimate cross-origin use (the website uses these endpoints).
 
@@ -935,7 +957,7 @@ def test_public_endpoint_cors_wildcard():
         return False
 ```
 
-2. **`app.py:1029`** — Add comma/semicolon rejection after the regex:
+1. **`app.py:1029`** — Add comma/semicolon rejection after the regex:
 
 ```python
     if not _EMAIL_RE.match(email) or len(email) > 254:
@@ -961,6 +983,7 @@ def test_mailer_rejects_invalid_recipient():
 ```
 
 **Ripple effects:**
+
 - Affects all email sending functionality.
 - Already debunked as injection, but robustness note remains.
 
@@ -987,7 +1010,7 @@ if SMTP_INSECURE_CERTS and not DEV_MODE:
     sys.exit(1)
 ```
 
-2. **`mailer.py:54-56`** — Log a warning when insecure certs are used:
+1. **`mailer.py:54-56`** — Log a warning when insecure certs are used:
 
 ```python
     if config.SMTP_INSECURE_CERTS:
@@ -1006,6 +1029,7 @@ def test_smtp_insecure_requires_dev_mode():
 ```
 
 **Ripple effects:**
+
 - Affects SMTP configuration and deployment.
 - Lower severity from "unconditional production MITM" to "dev-only MITM".
 
@@ -1033,7 +1057,7 @@ def test_smtp_insecure_requires_dev_mode():
 BETA_RETENTION_DAYS = int(os.environ.get("SYXX_BETA_RETENTION_DAYS", "90"))
 ```
 
-2. **`db.py:815-849`** — Add beta purge to `purge_expired()`:
+1. **`db.py:815-849`** — Add beta purge to `purge_expired()`:
 
 ```python
     # A031: purge beta signups past the retention window. PII (email, IP)
@@ -1043,7 +1067,7 @@ BETA_RETENTION_DAYS = int(os.environ.get("SYXX_BETA_RETENTION_DAYS", "90"))
                      (now - config.BETA_RETENTION_DAYS * 86400,))
 ```
 
-3. **`db.py`** — Add migration to add `expires_at` column if not present:
+1. **`db.py`** — Add migration to add `expires_at` column if not present:
 
 ```python
 # In _migrate():
@@ -1065,6 +1089,7 @@ def test_beta_signups_purged_after_retention():
 ```
 
 **Ripple effects:**
+
 - Affects database schema and maintenance jobs.
 - May need migration to add expiration timestamps to existing records.
 
@@ -1099,7 +1124,7 @@ def audit(subject, action, status, ip=None):
         conn.close()
 ```
 
-2. **`db.py` schema migration** — Add `ip_hash` column:
+1. **`db.py` schema migration** — Add `ip_hash` column:
 
 ```python
 # In _migrate():
@@ -1124,6 +1149,7 @@ def test_audit_stores_hashed_ip():
 ```
 
 **Ripple effects:**
+
 - Affects logging infrastructure and compliance.
 - May need log migration to anonymize existing data.
 
@@ -1156,11 +1182,13 @@ After review: the resolver IPs returned in leak results are the USER's resolver 
 **Location:** `Server/syxx_server/leak.py:173-232` (now at lines 226-241)
 
 **Current state:** Lines 226-228:
+
 ```python
 signed = {k: result[k] for k in
           ("token", "zone", "issuedAt", "leaked",
            "observedResolvers", "verifiedAt")}
 ```
+
 The signed payload includes `observedResolvers` (the set of unique resolver IPs) but NOT `observations` (the per-observation detail with timestamps and qtypes). The unsigned `observations` field in the response has granular evidence that is not covered by the signature.
 
 **Code changes:**
@@ -1191,6 +1219,7 @@ def test_leak_attestation_includes_observations():
 ```
 
 **Ripple effects:**
+
 - Affects evidence signing and verification.
 - Backward compatibility: existing verifiers that don't expect `observations` in the payload will still work (they just won't verify the field).
 - May need versioned payload format if clients enforce strict schema.
@@ -1202,9 +1231,11 @@ def test_leak_attestation_includes_observations():
 **Location:** `Server/syxx_server/passivedns.py:59`
 
 **Current state:** Line 59:
+
 ```python
 "driftSuspected": bool(established) and bool(recently_new - established),
 ```
+
 A domain never observed returns `established = set()`, so `bool(set()) = False`, so `driftSuspected = False`. A domain observed for months with no change also returns `driftSuspected = False`. These are different states: "no evidence" vs "evidence of stability".
 
 **Code changes:**
@@ -1258,6 +1289,7 @@ def test_drift_established_with_new():
 ```
 
 **Ripple effects:**
+
 - Affects drift detection and reporting.
 - Cross-ref A040 (passivedns baseline/drift logic).
 - Client-side consumers must handle the new `drift` field.
@@ -1303,7 +1335,7 @@ def resolve_authoritative(name, qtype, timeout=3, max_depth=MAX_DELEGATION_DEPTH
         # ... rest of existing walk logic ...
 ```
 
-2. **`app.py:1158-1164`** — Pass deadline from route handler:
+1. **`app.py:1158-1164`** — Pass deadline from route handler:
 
 ```python
     # A028: 8-second global deadline for the authoritative walk.
@@ -1327,6 +1359,7 @@ def test_resolve_authoritative_deadline_aborts():
 ```
 
 **Ripple effects:**
+
 - Affects `resolve_authoritative()` and all routes that call it.
 - Must maintain DNS resolution accuracy while adding timeouts.
 
@@ -1360,7 +1393,7 @@ def _cap_rows(conn, table, order_col, max_rows):
 
 Actually, the current implementation already deletes the oldest rows (ASC order). The issue is that "oldest first_launch" may be an active trial. The fix is to NOT evict rows that are within their trial window.
 
-2. **`db.py`** — Add trial-aware eviction:
+1. **`db.py`** — Add trial-aware eviction:
 
 ```python
 def _cap_rows_trials(conn, table, order_col, max_rows, now=None):
@@ -1392,6 +1425,7 @@ def test_trial_anchor_eviction_preserves_active():
 ```
 
 **Ripple effects:**
+
 - Affects trial anchor storage and retrieval logic.
 - Must verify that the trial window is correctly configured.
 
@@ -1408,10 +1442,12 @@ def test_trial_anchor_eviction_preserves_active():
 **Location:** `Server/syxx_server/app.py:1237-1243` (now at lines 1906-1907)
 
 **Current state:** `_doh_respond_json()` at line 1906:
+
 ```python
 parsed = resolver.query(name, qtype, config.PUBLIC_RESOLVERS[0],
                         timeout=config.DOH_UPSTREAM_TIMEOUT)
 ```
+
 Only queries the first resolver. If it fails or is poisoned, no fallback.
 
 **Code changes:**
@@ -1468,6 +1504,7 @@ def test_doh_json_fallback_to_second_resolver():
 ```
 
 **Ripple effects:**
+
 - Affects DoH resolution and accuracy.
 - Must verify that the fallback does not introduce timing issues.
 
@@ -1642,6 +1679,7 @@ class PaywallTests(unittest.TestCase):
 ```
 
 **Ripple effects:**
+
 - Confirms the auth gate works on all 14 paid routes.
 - Mutation test proves the gate is real (not just default behavior).
 
@@ -1703,6 +1741,7 @@ Cluster 11 (Tests) ─── depends on all others ───┘
 ```
 
 **Recommended merge order:**
+
 1. Clusters 1 (SSRF/Parsing) — Critical security
 2. Cluster 5 (Stripe) — Critical payments
 3. Clusters 4, 6, 7, 8 — Independent, can parallelize

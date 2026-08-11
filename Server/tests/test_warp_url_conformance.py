@@ -12,10 +12,10 @@ Contract enforced (same discipline as the html5lib suite):
   * xfail=true cases are EXPECTED to diverge; matching anyway is an "unexpected pass", not a failure;
   * a divergence WITHOUT an xfail marker fails the suite (no silent, undocumented gap).
 """
+
 import json
 import os
 import pathlib
-import unittest
 
 os.environ.setdefault("STRIPE_SECRET_KEY", "")
 os.environ.setdefault("SYXX_ALLOW_EPHEMERAL_COLLECTOR_KEY", "1")
@@ -29,39 +29,34 @@ def _load():
         return json.load(f)
 
 
-class UrlConformanceTests(unittest.TestCase):
-    def test_measured_conformance_and_xfail_ledger(self):
-        cases = _load()["cases"]
+def test_measured_conformance_and_xfail_ledger():
+    cases = _load()["cases"]
 
-        passed, xfailed, xpassed = [], [], []
-        undocumented = []
-        for case in cases:
-            expected = case.get("expected_href")
-            actual = warp._resolve(case["base"], case["input"])
-            matches = actual == expected
-            if case.get("xfail"):
-                (xpassed if matches else xfailed).append(case["name"])
+    passed, xfailed, xpassed = [], [], []
+    undocumented = []
+    for case in cases:
+        expected = case.get("expected_href")
+        actual = warp._resolve(case["base"], case["input"])
+        matches = actual == expected
+        if case.get("xfail"):
+            (xpassed if matches else xfailed).append(case["name"])
+        else:
+            if matches:
+                passed.append(case["name"])
             else:
-                if matches:
-                    passed.append(case["name"])
-                else:
-                    undocumented.append((case["name"], expected, actual))
+                undocumented.append((case["name"], expected, actual))
 
-        total = len(cases)
-        print("\n=== WARP_MANIFEST_V1 WPT url conformance ledger ===")
-        print(f"  total cases          : {total}")
-        print(f"  conformant (pass)    : {len(passed)}")
-        print(f"  known-divergent xfail: {len(xfailed)}  {sorted(xfailed)}")
-        print(f"  unexpected xpass     : {len(xpassed)}  {sorted(xpassed)}")
-        print(f"  undocumented gaps    : {len(undocumented)}")
-        for name, exp, act in undocumented:
-            print(f"    - {name}: expected {exp!r} got {act!r}")
+    total = len(cases)
+    print("\n=== WARP_MANIFEST_V1 WPT url conformance ledger ===")
+    print(f"  total cases          : {total}")
+    print(f"  conformant (pass)    : {len(passed)}")
+    print(f"  known-divergent xfail: {len(xfailed)}  {sorted(xfailed)}")
+    print(f"  unexpected xpass     : {len(xpassed)}  {sorted(xpassed)}")
+    print(f"  undocumented gaps    : {len(undocumented)}")
+    for name, exp, act in undocumented:
+        print(f"    - {name}: expected {exp!r} got {act!r}")
 
-        self.assertEqual(undocumented, [], "undocumented URL-resolution divergence — update the ledger")
-        self.assertEqual(len(passed) + len(xfailed) + len(xpassed) + len(undocumented), total)
-        self.assertGreater(len(passed), 0, "corpus records no conformant cases")
-        self.assertGreater(len(xfailed) + len(xpassed), 0, "corpus records no divergence cases")
-
-
-if __name__ == "__main__":
-    unittest.main()
+    assert undocumented == [], "undocumented URL-resolution divergence — update the ledger"
+    assert len(passed) + len(xfailed) + len(xpassed) + len(undocumented) == total
+    assert len(passed) > 0, "corpus records no conformant cases"
+    assert len(xfailed) + len(xpassed) > 0, "corpus records no divergence cases"

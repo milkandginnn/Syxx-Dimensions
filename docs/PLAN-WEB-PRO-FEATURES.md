@@ -48,6 +48,7 @@
 **Features 1 (Content Warp), 3 (Historical Passive DNS), 5 (Authoritative Delegation Trace) are fully implemented server-side.** The gap is frontend discoverability: the members terminal has `mirror` and `warp` buttons, but no dedicated UI sections for passive DNS history, delegation trace, or baseline drift.
 
 ### What exists
+
 - `/api/warp/raw?url=` — `app.py:908` — paywalled via `_require()`
 - `/api/diff` (POST) — `app.py:1016` — paywalled
 - `/api/passive-dns?domain=` — `app.py:1184` — paywalled
@@ -117,6 +118,7 @@ if(name==='baseline'){
 ```
 
 ### Verification
+
 - Sign in to the web app, run `trace github.com`, `passive github.com`, `baseline github.com` — each must return real data from the existing APIs.
 - Verify 402 returned when session is absent/expired.
 
@@ -189,6 +191,7 @@ if chaos_results and assessment != "open-resolver":
 ```
 
 Add `chaos` field to the response dict (line ~1178):
+
 ```python
 "chaos": chaos_results,
 ```
@@ -196,6 +199,7 @@ Add `chaos` field to the response dict (line ~1178):
 **Rate limit:** Already governed by `_rate_ok(ent)` at `app.py:1137`. No change needed.
 
 #### Testing
+
 - Run `/api/exposure` from a known open resolver IP — must return `open-resolver` with CHAOS data.
 - Run from a non-resolver IP — must return `inconclusive` or `closed`.
 - Failure case: timeout on CHAOS query must NOT downgrade from `open-resolver` to `inconclusive`.
@@ -384,6 +388,7 @@ if not ratelimit.allow("keycreate:" + ent.subject, capacity=5, refill_millis=864
 **Frontend (index.html):** Add a "API Keys" subsection to the members area management panel. Wire to `/api/keys` POST/GET and DELETE.
 
 #### Testing
+
 - Create a key via POST, use it in `X-Syxx-API-Key` header to call `/api/investigate` — must work.
 - Revoke the key, retry — must get 401/402.
 - Create a key with `ttlDays=1`, verify it expires after the TTL.
@@ -508,6 +513,7 @@ def _route_bulk_investigate(self):
 **Frontend (index.html):** Add a "Bulk" button in the DNS tools section. When clicked, show a textarea for domain list input, POST to `/api/bulk-investigate`, render the summary table.
 
 #### Testing
+
 - Submit 5 real domains, verify all return results within the deadline.
 - Submit 50 domains (max), verify completion.
 - Submit 51 domains, verify 400 error.
@@ -654,6 +660,7 @@ def test(resolver_ip, categories=None, deadline=None):
 **File: `app.py` — import `firewall` (line ~29)**
 
 Add `firewall` to the import list:
+
 ```python
 from . import (broadcast, config, db, fetcher, firewall, fulfillment, investigate, leak, licensing,
                listeners, logging_util, mailer, passivedns, ratelimit, resolver,
@@ -701,6 +708,7 @@ def _route_firewall_test(self):
 **Frontend (index.html):** Add a `firewall` button in the Remote wardens section. Wire to `/api/firewall-test` POST, render results as a table showing each domain's blocked/resolved status.
 
 #### Testing
+
 - Run against a known-filtered resolver (e.g., NextDNS with blocklist) — must show `filtered`.
 - Run against 1.1.1.1 (open) — must show `open`.
 - Failure case: submit an unreachable IP — must return `inconclusive`, not crash.
@@ -884,6 +892,7 @@ if path == "/api/monitor/assets":
 ```
 
 Route handler:
+
 ```python
 def _route_asset_monitor(self, query):
     ent, ok = self._require(query, config.ENFORCE_WEB)
@@ -916,6 +925,7 @@ def _route_asset_monitor(self, query):
 **Frontend (index.html):** Add `assets` button in Remote wardens. Render current DNS records, change history, and drift status.
 
 #### Testing
+
 - Check a stable domain twice — second check must show no changes.
 - Check a domain after a known DNS change — must detect the diff.
 - Failure case: check a nonexistent domain — must return empty records, not crash.
@@ -1176,12 +1186,14 @@ if path == "/api/monitors":
 ```
 
 In `_dispatch_get()`:
+
 ```python
 if path == "/api/monitors":
     return self._route_list_monitors(query)
 ```
 
 In `do_POST()` or a new DELETE handler:
+
 ```python
 if path.startswith("/api/monitors/"):
     return self._route_delete_monitor(path)
@@ -1192,6 +1204,7 @@ Route handlers follow the same pattern as API keys — `_require()`, `_rate_ok()
 **Frontend (index.html):** Add a "Monitors" section in the members area. Form to create a monitor (domain, check types, interval, email). List active monitors with delete buttons. Show latest results inline.
 
 #### Testing
+
 - Create a monitor with 1-hour interval, verify it appears in GET /api/monitors.
 - Delete it, verify it's gone.
 - Manually trigger `_tick()` with a due monitor — verify results are saved and email is sent (if SMTP configured).
@@ -1396,6 +1409,7 @@ if path == "/api/lookalike":
 ```
 
 Route handler:
+
 ```python
 def _route_lookalike(self):
     query = urllib.parse.parse_qs("")
@@ -1457,11 +1471,13 @@ case 'dnstwist':{
 ```
 
 Also add `dnstwist` to `MEMBERS_PRO`:
+
 ```js
 const MEMBERS_PRO = new Set(['mirror','warp','trace','passive','baseline','dnstwist']);
 ```
 
 #### Testing
+
 - Scan a common domain (e.g., `google.com`) — must generate permutations and resolve some.
 - Verify suspicious domains are flagged correctly.
 - Failure case: scan a very long domain name — must not generate excessive permutations or exceed memory.

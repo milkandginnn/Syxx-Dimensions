@@ -176,9 +176,9 @@ public enum ResolverConsensusEngine {
         async let cloudflare = queryOutcome(DNSQuery(name: domain, type: type, server: ip(of: "Cloudflare")))
         async let google = queryOutcome(DNSQuery(name: domain, type: type, server: ip(of: "Google")))
         async let quad9 = queryOutcome(DNSQuery(name: domain, type: type, server: ip(of: "Quad9")))
-        async let cloudflareDoH = dohOutcome(domain: domain, type: type, endpoint: dohEndpoints["Cloudflare"]!)
-        async let googleDoH = dohOutcome(domain: domain, type: type, endpoint: dohEndpoints["Google"]!)
-        async let quad9DoH = dohOutcome(domain: domain, type: type, endpoint: dohEndpoints["Quad9"]!)
+        async let cloudflareDoH = dohOutcome(domain: domain, type: type, endpoint: dohEndpoints["Cloudflare"])
+        async let googleDoH = dohOutcome(domain: domain, type: type, endpoint: dohEndpoints["Google"])
+        async let quad9DoH = dohOutcome(domain: domain, type: type, endpoint: dohEndpoints["Quad9"])
 
         var publicOutcomes: [String: ResolverQueryOutcome] = [:]
         publicOutcomes["Cloudflare"] = await cloudflare
@@ -210,9 +210,12 @@ public enum ResolverConsensusEngine {
         return ResolverQueryOutcome(response: response)
     }
 
-    private static func dohOutcome(domain: String, type: UInt16, endpoint: String) async -> ResolverQueryOutcome {
-        // A malformed endpoint is a configuration failure, not an authoritative empty answer — encode
-        // it as a transport error so it can never be mistaken for a clean DoH baseline.
+    private static func dohOutcome(domain: String, type: UInt16, endpoint: String?) async -> ResolverQueryOutcome {
+        // A missing or malformed endpoint is a configuration failure, not an authoritative empty answer —
+        // encode it as a transport error so it can never be mistaken for a clean DoH baseline.
+        guard let endpoint else {
+            return ResolverQueryOutcome(records: [], status: .transportError, errorDescription: "No DoH endpoint configured for resolver")
+        }
         guard let url = URL(string: endpoint) else {
             return ResolverQueryOutcome(records: [], status: .transportError, errorDescription: "Invalid DoH endpoint: \(endpoint)")
         }
@@ -246,16 +249,22 @@ public enum ResolverConsensusEngine {
             for r in publicResolvers {
                 group.addTask { (r.name, await queryOutcome(DNSQuery(name: domain, type: qtype, server: r.ip))) }
             }
+            var results: [(String, ResolverQueryOutcome)] = []
+            for await (name, outcome) in group { results.append((name, outcome)) }
+            results.sort { $0.0 < $1.0 }
             var out: [String: ResolverQueryOutcome] = [:]
-            for await (name, outcome) in group { out[name] = outcome }
+            for (name, outcome) in results { out[name] = outcome }
             return out
         }
         let doh = await withTaskGroup(of: (String, ResolverQueryOutcome).self) { group -> [String: ResolverQueryOutcome] in
             for name in mirrorPrimaryResolvers {
-                group.addTask { (name, await dohOutcome(domain: domain, type: qtype, endpoint: dohEndpoints[name]!)) }
+                group.addTask { (name, await dohOutcome(domain: domain, type: qtype, endpoint: dohEndpoints[name])) }
             }
+            var results: [(String, ResolverQueryOutcome)] = []
+            for await (name, outcome) in group { results.append((name, outcome)) }
+            results.sort { $0.0 < $1.0 }
             var out: [String: ResolverQueryOutcome] = [:]
-            for await (name, outcome) in group { out[name] = outcome }
+            for (name, outcome) in results { out[name] = outcome }
             return out
         }
         let localOutcome = await localTask

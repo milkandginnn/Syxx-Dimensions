@@ -644,7 +644,7 @@
   - Files: Server/syxx_server/app.py:706-718; Server/syxx_server/config.py:66-70
   - Complexity: S
   - Scope: Server
-- **A151** — extra_headers duplicates headers already emitted by _security_headers
+- **A151** — extra_headers duplicates headers already emitted by_security_headers
   - Criticality: Low
   - Files: Server/syxx_server/app.py:502-524, 479-500, 847-851
   - Complexity: S
@@ -909,7 +909,7 @@
   - Files: Server/tests/test_leak_signature.py:16-43
   - Complexity: S
   - Scope: Server
-- **A216** — honesty guards after __main__ invisible under bare invocation
+- **A216** — honesty guards after **main** invisible under bare invocation
   - Criticality: High
   - Files: Server/tests/test_leak.py:115-116
   - Complexity: S
@@ -2664,7 +2664,7 @@
 - **A101** — authoritative walk blocks connection handler threads (superseded by A028) | Scope: Portal/Server | Superseded: A028
 - **A202** — 6 test modules write to real repo DB (summary header) | Scope: Server/tests | Superseded: A214
 - **A203** — signature test passes with encoder deleted (summary header) | Scope: Server/tests | Superseded: A215
-- **A204** — honesty guards after __main__ invisible (summary header) | Scope: Server/tests | Superseded: A216
+- **A204** — honesty guards after **main** invisible (summary header) | Scope: Server/tests | Superseded: A216
 - **A205** — Keygen-sig tests short-circuited by Date guard (summary header) | Scope: Server/tests | Superseded: A217
 - **A206** — preflight ratifies 4-byte Keygen key (summary header) | Scope: Server/tests | Superseded: A218
 - **A207** — 9 tests guard unreachable dns_sim.py (summary header) | Scope: Server/tests | Superseded: A219
@@ -2774,13 +2774,13 @@
 ## 6. Execution Rules
 
 - 1. Before claiming a batch done, run a real run with valid output proving the feature works on real input.
-- 2. Every test must have failure cases: a happy path and a failure path.
-- 3. Tri-state over boolean: use secure/tampered/inconclusive end to end; never bare Bool/bool.
-- 4. Render no verdict before evidence: never return secure, tampered, confidence, or probability until every required datum is collected and validated.
-- 5. No mocked production output: remove hardcoded success/secure/tamper messages from real code paths.
-- 6. Platform parity: a SyxxKit change needs its Syxx.Kit twin; a trust-material change needs Server/ too.
-- 7. macOS is the gold standard: parity must be reached by bringing Windows and Linux to parity with macOS, not the other way around.
-- 8. GUI first: consider GUI usability and appeal before CLI output; GUI surfaces are 5x importance of CLI.
+- 1. Every test must have failure cases: a happy path and a failure path.
+- 1. Tri-state over boolean: use secure/tampered/inconclusive end to end; never bare Bool/bool.
+- 1. Render no verdict before evidence: never return secure, tampered, confidence, or probability until every required datum is collected and validated.
+- 1. No mocked production output: remove hardcoded success/secure/tamper messages from real code paths.
+- 1. Platform parity: a SyxxKit change needs its Syxx.Kit twin; a trust-material change needs Server/ too.
+- 1. macOS is the gold standard: parity must be reached by bringing Windows and Linux to parity with macOS, not the other way around.
+- 1. GUI first: consider GUI usability and appeal before CLI output; GUI surfaces are 5x importance of CLI.
 
 ---
 
@@ -2836,6 +2836,7 @@ Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
 | `wave1-server-license` | python-pro + security-auditor | `Server/syxx_server/licensing.py`, `db.py` | S001 |
 
 **Verification gate:**
+
 - `WitnessSigner.VerifySnapshotDetailed` returns `.InvalidSignature` (not `.Expired`) for a fabricated snapshot with past timestamp
 - `IntegrityTag` key file is DPAPI-encrypted on Windows, `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` on macOS
 - `LicenseManager._validate_offline` accepts a valid DB-provisioned offline license
@@ -2860,6 +2861,7 @@ Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
 | `wave2-dns-probes` | network-engineer + csharp-developer | `Windows/dotNET/Syxx.Kit/` probe files | N045, N050, N055, N075 |
 
 **Verification gate:**
+
 - Windows DNSCapture captures TCP DNS (port 53) and IPv6 DNS behind extension headers
 - Windows DNSResolver CLASS filter compares against queried QCLASS (not hardcoded `1`)
 - Windows DNSSECVerifier rejects DNSKEY from unrelated zones (owner/signer binding)
@@ -2883,6 +2885,7 @@ Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
 | `wave3-parity-trust` | code-reviewer + csharp-developer | `NetworkKeyState.cs`, `Trust.cs`, `Sentinel.cs`, `FirstRunScan.cs` (Windows side) | P020, P025, P030, P050 |
 
 **Verification gate:**
+
 - Synthesis engine produces identical `Conclusion` for identical `SectionInputs` on both platforms
 - `Sentinel.Diff` detects encrypted→unknown transition on Windows (ConditionState, not bool)
 - `IsUsableDNSServer` accepts link-local on Windows (matching macOS per RFC 8106)
@@ -2905,6 +2908,7 @@ Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
 | `wave4-macos-security` | security-auditor + swift-expert | `DNSCryptProxyConfig.swift`, `DeepSyxx/main.swift`, `RemoteContentView.swift` | M001, M020, M025, M030, M035 |
 
 **Verification gate:**
+
 - `DNSCryptProxyConfig.locateBinary()` rejects PATH and Homebrew candidates for root execution
 - DeepSyxx `installPfRules` validates anchor name against whitelist
 - DeepSyxx `setDNSServers` validates each entry is a parseable IP
@@ -2927,6 +2931,7 @@ Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
 | `wave5-windows-security` | security-auditor + csharp-developer | `LinuxSecretStore.cs`, `DpapiSecretStore.cs`, `PortalView.xaml.cs`, `EncryptedDNSConfigurator.cs` | W005, W010, W015, W020, W025 |
 
 **Verification gate:**
+
 - `LinuxSecretStore` schema uses `[StructLayout]` with proper marshalling
 - `DpapiSecretStore.Retrieve` zeroes plaintext after conversion
 - `PortalView.RunTracert` resolves `tracert` to `SystemDirectory` absolute path
@@ -2949,6 +2954,7 @@ Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
 | `wave6-linux-deploy` | linux-infra-admin + security-auditor | `scripts/installer-template.sh`, `scripts/deploy.sh`, `scripts/deploy-sentry.sh`, `Linux/snap/snapcraft.yaml` | L001-L003, L005-L006, L008, L011, L019, L021-L024 |
 
 **Verification gate:**
+
 - `installer-template.sh` creates `syxx` service user, writes secrets to 0600 env file, applies full systemd hardening block
 - Installer payload has SHA-256 checksum verified before extraction
 - Nginx configs include X-Frame-Options, X-Content-Type-Options, `client_body_buffer_size`
@@ -2971,6 +2977,7 @@ Wave 1 ──→ Wave 2 ──→ Wave 3 ──→ Wave 4 (macOS)
 | `wave7-test-integrity` | qa-expert + code-reviewer | All `*Tests*` files across platforms, `scripts/honesty-coverage-gate.py`, `scripts/cross-platform-parity-gate.py` | T003, T004, T011, T012, S002, S003, S004 |
 
 **Verification gate:**
+
 - Vacuous test `testD083_TamperedDisplayFormatVersion` either asserts formatVersion mismatch or is deleted
 - B252 DoH signing gap is closed: `dohOutcomes` included in canonical signed bytes
 - `test_scheduler.py` assertions are unconditional (directory exists, result row written)
@@ -3018,4 +3025,3 @@ All audit findings have been renumbered from parallel series (S/M/W/L/N/P/K/T/H/
 | K (cryptographic) → | E | E183–E199 | Wave 1 | P0 — feature-blocking |
 | T (test integrity) → | F | F049–F064 | Wave 7 | P2 — test quality |
 | G (corpus) → | F | F065–F070 | Wave 7 | P2 — test infrastructure |
-

@@ -248,6 +248,7 @@ Accessibility and localization: no evidence of either anywhere; both are post-v1
 ## Syxx protocol-level gaps (besides DoH/DoT/DoQ)
 
 **Ground truth**
+
 1. DNSSEC validation — cryptographic proof vs. quorum consensus; upgrades Dempster-Shafer weighting (validated answer ≠ merely corroborated).
 2. Authoritative chain walking — root→TLD→authoritative delegation walk; detects poisoning *above* the resolver layer (false consensus case).
 3. Negative-response validation — NSEC/NSEC3 denial-of-existence proofs; distinguishes honest NXDOMAIN from rewriting.
@@ -266,6 +267,7 @@ Accessibility and localization: no evidence of either anywhere; both are post-v1
 10. DNS tunneling/exfiltration detection — entropy + unique-subdomain-volume analysis (dnscat2, iodine).
 
 **Additional gaps (broader audit)**
+
 - DDR/DNR detection (RFC 9462/9463) — network steering toward encrypted resolvers.
 - SVCB/HTTPS record handling — ECH configs, ALPN; fresh manipulation target (also fixes the `?????` rendering lineage bug).
 - DNS cache inspection — poisoned entries persisting after the attack window.
@@ -293,6 +295,7 @@ New probe kinds inside existing `ProbePlan`/`ProbeBudget`.
 ### Phase 2: Ground truth (items 1, 2, 3)
 
 **DNSSEC validation (1)** — three stages:
+
 - *Stage A — chain fetch:* DNSKEY/DS/RRSIG up to root; embedded root trust anchor (RFC 5011 rollover awareness as later hardening).
 - *Stage B — verification:* RSA/SHA-256 (alg 8), ECDSA P-256 (alg 13), Ed25519 (alg 15). macOS: `SecKeyVerifySignature` + CryptoKit. .NET: `System.Security.Cryptography`. Zero external deps both platforms.
 - *Stage C — synthesis integration:* new EvidenceIds `dnssecValidated` / `dnssecBogus` / `dnssecUnsigned`. `dnssecBogus` = very high LLR toward interception; `dnssecValidated` heavily discounts resolver-disagreement evidence. Update `WeightRubric` with documented reasoning (as done for source-group discounts).
@@ -327,6 +330,7 @@ Rough total: one quarter focused (macOS + server), Windows trailing each phase b
 Organizing principle: **capability doesn't sell; verdicts, consequences, and next steps sell** (the "traceroute — so what?" problem).
 
 **Tier 1: Fix the "so what" problem (highest ROI — repositioning, not new tech)**
+
 1. Verdict → Action layer — every module output ends in a plain sentence + recommended action.
 2. Plain-language explanation layer — "We believe X because A and B, despite C" over the D-S output.
 3. Five-minute first-run — one button, full scan, graded result before any configuration.
@@ -361,6 +365,7 @@ Key insight: items 1–10 are worth more than 11–20 combined, and almost none 
 Ten strongest existing recommendations + ten new, single ranking:
 
 **Tier 1: Sells the product on sight**
+
 1. Verdict → Action layer *(existing)*
 2. Network report card *(existing)*
 3. **Router/gateway DNS audit** *(new)* — hijacked router DNS, exposed admin, altered DHCP options. The most common real-world consumer DNS attack; no consumer tool checks it.
@@ -512,7 +517,7 @@ Windows parity as a launch requirement (not a trailing port), prosumer export ho
 ### Sequencing & dependencies
 
 1. **Phase A first** — highest ROI, and the engine already produces the verdicts it surfaces. A1→A2→A3
-   are pure synthesis-surfacing (low risk); A4 orchestration; A5+A6 unlock the subscription. 
+   are pure synthesis-surfacing (low risk); A4 orchestration; A5+A6 unlock the subscription.
 2. **Phase B in parallel with A** (independent; builds on existing signing).
 3. **Phase C** next — C3 is nearly free (probe exists); C1/C2 are the top new-capability ROI.
 4. **Phase D last**, and only after **D0 (observation domain) is owner-approved** — D1/D2 are blocked on it.
@@ -521,12 +526,12 @@ Windows parity as a launch requirement (not a trailing port), prosumer export ho
    underlying engine (reassigned, in flight) must be green before product features depend on a given probe.
 
 **Owner-gated before their phase can start:** D0 observation domain (operational cost), B3/notarization
-+ app signing, Phase-E business model, Keygen/Stripe go-live (see Owner-gated section).
+
+- app signing, Phase-E business model, Keygen/Stripe go-live (see Owner-gated section).
 
 ---
 
 ## Pre-July 14, 2026 Content
-
 
 **Generated:** 2026-07-11  
 **Branch:** `feat/beta-signup-and-server-hardening`  
@@ -1698,6 +1703,7 @@ Phase 0 (commit working tree) — DONE (5690ce8)
 ```
 
 **Hard constraints (forced ordering) — updated after OC-1–OC-9:**
+
 1. **Phase 0 is DONE** (working tree committed as `5690ce8`). WS1-01 (A019) and WS1-02 (A020)
    are done; WS1 is 3/3 complete (A021 DONE).
 2. **WS3-01 (D004) preceded WS3-02 (D011)** — server pubkey endpoint (D004) was built first,
@@ -1774,7 +1780,6 @@ resolution." A separate track from the determinative-system upgrade — do **not
   validating resolver.
 - **Suggested order:** DoT → resolver profiles → server DoH/DoT → [dev ID] menu-bar toggle → NEDNSProxyProvider
   attribution → bundled Unbound.
-
 
 ---
 
@@ -1873,7 +1878,7 @@ Build all three platforms. Launch each GUI and visually verify targeted views ag
 | PR-11 | Linux Dashboard and main window controls are visual no-ops (Border/TextBlock, no Command bindings) | ⬜ new | ⬜ open |
 | PR-13 | Server authoritative DNS: OSError spin loop burns CPU core; server readiness reports HTTP 200 when all listeners are unknown | A136, A137 (new) | ⬜ open |
 | PR-14 | All distribution links are href="#"; six blocking commerce secrets missing | ⬜ external dependency | ⬜ open |
-| PR-15 | bundle-app.sh masks CLI build failure with `|| true`; SyxxCage.swift:39 deinit calls actor-isolated method (current compile break) | D113 (new) | ⬜ open |
+| PR-15 | bundle-app.sh masks CLI build failure with `\|\| true`; SyxxCage.swift:39 deinit calls actor-isolated method (current compile break) | D113 (new) | ⬜ open |
 | PR-16 | Windows TelemetryEnabled stores preference but gates nothing — OTel and Dimension phone-home fire unconditionally; price mismatch $2 vs $4.99 across surfaces | D114 (new) | ⬜ open |
 | PR-17 | Leak probe sub-domain tokens can start with digit (RFC 1035 violation); runLeak() never calls runCollectorVerification() | C001-adjacent | ⬜ open |
 | PR-18 | witnessVerify() guards on private key presence, blocking third-party and key-rollover verification; WitnessSigner missing byte-count guard before Curve25519 init | B195 (new) | ⬜ open |

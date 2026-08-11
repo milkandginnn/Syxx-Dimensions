@@ -11,7 +11,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NSec.Cryptography" Version="26.4.0" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- B007: the default matrix spec as a JSON embedded resource, transcribed from the
+         frozen oracle at corpus/matrix/default-spec.frozen.json. Loaded at startup by
+         SyxxMatrixBuilder.LoadDefaultSpec() with the inline BuildDefaultSpec() as fallback.
+         A drift between this resource and BuildDefaultSpec() is caught by
+         MatrixGoldenCorpusTests (default-spec.frozen.json byte-for-byte comparison). -->
+    <EmbeddedResource Include="Synthesis\default-spec.json" />
   </ItemGroup>
   <ItemGroup>
     <!-- D003: expose internal transport-pinning helpers (IsTransportIdentityFailure,
@@ -22,5 +29,11 @@
          assemblies: "Syxx" = Avalonia GUI AssemblyName (and the CLI), "SyxxUI" = WinUI. -->
     <InternalsVisibleTo Include="Syxx" />
     <InternalsVisibleTo Include="SyxxUI" />
+    <!-- D004: the Avalonia test project exercises LinuxSecretStore's file-fallback
+         on CI (no keyring daemon). Without this grant the tests must write to the
+         real ~/.syxx/keystore through the public constructor, and a silent failure
+         in StoreWithFile is invisible — Retrieve returns null with no diagnostic.
+         The internal constructor takes a temp directory so each test is hermetic. -->
+    <InternalsVisibleTo Include="SyxxUI.Avalonia.Tests" />
   </ItemGroup>
 </Project>

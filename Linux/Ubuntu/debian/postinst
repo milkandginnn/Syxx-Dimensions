@@ -1,0 +1,88 @@
+#!/bin/sh
+# Syxx .deb post-installation script (P-10, P-03).
+#
+# Before this file existed the package had NO maintainer scripts at all. Three consequences,
+# all silent:
+#
+#   1. P-03, and this one is a live licensing bug. scripts/syxx-capture-hardware-id.sh exists,
+#      is pinned by five tests in Windows/dotNET/Syxx.Tests/MachineFingerprintTests.cs, and its
+#      own header reasons its way to exactly this conclusion:
+#        "install-time — the packager (.deb postinst / snap / rpm %post) ALREADY runs as root,
+#         once. Capture there and the app needs no privilege at all, ever. <- this"
+#      It was never invoked. So MachineFingerprint.LinuxHelperCaptured() found no
+#      /var/lib/syxx/hardware-id, every Linux licence fell back to an InstallScoped
+#      fingerprint, and a reinstall read as a NEW MACHINE and burned another activation.
+#      This script closes that.
+#
+#   2. The polkit action shipped to /usr/share/polkit-1/actions/ needs no registration step —
+#      polkitd reads the directory at request time — but the desktop entry and the icon do
+#      need their caches refreshed, or the launcher shows a generic icon until the next
+#      session.
+#
+# CONTRACT THIS SCRIPT KEEPS
+#   * Idempotent. Re-running it recaptures the same hash (the DMI UUID does not change) and
+#     re-refreshes the caches. Nothing accumulates.
+#   * `set -e`-safe. Every optional step is either guarded by `command -v` or terminated with
+#     `|| true`, and every function ends in an explicit `return 0`.
+#   * A LICENSING HELPER MUST NEVER FAIL A PACKAGE INSTALL. The helper itself already exits 0
+#     on VMs and containers with no readable DMI UUID; we additionally refuse to propagate any
+#     failure it might have. A half-configured package is a worse outcome than an
+#     install-scoped fingerprint.
+
+set -e
+
+HELPER='/usr/lib/syxx/syxx-capture-hardware-id.sh'
+HARDWARE_ID='/var/lib/syxx/hardware-id'
+
+# Capture the salted hash of the machine's DMI UUID so licences can node-lock.
+#
+# NOT the raw UUID: /sys/class/dmi/id/product_uuid is mode 0400 on purpose, because it is a
+# stable cross-correlatable hardware identifier. The helper writes only the salted SHA-256, so
+# nothing readable by other local processes is a hardware id. See the helper's own header.
+capture_hardware_id() {
+    if [ ! -x "$HELPER" ]; then
+        # Packaging regression, not a user problem: build_deb.sh fails closed if the helper is
+        # missing from the staged tree, so reaching here means the tree was altered after build.
+        echo "syxx: $HELPER is missing or not executable; skipping hardware-id capture." >&2
+        echo "syxx: licences on this install will use an install-scoped fingerprint and will not node-lock." >&2
+        return 0
+    fi
+
+    if "$HELPER" "$HARDWARE_ID"; then
+        return 0
+    fi
+
+    echo "syxx: hardware-id capture did not complete; licences will use an install-scoped fingerprint." >&2
+    return 0
+}
+
+# A .desktop file whose icon cache was never rebuilt shows a generic placeholder in the
+# launcher. Both tools are optional (a server install has neither), so both are guarded.
+refresh_desktop_caches() {
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database -q /usr/share/applications || true
+    fi
+    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+        gtk-update-icon-cache -q -f -t /usr/share/icons/hicolor || true
+    fi
+    return 0
+}
+
+case "$1" in
+    configure)
+        capture_hardware_id
+        refresh_desktop_caches
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        # Nothing to undo: this script creates one file whose value is a pure function of the
+        # hardware, and two caches that are rebuilt by whatever ends up configured.
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

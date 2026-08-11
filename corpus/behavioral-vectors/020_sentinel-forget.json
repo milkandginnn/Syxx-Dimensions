@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "sentinel-forget",
+  "command": "sentinel",
+  "args": ["--forget"],
+  "group": "fixture",
+  "timeoutSeconds": 5,
+  "fixtureRequirements": {
+    "description": "Seeded ~/.syxx directory with the three state files (baseline.json, sentinel.json, config.json) so --forget has something to delete",
+    "artifactPath": "fixtures/sentinel/seeded-state/",
+    "artifactFormat": "syxx-state-dir"
+  },
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": [],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# SentinelCommand never sets Environment.ExitCode — exits 0 on all paths. macOS may return non-zero on failure."
+  ]
+}

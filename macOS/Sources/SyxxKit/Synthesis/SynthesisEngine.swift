@@ -287,5 +287,8 @@ public enum SynthesisEngine {
         // Witness / host — tentative: DNS exfiltration implies a local process tunnelling out.
         // Kept at moderate strength and reviewed as tentative (see report).
         .exfilLikely:                    (.localEnvironmentCompromised, 0.60),
+        // C201: exfilSuspicious is weaker than exfilLikely — patterns are suspicious but not
+        // confirmed exfiltration. Lower strength so it contributes tentatively, never decisively.
+        .exfilSuspicious:               (.localEnvironmentCompromised, 0.35),
     ]
 }

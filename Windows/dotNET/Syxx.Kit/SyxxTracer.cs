@@ -147,4 +147,12 @@ public static class SyxxTracer
         using var span = StartSpan(name, ActivityKind.Internal, tags);
         SetOutcome(span, Outcome.Untested, reason, evidence: false);
     }
+
+    /// <summary>
+    /// Diagnostic breadcrumb convenience — delegates to <see cref="SyxxDiagnostics.Breadcrumb"/>.
+    /// Exists so call sites that need a lightweight diagnostic log don't need to reach for the
+    /// full diagnostics API. The Swift twin uses <c>SyxxDiagnostics.breadcrumb()</c> directly.
+    /// </summary>
+    public static void Log(string category, string message)
+        => SyxxDiagnostics.Breadcrumb(category, message, DiagnosticSeverity.Warning);
 }

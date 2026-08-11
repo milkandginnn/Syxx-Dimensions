@@ -5,7 +5,6 @@ import time
 
 from . import investigate, resolver  # noqa: F401 — resolver available to sub-modules
 
-
 _MAX_WORKERS = 5
 
 
@@ -41,6 +40,17 @@ def investigate_all(domains, timeout=60, max_domains=50):
     -------
     dict with keys: results, total, success, failed, truncated.
     """
+    # SM-019: deduplicate input domains preserving order. Duplicate domains
+    # waste worker slots and inflate the result count.
+    seen = set()
+    deduped = []
+    for d in domains:
+        key = d.strip().lower().rstrip(".")
+        if key and key not in seen:
+            seen.add(key)
+            deduped.append(d)
+    domains = deduped
+
     truncated = len(domains) > max_domains
     accepted = domains[:max_domains]
 
@@ -51,12 +61,28 @@ def investigate_all(domains, timeout=60, max_domains=50):
     deadline = time.monotonic() + timeout
     with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
         future_map = {pool.submit(_run_one, d): d for d in good}
-        for fut in concurrent.futures.as_completed(future_map, timeout=max(deadline - time.monotonic(), 0.01)):
-            domain = future_map[fut]
-            try:
-                results.append(fut.result())
-            except Exception as exc:
-                results.append({"domain": domain, "error": str(exc)})
+        collected_futures = set()  # track which futures we've already collected
+        try:
+            for fut in concurrent.futures.as_completed(future_map, timeout=max(deadline - time.monotonic(), 0.01)):
+                collected_futures.add(fut)
+                domain = future_map[fut]
+                try:
+                    results.append(fut.result())
+                except Exception as exc:
+                    results.append({"domain": domain, "error": str(exc)})
+        except concurrent.futures.TimeoutError:
+            # A285: collect results from futures that completed between the
+            # as_completed timeout and this point. Previously these were
+            # silently dropped — a race condition where a future finishes
+            # just after the timeout but before the cancel loop.
+            for f in future_map:
+                if f.done() and f not in collected_futures:
+                    collected_futures.add(f)
+                    domain = future_map[f]
+                    try:
+                        results.append(f.result())
+                    except Exception as exc:
+                        results.append({"domain": domain, "error": str(exc)})
 
         # Cancel anything still pending past the deadline.
         for f in future_map:

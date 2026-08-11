@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "unfetchable-resolution-timeout",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "resolution": {
+      "status": "timeout",
+      "records": [],
+      "authorityRecords": [],
+      "ednsMalformed": false,
+      "authorityMalformed": false,
+      "offTypeAnswerCount": 0,
+      "offNameAnswerCount": 0,
+      "offClassAnswerCount": 0,
+      "conflictingCNAMEOwnerCount": 0,
+      "responseCode": 0,
+      "isAuthoritative": false,
+      "isTruncated": false,
+      "recursionAvailable": false,
+      "authenticatedData": false,
+      "errorMessage": "query timed out after 3 attempts",
+      "spoofedPacketCount": 0,
+      "attemptCount": 3
+    }
+  }
+}

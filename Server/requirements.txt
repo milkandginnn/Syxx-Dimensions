@@ -2,14 +2,20 @@
 #
 # The server core is stdlib-only (http.server, sqlite3, email, ssl, csv, …).
 # `cryptography` is used by leak.py to Ed25519-sign leak attestations (CF-01).
+# A032: CVE-2026-69249 fix first shipped in 49.x.
 # `opentelemetry` sends error traces to the Syxx collector (bugsmasher.syxx.app).
-cryptography>=41.0.0
+cryptography>=49.0.0
+# A035: `idna` is a transitive dependency of `cryptography` — listed directly to pin
+# the minimum version and make the dependency graph explicit.
+idna>=3.7
 # brotli decodes `Content-Encoding: br` assets in the WARP_MANIFEST_V1 closure (warp.py
 # _envelope_decode). Both protocol sides MUST support br (spec §8); a br body that cannot be
 # decoded is recorded fetch_failed, never hashed while still compressed. `brotlicffi` is an
 # accepted drop-in alternative (warp.py tries it if `brotli` is absent).
-brotli>=1.1.0
+# A036: bump reason — 1.2.0 is the current 1.x minor.
+brotli>=1.2.0
 opentelemetry-api>=1.44.0
 opentelemetry-sdk>=1.44.0
 opentelemetry-exporter-otlp-proto-http>=1.44.0
-sentry-sdk[opentelemetry]>=2.19
+# A033: bump reason — 2.66.0 current 2.x line (47 minors behind).
+sentry-sdk[opentelemetry]>=2.66.0

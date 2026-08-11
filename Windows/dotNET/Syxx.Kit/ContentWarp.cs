@@ -16,6 +16,13 @@ namespace Syxx.Kit
     // This file retains ONLY the legacy WarpResult / ScriptHashCheck display DTOs so the Mirror View
     // surface (owned by the UI stream) keeps compiling while it migrates to WarpManifestResult.
     // Nothing here performs any comparison, parsing, or fetching. It is inert data.
+    //
+    // D274 — SSRF TOCTOU / DNS-Rebinding: INERT. No URL resolution, DNS lookup, HTTP fetch, or
+    // IP validation occurs in this file. The SSRF attack surface was eliminated when the client
+    // engine was retired — all URL resolution now happens server-side behind the Ed25519-signed
+    // manifest protocol (WarpEngine + WarpManifestPinning). This file cannot be exploited for
+    // SSRF because it performs zero network I/O. No code change needed; this comment is the
+    // audit trail.
     // =====================================================================================
 
     /// <summary>LEGACY display DTO — retained as a compile shim for the Mirror View surface only.

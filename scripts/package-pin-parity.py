@@ -43,8 +43,11 @@ import re
 import sys
 from pathlib import Path
 
-# Project roots that share the reasoning core by ProjectReference.
-PROJECT_ROOTS = ["Windows/dotNET", "Ubuntu"]
+# Project roots that share the reasoning core by ProjectReference. The Avalonia (Linux)
+# client lives at Linux/Ubuntu/, NOT at a top-level Ubuntu/ — this list read "Ubuntu" until
+# 2026-08-04, so every run exited 2 and the Windows-vs-Avalonia comparison never happened.
+# The per-root self-test in main() is what makes a repeat of that visible instead of silent.
+PROJECT_ROOTS = ["Windows/dotNET", "Linux/Ubuntu"]
 
 PACKAGE_REF = re.compile(
     r"<PackageReference\s+Include=\"([^\"]+)\"[^>]*?\bVersion=\"([^\"]+)\"", re.IGNORECASE
@@ -64,13 +67,28 @@ def main() -> int:
     repo = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent.parent
 
     csprojs: list[Path] = []
+    per_root: dict[str, int] = {}
     for root in PROJECT_ROOTS:
         d = repo / root
         if not d.is_dir():
             print(f"gate error: project root not found: {d}", file=sys.stderr)
             print("The gate cannot run, so it reports UNKNOWN (exit 2), never a pass.", file=sys.stderr)
             return 2
-        csprojs.extend(sorted(d.rglob("*.csproj")))
+        found = sorted(d.rglob("*.csproj"))
+        # SELF-TEST. A configured root that exists but contributes zero projects is the
+        # dangerous case: the gate would compare the remaining platform against itself and
+        # print a pass. That is worse than red, because it reads as evidence. A directory
+        # move, a rename, or a root pointing one level too high all land here.
+        if not found:
+            print(f"gate error: project root contributes zero .csproj: {d}", file=sys.stderr)
+            print(
+                "A root with no projects cannot participate in the comparison, so the gate "
+                "reports UNKNOWN (exit 2) rather than a pass it did not earn.",
+                file=sys.stderr,
+            )
+            return 2
+        per_root[root] = len(found)
+        csprojs.extend(found)
 
     if not csprojs:
         print("gate error: zero .csproj files found; refusing to report a pass.", file=sys.stderr)
@@ -87,7 +105,11 @@ def main() -> int:
             pins.setdefault(pkg, {}).setdefault(version, []).append(str(p.relative_to(repo)))
 
     print("NuGet pin-parity gate (0.3b)")
-    print(f"  scanned {len(csprojs)} .csproj under {', '.join(PROJECT_ROOTS)}")
+    print(f"  scanned {len(csprojs)} .csproj across {len(per_root)} project root(s)")
+    # Printed per root, not just as a total: the total alone cannot show that BOTH sides of
+    # the comparison were present, which is the exact failure this gate spent months in.
+    for root in PROJECT_ROOTS:
+        print(f"    {per_root[root]:>3} .csproj  {root}")
     print(f"  {len(pins)} distinct package ids")
     print()
 

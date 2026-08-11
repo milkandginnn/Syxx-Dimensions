@@ -58,7 +58,7 @@ public enum EDNS0Probe {
             return EDNS0Capability(status: .notSupported,
                 detail: "resolver answered BADVERS (extended RCODE 16) — it speaks EDNS but rejected the advertised version; EDNS0 negotiation failed, not dropped on-path")
         }
-        if !ednsResp.didFail {
+        if !ednsResp.didNotSucceed {
             if let e = ednsResp.edns {
                 return EDNS0Capability(status: .supported, udpPayloadSize: e.udpPayloadSize, version: e.version,
                     detail: "resolver echoed an EDNS0 OPT record (UDP \(e.udpPayloadSize), version \(e.version)) — EDNS0 supported")
@@ -75,7 +75,7 @@ public enum EDNS0Probe {
         }
         // The EDNS0 query got no usable response — does a plain (no-OPT) query work?
         let plainResp = await query(DNSQuery(name: domain, type: typeA, server: server))
-        if !plainResp.didFail {
+        if !plainResp.didNotSucceed {
             return EDNS0Capability(status: .broken,
                 detail: "the EDNS0 query got no response but a plain query succeeded — OPT is being dropped on-path (middlebox); EDNS0 is broken, not merely unsupported")
         }

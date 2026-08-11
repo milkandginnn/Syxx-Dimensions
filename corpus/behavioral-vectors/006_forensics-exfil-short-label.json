@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "forensics-exfil-short-label",
+  "command": "forensics",
+  "args": ["--exfil", "a.b.example.test"],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 0,
+  "expectedOutputPhrases": ["Exfil assessment for a.b.example.test", "longest subdomain label"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "C# ForensicsCommand never sets Environment.ExitCode — exits 0 on all paths (inherits seeded 2).",
+    "macOS prints 'conclusion:' for the suspicion field; C# prints 'result:'. This is a field-name mismatch in the output text, not a functional divergence."
+  ]
+}

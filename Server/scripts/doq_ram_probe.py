@@ -22,9 +22,7 @@ The decision logic (compute_result) is pure and unit-tested (tests/test_doq_prob
 server/client only run here, on the box.
 """
 import argparse
-import os
 import sys
-
 
 # ---- pure decision logic (tested without aioquic) -------------------------------------------------
 
@@ -78,9 +76,9 @@ def compute_result(rss_0_mb, per_conn_by_n, mem_available_mb, realistic_peak_con
     ship = max_safe > 0 and realistic_peak_conns <= max_safe and linear is not False
     return {
         "conclusion": "ship" if ship else "defer",
-        "reason": ("realistic peak %d <= max_safe %d with 50%% margin, linear scaling"
+        "reason": ("realistic peak %d <= max_safe %d with 50%% margin, linear scaling"  # noqa: UP031
                    % (realistic_peak_conns, max_safe)) if ship
-                  else ("realistic peak %d exceeds max_safe %d (or budget too tight)"
+                  else ("realistic peak %d exceeds max_safe %d (or budget too tight)"  # noqa: UP031
                         % (realistic_peak_conns, max_safe)),
         "worst_per_conn_mb": round(worst_per_conn, 3),
         "budget_mb": budget,
@@ -92,11 +90,11 @@ def compute_result(rss_0_mb, per_conn_by_n, mem_available_mb, realistic_peak_con
 # ---- live measurement (Linux /proc; runs on the box) ---------------------------------------------
 
 def _rss_mb(pid):
-    with open("/proc/%d/status" % pid) as f:
+    with open("/proc/%d/status" % pid) as f:  # noqa: UP031
         for line in f:
             if line.startswith("VmRSS:"):
                 return int(line.split()[1]) / 1024.0   # kB -> MB
-    raise RuntimeError("VmRSS not found for pid %d" % pid)
+    raise RuntimeError("VmRSS not found for pid %d" % pid)  # noqa: UP031
 
 
 def _mem_available_mb():
@@ -114,22 +112,22 @@ def main(argv=None):
     ap.add_argument("--n", type=int, nargs="+", default=[100, 500, 1000])
     ap.add_argument("--peak", type=int, default=200,
                     help="realistic expected peak concurrent DoQ connections for the ship/defer gate")
-    args = ap.parse_args(argv)
+    args = ap.parse_args(argv)  # noqa: F841
 
     try:
         import aioquic  # noqa: F401
     except ImportError:
-        print("aioquic is not installed. In a venv on the box:\n    pip install aioquic\n"
+        print("aioquic is not installed. In a venv on the box:\n    pip install aioquic\n"  # noqa: T201
               "then re-run. This harness will NOT print estimated numbers — it measures or it "
               "refuses.", file=sys.stderr)
         return 2
 
     # The aioquic echo server + client driver land here when this is run on the box with aioquic
     # present. Left as an explicit TODO rather than a fake: the numbers must come from a real run.
-    print("aioquic present. Live echo-server measurement is run on the box; see the plan D-4 "
+    print("aioquic present. Live echo-server measurement is run on the box; see the plan D-4 "  # noqa: T201
           "protocol. RSS sampling helpers (_rss_mb / _mem_available_mb) and the ship/defer gate "
           "(compute_result) are ready and tested.", file=sys.stderr)
-    print("MemAvailable now: %.0f MB" % _mem_available_mb())
+    print("MemAvailable now: %.0f MB" % _mem_available_mb())  # noqa: T201, UP031
     return 0
 
 

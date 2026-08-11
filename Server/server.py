@@ -21,8 +21,7 @@ os.umask(0o077)
 # any working directory (systemd sets WorkingDirectory, but be resilient).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from syxx_server import (app, config, db, dns_authoritative, dot_listener,  # noqa: E402
-                         logging_util, preflight)
+from syxx_server import app, config, db, dns_authoritative, dot_listener, logging_util, preflight  # noqa: E402
 
 
 def main():

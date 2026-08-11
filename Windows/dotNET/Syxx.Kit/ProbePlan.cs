@@ -94,7 +94,7 @@ public static class ProbePlan
         inputs.Comparison = await ProbeRunner.RunAsync<ComparisonResult>("vantage", budget, async () =>
         {
             try { return await VantageComparer.CompareVantagePointsAsync(domain: domain, localServer: localResolver); }
-            catch { return null; }
+            catch { throw; }
         });
 
         if (inputs.Comparison == null)
@@ -123,8 +123,8 @@ public static class ProbePlan
             if (lic.Unlocked)
             {
                 string? storedKey = LicenseManager.GetStoredLicenseKey();
-                inputs.ServerGroundTruth = await ProbeRunner.RunAsync<GroundTruth>("groundTruth", budget, () =>
-                    DimensionClient.AuthoritativeAsync(SyxxConfig.DimensionBaseURL, domain, "A", storedKey));
+                inputs.ServerGroundTruth = await ProbeRunner.RunAsync<GroundTruth>("groundTruth", budget, async () =>
+                    (await DimensionClient.AuthoritativeAsync(SyxxConfig.DimensionBaseURL, domain, "A", storedKey))!);
             }
         }
 
@@ -159,8 +159,11 @@ public static class ProbePlan
 
         string origin = targetURL ?? $"https://{domain}";
         string? licenseKey = LicenseManager.GetStoredLicenseKey();
+        // Fresh per-run replay nonce (§4.5): the server must echo it inside the signed manifest,
+        // so a captured manifest cannot be replayed into a later run within the freshness window.
+        string nonce = WarpEngine.MakeNonce();
         return await ProbeRunner.RunAsync<WarpManifestResult>("warp", budget, () =>
-            WarpEngine.RunVantageCheckAsync(origin, SyxxConfig.DimensionBaseURL, licenseKey));
+            WarpEngine.RunVantageCheckAsync(origin, SyxxConfig.DimensionBaseURL, licenseKey, nonce));
     }
 
     // MARK: - Portal
@@ -219,8 +222,11 @@ public static class ProbePlan
             LeakDetector.TriggerQueriesAsync(subdomain, servers.ToList()));
 
         // Without a collector URL, the leak result is always inconclusive.
-        inputs.Leak = new LeakTestResult { Result = LeakResult.Inconclusive,
-            ErrorReason = "Local check only; use collector for confirmed result." };
+        inputs.Leak = new LeakTestResult
+        {
+            Result = LeakResult.Inconclusive,
+            ErrorReason = "Local check only; use collector for confirmed result."
+        };
 
         return inputs;
     }

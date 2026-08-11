@@ -64,11 +64,11 @@ public static class TrayIndicators
     /// the palette lives in the design system, not here.
     public static string GlyphFor(Severity severity) => severity switch
     {
-        Severity.Clean    => "shield.check",
-        Severity.Info     => "shield",
-        Severity.Warning  => "shield.exclamation",
-        Severity.High     => "shield.exclamation",
+        Severity.Clean => "shield.check",
+        Severity.Info => "shield",
+        Severity.Warning => "shield.exclamation",
+        Severity.High => "shield.exclamation",
         Severity.Critical => "shield.slash",
-        _                 => "shield.dotted",   // Unknown — visibly "not established", never a tick
+        _ => "shield.dotted",   // Unknown — visibly "not established", never a tick
     };
 }

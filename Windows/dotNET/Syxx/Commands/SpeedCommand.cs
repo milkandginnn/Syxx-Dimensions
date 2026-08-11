@@ -12,6 +12,17 @@ namespace Syxx.Commands
         {
             if (SyxxConfig.HandleGlobalFlags(args, "syxx speed",
                 "Usage: syxx speed [domain]   (ranks all configured resolvers by latency)")) return;
+            // F-14 / D324: explicit --help/-h check to prevent the domain parser from
+            // treating "--help" as a domain argument. HandleGlobalFlags above already
+            // catches -h/--help when they are the ONLY args, but this also catches the
+            // case where -h appears alongside a domain (e.g. "syxx speed google.com -h").
+            if (args.Contains("--help") || args.Contains("-h"))
+            {
+                Console.WriteLine("Usage: syxx speed [domain]   (ranks all configured resolvers by latency)");
+                Console.WriteLine("  domain defaults to google.com if omitted");
+                Environment.ExitCode = 0;
+                return;
+            }
             string domain = args.Length >= 1 ? args[0] : "google.com";
 
             Console.WriteLine($"\n  Resolver Speed Benchmark for: {domain}");

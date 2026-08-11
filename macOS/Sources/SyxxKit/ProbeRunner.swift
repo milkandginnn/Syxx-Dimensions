@@ -34,11 +34,18 @@ enum ProbeRace<Output: Sendable>: Sendable {
 /// `deadline` = the per-probe timeout fired.
 /// `transportError` = the operation threw.
 /// `produced` = the operation returned a value (which may itself be nil for Optional outputs).
+/// `noResult` = the operation ran to completion and deliberately returned nil (B046) — a
+/// legitimate "not applicable" answer, NOT a network failure. Downstream consumers that retry
+/// on `.transportError` must not retry a deliberate nil.
 public enum ProbeOutcome<Output: Sendable>: Sendable {
     case produced(Output)
     case untested(reason: String)
     case deadline
     case transportError(String?)
+    /// B046: the operation completed and returned nil on purpose (e.g. a probe that chose not
+    /// to run for a given vantage). Distinct from `.transportError` so "not applicable" is
+    /// never conflated with "network failure".
+    case noResult(String?)
 
     /// Extracts the produced value, or nil for any non-produced outcome.
     public var value: Output? {
@@ -109,11 +116,16 @@ public enum ProbeRunner {
                     defer { group.cancelAll() }
 
                     let first = try await group.next()
-                    // C058 Fix 2: when the deadline fires first, the transport may still
+                    // C058 Fix 2 + D403: when the deadline fires first, the transport may still
                     // complete moments later (a UDP retry at 2s arrives at 2.6s, a DoH request
                     // at 5.1s). Instead of discarding the late-but-valid result, add a grace
                     // deadline and wait for the operation to finish. A real (late) answer is
                     // preferred over a fabricated absence; the span records `late_but_valid`.
+                    //
+                    // D403: this grace period resolves the nondeterministic race at the exact
+                    // deadline — when timeout and operation complete simultaneously, the
+                    // TaskGroup picks arbitrarily. The 1.5s grace window gives the operation
+                    // a fair chance to deliver its result before the deadline wins.
                     if case .deadline = first {
                         let gracePeriod: TimeInterval = 1.5
                         group.addTask {
@@ -269,14 +281,14 @@ public enum ProbeRunner {
                 if let value {
                     return .produced(value)
                 } else {
-                    // C066: the operation returned nil. For Optional Output types this is a
+                    // B046: the operation returned nil. For Optional Output types this is a
                     // valid result (the probe chose to return nil); for non-Optional types
                     // this shouldn't happen. Either way, the span records the observation
-                    // and the outcome is transportError so callers can distinguish it from
-                    // a produced non-nil value.
+                    // and the outcome is noResult — a deliberate "not applicable", never a
+                    // transportError that downstream retry logic would act on.
                     span.setAttribute(key: "probe.result", value: "operation_returned_nil")
                     SyxxTracer.setOutcome(span, .unclassified, reason: "operation_returned_nil")
-                    return .transportError("operation_returned_nil")
+                    return .noResult("operation_returned_nil")
                 }
             case .deadline:
                 span.setAttribute(key: "probe.result", value: "probe_deadline")

@@ -41,21 +41,48 @@ public enum EncryptedTransportProbe {
     /// Default DoH endpoint (Cloudflare). A constant literal, so the force-unwrap cannot fail.
     public static let defaultEndpoint = URL(string: "https://cloudflare-dns.com/dns-query")!
 
+    /// B288: multiple DoH endpoints for fallback. A single hardcoded endpoint (Cloudflare) means
+    /// the probe fails if that specific endpoint is blocked, even though other encrypted DNS
+    /// paths work. Multiple independent endpoints provide a more accurate encrypted-transport
+    /// assessment.
+    public static let fallbackEndpoints: [URL] = [
+        URL(string: "https://cloudflare-dns.com/dns-query")!,
+        URL(string: "https://dns.google/dns-query")!,
+        URL(string: "https://dns.quad9.net/dns-query")!,
+    ]
+
     /// Resolve a stable control name over DoH and report whether the encrypted path completed. When the
     /// DoH path does NOT clearly succeed, a cleartext Do53 control decides between `blocked` (network up,
     /// encrypted path filtered) and `inconclusive` (network/provider down — no honest result). The
     /// control runs only when needed, so a healthy encrypted path costs no extra query.
+    /// B288: when the primary endpoint fails (blocked/timeout), tries fallback endpoints before
+    /// concluding the encrypted path is blocked. If ANY endpoint succeeds, the path is working —
+    /// only when ALL endpoints fail is it truly blocked.
     public static func probe(testName: String = "cloudflare.com",
                              qtype: UInt16 = 1,
                              endpoint: URL = defaultEndpoint,
                              query: DoHQueryFn = { await DNSResolver.queryDoHDetailed(name: $0, type: $1, url: $2) },
                              control: ControlQueryFn = { await DNSResolver.queryUDPDetailed(DNSQuery(name: $0, type: $1)) }) async -> EncryptedTransport {
         let resp = await query(testName, qtype, endpoint)
-        var controlSucceeded = false
-        if !(resp.status == .success && resp.records.count > 0) {
-            let c = await control(testName, qtype)
-            controlSucceeded = (c.status == .success && c.records.count > 0)
+        // B288: if primary endpoint succeeded, return immediately (no fallback needed).
+        if resp.status == .success && resp.records.count > 0 {
+            return classify(status: resp.status, recordCount: resp.records.count,
+                            controlSucceeded: true,
+                            endpoint: endpoint.host ?? endpoint.absoluteString)
         }
+        // B288: primary failed — try fallback endpoints (skip the one we already tried).
+        for fallback in fallbackEndpoints where fallback != endpoint {
+            let fallbackResp = await query(testName, qtype, fallback)
+            if fallbackResp.status == .success && fallbackResp.records.count > 0 {
+                return classify(status: fallbackResp.status, recordCount: fallbackResp.records.count,
+                                controlSucceeded: true,
+                                endpoint: fallback.host ?? fallback.absoluteString)
+            }
+        }
+        // All endpoints failed — run cleartext control to distinguish blocked from offline.
+        var controlSucceeded = false
+        let c = await control(testName, qtype)
+        controlSucceeded = (c.status == .success && c.records.count > 0)
         return classify(status: resp.status, recordCount: resp.records.count,
                         controlSucceeded: controlSucceeded,
                         endpoint: endpoint.host ?? endpoint.absoluteString)

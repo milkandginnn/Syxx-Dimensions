@@ -26,6 +26,11 @@ public partial class ConclusionsViewModel : ObservableObject
     [ObservableProperty] private bool _hasResult;
     [ObservableProperty] private string _progressText = "";
 
+    // The session/domain this conclusions surface summarises. Seeded by the session model
+    // (D1-00) once Linux has one; a blank value means "no session domain" and the scan refuses to
+    // invent a hard-coded default target (C009) rather than silently grade github.com.
+    [ObservableProperty] private string _domain = "";
+
     // Report card (A3)
     [ObservableProperty] private string _gradeLetter = "";
     [ObservableProperty] private string _gradeLabel = "";
@@ -54,6 +59,17 @@ public partial class ConclusionsViewModel : ObservableObject
     private async Task ScanAsync()
     {
         if (IsScanning) return;
+
+        // C009: the conclusions surface must not silently fall back to the well-known first-run
+        // target. Without a session domain there is nothing honest to summarise, so refuse BEFORE
+        // clearing any collections — a refused run preserves the evidence the session already has.
+        if (string.IsNullOrWhiteSpace(Domain))
+        {
+            ProgressText = "No session domain is set. Conclusions will not scan a hard-coded "
+                         + "default — run a warden on the domain you mean first.";
+            return;
+        }
+
         IsScanning = true;
         HasResult = false;
         TopReasons.Clear(); HonestyLines.Clear(); Ran.Clear(); Skipped.Clear();
@@ -63,7 +79,8 @@ public partial class ConclusionsViewModel : ObservableObject
         FirstRunResult result;
         try
         {
-            result = await FirstRunScan.RunAsync(progress: progress);
+            result = await FirstRunScan.RunAsync(
+                domain: Domain.Trim(), fallbackToDefaultDomain: false, progress: progress);
         }
         catch (Exception ex)
         {

@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Win32;
 
 namespace Syxx.Kit;
 
@@ -45,9 +46,11 @@ internal sealed class DpapiSecretStore : ISecretStore
 
     static DpapiSecretStore()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-                      ?? Environment.GetEnvironmentVariable("APPDATA")
-                      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "Roaming");
+        // E187: use LocalApplicationData (not Roaming) — DPAPI blobs are machine-specific
+        // and should not roam across devices via folder redirection or profile sync.
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+                      ?? Environment.GetEnvironmentVariable("LOCALAPPDATA")
+                      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "Local");
         StoreDir = Path.Combine(appData, "Syxx", "keystore");
     }
 
@@ -57,8 +60,33 @@ internal sealed class DpapiSecretStore : ISecretStore
     {
         var path = GetStorePath(keyType, keyId);
         var dir = Path.GetDirectoryName(path);
-        if (dir != null && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
+
+        // WG-042: always apply EnsurePrivateDir — idempotent on existing directories.
+        // On Windows this creates the directory with inherited ACLs; on Linux it sets 0700.
+        // Must run even if the directory already exists, to repair permissions if they drifted.
+        if (dir != null)
+            SyxxPaths.EnsurePrivateDir(dir);
+
+        // E206: on Windows, additionally restrict the keystore directory ACL to the current user.
+        // This prevents other local users from enumerating or reading DPAPI blobs.
+        if (dir != null && OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var dirInfo = new DirectoryInfo(dir);
+                var acl = dirInfo.GetAccessControl();
+                acl.SetAccessRuleProtection(true, false);
+                acl.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
+                    Environment.UserName,
+                    System.Security.AccessControl.FileSystemRights.FullControl,
+                    System.Security.AccessControl.InheritanceFlags.ContainerInherit | System.Security.AccessControl.InheritanceFlags.ObjectInherit,
+                    System.Security.AccessControl.PropagationFlags.None,
+                    System.Security.AccessControl.AccessControlType.Allow));
+                dirInfo.SetAccessControl(acl);
+            }
+            catch (PlatformNotSupportedException) { /* non-Windows or container — skip */ }
+            catch (System.UnauthorizedAccessException) { /* insufficient privilege — skip */ }
+        }
 
         var plaintext = Encoding.UTF8.GetBytes(secret);
         var entropy = GetEntropy(keyType);
@@ -75,9 +103,37 @@ internal sealed class DpapiSecretStore : ISecretStore
             var ciphertext = File.ReadAllBytes(path);
             if (ciphertext.Length == 0) return null;
 
-            var entropy = GetEntropy(keyType);
-            var plaintext = Unprotect(ciphertext, entropy);
-            return Encoding.UTF8.GetString(plaintext);
+            // E043 migration: try machine-specific entropy first, then fall back to the legacy
+            // static entropy for blobs written before the E043 change.
+            byte[]? plaintext = null;
+            try
+            {
+                plaintext = Unprotect(ciphertext, GetEntropy(keyType));
+            }
+            catch
+            {
+                // New entropy failed — try legacy static entropy for pre-E043 blobs.
+                try
+                {
+                    plaintext = Unprotect(ciphertext, GetLegacyStaticEntropy(keyType));
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
+            try
+            {
+                return Encoding.UTF8.GetString(plaintext);
+            }
+            finally
+            {
+                // E166: zero decrypted plaintext from memory to prevent secret leakage
+                // via GC heap dumps, crash dumps, or memory forensics.
+                Array.Clear(plaintext);
+                Array.Clear(ciphertext);
+            }
         }
         catch
         {
@@ -99,13 +155,73 @@ internal sealed class DpapiSecretStore : ISecretStore
         }
     }
 
+    /// <summary>
+    /// G-02: definitive for this store — every secret is one file named
+    /// <c>{keyType}_{keyId}</c> in a single directory, so the keyType prefix can be enumerated
+    /// without knowing any keyId. An undecryptable blob still counts as Present: the question is
+    /// whether a secret EXISTS, and a blob we cannot read is emphatically not an absent one.
+    /// An IO/permission failure yields <see cref="SecretExistence.Unknown"/> — never Absent, which
+    /// would license the caller to mint over a key that is sitting right there.
+    /// </summary>
+    public SecretExistence Exists(string keyType)
+    {
+        try
+        {
+            if (!Directory.Exists(StoreDir))
+            {
+                // No store directory: this user has never had a secret written here.
+                return SecretExistence.Absent;
+            }
+            return Directory.EnumerateFiles(StoreDir, Sanitize(keyType) + "_*").Any()
+                ? SecretExistence.Present
+                : SecretExistence.Absent;
+        }
+        catch
+        {
+            return SecretExistence.Unknown;
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────────
 
+    /// WG-042: builds the store path and validates it cannot escape <see cref="StoreDir"/>.
+    /// Even though <see cref="Sanitize"/> rejects ".." and directory separators, a defense-in-depth
+    /// check resolves the full path and confirms it is rooted under the expected directory. This
+    /// catches any encoding or platform-specific bypass that character-level sanitization might miss
+    /// (e.g. Windows short-name aliases, Unicode normalization, or future Sanitize regressions).
     private static string GetStorePath(string keyType, string keyId)
-        => Path.Combine(StoreDir, $"{Sanitize(keyType)}_{Sanitize(keyId)}");
+    {
+        var candidate = Path.Combine(StoreDir, $"{Sanitize(keyType)}_{Sanitize(keyId)}");
+        var fullPath = Path.GetFullPath(candidate);
+        var storeDirFull = Path.GetFullPath(StoreDir);
+
+        // Ensure the resolved path is rooted under the keystore directory.
+        // Path.EndsInDirectorySeparator handles trailing separator differences.
+        if (!fullPath.StartsWith(storeDirFull, StringComparison.OrdinalIgnoreCase)
+            || (fullPath.Length > storeDirFull.Length
+                && fullPath[storeDirFull.Length] != Path.DirectorySeparatorChar
+                && fullPath[storeDirFull.Length] != Path.AltDirectorySeparatorChar))
+        {
+            throw new InvalidOperationException(
+                $"WG-042: resolved keystore path '{fullPath}' escapes the expected directory '{storeDirFull}'");
+        }
+
+        return fullPath;
+    }
 
     private static string Sanitize(string value)
     {
+        // WG-042: reject path traversal attempts before character-level sanitization.
+        // ".." and directory separators could escape the keystore directory even after
+        // invalid-filename-character replacement (none of these are in GetInvalidFileNameChars
+        // on all platforms — '.' and '/' are valid on some filesystems).
+        if (value.Contains("..", StringComparison.Ordinal) ||
+            value.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            value.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Invalid key ID: path traversal characters are not permitted", nameof(value));
+        }
+
         var invalid = Path.GetInvalidFileNameChars();
         return string.Create(value.Length, (value, invalid), static (span, state) =>
         {
@@ -117,15 +233,59 @@ internal sealed class DpapiSecretStore : ISecretStore
 
     /// <summary>Per-keyType entropy so blobs for different purposes are not interchangeable
     /// under the same Windows user account.</summary>
+    /// <remarks>E043: entropy now incorporates the machine-specific MachineGuid from the Windows
+    /// registry instead of a static constant. MIGRATION: existing blobs encrypted with the legacy
+    /// static entropy remain readable — <see cref="Retrieve"/> tries the new entropy first and
+    /// falls back to the legacy static entropy on failure. New writes always use machine-specific
+    /// entropy, so the legacy path is self-retiring as secrets are rewritten.</remarks>
     private static byte[] GetEntropy(string keyType)
     {
-        // Combine app-level entropy with key-type discriminator
+        // E043: derive entropy from machine-specific secret (MachineGuid) instead of static constant.
+        var machineId = GetMachineGuid();
+        var prefix = $"com.milkandgin.syxx:{machineId}";
+        var prefixBytes = Encoding.UTF8.GetBytes(prefix);
+        var result = new byte[prefixBytes.Length + 1 + keyType.Length];
+        prefixBytes.CopyTo(result, 0);
+        result[prefixBytes.Length] = (byte)':';
+        Encoding.UTF8.GetBytes(keyType, result.AsSpan(prefixBytes.Length + 1));
+        return result;
+    }
+
+    /// <summary>Legacy static entropy — used ONLY as a decryption fallback for blobs written
+    /// before E043. Never used for new writes.</summary>
+    private static byte[] GetLegacyStaticEntropy(string keyType)
+    {
         var appEntropy = "com.milkandgin.syxx"u8;
         var result = new byte[appEntropy.Length + 1 + keyType.Length];
         appEntropy.CopyTo(result);
         result[appEntropy.Length] = (byte)':';
         Encoding.UTF8.GetBytes(keyType, result.AsSpan(appEntropy.Length + 1));
         return result;
+    }
+
+    /// <summary>Reads the Windows MachineGuid from HKLM\SOFTWARE\Microsoft\Cryptography.
+    /// Falls back to Environment.MachineName if the registry is inaccessible (restricted
+    /// environments, containers). Cached for the process lifetime.</summary>
+    private static string? _machineGuidCache;
+    private static string GetMachineGuid()
+    {
+        if (_machineGuidCache is not null) return _machineGuidCache;
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography");
+            var guid = key?.GetValue("MachineGuid") as string;
+            if (!string.IsNullOrWhiteSpace(guid))
+                return _machineGuidCache = guid;
+        }
+        catch
+        {
+            // Registry inaccessible (restricted environment, container, or security policy).
+            // Fall through to hostname fallback.
+        }
+        // Fallback: Environment.MachineName — weaker than MachineGuid but always available.
+        // This means entropy differs across installations on the same hardware only if the
+        // hostname changes, which is rare on Windows desktops.
+        return _machineGuidCache = Environment.MachineName;
     }
 
     // ── DPAPI encrypt / decrypt ───────────────────────────────────────────────────

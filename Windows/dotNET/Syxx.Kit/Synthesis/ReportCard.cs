@@ -73,12 +73,46 @@ public static class ReportCards
         // it falls past both guards into the threat-grading path, where an empty diagnosis list
         // yields the `_ => Severity.Warning` default and grades a never-run scan **C** — a letter
         // grade for a network nobody looked at. Untested is its own state and it is ungraded.
-        if (det.State == DeterminativeState.Untested
-            || det.State == DeterminativeState.Inconclusive
-            || (det.State == DeterminativeState.Clean && incomplete))
+        if (det.State == DeterminativeState.Untested)
         {
             return new ReportCard(Grade.Ungraded, "N/A",
                 "Not enough evidence to grade this network yet: finish the checks for a real grade.",
+                GapReasons(), Severity.Unknown);
+        }
+
+        // B310: Inconclusive with no threats detected is limited-confidence clean, not ungraded.
+        // The engine may return Inconclusive because clean-support indicators are not yet wired
+        // (C210), even when every section ran and found nothing wrong. Grading that as "N/A" is
+        // misleading — the user sees an ungradeable scan when the evidence actually looks clean.
+        // A `Clean` result with incomplete sections is also limited-confidence, not ungradeable.
+        if (det.State == DeterminativeState.Inconclusive
+            || (det.State == DeterminativeState.Clean && incomplete))
+        {
+            // When no threats were detected and the overhang is from clean-blocking (not
+            // from suppressed threat signals), grade as B (limited confidence clean).
+            bool hasThreatOverhang = det.Suppressed.Any(s =>
+                s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded
+                && s.Id != new DiagnosisId("clean")
+                && s.RawSupport >= 0.30);
+
+            if (!hasThreatOverhang)
+            {
+                var reasons = c.SectionStatuses
+                    .Where(s => s.Status == SectionStatus.Negative)
+                    .Take(MaxReasons)
+                    .Select(s => $"the {s.Section} check ran and found nothing wrong")
+                    .ToList();
+                if (reasons.Count == 0)
+                    reasons.Add("the checks that ran found no signs of tampering or leakage");
+                var headline = incomplete
+                    ? "This network looks clean, but some checks could not be completed — limited confidence."
+                    : "This network looks clean, but confidence is limited — some evidence was inconclusive.";
+                return new ReportCard(Grade.B, "B", headline, reasons, Severity.Clean);
+            }
+
+            // Threat signals were suppressed — genuinely ungradeable.
+            return new ReportCard(Grade.Ungraded, "N/A",
+                "Not enough evidence to grade this network yet: possible threat signals could not be confirmed.",
                 GapReasons(), Severity.Unknown);
         }
 

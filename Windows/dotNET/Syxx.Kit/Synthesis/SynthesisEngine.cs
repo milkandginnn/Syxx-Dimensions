@@ -37,12 +37,9 @@ public static class SynthesisEngine
     /// own `ThresholdProfile`).
     public sealed class Config
     {
-        /// When true (default), the matrix determinative engine runs over the evidence to produce
-        /// a result (`Determination` on the `Conclusion`). When false, no result is computed
-        /// (`Determination` remains null) and the raw section/evidence data is still populated
-        /// regardless. Useful for rollout gating or A/B testing during the matrix-engine cutover.
-        public bool UseMatrixEngine { get; init; } = true;
-
+        // C208: UseMatrixEngine kill-switch removed — the determinative engine always runs,
+        // matching macOS SynthesisEngine.swift which has no such flag. A silent boolean that
+        // could disable the entire result engine is an unacceptable correctness risk.
         public Config() { }
     }
 
@@ -65,9 +62,8 @@ public static class SynthesisEngine
             ActivityKind.Internal,
             ("synthesis.evidence_count", evidence.Count),
             ("synthesis.section_count", sectionStatuses.Count));
-        var determination = config.UseMatrixEngine
-            ? RunDeterminativeEngine(evidence, sectionStatuses, ct)
-            : null;
+        // C208: the engine always runs — no kill-switch.
+        var determination = RunDeterminativeEngine(evidence, sectionStatuses, ct);
         if (determination != null)
         {
             span?.SetTag("syxx.result", determination.State.ToString());
@@ -87,7 +83,7 @@ public static class SynthesisEngine
             SyxxTracer.SetOutcome(span, SyxxTracer.Outcome.Inconclusive, reason: "engine_did_not_run", evidence: false);
         }
         var conclusion = new Conclusion(
-            GeneratedAt: when,
+            GeneratedAt: when.UtcDateTime,
             SectionStatuses: sectionStatuses,
             Evidence: evidence,
             Advisories: advisories ?? Array.Empty<Advisory>(),
@@ -196,12 +192,12 @@ public static class SynthesisEngine
     ///    `Pow(alignment, decay) * clamp01(quality)`. A section MISSING from `sectionCompleteness`
     ///    reads 0.0, never 1.0 (the B151/B173 lesson: an inert 1.0 default is fabricated certainty).
     ///
-    /// Clean-support indicators (`resolverAgreement`, `routeClean`, `trustedWitnessOK`,
-    /// `localEvidenceSealValid`) are intentionally NOT wired here: the current evidence model emits
-    /// items for *findings*, and the trusted-witness / evidence-seal signals that would affirm a
-    /// clean pattern are not yet plumbed as `EvidenceId`s. Consequently a benign run reaches
-    /// `.inconclusive` rather than `.clean` — the honest posture (inconclusive over unearned secure)
-    /// until those affirmative-clean signals are wired.
+    /// B010: the four clean-support indicators (`resolverAgreement`, `routeClean`,
+    /// `trustedWitnessOK`, `localEvidenceSealValid`) are now wired via affirmative-clean
+    /// `EvidenceId`s (ResolverStatus, NxCanaryClean, DnssecCanarySecure, DnsEncrypted).
+    /// Strengths are conservative (0.70–0.80) — these are corroborating signals, not
+    /// cryptographic proof. A benign run with all four clean-support indicators present can
+    /// now reach `.clean` rather than stalling at `.inconclusive`.
     internal static List<SyxxIndicatorInput> MapEvidenceToIndicators(
         IReadOnlyList<EvidenceItem> evidence,
         Dictionary<Section, double> sectionCompleteness)
@@ -278,17 +274,35 @@ public static class SynthesisEngine
     /// The unambiguous `EvidenceId` → (`SyxxIndicator`, strength) table. Anything not listed is
     /// deliberately unmapped. Strengths are conservative: a "confirmed" observation reads
     /// near-certain, an unconfirmed one moderate.
+    /// B156 / F-09: the set of indicator IDs with at least one reachable EvidenceId mapping — the
+    /// C# twin of the computation at SyxxMatrixIntegration.swift:206. Internal: consumed by
+    /// SyxxMatrixBuilder to populate MatrixSpec.MappableIndicators.
+    internal static IReadOnlySet<IndicatorId> MappableIndicatorIds() =>
+        IndicatorMapping.Values.Select(v => v.Indicator.Id()).ToHashSet();
+
     private static readonly Dictionary<EvidenceId, (SyxxIndicator Indicator, double Strength)> IndicatorMapping = new()
     {
         // Prophet — answer authenticity
-        [EvidenceId.AuthoritativeDivergesConfirmed] = (SyxxIndicator.AuthoritativeMismatch, 0.95),
+        // C207: aligned with macOS (B092). The Dimension-confirmed variant arrives over ordinary
+        // TLS with no response signature or pinned key. 0.95 overclaims what the transport proves.
+        // 0.80 reflects a corroborating second source (above the local-only 0.70, below cryptographic proof).
+        [EvidenceId.AuthoritativeDivergesConfirmed] = (SyxxIndicator.AuthoritativeMismatch, 0.80),
         [EvidenceId.AuthoritativeDiverges] = (SyxxIndicator.AuthoritativeMismatch, 0.70),
         [EvidenceId.DnssecCanaryStripped] = (SyxxIndicator.SignedAnswerMismatch, 0.80),
+
+        // B010 — clean-support: resolver completed successfully implies agreement.
+        // Conservative 0.80: a status check confirms the resolver answered, not that it agreed
+        // with an authoritative source — but absence of divergence IS the agreement signal here.
+        [EvidenceId.ResolverStatus] = (SyxxIndicator.ResolverAgreement, 0.80),
 
         // Portal — path / redirection
         [EvidenceId.Redirection] = (SyxxIndicator.LanDnsRedirect, 0.90),
         [EvidenceId.GatewayDhcpOffLinkDNS] = (SyxxIndicator.ResolverPathAnomaly, 0.70),
         [EvidenceId.CaptivePortalActive] = (SyxxIndicator.CaptivePortalSignal, 0.90),
+
+        // B010 — clean-support: NX canary returned clean (not hijacked) → route is clean.
+        // Mirror of NxCanaryHijack → SuspiciousNxDomainPattern; the clean counterpart.
+        [EvidenceId.NxCanaryClean] = (SyxxIndicator.RouteClean, 0.80),
 
         // Glutton — transport / privacy
         [EvidenceId.DnsLeakConfirmed] = (SyxxIndicator.DnsLeakDetected, 0.95),
@@ -303,12 +317,26 @@ public static class SynthesisEngine
 
         // Witness / host — tentative: DNS exfiltration implies a local process tunnelling out.
         [EvidenceId.ExfilLikely] = (SyxxIndicator.LocalEnvironmentCompromised, 0.60),
+        // B024: ExfilSuspicious is weaker than ExfilLikely — suspicious patterns without the
+        // volume/tunnel shape that makes exfiltration likely. Same indicator, lower strength.
+        [EvidenceId.ExfilSuspicious] = (SyxxIndicator.LocalEnvironmentCompromised, 0.35),
+
+        // B010 — clean-support: DNSSEC validation succeeded → trusted cryptographic witness.
+        // Mirror of DnssecCanaryStripped → SignedAnswerMismatch; the secure counterpart.
+        [EvidenceId.DnssecCanarySecure] = (SyxxIndicator.TrustedWitnessOK, 0.75),
+
+        // B010 — clean-support: encrypted DNS transport confirmed → local evidence path intact.
+        // Conservative 0.70: encrypted transport is necessary but not sufficient for a valid
+        // evidence seal (the seal also requires response integrity and witness attestation).
+        [EvidenceId.DnsEncrypted] = (SyxxIndicator.LocalEvidenceSealValid, 0.70),
     };
 }
 
 /// Extension to map the shared `Section` enum onto `SyxxSection`.
 internal static class SynthesisSectionExtensions
 {
+    // B300: unknown section must not crash the engine — return Prophet as sentinel and log,
+    // so a future section addition doesn't cause an ArgumentOutOfRangeException mid-synthesis.
     internal static SyxxSection FromSection(Section s) => s switch
     {
         Section.Prophet => SyxxSection.Prophet,
@@ -317,8 +345,14 @@ internal static class SynthesisSectionExtensions
         Section.Glutton => SyxxSection.Glutton,
         Section.Cage => SyxxSection.Cage,
         Section.Witness => SyxxSection.Witness,
-        _ => throw new ArgumentOutOfRangeException(nameof(s)),
+        _ => HandleUnknownSection(s),
     };
+
+    private static SyxxSection HandleUnknownSection(Section s)
+    {
+        SyxxTracer.Log("synthesis.section.unknown", $"Unknown section {s} mapped to Prophet sentinel");
+        return SyxxSection.Prophet;
+    }
 }
 
 /// Extension to map the shared `SectionStatus` onto `EvidenceUsability`.

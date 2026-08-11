@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "witness-usage",
+  "command": "witness",
+  "args": [],
+  "group": "offline",
+  "timeoutSeconds": 5,
+  "expectedExitCode": 3,
+  "expectedOutputPhrases": ["Usage:"],
+  "expectedOutputAbsent": [],
+  "knownParityDivergences": [
+    "Usage text differs: macOS uses 'swift run syxx witness' prefix; Windows uses 'syxx witness'. This is a presentation difference, not a functional one."
+  ]
+}

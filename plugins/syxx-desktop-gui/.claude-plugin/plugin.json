@@ -1,0 +1,10 @@
+{
+  "name": "syxx-desktop-gui",
+  "version": "1.0.0",
+  "description": "Cross-platform desktop GUI development — SwiftUI (macOS), WinUI 3 (Windows), Avalonia UI (Linux), Qt 6 (C++), Swift 6, C# 15, .NET 10.0. Pixel-perfect mockup translation, platform-native idioms, responsive desktop layouts, dark/light theming, and accessibility across all desktop targets.",
+  "author": {
+    "name": "Seth Hobson",
+    "email": "seth@major7apps.com"
+  },
+  "license": "MIT"
+}

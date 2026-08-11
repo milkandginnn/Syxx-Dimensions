@@ -1,3 +1,30 @@
+// C002 — module header: the Foundation/.NET date-encoding mismatch and the ULP-nudging workaround.
+//
+// WHY THE WIRE FORMAT IS A DOUBLE. The DISPLAY mirror of a witness snapshot writes DateTime as a
+// bare JSON number (AppleReferenceDateJsonConverter). macOS writes Foundation's
+// timeIntervalSinceReferenceDate — seconds since 2001-01-01Z as an IEEE-754 binary64 — and Swift's
+// JSONDecoder reads exactly that; ISO-8601 strings, .NET's natural encoding, are rejected outright
+// by Swift. The two runtimes share IEEE-754 binary64 add/multiply, so the double itself is
+// portable across the Foundation/.NET boundary.
+//
+// WHY THE DOUBLE IS NOT ENOUGH. A DateTime carries 100 ns resolution, but a binary64 at the
+// magnitudes involved (~8e8 s since 2001; one ULP ≈ 1.2e-4 ms) cannot represent every instant.
+// D083 requires the display timestamp to TRUNCATE to exactly the signed evidence millisecond on
+// both platforms (ToUnixTimeMilliseconds() on Windows, UInt64(timeIntervalSince1970 * 1000) on
+// macOS), and both sides truncate. A naive double conversion lands within ~4e-4 ms of the instant,
+// so roughly one snapshot in a thousand would truncate to the adjacent millisecond and read as
+// DISPLAY MISMATCH — an honest snapshot failing its own verification on a timing coin-flip.
+// ToAppleReferenceSeconds() therefore walks the candidate's binary64 ULPs (each step moves the
+// represented instant by well under a microsecond) until macOS's truncation reproduces the signed
+// millisecond exactly. This is inherently fragile precision-critical code; the guards inside
+// ToAppleReferenceSeconds keep the walk from ever emitting an invalid (non-finite) date.
+//
+// FOLLOW-UP (deliberately NOT implemented here): the robust protocol-level fix is to stop shipping
+// dates as doubles and write an integer milliseconds-since-epoch on the wire — both platforms
+// already compute that value exactly (SignedEvidencePayload carries integer epoch-milliseconds
+// today, so the value is a known, portable quantity). That is a wire-format change (macOS
+// JSONEncoder/JSONDecoder date strategy plus the Windows reader/writer) and is out of scope for
+// this change; nothing in this file alters the bytes emitted today.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -70,6 +97,7 @@ namespace Syxx.Kit
                 [DNSResponseStatus.ResponseIdMismatch] = "responseIdMismatch",
                 [DNSResponseStatus.MalformedResponse] = "malformedResponse",
                 [DNSResponseStatus.TransportError] = "transportError",
+                [DNSResponseStatus.RcodeOther] = "rcodeOther",
             };
 
         private static readonly Dictionary<string, DNSResponseStatus> ByWireName = BuildReverse();
@@ -93,28 +121,28 @@ namespace Syxx.Kit
             switch (reader.TokenType)
             {
                 case JsonTokenType.String:
-                {
-                    string? raw = reader.GetString();
-                    if (raw is not null && ByWireName.TryGetValue(raw, out var mapped))
-                        return mapped;
-                    // Fail closed. An unknown status is NOT "success" and is not "timeout"; we do
-                    // not know what happened, so the whole snapshot read fails and the caller
-                    // reports malformed input rather than verifying fabricated evidence.
-                    throw new JsonException(
-                        $"Unrecognised DNS response status '{raw}'. Expected one of: {string.Join(", ", WireNames.Values)}.");
-                }
-                case JsonTokenType.Number:
-                {
-                    // Back-compat: Windows builds before B251 wrote the bare CLR ordinal. The
-                    // declaration order of DNSResponseStatus (DNSResolver.cs:78-90) matches the
-                    // Swift declaration order and is pinned by DNSResponseStatusWireTests.
-                    if (reader.TryGetInt32(out int ordinal)
-                        && Enum.IsDefined(typeof(DNSResponseStatus), ordinal))
                     {
-                        return (DNSResponseStatus)ordinal;
+                        string? raw = reader.GetString();
+                        if (raw is not null && ByWireName.TryGetValue(raw, out var mapped))
+                            return mapped;
+                        // Fail closed. An unknown status is NOT "success" and is not "timeout"; we do
+                        // not know what happened, so the whole snapshot read fails and the caller
+                        // reports malformed input rather than verifying fabricated evidence.
+                        throw new JsonException(
+                            $"Unrecognised DNS response status '{raw}'. Expected one of: {string.Join(", ", WireNames.Values)}.");
                     }
-                    throw new JsonException("Numeric DNS response status is outside the defined range.");
-                }
+                case JsonTokenType.Number:
+                    {
+                        // Back-compat: Windows builds before B251 wrote the bare CLR ordinal. The
+                        // declaration order of DNSResponseStatus (DNSResolver.cs:78-90) matches the
+                        // Swift declaration order and is pinned by DNSResponseStatusWireTests.
+                        if (reader.TryGetInt32(out int ordinal)
+                            && Enum.IsDefined(typeof(DNSResponseStatus), ordinal))
+                        {
+                            return (DNSResponseStatus)ordinal;
+                        }
+                        throw new JsonException("Numeric DNS response status is outside the defined range.");
+                    }
                 default:
                     throw new JsonException(
                         $"DNS response status must be a string or a number, got {reader.TokenType}.");
@@ -174,16 +202,16 @@ namespace Syxx.Kit
                 case JsonTokenType.Number:
                     return FromAppleReferenceSeconds(reader.GetDouble());
                 case JsonTokenType.String:
-                {
-                    // Legacy Windows encoding (ISO-8601). Round-trip kind so the value stays UTC.
-                    string? raw = reader.GetString();
-                    if (raw is not null && DateTime.TryParse(raw, CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind, out var parsed))
                     {
-                        return parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+                        // Legacy Windows encoding (ISO-8601). Round-trip kind so the value stays UTC.
+                        string? raw = reader.GetString();
+                        if (raw is not null && DateTime.TryParse(raw, CultureInfo.InvariantCulture,
+                                DateTimeStyles.RoundtripKind, out var parsed))
+                        {
+                            return parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+                        }
+                        throw new JsonException($"Timestamp '{raw}' is neither a Foundation reference-date interval nor an ISO-8601 date.");
                     }
-                    throw new JsonException($"Timestamp '{raw}' is neither a Foundation reference-date interval nor an ISO-8601 date.");
-                }
                 default:
                     throw new JsonException($"Timestamp must be a number or a string, got {reader.TokenType}.");
             }
@@ -235,6 +263,16 @@ namespace Syxx.Kit
             long signedMillis = new DateTimeOffset(utc).ToUnixTimeMilliseconds();
 
             double candidate = (utc.Ticks - WitnessWireJson.AppleReferenceDate.Ticks) / (double)TimeSpan.TicksPerSecond;
+
+            // [C002] Defensive: every representable DateTime yields a finite candidate, but a NaN
+            // must never reach the nudge loop below — Int64BitsToDouble can fabricate NaN/±∞ from
+            // bit patterns, and feeding that to MacOsTruncatedUnixMillis gives an implementation-
+            // defined double→long cast (long.MinValue on .NET) that could either silently mis-encode
+            // or, on a runtime that casts NaN to 0, masquerade as the epoch's signedMilliseconds==0.
+            // Fail loudly rather than emit an invalid date.
+            if (!double.IsFinite(candidate))
+                throw new JsonException("Could not encode the display timestamp: the computed reference-date interval is not finite.");
+
             if (MacOsTruncatedUnixMillis(candidate) == signedMillis)
                 return candidate;
 
@@ -247,12 +285,22 @@ namespace Syxx.Kit
             {
                 bits += direction;
                 double nudged = BitConverter.Int64BitsToDouble(bits);
+                // [C002] Guard: a step that lands on NaN or ±∞ (reachable only by overflowing the
+                // bit pattern) must never be compared or returned, so bail to the fail-closed path
+                // below instead of letting a runtime-specific NaN→long cast fabricate a match. The
+                // last finite value is never emitted either — see the refusal after the loop.
+                if (!double.IsFinite(nudged))
+                    break;
                 if (MacOsTruncatedUnixMillis(nudged) == signedMillis)
                     return nudged;
             }
 
-            // Unreachable in practice; refuse rather than emit a display timestamp that would make
-            // an honest snapshot read as tampered on the other platform.
+            // Unreachable in practice for any representable DateTime (the initial candidate is
+            // within a few ULPs of agreement, and a millisecond is thousands of ULPs wide at every
+            // magnitude a DateTime can express); reachable only if a nudge step produced a
+            // non-finite value. Refuse rather than fall back to the non-nudged candidate — a
+            // disagreeing millisecond is the D102 defect class and would make an honest snapshot
+            // read as tampered on the other platform.
             throw new JsonException("Could not encode the display timestamp without losing millisecond agreement with the signed evidence.");
         }
 

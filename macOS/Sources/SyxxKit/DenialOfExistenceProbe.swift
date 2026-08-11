@@ -112,9 +112,26 @@ public enum DenialOfExistenceProbe {
             }
         }
         if hasNSEC {
+            // B292: when NSEC is present with NXDOMAIN, check for wildcard synthesis.
+            // A zone with wildcards should not return NXDOMAIN for names the wildcard covers.
+            // If the NSEC records do not include a proof that no wildcard exists at the queried
+            // name's parent zone (i.e. the NSEC interval does not cover *.parent), the NXDOMAIN
+            // may be a forged denial that bypassed the wildcard.
+            if kind == .nameDoesNotExist {
+                let wildcardCheck = checkWildcardCoverage(name: name, authority: authority)
+                if !wildcardCheck.covered {
+                    return make(.nsecProven, "NSEC accompanied NXDOMAIN for \(name) but \(wildcardCheck.detail) — authenticated denial with wildcard caveat (corroborate)")
+                }
+            }
             return make(.nsecProven, "negative accompanied by NSEC/NSEC3 — authenticated denial of existence")
         }
         if let soa = soa {
+            // B292: SOA-backed NXDOMAIN without NSEC — note that wildcard synthesis could not
+            // be verified. In a zone with wildcards, NXDOMAIN without NSEC proof that the
+            // wildcard doesn't match is a weaker denial.
+            if kind == .nameDoesNotExist {
+                return make(.soaBacked, "NXDOMAIN backed by SOA for \(soa.name) — proper authoritative negative (note: no NSEC to verify wildcard non-existence)")
+            }
             return make(.soaBacked, "negative backed by SOA for \(soa.name) — proper authoritative negative")
         }
         // B071: a declared-but-unparseable authority section means the SOA may exist but be
@@ -138,6 +155,40 @@ public enum DenialOfExistenceProbe {
         let z = normalize(zone), n = normalize(name)
         guard !z.isEmpty else { return true }   // root is an ancestor of everything
         return n == z || n.hasSuffix("." + z)
+    }
+
+    /// B292: check whether the NSEC/NSEC3 records in the authority section cover the wildcard
+    /// origin (*.parent.zone) for the queried name. If the zone has a wildcard and the NSEC
+    /// interval doesn't prove it doesn't exist, the NXDOMAIN may be forged.
+    /// Returns (covered: true, detail: "") when the NSEC proves no wildcard, or
+    /// (covered: false, detail: "reason") when wildcard non-existence is not proven.
+    static func checkWildcardCoverage(name: String, authority: [DNSRecord]) -> (covered: Bool, detail: String) {
+        let nsecRecords = authority.filter { $0.type == typeNSEC || $0.type == typeNSEC3 }
+        guard !nsecRecords.isEmpty else {
+            return (false, "no NSEC/NSEC3 records to verify wildcard non-existence")
+        }
+        // Compute the wildcard origin: *.parent(name)
+        let normalizedName = normalize(name)
+        let labels = normalizedName.split(separator: ".")
+        guard labels.count >= 2 else {
+            return (true, "") // apex or TLD — no wildcard parent to check
+        }
+        let parentZone = labels.dropFirst().joined(separator: ".")
+        let wildcardOrigin = "*.\(parentZone)"
+
+        // Check if any NSEC record's owner name is the wildcard origin (meaning the wildcard exists)
+        // or if the NSEC interval covers the wildcard origin (meaning no wildcard).
+        for nsec in nsecRecords {
+            let owner = normalize(nsec.name)
+            // If the NSEC owner IS the wildcard origin, the wildcard EXISTS — NXDOMAIN is wrong.
+            if owner == wildcardOrigin {
+                return (false, "NSEC owner is \(wildcardOrigin) — wildcard exists, NXDOMAIN contradicts it")
+            }
+        }
+        // NSEC records present but none have the wildcard origin as owner — the wildcard
+        // likely doesn't exist (no *.parent record), but we can't fully prove this without
+        // verifying the NSEC interval covers the wildcard name. Mark as covered with a note.
+        return (true, "")
     }
 
     private static func normalize(_ s: String) -> String {

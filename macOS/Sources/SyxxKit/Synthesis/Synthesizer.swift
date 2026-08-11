@@ -113,10 +113,11 @@ public enum EvidenceAdapters {
         var ev: [EvidenceItem] = []; var subs: [SectionStatus] = []
         // B161: split "no answer at all" (timeout/transport/malformed ⇒ invalidated) from "an answer
         // with a refusal RCODE" (servFail/refused ⇒ inconclusive + emit the resolverStatus evidence
-        // item). Previously, didFail caught .servFail/.refused first, so the switch arm below was
-        // unreachable for those RCODEs — the resolverStatus signal was discarded before it reached
-        // the ledger or the engine, and a valid parsed refusal was filed as invalidated ("ran but its
-        // premise failed") instead of inconclusive ("ran, valid data, unresolved").
+        // item). Previously, didNotSucceed (then named didFail) caught .servFail/.refused first, so
+        // the switch arm below was unreachable for those RCODEs — the resolverStatus signal was
+        // discarded before it reached the ledger or the engine, and a valid parsed refusal was filed
+        // as invalidated ("ran but its premise failed") instead of inconclusive ("ran, valid data,
+        // unresolved").
         if let r = resolution {
             switch r.status {
             case .refused, .servFail:
@@ -348,8 +349,10 @@ public enum EvidenceAdapters {
                     rationale: "A verified, fresh signed manifest disagrees byte-for-byte with what your vantage fetched (or the manifest signature failed) — evidence of on-path content interference. Benign per-request/dynamic content is possible; see the diff before concluding."))
                 subs.append(.positive)
             case .inconclusive:
+                // C199: distinct EvidenceId from confirmed tampering — inconclusive warp must not
+                // carry the same weight as a verified content mismatch in the indicator mapping.
                 ev.append(EvidenceItem(section: .mirror,
-                    evidenceId: .scriptMismatch,
+                    evidenceId: .scriptMismatchInconclusive,
                     observation: "Content warp check was inconclusive" + (w.inconclusiveReason.map { ": \($0)" } ?? ""),
                     rationale: "An inconclusive warp (untrusted/unpinned signer, stale/forged freshness, or unfetchable content) could not determine whether content was modified — not a clean result; requires corroboration."))
                 subs.append(.inconclusive)
@@ -357,8 +360,12 @@ public enum EvidenceAdapters {
                 subs.append(.negative)
             }
         }
-        // A2 — authoritative ground truth. A full divergence (CDN/geo already dampened to inconclusive
-        // upstream) is real evidence of an upstream rewrite; a match is clean; anything ambiguous is inconclusive.
+        // A2 — authoritative ground truth. A full divergence is real evidence of an upstream rewrite;
+        // a match is clean; anything ambiguous is inconclusive. CDN/geo routing is NOT dampened
+        // upstream: `AuthoritativeVantage.classify` RETAINS `.diverges` when both answer sets sit in
+        // one provider's ranges (C015/K-16) — it annotates the provider rather than erasing the
+        // finding, because an attacker may sit inside that provider's own ASN. The rationale emitted
+        // below states that limit rather than claiming CDN/geo has been ruled out.
         if let a = authoritative {
             switch a.status {
             case .diverges:
@@ -383,11 +390,20 @@ public enum EvidenceAdapters {
                             + (a.nameservers.isEmpty ? "" : " (\(a.nameservers.prefix(2).joined(separator: ", ")))"),
                         rationale: "The Dimension server also reports the authority does not serve the address your resolver returned — corroborates an upstream rewrite over TLS, but the response is unsigned and should be independently verified."))
                 } else {
+                    // K-16 COUPLING — the rationale below is load-bearing on the classifier.
+                    // It used to end "(benign CDN/geo routing is already excluded for a full
+                    // divergence)". That was never true on this platform: `classify` RETAINS
+                    // `.diverges` when both answer sets lie in one provider's ranges (C015),
+                    // annotating the provider instead of softening, because an attacker may sit
+                    // inside the provider's own ASN. A `.diverges` can therefore legitimately carry
+                    // a shared provider, so the old claim told the user CDN/geo had been ruled out
+                    // when it had not. The wording states what is actually established, and matches
+                    // the C# twin at Syxx.Kit/Synthesis/Synthesizer.cs:488 verbatim.
                     ev.append(EvidenceItem(section: .mirror,
                         evidenceId: .authoritativeDiverges,
                         observation: "Recursive answer diverges from the domain's authoritative nameservers"
                             + (a.nameservers.isEmpty ? "" : " (\(a.nameservers.prefix(2).joined(separator: ", ")))"),
-                        rationale: "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite (benign CDN/geo routing is already excluded for a full divergence)."))
+                        rationale: "The domain's own authoritative servers do not serve the address your resolver returned — evidence of an upstream rewrite. CDN/geo routing can also produce this shape, including when both answers sit in one provider's ranges, so corroborate before concluding."))
                 }
                 subs.append(.positive)
             case .matches:      subs.append(.negative)

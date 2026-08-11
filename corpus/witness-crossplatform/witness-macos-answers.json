@@ -210,7 +210,7 @@
         }
       ]
     },
-    "expiresAt" : 1788384820976,
+    "expiresAt" : 1788731419495,
     "formatVersion" : 4,
     "perResolverAnswers" : [
       {
@@ -218,13 +218,13 @@
           {
             "name" : "example.com",
             "rdata" : "93.184.216.34",
-            "ttl" : 300,
+            "ttl" : 0,
             "type" : 1
           },
           {
             "name" : "example.com",
             "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
-            "ttl" : 300,
+            "ttl" : 0,
             "type" : 28
           }
         ],
@@ -241,7 +241,7 @@
           {
             "name" : "example.com",
             "rdata" : "93.184.216.34",
-            "ttl" : 216,
+            "ttl" : 0,
             "type" : 1
           }
         ],
@@ -258,13 +258,13 @@
           {
             "name" : "example.com",
             "rdata" : "93.184.216.34",
-            "ttl" : 300,
+            "ttl" : 0,
             "type" : 1
           },
           {
             "name" : "example.com",
             "rdata" : "2606:2800:220:1:248:1893:25c8:1946",
-            "ttl" : 120,
+            "ttl" : 0,
             "type" : 28
           }
         ],
@@ -324,13 +324,13 @@
         "success" : true
       }
     ],
-    "timestamp" : 1785792820976
+    "timestamp" : 1786139419495
   },
-  "expiresAt" : 810077620.976638,
+  "expiresAt" : 810424219.495812,
   "formatVersion" : 4,
   "keyId" : "4e22f0f074cf2da9",
   "publicKey" : "G5wOwKZitaDQPxI2fh6fA8YC9XgjK+9Uo63jrFDNmhw=",
-  "signature" : "JWrAUK1xxLTVx9665Rzekz02zlcaESsHKx5ReIgwLEDHjJ\/4S9iOFdPkaBSZmr6kqYOwj2cwyFIeVFr+C6dPBQ==",
+  "signature" : "2PJsn6ZVY4blWvhY+6wQpxLdqQuwNFqsU4octXQ\/KWomMqkxBqpN7WYU\/HsNI4czlBuUdWoWDFISO9TEp79KCA==",
   "targetDomain" : "example.com",
-  "timestamp" : 807485620.976638
+  "timestamp" : 807832219.495812
 }

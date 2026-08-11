@@ -1,0 +1,35 @@
+Implemented,Feature,Platform,Status,Tests,Files Created,Files Modified,Notes
+2026-08-07,1. Mirror Module,macOS,GREEN,64,11,1,Terminal-style panes (Terminal.app chrome), diff engine, degradation calculator, static content parser, dual-view (attribute table + expandable terminal), MirrorView integration
+2026-08-07,1a. Terminal-like interfaces side by side,macOS,GREEN,,,,MirrorTerminalView.swift with traffic lights, dark background, monospace font, teal prompt
+2026-08-07,1b. Domain/web address input,macOS,EXISTING,,,,Already in MirrorView.swift (TextField + Check button)
+2026-08-07,1c. Button to trigger capture,macOS,EXISTING,,,,Check button wired to model.run()
+2026-08-07,1d. Server initiates remote capture of static web contents,macOS,EXISTING,,,,/api/warp/manifest endpoint (WARP_MANIFEST_V1, Ed25519 signed)
+2026-08-07,1e. Static web contents includes HTML,macOS,GREEN,,,,StaticContentParser extracts HTML
+2026-08-07,1f. Static web contents includes JavaScript,macOS,GREEN,,,,StaticContentParser extracts <script> tags and src URLs
+2026-08-07,1g. Static web contents includes CSS,macOS,GREEN,,,,StaticContentParser extracts <style> and <link rel=stylesheet>
+2026-08-07,1h. Fallback for missing pre-JS resources,macOS,GREEN,,,,StaticContentParser extracts <slot>/<template> content, flags as partial
+2026-08-07,1i. Local retrieval of static web contents,macOS,GREEN,,,,MirrorBundle.local source via local fetch
+2026-08-07,1j-k. Server concatenates and encrypts,macOS,EXISTING,,,,WARP_MANIFEST_V1 signed manifest (Ed25519 over TLS 1.3)
+2026-08-07,1l. Local client pulls same static components,macOS,GREEN,,,,LocalFetchService fetches HTML+CSS+JS locally
+2026-08-07,1m. Client retrieves remote bundle from server,macOS,EXISTING,,,,Via /api/warp/manifest endpoint
+2026-08-07,1n. Client decrypts remote bundle siloed from local,macOS,GREEN,,,,MirrorBundle instances immutable (Sendable), memory-isolated
+2026-08-07,1o. Display local vs remote versions side by side,macOS,GREEN,,,,Side-by-side MirrorTerminalView panes with independent scrolling
+2026-08-07,1p. Git-diff-style markup,macOS,GREEN,,,,MirrorDiffView with green additions, red deletions, line numbers, section tabs
+2026-08-07,1q. Degradation score calculation,macOS,GREEN,,,,DegradationCalculator: changes/totalLines, 5-tier classification
+2026-08-07,1r. User explore files side by side with markup,macOS,GREEN,,,,Expandable View Details section with terminal panes + unified diff
+2026-08-07,1s. Styling consistent with mockups,macOS,GREEN,,,,Uses IoDesignSystem tokens, Cinzel/EB Garamond/ui-monospace fonts
+2026-08-07,1t. Debug all elements,macOS,GREEN,64,,,All 64 tests pass, adversarial review found zero bugs
+2026-08-07,1u. Repeat for Linux,Linux,GREEN,54,14,2,GNOME Terminal chrome, standalone LCS diff, all engines ported
+2026-08-07,1v. Repeat for Windows,Windows,CODE-VERIFIED,54,13,2,PowerShell chrome, TextDiff LCS, all engines ported
+2026-08-07,1w. features-implemented.csv,All,COMPLETE,,,,This file
+2026-08-07,2. Dark/Light Mode,macOS,GREEN,22,2,5,SyxxThemeMode enum, resolvedScheme in ContentView, APPEARANCE in SettingsView+GuidedSetup, persistence via SyxxSettingsStore
+2026-08-07,2a. Access system settings for dark/light default,macOS,GREEN,,,,resolvedScheme returns nil for system mode (follows OS appearance)
+2026-08-07,2b. Guided Setup option for Dark/Light Mode,macOS,GREEN,,,,APPEARANCE section in SetupChoices with System/Dark/Light picker
+2026-08-07,2c. SettingsView option for Dark/Light Mode,macOS,GREEN,,,,APPEARANCE card as first card in SettingsView with segmented Picker
+2026-08-07,2d. Toggle changes between modes,macOS,GREEN,,,,Immediate re-theme via preferredColorScheme + didSaveNotification
+2026-08-07,2e. Existing version is Dark Mode,macOS,EXISTING,,,,All ioDynamic dark values unchanged
+2026-08-07,2f. Light Mode inverts brightness/darkness,macOS,EXISTING,,,,All ioDynamic light values already defined in IoDesignSystem
+2026-08-07,2g. Module highlight colors inverted,macOS,EXISTING,,,,Mirror Yellow #8a6a00, Glutton Pink #b0286e, Cage Cyan #0a8a8a, Witness Red #b01e38 in light mode
+2026-08-07,2h. Debug all elements,macOS,GREEN,22,31,,,22 new + 31 existing related tests all pass
+2026-08-07,2i. Repeat for Linux,Linux,GREEN,30,3,8,ThemeManager with ThemeDictionaries (Dark/Light), APPEARANCE in SettingsView
+2026-08-07,2j. Repeat for Windows,Windows,CODE-VERIFIED,8,3,10+,ThemeManager + IoDesignSystem.Light.xaml, 437 DynamicResource migrations, APPEARANCE in SettingsView+FirstRunView

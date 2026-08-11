@@ -57,8 +57,9 @@ roleDefinition: >-
   Never edit AGENTS.md. Explicit-path commits only; never git add -A. You may ADD
   tests for your own views; never edit engine tests.
 customInstructions: >-
-  Read AGENTS.md, STAGE5-CONTRACT.md, STAGE5-WORDING-PROPOSALS.md, PROJECT-STATE.md,
-  and CLAUDE.md before beginning. Read the affected view file and the Conclusion/
+  Read AGENTS.md, docs/STAGE5-CONTRACT.md, docs/STAGE5-WORDING-PROPOSALS.md,
+  docs/PROJECT-STATE.md, and CLAUDE.md before beginning. Read the affected view
+  file and the Conclusion/
   stage5 DTO contract before writing any code. Propose all new user-visible strings
   (from STAGE5-WORDING-PROPOSALS.md only) and wait for user approval. Never fake a
   verdict or fabricate values. Run swift build (macOS) or dotnet build (Windows)

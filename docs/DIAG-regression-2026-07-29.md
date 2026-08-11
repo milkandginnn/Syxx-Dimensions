@@ -17,17 +17,20 @@ already-failing path but did not break a working one.
 ## Failure 1 — Glutton (leak test): "Token request failed … CollectorError error 0"
 
 **(a) What exactly throws / which enum case**
+
 - Enum: `CollectorError` at `macOS/Sources/SyxxKit/LeakDetector.swift:381`
   - case index 0: `badStatus(Int)`  ← **this is the one thrown** ("error 0")
   - case index 1: `badJSON(Error)`
 - Throw site for the token request: `LeakDetector.swift:412`, inside
   `requestToken(...)`:
+
   ```swift
   guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
       let code = (response as? HTTPURLResponse)?.statusCode ?? -1
       throw CollectorError.badStatus(code)   // line 412
   }
   ```
+
   The user-facing prefix "Token request failed" confirms it is the **token** call
   (`POST api/leak/token`), not the later `verify` call.
 - Meaning: the collector server **did answer over HTTP but with a non-200 status**
@@ -37,6 +40,7 @@ already-failing path but did not break a working one.
   bridged NSError string.
 
 **(b) Is the throw site new/modified in the uncommitted diff?**
+
 - **UNCHANGED from HEAD.** `git diff HEAD -- LeakDetector.swift` has **zero** hunks
   touching `requestToken` or the `badStatus` throw. The diff in this file touches
   only: `VerifyResponse` (added `inconclusive`, `leaked` made optional),
@@ -44,6 +48,7 @@ already-failing path but did not break a working one.
   it on the token-request path.
 
 **(c) Verdict: ENVIRONMENTAL / server-side — NOT a regression.**
+
 - The token endpoint returned non-200. This needs a reachable collector server plus
   valid credentials (session token or license). The rename did not touch this path.
 - **Cannot determine from static analysis alone** whether it is 401 (auth) vs 5xx
@@ -56,6 +61,7 @@ already-failing path but did not break a working one.
 ## Failure 2 — Witness: "Could not create witness snapshot … WitnessSignerError error 1"
 
 **(a) What exactly throws / which enum case**
+
 - Enum: `WitnessSignerError` at `macOS/Sources/SyxxKit/WitnessSigner.swift:50`
   - index 0: `emptyKey`
   - index 1: `invalidPrivateKey`  ← **this is the one thrown** ("error 1")
@@ -64,20 +70,24 @@ already-failing path but did not break a working one.
   - index 4: `unsupportedVersion`
   - index 5: `expired`
 - Throw site: `WitnessSigner.swift:103-105`, inside `createSignedSnapshot(...)`:
+
   ```swift
   guard let keyData = Data(base64Encoded: privateKeyBase64), keyData.count == 32 else {
       throw WitnessSignerError.invalidPrivateKey   // line 104
   }
   ```
+
 - Surfaced by `AppModel.swift:1007` ("Could not create witness snapshot: \(err.message)")
   where `err.message` is `error.localizedDescription` of the thrown
   `WitnessSignerError` (no `LocalizedError` conformance → the default
   "…WitnessSignerError error 1." NSError bridge).
 - **ROOT CAUSE — the stored signing key is garbage.** I dumped the keychain
   (read-only):
+
   ```
   security find-generic-password -s com.milkandgin.syxx -a witness-key -w  →  lklklklk
   ```
+
   `lklklklk` is valid base64 but decodes to **6 bytes** (`0x964964964964`), not the
   32 bytes an Ed25519 private key requires. So the `keyData.count == 32` clause fails
   and `invalidPrivateKey` is thrown. `emptyKey` (index 0) was *not* thrown because the
@@ -87,13 +97,16 @@ already-failing path but did not break a working one.
     Someone pasted "lklklklk" into the key field (a placeholder / smoke-test value).
 
 **(b) Is the throw site new/modified in the uncommitted diff?**
+
 - **MODIFIED — but only the guard predicate, not the outcome.** `git diff HEAD --
   WitnessSigner.swift`:
+
   ```diff
   - guard let keyData = Data(base64Encoded: privateKeyBase64) else {
   + guard let keyData = Data(base64Encoded: privateKeyBase64), keyData.count == 32 else {
         throw WitnessSignerError.invalidPrivateKey
   ```
+
 - What this changes for the "lklklklk" key:
   - **NEW code:** count check fails → throws `WitnessSignerError.invalidPrivateKey`
     (index 1) — the exact error reported.
@@ -112,6 +125,7 @@ already-failing path but did not break a working one.
   alter the bytes stored, and `generateAndStoreKey`/`saveKey` are otherwise unchanged.
 
 **(c) Verdict: PRE-EXISTING (bad stored key) — NOT a rename regression.**
+
 - The failure is caused by a malformed key sitting in the keychain
   ("lklklklk"), not by the uncommitted edits. The `count == 32` edit is a *hardening*
   that makes the rejection cleaner; it rejects only keys a valid Ed25519 signer would
@@ -135,6 +149,7 @@ already-failing path but did not break a working one.
 ## Failure 3 — Cage: "Could not start capture: Helper installation failed: CFErrorDomainLaunchd (8)"
 
 **(a) What exactly throws**
+
 - Not an enum case — this is an `NSError` built from a failed **`SMJobBless`** call.
   Path: `PrivilegeManager.swift:134` calls `SMJobBless(kSMDomainSystemLaunchd,
   "com.milkandgin.deepsyxx", auth, &error)`. On failure (`PrivilegeManager.swift:143-154`)
@@ -152,12 +167,14 @@ already-failing path but did not break a working one.
   (`AppModel.swift:1388`) → "Could not start capture: …".
 
 **(b) Is this throw site new/modified in the uncommitted diff?**
+
 - **UNCHANGED from HEAD.** `git diff HEAD --name-only -- PrivilegeManager.swift`
   returns nothing — the file is not modified. The `SMJobBless` call and its error
   wrapping are exactly as committed.
 
 **(c) Verdict: ENVIRONMENTAL (unsigned privileged helper / no Apple Developer ID) —
 NOT a regression.** The stated hypothesis is confirmed.
+
 - Syxx has no Apple Developer ID yet (the reason macOS ships last). `SMJobBless`
   requires the main app and the helper to be signed and to reference each other's
   code-signing requirements; an unsigned / ad-hoc-signed or improperly-embedded
@@ -193,6 +210,7 @@ reproduction of the actual throw sites.
 Why the rename looked guilty and isn't: the prior session's kill happened inside
 `LeakDetector.swift` and the Witness signing path — exactly two of the three failing
 areas — which is a strong prior. But tested against the real throw sites:
+
 - The **Glutton** and **Cage** throw sites are byte-for-byte unchanged from HEAD.
 - The **Witness** edit that *is* present (`keyData.count == 32`) only changes the
   error *text* for a key that was already invalid; it rejects nothing a correct

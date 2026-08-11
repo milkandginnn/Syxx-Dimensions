@@ -9,7 +9,13 @@
 #define CAGE_DLT_NULL    0   // BSD loopback / NULL (4-byte AF header)
 #define CAGE_DLT_EN10MB  1   // Ethernet (14-byte header)
 #define CAGE_DLT_PPP     9   // PPP (4-byte address/control/protocol header; built-in L2TP/IPsec utun)
-#define CAGE_DLT_RAW     12  // Raw IP, no link header (macOS value; note: 14 on some BSDs)
+// D330: DLT_RAW differs across platforms — 12 on macOS/BSD, 14 on Linux.
+// Use a compile-time guard so cross-platform builds select the correct value.
+#ifdef __linux__
+#define CAGE_DLT_RAW     14  // Raw IP on Linux (DLT_RAW = 14 in Linux libpcap)
+#else
+#define CAGE_DLT_RAW     12  // Raw IP on macOS/BSD (DLT_RAW = 12 in BSD libpcap)
+#endif
 #define CAGE_DLT_PKTAP   149 // Apple per-packet metadata; DLT_PKTAP == DLT_USER2 on live macOS captures
 
 /// Opaque handle to a pcap capture session.

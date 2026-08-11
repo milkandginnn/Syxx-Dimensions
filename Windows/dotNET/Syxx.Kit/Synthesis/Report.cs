@@ -183,6 +183,9 @@ public sealed record SynthesisReport(Conclusion Conclusion, IReadOnlyList<Merged
             foreach (var a in Conclusion.Advisories)
                 o.Add($"  • [{a.AdvisoryId.ToString().ToLowerInvariant()}] {a.Title}: {a.Detail}");
         }
+        o.Add(""); o.Add("NEXT STEPS");
+        o.Add("  • Review the findings above and verify with a second vantage point if any section is inconclusive.");
+        o.Add("  • Re-run Syxx after changing network conditions (VPN, different Wi-Fi) if threats are detected.");
         return string.Join("\n", o);
     }
 }

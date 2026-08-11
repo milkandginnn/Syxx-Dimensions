@@ -80,6 +80,7 @@ public sealed class FirstRunViewModel : INotifyPropertyChanged
     private bool _telemetryEnabled;
     private bool _updateCheckEnabled;
     private bool _crashReportingEnabled;
+    private string _themeMode = "system";
 
     public FirstRunViewModel(
         FirstRunCoordinator coordinator,
@@ -190,6 +191,12 @@ public sealed class FirstRunViewModel : INotifyPropertyChanged
         set => SetField(ref _crashReportingEnabled, value);
     }
 
+    public string ThemeMode
+    {
+        get => _themeMode;
+        set => SetField(ref _themeMode, value);
+    }
+
     public bool AttemptAcceptAgreement()
     {
         PendingAlertMessage = null;
@@ -240,7 +247,8 @@ public sealed class FirstRunViewModel : INotifyPropertyChanged
                 NotificationsEnabled,
                 TelemetryEnabled,
                 UpdateCheckEnabled,
-                CrashReportingEnabled);
+                CrashReportingEnabled,
+                ThemeMode);
         var result = _coordinator.CompleteSetup(selection);
         FailureMessage = result switch
         {

@@ -10,6 +10,20 @@
       <TextBlock Text="Settings" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SyxTextBrush}" />
     </StackPanel>
 
+    <!-- Appearance -->
+    <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
+            BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="APPEARANCE" FontSize="12" FontWeight="Bold" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="Theme:" VerticalAlignment="Center" Foreground="{StaticResource SyxTextBrush}" />
+          <ComboBox ItemsSource="{Binding ThemeModeOptions}" SelectedIndex="{Binding ThemeModeIndex}" MinWidth="140" />
+        </StackPanel>
+        <TextBlock Text="System follows your desktop environment's colour scheme. Dark and Light override it."
+                   FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource SyxTextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+
     <!-- Encrypted DNS -->
     <Border Background="{StaticResource SyxSurfaceDarkBrush}" CornerRadius="12" Padding="18"
             BorderBrush="{StaticResource SyxBorderSubtleBrush}" BorderThickness="1">

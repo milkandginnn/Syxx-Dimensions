@@ -44,6 +44,19 @@ extension Color {
     /// on the pale canvas (#eee7fb) is ~1.4:1 and unreadable, while #8a6a00 is ~6.4:1. This
     /// follows the palette's own darken-for-light convention (see ioSuccessGreen / ioText).
     static let ioMirrorYellow = ioDynamic(light: 0x8a6a00, dark: 0xffd400)  // Mirror highlight
+    /// Glutton highlight (owner directive 2026-08-05): hot pink, matching the intensity of
+    /// ioProphetBlue (#00b4ff) and ioSuccessGreen (#2dd4bf). Deliberately distinct from
+    /// ioCriticalRed (#ff4d6d) so the module colour is never confused with a severity state.
+    /// Light mode darkens for readability on pale canvas (same convention as ioMirrorYellow).
+    static let ioGluttonPink  = ioDynamic(light: 0xb0286e, dark: 0xff6eb4)  // Glutton highlight
+    /// Cage highlight (owner directive 2026-08-05): cyan — a cool third distinct from
+    /// Prophet's blue (#00b4ff) and Portal's teal (#2dd4bf). Sits between them on the hue
+    /// wheel without overlapping either.
+    static let ioCageCyan     = ioDynamic(light: 0x0a8a8a, dark: 0x00e5ff)  // Cage highlight
+    /// Witness highlight (owner directive 2026-08-05): red, matching the intensity of the
+    /// other module highlights. Deliberately distinct from ioCriticalRed (#ff4d6d) which is
+    /// a semantic severity colour — this is a module identity colour.
+    static let ioWitnessRed   = ioDynamic(light: 0xb01e38, dark: 0xff3355)  // Witness highlight
     static let ioDeepBlue    = ioDynamic(light: 0x5228b0, dark: 0x5b3fd6)   // Violet deep
     static let ioElectric    = ioDynamic(light: 0x8a6ef0, dark: 0xa78bff)   // Bright violet (links)
     static let ioAccentStart = ioDynamic(light: 0xd9a441, dark: 0xd9a441)   // Gold
@@ -69,6 +82,10 @@ extension Color {
     static let ioTextSecondary = ioDynamic(light: 0x6a4fa0, dark: 0xc9c1e6)  // Body copy
     static let ioTextMuted     = ioDynamic(light: 0x9a8fc0, dark: 0x9a8fc0)  // Captions
     static let ioTextFaint     = ioDynamic(light: 0x7d7399, dark: 0x6f6597)  // Timestamps
+
+    // ── Structural accents ──────────────────────────────────────────
+    static let ioVioletDivider  = Color(red: 148/255, green: 120/255, blue: 246/255)  // #9478f6 — dividers, borders
+    static let ioEyebrowMuted   = Color(red: 143/255, green: 131/255, blue: 184/255)  // #8f83b8 — section eyebrows
 }
 
 // MARK: - Warden Canvas (background radial gradient)
@@ -171,8 +188,9 @@ extension LinearGradient {
     )
     /// Dimensions wordmark gradient, left to right (#FF2D78 → #FF3DD5).
     static let ioWordmark = LinearGradient(
-        colors: [Color(red: 255/255, green: 45/255, blue: 120/255),  // #ff2d78
-                 Color(red: 255/255, green: 61/255, blue: 213/255)], // #ff3dd5
+        colors: [Color(red: 255/255, green: 154/255, blue: 61/255),   // #ff9a3d gold
+                 Color(red: 255/255, green: 45/255, blue: 120/255),   // #ff2d78 hot pink
+                 Color(red: 154/255, green: 92/255, blue: 255/255)],  // #9a5cff violet
         startPoint: .leading, endPoint: .trailing
     )
     /// Pro covenant banner gradient
@@ -255,9 +273,6 @@ enum SyxxTypeRole: String, Equatable, CaseIterable {
     /// Sidebar / navigation chrome. Spectral Light 300 — a text face at nav sizes, which
     /// reads as considered rather than as a control label.
     case navLabel
-    /// Super captions and card titles (owner directive 2026-08-02): Marcellus SC Regular at
-    /// body+2pt. This is Marcellus SC's first wired role; it was bundled role-less in Phase A.
-    case cardTitle
     case uiLabel
     case eyebrow
     case technical
@@ -278,6 +293,7 @@ enum SyxxTypography {
         .init(resourceName: "CormorantSC-Regular", postScriptName: "CormorantSC-Regular"),
         .init(resourceName: "CormorantSC-SemiBold", postScriptName: "CormorantSC-SemiBold"),
         .init(resourceName: "CormorantSC-Bold", postScriptName: "CormorantSC-Bold"),
+        .init(resourceName: "EBGaramond-Regular", postScriptName: "EBGaramond-Regular"),
         .init(resourceName: "EBGaramond-Italic", postScriptName: "EBGaramond-Italic"),
         .init(resourceName: "JetBrainsMono-Regular", postScriptName: "JetBrainsMono-Regular"),
         .init(resourceName: "JetBrainsMono-Medium", postScriptName: "JetBrainsMono-Medium"),
@@ -297,8 +313,6 @@ enum SyxxTypography {
         .init(resourceName: "CormorantGaramond-Regular", postScriptName: "CormorantGaramond-Regular"),
         .init(resourceName: "CormorantGaramond-Medium", postScriptName: "CormorantGaramond-Medium"),
         .init(resourceName: "CormorantGaramond-Bold", postScriptName: "CormorantGaramond-Bold"),
-        // Marcellus SC — bundled and registered, but NOT yet wired to a role. See the
-        // `body` case in postScriptName(for:) for why.
         .init(resourceName: "MarcellusSC-Regular", postScriptName: "MarcellusSC-Regular")
     ]
 
@@ -348,9 +362,8 @@ enum SyxxTypography {
         (size * cormorantOpticalScale * 2).rounded() / 2
     }
 
-    /// Default body point size. Owner directive 2026-08-02: body text was too small, +2pt,
-    /// so the Jost-era 14pt becomes 16pt before optical matching (15.5pt → 17.5pt resolved).
-    static let bodyDefaultSize: CGFloat = bodySize(matchingJost: 16)
+    /// Default body point size. Optically rescaled from the Jost-era 14pt.
+    static let bodyDefaultSize: CGFloat = bodySize(matchingJost: 14)
 
     static func jetBrainsMonoPostScriptName(for weight: Font.Weight) -> String {
         if weight == .bold || weight == .semibold || weight == .heavy || weight == .black {
@@ -379,7 +392,6 @@ enum SyxxTypography {
         case .deck: return "CormorantSC-SemiBold"
         case .emphasis: return "EBGaramond-Italic"
         case .navLabel: return navLabelPostScriptName
-        case .cardTitle: return "MarcellusSC-Regular"
         case .uiLabel, .eyebrow: return uiLabelPostScriptName
         case .technical: return "JetBrainsMono-Regular"
         }
@@ -395,8 +407,6 @@ enum SyxxTypography {
         case .deck: return 18
         case .emphasis: return 16
         case .navLabel: return 15
-        // Super captions / card titles: body + 2pt (owner directive 2026-08-02).
-        case .cardTitle: return bodyDefaultSize + 2
         case .uiLabel: return 13
         case .eyebrow: return 10
         case .technical: return 12
@@ -577,8 +587,6 @@ extension Font {
             return .custom("EBGaramond-Italic", size: resolved)
         case .navLabel:
             return .custom(SyxxTypography.navLabelPostScriptName, size: resolved)
-        case .cardTitle:
-            return .custom("MarcellusSC-Regular", size: resolved)
         case .uiLabel:
             return .custom(SyxxTypography.uiLabelPostScriptName, size: resolved)
         case .eyebrow:
@@ -603,10 +611,6 @@ extension Font {
     }
     /// Sidebar / navigation chrome (Spectral Light 300).
     static func navLabel(_ size: CGFloat = 15) -> Font { .ioRole(.navLabel, size: size) }
-    /// Super captions and card titles (Marcellus SC Regular, body+2pt by default).
-    static func cardTitle(_ size: CGFloat = SyxxTypography.defaultSize(for: .cardTitle)) -> Font {
-        .ioRole(.cardTitle, size: size)
-    }
     static func uiLabel(_ size: CGFloat = 13) -> Font { .ioRole(.uiLabel, size: size) }
     static func eyebrow(_ size: CGFloat = 10) -> Font { .ioRole(.eyebrow, size: size) }
     static func technical(_ size: CGFloat = 12) -> Font { .ioRole(.technical, size: size) }
@@ -733,6 +737,48 @@ extension View {
     }
 }
 
+// MARK: - Module Header (rune tile + eyebrow + name + content)
+
+struct ModuleHeader<Content: View>: View {
+    let rune: String
+    let eyebrow: String
+    let name: String
+    let accent: Color
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 15) {
+            Text(rune)
+                .font(.custom("Cinzel-SemiBold", size: 28))
+                .frame(width: 54, height: 54)
+                .background(accent.opacity(0.10))
+                .cornerRadius(14)
+                .foregroundColor(accent)
+                .shadow(color: accent.opacity(0.35), radius: 22)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(eyebrow)
+                    .font(.ioCaption(.bold))
+                    .foregroundColor(accent)
+                    .tracking(0.26)
+
+                Text(name)
+                    .font(.custom("Cinzel-SemiBold", size: 26))
+                    .foregroundColor(.ioText)
+
+                content()
+            }
+        }
+    }
+}
+
+extension ModuleHeader where Content == EmptyView {
+    init(rune: String, eyebrow: String, name: String, accent: Color) {
+        self.init(rune: rune, eyebrow: eyebrow, name: name, accent: accent, content: { EmptyView() })
+    }
+}
+
 // E123: IoButton / IoButtonStyle / .ioButton() removed — defined but never called.
 // All buttons use IoFilledButtonStyle / IoOutlineButtonStyle (separate implementations below).
 
@@ -851,7 +897,7 @@ struct IoProgressRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color(white: 1, opacity: 0.08), lineWidth: lineWidth)
+                .stroke(Color(red: 148/255, green: 120/255, blue: 246/255).opacity(0.15), lineWidth: lineWidth)
 
             Circle()
                 .trim(from: 0.0, to: progress)
@@ -945,7 +991,41 @@ extension View {
     }
 }
 
-// E123: IoToggle removed — defined but never instantiated anywhere in the app.
+// MARK: - Custom Toggle (mockup spec: 44×26 track, 20px knob, ON = violet + glow)
+
+struct IoToggleStyle: ToggleStyle {
+    private static let onGradient = LinearGradient(
+        colors: [Color.ioBlue, Color.ioDeepBlue],
+        startPoint: .leading, endPoint: .trailing)
+    private static let onGlow = Color.ioBlue.opacity(0.45)
+    private static let offFill = Color(white: 1, opacity: 0.12)
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 8) {
+            configuration.label
+            Spacer()
+            Group {
+                if configuration.isOn {
+                    RoundedRectangle(cornerRadius: 13).fill(Self.onGradient)
+                } else {
+                    RoundedRectangle(cornerRadius: 13).fill(Self.offFill)
+                }
+            }
+            .overlay(
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 20, height: 20)
+                        .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+                        .offset(x: configuration.isOn ? 9 : -9)
+                        .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
+                )
+                .shadow(color: configuration.isOn ? Self.onGlow : .clear,
+                    radius: configuration.isOn ? 8 : 0)
+                .frame(width: 44, height: 26)
+                .onTapGesture { configuration.isOn.toggle() }
+        }
+    }
+}
 
 // MARK: - Warden Sidebar Item
 

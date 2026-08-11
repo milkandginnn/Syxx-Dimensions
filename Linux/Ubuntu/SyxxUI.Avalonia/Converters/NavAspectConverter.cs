@@ -25,21 +25,21 @@ public sealed class NavAspectConverter : IValueConverter
     // §2.3 nav order + §4 iconography. Runes are the six wardens; symbols per §4 for the rest.
     private static readonly Dictionary<string, Meta> Map = new()
     {
-        ["What's New"]  = new("✦", false, false, false),   // ✦
-        ["Dashboard"]   = new("◧", false, false, false),   // ◧
-        ["Prophet"]     = new("ᚨ", true,  true,  false),   // ᚨ  (divider before the wardens)
-        ["Mirror"]      = new("ᛞ", true,  false, true),    // ᛞ  (Pro)
-        ["Portal"]      = new("ᛜ", true,  false, false),   // ᛜ
-        ["Glutton"]     = new("ᚦ", true,  false, true),    // ᚦ  (Pro)
-        ["Cage"]        = new("ᚾ", true,  false, false),   // ᚾ
-        ["Witness"]     = new("ᛉ", true,  false, true),    // ᛉ  (Pro)
-        ["Conclusions"] = new("⟐", false, true,  false),   // ⟐  (divider before the result)
-        ["Settings"]    = new("⚙", false, true,  false),   // ⚙  (divider before app-level items)
-        ["License"]     = new("⚷", false, false, false),   // ⚷
+        ["What's New"] = new("✦", false, false, false),   // ✦
+        ["Dashboard"] = new("◧", false, false, false),   // ◧
+        ["Prophet"] = new("ᚨ", true, true, false),   // ᚨ  (divider before the wardens)
+        ["Mirror"] = new("ᛞ", true, false, true),    // ᛞ  (Pro)
+        ["Portal"] = new("ᛜ", true, false, false),   // ᛜ
+        ["Glutton"] = new("ᚦ", true, false, true),    // ᚦ  (Pro)
+        ["Cage"] = new("ᚾ", true, false, false),   // ᚾ
+        ["Witness"] = new("ᛉ", true, false, true),    // ᛉ  (Pro)
+        ["Conclusions"] = new("⟐", false, true, false),   // ⟐  (divider before the result)
+        ["Settings"] = new("⚙", false, true, false),   // ⚙  (divider before app-level items)
+        ["License"] = new("⚷", false, false, false),   // ⚷
     };
 
-    private static readonly IBrush GoldGlyph  = new SolidColorBrush(Color.Parse("#e0b45a"));
-    private static readonly IBrush RuneGlyph  = new SolidColorBrush(Color.Parse("#9b8ac9"));
+    private static readonly IBrush GoldGlyph = new SolidColorBrush(Color.Parse("#e0b45a"));
+    private static readonly IBrush RuneGlyph = new SolidColorBrush(Color.Parse("#9b8ac9"));
     private static readonly IBrush PlainGlyph = new SolidColorBrush(Color.Parse("#8f83b8"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -51,12 +51,12 @@ public sealed class NavAspectConverter : IValueConverter
 
         return aspect switch
         {
-            "glyph"      => m.Glyph,
+            "glyph" => m.Glyph,
             "glyphBrush" => m.IsRune ? RuneGlyph : PlainGlyph,
-            "runeSize"   => m.IsRune ? 17.0 : 15.0,
-            "divider"    => m.DivBefore,
-            "locked"     => m.Locked,
-            _            => m.Glyph,
+            "runeSize" => m.IsRune ? 17.0 : 15.0,
+            "divider" => m.DivBefore,
+            "locked" => m.Locked,
+            _ => m.Glyph,
         };
     }
 

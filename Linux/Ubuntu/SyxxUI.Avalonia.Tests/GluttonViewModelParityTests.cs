@@ -12,7 +12,7 @@ namespace SyxxUI.Avalonia.Tests;
 /// <c>SyxxUI/Views/GluttonView.xaml(.cs)</c>. Every test exercises the
 /// <see cref="GluttonViewModel.RenderLeakResult"/> gate (marked internal, visible to this assembly
 /// via <c>InternalsVisibleTo</c> in <c>SyxxUI.Avalonia.csproj</c>) — the gate is the honesty spine
-/// this screen runs on, and rendering a leak/no-leak verdict wrongly is the single defect class
+/// this screen runs on, and rendering a leak/no-leak result wrongly is the single defect class
 /// (B030) this whole module was written to refuse.
 ///
 /// <para>Each test documents the mutation that turns it red (AGENTS.md Protocol §3): if a one-line
@@ -20,7 +20,7 @@ namespace SyxxUI.Avalonia.Tests;
 /// below catches it. The tests are offline (no network, no Avalonia render host), so they run
 /// headless on every platform — exactly like <c>ProphetViewModelPresentationTests</c>.</para>
 ///
-/// <para><b>HONESTY SCOPE</b>: these tests pin the verdict MAPPING (right text, right brush). They
+/// <para><b>HONESTY SCOPE</b>: these tests pin the result MAPPING (right text, right brush). They
 /// do NOT run the real collector HTTP/TLS round-trip; <see cref="LeakDetector.RunCollectorTestAsync"/>
 /// is exercised by <c>Syxx.Tests.LeakDetectorTests</c> on a Linux DNS-fixture host. Here, every
 /// <see cref="LeakTestResult"/> is constructed explicitly so the assertions are reproducible.</para>
@@ -29,10 +29,10 @@ public class GluttonViewModelParityTests
 {
     // --- Severity-Color brush constants (the Linux theme's canonical mapping, parroting
     // Presentation/SeverityColor.cs so a drift in EITHER file surfaces here) ---
-    private static readonly Color Teal  = Color.Parse("#3FD08A"); // SuccessBrush
+    private static readonly Color Teal = Color.Parse("#3FD08A"); // SuccessBrush
     private static readonly Color Amber = Color.Parse("#F2B33D"); // AmberBrush
-    private static readonly Color Red   = Color.Parse("#FF5C7A"); // CriticalBrush
-    private static readonly Color Info  = Color.Parse("#A79CC4"); // NeutralBrush
+    private static readonly Color Red = Color.Parse("#FF5C7A"); // CriticalBrush
+    private static readonly Color Info = Color.Parse("#A79CC4"); // NeutralBrush
 
     private static Color BrushColor(IBrush b) => ((SolidColorBrush)b).Color;
 
@@ -49,15 +49,15 @@ public class GluttonViewModelParityTests
         string? signature = null,
         List<string>? observed = null,
         string? errorReason = null) => new()
-    {
-        Result = r,
-        SignatureValid = sigValid,
-        SignatureKeyTrusted = sigTrusted,
-        TransportPinning = transport,
-        Signature = signature,
-        ObservedResolvers = observed ?? new(),
-        ErrorReason = errorReason,
-    };
+        {
+            Result = r,
+            SignatureValid = sigValid,
+            SignatureKeyTrusted = sigTrusted,
+            TransportPinning = transport,
+            Signature = signature,
+            ObservedResolvers = observed ?? new(),
+            ErrorReason = errorReason,
+        };
 
     // =========================================================================
     // D004 — no attestation ⇒ always UNVERIFIED amber, regardless of outer Result.
@@ -93,7 +93,7 @@ public class GluttonViewModelParityTests
 
         Assert.StartsWith("[UNVERIFIED]", vm.LeakResultText, System.StringComparison.Ordinal);
         Assert.Equal(Amber, BrushColor(vm.LeakResultBrush));
-        Assert.NotEqual(Red,  BrushColor(vm.LeakResultBrush));
+        Assert.NotEqual(Red, BrushColor(vm.LeakResultBrush));
     }
 
     // =========================================================================
@@ -138,7 +138,7 @@ public class GluttonViewModelParityTests
 
     // =========================================================================
     // B067 — a NotDetected over a non-enforced transport reads amber, never green.
-    // The collector's TLS identity must be verified before its verdict can be stood behind.
+    // The collector's TLS identity must be verified before its result can be stood behind.
     // =========================================================================
 
     [Fact]
@@ -146,7 +146,7 @@ public class GluttonViewModelParityTests
     {
         var vm = NewVm();
         // Everything is in order EXCEPT the transport pin: standard TLS validation is a weaker
-        // identity guarantee than an SPKI pin, so the verdict is not clean. MUTATION: drop the
+        // identity guarantee than an SPKI pin, so the result is not clean. MUTATION: drop the
         // transport-enforcement check in the NotDetected arm -> vm renders teal, breaking B067.
         vm.RenderLeakResult(Result(LeakResult.NotDetected,
             sigValid: true,
@@ -165,8 +165,8 @@ public class GluttonViewModelParityTests
     {
         var vm = NewVm();
         // The most dangerous transport state — a configured-but-non-matching pin — forces the
-        // verdict off the green path too. The transport line reads red (the pin DID fail), but the
-        // headline verdict stays amber because no leak evidence exists either.
+        // result off the green path too. The transport line reads red (the pin DID fail), but the
+        // headline result stays amber because no leak evidence exists either.
         vm.RenderLeakResult(Result(LeakResult.NotDetected,
             sigValid: true,
             sigTrusted: true,
@@ -176,7 +176,7 @@ public class GluttonViewModelParityTests
 
         Assert.Equal(Amber, BrushColor(vm.LeakResultBrush));
         Assert.NotEqual(Teal, BrushColor(vm.LeakResultBrush));
-        // The transport sub-line should surface the failed pin in RED — distinct from the verdict.
+        // The transport sub-line should surface the failed pin in RED — distinct from the result.
         Assert.Equal(Red, BrushColor(vm.TransportBrush));
     }
 
@@ -208,7 +208,7 @@ public class GluttonViewModelParityTests
     public void AttestedConfirmed_EnforcedTransportTrustedKey_ReadsRed()
     {
         var vm = NewVm();
-        // A leaking resolver with a valid attestation reads red — the only confident verdict this
+        // A leaking resolver with a valid attestation reads red — the only confident result this
         // screen renders in the negative direction.
         vm.RenderLeakResult(Result(LeakResult.Confirmed,
             sigValid: true,
@@ -257,7 +257,7 @@ public class GluttonViewModelParityTests
     public void Attested_ResultClasses_Invalid_Error_Inconclusive_AllReadAmber(LeakResult r)
     {
         var vm = NewVm();
-        // Every non-binary verdict is amber — never confident in either direction.
+        // Every non-binary result is amber — never confident in either direction.
         vm.RenderLeakResult(Result(r,
             sigValid: true,
             sigTrusted: true,
@@ -267,7 +267,7 @@ public class GluttonViewModelParityTests
 
         Assert.Equal(Amber, BrushColor(vm.LeakResultBrush));
         Assert.NotEqual(Teal, BrushColor(vm.LeakResultBrush));
-        Assert.NotEqual(Red,  BrushColor(vm.LeakResultBrush));
+        Assert.NotEqual(Red, BrushColor(vm.LeakResultBrush));
     }
 
     // =========================================================================

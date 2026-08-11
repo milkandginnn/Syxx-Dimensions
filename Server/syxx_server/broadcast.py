@@ -11,12 +11,12 @@ Example broadcast.json:
      "severity": "warning", "startsAt": 1751000000, "endsAt": 1751100000,
      "minVersion": "2.0.0", "maxVersion": null, "url": "https://syxx.app/status"}
 """
+
 import json
 import time
 import urllib.parse
 
-from . import config
-from . import logging_util
+from . import config, logging_util
 
 _SEVERITIES = ("info", "warning", "critical")
 
@@ -39,9 +39,15 @@ def _safe_url(raw):
 
 
 def current(now=None):
+    """Return the active broadcast message, or None if none is currently live.
+
+    Reads ``config.BROADCAST_FILE``, validates required fields, and applies
+    time-window / severity filtering.  *now* overrides the current epoch for
+    testing.
+    """
     now = now if now is not None else int(time.time())
     try:
-        with open(config.BROADCAST_FILE, "r", encoding="utf-8") as f:
+        with open(config.BROADCAST_FILE, encoding="utf-8") as f:
             data = json.load(f)
     except FileNotFoundError:
         return None  # no broadcast file — nothing to say, expected
@@ -55,8 +61,7 @@ def current(now=None):
         return None
     if not isinstance(data, dict) or not data.get("id"):
         # A198: silently discarded — log so operator notices the misconfigured broadcast
-        logging_util.warn("broadcast_rejected", reason="missing or empty id field",
-                          path=config.BROADCAST_FILE)
+        logging_util.warn("broadcast_rejected", reason="missing or empty id field", path=config.BROADCAST_FILE)
         return None
     starts, ends = data.get("startsAt"), data.get("endsAt")
     if isinstance(starts, int) and now < starts:
@@ -67,8 +72,7 @@ def current(now=None):
     # A198: log when severity is coerced — an operator's "critical" typo silently
     # becoming "info" is a quiet downgrade of an urgent message.
     if sev and sev not in _SEVERITIES:
-        logging_util.warn("broadcast_severity_coerced", original=sev, coerced_to="info",
-                          broadcast_id=data.get("id"))
+        logging_util.warn("broadcast_severity_coerced", original=sev, coerced_to="info", broadcast_id=data.get("id"))
     return {
         "id": str(data["id"])[:128],
         "title": str(data.get("title", ""))[:200],

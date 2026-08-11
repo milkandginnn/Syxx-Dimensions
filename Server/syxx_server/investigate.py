@@ -9,30 +9,28 @@ records everything it sees into the passive-DNS index.
 DNSSEC is reported as *observed* (DNSKEY/RRSIG presence + AD bit), not
 cryptographically validated — labeled honestly, matching the project's stance.
 """
-import os
+
 import re
 import time
+import traceback
 
 from . import config, passivedns, resolver
 
-_HOSTNAME = re.compile(r"^(?=.{1,253}$)([a-zA-Z0-9_-]{1,63}\.)+[a-zA-Z]{2,63}\.?$")
+# SM-001: support internationalized domain names (IDN). The previous regex
+# only matched ASCII labels — any IDN (e.g. "münchen.de") was rejected as
+# invalid. Accept non-ASCII Unicode labels; the resolver's _encode_name
+# handles IDNA encoding to Punycode before wire transmission.
+# A291: accept Punycode TLDs (xn--...) in addition to Unicode/ASCII TLDs.
+# The previous TLD segment [a-zA-Z\u00C0-\uFFFF]{2,63} rejected Punycode TLDs
+# like xn--fiqs8s (.中国) because they contain digits. Add an xn-- alternative.
+_HOSTNAME = re.compile(
+    r"^(?=.{1,253}$)"
+    r"([a-zA-Z0-9_\u00C0-\uFFFF-]{1,63}\.)+"
+    r"(?:xn--[a-zA-Z0-9-]{1,59}|[a-zA-Z\u00C0-\uFFFF]{2,63})\.?$"
+)
 
 
-def _env_int(name, default):
-    # A154: log the coercion so the operator is told their value was discarded.
-    raw = os.environ.get(name, "")
-    if not raw.strip():
-        return default
-    try:
-        return int(raw.strip())
-    except (TypeError, ValueError):
-        import logging
-        logging.getLogger("syxx-server").warning(
-            "config_invalid_int: %s=%r is not a valid integer; using default %r",
-            name, raw, default,
-        )
-        return default
-
+# A023: _env_int removed — use config._i() directly (canonical definition lives in config.py).
 
 # A096: aggregate wall-clock budget for one investigation. Each vantage query is
 # bounded per-request, but the fan-out (system + UDP + DoH, for A and AAAA, plus
@@ -40,11 +38,46 @@ def _env_int(name, default):
 # hold a worker across many slow queries. When the budget is spent, remaining
 # vantages are left UNQUERIED and simply absent from the result; they are never
 # silently counted as agreeing (that would be a false clean).
-_INVESTIGATE_DEADLINE = max(1, _env_int("SYXX_INVESTIGATE_DEADLINE", 15))
+_INVESTIGATE_DEADLINE = max(1, config._i("SYXX_INVESTIGATE_DEADLINE", 15))
 
 
 def valid_domain(domain):
+    """Return True if *domain* matches the hostname regex (syntactic check only)."""
     return bool(_HOSTNAME.match(domain or ""))
+
+
+# E042: Unicode homograph / mixed-script detection.
+# Confusable lookalikes: Latin characters that have visually identical
+# Cyrillic (or other script) counterparts commonly used in homograph attacks.
+_CONFUSABLE_LATIN = set("aceopxyACEOPXY")
+_CONFUSABLE_CYRILLIC = set("асеорхуАСЕОРХУ")  # U+0430-U+0445 range lookalikes
+_log = __import__("logging").getLogger(__name__)
+
+
+def _warn_homograph(domain: str) -> None:
+    """Log a warning if *domain* mixes scripts with confusable characters.
+
+    Simple heuristic: if the domain contains both ASCII and non-ASCII
+    characters, and the non-ASCII characters include Cyrillic lookalikes
+    of ASCII letters, flag it as a potential homograph attack. This is a
+    warning only — the domain is not rejected.
+    """
+    has_ascii = False
+    has_non_ascii = False
+    has_cyrillic_confusable = False
+    for ch in domain:
+        if ord(ch) < 128:
+            has_ascii = True
+        else:
+            has_non_ascii = True
+            if ch in _CONFUSABLE_CYRILLIC:
+                has_cyrillic_confusable = True
+    if has_ascii and has_non_ascii and has_cyrillic_confusable:
+        _log.warning(
+            "E042: possible Unicode homograph domain: %r — "
+            "mixed ASCII and confusable Cyrillic characters detected",
+            domain,
+        )
 
 
 def _vantages():
@@ -62,17 +95,40 @@ def _vantages():
 
 
 def _query_vantage(kind, target, domain, qtype):
+    """Dispatch a DNS query to the appropriate vantage backend (system/UDP/DoH)."""
     if kind == "system":
         return resolver.query_system(domain, qtype)
     if kind == "udp":
         return resolver.query(domain, qtype, target, timeout=config.INVESTIGATE_TIMEOUT)
-    return resolver.query_doh(domain, qtype, target["ip"], target["sni"],
-                              target["path"], timeout=config.DOH_TIMEOUT)
+    return resolver.query_doh(domain, qtype, target["ip"], target["sni"], target["path"], timeout=config.DOH_TIMEOUT)
 
 
-def _resolve_all(domain, qtype, deadline=None):
+def _format_exception_with_cause(e: BaseException) -> str:
+    """Format an exception with its explicit cause chain for error reporting.
+
+    A047: replaces bare ``type(e).__name__: {e}`` which discarded the exception
+    message's detail and any chained cause.  ``traceback.format_exception_only``
+    formats the exception type + message (and notes, on 3.11+), but does NOT walk
+    ``__cause__`` — that requires manual traversal.  We stop at the first
+    exception without an explicit ``__cause__`` (``raise … from …``); implicit
+    ``__context__`` chains are deliberately excluded because they represent
+    "while handling X, Y happened" noise that clutters a per-vantage error field.
+    """
+    parts = ["".join(traceback.format_exception_only(type(e), e)).strip()]
+    cause = e.__cause__
+    while cause is not None:
+        parts.append(
+            "caused by: " + "".join(traceback.format_exception_only(type(cause), cause)).strip()
+        )
+        cause = cause.__cause__
+    return "; ".join(parts)
+
+
+def _resolve_all(domain, qtype, deadline=None, vantages=None):
+    """Fan out a DNS query across all vantages, collecting per-vantage results."""
     per_resolver = {}
-    for kind, label, target in _vantages():
+    vantage_list = vantages if vantages is not None else _vantages()
+    for kind, label, target in vantage_list:
         if deadline is not None and time.monotonic() > deadline:
             # A096: aggregate budget spent. Leave the rest of the vantages unqueried
             # and absent — consensus is computed only over vantages that actually
@@ -80,8 +136,7 @@ def _resolve_all(domain, qtype, deadline=None):
             break
         try:
             res = _query_vantage(kind, target, domain, qtype)
-            values = sorted({r["value"] for r in res["records"]
-                             if r["type"] in ("A", "AAAA")})
+            values = sorted({r["value"] for r in res["records"] if r["type"] in ("A", "AAAA")})
             # A045: map RCODE to a typed outcome before consensus. SERVFAIL and
             # REFUSED must never collapse into status:"ok" with empty values, or
             # they vanish under majority voting and censorship-by-selective-failure
@@ -97,28 +152,38 @@ def _resolve_all(domain, qtype, deadline=None):
             rcode = res["rcode"]
             name = resolver.rcode_name(rcode)
             if rcode == 0:
-                status = "ok"                     # answered; values may be empty (NODATA)
+                status = "ok"  # answered; values may be empty (NODATA)
             elif rcode == 3:
-                status = "nxdomain"               # answered: this name does not exist
+                status = "nxdomain"  # answered: this name does not exist
             else:
-                status = "rcode_%s" % name.lower()   # SERVFAIL / REFUSED / anything else
-            per_resolver[label] = {"status": status, "transport": kind,
-                                   "rcode": rcode, "rcodeName": name, "ad": res["ad"],
-                                   "values": values}
+                status = f"rcode_{name.lower()}"  # SERVFAIL / REFUSED / anything else
+            per_resolver[label] = {
+                "status": status,
+                "transport": kind,
+                "rcode": rcode,
+                "rcodeName": name,
+                "ad": res["ad"],
+                "values": values,
+            }
             for v in values:
-                passivedns.ingest(domain, "A" if qtype == 1 else "AAAA", v,
-                                  "investigate", label)
+                passivedns.ingest(domain, "A" if qtype == 1 else "AAAA", v, "investigate", label)
         except resolver.DNSError as e:
-            per_resolver[label] = {"status": "error", "transport": kind,
-                                   "error": str(e), "values": []}
-        except Exception as e:                    # noqa: BLE001
+            per_resolver[label] = {"status": "error", "transport": kind, "error": str(e), "values": []}
+        except Exception as e:  # noqa: BLE001 — boundary handler: any exception here must become a reported result, not a crash
             # A155 Fix 2: a bug anywhere in the mapping above must degrade this ONE
             # vantage to an honest error and let consensus report inconclusive — never
             # escape as a 500 that hides the outcome of the vantages that did answer
             # (honesty spine #2: a failure is not an absence of evidence, and it is
             # certainly not a clean result).
-            per_resolver[label] = {"status": "error", "transport": kind,
-                                   "error": "%s: %s" % (type(e).__name__, e), "values": []}
+            # A047: preserve the full exception message AND chain (__cause__) instead
+            # of just type(e).__name__ which loses the original error text. Walk the
+            # explicit cause chain so "raise X from Y" reports both exceptions.
+            per_resolver[label] = {
+                "status": "error",
+                "transport": kind,
+                "error": _format_exception_with_cause(e),
+                "values": [],
+            }
     return per_resolver
 
 
@@ -138,25 +203,38 @@ def _consensus_one(by_vantage):
     # evidence, not absent evidence. The old filter kept only status=="ok" AND
     # non-empty values, so a selectively-censored vantage silently vanished and the
     # remaining two agreeing vantages produced "consistent".
-    answered = {k: d for k, d in by_vantage.items()
-                if d.get("status") in ("ok", "nxdomain")}
+    # A279: when >50% of vantages are unreachable (errors, not just empty),
+    # consensus among the remaining few masks selective censorship. Escalate
+    # to 'inconclusive' with a failure rate note before computing agreement.
+    total_vantages = len(by_vantage)
+    unreachable = sum(1 for d in by_vantage.values() if d.get("status") == "error")
+    if total_vantages > 0 and unreachable > total_vantages / 2:
+        return (
+            "inconclusive",
+            f"majority of vantages unreachable ({unreachable}/{total_vantages} failed); "
+            "cannot form a reliable consensus — possible selective censorship",
+        )
+
+    answered = {k: d for k, d in by_vantage.items() if d.get("status") in ("ok", "nxdomain")}
     if not answered:
         # A045: distinguish all-rcode-failure from all-transport-error, so the user
         # sees SERVFAIL/REFUSED by name rather than a generic "no answer". Names, not
         # numbers: `rcode` 0 is falsy and an int set cannot be joined (A155).
         names = sorted({d["rcodeName"] for d in by_vantage.values() if d.get("rcodeName")})
         if names:
-            return "inconclusive", "all vantages returned error RCODEs: %s" % ", ".join(names)
+            return "inconclusive", "all vantages returned error RCODEs: {}".format(", ".join(names))
         return "inconclusive", "no vantage returned an answer"
     nxdomain_vantages = sorted(k for k, d in answered.items() if d.get("status") == "nxdomain")
-    nodata_vantages = sorted(k for k, d in answered.items()
-                             if d.get("status") == "ok" and not d["values"])
+    nodata_vantages = sorted(k for k, d in answered.items() if d.get("status") == "ok" and not d["values"])
     with_vals = {k: d for k, d in answered.items() if d["values"]}
     if not with_vals:
         if nxdomain_vantages and nodata_vantages:
-            return "inconclusive", ("vantages disagree on whether the name exists at all "
-                                    "(NXDOMAIN: %s; NODATA: %s) and none returned a record"
-                                    % (", ".join(nxdomain_vantages), ", ".join(nodata_vantages)))
+            return "inconclusive", (
+                "vantages disagree on whether the name exists at all "
+                "(NXDOMAIN: {}; NODATA: {}) and none returned a record".format(
+                    ", ".join(nxdomain_vantages), ", ".join(nodata_vantages)
+                )
+            )
         if nxdomain_vantages:
             return "inconclusive", "all vantages returned NXDOMAIN"
         return "inconclusive", "no records of this type"
@@ -165,13 +243,16 @@ def _consensus_one(by_vantage):
     # signalled. Report the RCODE provenance so the user can see which vantage said
     # what, rather than a bare "divergent".
     if nxdomain_vantages:
-        return "divergent", ("some vantages returned NXDOMAIN (%s) while others returned "
-                             "records; possible selective censorship"
-                             % ", ".join(nxdomain_vantages))
+        return "divergent", (
+            "some vantages returned NXDOMAIN ({}) while others returned records; possible selective censorship".format(
+                ", ".join(nxdomain_vantages)
+            )
+        )
     if nodata_vantages:
-        return "divergent", ("some vantages returned NOERROR with no records (%s) while others "
-                             "returned records; possible selective filtering"
-                             % ", ".join(nodata_vantages))
+        return "divergent", (
+            "some vantages returned NOERROR with no records ({}) while others "
+            "returned records; possible selective filtering".format(", ".join(nodata_vantages))
+        )
     # S5: majority voting — count how many vantages report each answer set.
     answer_counts = {}
     for d in with_vals.values():
@@ -189,23 +270,32 @@ def _consensus_one(by_vantage):
         # confidence even when a majority agrees.
         any_non_ok = any(d.get("status") != "ok" for d in by_vantage.values())
         if any_non_ok:
-            return "consistent-degraded", "majority of vantages agree (%d/%d); some vantages unreachable" % (best_count, total_with_vals)
+            return "consistent-degraded", f"majority of vantages agree ({best_count}/{total_with_vals}); some vantages unreachable"
+        # A290: single-vantage result — cannot cross-check.
         if total_with_vals == 1:
-            return "single-vantage", ("only one vantage was reachable (this network blocks the "
-                                      "others); cannot cross-check for tampering")
-        return "consistent", "vantages agree (%d/%d)" % (best_count, total_with_vals)
+            return "single-vantage", (
+                "only one vantage was reachable (this network blocks the others); cannot cross-check for tampering"
+            )
+        return "consistent", f"vantages agree ({best_count}/{total_with_vals})"
     else:
-        # No majority — genuine disagreement. Could be tampering, or could be
-        # geo-split / CDN with equal distribution.
-        return "divergent", "vantages disagree — no majority (%d/%d agree); possible geo/CDN split or tampering" % (best_count, total_with_vals)
+        # A292: when only 2 vantages answered with values and they disagree,
+        # this is likely geo/CDN split rather than tampering. With so few
+        # data points, "divergent" overstates confidence in the divergence.
+        if total_with_vals <= 2:
+            return "consistent-degraded", (
+                f"only {total_with_vals} vantage(s) returned values and they disagree; "
+                "insufficient data to declare divergence — likely geo/CDN split"
+            )
+        # No majority with 3+ vantages — genuine disagreement.
+        return "divergent", f"vantages disagree — no majority ({best_count}/{total_with_vals} agree); possible geo/CDN split or tampering"
 
 
 # Worst-to-best ordering so the overall result surfaces the strongest signal.
-_RANK = {"divergent": 4, "single-vantage": 3, "consistent-degraded": 2,
-         "consistent": 1, "inconclusive": 0}
+_RANK = {"divergent": 4, "single-vantage": 3, "consistent-degraded": 2, "consistent": 1, "inconclusive": 0}
 
 
 def _consensus(a_by_vantage, aaaa_by_vantage):
+    """Compute overall consensus across A and AAAA vantage results."""
     va = _consensus_one(a_by_vantage)
     v6 = _consensus_one(aaaa_by_vantage)
     candidates = [v for v in (va, v6) if v[0] != "inconclusive"]
@@ -218,7 +308,147 @@ def _consensus(a_by_vantage, aaaa_by_vantage):
 _DNSSEC_NOTE = "presence-only; not cryptographically validated"
 
 
-def _dnssec_observed(domain, deadline=None):
+def _dnssec_vantage_doh(domain, label, target):
+    """DNSSEC probe via DoH — query DNSKEY and check for RRSIG presence.
+
+    A293: The DoH JSON API may not carry the DO bit directly, but we can still
+    query for DNSKEY records and check for RRSIG presence in the response.
+    """
+    try:
+        res = resolver.query_doh(
+            domain,
+            resolver.TYPE_DNSKEY,  # A049: direct reference — always defined in resolver.py:50
+            target["ip"],
+            target["sni"],
+            target["path"],
+            timeout=config.DOH_TIMEOUT,
+        )
+    except Exception:
+        return {
+            "signed": "unknown",
+            "observed": False,
+            "adBit": False,
+            "note": "DoH DNSSEC probe failed",
+            "rrsigStatuses": [],
+            "transport": "doh",
+            "vantage": label,
+        }
+
+    records = res.get("records", [])
+    dnskey_records = [r for r in records if r.get("type") in ("DNSKEY", 48)]
+    rrsig_records = [r for r in records if r.get("type") in ("RRSIG", 46)]
+
+    if dnskey_records and rrsig_records:
+        signed, observed, note = "yes", True, "DNSKEY+RRSIG observed via DoH (presence-only)"
+    elif dnskey_records:
+        signed, observed, note = "no", False, "DNSKEY present but no RRSIG via DoH"
+    else:
+        signed, observed, note = "unknown", False, "no DNSKEY records via DoH; resolver may not honor DO bit"
+
+    return {
+        "signed": signed,
+        "observed": observed,
+        "adBit": res.get("ad", False),
+        "note": note,
+        "rrsigStatuses": [],
+        "transport": "doh",
+        "vantage": label,
+    }
+
+
+def _dnssec_vantage_system(kind, label):
+    """System resolver cannot carry the DO bit — report unknown, not absent."""
+    return {
+        "signed": "unknown",
+        "observed": False,
+        "adBit": False,
+        "note": "transport cannot carry the DNSSEC OK bit",
+        "rrsigStatuses": [],
+        "transport": kind,
+        "vantage": label,
+    }
+
+
+def _dnssec_vantage_udp(domain, label, target):
+    """DNSSEC probe via UDP — query DNSKEY with DO bit set, read RRSIG from response.
+
+    S13: delegates to resolver.zone_signing_status which asks for DNSKEY with
+    the DO bit set and reads the covering RRSIG out of that same response.
+    """
+    posture, statuses = resolver.zone_signing_status(
+        domain, target, config.INVESTIGATE_TIMEOUT, rd=True
+    )
+    signed = {True: "yes", False: "no", None: "unknown"}[posture]
+    note = _DNSSEC_NOTE
+
+    if posture is None and statuses:
+        # DNSKEY present, but nothing inside its validity window: say which way.
+        if "expired" in statuses:
+            note += " (DNSKEY present; some RRSIGs are expired)"
+        elif "not-yet-valid" in statuses:
+            note += " (DNSKEY present; some RRSIGs are not yet valid)"
+        else:
+            note += " (DNSKEY present; no usable covering RRSIG)"
+    elif posture is None:
+        note = "could not query DNSSEC records"
+
+    return {
+        "signed": signed,
+        "observed": posture is True,
+        "adBit": False,
+        "note": note,
+        "rrsigStatuses": statuses,
+        "transport": "udp",
+        "vantage": label,
+    }
+
+
+def _dnssec_aggregate(per_vantage):
+    """Aggregate per-vantage DNSSEC results into an overall tri-state result.
+
+    A041: signed if ANY reachable vantage saw a DNSKEY with a covering RRSIG
+    inside its validity window. A single stripping vantage must not terminate
+    the search.
+
+    A167: tri-state observed — True if signed, False if unsigned, None if
+    unknown (no vantage could answer). The previous bool rendered "unknown"
+    identically to "this zone is not signed" in the UI.
+    """
+    if any(v["signed"] == "yes" for v in per_vantage):
+        status = "signed"
+    elif any(v["signed"] == "no" for v in per_vantage):
+        status = "unsigned"
+    else:
+        # Honesty spine #2/#3: no vantage could answer. That is UNKNOWN, and it must
+        # not be reported with the same value as an observed unsigned zone.
+        status = "unknown"
+
+    confirming = [v for v in per_vantage if v["signed"] == "yes"]
+    if confirming:
+        note, rrsig_statuses = confirming[0]["note"], confirming[0]["rrsigStatuses"]
+    elif per_vantage:
+        note, rrsig_statuses = per_vantage[0]["note"], per_vantage[0]["rrsigStatuses"]
+    else:
+        note, rrsig_statuses = "could not query DNSSEC records", []
+
+    if status == "signed":
+        observed_val = True
+    elif status == "unsigned":
+        observed_val = False
+    else:
+        observed_val = None  # no vantage could answer — unknown, not false
+
+    return {
+        "status": status,
+        "observed": observed_val,
+        "adBit": any(v["adBit"] for v in per_vantage),
+        "note": note,
+        "rrsigStatuses": rrsig_statuses,
+        "vantages": per_vantage,
+    }
+
+
+def _dnssec_observed(domain, deadline=None, vantages=None):
     """DNSSEC posture as OBSERVED across vantages — never cryptographically validated.
 
     S13: the previous revision issued a SECOND query with QTYPE=RRSIG (46). That does
@@ -242,74 +472,47 @@ def _dnssec_observed(domain, deadline=None):
     way to see an RRSIG, so its silence is absence of evidence, not evidence of absence.
     """
     per_vantage = []
-    for kind, label, target in _vantages():
+    vantage_list = vantages if vantages is not None else _vantages()
+
+    for kind, label, target in vantage_list:
         if deadline is not None and time.monotonic() > deadline:
             break
-        if kind != "udp":
-            # No DO bit on this transport -> this vantage cannot answer the question.
-            # Record it as unknown rather than dropping it, so the caller can see how
-            # many vantages were consulted and why they had nothing to say.
-            per_vantage.append({"signed": "unknown", "observed": False, "adBit": False,
-                                "note": "transport cannot carry the DNSSEC OK bit",
-                                "rrsigStatuses": [], "transport": kind, "vantage": label})
-            continue
-        posture, statuses = resolver.zone_signing_status(
-            domain, target, config.INVESTIGATE_TIMEOUT, rd=True)
-        signed = {True: "yes", False: "no", None: "unknown"}[posture]
-        note = _DNSSEC_NOTE
-        if posture is None and statuses:
-            # DNSKEY present, but nothing inside its validity window: say which way.
-            if "expired" in statuses:
-                note += " (DNSKEY present; some RRSIGs are expired)"
-            elif "not-yet-valid" in statuses:
-                note += " (DNSKEY present; some RRSIGs are not yet valid)"
-            else:
-                note += " (DNSKEY present; no usable covering RRSIG)"
-        elif posture is None:
-            note = "could not query DNSSEC records"
-        per_vantage.append({"signed": signed, "observed": posture is True, "adBit": False,
-                            "note": note, "rrsigStatuses": statuses,
-                            "transport": kind, "vantage": label})
 
-    # A041: signed if ANY reachable vantage saw a DNSKEY with a covering RRSIG inside its
-    # validity window. A single stripping vantage must not terminate the search.
-    if any(v["signed"] == "yes" for v in per_vantage):
-        status = "signed"
-    elif any(v["signed"] == "no" for v in per_vantage):
-        status = "unsigned"
-    else:
-        # Honesty spine #2/#3: no vantage could answer. That is UNKNOWN, and it must
-        # not be reported with the same value as an observed unsigned zone.
-        status = "unknown"
-    confirming = [v for v in per_vantage if v["signed"] == "yes"]
-    if confirming:
-        note, rrsig_statuses = confirming[0]["note"], confirming[0]["rrsigStatuses"]
-    elif per_vantage:
-        note, rrsig_statuses = per_vantage[0]["note"], per_vantage[0]["rrsigStatuses"]
-    else:
-        note, rrsig_statuses = "could not query DNSSEC records", []
-    # A167: tri-state observed — True if signed, False if unsigned, None if
-    # unknown (no vantage could answer). The previous bool rendered "unknown"
-    # identically to "this zone is not signed" in the UI.
-    if status == "signed":
-        observed_val = True
-    elif status == "unsigned":
-        observed_val = False
-    else:
-        observed_val = None  # no vantage could answer — unknown, not false
-    return {"status": status, "observed": observed_val,
-            "adBit": any(v["adBit"] for v in per_vantage),
-            "note": note, "rrsigStatuses": rrsig_statuses, "vantages": per_vantage}
+        if kind == "doh":
+            per_vantage.append(_dnssec_vantage_doh(domain, label, target))
+        elif kind == "udp":
+            per_vantage.append(_dnssec_vantage_udp(domain, label, target))
+        else:
+            per_vantage.append(_dnssec_vantage_system(kind, label))
+
+    return _dnssec_aggregate(per_vantage)
 
 
 def investigate(domain):
+    """Run a full multi-vantage DNS investigation for *domain*; return (result_dict, None) or (None, error)."""
     domain = (domain or "").strip().lower().rstrip(".")
     if not valid_domain(domain) or len(domain) > 253:
         return None, "invalid domain"
+    # E042: warn on potential homograph domains (mixed-script confusables)
+    _warn_homograph(domain)
     deadline = time.monotonic() + _INVESTIGATE_DEADLINE
-    a = _resolve_all(domain, resolver.TYPE_A, deadline)
-    aaaa = _resolve_all(domain, resolver.TYPE_AAAA, deadline)
+    t0 = time.monotonic()
+    vantages = _vantages()
+    a = _resolve_all(domain, resolver.TYPE_A, deadline, vantages=vantages)
+    aaaa = _resolve_all(domain, resolver.TYPE_AAAA, deadline, vantages=vantages)
     result, reason, (va, va_reason), (v6, v6_reason) = _consensus(a, aaaa)
+    # SM-004: include deadline metadata so the caller can see how much budget
+    # remained and whether the investigation was truncated.
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+    remaining_ms = max(0, int((_INVESTIGATE_DEADLINE - (time.monotonic() - t0)) * 1000))
+    # A294: count vantages that were skipped due to deadline exhaustion.
+    # These are invisible in the per-vantage dicts — the caller needs to know
+    # how many vantages were never queried so they can gauge result completeness.
+    all_vantage_count = len(vantages)
+    a_queried = len(a)
+    aaaa_queried = len(aaaa)
+    deadline_skipped_a = max(0, all_vantage_count - a_queried)
+    deadline_skipped_aaaa = max(0, all_vantage_count - aaaa_queried)
     return {
         "domain": domain,
         "ipv4": a,
@@ -318,5 +521,13 @@ def investigate(domain):
         "consensusReason": reason,
         "ipv4Consensus": va,
         "ipv6Consensus": v6,
-        "dnssec": _dnssec_observed(domain, deadline),
+        "dnssec": _dnssec_observed(domain, deadline, vantages=vantages),
+        "timing": {
+            "elapsed_ms": elapsed_ms,
+            "deadline_ms": _INVESTIGATE_DEADLINE * 1000,
+            "remaining_ms": remaining_ms,
+            # A294: how many vantages were skipped per record type due to deadline.
+            "deadline_skipped_ipv4": deadline_skipped_a,
+            "deadline_skipped_ipv6": deadline_skipped_aaaa,
+        },
     }, None

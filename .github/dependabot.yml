@@ -1,12 +1,39 @@
-# Dependabot config for the uv-managed Python projects in this repo.
-# See AGENTS.md for the canonical toolchain (uv + ruff + ty).
-#
-# Native uv support landed in GitHub Dependabot in 2024; the ecosystem
-# key is "uv" and Dependabot will update both pyproject.toml and uv.lock
-# in lock-step.
+# Dependabot config for the Syxx project.
+# CI-031: covers all package ecosystems — uv (Python), nuget (.NET), github-actions.
 
 version: 2
 updates:
+  # CI-031: GitHub Actions — keep action versions current for security patches.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci(deps)"
+
+  # CI-031: NuGet — .NET dependencies for Windows/Linux clients and shared Kit.
+  - package-ecosystem: "nuget"
+    directory: "/Windows"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "dotnet"
+    commit-message:
+      prefix: "deps(nuget)"
+    groups:
+      dotnet-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
   # tools/yt-design-extractor — internal tooling
   - package-ecosystem: "uv"
     directory: "/tools/yt-design-extractor"

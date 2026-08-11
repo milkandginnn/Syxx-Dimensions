@@ -66,6 +66,6 @@ public enum DomainCanonical {
     /// Returns `true` if two domain strings refer to the same canonical name.
     public static func areEquivalent(_ a: String, _ b: String) -> Bool {
         guard let ca = canonicalizeOrNil(a), let cb = canonicalizeOrNil(b) else { return false }
-        return ca == cb
+        return ca.utf8.elementsEqual(cb.utf8)
     }
 }

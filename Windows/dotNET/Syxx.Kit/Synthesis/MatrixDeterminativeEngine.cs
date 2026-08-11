@@ -81,6 +81,59 @@ public readonly record struct SectionId(string Value)
     public override string ToString() => Value;
 }
 
+/// F-04: emit an <see cref="IReadOnlySet{SectionId}"/> as an ORDINAL-SORTED array.
+///
+/// A set has no meaningful order, but JSON arrays do, so serializing one directly leaks the hash
+/// order into the bytes. `SectionId` is a record struct over `string`, and .NET randomizes string
+/// hashing per process, so those bytes differ between launches. Anything that hashes, signs, or
+/// byte-compares this output — the frozen spec oracle, the cross-platform parity gate — is unstable
+/// with it.
+///
+/// Ordinal to match the Swift twin's `MatrixSpec.encode(to:)`, which sorts by `rawValue`. Reading
+/// is order-insensitive: the array goes back into a set.
+/// F-09: same rationale as <see cref="SortedSectionIdSetConverter"/>, for the B156
+/// `mappableIndicators` set — sorted emission keeps the spec bytes stable and matches the Swift
+/// twin's `encode(to:)`, which sorts both sets by rawValue.
+internal sealed class SortedIndicatorIdSetConverter : JsonConverter<IReadOnlySet<IndicatorId>>
+{
+    public override IReadOnlySet<IndicatorId> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var ids = JsonSerializer.Deserialize<List<IndicatorId>>(ref reader, options)
+                  ?? throw new JsonException("mappableIndicators must be an array of indicator identifiers");
+        return new HashSet<IndicatorId>(ids);
+    }
+
+    public override void Write(Utf8JsonWriter writer, IReadOnlySet<IndicatorId> value, JsonSerializerOptions options)
+    {
+        writer.WriteStartArray();
+        foreach (var id in value.OrderBy(i => i.Value, StringComparer.Ordinal))
+        {
+            JsonSerializer.Serialize(writer, id, options);
+        }
+        writer.WriteEndArray();
+    }
+}
+
+internal sealed class SortedSectionIdSetConverter : JsonConverter<IReadOnlySet<SectionId>>
+{
+    public override IReadOnlySet<SectionId> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var ids = JsonSerializer.Deserialize<List<SectionId>>(ref reader, options)
+                  ?? throw new JsonException("knownSections must be an array of section identifiers");
+        return new HashSet<SectionId>(ids);
+    }
+
+    public override void Write(Utf8JsonWriter writer, IReadOnlySet<SectionId> value, JsonSerializerOptions options)
+    {
+        writer.WriteStartArray();
+        foreach (var id in value.OrderBy(s => s.Value, StringComparer.Ordinal))
+        {
+            JsonSerializer.Serialize(writer, id, options);
+        }
+        writer.WriteEndArray();
+    }
+}
+
 [JsonConverter(typeof(IndicatorIdJsonConverter))]
 public readonly record struct IndicatorId(string Value)
 {
@@ -362,11 +415,36 @@ public sealed record MatrixSpec
     [JsonPropertyName("thresholds")] public ThresholdProfile Thresholds { get; init; }
     /// The universe of section identifiers a `RequiredSections` list may reference. Defaults to the
     /// six canonical Syxx sections; validated in `Validate()`.
-    /// NOTE (parity, observed while porting): Swift encodes `Set&lt;SectionID&gt;` as an array in
-    /// per-process hash order — the Swift-side `defaultSpecJSON` is therefore NOT byte-stable for
-    /// this one field across launches. Flagged for the Phase 5 canonical-encoding rule (sort the
-    /// set on BOTH platforms in the frozen oracle); everything else in the spec is order-stable.
-    [JsonPropertyName("knownSections")] public IReadOnlySet<SectionId> KnownSections { get; init; }
+    /// F-04 (2026-08-05): the canonical-encoding rule this note asked for is now IMPLEMENTED on
+    /// both platforms — Swift sorts in `MatrixSpec.encode(to:)`, C# sorts via
+    /// <see cref="SortedSectionIdSetConverter"/> below. The original note is kept because it
+    /// records that the hazard was seen during the port:
+    ///
+    ///   "Swift encodes Set&lt;SectionID&gt; as an array in per-process hash order — the Swift-side
+    ///    defaultSpecJSON is therefore NOT byte-stable for this one field across launches. Flagged
+    ///    for the Phase 5 canonical-encoding rule (sort the set on BOTH platforms in the frozen
+    ///    oracle); everything else in the spec is order-stable."
+    ///
+    /// Its one inaccuracy: this side was not exempt. `SectionId` is a record struct over `string`,
+    /// so its hash comes from the string's, and .NET randomizes string hashing per process — a
+    /// `HashSet&lt;SectionId&gt;` enumerates in a per-process order here too. Only the sorted
+    /// emission below makes either platform byte-stable.
+    [JsonPropertyName("knownSections")]
+    [JsonConverter(typeof(SortedSectionIdSetConverter))]
+    public IReadOnlySet<SectionId> KnownSections { get; init; }
+
+    /// B156 / F-09 (ported 2026-08-05): the set of indicator IDs that have at least one reachable
+    /// EvidenceId mapping in the evidence model. Support rules referencing unmappable indicators
+    /// are excluded from the coverage denominator so that unmapped rules don't create permanent
+    /// dead weight that hard-caps coverage below the minimum thresholds and makes entire diagnoses
+    /// unreachable. When null (legacy JSON), all indicators are treated as mappable (original
+    /// behavior). Twin of `MatrixSpec.mappableIndicators` (MatrixDeterminativeEngine.swift:286);
+    /// this side lacked both the field and the coverage filter, so diagnoses reachable on macOS
+    /// could be unreachable on Windows and Linux from identical evidence.
+    [JsonPropertyName("mappableIndicators")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(SortedIndicatorIdSetConverter))]
+    public IReadOnlySet<IndicatorId>? MappableIndicators { get; init; }
 
     public static IReadOnlySet<SectionId> DefaultKnownSections { get; } = new HashSet<SectionId>
     {
@@ -377,11 +455,13 @@ public sealed record MatrixSpec
     [JsonConstructor]
     public MatrixSpec(IReadOnlyList<DiagnosisSpec> diagnoses,
                       ThresholdProfile thresholds,
-                      IReadOnlySet<SectionId>? knownSections = null)
+                      IReadOnlySet<SectionId>? knownSections = null,
+                      IReadOnlySet<IndicatorId>? mappableIndicators = null)
     {
         Diagnoses = diagnoses;
         Thresholds = thresholds;
         KnownSections = knownSections ?? DefaultKnownSections;
+        MappableIndicators = mappableIndicators;
     }
 
     /// Structural invariants a well-formed spec must satisfy. Thrown at engine construction so a
@@ -732,6 +812,9 @@ public sealed class MatrixDeterminativeEngine
     /// The exclusionary strength at or above which an exclusionary/`Excludes` observation is
     /// treated as "firing" (hard exclusion / strong contradiction).
     private const double ExclusionFiringThreshold = 0.5;
+    /// Minimum quality an observation must have to trigger hard exclusion (Swift parity: B028).
+    /// A low-quality observation cannot fire a hard exclusion.
+    private const double ExclusionQualityFloor = 0.5;
     /// Raw-support floor above which a gated / below-tier threat diagnosis is considered an
     /// "honesty overhang" that must forbid a `Clean` result and force `Inconclusive`. Compared
     /// against `RawScore.ObservedSupport` (quality-independent) at BOTH the admission gate and the
@@ -787,15 +870,28 @@ public sealed class MatrixDeterminativeEngine
             raws[d.Id] = ComputeRawScore(d, indicatorById, sectionById);
         }
 
-        // Pass 2: margins (need cross-diagnosis strengths). Competitors exclude self and any
-        // explicitly-allowed co-occurrence.
+        // B030 (B159): pre-compute emittable diagnosis IDs before Pass 2.
+        // A gated or hard-excluded diagnosis must not suppress its competitors —
+        // it cannot itself win, so including it inflates CompetitorBestStrength
+        // and unfairly caps the margin of legitimate diagnoses.
+        var emittableIds = new HashSet<DiagnosisId>(
+            Spec.Diagnoses
+                .Where(d => raws.TryGetValue(d.Id, out var r) && r.Gate is null && r.HardExclusion is null)
+                .Select(d => d.Id)
+        );
+
+        // Pass 2: margins (need cross-diagnosis strengths). Competitors exclude self, CleanId,
+        // any explicitly-allowed co-occurrence, and any non-emittable (gated/hard-excluded) diagnosis.
         double CompetitorBestStrength(DiagnosisSpec d)
         {
             var allowed = new HashSet<DiagnosisId>(d.AllowedCooccurrenceWith);
             var best = 0.0;
             foreach (var other in Spec.Diagnoses)
             {
-                if (other.Id == d.Id || allowed.Contains(other.Id)) { continue; }
+                // B031: skip CleanId — it is a sentinel, not a threat.
+                // B030: skip non-emittable diagnoses — gated/excluded entries cannot win,
+                //       so they must not suppress legitimate competitors' margins.
+                if (other.Id == d.Id || other.Id == CleanId || allowed.Contains(other.Id) || !emittableIds.Contains(other.Id)) { continue; }
                 best = Math.Max(best, raws.TryGetValue(other.Id, out var r) ? r.Strength : 0);
             }
             return best;
@@ -910,12 +1006,40 @@ public sealed class MatrixDeterminativeEngine
                                      IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
                                      IReadOnlyDictionary<SectionId, SectionResult> sectionById)
     {
-        var r = new RawScore();
-
         var supportRules = d.Rules.Where(x => x.Polarity == IndicatorPolarity.Supports).ToList();
         var excludeRules = d.Rules.Where(x => x.Polarity == IndicatorPolarity.Excludes).ToList();
 
-        var totalSupportWeight = supportRules.Sum(x => x.Weight);
+        var (r, observedSupportWeight, alignedSupport, contradictionMass) =
+            CalculateCoverageAndFit(d, supportRules, indicatorById, sectionById);
+
+        contradictionMass += CalculateExclusionContradiction(excludeRules, indicatorById, sectionById);
+
+        ApplyThresholds(r, observedSupportWeight, alignedSupport, contradictionMass);
+
+        CheckHardExclusion(d, r, indicatorById, sectionById);
+
+        CheckRequiredSectionGates(d, r, sectionById);
+
+        return r;
+    }
+
+    private (RawScore r, double observedSupportWeight, double alignedSupport, double contradictionMass)
+        CalculateCoverageAndFit(DiagnosisSpec d,
+                                List<DiagnosisIndicatorRule> supportRules,
+                                IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
+                                IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
+        var r = new RawScore();
+
+        // B156: normalise coverage over *mappable* indicator weight only. Rules referencing
+        // unmappable indicators (those with no EvidenceId mapping) are permanent dead weight in
+        // the denominator, hard-capping coverage below the minimum thresholds and making entire
+        // diagnoses unreachable. When `MappableIndicators` is null (legacy spec), all rules count.
+        // Twin of MatrixDeterminativeEngine.swift:789-800; ported 2026-08-05 (F-09) — before this,
+        // the two engines computed different coverage from identical evidence.
+        var totalSupportWeight = Spec.MappableIndicators is { } mappable
+            ? supportRules.Where(x => mappable.Contains(x.IndicatorId)).Sum(x => x.Weight)
+            : supportRules.Sum(x => x.Weight);
         var observedSupportWeight = 0.0;
         var alignedSupport = 0.0;          // Σ weight*effective for non-contradictory support
         var contradictionMass = 0.0;
@@ -924,22 +1048,32 @@ public sealed class MatrixDeterminativeEngine
         foreach (var rule in supportRules)
         {
             if (!indicatorById.TryGetValue(rule.IndicatorId, out var obs) || obs.ObservedStrength is not { } s) { continue; }
-            observedSupportWeight += rule.Weight;
             var alignment = rule.ExpectedStrength > 0 ? Math.Min(1.0, s / rule.ExpectedStrength) : s;
             var aligned = Math.Pow(alignment, rule.DecayExponent);
+
+            // B026: non-usable sections contribute to observedSupport only (overhang measure),
+            // not to scoring metrics. Twin of MatrixDeterminativeEngine.swift:840-843.
+            if (sectionById.TryGetValue(obs.Section, out var producing) && !producing.Status.IsUsable())
+            {
+                observedSupportWeight += rule.Weight;
+                r.ObservedSupport += rule.Weight * aligned;
+                continue;
+            }
+
+            observedSupportWeight += rule.Weight;
             var effective = aligned * Clamp01(obs.Quality);
             var contribution = rule.Weight * effective;
             if (obs.Contradictory)
             {
-                // A supporting indicator observed to contradict → attenuates fit, adds contradiction.
-                contradictionMass += contribution;
+                // A contradictory indicator still contributes to support at half weight
+                // (bounded attenuation), and adds contradiction mass at half weight.
+                // It can attenuate, never silently zero. Twin of MatrixDeterminativeEngine.swift:850-858.
+                alignedSupport += contribution * 0.5;
+                contradictionMass += contribution * 0.5;
             }
             else
             {
                 alignedSupport += contribution;
-                // Quality-independent: the observation FIRED; thin-section attenuation must not
-                // erase it from the overhang-admission measure (C062/C065).
-                r.ObservedSupport += rule.Weight * aligned;
                 if (effective > 0)
                 {
                     groups.Add(rule.IndependenceGroup);
@@ -948,38 +1082,71 @@ public sealed class MatrixDeterminativeEngine
                     if (rule.EvidenceClass == EvidenceClass.Major) { r.MajorCount += 1; }
                 }
             }
+            // Quality-independent: the observation FIRED; thin-section attenuation must not
+            // erase it from the overhang-admission measure (C062/C065). Twin of swift:860-862.
+            r.ObservedSupport += rule.Weight * aligned;
         }
+
+        r.Coverage = totalSupportWeight > 0 ? Clamp01(observedSupportWeight / totalSupportWeight) : 0;
+        r.Fit = observedSupportWeight > 0 ? Clamp01(alignedSupport / observedSupportWeight) : 0;
+        r.IndependentGroups = groups.Count;
+
+        return (r, observedSupportWeight, alignedSupport, contradictionMass);
+    }
+
+    private double CalculateExclusionContradiction(List<DiagnosisIndicatorRule> excludeRules,
+                                                    IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
+                                                    IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
+        var contradictionMass = 0.0;
 
         // Exclude-polarity rules: firing observations add strong contradiction.
         foreach (var rule in excludeRules)
         {
             if (!indicatorById.TryGetValue(rule.IndicatorId, out var obs) || obs.ObservedStrength is not { } s
                 || obs.Contradictory) { continue; }
+            if (!sectionById.TryGetValue(obs.Section, out var producingExcl) || !producingExcl.Status.IsUsable()) { continue; }
             var alignment = rule.ExpectedStrength > 0 ? Math.Min(1.0, s / rule.ExpectedStrength) : s;
             var effective = Math.Pow(alignment, rule.DecayExponent) * Clamp01(obs.Quality);
             contradictionMass += rule.Weight * effective;
         }
 
+        return contradictionMass;
+    }
+
+    private void ApplyThresholds(RawScore r, double observedSupportWeight, double alignedSupport, double contradictionMass)
+    {
         r.RawSupport = alignedSupport;
-        r.Coverage = totalSupportWeight > 0 ? Clamp01(observedSupportWeight / totalSupportWeight) : 0;
-        r.Fit = observedSupportWeight > 0 ? Clamp01(alignedSupport / observedSupportWeight) : 0;
         // Contradiction normalised against the support it competes with (bounded, never > 1).
         r.Contradiction = Clamp01(contradictionMass / (contradictionMass + observedSupportWeight + 1e-9));
         r.Strength = r.Fit * r.Coverage;
-        r.IndependentGroups = groups.Count;
+    }
 
+    private void CheckHardExclusion(DiagnosisSpec d, RawScore r,
+                                     IReadOnlyDictionary<IndicatorId, ObservedIndicator> indicatorById,
+                                     IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
         // Hard exclusion: a listed exclusionary indicator observed as firing and non-contradictory.
         foreach (var exId in d.ExclusionaryIndicators)
         {
             if (indicatorById.TryGetValue(exId, out var obs) && obs.ObservedStrength is { } s
-                && !obs.Contradictory && s >= ExclusionFiringThreshold)
+                && !obs.Contradictory && s >= ExclusionFiringThreshold
+                && Clamp01(obs.Quality) >= ExclusionQualityFloor
+                && sectionById.TryGetValue(obs.Section, out var exSection) && exSection.Status.IsUsable())
             {
                 r.HardExclusion = exId;
                 break;
             }
         }
+    }
 
+    private void CheckRequiredSectionGates(DiagnosisSpec d, RawScore r,
+                                            IReadOnlyDictionary<SectionId, SectionResult> sectionById)
+    {
         // Required-section hard gate (fail-closed).
+        // B166: when hardGateOnMissingRequiredSections is false, continue checking remaining
+        // required sections rather than stopping — the invalidated/unusable checks below are
+        // governed by independent flags. Twin of MatrixDeterminativeEngine.swift:938-958.
         foreach (var reqSection in d.RequiredSections)
         {
             if (!sectionById.TryGetValue(reqSection, out var section))
@@ -988,8 +1155,9 @@ public sealed class MatrixDeterminativeEngine
                 {
                     r.Gate = new GateInfo(SuppressedDiagnosis.SuppressionReason.MissingRequiredSection,
                                           $"Required section '{reqSection.Value}' did not run.");
+                    break;
                 }
-                break;
+                continue;
             }
             if (section.Status == EvidenceUsability.Invalidated && Spec.Thresholds.FailClosedOnInvalidatedRequiredSections)
             {
@@ -999,13 +1167,15 @@ public sealed class MatrixDeterminativeEngine
             }
             if (!section.Status.IsUsable())
             {
-                r.Gate = new GateInfo(SuppressedDiagnosis.SuppressionReason.MissingRequiredSection,
-                                      $"Required section '{reqSection.Value}' produced no usable output ({section.Status.RawValue()}).");
-                break;
+                if (Spec.Thresholds.HardGateOnMissingRequiredSections)
+                {
+                    r.Gate = new GateInfo(SuppressedDiagnosis.SuppressionReason.MissingRequiredSection,
+                                          $"Required section '{reqSection.Value}' produced no usable output ({section.Status.RawValue()}).");
+                    break;
+                }
+                continue;
             }
         }
-
-        return r;
     }
 
     // MARK: Tiering
@@ -1102,9 +1272,23 @@ public sealed class MatrixDeterminativeEngine
         // (`RawSupport` = un-attenuated observed support), never `RawStrength` (fit·coverage) —
         // the hard gate that suppressed the threat is precisely what crushes coverage, so a
         // strength-based floor here would let `Clean` ride over an unverified threat signal.
+        // B163 parity (C006): hardExcluded entries stay in the overhang — a degraded exclusion
+        // must not license a clean result. Mirrors the Swift overhang over the full `suppressed`;
+        // only the display-side nearFloor breadcrumb below keeps them out.
         var overhang = suppressed
-            .Where(s => s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded && s.RawSupport >= OverhangFloor)
+            .Where(s => s.RawSupport >= OverhangFloor)
             .ToList();
+        // B298: diagnostic breadcrumb for signals just below the floor (0.20–0.30 range).
+        // These are suppressed but may indicate legitimate below-tier signals worth reviewing.
+        var nearFloor = suppressed
+            .Where(s => s.Reason != SuppressedDiagnosis.SuppressionReason.HardExcluded
+                        && s.RawSupport >= 0.20 && s.RawSupport < OverhangFloor)
+            .ToList();
+        if (nearFloor.Count > 0)
+        {
+            SyxxTracer.Log("synthesis.overhang.nearfloor",
+                $"{nearFloor.Count} signal(s) in 0.20–0.30 range suppressed by OverhangFloor: {string.Join(", ", nearFloor.Select(s => $"{s.Id}={s.RawSupport:F2}"))}");
+        }
         if (emitted.TryGetValue(CleanId, out var clean) && overhang.Count == 0)
         {
             var cleanEmitted = clean.Score;
@@ -1156,9 +1340,11 @@ public sealed class MatrixDeterminativeEngine
     {
         var basis = raw.HasDecisive ? "a decisive observation"
             : (raw.MajorCount >= 2 ? $"{raw.MajorCount} major observations" : "supporting observations");
+        // B273: use PctSigned for margin — a negative margin (diagnosis scored worse than its
+        // best competitor) is diagnostic information that Math.Abs would hide.
         return $"{Capitalized(tier.RawValue())} support for {d.DisplayName}: {basis} across "
             + $"{raw.IndependentGroups} independent evidence group{(raw.IndependentGroups == 1 ? "" : "s")} "
-            + $"(fit {Pct(raw.Fit)}, coverage {Pct(raw.Coverage)}, margin {Pct(margin)}, "
+            + $"(fit {Pct(raw.Fit)}, coverage {Pct(raw.Coverage)}, margin {PctSigned(margin)}, "
             + $"contradiction {Pct(raw.Contradiction)}).";
     }
 
@@ -1179,8 +1365,20 @@ public sealed class MatrixDeterminativeEngine
     /// Twin of Swift's private `pct`: `Int((clamp01(abs(x)) * 100).rounded())` — Swift's bare
     /// `.rounded()` is schoolbook AWAY-FROM-ZERO, deliberately NOT `Round6`'s to-even. Do not
     /// unify them (plan Step 3.1); explanation strings would fork across platforms.
+    /// Used for coverage, fit, and contradiction — always non-negative quantities.
     private static string Pct(double x)
         => $"{(int)Math.Round(Clamp01(Math.Abs(x)) * 100, MidpointRounding.AwayFromZero)}%";
+
+    /// B273: signed variant for margin display — a negative margin means the diagnosis scored
+    /// WORSE than its best competitor. Using Math.Abs on margin hides this signal (a -0.15
+    /// margin reads as 15% instead of -15%), suppressing evidence that a diagnosis is losing.
+    /// The sign carries diagnostic information that must survive to the explanation string.
+    private static string PctSigned(double x)
+    {
+        var clamped = Math.Max(-1.0, Math.Min(1.0, x));
+        var pct = (int)Math.Round(clamped * 100, MidpointRounding.AwayFromZero);
+        return $"{pct}%";
+    }
 
     /// Twin of Swift's `clamp01` = `min(1.0, max(0.0, x))`. Written branch-wise because C#'s
     /// `Math.Max` PROPAGATES NaN while Swift's `max` returns the other operand for NaN; this form

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "portal-encrypted-transport-working",
+  "pinnedUnixSeconds": 1752268477,
+  "sectionInputs": {
+    "encryptedTransport": {
+      "status": "working",
+      "endpoint": "https://cloudflare-dns.com/dns-query",
+      "detail": "DoH resolution completed over TLS"
+    }
+  }
+}

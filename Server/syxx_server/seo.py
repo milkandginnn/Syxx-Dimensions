@@ -12,14 +12,14 @@ E-10: Pricing in structured data is read from environment variables
 (SYXX_SEO_PRICE_MONTHLY, SYXX_SEO_PRICE_YEARLY) to prevent drift between
 the SEO page and the actual Stripe prices. Defaults match the Stripe catalog.
 """
+
 from __future__ import annotations
 
 import json
-import os
 import re
-from typing import Dict, Optional
 
 from . import __version__
+from .config import SEO_PRICE_MONTHLY, SEO_PRICE_YEARLY  # A025: single source of truth
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -27,14 +27,10 @@ from . import __version__
 
 CANONICAL_ORIGIN = "https://syxx.app"
 
-# E-10: SEO prices are configurable to prevent drift from Stripe.
-# The operator should update these when Stripe prices change.
-_SEO_PRICE_MONTHLY = os.environ.get("SYXX_SEO_PRICE_MONTHLY", "3.95")
-_SEO_PRICE_YEARLY = os.environ.get("SYXX_SEO_PRICE_YEARLY", "19.95")
-
 # ---------------------------------------------------------------------------
 # JSON-LD — SoftwareApplication (landing page only)
 # ---------------------------------------------------------------------------
+
 
 def _build_software_application_ld_json():
     """Build JSON-LD with current pricing. Called at module load; prices are
@@ -57,13 +53,13 @@ def _build_software_application_ld_json():
             "offers": [
                 {
                     "@type": "Offer",
-                    "price": _SEO_PRICE_MONTHLY,
+                    "price": SEO_PRICE_MONTHLY,
                     "priceCurrency": "USD",
                     "description": "Monthly subscription",
                 },
                 {
                     "@type": "Offer",
-                    "price": _SEO_PRICE_YEARLY,
+                    "price": SEO_PRICE_YEARLY,
                     "priceCurrency": "USD",
                     "description": "Yearly subscription",
                 },
@@ -91,7 +87,7 @@ _SOFTWARE_APPLICATION_LD_JSON = _build_software_application_ld_json()
 #   twitter_card, twitter_site,
 #   json_ld  (raw JSON string for a <script type="application/ld+json"> block)
 
-PAGE_META: Dict[str, dict] = {
+PAGE_META: dict[str, dict] = {
     # ---- landing page ----
     "/": {
         "title": "Syxx Dimensions — DNS Investigation Suite",
@@ -117,7 +113,6 @@ PAGE_META: Dict[str, dict] = {
         "twitter_site": "@syxxdimensions",
         "json_ld": _SOFTWARE_APPLICATION_LD_JSON,
     },
-
     # ---- DNS leak test (main) ----
     "/leak-test": {
         "title": "Syxx DNS Leak Test — Free DNS Resolver Check",
@@ -129,10 +124,7 @@ PAGE_META: Dict[str, dict] = {
             "shows the resolver IPs that reached our authoritative server — "
             "compare them against your VPN or encrypted DNS provider."
         ),
-        "keywords": (
-            "DNS leak test, DNS privacy, VPN leak test, DNS leak check, "
-            "free DNS test, ISP DNS monitoring"
-        ),
+        "keywords": ("DNS leak test, DNS privacy, VPN leak test, DNS leak check, free DNS test, ISP DNS monitoring"),
         "canonical": "/leak-test",
         "og_title": "Syxx DNS Leak Test — Free DNS Resolver Check",
         "og_description": (
@@ -143,7 +135,6 @@ PAGE_META: Dict[str, dict] = {
         "twitter_card": "summary",
         "twitter_site": "@syxxdimensions",
     },
-
     # ---- DNS leak test (alt) ----
     "/leaktest": {
         "title": "Syxx DNS Leak Test — Free DNS Resolver Check",
@@ -152,20 +143,14 @@ PAGE_META: Dict[str, dict] = {
             "shows the resolver IPs that reached our authoritative server — "
             "compare them against your VPN or encrypted DNS provider."
         ),
-        "keywords": (
-            "DNS leak test, DNS privacy, VPN leak, DNS leak check, "
-            "free DNS test, resolver leak"
-        ),
+        "keywords": ("DNS leak test, DNS privacy, VPN leak, DNS leak check, free DNS test, resolver leak"),
         "canonical": "/leaktest",
         "og_title": "Syxx DNS Leak Test — Free DNS Resolver Check",
-        "og_description": (
-            "See which DNS resolvers handled your lookups. Free, no account required."
-        ),
+        "og_description": ("See which DNS resolvers handled your lookups. Free, no account required."),
         "og_type": "website",
         "twitter_card": "summary",
         "twitter_site": "@syxxdimensions",
     },
-
     # ---- Legal pages (DRAFT — held out of index until owner approval, A199) ----
     # Remove "robots" key and re-add to sitemap.xml + robots.txt Allow on approval.
     "/privacy": {
@@ -191,7 +176,6 @@ PAGE_META: Dict[str, dict] = {
         "og_type": "article",
         "twitter_card": "summary",
     },
-
     # ---- API docs ----
     "/docs/api.html": {
         "title": "Syxx API Documentation — DNS Investigation Endpoints",
@@ -200,10 +184,7 @@ PAGE_META: Dict[str, dict] = {
             "suite. Endpoints for DNS investigation, authoritative lookup, "
             "trace, baseline comparison, exposure analysis and passive DNS."
         ),
-        "keywords": (
-            "DNS API, DNS investigation API, REST API, DNS lookup API, "
-            "passive DNS API, network security API"
-        ),
+        "keywords": ("DNS API, DNS investigation API, REST API, DNS lookup API, passive DNS API, network security API"),
         "canonical": "/docs/api",
         "og_title": "Syxx API Documentation",
         "og_description": (
@@ -213,7 +194,6 @@ PAGE_META: Dict[str, dict] = {
         "og_type": "article",
         "twitter_card": "summary",
     },
-
     # ---- Help / FAQ ----
     "/docs/help.html": {
         "title": "Syxx Dimensions — Help & Documentation",
@@ -228,10 +208,7 @@ PAGE_META: Dict[str, dict] = {
         ),
         "canonical": "/docs/help",
         "og_title": "Syxx Dimensions — Help & Documentation",
-        "og_description": (
-            "Feature documentation and guides for the Syxx Dimensions DNS "
-            "investigation suite."
-        ),
+        "og_description": ("Feature documentation and guides for the Syxx Dimensions DNS investigation suite."),
         "og_type": "article",
         "twitter_card": "summary",
     },
@@ -240,6 +217,7 @@ PAGE_META: Dict[str, dict] = {
 # ---------------------------------------------------------------------------
 # Helpers — tag generation
 # ---------------------------------------------------------------------------
+
 
 def _meta_tag(name: str, content: str, *, attr: str = "name") -> str:
     """Build a <meta> element."""
@@ -253,8 +231,19 @@ def _link_canonical(href: str) -> str:
 
 
 def _esc(s: str) -> str:
-    """Escape attribute value for safe HTML embedding."""
-    return s.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+    """Escape attribute value for safe HTML embedding.
+
+    SM-046: also escape single quotes — attribute values may be delimited by
+    single quotes in some HTML parsers, and an unescaped ' in an attribute
+    value can break out of the attribute context.
+    """
+    return (
+        s.replace("&", "&amp;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
 
 def _build_tags(meta: dict) -> str:
@@ -309,12 +298,18 @@ def _build_tags(meta: dict) -> str:
 # ---------------------------------------------------------------------------
 
 # Regex to find an existing tag by (name|property) + content.
+# SM-047 + E264: match <meta> tags regardless of attribute order or quoting style.
+# The regex uses lookaheads to check for (name|property) and content attributes
+# in any order. E264: also handle single-quoted attributes and attributes with
+# extra whitespace, which the previous regex missed.
 _TAG_RE = re.compile(
-    r'<meta\s+(?:name|property)\s*=\s*"[^"]*"\s+content\s*=\s*"[^"]*"\s*/?>',
+    r'<meta\s+(?=[^>]*(?:name|property)\s*=\s*["\'][^"\']*["\'])'
+    r'(?=[^>]*content\s*=\s*["\'][^"\']*["\'])[^>]*/?\s*>',
     re.IGNORECASE,
 )
 _CANONICAL_RE = re.compile(
-    r'<link\s+rel\s*=\s*"canonical"\s+href\s*=\s*"[^"]*"\s*/?>',
+    r'<link\s+[^>]*rel\s*=\s*["\']canonical["\'][^>]*href\s*=\s*["\'][^"\']*["\'][^>]*/?>|'
+    r'<link\s+[^>]*href\s*=\s*["\'][^"\']*["\'][^>]*rel\s*=\s*["\']canonical["\'][^>]*/?>',
     re.IGNORECASE,
 )
 _JSONLD_RE = re.compile(
@@ -322,10 +317,14 @@ _JSONLD_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+
 # Individual matchers for dedup.
-def _tag_identity(tag: str) -> Optional[str]:
-    """Return a dedup key for a <meta> tag, e.g. 'description' or 'og:title'."""
-    m = re.search(r'(?:name|property)\s*=\s*"([^"]*)"', tag, re.IGNORECASE)
+def _tag_identity(tag: str) -> str | None:
+    """Return a dedup key for a <meta> tag, e.g. 'description' or 'og:title'.
+
+    E264: Handle both single and double quoted attributes.
+    """
+    m = re.search(r'(?:name|property)\s*=\s*["\']([^"\']*)["\']', tag, re.IGNORECASE)
     return m.group(1).lower() if m else None
 
 
@@ -357,6 +356,7 @@ def inject_meta_tags(html_content: str, page_path: str) -> str:
 
     # --- remove existing tags we are about to replace ---
     def _drop_meta(m: re.Match) -> str:
+        """Remove existing meta tags that are about to be re-injected."""
         tag = m.group(0)
         ident = _tag_identity(tag)
         if ident and ident in injected_identities:
@@ -385,7 +385,7 @@ def inject_meta_tags(html_content: str, page_path: str) -> str:
     return html_content[:head_close] + new_block + "\n" + html_content[head_close:]
 
 
-def page_title(page_path: str) -> Optional[str]:
+def page_title(page_path: str) -> str | None:
     """Return the configured <title> for a page, or None."""
     meta = PAGE_META.get(page_path)
     return meta["title"] if meta and "title" in meta else None

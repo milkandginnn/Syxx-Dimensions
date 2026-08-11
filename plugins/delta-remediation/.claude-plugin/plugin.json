@@ -1,0 +1,15 @@
+{
+  "name": "delta-remediation",
+  "version": "1.0.0",
+  "description": "Delta Remediation Command Suite — seven commands forming a complete defect lifecycle from discovery through remediation to verification",
+  "author": "Syxx",
+  "commands": [
+    "delta-analysis",
+    "delta-evaluation",
+    "delta-decide",
+    "delta-plan",
+    "delta-implement",
+    "delta-clean",
+    "delta-review"
+  ]
+}

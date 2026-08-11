@@ -1,0 +1,27 @@
+# PROVENANCE: DERIVED-FROM-DOCUMENTATION
+# NOT captured from a real host. Authored on macOS, which has no systemd-resolved.
+#
+# Shape source: systemd printing code, print_configuration()
+#   https://github.com/systemd/systemd/blob/main/src/resolve/resolvectl.c
+# Global-section shape cross-checked against the verbatim paste in
+#   https://github.com/systemd/systemd/issues/21123
+#
+# Represents: a machine configured globally rather than per-link — i.e. DNS= set in
+# /etc/systemd/resolved.conf, or `resolvectl dns "" 1.1.1.1 1.0.0.1`. The links carry
+# no DNS of their own.
+#
+# WHAT THIS PINS — the ★ defect. The replaced parser began every line with
+#   if (currentInterface == null) continue;
+# so nothing before the first "Link" header was ever read. The Global block is exactly
+# where resolved.conf DNS lives, so on this machine the parser returned ZERO resolvers,
+# fell through to /etc/resolv.conf, and adopted the 127.0.0.53 stub as the system
+# resolver. Every comparison, leak and attribution probe then aimed at the stub.
+Global
+         Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+  resolv.conf mode: stub
+Current DNS Server: 1.1.1.1
+       DNS Servers: 1.1.1.1 1.0.0.1
+
+Link 2 (enp1s0)
+Current Scopes: none
+     Protocols: -DefaultRoute +LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported

@@ -41,7 +41,7 @@ public class ProphetPresentationTests
         Assert.Equal(0, result.ActiveCount);
         // Failure case: if the filter dropped "[unreachable]" instead of keeping it, an
         // implementation that counted all rows would report ActiveCount=2 and this asserts red.
-        Assert.Equal(0, result.UniqueIPs.Count);
+        Assert.Empty(result.UniqueIPs);
     }
 
     [Fact]

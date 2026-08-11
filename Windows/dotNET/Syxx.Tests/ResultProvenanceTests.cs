@@ -94,7 +94,7 @@ public class ResultProvenanceTests : IDisposable
 
         Synthesizer.ReportResultProvenance(Make(statuses, det));
 
-        var evt = Assert.Single(_sink.Events.Where(e => e.ErrorClass == "result.unattributed_degradation"));
+        var evt = Assert.Single(_sink.Events, e => e.ErrorClass == "result.unattributed_degradation");
         Assert.Equal("cage", evt.Tags!["syxx.section"]);
         Assert.Equal("false", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
     }
@@ -119,7 +119,7 @@ public class ResultProvenanceTests : IDisposable
 
         Synthesizer.ReportResultProvenance(Make(statuses, det));
 
-        Assert.Empty(_sink.Events.Where(e => e.ErrorClass == "result.unattributed_degradation"));
+        Assert.DoesNotContain(_sink.Events, e => e.ErrorClass == "result.unattributed_degradation");
         Assert.Equal("true", _sink.Crumbs.Single().Data["syxx.attribution_complete"]);
     }
 

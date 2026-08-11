@@ -9,6 +9,8 @@ dependencies = [
     "typer>=0.26.8",
     "rich>=15.0.0",
     "pyyaml>=6.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [project.optional-dependencies]

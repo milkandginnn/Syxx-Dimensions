@@ -15,6 +15,10 @@ Implement WCAG 2.2 compliant desktop applications with VoiceOver (macOS), Narrat
 - Adding accessibility labels and hints to desktop views
 - Testing with assistive technology (VoiceOver, Narrator, Orca)
 
+## Reference
+
+See `references/details.md` for detailed platform-specific reference material.
+
 ## Accessibility API Mapping
 
 ### Labels & Hints

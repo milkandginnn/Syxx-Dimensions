@@ -352,6 +352,16 @@
       "license": "MIT"
     },
     {
+      "name": "delta-remediation",
+      "source": "./plugins/delta-remediation",
+      "version": "1.0.0",
+      "description": "Delta Remediation Command Suite \u2014 seven commands forming a complete defect lifecycle from discovery through remediation to verification",
+      "author": {
+        "name": "Syxx",
+        "email": ""
+      }
+    },
+    {
       "name": "dependency-management",
       "source": "./plugins/dependency-management",
       "version": "1.2.1",

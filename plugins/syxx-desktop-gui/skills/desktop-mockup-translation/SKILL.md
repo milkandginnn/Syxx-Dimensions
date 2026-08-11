@@ -15,6 +15,10 @@ Translate pixel-perfect design mockups to production code across SwiftUI (macOS)
 - Mapping design tokens to platform-native equivalents
 - Debugging visual discrepancies between platforms
 
+## Reference
+
+See `references/details.md` for detailed platform-specific reference material.
+
 ## Translation Process
 
 ### Step 1: Decompose the Mockup

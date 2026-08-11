@@ -1,0 +1,9 @@
+{
+  "name": "agentic-marketplace",
+  "version": "1.7.1",
+  "description": "Multi-harness agentic plugin marketplace — 91 plugins, 180 skills, 164 agents, 145 commands across architecture, infrastructure, languages, security, testing, ML, and full-stack development.",
+  "contextFileName": "QWEN.md",
+  "skills": "skills",
+  "agents": "agents",
+  "commands": "commands"
+}

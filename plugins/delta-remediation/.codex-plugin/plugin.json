@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "description": "Delta Remediation Command Suite \u2014 seven commands forming a complete defect lifecycle from discovery through remediation to verification",
   "skills": "./skills/",
-  "author": {
-    "name": "Syxx"
-  },
-  "license": "MIT",
+  "author": "Syxx",
   "interface": {
     "displayName": "Delta Remediation",
     "shortDescription": "Delta Remediation Command Suite \u2014 seven commands forming a complete defect lifecycle from discovery through\u2026",

@@ -15,6 +15,10 @@ Build responsive desktop layouts across SwiftUI (macOS), WinUI 3 (Windows), Aval
 - Establishing margin ownership and spacing conventions
 - Porting a view from one platform to another
 
+## Reference
+
+See `references/details.md` for detailed platform-specific reference material.
+
 ## Spacing Token Grid
 
 All desktop platforms use the same spacing tokens. Round off-grid measurements to the nearest token:

@@ -57,7 +57,10 @@ final class WarpEngineTests: XCTestCase {
         return written > 0 ? Data(dst.prefix(written)) : nil
     }
 
-    private struct CaseData {
+    /// `@unchecked Sendable`: every stored property is an immutable `let`, and `expected` holds only
+    /// JSON-derived immutable values. The corpus closures below are `@Sendable`, so under Swift 6
+    /// strict concurrency the struct must declare conformance or the test target will not compile.
+    private struct CaseData: @unchecked Sendable {
         let envelope: Data
         let origin: String
         let nowMs: UInt64

@@ -25,6 +25,13 @@ import SyxxKit
 /// as it found it. A hard crash mid-test (not a normal assertion failure — `tearDown` still runs on
 /// those) could in principle skip the restore; this is a known, narrow residual risk of testing
 /// Keychain-backed code this way.
+///
+/// Both the backup and the restore are gated on `WitnessKeychainTestSupport
+/// .isDataProtectionKeychainWritable`, a live once-per-run `SecItemAdd` probe. An unsigned xctest
+/// bundle carries no keychain-access-groups entitlement and cannot touch the data-protection
+/// keychain the product uses, so every test here that must write a real key skips with that reason
+/// rather than failing on its first statement. The probe is runtime, not a build flag: sign the
+/// bundle and these tests execute for real with no source change.
 final class AppModelWitnessTests: XCTestCase {
 
     // Not MainActor-isolated on purpose: WitnessKeyManager is a plain, non-isolated enum (its
@@ -34,9 +41,17 @@ final class AppModelWitnessTests: XCTestCase {
     // marked @MainActor, since AppModel itself is a @MainActor type.
     private var backedUpKey: String?
 
+    /// Whether `setUpWithError` was actually able to take a backup. Only then may `tearDown` write.
+    private var backupWasTaken = false
+
     override func setUpWithError() throws {
         try super.setUpWithError()
+        // No probe, no backup — and therefore no restore. `loadKey()` swallows its OSStatus and
+        // returns nil on a host that cannot read the data-protection keychain, so an unguarded
+        // backup here reads as "there was no key" and would license `tearDown` to DELETE one.
+        guard WitnessKeychainTestSupport.isDataProtectionKeychainWritable else { return }
         backedUpKey = WitnessKeyManager.loadKey()
+        backupWasTaken = true
     }
 
     override func tearDownWithError() throws {
@@ -46,8 +61,14 @@ final class AppModelWitnessTests: XCTestCase {
         // Routing the restore through `saveKey` would throw on exactly those machines and leave the
         // developer's stored key destroyed by a test run. Test scaffolding must leave the machine as
         // it found it, valid or not.
-        WitnessKeychainTestSupport.restore(backedUpKey)
+        //
+        // Guarded on the probe because `tearDown` runs even when `setUpWithError` threw `XCTSkip`.
+        // Restoring a backup that was never taken is how a nil "backup" turns into a real deletion.
+        if backupWasTaken {
+            WitnessKeychainTestSupport.restore(backedUpKey)
+        }
         backedUpKey = nil
+        backupWasTaken = false
         try super.tearDownWithError()
     }
 
@@ -82,6 +103,7 @@ final class AppModelWitnessTests: XCTestCase {
 
     @MainActor
     func testEmptyDomainYieldsFailedNotRunningOrIdle() throws {
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
 
@@ -121,6 +143,7 @@ final class AppModelWitnessTests: XCTestCase {
 
     @MainActor
     func testFreeDuringInFlightTestifyDoesNotResurrectState() async throws {
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
         model.domain = "example.com"
@@ -165,6 +188,9 @@ final class AppModelWitnessTests: XCTestCase {
     /// changes relative timing (e.g. a slower first domain), just not this exact one for certain.
     @MainActor
     func testRapidReTestifyDoesNotCorruptState() async throws {
+        // Keychain reachability only. The live-DNS requirement below is a SEPARATE condition and is
+        // still asserted, not skipped — see WitnessKeychainTestSupport's honesty boundary note.
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
 
@@ -194,6 +220,9 @@ final class AppModelWitnessTests: XCTestCase {
 
     @MainActor
     func testFreeAfterSuccessfulVerifyClearsSnapshotSoVerifyReportsNothing() async throws {
+        // Keychain reachability only. The F039 "fail, don't skip, if we never reach .signed" rule
+        // below is a SEPARATE condition (live DNS egress) and is deliberately left as a failure.
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
         model.domain = "example.com"
@@ -236,6 +265,9 @@ final class AppModelWitnessTests: XCTestCase {
     /// without paying the cost of also running Prophet/Portal/Mirror/Glutton in the same test.
     @MainActor
     func testRunWitnessSuccessPathSetsRealSignedState() async throws {
+        // Keychain reachability only. The F039 "fail, don't skip, if we never reach .signed" rule
+        // below is a SEPARATE condition (live DNS egress) and is deliberately left as a failure.
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
         model.domain = "example.com"
@@ -257,6 +289,7 @@ final class AppModelWitnessTests: XCTestCase {
 
     @MainActor
     func testRunWitnessFailurePathSetsRealFailedState() async throws {
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
         model.domain = ""   // empty domain -> synchronous guard failure inside runWitness()
@@ -272,6 +305,9 @@ final class AppModelWitnessTests: XCTestCase {
     /// No host network. Failure case: inject `.noResult` instead of `.fixed` → wrong classification.
     @MainActor
     func testRunWitnessThreadsRealErrorNotGenericString() async throws {
+        // Planting the legacy bad key is itself a data-protection keychain write, so this test needs
+        // the same reachability as the `generateAndStoreKey` ones.
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         // A key that is present (so the "no key" guard is not what fires) but is not valid base64 /
         // not a valid Ed25519 private key, so WitnessSigner.createSignedSnapshot throws for real
         // inside runWitness()'s sign-snapshot ProbeRunner closure.
@@ -316,6 +352,7 @@ final class AppModelWitnessTests: XCTestCase {
     /// Failure case: change the production nil-branch string → this assertion goes red.
     @MainActor
     func testRunWitnessNoResultClassifiesAsVantageDidNotReturn() async throws {
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
         model.witnessVantageSeam = .noResult
@@ -335,6 +372,7 @@ final class AppModelWitnessTests: XCTestCase {
     /// B255: injected comparison failure must use the snapshot-creation prefix, not the nil-branch.
     @MainActor
     func testRunWitnessInjectedComparisonFailureUsesSnapshotPrefix() async throws {
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         try WitnessKeyManager.generateAndStoreKey()
         let model = AppModel()
         model.witnessVantageSeam = .failed("resolver baseline unreachable")

@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import XCTest
 import SyxxKit
 
 /// Raw Keychain access for the witness signing key, for TESTS ONLY.
@@ -30,12 +31,29 @@ enum WitnessKeychainTestSupport {
     private static let service = "com.milkandgin.syxx"
     private static let account = "witness-key"
 
+    /// MUST mirror `WitnessKeyManager.keychainQuery` (SyxxKit/WitnessKeyManager.swift) attribute for
+    /// attribute — most of all `kSecUseDataProtectionKeychain`.
+    ///
+    /// DATA-LOSS DEFECT this pins closed. Without that key, macOS routes the request to the LEGACY
+    /// file-based keychain, while the product routes to the DATA-PROTECTION keychain. `service` and
+    /// `account` match, so nothing looks wrong — but they are two different stores. The witness test
+    /// classes back up the existing key through `WitnessKeyManager.loadKey()` (data-protection) and
+    /// restore it here; with the stores mismatched, `restore` deposited a developer's real signing key
+    /// into a store the app never reads, and `deleteKey()` deleted from that same wrong store. The app
+    /// then reported no key, silently and unrecoverably. It fired from `tearDown`, so skipping the
+    /// tests did not prevent it: `XCTSkip` thrown in `setUpWithError` still runs `tearDown`.
+    ///
+    /// On a host that cannot reach the data-protection keychain (see
+    /// `isDataProtectionKeychainWritable`) the writes below now fail honestly with
+    /// `errSecMissingEntitlement` (-34018) instead of succeeding against the wrong store. That is the
+    /// intended outcome: a loud no-op beats a silent write to a store nothing reads.
     private static var baseQuery: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecUseDataProtectionKeychain as String: true
         ]
     }
 
@@ -76,5 +94,56 @@ enum WitnessKeychainTestSupport {
         } else {
             deleteKey()
         }
+    }
+
+    // MARK: - Data-protection keychain availability
+
+    /// The reason surfaced by `skipUnlessDataProtectionKeychainWritable()`. Named so the skip text
+    /// says what is actually wrong rather than "keychain error".
+    static let unavailableReason = """
+        the data-protection keychain is unavailable to this test bundle: the SecItemAdd probe failed, \
+        which on macOS means the xctest bundle is unsigned and therefore carries no \
+        keychain-access-groups entitlement (errSecMissingEntitlement, -34018). WitnessKeyManager \
+        stores the signing key there, so no test that must write or read a real witness key can run \
+        here. Sign the test bundle with a valid identity and these tests execute for real.
+        """
+
+    /// Whether this process can actually WRITE the data-protection keychain, measured once per test
+    /// run by a live `SecItemAdd` against a throwaway service that no product code ever touches.
+    ///
+    /// Deliberately a runtime probe and not a compile-time flag or an environment opt-out: a build
+    /// flag would keep skipping on a host that CAN do this (a signed bundle, a CI runner with an
+    /// identity), which is precisely the host where the coverage matters most. `static let` gives
+    /// lazy, once-only, thread-safe evaluation.
+    static let isDataProtectionKeychainWritable: Bool = probeDataProtectionKeychain()
+
+    private static func probeDataProtectionKeychain() -> Bool {
+        // A unique service per run so a probe item can never collide with, or be mistaken for, the
+        // real witness item — and so a leaked probe from a crashed run cannot make this return true.
+        let probeQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.milkandgin.syxx.keychain-probe.\(UUID().uuidString)",
+            kSecAttrAccount as String: "probe",
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecUseDataProtectionKeychain as String: true
+        ]
+        var addQuery = probeQuery
+        addQuery[kSecValueData as String] = Data("probe".utf8)
+        guard SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess else { return false }
+        SecItemDelete(probeQuery as CFDictionary)
+        return true
+    }
+
+    /// Skips the calling test when the data-protection keychain cannot be written on this host.
+    ///
+    /// HONESTY BOUNDARY. This covers exactly one condition — keychain reachability. It is NOT a
+    /// stand-in for network availability: the witness tests that additionally need real DNS egress
+    /// (`testRunWitnessSuccessPathSetsRealSignedState`,
+    /// `testFreeAfterSuccessfulVerifyClearsSnapshotSoVerifyReportsNothing`,
+    /// `testRapidReTestifyDoesNotCorruptState`) were deliberately written to FAIL rather than skip
+    /// when the pipeline cannot reach `.signed`, and that behaviour is left intact. On a signed host
+    /// with no egress they still go red, as intended.
+    static func skipUnlessDataProtectionKeychainWritable() throws {
+        try XCTSkipUnless(isDataProtectionKeychainWritable, unavailableReason)
     }
 }

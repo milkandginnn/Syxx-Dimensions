@@ -128,9 +128,17 @@ final class WitnessTestifyParityTests: XCTestCase {
     // run leaves the developer's key untouched.
     private var backedUpKey: String?
 
+    /// Whether `setUpWithError` was actually able to take a backup. Only then may `tearDown` write.
+    private var backupWasTaken = false
+
     override func setUpWithError() throws {
         try super.setUpWithError()
+        // No probe, no backup — and therefore no restore. `loadKey()` swallows its OSStatus and
+        // returns nil where the data-protection keychain is unreachable, so an unguarded backup here
+        // reads as "there was no key" and would license `tearDown` to DELETE one.
+        guard WitnessKeychainTestSupport.isDataProtectionKeychainWritable else { return }
         backedUpKey = WitnessKeyManager.loadKey()
+        backupWasTaken = true
     }
 
     override func tearDownWithError() throws {
@@ -138,8 +146,13 @@ final class WitnessTestifyParityTests: XCTestCase {
         // its input. A key persisted by a build from before that validation existed may be invalid,
         // and routing the restore through `saveKey` would throw on exactly those machines and leave
         // the developer's stored key destroyed by a test run. See WitnessKeychainTestSupport.
-        WitnessKeychainTestSupport.restore(backedUpKey)
+        //
+        // Guarded on the probe because `tearDown` runs even when `setUpWithError` threw `XCTSkip`.
+        if backupWasTaken {
+            WitnessKeychainTestSupport.restore(backedUpKey)
+        }
         backedUpKey = nil
+        backupWasTaken = false
         try super.tearDownWithError()
     }
 
@@ -163,6 +176,9 @@ final class WitnessTestifyParityTests: XCTestCase {
 
     @MainActor
     func testViewModelLayerMatchesFixture_macOS() throws {
+        // Both drivable scenarios write the real Keychain (`generateAndStoreKey` / `deleteKey`), so
+        // this arm needs the data-protection keychain. The planner arm above does not and still runs.
+        try WitnessKeychainTestSupport.skipUnlessDataProtectionKeychainWritable()
         var drivenIds: [String] = []
         var skipped: [(String, String)] = []
         for s in try Self.loadScenarios() where s.layer == "viewModel" {

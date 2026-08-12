@@ -57,10 +57,29 @@ final class WarpEngineTests: XCTestCase {
         return written > 0 ? Data(dst.prefix(written)) : nil
     }
 
-    /// `@unchecked Sendable`: every stored property is an immutable `let`, and `expected` holds only
-    /// JSON-derived immutable values. The corpus closures below are `@Sendable`, so under Swift 6
-    /// strict concurrency the struct must declare conformance or the test target will not compile.
-    private struct CaseData: @unchecked Sendable {
+    /// Typed mirror of one corpus `expected.json` (spec §9). Decoded rather than read out of a
+    /// `[String: Any]` for two reasons. First, a missing or retyped corpus key now fails the DECODE
+    /// instead of quietly turning `expected["k"] as? String` into `nil` and skipping the assertion
+    /// that key guards — the same green-that-lies family as the brotli case skip. Second, every
+    /// stored property is a value type, so `CaseData` gets compiler-CHECKED `Sendable` for the
+    /// `@Sendable` fetch closures below, rather than `@unchecked` silencing the diagnostic over a
+    /// box of bridged `NS…` reference types.
+    private struct ExpectedCase: Decodable, Sendable {
+        struct Asset: Decodable, Sendable {
+            let url: String
+            let `class`: String
+            let state: String
+        }
+        let conclusion: String
+        let signatureState: String
+        let manifestState: String
+        let freshnessState: String
+        let htmlState: String
+        let assets: [Asset]
+        let notes: String
+    }
+
+    private struct CaseData: Sendable {
         let envelope: Data
         let origin: String
         let nowMs: UInt64
@@ -68,7 +87,7 @@ final class WarpEngineTests: XCTestCase {
         let pinnedKeys: [String: Data]
         let bytesByURL: [String: [UInt8]]
         let originHTML: [UInt8]
-        let expected: [String: Any]
+        let expected: ExpectedCase
     }
 
     /// Loads one case. Returns nil (with XCTSkip semantics via the caller) if the case needs a
@@ -114,7 +133,10 @@ final class WarpEngineTests: XCTestCase {
             else { bytesByURL[Self.urlForInput(f)] = Array(data) }
         }
 
-        let expected = (try JSONSerialization.jsonObject(with: Data(contentsOf: dir.appendingPathComponent("expected.json"))) as? [String: Any]) ?? [:]
+        // Throws on a renamed/retyped corpus key: a schema change must break the build of the
+        // oracle, never silently delete an assertion from it.
+        let expected = try JSONDecoder().decode(
+            ExpectedCase.self, from: Data(contentsOf: dir.appendingPathComponent("expected.json")))
         return CaseData(envelope: envelope, origin: origin, nowMs: nowMs, nonce: nonce,
                         pinnedKeys: pinnedKeys, bytesByURL: bytesByURL, originHTML: originHTML, expected: expected)
     }
@@ -136,20 +158,18 @@ final class WarpEngineTests: XCTestCase {
             let result = await WarpEngine.verify(originURL: c.origin, envelopeBytes: c.envelope,
                                                  pinnedKeys: c.pinnedKeys, nonce: c.nonce, nowMs: c.nowMs, fetch: fetch)
 
-            XCTAssertEqual(result.conclusion.rawValue, c.expected["conclusion"] as? String, "[\(name)] conclusion")
-            XCTAssertEqual(result.signatureState.rawValue, c.expected["signatureState"] as? String, "[\(name)] signatureState")
-            if let m = c.expected["manifestState"] as? String {
-                let mapped = m == "notEvaluated" && result.manifestState == .notEvaluated ? m : result.manifestState.rawValue
-                XCTAssertEqual(mapped, m, "[\(name)] manifestState")
-            }
-            XCTAssertEqual(mapFreshness(result.freshnessState), c.expected["freshnessState"] as? String, "[\(name)] freshnessState")
-            XCTAssertEqual(mapContent(result.htmlState), c.expected["htmlState"] as? String, "[\(name)] htmlState")
+            XCTAssertEqual(result.conclusion.rawValue, c.expected.conclusion, "[\(name)] conclusion")
+            XCTAssertEqual(result.signatureState.rawValue, c.expected.signatureState, "[\(name)] signatureState")
+            // `WarpManifestState.notEvaluated.rawValue` IS "notEvaluated", so this needs no mapping.
+            XCTAssertEqual(result.manifestState.rawValue, c.expected.manifestState, "[\(name)] manifestState")
+            XCTAssertEqual(mapFreshness(result.freshnessState), c.expected.freshnessState, "[\(name)] freshnessState")
+            XCTAssertEqual(mapContent(result.htmlState), c.expected.htmlState, "[\(name)] htmlState")
 
-            let expAssets = (c.expected["assets"] as? [[String: Any]]) ?? []
+            let expAssets = c.expected.assets
             XCTAssertEqual(result.assets.count, expAssets.count, "[\(name)] asset count")
             for (i, ea) in expAssets.enumerated() where i < result.assets.count {
-                XCTAssertEqual(result.assets[i].url, ea["url"] as? String, "[\(name)] asset[\(i)] url")
-                XCTAssertEqual(mapContent(result.assets[i].state), ea["state"] as? String, "[\(name)] asset[\(i)] state")
+                XCTAssertEqual(result.assets[i].url, ea.url, "[\(name)] asset[\(i)] url")
+                XCTAssertEqual(mapContent(result.assets[i].state), ea.state, "[\(name)] asset[\(i)] state")
             }
         }
     }

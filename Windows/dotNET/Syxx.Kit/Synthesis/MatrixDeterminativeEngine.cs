@@ -938,20 +938,30 @@ public sealed class MatrixDeterminativeEngine
             // bundle is NOT skipped — there is no status to consult — matching the Swift guard.
             if (sectionById.TryGetValue(obs.Section, out var producing) && !producing.Status.IsUsable())
             {
-                // DELIBERATE DIVERGENCE FROM THE SWIFT TWIN, and the reason it is deliberate:
-                // Swift `continue`s here before `observedSupport` accumulates, which ALSO deletes
-                // the observation from the overhang-ADMISSION measure. That measure is
-                // quality-independent on purpose (C062/C065): it answers "did a real observation
-                // FIRE," so that a thin or incomplete section can attenuate evidential weight but
-                // can never HIDE a seen threat signal. Dropping it here reopens exactly the
-                // false-clean hole the overhang exists to close — a strong threat indicator behind
-                // untested required sections would vanish from `Suppressed` instead of forbidding
-                // a bare `Clean` (pinned by MatrixUntestedStateTests
+                // C062/C065 — SHARED WITH THE SWIFT TWIN (MatrixDeterminativeEngine.swift:804,
+                // landed by 9a7efa68; the two runtimes agree here). Skipping the whole rule would
+                // ALSO delete the observation from the overhang-ADMISSION measure, which is
+                // quality-independent on purpose: it answers "did a real observation FIRE," so
+                // that a thin or incomplete section can attenuate evidential weight but can never
+                // HIDE a seen threat signal. Dropping it reopens exactly the false-clean hole the
+                // overhang exists to close — a strong threat indicator behind untested required
+                // sections would vanish from `Suppressed` instead of forbidding a bare `Clean`
+                // (pinned by MatrixUntestedStateTests
                 // .UntestedSectionsWithObservedIndicators_IsNotUntested, whose Swift twin
                 // testUntestedSectionsWithObservedIndicators_isNotUntested asserts the same thing).
                 // So: no scoring contribution (B162 satisfied — it cannot inflate coverage, fit,
                 // contradiction, independence groups or the tier gate), but the firing is still
-                // admitted to the overhang. The divergence is strictly fail-closed.
+                // admitted to the overhang.
+                //
+                // Fail-closed for NON-CONTRADICTORY observations only, and the qualifier is not
+                // pedantry. For a CONTRADICTORY one the skip removes the same term from BOTH the
+                // numerator and the denominator of
+                // `Contradiction = contradictionMass / (contradictionMass + observedSupportWeight)`,
+                // which generally LOWERS measured contradiction and so makes tiering easier: with
+                // c=0.3, w=2.6 and a ghost section contributing dc=dw=0.2, the old value 0.1515
+                // becomes 0.1034. That is accepted — it matches the Swift twin, and a section that
+                // produced nothing usable should not be able to manufacture contradiction mass
+                // against a diagnosis either.
                 if (!obs.Contradictory) { r.ObservedSupport += rule.Weight * aligned; }
                 continue;
             }

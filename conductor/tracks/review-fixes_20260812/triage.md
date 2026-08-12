@@ -378,3 +378,27 @@ Same missing `!$0.didFail` filter, found while fixing N11. Neither fixed.
 **`VantageComparer.swift:320` `udpSetsForCheck` — latent.** A forged outcome can break the unanimity the W04 residual guard keys on. No post-fix input was found where this alone yields a false clean, so it is called latent rather than proven. C# twin at `VantageComparer.cs:358-361`.
 
 **Correction to the record:** 9a7efa68 claimed "parity with `VantageComparer.cs:386-394`". That was parity with a C# defect — C# filters on `Records.Count > 0` only and its `DidFail` covers the same five statuses, so it admits the same forged outcomes. The claim copied a bug into Swift rather than fixing anything. Swift is now correct; C# needs the same repair on all three sites.
+
+---
+
+# HANDOFF — session ended on budget 2026-08-12
+
+**Objective:** repair the 36 recovered defects. Phase 0 established only 6 were live; the work then expanded into the cross-runtime divergence class those repairs kept creating.
+
+**Completed and verified:** W20 guard + N1 pinned (`a0eb4a8d`) · W04 quorum floor + W16 cross-runtime binding (`70c8af9f`) · macOS test target made compilable (`ad7ed1d8`) · N2/N7/N8 Swift (`9a7efa68`) · keychain key-destruction closed, 10 honest skips (`590b790a`) · forged-packet unanimity (`64339190`).
+
+**Committed but NOT verified:** `a7aaebad` — Sendable idiom and the stale divergence comment. The implementing agent's report never arrived. **Re-run `swift test` and `dotnet test` before trusting it.**
+
+**Verified facts to rely on:** Swift suite goes 39 → 29 distinct failing names after the keychain work; failing NAMES are the only stable metric, since one timing test is flaky by construction. C# holds 12 stable pre-existing failures on this host. `rules/` is intact at 8 files and still UNTRACKED — a `git clean` would destroy it.
+
+**Next actions, in order:**
+
+1. **N20 `udpBaselines` (`VantageComparer.swift:149`)** — live false-negative, highest priority. One forged packet entering the baseline set puts the attacker's address into `publicUnion`, so `localRdatas` is no longer disjoint and the redirection branch is skipped. Same one-line repair as N11; needs its own red test because it shifts degraded/redirection semantics on inputs the suite already exercises.
+2. **Port the three forged-outcome repairs to C#** — all three sites are wrong there too. 9a7efa68's "parity with C#" claim was parity with a defect.
+3. **N12 hard-exclusion guard (C#)** — fail-open, and armed by the same change that would make `Clean` reachable.
+4. **The 26 remaining stale Swift tests** — all classified with minimal changes recorded above. Cause 1 and cause 7 must NOT be satisfied product-side.
+5. **Parity mechanism** — give the four orphaned corpora their readers, then add corpus-liveness to the existing gate. Author corpora from intended semantics, never captured output.
+
+**Owner decisions outstanding:** C063 vs B157 quality-floor policy · the ProbeBudget canonical table (three tables in play) · whether the deleted features return (persisted collector pins, key wrapping, `--verbose`, Mirror degradation UI) · the Witness keychain seam.
+
+**Open risk:** 24 recorded divergences, and this session created three of them by repairing one side only. Nothing structural prevents the next one.

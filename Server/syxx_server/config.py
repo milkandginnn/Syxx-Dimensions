@@ -413,7 +413,7 @@ TRIAL_ANCHOR_MAX_ROWS = _i("SYXX_TRIAL_ANCHOR_MAX_ROWS", 100000)
 PURGE_INTERVAL_SECONDS = _i("SYXX_PURGE_INTERVAL_SECONDS", 3600)
 
 # Paywall enforcement. Web (/api/*) endpoints are ALWAYS enforced so the website
-# can never be a free bypass. Native endpoints (/warp, /leak, /fetch_script) are
+# can never be a free bypass. Native endpoints (/api/warp/*, /leak, /fetch_script) are
 # enforced by default; an operator may open a compatibility grace window by
 # setting SYXX_ENFORCE_NATIVE=false (see README).
 ENFORCE_WEB = True

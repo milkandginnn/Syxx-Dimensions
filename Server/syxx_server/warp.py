@@ -117,12 +117,10 @@ def inline_scripts(html):
 def build_baseline(target_url):
     """Fetch + analyze a target, returning the client-compatible dict.
 
-    DEPRECATED (superseded by build_manifest / WARP_MANIFEST_V1). Retained ONLY because
-    the scheduler baseline job (scheduler.py) and the /api/diff content half
-    (app._diff_content) still consume this shape; those consumers live in another lane and
-    are migrated separately. The `/warp` route that exposes it is documented deprecated.
-    Do NOT build new callers on this — use build_manifest, which is signed and covers the
-    full CSS/@import closure."""
+    Server-internal only. No longer HTTP-exposed — the `/warp` route that previously served this
+    shape is retired (410 Gone). Consumed ONLY by the scheduler baseline job (scheduler.py) and
+    the /api/diff content half (app._diff_content). Do not build new callers; use build_manifest
+    (WARP_MANIFEST_V1, signed) for any client-facing surface."""
     # A092: the cache is keyed on the RESOLVED final_url, not the pre-redirect
     # target_url. The old code read/wrote the cache under target_url but parsed and
     # hashed assets relative to final_url; if target_url's redirect destination

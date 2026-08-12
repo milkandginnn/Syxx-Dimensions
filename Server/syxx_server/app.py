@@ -4,10 +4,10 @@ Route classes:
   public : /, static assets, /healthz, /readyz, /metrics, /api/stats, /api/broadcast,
            /api/whats-new, /api/startup, /api/auth/activate (activation is how you GET
            entitled), /api/checkout (purchase flow), /api/webhooks/stripe (signature-verified)
-  paid   : everything that costs server resources — /warp, /fetch_script, /leak
-           (native app), and /api/investigate, /api/authoritative, /api/diff, /api/trace,
-           /api/baseline, /api/exposure, /api/passive-dns, /api/leak/* (website). Paid routes
-           require an Entitlement or they return 402.
+  paid   : everything that costs server resources — /api/warp/manifest, /api/warp/raw,
+           /warp/fetch_script, /leak (native app), and /api/investigate, /api/authoritative,
+           /api/diff, /api/trace, /api/baseline, /api/exposure, /api/passive-dns, /api/leak/*
+           (website). Paid routes require an Entitlement or they return 402.
 
 The website therefore cannot bypass the paywall: its live-query endpoints are in
 the paid class and demand the same license the app uses.
@@ -1532,27 +1532,22 @@ class Handler(BaseHTTPRequestHandler):
 
     # --- paid: native app --------------------------------------------------
     def _route_warp(self, query):
-        """DEPRECATED — the unsigned structural baseline (`warp.build_baseline`). Superseded by
-        the signed manifest at /api/warp/manifest (WARP_MANIFEST_V1); a declared-but-unsigned
-        hash is forgeable by a MITM into a false match. Retained one release because the
-        scheduler baseline job and /api/diff content half still consume this shape."""
+        """DEPRECATED — the unsigned structural baseline (`warp.build_baseline`) is retired
+        (superseded by the signed manifest at /api/warp/manifest, WARP_MANIFEST_V1). A
+        declared-but-unsigned hash is forgeable by a MITM into a false match. The server-internal
+        consumers (scheduler baseline job + /api/diff content half) still use build_baseline
+        in-process; this HTTP route returns 410 Gone for one deprecation release — it never
+        fabricates a baseline. Pro-gated so the deprecation notice is only seen by entitled
+        callers."""
         ent, ok = self._require(query, config.ENFORCE_NATIVE)
         if not ok or not self._rate_ok(ent):
             return
-        target = (query.get("url", [""])[0]).strip()
-        if not target:
-            return self._json_error(400, "missing url")
-        try:
-            span = _OTEL_TRACER.start_span("server.warp") if _OTEL_TRACER else None
-            result = warp.build_baseline(target)
-            if span: span.set_attribute("warp.target", target)
-            if span: span.end()
-        except fetcher.BlockedError as e:
-            return self._json_error(400, "target blocked: %s" % e)
-        except fetcher.FetchError as e:
-            return self._json_error(502, "proxy fetch failed: %s" % e)
-        db.audit(ent.subject if ent else None, "/warp", 200, self._client_ip())
-        self._send(200, result)
+        db.audit(ent.subject if ent else None, "/warp", 410, self._client_ip())
+        return self._json_error(
+            410,
+            "WARP_V1 baseline is retired; use /api/warp/manifest (WARP_MANIFEST_V1), a signed manifest",
+            {"successor": "/api/warp/manifest", "deprecated": True},
+        )
 
     def _route_warp_raw(self, query):
         """Manual Warp: return the server's CLEAN-PATH copy of a page's raw content, so the client

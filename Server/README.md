@@ -35,7 +35,7 @@ and `/api/auth/activate` itself.
 | `GET /api/stats` | public | passive-DNS record count (marketing) |
 | `POST /api/auth/activate` | public | license key → session token |
 | `POST /api/beta/reserve` | public | Nnyx/Zzyn beta signup (persists; emails a confirmation) |
-| `GET /warp?url=` | **paid** | Warp structural + hash baseline (app) |
+| `GET /warp?url=` | **paid** | **retired (410)** — unsigned baseline; use `GET /api/warp/manifest` (signed, WARP_MANIFEST_V1) |
 | `GET /fetch_script?url=`, `GET /warp/fetch_script?url=` | **paid** | single script fetch (app; both paths routed) |
 | `GET /leak?token=` | **paid** | resolver readout for a raw token (app) |
 | `GET /api/investigate?domain=` | **paid** | multi-vantage web investigation |
@@ -87,11 +87,11 @@ SERVER_IP=1.2.3.4 DOMAIN=syxx.app LETSENCRYPT_EMAIL=you@example.com ./scripts/de
 The leak zones must have NS records delegating to the server IP for the DNS
 collector to see resolver lookups.
 
-## Required app-side follow-up (out of scope here)
+## App-side Warp wiring
 
-The shipped app calls `https://syxx.app/warp?url=…` **without** attaching its
-license, so with `SYXX_ENFORCE_NATIVE=true` those calls now get `402`. To keep
-native Warp/Leak working under enforcement, the client needs a one-line change
-to append its already-stored Keygen key, e.g. `…/warp?url=…&key=<licenseKey>`
-(or an `X-Syxx-License` header). Until that ships you can run a grace window with
+The shipped app calls `https://syxx.app/api/warp/manifest` and `/api/warp/raw` (both paid routes,
+so an entitlement is required when `SYXX_ENFORCE_NATIVE=true`). The legacy `GET /warp?url=…`
+route is **retired (410 Gone)** — clients no longer call it; its in-process `warp.build_baseline`
+consumer survives only in the scheduler baseline job and the `/api/diff` content half. If a native
+call needs to run without a stored Keygen key you can use a grace window with
 `SYXX_ENFORCE_NATIVE=false`; the website paywall stays fully enforced regardless.

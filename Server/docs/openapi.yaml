@@ -530,20 +530,16 @@ paths:
     get:
       tags: [Paid]
       deprecated: true
-      summary: "DEPRECATED — unsigned structural baseline (use /api/warp/manifest)"
+      summary: "DEPRECATED/GONE — unsigned structural baseline retired (use /api/warp/manifest)"
       description: >
-        DEPRECATED. Returns the server's unsigned structural baseline for a page. Superseded by
-        the signed manifest at /api/warp/manifest (WARP_MANIFEST_V1): a declared-but-unsigned hash
-        is forgeable by a MITM into a false match. Retained one release because the scheduler
-        baseline job and the /api/diff content half still consume this shape.
-      parameters:
-        - name: url
-          in: query
-          required: true
-          schema: { type: string, format: uri }
+        DEPRECATED. The unsigned structural baseline served here is gone: a declared-but-unsigned
+        hash is forgeable by a MITM into a false match. Superseded by the signed manifest at
+        /api/warp/manifest (WARP_MANIFEST_V1). The route now returns 410 Gone with a migration
+        pointer for one deprecation release — it never fabricates a baseline.
       responses:
-        "200":
-          description: Fetched content
+        "410":
+          description: >
+            Gone. { error, successor: "/api/warp/manifest", deprecated: true }.
 
   /api/warp/manifest:
     get:

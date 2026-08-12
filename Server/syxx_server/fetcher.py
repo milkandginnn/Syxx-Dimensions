@@ -37,7 +37,7 @@ class TruncatedError(FetchError):
     pass
 
 
-# A033: destination-port allowlist. Without this, /warp, /fetch_script, and /api/diff
+# A033: destination-port allowlist. Without this, /api/warp/*, /fetch_script, and /api/diff
 # fetch an arbitrary public IP:port, turning the server into a blind port scanner /
 # cross-protocol probe. Only the standard web ports are permitted.
 _ALLOWED_PORTS = frozenset({80, 443})

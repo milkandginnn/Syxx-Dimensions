@@ -176,5 +176,20 @@ class WarpAssemblyDeprecationTests(unittest.TestCase):
             self.assertFalse(hasattr(warp, gone), f"{gone} must be retired")
 
 
+class WarpRouteDeprecationTests(unittest.TestCase):
+    def test_warp_route_is_gone_410_with_successor(self):
+        d = _run(app.Handler._route_warp, {"url": [BASE]})
+        self.assertEqual(d.sent["status"], 410)
+        self.assertEqual(d.sent["extra"]["successor"], "/api/warp/manifest")
+        self.assertIs(d.sent["extra"]["deprecated"], True)
+
+    def test_warp_route_never_fabricates_baseline(self):
+        d = _run(app.Handler._route_warp, {"url": [BASE]})
+        self.assertEqual(d.sent["status"], 410)
+        self.assertNotIn("scripts", str(d.sent))
+        self.assertNotIn("inlineScriptHashes", str(d.sent))
+        self.assertIn("/api/warp/manifest", str(d.sent))
+
+
 if __name__ == "__main__":
     unittest.main()

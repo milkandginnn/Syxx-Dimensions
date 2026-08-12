@@ -224,3 +224,81 @@ Both routes need an Apple Developer identity first. Not a same-week option.
 `swift build --build-tests` is the load-bearing choice for the gate: it type-checks the test target without running a test, so it needs no keychain and no network, and it can be **green today** while everything else is still red. A gate whose success condition is unreachable gets bypassed within a day.
 
 Each gate must be proven by falsification — and #9 must be **RED on first run**, because two fixtures already have zero readers. A green first run means it measures nothing.
+
+## Code review of the four committed waves
+
+**No blockers on three. `9a7efa68` would NOT have been approved as it stands** — one unstated fail-open filter change outside its declared scope, and one inline correctness claim the code contradicts.
+
+### N11 [high] — forged packets can vote in UDP unanimity (regression I committed)
+
+`macOS/Sources/SyxxKit/VantageComparer.swift` `detectUnanimousTampering`. The N2 repair silently dropped `!$0.didFail` alongside the intended RCODE-set removal. The comparer's `didFail` (`:24-28`) covers `.timeout, .transportError, .malformedResponse, .responseIdMismatch, .truncated` — a *different* set from `DNSResolver.swift:265-269`. So that filter was never what excluded SERVFAIL/REFUSED; dropping it only admitted outcomes that FAILED yet still carry records.
+
+**`.responseIdMismatch` is the signature of an off-path spoofer.** It can now define or break UDP unanimity — either masking a real tamper conclusion or supplying the unanimous answer itself. Fix in progress: `filter { !$0.didFail && $0.hasRecords }`, which keeps N2 fixed because SERVFAIL/REFUSED carry no records regardless.
+
+### N12 [high] — hard-exclusion scan is fail-open, and arms itself when N1 is resolved
+
+`Windows/dotNET/Syxx.Kit/Synthesis/MatrixDeterminativeEngine.cs:1002-1010` sets `HardExclusion` with no usability guard — the same omission W20 fixed 60 lines above, but this path is fail-**open**. A hard-excluded diagnosis is admitted to `Suppressed` as `HardExcluded`, and `:1136` filters `HardExcluded` **out** of the overhang, so a threat excluded by an indicator from an `Invalidated`/`Untested` section vanishes and permits `Clean`.
+
+**Latent but coupled to N1:** shipping threat diagnoses exclude on `TrustedWitnessOK`, one of the four unwired clean-support indicators. **The change that makes `Clean` reachable is the same change that arms this hole.**
+
+This also corrects triage N3, which recorded the `Reason != HardExcluded` pattern as no longer reaching the report card. The instance at `:1136` is live and decides `Clean` vs `Inconclusive`.
+
+### N13 [medium] — "strictly fail-closed" is overbroad, in both runtimes now
+
+The W20 comment's invariant holds for non-contradictory observations only. For contradictory ones the guard removes a term from both numerator and denominator of `Contradiction`, generally *lowering* measured contradiction and making tiering easier. Defensible and matches Swift, but the comment states an invariant the code does not hold, and `9a7efa68` copied that comment into Swift. Fixture D covers only the non-contradictory ghost.
+
+### Lower-severity review findings
+
+`corpus/dnssec/validity-span.json` claims Swift conformance nothing enforces (Swift can be retyped with nothing going red). `[CallerFilePath]` bakes an absolute build-machine path into the C# corpus test. `SingleDoHDisagreementIsNotTamper` is now fully subsumed by the inverted test. `SuppressedDiagnosis.RawSupport` carries `ObservedSupport`, not `RawScore.RawSupport` — a name collision sitting exactly where confusing the two reopens the false-clean hole. The W04 guard is opt-in on `dohProvided`. `@unchecked Sendable`'s stated justification is not the real one: the forcing property is `[String: Any]`, whose `JSONSerialization` contents are Foundation reference types.
+
+### Confirmed on the record
+
+The W20 divergence is sound — `ObservedSupport` is bit-identical before and after, so no new suppression path was introduced. The W04 test inversion was legitimate: the old fixture produced a fully clean result on a run whose only encrypted witness contradicted every UDP resolver. The W16 binding is real, not vacuous — both suites hardcode the value *in addition to* reading the fixture, closing the usual drift loophole. `CleanDiagnosisReachabilityTests` pins a documented contract and fails in the right direction.
+
+**One consequence worth stating to the owner:** on a network where 2 of 3 DoH endpoints are blocked — common, and precisely this product's target environment — every Mirror run is now undetermined. Intended posture, correctly argued, but it changes the modal user-visible outcome on hostile networks.
+
+## Matrix cluster (11 names) — reported
+
+Eight root causes. **Only one is a live signal against Swift product code, and four are a live signal against C#.**
+
+| Test | Class |
+|---|---|
+| `MatrixAllNegativeParity…_isClean` | **LIVE-DEFECT** — `.clean` unreachable |
+| `testSingleDecisiveThreat_…` | STALE (B156 raised coverage 0.561 → 1.000) |
+| `testC063_…differsInStrengthAndTier` | STALE at `:41` + **POLICY COLLISION** at `:45` |
+| `testHardExclusionDominates_…` | STALE — assertion unsatisfiable by construction |
+| `testContradictionBounded_…` | STALE — F045 vs the C062 overhang |
+| `ProbeRunner.test_default{Prophet,Mirror,Portal,Glutton}` ×4 | STALE on Swift; **LIVE-DEFECT on the C# twins** |
+| `test_run_timeout_accountsCorrectly` | STALE — C058 added a 1.5 s grace drain |
+| `MonitorScheduler.testStartRunsImmediatelyThenStopHalts` | **FLAKY by construction** — product correct |
+
+### N14 — `.clean` is unreachable in the shipped Swift spec
+
+**B156 defeating its own purpose.** It exists so unmappable rules cannot hard-cap coverage; when *all* of a diagnosis's support rules are unmappable, it makes the diagnosis unreachable outright. None of `clean`'s four support rules is in `indicatorMapping`, so `totalSupportWeight` is 0 for every possible bundle → coverage 0 → `DeterminativeState.clean` cannot be produced by the shipped engine **under any input**, and the clean branch at `:986` is dead code.
+
+Distinct from N1: N1 is a deliberate decision leaving the *pipeline* silent but the engine capable. B156 additionally removes engine capability — a side effect, not the recorded decision. Recommended fix: build the denominator from `mappable ∪ {indicators actually present in the bundle}`.
+
+### N15 — the clean-blocking overhang is INVERTED between runtimes
+
+| | surfaced `suppressed` | clean-blocking overhang |
+|---|---|---|
+| Swift | **excludes** hardExcluded | **includes** it (B163) |
+| C# | **includes** it | **excludes** it |
+
+Both decisions are inverted. Swift's pair is the honest one. C#'s means a single degraded or unusable-section exclusion both suppresses the threat **and** removes it from the clean gate — a false-`Clean` path over a threat that fired with real observed support. Compounds N12.
+
+### N16 — ProbeBudget C058 diagonal half-port
+
+Not a shared fixture and not environmental — both cross-cutting leads were checked against this cluster and neither applies. `maxProbes` is identical in all four artifacts; only the two timeout fields moved, and the runtimes fail on *different* fields. **Three different budget tables are in play.** Swift tests are stale; the C# tests are a live signal against C# product, which never received C058.
+
+### N17 — three further C#/Swift divergences in the same function
+
+`ExclusionQualityFloor` + usability guard present in Swift, absent in C# (fail-open: a quality-0.01 observation silently zeroes a threat on Windows). B166's `break`-outside-the-flag exits the required-section loop early when hard-gating is off. B168 guards `clean` on all three overhang admissions in Swift, only one in C#.
+
+### C063 vs B157 — genuine policy collision, owner call
+
+Not stale, not live. Two policies conflict and the code cannot satisfy both. Two objections to B157 as written regardless of which wins: it fires for any `quality > 0`, so 1% completeness reads as 62%; and the floor sits *exactly on* `minimumFitForProbable`, making the outcome rounding-dependent and the quality axis inert whenever alignment is 1.0. Same bundle yields `ThreatDetected` on Swift and undetermined on C#.
+
+## Running divergence count: seventeen
+
+N2, N6, N7, N8, N9 (×4), N10, N11, N12, N13, N14, N15, N16, N17 (×3), B157. Every one is the same shape.

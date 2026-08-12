@@ -368,3 +368,13 @@ Framing for the record: **the compiler became more correct, not the code regress
 ## Divergence count: twenty-four
 
 Seventeen previously recorded, plus P1, P6, P7, P8, P9, N18, N19.
+
+## N20 — two sibling instances of the forged-outcome defect remain
+
+Same missing `!$0.didFail` filter, found while fixing N11. Neither fixed.
+
+**`VantageComparer.swift:149` `udpBaselines` — LIVE FALSE-NEGATIVE, worse than the one repaired.** A forged record-carrying outcome becomes a *baseline* and enters `publicUnion`, `resolverOverlapCount`, and the B058/B059 upgrade. An attacker who redirects local **and** spoofs one public resolver to echo the same address puts that address into `publicUnion`, so `localRdatas` is no longer disjoint and the B281 redirection branch is skipped entirely. The upgrade recovers it only when ≥2 honest resolvers agree on a corroborated alternative; in the CDN-divergent case the run lands on degraded instead. **One forged packet downgrades a real redirection.** C# has the same shape.
+
+**`VantageComparer.swift:320` `udpSetsForCheck` — latent.** A forged outcome can break the unanimity the W04 residual guard keys on. No post-fix input was found where this alone yields a false clean, so it is called latent rather than proven. C# twin at `VantageComparer.cs:358-361`.
+
+**Correction to the record:** 9a7efa68 claimed "parity with `VantageComparer.cs:386-394`". That was parity with a C# defect — C# filters on `Records.Count > 0` only and its `DidFail` covers the same five statuses, so it admits the same forged outcomes. The claim copied a bug into Swift rather than fixing anything. Swift is now correct; C# needs the same repair on all three sites.

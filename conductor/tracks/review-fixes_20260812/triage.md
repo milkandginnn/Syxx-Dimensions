@@ -387,7 +387,9 @@ Same missing `!$0.didFail` filter, found while fixing N11. Neither fixed.
 
 **Completed and verified:** W20 guard + N1 pinned (`a0eb4a8d`) · W04 quorum floor + W16 cross-runtime binding (`70c8af9f`) · macOS test target made compilable (`ad7ed1d8`) · N2/N7/N8 Swift (`9a7efa68`) · keychain key-destruction closed, 10 honest skips (`590b790a`) · forged-packet unanimity (`64339190`).
 
-**Committed but NOT verified:** `a7aaebad` — Sendable idiom and the stale divergence comment. The implementing agent's report never arrived. **Re-run `swift test` and `dotnet test` before trusting it.**
+**`a7aaebad` is now VERIFIED** — its report arrived after the commit. `WarpEngineTests` 6/6 pass and contribute zero failing names; C# holds at 12 failures matching the baseline by name. The `Any` was deleted rather than hoisted, closing one assertion that vanished silently on a corpus key rename plus two-per-asset near-misses caught only by a sibling count assertion — nine silencing constructs gone. The C# behavior change is provably nil: the diff with comment lines filtered is empty.
+
+Two follow-ups it left, both small: the Swift twin comment at `MatrixDeterminativeEngine.swift:803` still carries the overbroad "strictly fail-closed" claim and a now-stale line pointer (the C# block grew to `:939-967`), and `MatrixDeterminativeEngine.cs:930` points at `:782-785` where the Swift B162 comment is actually `:784-791`. Corrected wording is in the agent's report.
 
 **Verified facts to rely on:** Swift suite goes 39 → 29 distinct failing names after the keychain work; failing NAMES are the only stable metric, since one timing test is flaky by construction. C# holds 12 stable pre-existing failures on this host. `rules/` is intact at 8 files and still UNTRACKED — a `git clean` would destroy it.
 

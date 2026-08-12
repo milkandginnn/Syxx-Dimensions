@@ -3,7 +3,7 @@
 **Track ID:** review-fixes_20260812
 **Spec:** [spec.md](./spec.md) · **Findings:** [findings.md](./findings.md)
 **Created:** 2026-08-12
-**Status:** [~] Phase 0 complete — awaiting gate approval
+**Status:** [~] Wave 1 complete
 **Triage:** [triage.md](./triage.md)
 **Tier:** 3 — orchestrator mandatory, specialist team, explicit sequencing, integration validation
 
@@ -113,8 +113,8 @@ Seven defects in one evidence-scoring pipeline. Repairing them independently is 
 - [ ] Task 1.2 (red): **W02** — assert `DeterminativeState.Inconclusive` never yields Grade B / `Severity.Clean` / a "looks clean" headline, and that `hasThreatOverhang` counts `HardExcluded` suppressions. Cover both `ReportCard.cs:88` and `:83`.
 - [ ] Task 1.3 (red): **W01** — assert a control-domain DNSSEC canary success cannot hard-exclude `dnsSpoofing`/`dnsInterception` for a *target* domain.
 - [ ] Task 1.4 (red): **W03** — assert NXDOMAIN/REFUSED/SERVFAIL never produces affirmative clean support, and never counts toward the `MajorCount >= 2` conclusive-clean requirement.
-- [ ] Task 1.5 (red): **W20 / M02 / M09 / M10** — assert coverage excludes non-usable sections' weight (C# must match `MatrixDeterminativeEngine.swift:785`), contradicting indicators never enter `supportingIndicators` / `hasDecisive` / `alignedSupport`, the quality floor admits thin-but-conclusive sections, and unmappable rules stay out of the coverage denominator.
-- [ ] Task 1.6 (green): Implement W01, W02, W03, W20 in `Syxx.Kit/Synthesis/`. Consult the security specialist before changing any exclusion threshold or indicator strength.
+- [x] Task 1.5 (red): **W20 / M02 / M09 / M10** — assert coverage excludes non-usable sections' weight (C# must match `MatrixDeterminativeEngine.swift:785`), contradicting indicators never enter `supportingIndicators` / `hasDecisive` / `alignedSupport`, the quality floor admits thin-but-conclusive sections, and unmappable rules stay out of the coverage denominator.
+- [x] Task 1.6 (green): Implement W01, W02, W03, W20 in `Syxx.Kit/Synthesis/`. Consult the security specialist before changing any exclusion threshold or indicator strength.
 - [ ] Task 1.7 (green): Implement M02, M09, M10 in `SyxxKit/Synthesis/`.
 - [ ] Task 1.8: Cross-runtime parity check — C# and Swift produce identical determinations for every Task 1.1 fixture.
 - [ ] Task 1.9: Code review (severity-tagged); resolve `[blocker]`/`[high]` before commit.

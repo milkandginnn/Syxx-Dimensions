@@ -924,9 +924,39 @@ public sealed class MatrixDeterminativeEngine
         foreach (var rule in supportRules)
         {
             if (!indicatorById.TryGetValue(rule.IndicatorId, out var obs) || obs.ObservedStrength is not { } s) { continue; }
-            observedSupportWeight += rule.Weight;
             var alignment = rule.ExpectedStrength > 0 ? Math.Min(1.0, s / rule.ExpectedStrength) : s;
             var aligned = Math.Pow(alignment, rule.DecayExponent);
+
+            // B162 (Swift twin :782-785): an indicator whose PRODUCING section produced no usable
+            // output must not SCORE. The required-section gate below only inspects the sections
+            // THIS diagnosis lists, so an observation originating in some other Untested/
+            // Invalidated section would otherwise count at full face value — inflating the
+            // coverage numerator, deflating `Contradiction` (unusable weight padding its
+            // denominator), and, worst, reaching `HasDecisive`/`MajorCount`, where evidence from a
+            // section that produced nothing usable could clear the decisive-or-two-majors gate and
+            // promote a diagnosis to `Conclusive`. An indicator whose section is ABSENT from the
+            // bundle is NOT skipped — there is no status to consult — matching the Swift guard.
+            if (sectionById.TryGetValue(obs.Section, out var producing) && !producing.Status.IsUsable())
+            {
+                // DELIBERATE DIVERGENCE FROM THE SWIFT TWIN, and the reason it is deliberate:
+                // Swift `continue`s here before `observedSupport` accumulates, which ALSO deletes
+                // the observation from the overhang-ADMISSION measure. That measure is
+                // quality-independent on purpose (C062/C065): it answers "did a real observation
+                // FIRE," so that a thin or incomplete section can attenuate evidential weight but
+                // can never HIDE a seen threat signal. Dropping it here reopens exactly the
+                // false-clean hole the overhang exists to close — a strong threat indicator behind
+                // untested required sections would vanish from `Suppressed` instead of forbidding
+                // a bare `Clean` (pinned by MatrixUntestedStateTests
+                // .UntestedSectionsWithObservedIndicators_IsNotUntested, whose Swift twin
+                // testUntestedSectionsWithObservedIndicators_isNotUntested asserts the same thing).
+                // So: no scoring contribution (B162 satisfied — it cannot inflate coverage, fit,
+                // contradiction, independence groups or the tier gate), but the firing is still
+                // admitted to the overhang. The divergence is strictly fail-closed.
+                if (!obs.Contradictory) { r.ObservedSupport += rule.Weight * aligned; }
+                continue;
+            }
+
+            observedSupportWeight += rule.Weight;
             var effective = aligned * Clamp01(obs.Quality);
             var contribution = rule.Weight * effective;
             if (obs.Contradictory)

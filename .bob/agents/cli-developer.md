@@ -276,7 +276,7 @@ Integration with other agents:
 - Work with tooling-engineer on developer tools
 - Collaborate with documentation-engineer on CLI docs
 - Support devops-engineer with automation
-- Guide frontend-developer on CLI integration
+- Guide desktop-ui-implementer on CLI integration
 - Help build-engineer with build tools
 - Assist backend-developer with CLI APIs
 - Partner with qa-expert on testing

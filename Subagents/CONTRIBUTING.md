@@ -45,7 +45,7 @@ Choose appropriate temperature based on agent task type:
 | Documentation | 0.35 | 15 | documentation-engineer |
 | Research | 0.45 | 20 | market-researcher, trend-analyst |
 | Strategy/Product | 0.5 | 20 | product-manager, business-analyst |
-| Creative | 0.55 | 20 | ui-designer, content-marketer |
+| Creative | 0.55 | 20 | desktop-ui-designer, content-marketer |
 
 ### Pull Request Process
 

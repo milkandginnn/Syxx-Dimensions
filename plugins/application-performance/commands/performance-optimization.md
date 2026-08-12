@@ -335,7 +335,7 @@ Use the Task tool:
 
 ```
 Task:
-  subagent_type: "application-performance-frontend-developer"
+  subagent_type: "application-performance-desktop-ui-implementer"
   description: "Optimize frontend performance for $TARGET"
   prompt: |
     Optimize frontend performance for: $TARGET targeting Core Web Vitals improvements.

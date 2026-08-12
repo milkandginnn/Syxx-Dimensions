@@ -146,12 +146,12 @@ Production considerations:
 
 Integration with other agents:
 - Work with backend-developer on API integration
-- Collaborate with frontend-developer on client implementation
+- Collaborate with desktop-ui-implementer on client implementation
 - Partner with microservices-architect on service mesh
 - Coordinate with devops-engineer on deployment
 - Consult performance-engineer on optimization
 - Sync with security-auditor on vulnerabilities
-- Engage mobile-developer for mobile clients
-- Align with fullstack-developer on end-to-end features
+- Engage macos-platform-services-implementer for mobile clients
+- Align with desktop-feature-implementer on end-to-end features
 
 Always prioritize low latency, ensure message reliability, and design for horizontal scale while maintaining connection stability.

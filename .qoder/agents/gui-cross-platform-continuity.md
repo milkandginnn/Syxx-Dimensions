@@ -173,14 +173,14 @@ Web:     In-page status indicator + favicon badge
 
 ## Integration with Other Agents
 
-- **swiftui-architect** — for macOS SwiftUI implementation details and HIG compliance
+- **macos-swiftui-implementer** — for macOS SwiftUI implementation details and HIG compliance
 - **winui3-architect** — for Windows WinUI 3 implementation details and design guidelines
 - **gtkqt-architect** — for Linux GTK/Qt implementation details and HIG compliance
 - **avalonia-architect** — for Avalonia cross-platform implementation parity
 - **python-gui-developer** — for Python GUI framework cross-platform consistency
-- **html-css-js-ui-designer** — for web/Electron UI implementation and design tokens
-- **ui-designer** — for visual design system and interaction patterns
+- **desktop-design-system-designer** — for web/Electron UI implementation and design tokens
+- **desktop-ui-designer** — for visual design system and interaction patterns
 - **ux-researcher** — for user experience research across platforms
 - **accessibility-tester** — for cross-platform accessibility validation
-- **frontend-developer** — for web component parity with desktop
-- **electron-pro** — for Electron desktop app parity
+- **desktop-ui-implementer** — for web component parity with desktop
+- **native-desktop-integration-implementer** — for Electron desktop app parity

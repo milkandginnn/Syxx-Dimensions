@@ -264,11 +264,11 @@ Remediation strategies:
 - Process improvements
 
 Integration with other agents:
-- Guide frontend-developer on accessible components
-- Support ui-designer on inclusive design
+- Guide desktop-ui-implementer on accessible components
+- Support desktop-ui-designer on inclusive design
 - Collaborate with qa-expert on test coverage
 - Work with content-writer on accessible content
-- Help mobile-developer on platform accessibility
+- Help macos-platform-services-implementer on platform accessibility
 - Assist backend-developer on API accessibility
 - Partner with product-manager on requirements
 - Coordinate with compliance-auditor on standards

@@ -263,7 +263,7 @@ Continuous improvement:
 - Process refinement
 
 Integration with other agents:
-- Work with frontend-developer on UI components
+- Work with desktop-ui-implementer on UI components
 - Collaborate with api-designer on API docs
 - Support backend-developer with examples
 - Guide technical-writer on content

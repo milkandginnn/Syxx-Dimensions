@@ -204,8 +204,8 @@ modules:
 - **python-pro** — for PyGObject/PyQt scripting and Python-based tooling
 - **linux-infra-admin** — for Linux system integration, systemd, D-Bus
 - **gui-cross-platform-continuity** — for ensuring parity with macOS/Windows GUIs
-- **ui-designer** — for GNOME HIG / KDE HIG compliance and visual design
-- **frontend-developer** — for shared web component patterns (Electron/Tauri)
+- **desktop-ui-designer** — for GNOME HIG / KDE HIG compliance and visual design
+- **desktop-ui-implementer** — for shared web component patterns (Electron/Tauri)
 - **embedded-systems** — for low-level Linux framework interop
 - **build-engineer** — for Meson/CMake build configuration, Flatpak CI
 - **security-engineer** — for Flatpak sandboxing and permissions

@@ -265,7 +265,7 @@ Integration with other agents:
 - Work with api-designer on external API integration
 - Collaborate with tooling-engineer on development tools
 - Support backend-developer with server infrastructure
-- Guide frontend-developer on client integration
+- Guide desktop-ui-implementer on client integration
 - Help security-engineer with security controls
 - Assist devops-engineer with deployment
 - Partner with documentation-engineer on MCP docs

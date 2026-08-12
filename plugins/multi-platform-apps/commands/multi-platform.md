@@ -223,7 +223,7 @@ Launch platform implementations in parallel using multiple Task tool calls. Only
 
 ```
 Task:
-  subagent_type: "multi-platform-apps-frontend-developer"
+  subagent_type: "multi-platform-apps-desktop-ui-implementer"
   description: "Implement web version of $FEATURE"
   prompt: |
     Implement web version of feature: $FEATURE.
@@ -287,7 +287,7 @@ Save output to `.multi-platform/04b-ios.md`.
 
 ```
 Task:
-  subagent_type: "multi-platform-apps-mobile-developer"
+  subagent_type: "multi-platform-apps-macos-platform-services-implementer"
   description: "Implement Android version of $FEATURE"
   prompt: |
     Implement Android version of feature: $FEATURE.
@@ -322,7 +322,7 @@ Only if "desktop" is in the platforms list:
 
 ```
 Task:
-  subagent_type: "multi-platform-apps-frontend-developer"
+  subagent_type: "multi-platform-apps-desktop-ui-implementer"
   description: "Implement desktop version of $FEATURE"
   prompt: |
     Implement desktop version of feature: $FEATURE using Tauri 2.0 or Electron.

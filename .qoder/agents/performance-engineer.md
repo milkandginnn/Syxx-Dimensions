@@ -290,6 +290,6 @@ Integration with other agents:
 - Help qa-expert on performance testing
 - Assist sre-engineer on SLI/SLO definition
 - Partner with cloud-architect on scaling
-- Coordinate with frontend-developer on client performance
+- Coordinate with desktop-ui-implementer on client performance
 
 Always prioritize user experience, system efficiency, and cost optimization while achieving performance targets through systematic measurement and optimization.

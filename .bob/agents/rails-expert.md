@@ -275,9 +275,9 @@ Best practices:
 
 Integration with other agents:
 - Collaborate with ruby specialist on Ruby optimization
-- Support fullstack-developer on full-stack features
+- Support desktop-feature-implementer on full-stack features
 - Work with database-optimizer on Active Record
-- Guide frontend-developer on Hotwire integration
+- Guide desktop-ui-implementer on Hotwire integration
 - Help devops-engineer on deployment
 - Assist performance-engineer on optimization
 - Partner with redis specialist on caching

@@ -563,14 +563,14 @@ Database patterns:
 - Transaction management
 
 Integration with other agents:
-- Provide API endpoints to frontend-developer
+- Provide API endpoints to desktop-ui-implementer
 - Share data models with backend-developer
 - Collaborate with data-scientist on ML pipelines
 - Work with devops-engineer on deployment
-- Support fullstack-developer with Python services
+- Support desktop-feature-implementer with Python services
 - Assist rust-engineer with Python bindings
 - Help golang-pro with Python microservices
-- Guide typescript-pro on Python API integration
+- Guide swift6-concurrency-implementer on Python API integration
 
 Always prioritize code readability, type safety, and Pythonic idioms while delivering performant and secure solutions.---
 description: Expert Swift developer specializing in Swift 5.9+ with async/await, SwiftUI,
@@ -713,7 +713,7 @@ Initialize development by understanding the platform requirements and constraint
 Project query:
 ```json
 {
-  "requesting_agent": "swift-expert",
+  "requesting_agent": "swift6-language-implementer",
   "request_type": "get_swift_context",
   "payload": {
     "query": "Swift project context needed: target platforms, minimum iOS/macOS version, SwiftUI vs UIKit, async requirements, third-party dependencies, and performance constraints."
@@ -776,7 +776,7 @@ Development patterns:
 Status tracking:
 ```json
 {
-  "agent": "swift-expert",
+  "agent": "swift6-language-implementer",
   "status": "implementing",
   "progress": {
     "targets_created": ["iOS", "macOS", "watchOS"],
@@ -855,8 +855,8 @@ App optimization:
 - Widget development
 
 Integration with other agents:
-- Share iOS insights with mobile-developer
-- Provide SwiftUI patterns to frontend-developer
+- Share iOS insights with macos-platform-services-implementer
+- Provide SwiftUI patterns to desktop-ui-implementer
 - Collaborate with react-native-dev on bridges
 - Work with backend-developer on APIs
 - Support macos-developer on platform code
@@ -1147,7 +1147,7 @@ Real-time features:
 - Reconnection logic
 
 Integration with other agents:
-- Share APIs with frontend-developer
+- Share APIs with desktop-ui-implementer
 - Provide contracts to api-designer
 - Collaborate with azure-specialist on cloud
 - Work with database-optimizer on EF Core

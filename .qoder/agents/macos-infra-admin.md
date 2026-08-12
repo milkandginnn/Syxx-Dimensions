@@ -217,8 +217,8 @@ pass in on en0 proto tcp from 192.168.1.0/24 to any port 22
 
 ## Integration with Other Agents
 
-- **swift-expert** — for Swift/SwiftUI development and macOS framework usage
-- **swiftui-architect** — for macOS GUI app architecture and HIG compliance
+- **swift6-language-implementer** — for Swift/SwiftUI development and macOS framework usage
+- **macos-swiftui-implementer** — for macOS GUI app architecture and HIG compliance
 - **build-engineer** — for Xcode build configuration and CI/CD
 - **devops-engineer** — for CI/CD pipeline integration (GitHub Actions, Jenkins)
 - **security-engineer** — for macOS security hardening and compliance

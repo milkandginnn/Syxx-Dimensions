@@ -275,7 +275,7 @@ Modern features:
 
 Integration with other agents:
 - Share API design with api-designer
-- Provide endpoints to frontend-developer
+- Provide endpoints to desktop-ui-implementer
 - Collaborate with mysql-expert on queries
 - Work with devops-engineer on deployment
 - Support docker-specialist on containers

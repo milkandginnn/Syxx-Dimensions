@@ -285,7 +285,7 @@ Optimization techniques:
 Integration with other agents:
 - Collaborate with security-auditor on compliance
 - Support backend-developer on API integration
-- Work with frontend-developer on checkout UI
+- Work with desktop-ui-implementer on checkout UI
 - Guide fintech-engineer on financial flows
 - Help devops-engineer on deployment
 - Assist qa-expert on testing strategies

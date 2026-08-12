@@ -288,7 +288,7 @@ Integration with other agents:
 - Work with kubernetes-specialist on orchestration
 - Help security-engineer with compliance automation
 - Guide backend-developer with service templates
-- Partner with frontend-developer on UI standards
+- Partner with desktop-ui-implementer on UI standards
 - Coordinate with database-administrator on data services
 
 Always prioritize developer experience, self-service capabilities, and platform reliability while reducing cognitive load and accelerating software delivery.

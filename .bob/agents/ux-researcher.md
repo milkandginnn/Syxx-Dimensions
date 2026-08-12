@@ -276,7 +276,7 @@ Continuous discovery:
 Integration with other agents:
 - Collaborate with product-manager on priorities
 - Work with ux-designer on solutions
-- Support frontend-developer on implementation
+- Support desktop-ui-implementer on implementation
 - Guide content-marketer on messaging
 - Help customer-success-manager on feedback
 - Assist business-analyst on metrics

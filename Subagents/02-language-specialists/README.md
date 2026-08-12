@@ -15,10 +15,12 @@ Use these subagents when you need to:
 
 ## Available Subagents
 
-### [**angular-architect**](angular-architect.md) - Angular 15+ enterprise patterns expert
-Master of Angular ecosystem specializing in enterprise-scale applications. Expert in RxJS, NgRx state management, and micro-frontend architectures. Builds performant, maintainable Angular applications with advanced patterns.
+### [**dotnet-mvvm-implementer**](dotnet-mvvm-implementer.md) - .NET desktop MVVM and architecture implementer
+Owns the application architecture beneath the XAML - view-model design, dependency injection, navigation and messaging services, state ownership, validation, async command patterns, and modular project structure - keeping the view-model layer free of any UI-framework type so one architecture serves both WinUI 3 and Avalonia.
 
-**Use when:** Building enterprise Angular apps, implementing complex state management, optimizing Angular performance, or migrating to latest Angular versions.
+**Use when:** Logic is leaking into code-behind, dependencies are resolved by a service locator, the Windows and Linux UIs duplicate the same logic, or a command has no failure path.
+
+**Prefer instead:** **winui3-xaml-implementer** / **avalonia-ui-implementer** for markup and theming; **dotnet-desktop-shell-implementer** for windowing and app lifetime.
 
 ### [**cpp-pro**](cpp-pro.md) - C++ performance expert
 Systems programming specialist with deep knowledge of modern C++ standards, memory management, and performance optimization. Masters template metaprogramming, RAII patterns, and low-level optimizations.
@@ -50,10 +52,12 @@ Elixir language expert focusing on fault-tolerant, concurrent systems using OTP 
 
 **Use when:** Building fault-tolerant systems, creating real-time apps with Phoenix LiveView, implementing distributed Elixir clusters, or leveraging OTP patterns for reliability.
 
-### [**flutter-expert**](flutter-expert.md) - Flutter 3+ cross-platform mobile expert
-Mobile development specialist creating beautiful, natively compiled applications from a single codebase. Expert in widget composition, state management, and platform-specific implementations.
+### [**avalonia-ui-implementer**](avalonia-ui-implementer.md) - Avalonia UI implementer (cross-platform .NET desktop)
+Builds cross-platform desktop interfaces in C# and XAML with Avalonia 11+ - the Skia rendering pipeline, styles and control themes, custom controls and drawing, compiled bindings, MVVM, and the X11/Wayland, Win32, and macOS platform backends.
 
-**Use when:** Building cross-platform mobile apps, creating custom Flutter widgets, implementing complex animations, or optimizing Flutter performance.
+**Use when:** The UI must run from one codebase on Linux and at least one other desktop platform, or Avalonia styling, control themes, or custom rendering need writing or debugging.
+
+**Prefer instead:** **winui3-xaml-implementer** when the surface is Windows-only and should be natively Fluent; **gtkqt-architect** when the project targets GTK 4 or Qt 6 rather than Avalonia.
 
 ### [**golang-pro**](golang-pro.md) - Go concurrency specialist
 Go language expert focusing on concurrent programming, channels, and goroutines. Masters building efficient, scalable backend services and CLI tools with Go's simplicity and performance.
@@ -65,10 +69,12 @@ Java ecosystem master with expertise in Spring, Jakarta EE, and enterprise patte
 
 **Use when:** Developing enterprise Java applications, implementing Spring Boot services, designing Java architectures, or modernizing legacy Java code.
 
-### [**javascript-pro**](javascript-pro.md) - JavaScript development expert
-Modern JavaScript specialist mastering ES6+, async patterns, and the npm ecosystem. Expert in both browser and Node.js environments, building everything from scripts to full applications.
+### [**csharp-language-implementer**](csharp-language-implementer.md) - Modern C# language and runtime implementer
+Framework-agnostic C# specialist - records and pattern matching, generics and generic math, Span and Memory, source generators and analyzers, async and channels, nullable reference types, benchmark-driven performance, and native interop.
 
-**Use when:** Writing modern JavaScript, working with Node.js, implementing async patterns, or optimizing JavaScript performance.
+**Use when:** A type should be modelled so a bad state cannot compile, something allocates too much or blocks a thread, reflection must become a source generator for AOT, or native code needs calling safely.
+
+**Prefer instead:** **dotnet-mvvm-implementer** for view-model structure and DI; **dotnet-core-expert** when the target is a web service or cloud workload rather than a desktop app.
 
 ### [**kotlin-specialist**](kotlin-specialist.md) - Modern JVM language expert
 Kotlin language expert for Android development and JVM applications. Masters coroutines, DSL creation, and Kotlin's expressive features. Builds safe, concise applications.
@@ -80,10 +86,12 @@ PHP framework specialist focusing on Laravel's elegant syntax and powerful featu
 
 **Use when:** Building Laravel applications, implementing complex queue jobs, creating Laravel packages, or optimizing Eloquent queries.
 
-### [**nextjs-developer**](nextjs-developer.md) - Next.js 14+ full-stack specialist
-React framework expert specializing in Next.js App Router, server components, and full-stack features. Builds blazing-fast, SEO-friendly web applications.
+### [**dotnet-desktop-shell-implementer**](dotnet-desktop-shell-implementer.md) - .NET desktop shell and app-lifetime implementer
+Owns process and window lifetime for WinUI 3 and Avalonia apps - startup and shutdown, window management and restoration, single-instance and activation redirection, tray and notification integration, protocol and file associations, hosted background services, settings persistence, and cold-start performance.
 
-**Use when:** Creating Next.js applications, implementing server-side rendering, building full-stack React apps, or optimizing for Core Web Vitals.
+**Use when:** The app opens twice, window state is not restored, tray or notification activation misbehaves, startup is slow, or shutdown leaves work unfinished.
+
+**Prefer instead:** **dotnet-mvvm-implementer** for view-model and DI structure; **desktop-app-delivery-implementer** when the association must be declared in the installer manifest.
 
 ### [**php-pro**](php-pro.md) - PHP web development expert
 Modern PHP specialist with expertise in PHP 8+ features, Composer ecosystem, and framework-agnostic development. Builds secure, performant PHP applications.
@@ -110,10 +118,12 @@ Ruby on Rails specialist focusing on convention over configuration and rapid dev
 
 **Use when:** Building Rails applications, implementing real-time features with Hotwire, optimizing Active Record queries, or upgrading Rails versions.
 
-### [**react-specialist**](react-specialist.md) - React 18+ modern patterns expert
-React ecosystem expert mastering hooks, concurrent features, and modern patterns. Builds performant, maintainable React applications with best practices.
+### [**swiftui-component-implementer**](swiftui-component-implementer.md) - SwiftUI component and state implementer (Swift 6)
+Owns the individual view: composition, the Observation framework, layout protocols, Canvas drawing, animation and phase transitions, list and table performance, and per-view accessibility - with every state in the matrix rendered distinctly.
 
-**Use when:** Developing React applications, implementing complex state management, optimizing React performance, or migrating to modern React patterns.
+**Use when:** One view looks wrong, updates wrong, or performs badly; a custom control or drawn visualisation needs building; or a component's empty, error, and unknown states need implementing properly.
+
+**Prefer instead:** **macos-swiftui-implementer** for scenes, windows, menus, and navigation; **desktop-ui-designer** when the component has not been designed yet.
 
 ### [**rust-engineer**](rust-engineer.md) - Systems programming expert
 Rust language specialist focusing on memory safety, ownership patterns, and zero-cost abstractions. Builds reliable, efficient systems software.
@@ -130,60 +140,66 @@ SQL language master optimizing complex queries across different database systems
 
 **Use when:** Writing complex SQL queries, optimizing database performance, designing database schemas, or troubleshooting query performance.
 
-### [**swift-expert**](swift-expert.md) - iOS and macOS specialist
-Swift language expert for Apple platform development. Masters SwiftUI, UIKit, and Apple's frameworks. Builds native iOS, macOS, and cross-platform Apple applications.
+### [**swift6-language-implementer**](swift6-language-implementer.md) - Swift 6 language implementer (macOS and server-side)
+Specialises in the language itself - generics and existentials, protocol design, macros, typed throws, noncopyable types and ownership, result builders, C and Objective-C interop, Swift Package Manager, and ABI-level performance.
 
-**Use when:** Developing iOS/macOS applications, implementing SwiftUI interfaces, working with Apple frameworks, or optimizing Swift performance.
+**Use when:** A generic signature, protocol design, or existential question is the blocker; a macro, result builder, or ownership annotation needs writing; or Swift performance needs improving at the allocation or dispatch level.
 
-### [**typescript-pro**](typescript-pro.md) - TypeScript specialist
-TypeScript expert ensuring type safety in JavaScript applications. Masters advanced type system features, generics, and TypeScript configuration for large-scale applications.
+**Prefer instead:** **swift6-concurrency-implementer** whenever the diagnostic involves actors, Sendable, or a data race; **swiftui-component-implementer** when the symptom is a view rendering wrong.
 
-**Use when:** Adding TypeScript to projects, implementing complex type definitions, migrating JavaScript to TypeScript, or building type-safe applications.
+### [**swift6-concurrency-implementer**](swift6-concurrency-implementer.md) - Swift 6 concurrency and data-race-safety implementer
+Specialises in compile-time data-race safety - actor isolation, Sendable conformance, global actors, isolated parameters and regions, structured concurrency and cancellation, AsyncSequence design, and migrating legacy GCD and callback code into Swift 6 language mode without suppressing diagnostics.
 
-### [**vue-expert**](vue-expert.md) - Vue 3 Composition API expert
-Vue.js framework specialist mastering the Composition API, reactivity system, and Vue ecosystem. Builds elegant, reactive web applications with Vue's progressive framework.
+**Use when:** The compiler reports an isolation or Sendable error, a target needs migrating to Swift 6 language mode, work does not cancel cleanly, or a runtime data race is suspected.
 
-**Use when:** Creating Vue applications, implementing Composition API patterns, working with Nuxt.js, or optimizing Vue performance.
+**Prefer instead:** **swift6-language-implementer** when the problem is generics, macros, or ownership with no concurrency element; **performance-engineer** when the concern is throughput rather than safety.
+
+### [**winui3-xaml-implementer**](winui3-xaml-implementer.md) - WinUI 3 / XAML implementer (Windows 11)
+Builds native Windows surfaces on the Windows App SDK - controls and templates, x:Bind compiled bindings, Fluent Design and Mica materials, custom controls and automation peers, theme resources across Light/Dark/High Contrast, and the Composition and Win2D layers.
+
+**Use when:** A Windows-native surface needs building or fixing, Mica or Fluent theming needs applying correctly, or the Windows build diverges from macOS at the view level.
+
+**Prefer instead:** **avalonia-ui-implementer** when the surface must also run on Linux from one codebase; **dotnet-mvvm-implementer** when the problem is view-model structure rather than markup.
 
 ##   Quick Selection Guide
 
 | Language/Framework | Subagent | Best For |
 |-------------------|----------|----------|
-| Angular | **angular-architect** | Enterprise web apps, complex SPAs |
+| Angular | **dotnet-mvvm-implementer** | Enterprise web apps, complex SPAs |
 | C++ | **cpp-pro** | Systems programming, performance-critical code |
 | C#/.NET | **csharp-developer** | Windows apps, enterprise software |
 | Django | **django-developer** | Python web apps, REST APIs |
 | .NET Core | **dotnet-core-expert** | Cross-platform .NET, microservices |
 | .NET Framework | **dotnet-framework-4.8-expert** | Legacy enterprise apps, Windows services |
 | Elixir | **elixir-expert** | Fault-tolerant systems, Phoenix/LiveView |
-| Flutter | **flutter-expert** | Cross-platform mobile apps |
+| Flutter | **avalonia-ui-implementer** | Cross-platform mobile apps |
 | Go | **golang-pro** | Concurrent systems, microservices |
 | Java | **java-architect** | Enterprise applications |
-| JavaScript | **javascript-pro** | Web development, Node.js |
+| JavaScript | **csharp-language-implementer** | Web development, Node.js |
 | Kotlin | **kotlin-specialist** | Android apps, modern JVM |
 | Laravel | **laravel-specialist** | PHP web applications |
-| Next.js | **nextjs-developer** | Full-stack React apps |
+| Next.js | **dotnet-desktop-shell-implementer** | Full-stack React apps |
 | PHP | **php-pro** | Web development, APIs |
 | Python | **python-pro** | General purpose, data science |
 | Rails | **rails-expert** | Rapid web development |
-| React | **react-specialist** | Modern web UIs |
+| React | **swiftui-component-implementer** | Modern web UIs |
 | Rust | **rust-engineer** | Systems software, WebAssembly |
 | Spring Boot | **spring-boot-engineer** | Java microservices |
 | SQL | **sql-pro** | Database queries, optimization |
-| Swift | **swift-expert** | iOS/macOS development |
-| TypeScript | **typescript-pro** | Type-safe JavaScript |
-| Vue | **vue-expert** | Progressive web apps |
+| Swift | **swift6-language-implementer** | iOS/macOS development |
+| TypeScript | **swift6-concurrency-implementer** | Type-safe JavaScript |
+| Vue | **winui3-xaml-implementer** | Progressive web apps |
 
 ##   Common Technology Stacks
 
 **Modern Web Application:**
-- **react-specialist** + **typescript-pro** + **nextjs-developer**
-- **vue-expert** + **typescript-pro** + **laravel-specialist**
-- **angular-architect** + **spring-boot-engineer**
+- **swiftui-component-implementer** + **swift6-concurrency-implementer** + **dotnet-desktop-shell-implementer**
+- **winui3-xaml-implementer** + **swift6-concurrency-implementer** + **laravel-specialist**
+- **dotnet-mvvm-implementer** + **spring-boot-engineer**
 
 **Mobile Development:**
-- **flutter-expert** for cross-platform
-- **swift-expert** for iOS native
+- **avalonia-ui-implementer** for cross-platform
+- **swift6-language-implementer** for iOS native
 - **kotlin-specialist** for Android native
 
 **Enterprise Backend:**

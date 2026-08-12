@@ -1,0 +1,73 @@
+{
+  "id": "review-fixes_20260812",
+  "title": "Recovered xhigh Review \u2014 Confirmed Defect Repairs",
+  "type": "bug",
+  "status": "in_progress",
+  "tier": 3,
+  "created": "2026-08-12T13:19:00Z",
+  "updated": "2026-08-12T14:25:00Z",
+  "phases": {
+    "total": 7,
+    "completed": 1
+  },
+  "tasks": {
+    "total": 59,
+    "completed": 8
+  },
+  "defects": {
+    "total": 36,
+    "windows": 21,
+    "macos": 15,
+    "source": "findings.md",
+    "source_provenance": "recovered from session transcript f93531fc; three /code-review xhigh runs 2026-08-11/12; 45 reported, 36 unique after dedup"
+  },
+  "gates": [
+    {
+      "id": "W16",
+      "subject": "DNSSEC MaxPlausibleValiditySpan arbitration across C#/Swift/Python",
+      "status": "ratified",
+      "ruling": "63_072_000 seconds (730 days) across all three runtimes; no value change",
+      "ruled_on": "2026-08-12",
+      "note": "already unified at HEAD and verified sound; remaining work is enforcement binding (shared fixture + live tests in all three runtimes) plus relocating quarantined Swift assertions",
+      "closure_conditions": [
+        "value ratified",
+        "three live suites passing off the shared fixture",
+        "quarantine audit delivers owner/priority/remediation list"
+      ]
+    },
+    {
+      "id": "M12",
+      "subject": "Signed-evidence canonicalization contract v5 + named legacy profiles",
+      "status": "approved",
+      "note": "re-gate on any deviation from the design recorded in spec.md"
+    },
+    {
+      "id": "UI",
+      "subject": "Tier 3 UI governance for M04/M05",
+      "status": "open",
+      "blocks": "phase-6"
+    }
+  ],
+  "governing_rules": [
+    "IMPLEMENTATION-RULES.md",
+    "SUBAGENT-RULES.md",
+    "BUDGET-RULES.md",
+    "WORKFLOW-RULES.md",
+    "COMMUNICATION-RULES.md"
+  ],
+  "current_phase": 1,
+  "current_task": "gate-phase-0",
+  "baseline": {
+    "head": "a2adae23ed4d19fab4cb30166d92a52d1afd44ff",
+    "branch": "main",
+    "working_tree": "125 files (+2380/-33247); code-only 53 files (+765/-559)",
+    "rules_integrity": "8 files, untracked, unmodified"
+  },
+  "triage": {
+    "repaired": 25,
+    "live": 5,
+    "moved_live": 1,
+    "absent_code": 5,
+    "new_defects_found": 5
+  }
+}

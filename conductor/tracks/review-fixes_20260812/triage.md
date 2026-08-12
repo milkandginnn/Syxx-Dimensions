@@ -169,3 +169,58 @@ Landing the 15 test corrections makes the Swift suite green and leaves this gap 
 ## Running divergence count
 
 Nine cross-runtime divergences are now known: N2, N6, N7, N8, B157, and N9's four. Every one is the same shape — one side repaired, the other not. This is the failure mode that produced the original 36, and it is still producing new ones.
+
+## Build/CI advisory — measured, not assumed
+
+**Meta-finding that outranks the rest:** three good local gates already exist (`scripts/cross-platform-parity-gate.py`, `honesty-coverage-gate.py`, `package-pin-parity.py`), all no-SDK and deterministic. They are invoked from `.github/workflows/ci.yml` **and nowhere else**, and the `Makefile` has zero targets for Swift, C#, or Server. With CI off, the problem is not a missing gate — it is that there is **no local gate runner at all**.
+
+### N10 — the ProbeBudget shared-cause hypothesis is refuted; Swift's product drifted
+
+Two independent drifts, not one shared fixture cause:
+
+| Section | Swift impl | Swift test expects | C# impl | C# test expects |
+|---|---|---|---|---|
+| Prophet | 45 / 5.0 / 15 | 30 / 2.5 / 15 | 30 / 2.5 / 15 | 30 / **5** / 15 |
+| Mirror | 50 / 6.0 / 10 | 30 / 2.5 / 10 | 30 / 2.5 / 10 | 30 / **5** / 10 |
+| Portal | 30 / 5.0 / 5 | 15 / 2.5 / 5 | 15 / 2.5 / 5 | 15 / **5** / 5 |
+| Glutton | 25 / 5.0 / 5 | 20 / 2.5 / 5 | 20 / 2.5 / 5 | 20 / **5** / 5 |
+
+C# is pure test hygiene — one stale field. **Swift is a product defect: the implementation drifted and the test is correct.** macOS Prophet allows 45 s total / 5 s per probe where Windows allows 30 s / 2.5 s, so identical slow networks produce different undetermined rates per platform. Owner picks which set is canon. Divergence count: ten.
+
+### Corpus census — two fixtures have zero readers anywhere
+
+`matrix/default-spec.frozen.json` is read only by Windows (Swift twin quarantined). **`stage0/seeds.json` has no live reader on any platform.** **`probe-parity/probe-parity.json` has none either** — its generator's own header claims two readers, `ProbeParityReplayTests.cs` and `.swift`, and **neither file exists**.
+
+### Quarantine — deception surface is smaller than reported
+
+43 files / 9,839 lines is right, but only **19 files / 3,523 lines are named plainly `*.swift`**. The other 24 already carry a visibly-dead suffix. Renaming those 19 finishes a convention the repo already invented and makes the invariant mechanically checkable.
+
+### Keychain — both signing routes are blocked here, measured
+
+- Data-protection keychain: `SecItemAdd` → **-34018**. Legacy keychain, same query minus the flag: **0**. So the generic framing "unsigned bundles can't use the keychain" is false and would send the fix the wrong way.
+- `security find-identity -v -p codesigning` → **0 valid identities**.
+- Ad-hoc signing with a `keychain-access-groups` entitlement → **SIGKILL at exec**. It is a restricted entitlement.
+
+Both routes need an Apple Developer identity first. Not a same-week option.
+
+**The seam does not buy keychain coverage.** With a seam, `keychainQuery`/`writeKeychainData`/the data-protection flag execute in no test on any host — exactly the class `honesty-coverage-gate.py` exists to refuse. What the seam *does* buy is deleting the backup/restore dance entirely, so the defect class that produced the helper bug stops being representable. That is the honest argument for it; test coverage is not.
+
+### Recommended local gates, ranked by signal ÷ effort
+
+| # | Action | Effort |
+|---|---|---|
+| 1 | Fix `WitnessKeychainTestSupport.baseQuery` — **in progress** | 15 min |
+| 2 | `scripts/local-gate.sh` called from the existing pre-commit hook | 45 min |
+| 3 | `swift build --package-path macOS --build-tests` inside it | +0 |
+| 4 | Rename the 19 plain `.swift` quarantine files | 10 min |
+| 5 | Keychain probe + `XCTSkip`, incl. probe-guarded tearDown — **in progress** | 20 min |
+| 6 | `scripts/dead-test-gate.py`, manifest-derived | 45 min |
+| 7 | `KNOWN-FAILURES.txt` two-way ratchet | 1 h |
+| 8 | `corpus/probe-budget/defaults.json` + rewire both suites | 1.5 h |
+| 9 | `scripts/corpus-binding-gate.py` | 2 h |
+| 10 | Witness protocol seam — owner-gated | 3-4 h |
+| 11 | Signing identity — external, $99/yr | — |
+
+`swift build --build-tests` is the load-bearing choice for the gate: it type-checks the test target without running a test, so it needs no keychain and no network, and it can be **green today** while everything else is still red. A gate whose success condition is unreachable gets bypassed within a day.
+
+Each gate must be proven by falsification — and #9 must be **RED on first run**, because two fixtures already have zero readers. A green first run means it measures nothing.

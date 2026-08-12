@@ -40,10 +40,13 @@ The findings were authored against a pre-revert tree, which Phase 0 existed to d
 
 | # | Location | Issue |
 |---|---|---|
-| N1 | `SyxxMatrixIntegration.cs:217-220` + `SynthesisEngine.cs:281-306` | **`clean` may be unreachable on Windows/Linux.** All 14 `IndicatorMapping` entries are threat-side; none of `clean`'s four supporting indicators (`ResolverAgreement`, `RouteClean`, `TrustedWitnessOK`, `LocalEvidenceSealValid`) has an `EvidenceId` producer. If it holds at runtime, coverage/fit/strength are 0, `clean` never reaches a tier, and every threat-free run falls to `Inconclusive`. Read-level inference, orchestrator-verified as far as reading allows; needs a run to confirm. **Do not fix by restoring the W01/W03 mappings** — that reinstates the false-clean defects. |
+| N1 | `SyxxMatrixIntegration.cs:217-220` + `SynthesisEngine.cs:281-306` | **`clean` may be unreachable on Windows/Linux.** All 14 `IndicatorMapping` entries are threat-side; none of `clean`'s four supporting indicators (`ResolverAgreement`, `RouteClean`, `TrustedWitnessOK`, `LocalEvidenceSealValid`) has an `EvidenceId` producer. If it holds at runtime, coverage/fit/strength are 0, `clean` never reaches a tier, and every threat-free run falls to `Inconclusive`. Read-level inference, orchestrator-verified as far as reading allows; needs a run to confirm. **Do not fix by restoring the W01/W03 mappings** — that reinstates the false-clean defects. **RESOLVED 2026-08-12: not a defect.** Confirmed unreachable end-to-end by test, but `SynthesisEngine.cs:200-204` documents it as deliberate — clean-support indicators are intentionally unwired, "inconclusive over unearned secure". Also established: porting Swift's `mappableIndicators` would make it strictly worse, since that set derives from the threat-side mapping, so all four clean rules become unmappable and `totalSupportWeight` collapses to 0. |
 | N2 | `VantageComparer.swift:333` | Swift twin of W06, still live: `if udpStatuses.count > 1 { return .tampered }` over outcomes filtered only by `!didFail`. Benign RCODE variation graded as tampering. Sits three lines above M03's repair; no review run caught it. |
 | N3 | `MatrixDeterminativeEngine.cs:1106` | Surviving instance of the `Reason != HardExcluded` filter that made W02's old guard fail. No longer reaches the report card, but the pattern is intact. |
 | N4 | `SignedEvidencePayload.swift` | M12's repair writes the real TTL for v2/v3/v4 alike while verification *is* version-keyed. The unversioned byte-shift already happened; snapshots sealed by the `ttl: 0` build now fail verification. **Wave 5 inverts** — no longer "prevent a silent shift" but "a shift landed; bump to v5 and add `legacyZeroTTL` retroactively". |
+| N6 | `MatrixDeterminativeEngine.cs:984-991` | Exclude-polarity loop has no usability guard; the Swift twin does at `:823`. An indicator from a non-usable section can still add contradiction mass. Fail-closed direction (suppresses rather than promotes), so lower urgency — but a genuine parity gap. |
+| N7 | `MatrixDeterminativeEngine.swift:785` | Inferred live Swift defect: the guard `continue`s before `observedSupport` accumulates, which would delete the observation from the overhang-admission measure. `MatrixUntestedStateTests.swift:69-88` asserts the opposite, so that test may be red at HEAD. Under verification by the Swift implementer. |
+| N8 | `VantageComparer.swift:292-293` | W04's Swift twin kept the narrow `allDohFailed` form after the C# fix landed, so the two runtimes diverge on the same corroboration decision and W04 ships half-fixed. Routed to the Swift implementer in Wave 2. |
 | N5 | `DNSResolver.swift:26` | `EncryptedTransportProbe`'s cleartext control query defaults to `8.8.8.8` — a privacy tool sending the fallback control to Google rather than the user's own resolver. |
 
 ## Features removed alongside their defects — owner decisions, not triage calls
@@ -85,3 +88,37 @@ Two committed corpora are unread on macOS: `corpus/matrix/default-spec.frozen.js
 Two specialists classified in parallel under read-only scope with no network and no builds; 33 of 50 and 33 of 50 tool calls used; the audit used 40 of 45. The orchestrator independently verified the highest-consequence claims in code: M01's missing gate, M05's two sites, M04's absence, M12's TTL, W12's three nonce-less call sites, W19's Avalonia caller, and N1's mapping table. No agent wrote, moved, or deleted any file. `rules/` untouched throughout.
 
 Unproven and flagged as such: N1's end-to-end runtime effect, and W20's real-world reachability (the missing guard is certain; how often a non-usable section emits surviving evidence is not).
+
+---
+
+# Swift suite investigation — 39 failing names (2026-08-12)
+
+The macOS suite had not compiled at HEAD; `ad7ed1d8` unblocked it and its first real run showed 39 distinct failing names. Three debuggers were dispatched. Findings below are per-cluster.
+
+## App-layer cluster (13 names) — reported
+
+**10 of 13 are ONE environmental cause, not ten defects.** `-34018` is `errSecMissingEntitlement`. `WitnessKeyManager` targets the data-protection keychain (`kSecUseDataProtectionKeychain: true`), which requires a code-signed caller with a keychain-access-group entitlement. A `swift test` xctest bundle is unsigned, so every keychain WRITE fails at `WitnessKeyManager.swift:204`.
+
+Nine tests fail on their first statement — `try WitnessKeyManager.generateAndStoreKey()` — before touching any product logic. The tenth (`testRunWitnessThreadsRealErrorNotGenericString`) plants a raw key instead but still fails, because `hasKey` reads the same keychain.
+
+**The control group proves it:** the three tests in these same classes that need no successful keychain write are exactly the three that pass. The partition is exact.
+
+**Consequence: the Witness signing path has no test signal on this host.** Nine tests never execute a line of witness logic. Every Witness regression claim from this suite is unproven rather than passing.
+
+**Independent LIVE-DEFECT found in the test scaffolding.** `WitnessKeychainTestSupport.baseQuery` (`macOS/Tests/SyxxAppTests/WitnessKeychainTestSupport.swift:33-40`) omits `kSecUseDataProtectionKeychain`, so it addresses a *different* keychain from `WitnessKeyManager`. On a properly-signed host, `tearDown`'s `restore()` writes the backed-up key to the wrong keychain and `deleteKey()` deletes from the wrong one — a developer's real signing key would be silently replaced and never restored. That is precisely the harm the file's own header claims to prevent. Fix is one line; do it regardless of the entitlement work.
+
+**Remaining 3 are STALE tests, not defects.** Two `TypographyResourcesTests` and one `DimensionsShellLayoutTests` pin contracts that dated in-source owner directives (2026-08-02) deliberately superseded — `cardTitle` role added, body 15.5 → 17.5, sidebar wordmark restyled. The implementation is the approved state; the tests drifted. **This keeps them out of Tier 3 UI governance** — that would apply only if someone proposed reverting the shell to satisfy the test.
+
+## M05 — worse than the triage entry states
+
+`witnessTestify()` (`AppModel.swift:1981`) does not ignore a self-verification result — **there isn't one.** `WitnessTestifyPlanner.seal` signs and computes drift but never self-verifies. The fix on that path is larger than "consult the existing result": the verification must be added first.
+
+No test would have caught M05. The nine-case distinction does survive on `witnessResult` via `witnessVerify()`, so M05 is a collapse of the testimony badge, not of the app's whole vocabulary.
+
+Two tests will pin the defect once trust keys are configured: `testRunWitnessSuccessPathSetsRealSignedState` and the guard in `testFreeAfterSuccessfulVerifyClearsSnapshot…` hard-require `.signed`, which is correct today only because an empty configured trust set skips the trust check. Both need revisiting in the M05 wave.
+
+Widening `WitnessTestimonyState` is a **three-platform change** — macOS, `Windows/Syxx.Tests`, `Ubuntu/SyxxUI.Avalonia.Tests` — plus the shared `corpus/witness-testify-parity/witness-testify-parity.json`, because the parity fixture encodes the same collapsed state space.
+
+## Unverified prediction to check cheaply
+
+`LicenseManager.swift` is the only other file using `kSecUseDataProtectionKeychain`. If any of the remaining failing names exercise licence keychain writes, they share this root cause and must not be triaged as separate defects.

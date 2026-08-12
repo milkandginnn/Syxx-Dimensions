@@ -32,15 +32,15 @@ Document all live routes and add a drift check that fails CI on mismatch.
 
 ### Tasks
 
-- [ ] Task 2.1: Write the route-drift checker script (e.g., `Server/tools/check_openapi_drift.py`) that derives the live route set from `app.py` route dispatch and diffs it against the paths in `Server/docs/openapi.yaml`; exit non-zero on mismatch (missing OR extra).
-- [ ] Task 2.2: Add the 7 missing routes to `openapi.yaml`: `/api/appcast`, `/api/beta/reserve`, `/api/billing/portal`, `/api/broadcast`, `/api/startup`, `/api/whats-new`, `/leak` — with accurate method, parameters, and response schemas from the actual handlers.
-- [ ] Task 2.3: Add a pytest that invokes the drift checker and asserts spec paths == live routes (so drift fails the test suite, not only CI).
-- [ ] Task 2.4: Wire the drift check into `ci.yml` (Python job) and as a `make` target; confirm it passes on the fixed spec.
+- [x] Task 2.1: Write the route-drift checker script (e.g., `Server/tools/check_openapi_drift.py`) that derives the live route set from `app.py` route dispatch and diffs it against the paths in `Server/docs/openapi.yaml`; exit non-zero on mismatch (missing OR extra).
+- [x] Task 2.2: Add the 7 missing routes to `openapi.yaml`: `/api/appcast`, `/api/beta/reserve`, `/api/billing/portal`, `/api/broadcast`, `/api/startup`, `/api/whats-new`, `/leak` — with accurate method, parameters, and response schemas from the actual handlers.
+- [x] Task 2.3: Add a pytest that invokes the drift checker and asserts spec paths == live routes (so drift fails the test suite, not only CI).
+- [x] Task 2.4: Wire the drift check into `ci.yml` (Python job) and as a `make` target; confirm it passes on the fixed spec.
 
 ### Verification
 
-- [ ] `uv run python Server/tools/check_openapi_drift.py` exits 0; the pytest drift test passes.
-- [ ] Deliberately remove a route from the spec and confirm the check fails (gate actually binds).
+- [x] `uv run python Server/tools/check_openapi_drift.py` exits 0; the pytest drift test passes.
+- [x] Deliberately remove a route from the spec and confirm the check fails (gate actually binds).
 
 ## Phase 3: Constants Deduplication + Wire Pinning
 

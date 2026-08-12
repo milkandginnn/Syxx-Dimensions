@@ -100,8 +100,14 @@ final class VantageComparerTests: XCTestCase {
             "C046: DoH-blocked run does not return inconclusive — it returns a detection signal")
     }
 
-    /// Boundary guard: DoH provided but ONLY a subset fails (not all) — must not falsely
-    /// force inconclusive when a partial DoH result is still usable.
+    /// W04: this case previously asserted that a lone answering DoH endpoint is "still usable" and
+    /// so must NOT force inconclusive. That assertion pinned the defect: `detectUnanimousTampering`
+    /// abandons its cross-check at a `< 2` DoH gate, so a single endpoint means no cross-transport
+    /// corroboration ever completed, and reporting the run as decided is a false-secure result. The
+    /// `inconclusive` assertion below is therefore INVERTED to the corroboration-floor contract the
+    /// C# twin pins at `VantageComparer.cs:351-368`. See also
+    /// `testW04_TwoAnsweringDoHEndpointsWithAThirdFailing_StaysCorroborated`, which holds the line
+    /// against this degenerating into "any DoH failure ⇒ uncorroborated".
     func testPartialDoHFailureWithOneSuccessIsNotInconclusive() {
         let local = outcome([tamperIP])
         let publics: [String: ResolverQueryOutcome] = [
@@ -116,11 +122,17 @@ final class VantageComparerTests: XCTestCase {
             "Quad9":      outcome([], status: .timeout)
         ]
         let result = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics, dohOutcomes: doh)
-        // C046: a single DoH endpoint with records is not enough for corroboration (needs ≥2).
+        // PRE-EXISTING RED, NOT W04: this assertion pins the pre-M03 belief that an undetermined
+        // cross-check is itself a detection signal. M03 repaired `detectUnanimousTampering` to
+        // return `.undetermined` for exactly this case, so `redirection` is now false. Left untouched
+        // deliberately — correcting it is M03 stale-test cleanup, not part of the W04 change.
         XCTAssertTrue(result.redirection,
             "C046: UDP unanimity + only 1 DoH success (<2) is a detection signal")
-        XCTAssertFalse(result.inconclusive,
-            "C046: partial DoH success does not force inconclusive — it returns a detection signal")
+        // W04 (INVERTED, see the doc comment): a single answering DoH endpoint is below the
+        // corroboration floor the cross-check itself enforces, so no cross-transport check ever
+        // completed and the run must not be reported as decided.
+        XCTAssertTrue(result.inconclusive,
+            "W04: one answering DoH endpoint is below the corroboration floor — counts as none")
     }
 
     // MARK: - WS2-B.2 / B058-B059: poisoned baseline echoing local must not downgrade to DEGRADED
@@ -241,5 +253,137 @@ final class VantageComparerTests: XCTestCase {
         XCTAssertEqual(section.status, .positive,
                        "a confirmed authoritative divergence must not be cancelled by a B281 inconclusive")
         // Mutation: make the explained/inconclusive comparison force the section clean → red.
+    }
+
+    // MARK: - N2: benign RCODE variation is not tampering (Swift twin of the C# repair)
+
+    /// Ten public resolvers answer NoError with byte-identical A records, one returns SERVFAIL on a
+    /// temporarily bogus zone and one returns REFUSED from an ACL or rate limit. Neither carries any
+    /// record, so neither says anything about *where* the name points — they cannot manufacture a
+    /// disagreement. Unanimity is a question of record sets alone (C# twin: `VantageComparer.cs`
+    /// `DetectUnanimousTampering`, which filters on `Records.Count > 0` and compares no RCODEs).
+    ///
+    /// Failure case: restore the `udpStatuses.count > 1 → .tampered` branch in
+    /// `detectUnanimousTampering` and this goes RED — two benign refusals are graded as confirmed
+    /// on-path tampering.
+    private func tenAgreeingResolversPlusTwoRefusals() -> [String: ResolverQueryOutcome] {
+        var publics: [String: ResolverQueryOutcome] = [:]
+        for i in 1...10 { publics["Public\(i)"] = outcome([realIP]) }
+        publics["ServFailer"] = outcome([], status: .servFail)   // temporarily bogus zone
+        publics["Refuser"]    = outcome([], status: .refused)    // ACL / rate limit
+        return publics
+    }
+
+    func testN2_BenignRcodeVariationWithAgreeingRecordsIsNotTampering() {
+        let local = outcome([realIP])                 // local agrees with the ten
+        let publics = tenAgreeingResolversPlusTwoRefusals()
+        // DoH corroborates the same destination — nothing anywhere disagrees about the answer.
+        let doh: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([realIP]),
+            "Quad9":      outcome([realIP])
+        ]
+
+        XCTAssertEqual(VantageComparer.detectUnanimousTampering(publicOutcomes: publics,
+                                                                dohOutcomes: doh,
+                                                                localRdatas: [realIP]),
+                       .notTampered,
+                       "two record-less RCODEs cannot make agreeing resolvers into a tamper signal")
+
+        let r = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics, dohOutcomes: doh)
+        XCTAssertFalse(r.redirection,
+                       "benign per-resolver RCODE variation must never be graded as redirection/tampering")
+        XCTAssertFalse(r.inconclusive,
+                       "ten agreeing resolvers plus a corroborating DoH consensus is a decidable run")
+        XCTAssertTrue(r.degraded,
+                      "the SERVFAIL/REFUSED resolvers must be surfaced as degraded, not silently dropped")
+    }
+
+    /// Same roster with no DoH leg — the branch under repair fired *before* the DoH guard, so the
+    /// defect reproduced with or without cross-validation. Without an attacker-independent
+    /// reference the honest result is inconclusive (M03), but it must never be a redirection.
+    func testN2_BenignRcodeVariationWithoutDoHIsNotTampering() {
+        let local = outcome([realIP])
+        let publics = tenAgreeingResolversPlusTwoRefusals()
+
+        let r = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics, dohOutcomes: nil)
+        XCTAssertFalse(r.redirection,
+                       "two benign refusals with no DoH cross-check must not confirm on-path tampering")
+    }
+
+    /// The refusing resolvers stay visible end-to-end: `ComparisonResult` must still carry them with
+    /// their typed RCODE, so the UI can report "12 asked, 10 answered" instead of quietly showing 10.
+    /// This is the Swift side of the C# guarantee that non-answering resolvers are reported rather
+    /// than discarded.
+    func testN2_NonAnsweringResolversRemainRepresentedInTheResult() {
+        let local = outcome([realIP])
+        let publics = tenAgreeingResolversPlusTwoRefusals()
+        let comparison = ComparisonResult(
+            localServer: "127.0.0.1",
+            localRecords: local.records,
+            publicResolverResults: publics.mapValues(\.records),
+            isRedirectionDetected: false,
+            isInconclusive: false,
+            isDegraded: true,
+            localOutcome: local,
+            publicResolverOutcomes: publics,
+            dohOutcomes: nil
+        )
+        XCTAssertEqual(comparison.publicResolverOutcomes.count, 12,
+                       "all 12 queried resolvers must survive into the result")
+        XCTAssertEqual(comparison.publicResolverOutcomes["ServFailer"]?.status, .servFail,
+                       "the SERVFAIL resolver keeps its typed RCODE")
+        XCTAssertEqual(comparison.publicResolverOutcomes["Refuser"]?.status, .refused,
+                       "the REFUSED resolver keeps its typed RCODE")
+    }
+
+    // MARK: - W04: one DoH witness is below the corroboration floor, so it counts as none
+
+    /// `detectUnanimousTampering` abandons its cross-check at a `< 2` DoH gate, so a run with a
+    /// single answering endpoint has NO completed cross-transport corroboration. The residual guard
+    /// must use that same quorum floor. Twin of the C# contract at `VantageComparer.cs:351-368`.
+    ///
+    /// Failure case: narrow the floor back to "all DoH failed" and this goes RED — a lone DoH
+    /// witness makes the run read as corroborated when nothing was corroborated.
+    func testW04_UdpUnanimousWithOnlyOneAnsweringDoHEndpoint_IsNotReportedClean() {
+        let local = outcome([realIP])
+        let publics: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([realIP]),
+            "Quad9":      outcome([realIP])
+        ]
+        // Exactly ONE DoH endpoint answers, and it AGREES — agreement from a single witness is still
+        // below the floor the cross-check itself enforces.
+        let doh: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([], status: .timeout),
+            "Quad9":      outcome([], status: .timeout)
+        ]
+        let r = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics, dohOutcomes: doh)
+        XCTAssertFalse(r.redirection, "a below-quorum cross-check is not evidence of a redirect")
+        XCTAssertTrue(r.inconclusive,
+                      "one answering DoH endpoint is below the corroboration floor — the run has no "
+                      + "completed cross-transport check and must not read as a decided result")
+    }
+
+    /// The guard against the fix degenerating into "any DoH failure ⇒ uncorroborated". TWO answering
+    /// endpoints meet the floor, so a third failure changes nothing: the run stays corroborated.
+    func testW04_TwoAnsweringDoHEndpointsWithAThirdFailing_StaysCorroborated() {
+        let local = outcome([realIP])
+        let publics: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([realIP]),
+            "Quad9":      outcome([realIP])
+        ]
+        let doh: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([realIP]),
+            "Quad9":      outcome([], status: .timeout)
+        ]
+        let r = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics, dohOutcomes: doh)
+        XCTAssertFalse(r.redirection, "everything agrees across both transports")
+        XCTAssertFalse(r.inconclusive,
+                       "two answering DoH endpoints meet the quorum floor — a third failure must not "
+                       + "erase a corroboration that actually completed")
     }
 }

@@ -779,13 +779,32 @@ public struct MatrixDeterminativeEngine: Sendable {
 
         for rule in supportRules {
             guard let obs = indicatorByID[rule.indicatorID], let s = obs.observedStrength else { continue }
-            // B162: skip indicators whose producing section is not usable — the required-section
-            // gate only checks listed sections, so an indicator from another invalidated/untested
-            // section would otherwise score at face value for every diagnosis that omits it.
-            if let producing = sectionByID[obs.section], !producing.status.isUsable { continue }
-            observedSupportWeight += rule.weight
             let alignment = rule.expectedStrength > 0 ? min(1.0, s / rule.expectedStrength) : s
             let aligned = pow(alignment, rule.decayExponent)
+            // B162: an indicator whose PRODUCING section produced no usable output must not SCORE.
+            // The required-section gate only inspects the sections THIS diagnosis lists, so an
+            // observation originating in some other untested/invalidated section would otherwise
+            // count at full face value — inflating the coverage numerator, deflating `contradiction`
+            // (unusable weight padding its denominator), and reaching `hasDecisive`/`majorCount`,
+            // where evidence from a section that produced nothing usable could clear the
+            // decisive-or-two-majors gate. An indicator whose section is ABSENT from the bundle is
+            // NOT skipped — there is no status to consult.
+            if let producing = sectionByID[obs.section], !producing.status.isUsable {
+                // C062/C065: skipping the whole rule here ALSO deleted the observation from the
+                // overhang-ADMISSION measure, which is quality-independent on purpose — it answers
+                // "did a real observation FIRE", so a thin or incomplete section can attenuate
+                // evidential weight but must never HIDE a seen threat signal. Dropping it reopened
+                // the false-clean hole the overhang exists to close: a strong threat indicator
+                // behind untested required sections vanished from `suppressed` instead of
+                // forbidding a bare `.clean` (pinned by
+                // `testUntestedSectionsWithObservedIndicators_isNotUntested`). So: no scoring
+                // contribution — B162 still holds, it cannot inflate coverage, fit, contradiction,
+                // independence groups or the tier gate — but the firing is still admitted to the
+                // overhang. Strictly fail-closed. Twin of C# `MatrixDeterminativeEngine.cs:939-957`.
+                if !obs.contradictory { r.observedSupport += rule.weight * aligned }
+                continue
+            }
+            observedSupportWeight += rule.weight
             // B157: floor quality for a datapoint that itself completed (quality > 0). Without the
             // floor, `fit ≤ quality`, and a section running under `minimumFitForProbable` (0.62)
             // of its hardcoded catalog can never contribute to an emitted diagnosis regardless of

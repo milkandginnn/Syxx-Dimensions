@@ -147,7 +147,16 @@ public enum VantageComparer {
         // B010 cross-transport comparison.
         let dohBaselines = dohOutcomes?.values.filter { $0.hasRecords } ?? []
         let udpBaselines = publicOutcomes.values.filter { $0.hasRecords }
-        let baselines = !dohBaselines.isEmpty ? dohBaselines : udpBaselines
+        // W04: prefer DoH only once it MEETS the corroboration floor (≥2 answering endpoints) — the
+        // same quorum `detectUnanimousTampering` enforces at its own `< 2` gate. A lone answering
+        // endpoint used to be preferred anyway, which made `baselines` a single element and tripped
+        // the `!sufficientBaseline` early return below: every usable UDP baseline was discarded and
+        // the run returned `degraded` with `inconclusive == false`, before the residual guard at the
+        // foot of this function could ever be reached. One witness is below the floor, so it counts
+        // as none and the UDP baselines carry the comparison instead. Strictly fail-closed: the DoH
+        // consensus is still the ONLY reference B281 classifies a disjoint answer against, so this
+        // opens no new path to `redirection`.
+        let baselines = dohBaselines.count >= 2 ? dohBaselines : udpBaselines
         let anyPublicBaseline = !baselines.isEmpty
         let sufficientBaseline = baselines.count >= 2
 
@@ -281,16 +290,23 @@ public enum VantageComparer {
         let degraded = publicOutcomes.values.contains { $0.didFail || $0.records.isEmpty }
             || (!redirection && resolverOverlapCount == 1 && onlyOverlapIsUnique)
 
-        // B010 residual: UDP unanimous + DoH all failed/blocked → cannot distinguish "tampered +
-        // attacker also blocks DoH" from "clean + DoH provider outage". Must be inconclusive,
+        // B010 residual: UDP unanimous + DoH cross-check below quorum → cannot distinguish "tampered
+        // + attacker also suppresses DoH" from "clean + DoH provider outage". Must be inconclusive,
         // never a false-secure clean result. Only applies when redirection was NOT already
         // detected (no double-counting) and when we actually provided DoH outcomes.
+        //
+        // W04: the quorum floor is the SAME one `detectUnanimousTampering` enforces — at least two
+        // DoH endpoints must actually return records. Testing "all DoH failed" was too narrow: a
+        // single answering endpoint made that false while `detectUnanimousTampering` still bailed
+        // out at its own `< 2` gate, so a run with no completed cross-transport corroboration was
+        // reported as decided. One witness is below the floor, so it counts as none.
         let dohProvided = dohOutcomes != nil && !dohOutcomes!.isEmpty
         // C117: filter to address records for the B010 residual unanimity check.
         let udpSetsForCheck = publicOutcomes.values.filter { $0.hasRecords }.map { Set($0.records.filter { $0.type == 1 || $0.type == 28 }.map(\.rdata)) }
         let udpUnanimous = udpSetsForCheck.count >= 2 && udpSetsForCheck.allSatisfy { $0 == udpSetsForCheck[0] }
-        let allDohFailed = dohProvided && dohOutcomes!.values.allSatisfy { !$0.hasRecords }
-        let dohBlockedWhileUdpUnanimous = !redirection && udpUnanimous && allDohFailed
+        let dohAnsweringCount = dohProvided ? dohOutcomes!.values.filter { $0.hasRecords }.count : 0
+        let dohBelowCorroborationFloor = dohProvided && dohAnsweringCount < 2
+        let dohBlockedWhileUdpUnanimous = !redirection && udpUnanimous && dohBelowCorroborationFloor
 
         // C046/C056/B281: combine the inconclusive signals — the tri-state undetermined from
         // detectUnanimousTampering, the B010-residual DoH-blocked check, and B281's unconfirmable
@@ -312,13 +328,19 @@ public enum VantageComparer {
     static func detectUnanimousTampering(publicOutcomes: [String: ResolverQueryOutcome],
                                          dohOutcomes: [String: ResolverQueryOutcome]?,
                                          localRdatas: Set<String>) -> UnanimousTamperResult {
-        // UDP rdata sets from resolvers that actually ANSWERED (not failures/timeouts).
-        // C056 Fix 2: a timeout is not a disagreeing RCODE — filtering out failures prevents
-        // one flaky resolver from creating a false "disagreement" pattern.
+        // N2: unanimity is a question of RECORD SETS ONLY — never of RCODEs. A resolver that returns
+        // SERVFAIL on a temporarily bogus zone, REFUSED from an ACL or rate limit, or NXDOMAIN/NODATA
+        // carries no records, so it says nothing about *where* the name points and is excluded here.
+        // The previous RCODE-set comparison graded ordinary per-resolver RCODE variation (ten NoError
+        // answers with identical rdata plus one SERVFAIL and one REFUSED) as confirmed on-path
+        // tampering, with no DoH cross-validation reached — the branch fired before the DoH guard
+        // below. Those resolvers are not discarded: `evaluate` still reports them through `degraded`
+        // (any public outcome that failed or returned no records), and `ComparisonResult` carries
+        // every queried resolver with its typed RCODE. Twin of the C# repair in `VantageComparer.cs`
+        // `DetectUnanimousTampering`, which filters on `Records.Count > 0` and compares no statuses.
         // C117: filter to address records — CNAME/RRSIG rdata differ across resolvers even
         // when the A/AAAA answers agree, producing spurious "disagreement".
-        let answeredOutcomes = publicOutcomes.values.filter { !$0.didFail }
-        let udpSets = answeredOutcomes
+        let udpSets = publicOutcomes.values
             .filter { $0.hasRecords }
             .map { Set($0.records.filter { $0.type == 1 || $0.type == 28 }.map(\.rdata)) }
         if udpSets.count < 2 { return .notTampered }
@@ -326,11 +348,6 @@ public enum VantageComparer {
         // Unanimity: all UDP answer sets point to the same destination.
         let firstUdp = udpSets[0]
         if !udpSets.allSatisfy({ $0 == firstUdp }) { return .notTampered }
-
-        // C046: compare RCODE/status sets across ANSWERED public resolvers only.
-        // If all answered resolvers agree on rdata but disagree on RCODE, that is a tamper signal.
-        let udpStatuses = Set(answeredOutcomes.map { $0.status })
-        if udpStatuses.count > 1 { return .tampered }
 
         // C046/C056: if DoH is unavailable, the UDP unanimity cannot be independently
         // verified. This is UNDETERMINED (evidence toward interception), never a confirmed positive.

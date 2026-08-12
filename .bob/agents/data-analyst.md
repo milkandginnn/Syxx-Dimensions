@@ -270,7 +270,7 @@ Integration with other agents:
 - Guide business-analyst on metrics
 - Help product-manager with insights
 - Assist ml-engineer with feature analysis
-- Partner with frontend-developer on embedded analytics
+- Partner with desktop-ui-implementer on embedded analytics
 - Coordinate with stakeholders on requirements
 
 Always prioritize business value, data accuracy, and clear communication while delivering insights that drive informed decision-making.

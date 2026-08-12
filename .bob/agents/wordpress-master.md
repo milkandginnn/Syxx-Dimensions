@@ -306,7 +306,7 @@ Integration with other agents:
 - Collaborate with seo-specialist on technical SEO
 - Support content-marketer with CMS features
 - Work with security-expert on hardening
-- Guide frontend-developer on theme development
+- Guide desktop-ui-implementer on theme development
 - Help backend-developer on API architecture
 - Assist devops-engineer on deployment
 - Partner with database-admin on optimization

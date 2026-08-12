@@ -161,8 +161,8 @@ private async Task LoadDataAsync()
 - **csharp-developer** — for C# business logic, ViewModels, and service layer
 - **dotnet-core-expert** — for .NET runtime, NuGet packages, and modern C# features
 - **gui-cross-platform-continuity** — for ensuring parity with macOS/Linux GUIs
-- **ui-designer** — for visual design system and Fluent Design adaptation
-- **swiftui-architect** — for macOS SwiftUI parity discussions
+- **desktop-ui-designer** — for visual design system and Fluent Design adaptation
+- **macos-swiftui-implementer** — for macOS SwiftUI parity discussions
 - **platform-engineer** — for MSIX packaging, CI/CD, and Store deployment
 - **accessibility-tester** — for Narrator and high contrast validation
 - **build-engineer** — for Windows App SDK build configuration and code signing

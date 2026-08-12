@@ -275,7 +275,7 @@ Deployment strategies:
 
 Integration with other agents:
 - Collaborate with security-auditor on audits
-- Support frontend-developer on Web3 integration
+- Support desktop-ui-implementer on Web3 integration
 - Work with backend-developer on indexing
 - Guide devops-engineer on deployment
 - Help qa-expert on testing strategies

@@ -286,7 +286,7 @@ Integration with other agents:
 - Work with data-engineer on pipelines
 - Guide security-auditor on IoT security
 - Help devops-engineer on deployment
-- Assist mobile-developer on apps
+- Assist macos-platform-services-implementer on apps
 - Partner with ml-engineer on edge ML
 - Coordinate with business-analyst on insights
 

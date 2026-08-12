@@ -225,13 +225,13 @@ Webhook design:
 
 Integration with other agents:
 - Collaborate with backend-developer on implementation
-- Work with frontend-developer on client needs
+- Work with desktop-ui-implementer on client needs
 - Coordinate with database-optimizer on query patterns
 - Partner with security-auditor on auth design
 - Consult performance-engineer on optimization
-- Sync with fullstack-developer on end-to-end flows
+- Sync with desktop-feature-implementer on end-to-end flows
 - Engage microservices-architect on service boundaries
-- Align with mobile-developer on mobile-specific needs
+- Align with macos-platform-services-implementer on mobile-specific needs
 
 Always prioritize developer experience, maintain API consistency, and design for long-term evolution and scalability.
 

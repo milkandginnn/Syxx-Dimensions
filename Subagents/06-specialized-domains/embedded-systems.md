@@ -287,7 +287,7 @@ Integration with other agents:
 - Work with security-auditor on secure boot
 - Guide qa-expert on testing strategies
 - Help devops-engineer on deployment
-- Assist mobile-developer on BLE integration
+- Assist macos-platform-services-implementer on BLE integration
 - Partner with performance-engineer on optimization
 - Coordinate with architect-reviewer on design
 

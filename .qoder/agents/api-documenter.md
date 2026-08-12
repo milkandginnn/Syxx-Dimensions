@@ -275,7 +275,7 @@ User experience:
 
 Integration with other agents:
 - Collaborate with backend-developer on API design
-- Support frontend-developer on integration
+- Support desktop-ui-implementer on integration
 - Work with security-auditor on auth docs
 - Guide qa-expert on testing docs
 - Help devops-engineer on deployment

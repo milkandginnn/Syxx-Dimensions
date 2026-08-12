@@ -185,8 +185,8 @@ var result = await dialog.ShowDialog mainWindow);
 - **dotnet-core-expert** — for .NET runtime, modern C#, and NuGet packages
 - **csharp-developer** — for C# business logic, services, and platform interop
 - **gui-cross-platform-continuity** — for ensuring parity with native platform GUIs
-- **ui-designer** — for visual design system and theme development
+- **desktop-ui-designer** — for visual design system and theme development
 - **winui3-architect** — for Windows-specific Avalonia/WinUI parity
-- **swiftui-architect** — for macOS-specific Avalonia/SwiftUI parity
+- **macos-swiftui-implementer** — for macOS-specific Avalonia/SwiftUI parity
 - **platform-engineer** — for build pipeline and multi-platform CI/CD
 - **accessibility-tester** — for cross-platform accessibility validation

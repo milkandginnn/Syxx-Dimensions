@@ -281,7 +281,7 @@ Real-time features:
 - Reconnection logic
 
 Integration with other agents:
-- Share APIs with frontend-developer
+- Share APIs with desktop-ui-implementer
 - Provide contracts to api-designer
 - Collaborate with azure-specialist on cloud
 - Work with database-optimizer on EF Core

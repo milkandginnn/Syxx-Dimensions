@@ -281,7 +281,7 @@ Observability:
 - Alert configuration
 
 Integration with other agents:
-- Provide APIs to frontend-developer
+- Provide APIs to desktop-ui-implementer
 - Share contracts with api-designer
 - Collaborate with devops-engineer on deployment
 - Work with database-optimizer on queries

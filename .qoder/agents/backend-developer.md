@@ -218,11 +218,11 @@ Environment management:
 
 Integration with other agents:
 - Receive API specifications from api-designer
-- Provide endpoints to frontend-developer
+- Provide endpoints to desktop-ui-implementer
 - Share schemas with database-optimizer
 - Coordinate with microservices-architect
 - Work with devops-engineer on deployment
-- Support mobile-developer with API needs
+- Support macos-platform-services-implementer with API needs
 - Collaborate with security-auditor on vulnerabilities
 - Sync with performance-engineer on optimization
 

@@ -102,7 +102,7 @@ The project has 224 open deltas (97 MUST FIX), 10 v1 features blocking ship, 7 b
 
 | # | Agent | Specific Functions | Skills to Equip |
 |---|-------|-------------------|-----------------|
-| 1 | **swift-expert** | Implement `SyxxKit/TriState.swift` (enum: `.secure`, `.tampered`, `.inconclusive`). Implement `SyxxKit/IPClassifier.swift` with IPv4-mapped IPv6 normalization. Canonical base: `fetcher.py`'s implementation. | `syxx-cross-platform-parity`, `syxx-dns-detection-logic` |
+| 1 | **swift6-language-implementer** | Implement `SyxxKit/TriState.swift` (enum: `.secure`, `.tampered`, `.inconclusive`). Implement `SyxxKit/IPClassifier.swift` with IPv4-mapped IPv6 normalization. Canonical base: `fetcher.py`'s implementation. | `syxx-cross-platform-parity`, `syxx-dns-detection-logic` |
 | 2 | **csharp-developer** | Implement `Syxx.Kit/TriState.cs` (matching Swift variant names exactly). Implement `Syxx.Kit/IPClassifier.cs` with identical classification logic. | `syxx-cross-platform-parity`, `syxx-parity-check` |
 | 3 | **python-pro** | Implement `Server/syxx_server/netutil.py` (server-side IPClassifier equivalent). Ensure type hints on all new functions. | `syxx-server-architecture` |
 
@@ -112,7 +112,7 @@ The project has 224 open deltas (97 MUST FIX), 10 v1 features blocking ship, 7 b
 
 | # | Agent | Specific Functions | Skills to Equip |
 |---|-------|-------------------|-----------------|
-| 4 | **swift-expert** | Fix D060 (shell injection via osascript: replace string interpolation with `Process` arguments array). Fix D065 (symlink race: use `O_CREAT\|O_EXCL\|O_NOFOLLOW`). Fix D033 (remote content origin checks on every navigation including redirects). Fix D048 (activation overwrites known-good credential before validation). | `syxx-honesty-audit`, `syxx-delta-file` |
+| 4 | **swift6-language-implementer** | Fix D060 (shell injection via osascript: replace string interpolation with `Process` arguments array). Fix D065 (symlink race: use `O_CREAT\|O_EXCL\|O_NOFOLLOW`). Fix D033 (remote content origin checks on every navigation including redirects). Fix D048 (activation overwrites known-good credential before validation). | `syxx-honesty-audit`, `syxx-delta-file` |
 | 5 | **csharp-developer** | Fix D034 (WebView origin check: replace `Uri.Contains` with parsed host+port comparison). Fix D035/D036/D064 (URI validation in Windows launch contexts). Fix E028 (`isPro` never set true: wire LicenseManager validation result to `isPro` at launch). Fix E026 (hardcoded collector host: create `SyxxConfig.LeakBaseUrl`). | `syxx-honesty-audit`, `syxx-delta-file` |
 | 6 | **python-pro** | Fix D053 (server offline license validation: add Ed25519 signing). Fix D063 (malformed packet validation: add QR/opcode/qdcount/qclass checks before observation). Fix A045 (SERVFAIL/REFUSED mapped to status:ok: map each RCODE to typed outcome). | `syxx-server-architecture`, `syxx-evidence-cryptography` |
 | 7 | **security-engineer** | Review all Phase 2 security fixes for completeness. Audit D019/D075 (ContentWarp SSRF fail-open: change `return true` to `return false`, add `.noResolver` tri-state). Audit D018 (NS glue IPs queried with no public-IP gate). Audit D037/D038 (unsigned startup cache + arbitrary base URL). Cross-check that no fix introduces a new attack surface. | `syxx-honesty-audit`, `syxx-evidence-cryptography` |
@@ -146,7 +146,7 @@ The project has 224 open deltas (97 MUST FIX), 10 v1 features blocking ship, 7 b
 
 | # | Agent | Specific Functions | Skills to Equip |
 |---|-------|-------------------|-----------------|
-| 1 | **swift-expert** | Fix C049 (Prophet discards user-selected resolver). Fix C046 (unanimous-tampering detector bails on proof conditions: compare RCODE/status sets, not just rdata). Fix C025 (baseline queries over plaintext UDP: query via DoH/DoT). | `syxx-dns-detection-logic`, `syxx-synthesis-engine` |
+| 1 | **swift6-language-implementer** | Fix C049 (Prophet discards user-selected resolver). Fix C046 (unanimous-tampering detector bails on proof conditions: compare RCODE/status sets, not just rdata). Fix C025 (baseline queries over plaintext UDP: query via DoH/DoT). | `syxx-dns-detection-logic`, `syxx-synthesis-engine` |
 | 2 | **csharp-developer** | Fix C010 (version.bind escalated from tilt-only to section-gating: delete `subs.Add()`). Windows-side C046 twin. Windows-side C025 twin. | `syxx-dns-detection-logic`, `syxx-parity-check` |
 | 3 | **python-pro** | Fix A036 (signed payload excludes per-observation detail). Fix A044 (consensus drops reachable empty vantages). Fix A041 (DNSSEC posture stops at first reachable vantage). Fix A042/A043 (RRSIG inception ignored + missing typeCovered check). | `syxx-server-architecture`, `syxx-evidence-cryptography` |
 | 4 | **backend-developer** | Fix C076 deep-dive: DNS leak test verdict integrity. Add provider enrichment columns to `db.py`. Wire reverse DNS + ASN lookup into leak observation. Replace count-only verdicts with provider-aware logic. Delete hardcoded mock fallback data. | `syxx-server-architecture`, `syxx-honesty-audit` |
@@ -186,7 +186,7 @@ The project has 224 open deltas (97 MUST FIX), 10 v1 features blocking ship, 7 b
 
 | # | Agent | Specific Functions | Skills to Equip |
 |---|-------|-------------------|-----------------|
-| 3 | **swiftui-architect** | macOS: Wire Mirror module to actually run (B-2: Pro flag is never set). Build first-run experience (A-2): Launch to EULA to one obvious next action. Build first-run scan button (D-1). | `syxx-gui-architecture`, `syxx-ui-design-system`, `macos-tahoe-ui-implementation` |
+| 3 | **macos-swiftui-implementer** | macOS: Wire Mirror module to actually run (B-2: Pro flag is never set). Build first-run experience (A-2): Launch to EULA to one obvious next action. Build first-run scan button (D-1). | `syxx-gui-architecture`, `syxx-ui-design-system`, `macos-tahoe-ui-implementation` |
 | 4 | **winui3-architect** | Windows: Wire Mirror module to run. Build first-run experience. Build first-run scan button. Fix Windows GUI Cage trigger (B-5: pane never populates). | `syxx-gui-architecture`, `syxx-ui-design-system`, `windows-ui-implementation` |
 | 5 | **avalonia-architect** | Linux: Build first-run experience. Ensure Linux GUI parity with macOS/Windows for all v1 features. Fix Linux license persistence (E-5: cannot persist via DPAPI). | `syxx-gui-architecture`, `syxx-cross-platform-parity` |
 
@@ -201,7 +201,7 @@ The project has 224 open deltas (97 MUST FIX), 10 v1 features blocking ship, 7 b
 
 | # | Agent | Specific Functions | Skills to Equip |
 |---|-------|-------------------|-----------------|
-| 8 | **swift-expert** | macOS: Implement D-2 (continuous monitoring: background re-probe, change detection, state persistence). Implement D-5 (per-network history: write to the existing ledger class). Implement D-6 (network-change detection: SSID join triggers re-evaluation). | `syxx-dns-detection-logic`, `syxx-data-persistence` |
+| 8 | **swift6-language-implementer** | macOS: Implement D-2 (continuous monitoring: background re-probe, change detection, state persistence). Implement D-5 (per-network history: write to the existing ledger class). Implement D-6 (network-change detection: SSID join triggers re-evaluation). | `syxx-dns-detection-logic`, `syxx-data-persistence` |
 | 9 | **csharp-developer** | Windows: Implement D-2/D-5/D-6 twins. Ensure byte-identical behavior with macOS. | `syxx-dns-detection-logic`, `syxx-parity-check` |
 | 10 | **platform-engineer** | Implement G-1 (update mechanism: enable update check, fix dead URL, add appcast/updater). Implement G-4 (diagnostics: logging and crash reporting on both clients). Implement G-6 (settings surface: resolver set, scan scope, notifications, telemetry opt-out). | `syxx-cross-platform-parity` |
 
@@ -299,21 +299,21 @@ Phase 1 (Meta-Orchestration)  [6 coordinators, parallel]
   knowledge-synthesizer   ─┘
 
 Phase 2 (Critical Security)   [8 specialists, 3 waves]
-  Wave 2A: swift-expert + csharp-developer + python-pro  (shared infra)
+  Wave 2A: swift6-language-implementer + csharp-developer + python-pro  (shared infra)
     GATE: TriState + IPClassifier parity verified
-  Wave 2B: swift-expert + csharp-developer + python-pro + security-engineer  (security fixes)
+  Wave 2B: swift6-language-implementer + csharp-developer + python-pro + security-engineer  (security fixes)
   Wave 2C: backend-developer  (witness + licensing)
   CREATE: syxx-security-fix-patterns
 
 Phase 3 (Detection Integrity) [7 specialists, 2 waves]
-  Wave 3A: swift-expert + csharp-developer + python-pro + backend-developer  (detection logic)
+  Wave 3A: swift6-language-implementer + csharp-developer + python-pro + backend-developer  (detection logic)
   Wave 3B: security-engineer + code-reviewer + qa-expert  (verdict audit)
 
 Phase 4 (v1 Features)         [10 specialists, 4 waves]
   Wave 4A: build-engineer + deployment-engineer  (artifacts)
-  Wave 4B: swiftui-architect + winui3-architect + avalonia-architect  (Mirror + first-run)
+  Wave 4B: macos-swiftui-implementer + winui3-architect + avalonia-architect  (Mirror + first-run)
   Wave 4C: backend-developer + payment-integration  (commerce)
-  Wave 4D: swift-expert + csharp-developer + platform-engineer  (monitoring + update)
+  Wave 4D: swift6-language-implementer + csharp-developer + platform-engineer  (monitoring + update)
   CREATE: syxx-ci-release, syxx-commerce-flow
 
 Phase 5 (Quality and Ship)    [8 specialists, parallel]
@@ -334,7 +334,7 @@ Phase 5 (Quality and Ship)    [8 specialists, parallel]
 | Phase 4 | 10 specialists | 32 |
 | Phase 5 | 8 specialists | 40 |
 
-**Unique agents deployed:** 40 (some agents like swift-expert, csharp-developer, and python-pro appear in multiple phases but are redeployed with new task assignments).
+**Unique agents deployed:** 40 (some agents like swift6-language-implementer, csharp-developer, and python-pro appear in multiple phases but are redeployed with new task assignments).
 
 ---
 

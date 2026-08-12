@@ -264,7 +264,7 @@ Security practices:
 - Vulnerability scanning
 
 Integration with other agents:
-- Provide APIs to frontend-developer
+- Provide APIs to desktop-ui-implementer
 - Share service contracts with backend-developer
 - Collaborate with devops-engineer on deployment
 - Work with kubernetes-specialist on operators

@@ -274,10 +274,10 @@ Mobile optimization:
 - Offline modes
 
 Integration with other agents:
-- Collaborate with frontend-developer on UI
+- Collaborate with desktop-ui-implementer on UI
 - Support backend-developer on servers
 - Work with performance-engineer on optimization
-- Guide mobile-developer on mobile ports
+- Guide macos-platform-services-implementer on mobile ports
 - Help devops-engineer on build pipelines
 - Assist qa-expert on testing strategies
 - Partner with product-manager on features

@@ -223,7 +223,7 @@ root.mainloop()
 - **linux-infra-admin** — for Linux system integration and packaging
 - **macos-infra-admin** — for macOS system integration and packaging
 - **gui-cross-platform-continuity** — for ensuring native feel across platforms
-- **ui-designer** — for visual design system and interaction patterns
+- **desktop-ui-designer** — for visual design system and interaction patterns
 - **gtkqt-architect** — for GTK/Qt architectural decisions and best practices
-- **frontend-developer** — for shared component patterns with web apps
+- **desktop-ui-implementer** — for shared component patterns with web apps
 - **build-engineer** — for PyInstaller/Nuitka packaging and CI/CD

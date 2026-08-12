@@ -46,10 +46,12 @@ IoT expert connecting physical devices to the cloud. Masters device protocols, e
 
 **Use when:** Building IoT applications, implementing device communication, managing IoT fleets, processing sensor data, or designing IoT architectures.
 
-### [**mobile-app-developer**](mobile-app-developer.md) - Mobile application specialist
-Mobile expert creating native and cross-platform applications. Masters iOS/Android development, mobile UI/UX, and app store deployment. Builds apps users love on their devices.
+### [**desktop-app-delivery-implementer**](desktop-app-delivery-implementer.md) - Desktop packaging, signing, and release implementer
+Owns everything between a working build and an installed, trusted, updatable application - code signing, macOS notarization and DMG, Windows Authenticode and MSIX, Linux .deb/snap/Flatpak/AppImage, version stamping, update channels, crash-symbol upload, and release automation.
 
-**Use when:** Creating mobile apps, implementing native features, optimizing mobile performance, handling offline functionality, or deploying to app stores.
+**Use when:** The code is correct but the artifact will not install, launch, or update; Gatekeeper or SmartScreen is rejecting the build; or a release needs automating with a rollback path.
+
+**Prefer instead:** **build-engineer** when the problem is compile-time build configuration; **deployment-engineer** when the target is server or cloud rather than a desktop installer.
 
 ### [**payment-integration**](payment-integration.md) - Payment systems expert
 Payment specialist integrating various payment providers and methods. Expert in PCI compliance, payment security, and transaction handling. Makes payments seamless and secure.
@@ -81,7 +83,7 @@ SEO expert driving organic traffic through search optimization. Masters technica
 | Financial Tech | **fintech-engineer** | Banking, payments, compliance |
 | Gaming | **game-developer** | Game engines, multiplayer |
 | IoT/Connected | **iot-engineer** | Device clouds, sensors |
-| Mobile Apps | **mobile-app-developer** | iOS/Android apps |
+| Mobile Apps | **desktop-app-delivery-implementer** | iOS/Android apps |
 | Payments | **payment-integration** | Payment gateways, PCI |
 | Quantitative | **quant-analyst** | Trading algorithms, risk |
 | Risk Management | **risk-manager** | Risk assessment, compliance |
@@ -98,7 +100,7 @@ SEO expert driving organic traffic through search optimization. Masters technica
 **IoT Platform:**
 - **iot-engineer** for architecture
 - **embedded-systems** for devices
-- **mobile-app-developer** for apps
+- **desktop-app-delivery-implementer** for apps
 - **api-documenter** for APIs
 
 **Blockchain Project:**
@@ -109,14 +111,14 @@ SEO expert driving organic traffic through search optimization. Masters technica
 
 **Gaming Platform:**
 - **game-developer** for game logic
-- **mobile-app-developer** for mobile
+- **desktop-app-delivery-implementer** for mobile
 - **payment-integration** for monetization
 - **api-documenter** for game APIs
 
 **E-commerce Platform:**
 - **seo-specialist** for organic traffic
 - **payment-integration** for checkout
-- **mobile-app-developer** for mobile commerce
+- **desktop-app-delivery-implementer** for mobile commerce
 - **risk-manager** for fraud prevention
 
 ## Getting Started

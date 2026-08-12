@@ -432,7 +432,7 @@ Initialize development by understanding the platform requirements and constraint
 Project query:
 ```json
 {
-  "requesting_agent": "swift-expert",
+  "requesting_agent": "swift6-language-implementer",
   "request_type": "get_swift_context",
   "payload": {
     "query": "Swift project context needed: target platforms, minimum iOS/macOS version, SwiftUI vs UIKit, async requirements, third-party dependencies, and performance constraints."
@@ -495,7 +495,7 @@ Development patterns:
 Status tracking:
 ```json
 {
-  "agent": "swift-expert",
+  "agent": "swift6-language-implementer",
   "status": "implementing",
   "progress": {
     "targets_created": ["iOS", "macOS", "watchOS"],
@@ -574,8 +574,8 @@ App optimization:
 - Widget development
 
 Integration with other agents:
-- Share iOS insights with mobile-developer
-- Provide SwiftUI patterns to frontend-developer
+- Share iOS insights with macos-platform-services-implementer
+- Provide SwiftUI patterns to desktop-ui-implementer
 - Collaborate with react-native-dev on bridges
 - Work with backend-developer on APIs
 - Support macos-developer on platform code

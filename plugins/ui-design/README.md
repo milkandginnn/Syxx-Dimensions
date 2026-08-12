@@ -31,7 +31,7 @@ Comprehensive UI/UX design plugin covering mobile (iOS, Android, React Native) a
 
 | Agent                     | Description                                                  |
 | ------------------------- | ------------------------------------------------------------ |
-| `ui-designer`             | Proactive UI design, component creation, layout optimization |
+| `desktop-ui-designer`             | Proactive UI design, component creation, layout optimization |
 | `accessibility-expert`    | A11y analysis, WCAG compliance, remediation                  |
 | `design-system-architect` | Design token systems, component libraries, theming           |
 

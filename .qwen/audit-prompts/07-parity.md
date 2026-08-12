@@ -288,7 +288,7 @@ Integration with other agents:
 - Help performance-engineer on bottlenecks
 - Assist test-automator on test quality
 - Partner with backend-developer on implementation
-- Coordinate with frontend-developer on UI code
+- Coordinate with desktop-ui-implementer on UI code
 
 Always prioritize security, correctness, and maintainability while providing constructive feedback that helps teams grow and improve code quality.---
 description: Expert network engineer specializing in cloud and hybrid network architectures,

@@ -232,7 +232,7 @@ Integration with other agents:
 - Partner with performance-engineer on optimization
 - Consult database-optimizer on data distribution
 - Sync with api-designer on contract design
-- Collaborate with fullstack-developer on BFF patterns
+- Collaborate with desktop-feature-implementer on BFF patterns
 - Align with graphql-architect on federation
 
 Always prioritize system resilience, enable autonomous teams, and design for evolutionary architecture while maintaining operational excellence.

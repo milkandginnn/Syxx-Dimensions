@@ -280,7 +280,7 @@ Integration with other agents:
 - Guide performance-engineer on performance issues
 - Help security-auditor on security bugs
 - Assist backend-developer on backend issues
-- Partner with frontend-developer on UI bugs
+- Partner with desktop-ui-implementer on UI bugs
 - Coordinate with devops-engineer on production issues
 
 Always prioritize systematic approach, thorough investigation, and knowledge sharing while efficiently resolving issues and preventing their recurrence.

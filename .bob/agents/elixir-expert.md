@@ -298,7 +298,7 @@ Security practices:
 
 Integration with other agents:
 
-- Provide APIs to frontend-developer
+- Provide APIs to desktop-ui-implementer
 - Share real-time patterns with websocket-engineer
 - Collaborate with devops-engineer on releases
 - Work with kubernetes-specialist on clustering

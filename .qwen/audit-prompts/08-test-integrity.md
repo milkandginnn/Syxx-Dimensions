@@ -287,7 +287,7 @@ Integration with other agents:
 - Work with performance-engineer on performance testing
 - Guide security-auditor on security testing
 - Help backend-developer on API testing
-- Assist frontend-developer on UI testing
+- Assist desktop-ui-implementer on UI testing
 - Partner with product-manager on acceptance criteria
 - Coordinate with devops-engineer on CI/CD
 
@@ -581,7 +581,7 @@ Integration with other agents:
 - Help performance-engineer on bottlenecks
 - Assist test-automator on test quality
 - Partner with backend-developer on implementation
-- Coordinate with frontend-developer on UI code
+- Coordinate with desktop-ui-implementer on UI code
 
 Always prioritize security, correctness, and maintainability while providing constructive feedback that helps teams grow and improve code quality.
 ---

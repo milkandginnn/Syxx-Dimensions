@@ -275,13 +275,13 @@ Best practices:
 
 Integration with other agents:
 - Collaborate with python-pro on Python optimization
-- Support fullstack-developer on full-stack features
+- Support desktop-feature-implementer on full-stack features
 - Work with database-optimizer on query optimization
 - Guide api-designer on API patterns
 - Help security-auditor on security
 - Assist devops-engineer on deployment
 - Partner with redis specialist on caching
-- Coordinate with frontend-developer on API integration
+- Coordinate with desktop-ui-implementer on API integration
 
 Always prioritize security, performance, and maintainability while building Django applications that leverage the framework's strengths for rapid, reliable development.
 

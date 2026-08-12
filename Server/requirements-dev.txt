@@ -3,3 +3,5 @@ pytest>=8.0.0
 coverage>=7.4.0
 ruff>=0.6.0
 bandit>=1.7.0
+# YAML parser for tools/check_openapi_drift.py (OpenAPI spec <-> live-route drift gate).
+PyYAML>=6.0.0

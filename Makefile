@@ -16,7 +16,7 @@ YTX_SCRIPT := yt-design-extractor.py
 # `uv run` against the plugin-eval venv — has pyyaml + extra-paths to tools/adapters/
 UV_TOOLS := uv run $(EVAL_PROJECT) python
 
-.PHONY: help install install-ocr install-easyocr deps check run run-full run-ocr run-transcript clean generate generate-all clean-generated install-opencode uninstall-opencode install-copilot uninstall-copilot validate garden test smoke-test generate-plugin sync-commands generate-all-commands clean-commands
+.PHONY: help install install-ocr install-easyocr deps check run run-full run-ocr run-transcript clean generate generate-all clean-generated install-opencode uninstall-opencode install-copilot uninstall-copilot validate garden test smoke-test drift generate-plugin sync-commands generate-all-commands clean-commands
 
 help:
 	@echo "claude-agents — multi-harness plugin marketplace"
@@ -34,6 +34,7 @@ help:
 	@echo "  make garden [STRICT=1]                           Run doc-gardener (drift detection)"
 	@echo "  make test                                        Full pytest suite (plugin-eval + tools)"
 	@echo "  make smoke-test                                  Real-CLI smoke test (skips CLIs not on PATH)"
+	@echo "  make drift                                       Server OpenAPI spec <-> live-route drift check"
 	@echo ""
 	@echo "Legacy Gemini CLI targets (kept for compatibility — wrap make generate):"
 	@echo "  make generate-plugin PLUGIN=<name>  Generate Gemini commands for one plugin"
@@ -196,6 +197,12 @@ garden:
 # Full pytest suite — plugin-eval framework + tools/ adapters/validators/gardener.
 test:
 	uv run $(EVAL_PROJECT) pytest -q plugins/plugin-eval/ tools/tests/
+
+# Server OpenAPI spec <-> live-route drift check (warp-hardening_20260811).
+# Fails when the spec documents a route the server does not serve, or when a
+# live route (derived mechanically from app.py dispatch) is missing from the spec.
+drift:
+	cd Server && uv run python tools/check_openapi_drift.py
 
 # Real-CLI smoke test. Generates artifacts (if not present), then invokes whichever
 # of opencode / gemini / codex / claude are on PATH. Per-CLI tests skip gracefully

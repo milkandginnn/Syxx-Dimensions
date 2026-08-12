@@ -38,6 +38,170 @@ tags:
 
 paths:
   # ── Public endpoints ──
+  # 2026-08-11 /api/appcast GET — warp-hardening_20260811 added; Ed25519-signed appcast feed — route was missing from spec
+  /api/appcast:
+    get:
+      tags: [Public]
+      summary: Ed25519-signed auto-update appcast (Sparkle-inspired)
+      description: >
+        Returns the current release manifest for the requested platform, signed with
+        the dedicated update key; clients verify the signature before installing
+        anything. Refuses (404) when no complete published package exists for the
+        platform or the signing key is unavailable.
+      parameters:
+        - name: platform
+          in: query
+          schema: { type: string, default: "mac", enum: ["mac", "win", "deb"] }
+      responses:
+        "200":
+          description: Signed appcast manifest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  platform: { type: string }
+                  version: { type: string }
+                  build: { type: integer }
+                  minVersion: { type: string }
+                  critical: { type: boolean }
+                  releaseNotes: { type: string }
+                  publishedAt: { type: integer }
+                  signature: { type: string, description: "Base64 Ed25519 signature over the canonical manifest" }
+                  packages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url: { type: string, format: uri }
+                        sha256: { type: string }
+                        size: { type: integer }
+                        type: { type: string }
+        "404":
+          description: No update available for this platform
+
+  # 2026-08-11 /api/beta/reserve POST — warp-hardening_20260811 added; closed-beta interest form — route was missing from spec
+  /api/beta/reserve:
+    post:
+      tags: [Public]
+      summary: Record interest in the Nnyx/Zzyn closed betas
+      description: >
+        Public signup form, rate-limited per IP. Persists the reservation and
+        best-effort sends a confirmation email on a background thread; the operator
+        receives a weekly digest of all rows.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, interests]
+              properties:
+                email:
+                  type: string
+                  format: email
+                interests:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    enum: ["nnyx", "zzyn"]
+      responses:
+        "200":
+          description: Reservation recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  interests:
+                    type: array
+                    items: { type: string }
+                  confirmation: { type: boolean }
+        "400":
+          $ref: "#/components/responses/Error400"
+
+  # 2026-08-11 /api/broadcast GET — warp-hardening_20260811 added; MOTD broadcast, unauthenticated (no security) — route was missing from spec
+  /api/broadcast:
+    get:
+      tags: [Public]
+      summary: Message-of-the-day broadcast
+      description: >
+        Returns the current operator-set broadcast (so a security message reaches
+        every user, Lite or Pro) or null when none is active; the app shows an
+        unseen id once.
+      responses:
+        "200":
+          description: Current broadcast
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcast:
+                    type: object
+                    nullable: true
+
+  # 2026-08-11 /api/startup GET — warp-hardening_20260811 added; consolidated startup check — route was missing from spec
+  /api/startup:
+    get:
+      tags: [Public]
+      summary: Consolidated startup check
+      description: >
+        ONE call so the app does not phone home per feature: current broadcast +
+        update availability (vs. the client's version) + a What's New pointer.
+        This is the privacy consolidation from the plan.
+      parameters:
+        - name: platform
+          in: query
+          schema: { type: string, default: "mac", enum: ["mac", "win", "deb"] }
+        - name: version
+          in: query
+          schema: { type: string, description: "Client version for update comparison" }
+      responses:
+        "200":
+          description: Broadcast, update availability, and What's-New pointer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcast:
+                    type: object
+                    nullable: true
+                  update:
+                    type: object
+                    nullable: true
+                    properties:
+                      available: { type: boolean }
+                      latest: { type: string }
+                      url: { type: string, format: uri }
+                  whatsNewUrl: { type: string }
+
+  # 2026-08-11 /api/whats-new GET — warp-hardening_20260811 added; per-platform What's-New HTML — route was missing from spec
+  /api/whats-new:
+    get:
+      tags: [Public]
+      summary: Per-platform What's-New HTML
+      description: >
+        Legacy `?platform=` route serving the self-contained per-platform What's-New
+        HTML under a strict CSP; the content is Ed25519-signed via the
+        X-Syxx-Signature header. The MOTD subdomains serve the same files at / via
+        Host routing.
+      parameters:
+        - name: platform
+          in: query
+          schema: { type: string, default: "mac", enum: ["mac", "win", "deb"] }
+      responses:
+        "200":
+          description: What's-New HTML (signed via X-Syxx-Signature)
+          content:
+            text/html: {}
+        "404":
+          description: No what's-new content
+
+  # 2026-08-11 /api/stats GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/stats:
     get:
       tags: [Public]
@@ -50,6 +214,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Stats"
 
+  # 2026-08-11 /api/lookup GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/lookup:
     get:
       tags: [Public]
@@ -79,6 +244,7 @@ paths:
         "502":
           $ref: "#/components/responses/Error502"
 
+  # 2026-08-11 /api/reverse-dns GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/reverse-dns:
     get:
       tags: [Public]
@@ -94,6 +260,7 @@ paths:
         "400":
           $ref: "#/components/responses/Error400"
 
+  # 2026-08-11 /api/benchmark GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/benchmark:
     get:
       tags: [Public]
@@ -113,6 +280,7 @@ paths:
         "200":
           description: Benchmark results
 
+  # 2026-08-11 /api/whois GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/whois:
     get:
       tags: [Public]
@@ -126,6 +294,7 @@ paths:
         "200":
           description: WHOIS/RDAP data
 
+  # 2026-08-11 /api/propagation GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/propagation:
     get:
       tags: [Public]
@@ -142,6 +311,7 @@ paths:
         "200":
           description: Propagation consensus
 
+  # 2026-08-11 /api/email-auth GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/email-auth:
     get:
       tags: [Public]
@@ -158,6 +328,7 @@ paths:
         "200":
           description: Email auth check results
 
+  # 2026-08-11 /api/subdomains GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/subdomains:
     get:
       tags: [Public]
@@ -171,6 +342,7 @@ paths:
         "200":
           description: Subdomain enumeration results
 
+  # 2026-08-11 /api/firewall-test GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/firewall-test:
     get:
       tags: [Public]
@@ -183,6 +355,7 @@ paths:
         "200":
           description: Firewall test results
 
+  # 2026-08-11 /api/dnssec GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/dnssec:
     get:
       tags: [Public]
@@ -197,6 +370,7 @@ paths:
           description: DNSSEC validation result
 
   # ── Auth endpoints ──
+  # 2026-08-11 /api/auth/activate POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/auth/activate:
     post:
       tags: [Auth]
@@ -224,6 +398,7 @@ paths:
         "503":
           $ref: "#/components/responses/Error503"
 
+  # 2026-08-11 /api/trial/anchor POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/trial/anchor:
     post:
       tags: [Auth]
@@ -242,6 +417,7 @@ paths:
         "200":
           description: Trial anchored
 
+  # 2026-08-11 /api/pubkey GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/pubkey:
     get:
       tags: [Auth]
@@ -256,6 +432,33 @@ paths:
                 $ref: "#/components/schemas/PublicKey"
 
   # ── Paid endpoints ──
+  # 2026-08-11 /api/billing/portal POST — warp-hardening_20260811 added; Stripe billing-portal session — route was missing from spec
+  /api/billing/portal:
+    post:
+      tags: [Paid]
+      summary: Create a Stripe Customer Portal session
+      description: >
+        Requires an active session token (Authorization: Bearer <session-token>).
+        Returns the portal URL for the caller's own subscription (cancel, upgrade,
+        or update payment method). The Stripe customer id is derived from the
+        session token every time — never taken from the request.
+      responses:
+        "200":
+          description: Billing portal URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, format: uri }
+        "401":
+          description: Missing, invalid, or expired session token
+        "404":
+          description: No license/subscription mapping found for this session
+        "503":
+          $ref: "#/components/responses/Error503"
+
+  # 2026-08-11 /api/investigate GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/investigate:
     get:
       tags: [Paid]
@@ -271,6 +474,7 @@ paths:
         "402":
           $ref: "#/components/responses/Error402"
 
+  # 2026-08-11 /api/authoritative GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/authoritative:
     get:
       tags: [Paid]
@@ -287,6 +491,7 @@ paths:
         "200":
           description: Authoritative answer with delegation trace
 
+  # 2026-08-11 /api/diff POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/diff:
     post:
       tags: [Paid]
@@ -303,6 +508,7 @@ paths:
         "402":
           $ref: "#/components/responses/Error402"
 
+  # 2026-08-11 /api/trace GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/trace:
     get:
       tags: [Paid]
@@ -319,6 +525,7 @@ paths:
         "200":
           description: Delegation trace
 
+  # 2026-08-11 /api/baseline GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/baseline:
     get:
       tags: [Paid]
@@ -335,6 +542,7 @@ paths:
         "200":
           description: Baseline with drift signal
 
+  # 2026-08-11 /api/exposure GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/exposure:
     get:
       tags: [Paid]
@@ -348,6 +556,7 @@ paths:
         "200":
           description: Exposure analysis
 
+  # 2026-08-11 /api/passive-dns GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/passive-dns:
     get:
       tags: [Paid]
@@ -369,6 +578,7 @@ paths:
         "402":
           $ref: "#/components/responses/Error402"
 
+  # 2026-08-11 /api/leak/token POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/leak/token:
     post:
       tags: [Paid]
@@ -383,6 +593,7 @@ paths:
         "402":
           $ref: "#/components/responses/Error402"
 
+  # 2026-08-11 /api/leak/verify GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/leak/verify:
     get:
       tags: [Paid]
@@ -398,6 +609,7 @@ paths:
         "404":
           description: Unknown or expired token
 
+  # 2026-08-11 /api/leaktest/start POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/leaktest/start:
     post:
       tags: [Paid]
@@ -406,6 +618,7 @@ paths:
         "200":
           description: Leak test token for web
 
+  # 2026-08-11 /api/leaktest/check GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/leaktest/check:
     get:
       tags: [Paid]
@@ -419,6 +632,7 @@ paths:
         "200":
           description: Leak test results
 
+  # 2026-08-11 /api/keys GET/POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/keys:
     get:
       tags: [Paid]
@@ -454,6 +668,7 @@ paths:
         "201":
           description: API key created
 
+  # 2026-08-11 /api/keys/{id} DELETE — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/keys/{id}:
     delete:
       tags: [Paid]
@@ -467,6 +682,7 @@ paths:
         "200":
           description: Key revoked
 
+  # 2026-08-11 /api/monitors GET+POST — warp-hardening_20260811 POST added (create-monitor handler was undocumented); GET pre-existing
   /api/monitors:
     get:
       tags: [Paid]
@@ -474,7 +690,28 @@ paths:
       responses:
         "200":
           description: Monitor list
+    post:
+      tags: [Paid]
+      summary: Create a scheduled monitor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain]
+              properties:
+                domain: { type: string }
+                checks: { type: string, default: "prophet" }
+                interval_hours: { type: integer, default: 24 }
+                notify_email: { type: string, format: email, nullable: true }
+      responses:
+        "201":
+          description: Monitor created
+        "400":
+          $ref: "#/components/responses/Error400"
 
+  # 2026-08-11 /api/monitors/{id} DELETE — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/monitors/{id}:
     delete:
       tags: [Paid]
@@ -488,6 +725,7 @@ paths:
         "200":
           description: Monitor deleted
 
+  # 2026-08-11 /api/bulk-investigate POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/bulk-investigate:
     post:
       tags: [Paid]
@@ -508,6 +746,7 @@ paths:
         "200":
           description: Bulk investigation results
 
+  # 2026-08-11 /api/lookalike POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/lookalike:
     post:
       tags: [Paid]
@@ -526,6 +765,7 @@ paths:
         "200":
           description: Lookalike analysis
 
+  # 2026-08-11 /warp GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /warp:
     get:
       tags: [Paid]
@@ -541,6 +781,7 @@ paths:
           description: >
             Gone. { error, successor: "/api/warp/manifest", deprecated: true }.
 
+  # 2026-08-11 /api/warp/manifest GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/warp/manifest:
     get:
       tags: [Paid]
@@ -579,6 +820,7 @@ paths:
         "502":
           description: Manifest fetch failed, or inconclusive (initial-load HTML unavailable).
 
+  # 2026-08-11 /api/warp/raw GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/warp/raw:
     get:
       tags: [Paid]
@@ -611,6 +853,7 @@ paths:
         "502":
           description: Fetch failed.
 
+  # 2026-08-11 /api/warp/assembly GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/warp/assembly:
     get:
       tags: [Paid]
@@ -633,6 +876,40 @@ paths:
           description: >
             Gone. { error, successor: "/api/warp/manifest", deprecated: true }.
 
+  # 2026-08-11 /leak GET — warp-hardening_20260811 added; legacy leak readout — route was missing from spec
+  /leak:
+    get:
+      tags: [Paid]
+      summary: Legacy leak observation readout
+      description: >
+        Backwards-compatible readout of the last resolver and observations for a
+        raw one-time leak token owned by the caller.
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Token observations with last resolver
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  resolverIP:
+                    type: string
+                    nullable: true
+                  observations:
+                    type: array
+                    items: { type: object }
+        "402":
+          $ref: "#/components/responses/Error402"
+        "404":
+          description: Unknown token or token not owned by the caller
+
+  # 2026-08-11 /fetch_script GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /fetch_script:
     get:
       tags: [Paid]
@@ -646,6 +923,24 @@ paths:
         "200":
           description: Script inventory
 
+  # 2026-08-11 /warp/fetch_script GET — warp-hardening_20260811 added; alias of /fetch_script (same handler) — route was missing from spec
+  /warp/fetch_script:
+    get:
+      tags: [Paid]
+      summary: Fetch and parse scripts from a URL (alias of /fetch_script)
+      description: >
+        Alias of /fetch_script served by the same handler (`_route_fetch_script`),
+        kept for clients that pinned the /warp/ path.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+      responses:
+        "200":
+          description: Script inventory
+
+  # 2026-08-11 /dns-query GET/POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /dns-query:
     get:
       tags: [Paid]
@@ -669,6 +964,7 @@ paths:
           description: DNS response
 
   # ── Webhooks ──
+  # 2026-08-11 /api/webhooks/stripe POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/webhooks/stripe:
     post:
       tags: [Webhooks]
@@ -678,6 +974,7 @@ paths:
         "200":
           description: Event processed
 
+  # 2026-08-11 /api/webhooks/keygen POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/webhooks/keygen:
     post:
       tags: [Webhooks]
@@ -686,6 +983,7 @@ paths:
         "200":
           description: Event processed
 
+  # 2026-08-11 /api/checkout GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /api/checkout:
     get:
       tags: [Auth]
@@ -700,6 +998,7 @@ paths:
           description: Redirect to Stripe Checkout
 
   # ── Health ──
+  # 2026-08-11 /healthz GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /healthz:
     get:
       tags: [Public]
@@ -708,6 +1007,7 @@ paths:
         "200":
           description: OK
 
+  # 2026-08-11 /readyz GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /readyz:
     get:
       tags: [Public]
@@ -716,6 +1016,7 @@ paths:
         "200":
           description: Ready
 
+  # 2026-08-11 /metrics GET — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
   /metrics:
     get:
       tags: [Public]

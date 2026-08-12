@@ -378,6 +378,15 @@ jobs:
           cd Server
           ./venv/bin/ruff check syxx_server/ tests/
 
+      # --- OpenAPI drift (warp-hardening_20260811): the spec must document every
+      # live route. The checker derives the live route set mechanically from the
+      # route dispatch in app.py (AST, never a hand-maintained list) and fails on
+      # ANY divergence in either direction.
+      - name: Run OpenAPI drift check
+        run: |
+          cd Server
+          ./venv/bin/python tools/check_openapi_drift.py
+
       # --- Bandit: Python security scanning (Phase 0.6). Catches common
       # security issues (hardcoded passwords, SQL injection, weak crypto).
       - name: Run bandit security scan

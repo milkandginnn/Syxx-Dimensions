@@ -28,6 +28,9 @@ ignore = [
     "S",     # security checks relaxed in tests
     "T20",   # print allowed in tests
 ]
+"tools/*" = [
+    "T20",   # CLI report scripts print their output
+]
 
 [tool.bandit]
 exclude_dirs = ["tests", "venv", "__pycache__"]

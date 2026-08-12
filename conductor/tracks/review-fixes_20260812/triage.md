@@ -122,3 +122,50 @@ Widening `WitnessTestimonyState` is a **three-platform change** — macOS, `Wind
 ## Unverified prediction to check cheaply
 
 `LicenseManager.swift` is the only other file using `kSecUseDataProtectionKeychain`. If any of the remaining failing names exercise licence keychain writes, they share this root cause and must not be triaged as separate defects.
+
+## Comparator cluster (15 names) — reported
+
+**All 15 are STALE-TEST across 7 root causes. No live defects, none undecided.** Analysis was post-Wave-2, so N2 and N8/W04 are already accounted for.
+
+Eleven of the fifteen have been red since the initial commit, hidden by the non-compiling suite. They are not this cycle's regressions.
+
+| Cause | Tests | What moved |
+|---|---|---|
+| 1 — M03 tri-state + W04 floor | 4 | `.undetermined` now maps to inconclusive, never redirection |
+| 2 — RFC 5737 glue vs D018 filter | 5 | **One fixture line.** Mock glue resolves to `203.0.113.1/.2`, which `IPClassifier` classifies `.documentation`; D018 keeps only `.publicRoutable`, so `nsIPs` is always empty and every `compare()` short-circuits |
+| 3 — C015 retained divergence | 1 | Same-provider no longer downgrades `.diverges` → inconclusive |
+| 4 — B079 disjoint rotation (M14) | 1 | CDN edge rotation is inconclusive, not unstable |
+| 5 — C067 ECS silence (M13) | 1 | No echoed ECS option is inconclusive; only scope-0 is `.notForwarded` |
+| 6 — B076/B077 TTL guards | 2 | Uniform TTL populations are inconclusive, not `.independentCaching` |
+| 7 — D100 permutation harness | 1 | Harness measures the wrong property; B098 binds each resolver's own TTL by design |
+
+**Three tests contradict their own name or doc comment** — a test named `...IsNotTamper` asserts tamper; another's doc says "MUST be inconclusive" while its assertion says otherwise. That is the decisive evidence they are stale.
+
+### Do not "fix" these in the product
+
+- **Cause 1** is the never-false-clean family. Flipping `redirection` to false without also pinning `inconclusive == true` converts each into a false-clean assertion — exactly what M03/W04 closed.
+- **Cause 7 is the most dangerous of the 15.** Satisfying its byte-identity assertion in the product — dropping TTLs from `perResolverAnswers` or sorting records across resolvers — would delete answer-ownership binding and let an attacker swap answers between resolvers under a valid signature. Anyone reading this failure as "the payload is nondeterministic" will reach for precisely that.
+- **Causes 3, 4, 5** each revert to an unearned clean or a CDN false positive if repaired product-side.
+
+### Coverage that must be added alongside
+
+Cause 2's fixture change removes the only (accidental) coverage of the D018 glue filter — add a case asserting documentation/private glue yields inconclusive, or deleting D018 goes unnoticed. Cause 4 leaves `AnswerStability.Status.unstable` unreachable from `classify`; give it a reachable definition or retire it.
+
+### N9 — four more Swift-only honesty repairs C# never received
+
+Found while verifying. In each, Windows returns the **more confident** conclusion on evidence macOS now declines to decide:
+
+| Repair | C# site | C# behavior |
+|---|---|---|
+| C067 | `ECSProbe.cs:42` | returns `NotForwarded` for both scope-0 AND no-option |
+| B076/B077 | `TTLAnomalyProbe.cs:45-61` | neither guard; uniform populations fall through to `IndependentCaching` |
+| B079 | `AnswerStabilityProbe.cs:83` | still returns `Unstable` for disjoint rotation |
+| C015 | `AuthoritativeVantage.cs:130-132` | still downgrades `Diverges` → inconclusive on shared provider |
+
+Landing the 15 test corrections makes the Swift suite green and leaves this gap guarded by nothing.
+
+**Unverified C# lead:** `Windows/dotNET/Syxx.Tests/SynthesisEngineTests.cs:35` uses the same `203.0.113.1/.2` glue against the identical filter at `IPClassifier.cs:67` — likely the same latent fixture fault as cause 2. Cheap to check.
+
+## Running divergence count
+
+Nine cross-runtime divergences are now known: N2, N6, N7, N8, B157, and N9's four. Every one is the same shape — one side repaired, the other not. This is the failure mode that produced the original 36, and it is still producing new ones.

@@ -304,10 +304,15 @@ def _validate_offline(key):
 
 def _offline_license_hmac(key, status, expires_at, plan):
     """Compute HMAC-SHA256 over the license row fields using the server secret.
-    The HMAC covers key + status + expires_at + plan so an attacker cannot modify
-    any field without invalidating the signature."""
-    payload = f"{key}|{status}|{expires_at}|{plan}".encode("utf-8")
-    return hmac.new(secret(), payload, hashlib.sha256).hexdigest()
+
+    The signed field ORDER is db's single source of truth
+    (db.OFFLINE_LICENSE_HMAC_FIELDS — key|plan|status|expires_at,
+    warp-hardening_20260811 Task 3.4). This module's parameter order is
+    (key, status, expires_at, plan) for callers, so it delegates with the args
+    REORDERED to match that canonical order. Keeping the two in sync matters:
+    a divergent order silently changes every row's signature.
+    """
+    return db._license_row_hmac_v1(key, plan, status, expires_at)
 
 
 def _validate_keygen(key):

@@ -28,6 +28,19 @@ TYPE_SRV = 33
 TYPE_RRSIG = 46
 TYPE_DNSKEY = 48
 TYPE_CAA = 257
+TYPE_HTTPS = 65
+
+# Single source of truth for the numeric DNS type values, keyed by their
+# wire/JSON name. Every route that maps a user-supplied "?type=" string to a
+# qtype imports THIS map instead of re-declaring a per-route copy
+# (warp-hardening_20260811 Task 3.2). The private number→name inverse below is
+# DERIVED from it so there is exactly one table.
+TYPE_NAMES = {
+    "A": TYPE_A, "NS": TYPE_NS, "CNAME": TYPE_CNAME, "SOA": TYPE_SOA,
+    "PTR": TYPE_PTR, "MX": TYPE_MX, "TXT": TYPE_TXT, "AAAA": TYPE_AAAA,
+    "SRV": TYPE_SRV, "RRSIG": TYPE_RRSIG, "DNSKEY": TYPE_DNSKEY,
+    "CAA": TYPE_CAA, "HTTPS": TYPE_HTTPS,
+}
 
 # RCODE labels (RFC 1035 4.1.1, extended by RFC 2136 / RFC 2845 / RFC 6891).
 #
@@ -89,8 +102,7 @@ MAX_RRSIG_VALIDITY_SPAN = 63_072_000
 # DNS response (65535 bytes with EDNS) and well below an OOM / loop risk.
 _MAX_TCP_LENGTH = 16_384
 
-_TYPE_NAMES = {1: "A", 2: "NS", 5: "CNAME", 6: "SOA", 12: "PTR", 15: "MX", 16: "TXT",
-               28: "AAAA", 33: "SRV", 46: "RRSIG", 48: "DNSKEY", 257: "CAA"}
+_TYPE_NAMES = {code: name for name, code in TYPE_NAMES.items()}
 
 
 class DNSError(Exception):

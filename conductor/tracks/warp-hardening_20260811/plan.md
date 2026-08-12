@@ -48,16 +48,16 @@ Consolidate duplicated type/rcode maps and pin wire output.
 
 ### Tasks
 
-- [ ] Task 3.1: Write wire-format pinning tests (red) for `/api/lookup`, `/api/reverse-dns`, `/api/propagation`, `/api/whois`, `/dns-query` asserting the exact JSON output (keys, ordering, separators) as produced today.
-- [ ] Task 3.2: Promote `resolver._TYPE_NAMES` / `RCODE_NAMES` to the single source of truth (public names, no per-route copies); re-export from a single module.
-- [ ] Task 3.3: Replace the duplicated dictionaries at `app.py:2103, 2173, 2278, 2699-2700` with imports of the single source; eliminate any per-route local tables.
-- [ ] Task 3.4: Consolidate HMAC field-order constants so the two modules sharing the offline-license HMAC shape reference one ordered field list; add a pinning test for that exact wire format.
-- [ ] Task 3.5: Run the full Python suite and `ruff check` on touched files; resolve any behavior deltas flagged by the pinning tests (adjust source, not the pin).
+- [x] Task 3.1: Write wire-format pinning tests (red) for `/api/lookup`, `/api/reverse-dns`, `/api/propagation`, `/api/whois`, `/dns-query` asserting the exact JSON output (keys, ordering, separators) as produced today.
+- [x] Task 3.2: Promote `resolver._TYPE_NAMES` / `RCODE_NAMES` to the single source of truth (public names, no per-route copies); re-export from a single module.
+- [x] Task 3.3: Replace the duplicated dictionaries at `app.py:2103, 2173, 2278, 2699-2700` with imports of the single source; eliminate any per-route local tables.
+- [x] Task 3.4: Consolidate HMAC field-order constants so the two modules sharing the offline-license HMAC shape reference one ordered field list; add a pinning test for that exact wire format.
+- [x] Task 3.5: Run the full Python suite and `ruff check` on touched files; resolve any behavior deltas flagged by the pinning tests (adjust source, not the pin).
 
 ### Verification
 
-- [ ] Pinning tests green and byte-identical to pre-refactor output; `rg` shows a single definition of each map/field-order list.
-- [ ] `ruff check` clean on touched files; full suite green.
+- [x] Pinning tests green and byte-identical to pre-refactor output; `rg` shows a single definition of each map/field-order list.
+- [x] `ruff check` clean on touched files; full suite green.
 
 ## Phase 4: C# Sync-over-Async Audit
 

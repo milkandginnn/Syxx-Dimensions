@@ -232,6 +232,19 @@ _PROPAGATION_POOL = concurrent.futures.ThreadPoolExecutor(
     max_workers=24, thread_name_prefix="propagation"
 )
 
+# Which "?type=" names each free-tier lookup route accepts. The name→qtype
+# VALUES all live in one place (resolver.TYPE_NAMES, warp-hardening_20260811
+# Task 3.2); these small sets only gate each route's SUPPORTED SUBSET so the
+# per-route maps they replaced no longer duplicate the value tables. Keep the
+# subsets distinct — e.g. /api/lookup accepts SOA/CAA/PTR/SRV while /api/benchmark
+# and /api/propagation default/reject them — or a route's behavior changes.
+_LOOKUP_TYPE_NAMES = frozenset(("A", "AAAA", "NS", "CNAME", "SOA", "MX", "TXT",
+                                "CAA", "PTR", "SRV"))
+_BENCH_TYPE_NAMES = frozenset(("A", "AAAA", "NS", "MX", "TXT", "CNAME"))
+_PROPAGATION_TYPE_NAMES = _BENCH_TYPE_NAMES
+_DOH_JSON_TYPE_NAMES = frozenset(("A", "NS", "CNAME", "SOA", "PTR", "MX", "TXT",
+                                  "AAAA", "SRV", "HTTPS"))
+
 
 def _host(u):
     try:
@@ -2095,13 +2108,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "invalid domain format")
 
         type_str = (query.get("type", ["A"])[0]).strip().upper()
-        type_map = {"A": resolver.TYPE_A, "AAAA": resolver.TYPE_AAAA, "NS": resolver.TYPE_NS,
-                    "CNAME": resolver.TYPE_CNAME, "SOA": resolver.TYPE_SOA, "MX": resolver.TYPE_MX,
-                    "TXT": resolver.TYPE_TXT, "CAA": resolver.TYPE_CAA, "PTR": resolver.TYPE_PTR,
-                    "SRV": resolver.TYPE_SRV}
-        qtype = type_map.get(type_str)
-        if qtype is None:
+        if type_str not in _LOOKUP_TYPE_NAMES:
             return self._json_error(400, "unsupported record type")
+        qtype = resolver.TYPE_NAMES[type_str]
 
         server = (query.get("server", [""])[0]).strip()
         if not server:
@@ -2111,8 +2120,6 @@ class Handler(BaseHTTPRequestHandler):
         if server not in config.PUBLIC_RESOLVERS:
             return self._json_error(400, "server must be in the allowed resolver list")
 
-        rcode_names = {0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN",
-                       4: "NOTIMP", 5: "REFUSED"}
         try:
             result = resolver.query(domain, qtype, server, timeout=config.INVESTIGATE_TIMEOUT)
         except resolver.DNSError as e:
@@ -2122,7 +2129,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, {
             "domain": domain, "type": type_str, "server": server,
             "rcode": result.get("rcode", -1),
-            "rcodeName": rcode_names.get(result.get("rcode", -1), "UNKNOWN"),
+            "rcodeName": resolver.rcode_name(result.get("rcode", -1)),
             "ad": result.get("ad", False),
             "records": result.get("records", []),
             "truncated": result.get("truncated", False),
@@ -2165,9 +2172,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "missing or invalid domain")
 
         type_str = (query.get("type", ["A"])[0]).strip().upper()
-        type_map = {"A": resolver.TYPE_A, "AAAA": resolver.TYPE_AAAA, "NS": resolver.TYPE_NS,
-                    "MX": resolver.TYPE_MX, "TXT": resolver.TYPE_TXT, "CNAME": resolver.TYPE_CNAME}
-        qtype = type_map.get(type_str, resolver.TYPE_A)
+        # Unsupported types fall back to A (benchmark behavior, not an error).
+        qtype = resolver.TYPE_NAMES[type_str] if type_str in _BENCH_TYPE_NAMES else resolver.TYPE_A
 
         try:
             rounds = min(10, max(1, int(query.get("rounds", ["3"])[0])))
@@ -2270,11 +2276,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(400, "invalid or missing domain")
 
         type_str = (query.get("type", ["A"])[0]).strip().upper()
-        type_map = {"A": resolver.TYPE_A, "AAAA": resolver.TYPE_AAAA, "NS": resolver.TYPE_NS,
-                    "MX": resolver.TYPE_MX, "TXT": resolver.TYPE_TXT, "CNAME": resolver.TYPE_CNAME}
-        qtype = type_map.get(type_str)
-        if qtype is None:
+        if type_str not in _PROPAGATION_TYPE_NAMES:
             return self._json_error(400, "unsupported record type")
+        qtype = resolver.TYPE_NAMES[type_str]
 
         resolvers = config.PROPAGATION_RESOLVERS
 
@@ -2659,15 +2663,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_error(502, "all upstream resolvers failed")
         self._send(200, resp, "application/dns-message")
 
-    # Name→number for the JSON convenience format's ?type=. Small on purpose: the wireformat path
-    # carries any type; JSON is a convenience for the common ones. A numeric ?type= is also accepted.
-    _DOH_JSON_TYPES = {"A": 1, "NS": 2, "CNAME": 5, "SOA": 6, "PTR": 12, "MX": 15,
-                       "TXT": 16, "AAAA": 28, "SRV": 33, "HTTPS": 65}
+    # Supported "?type=" names for the JSON convenience format, from the single
+    # resolver.TYPE_NAMES table. The wireformat path carries any type; JSON is a
+    # convenience for these. A numeric ?type= is also accepted.
+    _DOH_JSON_TYPES = _DOH_JSON_TYPE_NAMES
 
     def _doh_respond_json(self, query):
         name = (query.get("name", [""])[0]).strip()
         type_param = (query.get("type", ["A"])[0]).strip().upper()
-        qtype = self._DOH_JSON_TYPES.get(type_param)
+        qtype = resolver.TYPE_NAMES.get(type_param) if type_param in _DOH_JSON_TYPE_NAMES else None
         if qtype is None:
             try:
                 qtype = int(type_param)

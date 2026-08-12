@@ -436,9 +436,17 @@ def _license_hmac_key_v2():
     return _hmac.new(licensing.secret(), b"license-row-v1", hashlib.sha256).digest()
 
 
+# Ordered field list for the offline-license row HMAC (D053 / A184). db.py (which
+# verifies stored rows) and licensing.py (which validates licenses) BOTH sign over
+# this exact field ORDER (warp-hardening_20260811 Task 3.4). Never reorder: the
+# order changes the signature of every existing v1 row.
+OFFLINE_LICENSE_HMAC_FIELDS = ("key", "plan", "status", "expires_at")
+
+
 def _license_row_hmac_v1(key, plan, status, expires_at):
-    """D053 legacy HMAC: pipe-delimited, covers 4 fields only."""
-    msg = "%s|%s|%s|%s" % (key, plan, status, expires_at or "")
+    """D053 legacy HMAC: pipe-delimited, covers OFFLINE_LICENSE_HMAC_FIELDS only."""
+    values = {"key": key, "plan": plan, "status": status, "expires_at": expires_at or ""}
+    msg = "|".join(str(values[f]) for f in OFFLINE_LICENSE_HMAC_FIELDS)
     return _hmac.new(_license_hmac_key_v1(), msg.encode("utf-8"), hashlib.sha256).hexdigest()
 
 

@@ -344,17 +344,26 @@ namespace Syxx.Kit
             bool degraded = publicOutcomes.Values.Any(o => o.DidFail || o.Records.Count == 0)
                 || (!redirection && resolverOverlapCount == 1 && onlyOverlapIsUnique);
 
-            // B010 residual: UDP unanimous + DoH all failed/blocked → cannot distinguish "tampered +
-            // attacker also blocks DoH" from "clean + DoH provider outage". Must be inconclusive,
-            // never a false-secure clean result. Only applies when redirection was NOT already
-            // detected (no double-counting) and when DoH outcomes were provided.
+            // B010 residual: UDP unanimous + DoH cross-check below quorum → cannot distinguish
+            // "tampered + attacker also suppresses DoH" from "clean + DoH provider outage". Must be
+            // inconclusive, never a false-secure clean result. Only applies when redirection was NOT
+            // already detected (no double-counting) and when DoH outcomes were provided.
+            //
+            // W04: the quorum floor is the SAME one DetectUnanimousTampering enforces — at least two
+            // DoH endpoints must actually return records. Testing "all DoH failed" was too narrow: a
+            // single answering endpoint made that false while DetectUnanimousTampering still bailed
+            // out at its own `< 2` gate, so a run with no completed cross-transport corroboration was
+            // reported fully clean. One witness is below the floor, so it counts as none.
             bool dohProvided = dohOutcomes is not null && dohOutcomes.Count > 0;
             var udpSetsForCheck = publicOutcomes.Values.Where(o => o.Records.Count > 0)
                 .Select(o => new HashSet<string>(o.Records.Select(r => r.Rdata))).ToList();
             bool udpUnanimous = udpSetsForCheck.Count >= 2
                 && udpSetsForCheck.All(s => s.SetEquals(udpSetsForCheck[0]));
-            bool allDohFailed = dohProvided && dohOutcomes!.Values.All(o => o.Records.Count == 0);
-            bool dohBlockedWhileUdpUnanimous = !redirection && udpUnanimous && allDohFailed;
+            int dohAnsweringCount = dohProvided
+                ? dohOutcomes!.Values.Count(o => o.Records.Count > 0)
+                : 0;
+            bool dohBelowCorroborationFloor = dohProvided && dohAnsweringCount < 2;
+            bool dohBlockedWhileUdpUnanimous = !redirection && udpUnanimous && dohBelowCorroborationFloor;
 
             // B281: fold in the unconfirmable-disjoint-divergence inconclusive. `degraded` was
             // computed above (before any early exit), so a timed-out UDP baseline cannot be erased

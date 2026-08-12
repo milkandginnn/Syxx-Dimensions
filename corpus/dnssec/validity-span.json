@@ -1,0 +1,100 @@
+{
+  "name": "dnssec-rrsig-validity-span",
+  "description": "W16 cross-runtime binding for the RRSIG validity-span plausibility guard (B047). The normative span is RATIFIED and must not change without changing this file; every runtime that enforces it reads its expectation from here rather than repeating a bare literal. C# DNSSECVerifier.MaxPlausibleValiditySpanSeconds, Swift DNSSECVerifier.maxPlausibleValiditySpanSeconds, and Python resolver.MAX_RRSIG_VALIDITY_SPAN must all equal normative.max_validity_span_seconds, and each runtime's window check must agree with every case below.",
+  "normative": {
+    "max_validity_span_seconds": 63072000,
+    "human": "730 days (2 years)",
+    "rejection_rule": "reject when ((expiration - inception) mod 2^32) is STRICTLY GREATER THAN max_validity_span_seconds; a span exactly at the limit is accepted",
+    "serial_arithmetic": "RFC 1982, SERIAL_BITS = 32: `a <= b` iff ((b - a) mod 2^32) < 2^31. `now` is reduced mod 2^32 before comparison, so windows straddling the 2106 epoch wrap are evaluated correctly."
+  },
+  "cases": [
+    {
+      "name": "typical_thirty_day_window_accepted",
+      "inception": 1000000,
+      "expiration": 3592000,
+      "now": 1500000,
+      "window_valid": true,
+      "reason": "A real signer's window: 30 days, far below the limit, and now sits inside it."
+    },
+    {
+      "name": "span_exactly_at_limit_accepted",
+      "inception": 1000000,
+      "expiration": 64072000,
+      "now": 1000010,
+      "window_valid": true,
+      "reason": "Span == 63072000 exactly. The guard rejects on strictly-greater, so the boundary value is ACCEPTED. This pins the comparison operator: a runtime that switched to >= would go red here."
+    },
+    {
+      "name": "span_one_second_above_limit_rejected",
+      "inception": 1000000,
+      "expiration": 64072001,
+      "now": 1000010,
+      "window_valid": false,
+      "reason": "Span == 63072001, one second past the limit, and now sits inside the window. Only the plausibility guard can reject this — it pins the limit itself."
+    },
+    {
+      "name": "span_one_second_below_limit_accepted",
+      "inception": 1000000,
+      "expiration": 64071999,
+      "now": 1000010,
+      "window_valid": true,
+      "reason": "Span == 63071999. Proves the limit is not off by one in the accepting direction."
+    },
+    {
+      "name": "serial_half_space_span_rejected",
+      "inception": 0,
+      "expiration": 2147483647,
+      "now": 10,
+      "window_valid": false,
+      "reason": "A span of 2^31-1: the widest window serial arithmetic still calls well-ordered. This is the clock-spoof shape the guard exists for (B047)."
+    },
+    {
+      "name": "wrap_adjacent_span_exactly_at_limit_accepted",
+      "inception": 4294967195,
+      "expiration": 63071899,
+      "now": 4294967306,
+      "window_valid": true,
+      "reason": "Window straddles the 2^32 (year 2106) wrap: inception is 101s before the wrap, expiration 63071899s after. Span under serial arithmetic == 63072000, exactly the limit, so accepted. now == 2^32 + 10, i.e. 10s past the wrap, inside the window once reduced mod 2^32. A runtime doing absolute-epoch subtraction instead of mod-2^32 would compute a negative or astronomically large span and go red."
+    },
+    {
+      "name": "wrap_adjacent_span_one_second_above_limit_rejected",
+      "inception": 4294967195,
+      "expiration": 63071900,
+      "now": 4294967306,
+      "window_valid": false,
+      "reason": "The same wrap-straddling shape one second wider. This is the bypass the guard must not have: crossing the wrap must not buy an attacker a wider plausible span than staying below it."
+    },
+    {
+      "name": "wrap_spoofed_maximum_span_rejected",
+      "inception": 4294000000,
+      "expiration": 2146516351,
+      "now": 4294000010,
+      "window_valid": false,
+      "reason": "Wrap-straddling window of 2^31-1 seconds — the maximum the serial ordering permits, reached by wrapping past 2^32 rather than by a large literal. Must be refused exactly like the non-wrapping half-space case."
+    },
+    {
+      "name": "expiration_before_inception_rejected",
+      "inception": 2000000,
+      "expiration": 1000000,
+      "now": 1500000,
+      "window_valid": false,
+      "reason": "Malformed: under serial arithmetic the forward distance inception -> expiration exceeds 2^31, so expiration does not follow inception. Rejected before the span guard is even consulted."
+    },
+    {
+      "name": "plausible_span_but_expired_rejected",
+      "inception": 1000000,
+      "expiration": 2000000,
+      "now": 2500000,
+      "window_valid": false,
+      "reason": "Span is plausible; now is past expiration. Keeps the span guard from being mistaken for the whole check."
+    },
+    {
+      "name": "plausible_span_but_not_yet_valid_rejected",
+      "inception": 1000000,
+      "expiration": 2000000,
+      "now": 500000,
+      "window_valid": false,
+      "reason": "Span is plausible; now precedes inception."
+    }
+  ]
+}

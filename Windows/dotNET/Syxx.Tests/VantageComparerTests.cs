@@ -255,10 +255,50 @@ namespace Syxx.Tests
                 "Inconclusive and Degraded are mutually exclusive in Evaluate()");
         }
 
-        // Boundary guard: DoH provided but ONLY a subset fails (not all) — must not falsely
-        // force Inconclusive when a partial DoH result is still usable.
+        // W04 residual: DoH provided, but only ONE endpoint answered. DetectUnanimousTampering
+        // abandons the cross-check at its `dohSets.Count < 2` gate, so the run carries NO
+        // cross-transport corroboration at all — yet the lone DoH answer is enough to make an
+        // "all DoH failed" test false. Before the fix, Evaluate emitted a fully clean result
+        // (no redirection, no inconclusive, no degraded) from a run that never corroborated
+        // anything. Under-2 answering endpoints must read exactly like zero: not corroborated.
+        //
+        // This is the benign-looking shape — the lone DoH endpoint AGREES with the unanimous UDP
+        // answer and with local. One agreeing witness is still below the ≥2 corroboration floor
+        // this comparer applies everywhere else, so it cannot license a clean result.
+        //
+        // Mutation proof: revert the guard in Evaluate() to `allDohFailed` and this goes RED —
+        // Inconclusive becomes false on a run with exactly one answering DoH endpoint.
         [Fact]
-        public void PartialDoHFailureWithOneSuccess_IsNotInconclusive()
+        public void UDPUnanimousWithSingleAgreeingDoH_IsInconclusive()
+        {
+            var local = Success(GoodIP);
+            var publics = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = Success(GoodIP),
+                ["Google"]     = Success(GoodIP),
+                ["Quad9"]      = Success(GoodIP)
+            };
+            // Exactly one DoH endpoint answered; the other two failed.
+            var doh = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = Success(GoodIP),
+                ["Google"]     = Failure(),
+                ["Quad9"]      = Failure()
+            };
+            var result = VantageComparer.Evaluate(local, publics, doh);
+
+            Assert.True(result.Inconclusive,
+                "one answering DoH endpoint is below the ≥2 cross-transport corroboration floor; " +
+                "the run must not be reported clean (W04)");
+            Assert.False(result.Redirection,
+                "an uncorroborated run must not fabricate a tampered result either");
+        }
+
+        // W04, the accusatory-looking shape: the lone DoH endpoint DISAGREES with the unanimous UDP
+        // answer that local echoes. One witness is below the tamper floor, so no redirection — but
+        // it is equally not a clean run, because the cross-check never reached quorum.
+        [Fact]
+        public void PartialDoHFailureWithOneSuccess_IsInconclusive()
         {
             var local = Success(TamperIP);
             var publics = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
@@ -275,12 +315,35 @@ namespace Syxx.Tests
                 ["Quad9"]      = Failure()
             };
             var result = VantageComparer.Evaluate(local, publics, doh);
-            // One DoH success is below the ≥2 corroboration floor for a tamper result, but also
-            // does NOT trigger the all-DoH-blocked Inconclusive guard.
-            Assert.False(result.Inconclusive,
-                "partial DoH failure (one success) must not trigger the all-DoH-blocked Inconclusive guard");
+            Assert.True(result.Inconclusive,
+                "one answering DoH endpoint leaves the cross-transport check below quorum (W04)");
             Assert.False(result.Redirection,
                 "a lone DoH answer does not meet the ≥2 corroboration floor");
+        }
+
+        // W04 boundary, the other side of the gate: TWO answering DoH endpoints DO reach the
+        // corroboration floor, so a third failing endpoint must not force Inconclusive. This is the
+        // test that keeps the fix from degenerating into "any DoH failure ⇒ inconclusive".
+        [Fact]
+        public void TwoAgreeingDoHWithOneFailure_IsNotInconclusive()
+        {
+            var local = Success(GoodIP);
+            var publics = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = Success(GoodIP),
+                ["Google"]     = Success(GoodIP),
+                ["Quad9"]      = Success(GoodIP)
+            };
+            var doh = new System.Collections.Generic.Dictionary<string, ResolverQueryOutcome>
+            {
+                ["Cloudflare"] = Success(GoodIP),
+                ["Google"]     = Success(GoodIP),
+                ["Quad9"]      = Failure()
+            };
+            var result = VantageComparer.Evaluate(local, publics, doh);
+            Assert.False(result.Inconclusive,
+                "two answering DoH endpoints meet the corroboration floor — this run IS corroborated");
+            Assert.False(result.Redirection);
         }
     }
 }

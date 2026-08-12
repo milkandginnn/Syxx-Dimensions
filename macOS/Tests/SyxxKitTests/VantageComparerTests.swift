@@ -386,4 +386,153 @@ final class VantageComparerTests: XCTestCase {
                        "two answering DoH endpoints meet the quorum floor — a third failure must not "
                        + "erase a corroboration that actually completed")
     }
+
+    // MARK: - F1: a FAILED outcome never votes in UDP unanimity, even when it carries records
+
+    /// The rdata an off-path spoofer plants. Routable and non-blocking so these cases exercise the
+    /// unanimity logic rather than short-circuiting through `IPClassifier.isBlockingAnswer`.
+    private let attackerIP = "203.0.113.66"
+
+    /// `ResolverQueryOutcome.didFail` is not a synonym for "carries no records". `.responseIdMismatch`
+    /// is the signature of an off-path spoofer — a response whose ID does not match the query we
+    /// sent, so the packet was NOT written by the resolver we asked — and it arrives full of records.
+    /// `.truncated` and `.malformedResponse` are the same shape: the answer could not be trusted, yet
+    /// records were parsed out of it.
+    ///
+    /// Such an outcome must not vote. Here three honest resolvers are unanimous on the tampered
+    /// destination and DoH transparently shows the real one — a confirmed B010 pattern. One forged
+    /// packet disagreeing with the three must not be able to erase that conclusion.
+    ///
+    /// Failure case: drop `!$0.didFail` from the `udpSets` filter in `detectUnanimousTampering` and
+    /// this goes RED for every status — a spoofer silences a real tamper conclusion for the price of
+    /// one packet. The N2 record-set repair is unaffected: SERVFAIL/REFUSED/NXDOMAIN carry no
+    /// records and stay excluded by `hasRecords` whatever `didFail` says.
+    func testF1_FailedOutcomesCarryingRecordsCannotDefeatUnanimity() {
+        let forgedStatuses: [DNSResponseStatus] = [.responseIdMismatch, .truncated, .malformedResponse]
+        for status in forgedStatuses {
+            var publics: [String: ResolverQueryOutcome] = [
+                "Cloudflare": outcome([tamperIP]),
+                "Google":     outcome([tamperIP]),
+                "Quad9":      outcome([tamperIP])
+            ]
+            publics["Spoofed"] = outcome([attackerIP], status: status)
+            let doh: [String: ResolverQueryOutcome] = [
+                "Cloudflare": outcome([realIP]),
+                "Google":     outcome([realIP]),
+                "Quad9":      outcome([realIP])
+            ]
+            XCTAssertEqual(VantageComparer.detectUnanimousTampering(publicOutcomes: publics,
+                                                                    dohOutcomes: doh,
+                                                                    localRdatas: [tamperIP]),
+                           .tampered,
+                           "a \(status) outcome is a failed answer, not a vantage — it must not break "
+                           + "the unanimity of the three resolvers that actually answered")
+        }
+    }
+
+    /// The mirror-image abuse: rather than breaking unanimity, the forged packet SUPPLIES it. Only
+    /// one genuine resolver answered, which is below the `< 2` quorum the cross-check enforces. A
+    /// spoofer adding a second, agreeing packet must not manufacture the missing witness.
+    ///
+    /// Failure case: without the `!$0.didFail` filter `udpSets.count` reaches 2, the sets are
+    /// unanimous, the DoH consensus differs and local matches — the function reports `.tampered` on
+    /// the strength of evidence an attacker wrote.
+    func testF1_ForgedOutcomeCannotManufactureTheUnanimityQuorum() {
+        let publics: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([tamperIP]),                                  // the one real witness
+            "Spoofed":    outcome([tamperIP], status: .responseIdMismatch),     // off-path forgery
+            "Google":     outcome([], status: .timeout),
+            "Quad9":      outcome([], status: .timeout)
+        ]
+        let doh: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([realIP])
+        ]
+        XCTAssertEqual(VantageComparer.detectUnanimousTampering(publicOutcomes: publics,
+                                                                dohOutcomes: doh,
+                                                                localRdatas: [tamperIP]),
+                       .notTampered,
+                       "one genuine answering resolver is below the corroboration floor — a forged "
+                       + "packet must not be counted as the second witness")
+    }
+
+    /// End-to-end consequence of the same defect, through `evaluate`. With a single answering DoH
+    /// endpoint the cross-check cannot complete, so `detectUnanimousTampering` returns `undetermined`
+    /// and the run must read INCONCLUSIVE — never a decided clean. A forged `.truncated` packet that
+    /// breaks UDP unanimity short-circuits the function to `.notTampered` *before* the DoH gate is
+    /// reached, and the honest "we could not tell" collapses into "no redirection found".
+    ///
+    /// Failure case: without the `!$0.didFail` filter this goes RED on `inconclusive` — the run is
+    /// reported as decided on the strength of a packet the resolver never sent.
+    func testF1_ForgedTruncatedOutcomeCannotTurnUndeterminedIntoADecidedRun() {
+        let local = outcome([realIP])
+        var publics: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([realIP]),
+            "Quad9":      outcome([realIP])
+        ]
+        publics["Spoofed"] = outcome([attackerIP], status: .truncated)
+        // One answering DoH endpoint: below the corroboration floor, so no cross-check completes.
+        let doh: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),
+            "Google":     outcome([], status: .timeout),
+            "Quad9":      outcome([], status: .timeout)
+        ]
+
+        XCTAssertEqual(VantageComparer.detectUnanimousTampering(publicOutcomes: publics,
+                                                                dohOutcomes: doh,
+                                                                localRdatas: [realIP]),
+                       .undetermined,
+                       "the three genuine resolvers are unanimous and the DoH leg is below quorum — "
+                       + "the honest answer is undetermined, not a forged disagreement")
+
+        let r = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics, dohOutcomes: doh)
+        XCTAssertFalse(r.redirection, "nothing here confirms a redirect")
+        XCTAssertTrue(r.inconclusive,
+                      "a forged packet must not convert an uncompleted cross-transport check into a "
+                      + "decided run")
+    }
+
+    // MARK: - F2: one answering DoH endpoint hands the comparison to attacker-authored UDP baselines
+
+    /// Characterisation test for the shape the W04 baseline-preference change opened up, and which
+    /// nothing else covers: exactly ONE answering DoH endpoint (below the ≥2 floor, so `baselines`
+    /// falls back to UDP), `resolverOverlapCount == 1`, that lone overlap uncorroborated, and a
+    /// corroborated alternative behind it.
+    ///
+    /// Before W04 this input early-returned `degraded` at `!sufficientBaseline`, because a single DoH
+    /// answer was still preferred and made `baselines` one element. It now runs the full comparison
+    /// over UDP baselines — which an on-path port-53 attacker authors — and the B058/B059
+    /// poisoned-baseline upgrade fires: `redirection == true`. Two independent conditions then keep
+    /// the W04 residual guard silent on this input: `dohBlockedWhileUdpUnanimous` requires
+    /// `!redirection`, and the UDP answers are not unanimous in the first place.
+    ///
+    /// This asserts what the code DOES; it is not an endorsement. The result is an
+    /// attacker-constructible positive rather than a false clean, and the identical path is already
+    /// reachable whenever DoH is wholly absent — which is why the behaviour is left alone here and
+    /// only the inline claim above it was corrected.
+    func testF2_LoneDoHWitnessHandsTheComparisonToUdpBaselines() {
+        let local = outcome([realIP])                       // the lone UDP echo agrees with local
+        let publics: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),                // single, uncorroborated overlap
+            "Google":     outcome([tamperIP]),              // corroborated alternative, 1 of 2
+            "Quad9":      outcome([tamperIP])               // corroborated alternative, 2 of 2
+        ]
+        let doh: [String: ResolverQueryOutcome] = [
+            "Cloudflare": outcome([realIP]),                // the ONE answering endpoint
+            "Google":     outcome([], status: .timeout),
+            "Quad9":      outcome([], status: .timeout)
+        ]
+
+        let r = VantageComparer.evaluate(localOutcome: local, publicOutcomes: publics, dohOutcomes: doh)
+        XCTAssertTrue(r.redirection,
+                      "with DoH below the floor the UDP baselines carry the comparison and the "
+                      + "B058/B059 upgrade fires — the lone echo is graded as poison")
+        XCTAssertFalse(r.inconclusive,
+                       "the W04 residual guard cannot fire here: it requires !redirection, and the "
+                       + "UDP answers are not unanimous either")
+        XCTAssertFalse(r.degraded,
+                       "degraded is subsumed by the confirmed redirection — every UDP resolver "
+                       + "answered with records")
+    }
 }

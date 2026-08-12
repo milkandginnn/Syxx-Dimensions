@@ -153,9 +153,24 @@ public enum VantageComparer {
         // the `!sufficientBaseline` early return below: every usable UDP baseline was discarded and
         // the run returned `degraded` with `inconclusive == false`, before the residual guard at the
         // foot of this function could ever be reached. One witness is below the floor, so it counts
-        // as none and the UDP baselines carry the comparison instead. Strictly fail-closed: the DoH
-        // consensus is still the ONLY reference B281 classifies a disjoint answer against, so this
-        // opens no new path to `redirection`.
+        // as none and the UDP baselines carry the comparison instead.
+        //
+        // F2: what holds here is NARROWER than "strictly fail-closed, opens no new path to
+        // `redirection`" — that earlier claim was wrong and is corrected rather than acted on.
+        // `baselines` does not only feed the B281 disjoint branch; it also feeds `publicUnion`,
+        // `resolverOverlapCount` and `sufficientBaseline`. In the `dohBaselines.count == 1 &&
+        // udpBaselines.count >= 2` case the old code early-returned `degraded` at
+        // `!sufficientBaseline`; this code instead runs the full comparison over UDP baselines an
+        // on-path port-53 attacker authors — including the B058/B059 poisoned-baseline upgrade, which
+        // can set `redirection = true`. Because `dohBlockedWhileUdpUnanimous` requires `!redirection`,
+        // the W04 residual guard then does not fire on that input.
+        //
+        // What IS true: the B281 disjoint branch classifies ONLY against `dohCorroboratedPool`, never
+        // `publicUnion`, so *that* path gains no new route to `redirection`. The B058/B059 path is an
+        // attacker-constructible positive, not a false clean, and it is not a NEW exposure: the
+        // identical path is already reachable whenever DoH is wholly absent (`dohBaselines.isEmpty`),
+        // the common case on a filtered network. Behaviour is therefore left unchanged and the shape
+        // is pinned by `testF2_LoneDoHWitnessHandsTheComparisonToUdpBaselines`.
         let baselines = dohBaselines.count >= 2 ? dohBaselines : udpBaselines
         let anyPublicBaseline = !baselines.isEmpty
         let sufficientBaseline = baselines.count >= 2
@@ -338,10 +353,25 @@ public enum VantageComparer {
         // (any public outcome that failed or returned no records), and `ComparisonResult` carries
         // every queried resolver with its typed RCODE. Twin of the C# repair in `VantageComparer.cs`
         // `DetectUnanimousTampering`, which filters on `Records.Count > 0` and compares no statuses.
+        //
+        // F1: `hasRecords` is the N2 filter and is NOT sufficient on its own — `!didFail` is a
+        // SEPARATE, non-overlapping exclusion and both are required. `didFail` here (see
+        // `ResolverQueryOutcome.didFail` above) covers `.timeout`, `.transportError`,
+        // `.malformedResponse`, `.responseIdMismatch` and `.truncated`. The first two carry no
+        // records, but the last three DO: `.responseIdMismatch` is the signature of an off-path
+        // spoofer — a response whose ID does not match the query we sent, so the packet was not
+        // written by the resolver we asked — and it arrives full of attacker-chosen records. Admitting
+        // it lets one forged packet either BREAK unanimity (silencing a real tamper conclusion) or
+        // SUPPLY it (manufacturing the second witness the `< 2` gate demands). Dropping `!didFail`
+        // never helped N2 either: SERVFAIL/REFUSED/NXDOMAIN/NODATA are not in `didFail` at this
+        // layer at all, so `hasRecords` alone is what excludes them, with or without this clause.
+        // The C# twin filters on `Records.Count > 0` ONLY and therefore still admits the forged
+        // outcomes — on this point Swift is correct and `VantageComparer.cs` needs the same repair;
+        // it is deliberately NOT parity-matched downwards.
         // C117: filter to address records — CNAME/RRSIG rdata differ across resolvers even
         // when the A/AAAA answers agree, producing spurious "disagreement".
         let udpSets = publicOutcomes.values
-            .filter { $0.hasRecords }
+            .filter { !$0.didFail && $0.hasRecords }
             .map { Set($0.records.filter { $0.type == 1 || $0.type == 28 }.map(\.rdata)) }
         if udpSets.count < 2 { return .notTampered }
 

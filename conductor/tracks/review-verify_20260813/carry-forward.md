@@ -262,3 +262,67 @@ Fix: the payload exposes no event id (`data.get("id")` is the *license* id), so 
 Confirmed: README claims 3.8+ while `StrEnum` and four `datetime.UTC` sites (all added by this diff) require 3.11+. README is **clean**, so the claim predates the change; the code moved. Runtime and lint already agree on 3.12, and ruff's `UP` rules actively push toward these constructs.
 
 Adjacent, outside K1: **`Server/uv.lock:3` declares `requires-python = ">=3.14"`** — a third floor disagreeing with both CI's 3.12 and ruff's py312 target, while `pyproject.toml` declares none at all.
+
+---
+
+# Phase 1 — Cluster A (DNSSEC)
+
+**A1 confirmed and reproduced.** Two findings were misranked, two are nil, and a blocker was discovered that changes the fix order.
+
+| # | Finding | Status | Real severity |
+|---|---|---|---|
+| — | `/api/dnssec` dead for every input | confirmed, measured | **Blocker** |
+| A1 | No trust anchor; root DNSKEY and DS RRSIGs unverified | confirmed + reproduced | **High** — false clean |
+| A4 | `_vrsa` parses RFC 3110 as DER; alg 8 never verifies | confirmed + reproduced | **High** (filed LOW) — false tamper |
+| A6 | `_parse` accepts QDCOUNT≠1; A061 never carried over | confirmed | **Medium** (filed LOW) |
+| A2 | `_ksk` unconstrained `rs[0]` fallback | confirmed | Low today; must be fixed *with* A1 |
+| A7 | Swallowed import; misleading 501 | confirmed | Low |
+| A3 | `_vec` on-curve | confirmed as written | **Nil** — close no-change |
+| A5 | `_dsm` timing | confirmed as written | **Nil** — close no-change |
+
+## A1 is larger than filed
+
+Both required conditions hold: no anchor, pin, keyTag constant or RFC 7958 artifact exists anywhere under `Server/`, and the root DNSKEY RRset's own RRSIG is never extracted or checked — `:425` records `valid` on record *presence* alone.
+
+**The escalation: the DS RRsets are not verified either.** The only cryptographic operation in the entire walk is the child DNSKEY RRset verified against a key drawn from *that same RRset* — a self-signature. So the chain has neither a root of trust nor any parent→child linkage; **each zone is verified only against itself.** The root key feeds exactly two things: an algorithm label and a displayed keyTag. It is never an input to any verification.
+
+**Capability required:** an on-path or spoofing position on the server's egress to UDP/53. The attacker cannot inject servers through the API — `validate_chain` takes no server argument and starts from hardcoded roots. That is precisely the adversary DNSSEC exists to defeat, and precisely the adversary this product sells itself as detecting.
+
+**Blast radius:** `/api/dnssec` is a free-tier unauthenticated GET returning `conclusion: "valid"` for a wholly forged chain.
+
+**Reproduced.** With a fake socket, zero packets leaving the host: a freshly generated attacker root key with no relationship to the child zone yields `valid` across all four steps — root DNSKEY, DS match, DNSKEY RRSIG, answer RRSIG.
+
+## The blocker, and why sequencing matters more than any single fix
+
+`/api/dnssec` returns `inconclusive` for **every** input today. `_build_query` returns the caller's name verbatim as the expected qname, but `_read_name` can never decode a name to `"."`, so every trailing-dot query in the walk fails its own question-binding check. Separately, `_encode_name(".")` emits two null bytes, so the root question is malformed on the wire.
+
+**This is not mitigation.** The dead path is symmetric — an attacker crafting a well-formed question still cannot satisfy the mismatch. The hazard is the obvious repair: **normalising the qname to make the endpoint work immediately exposes the A1 false clean**, exactly as the reproduction shows.
+
+**Anchor before plumbing.** Repairing the name-form defect without A1 converts a permanently-undetermined endpoint into one that reports `valid` under active attack.
+
+## A4 is the mirror image — a false tamper claim
+
+`_vrsa` feeds raw RFC 3110 key material to `load_der_public_key`, which raises, is swallowed by a bare `except Exception`, and returns `False` — indistinguishable from a failed signature. **Every correctly signed RSASHA256 zone** — the root ZSK, `.com`, most TLDs — would report `invalid` if the endpoint worked. The module docstring's claim to support alg 8 is false.
+
+It also means the A1 false clean is currently reachable only for algorithm-13 zones. Not something to rely on; alg 13 is widespread.
+
+## A6 aids the one attacker A1 does not
+
+`QDCOUNT == 0` skips question binding entirely and parsing resumes where an attacker places records. `resolver.py:227-231` names this exact defect and rejects it (A061) — **the hardening landed in one module of the package and was never carried into the other.** Removing query-name binding leaves only the 16-bit txid plus source port as spoofing entropy, which materially assists an **off-path** attacker.
+
+## Cross-runtime: no twin, and that is the point
+
+Neither client performs chain validation, so neither can carry an anchor weakness. Both **deliberately refuse** a validated state — the strongest positive either emits is `recordsPresentUnverified`, surfaced as "cryptographic validation not performed by this client", and both call the alternative "a false-secure claim".
+
+**The Python server is the only runtime that emits a `valid` chain result — the only place the A1 false clean can be produced, and the only place it reaches a user.**
+
+## Warnings recorded for the fix
+
+- **Do not pin keyTag 19036 from memory** — that is KSK-2010, retired in 2019. Take whatever IANA currently publishes.
+- Partial application does not help: anchor pin, root RRSIG check, and **DS RRSIG verification at each hop** are one fix. Without the third, the anchor is decorative — trust still never propagates.
+- A2's tier-3 fallback must be **deleted**, not retained. A "pick whatever is first" fallback sitting behind a trust anchor reintroduces the same class of defect.
+- My assignment's premise was wrong: `Server/tests/dns_sim.py` is a pure classifier with no sockets, not a packet harness.
+
+## Out of scope, routed to parity
+
+Swift's `classify` binds records to the queried zone (C059) and validates DNSKEY protocol/ZONE/algorithm (C125). **The C# `Classify` takes no queried-name parameter at all** and filters only on record type, so the Windows stripping canary can be defeated by appending a valid-window DNSKEY+RRSIG pair from any unrelated signed zone — the attack the Swift comment describes defending against.

@@ -1,0 +1,48 @@
+# robots.txt for syxx.app
+# https://syxx.app
+
+User-agent: *
+
+# Public pages — allow crawl
+Allow: /
+Allow: /docs/api
+Allow: /docs/api.html
+Allow: /docs/help
+Allow: /docs/help.html
+Allow: /leaktest
+Allow: /leak-test
+Allow: /whats-new-mac.html
+Allow: /whats-new-win.html
+Allow: /whats-new-deb.html
+
+# Legal pages — DRAFT pending owner approval (A199); do not index until approved.
+Disallow: /privacy
+Disallow: /terms
+
+# Post-checkout pages — no SEO value, keep out of the index
+Disallow: /purchase/
+Disallow: /purchase-success.html
+Disallow: /purchase-cancel.html
+
+# API endpoints — JSON responses, not pages
+Disallow: /api/
+
+# Infrastructure endpoints
+Disallow: /healthz
+Disallow: /readyz
+Disallow: /metrics
+
+# Paid resource endpoints. /leak is anchored with $ because the bare prefix also
+# matched /leaktest and /leak-test, which kept the free leak test out of the index.
+Disallow: /warp
+Disallow: /fetch_script
+Disallow: /leak$
+
+# Static assets — CSS/JS/images, no SEO value
+Disallow: /assets/
+
+# Admin and internal routes
+Disallow: /admin
+Disallow: /internal
+
+Sitemap: https://syxx.app/sitemap.xml

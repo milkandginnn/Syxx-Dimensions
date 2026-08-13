@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "purpose": "WARP_MANIFEST_V1 §10 conformance — measure where the server's stdlib html.parser asset enumerator (warp._enumerate_manifest_assets) diverges from what a spec-compliant HTML parser (a browser) would load on initial page load.",
+    "derived_from": "html5lib-tests (https://github.com/html5lib/html5lib-tests, tree-construction/) and the WHATWG HTML parsing spec content models. Cases are hand-distilled to the asset-enumeration question and reduced to minimal markup; they are NOT verbatim upstream fixtures.",
+    "upstream_license": "MIT (html5lib-tests)",
+    "coverage_note": "expected_assets is the browser-loaded set (spec ground truth). xfail=true marks a KNOWN divergence of the stdlib html.parser from that ground truth — the honest coverage gap, not a bug to hide. xfail=false cases MUST match or the enumerator regressed.",
+    "class_note": "class is one of HTML/JS/CSS/CSS_IMPORT; the HTML document itself is not listed (it is always covered)."
+  },
+  "base_url": "https://example.test/dir/page",
+  "cases": [
+    {
+      "name": "basic_external_script",
+      "html": "<html><head><script src=\"app.js\"></script></head></html>",
+      "expected_assets": [["https://example.test/dir/app.js", "JS"]],
+      "xfail": false
+    },
+    {
+      "name": "modulepreload_is_js",
+      "html": "<html><head><link rel=\"modulepreload\" href=\"m.js\"></head></html>",
+      "expected_assets": [["https://example.test/dir/m.js", "JS"]],
+      "xfail": false
+    },
+    {
+      "name": "preload_as_script_is_js",
+      "html": "<html><head><link rel=\"preload\" as=\"script\" href=\"p.js\"></head></html>",
+      "expected_assets": [["https://example.test/dir/p.js", "JS"]],
+      "xfail": false
+    },
+    {
+      "name": "stylesheet_is_css",
+      "html": "<html><head><link rel=\"stylesheet\" href=\"s.css\"></head></html>",
+      "expected_assets": [["https://example.test/dir/s.css", "CSS"]],
+      "xfail": false
+    },
+    {
+      "name": "attribute_order_independent",
+      "html": "<html><head><link href=\"s.css\" rel=\"stylesheet\"></head></html>",
+      "expected_assets": [["https://example.test/dir/s.css", "CSS"]],
+      "xfail": false
+    },
+    {
+      "name": "gt_inside_quoted_attribute",
+      "html": "<html><head><script data-x=\"a>b\" src=\"q.js\"></script></head></html>",
+      "expected_assets": [["https://example.test/dir/q.js", "JS"]],
+      "xfail": false
+    },
+    {
+      "name": "commented_out_script_not_loaded",
+      "html": "<html><head><!-- <script src=\"ghost.js\"></script> --></head></html>",
+      "expected_assets": [],
+      "xfail": false
+    },
+    {
+      "name": "script_inside_template_is_inert",
+      "html": "<html><head><template><script src=\"t.js\"></script></template></head></html>",
+      "expected_assets": [],
+      "xfail": true,
+      "divergence": "html.parser has no <template> content model — it surfaces the inner <script src> as a normal start tag, so warp OVER-enumerates an asset a browser never loads."
+    },
+    {
+      "name": "stylesheet_inside_head_noscript_is_raw_text",
+      "html": "<html><head><noscript><link rel=\"stylesheet\" href=\"n.css\"></noscript></head></html>",
+      "expected_assets": [],
+      "xfail": true,
+      "divergence": "With scripting enabled a browser treats <noscript> content in <head> as raw text, so the <link> is not an element and n.css is not loaded. html.parser parses it as an element, so warp OVER-enumerates."
+    },
+    {
+      "name": "character_reference_in_src",
+      "html": "<html><head><script src=\"a&amp;b.js\"></script></head></html>",
+      "expected_assets": [["https://example.test/dir/a&b.js", "JS"]],
+      "xfail": false,
+      "note": "CONFORMANT: html.parser unescapes character references in attribute values regardless of convert_charrefs (which only governs text nodes), so &amp; → & and the resolved URL matches the browser."
+    },
+    {
+      "name": "duplicate_src_keeps_first_per_spec",
+      "html": "<html><head><script src=\"first.js\" src=\"second.js\"></script></head></html>",
+      "expected_assets": [["https://example.test/dir/first.js", "JS"]],
+      "xfail": true,
+      "divergence": "The HTML spec drops a duplicate attribute (first wins). warp collapses attrs into a dict, so the LAST src wins — the enumerated URL can differ."
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<!-- DRAFT — PENDING OWNER APPROVAL (AGENTS.md §4.7). Every statement below is grounded in
+     the current server/client behavior; review with counsel before publishing. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Syxx — Privacy Policy</title>
+  <link rel="icon" type="image/png" href="assets/syxx-favicon.png">
+  <link rel="canonical" href="https://syxx.app/privacy">
+  <!-- privacy.html IS in syxx_server/seo.py PAGE_META with robots=noindex,nofollow
+       until owner approval (A199). The seo injector will replace tags by identity;
+       the robots meta and the noindex state are authoritative in PAGE_META. -->
+  <meta name="description" content="Syxx is a DNS-integrity tool. Its job is to inspect your own network from your own device and tell you honestly what it found.">
+  <meta property="og:title" content="Syxx — Privacy Policy">
+  <meta property="og:description" content="Syxx is a DNS-integrity tool. Its job is to inspect your own network from your own device and tell you honestly what it found.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://syxx.app/privacy">
+  <meta property="og:image" content="https://syxx.app/assets/syxx-logo.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Jost:ital,wght@0,300..700;1,300..500&family=Cormorant+SC:wght@400;600;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --io-bg: #0b0518;
+      --io-surface: #170c2e;
+      --io-text: #efeafe;
+      --io-text-secondary: #c9c1e6;
+      --io-blue: #7c5cff;
+      --io-accent-start: #d9a441;
+      --font-sans: 'Jost', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: radial-gradient(130% 80% at 15% 0%, #1a0c33 0%, #0b0518 55%);
+      color: var(--io-text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+    h1, h2, h3 { font-family: 'Cinzel', Georgia, serif; color: var(--io-text); }
+    h1 { font-size: 32px; margin: 0 0 4px; }
+    .updated { color: var(--io-accent-start); font-size: 13px; margin-bottom: 32px; font-family: var(--font-sans); }
+    h2 { font-size: 20px; margin: 32px 0 10px; }
+    p, li { color: var(--io-text-secondary); font-family: 'EB Garamond', Georgia, serif; font-size: 17px; line-height: 1.7; }
+    section { background: var(--io-surface); border: 1px solid rgba(124,92,255,0.25);
+              border-radius: 14px; padding: 8px 24px 16px; margin-bottom: 16px; }
+    a { color: var(--io-blue); }
+    nav.crumb { padding: 20px 24px 0; max-width: 760px; margin: 0 auto; font-family: var(--font-sans); }
+    nav.crumb a { color: var(--io-text-secondary); text-decoration: none; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav class="crumb" aria-label="Breadcrumb"><a href="/">&larr; syxx.app</a></nav>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="updated">DRAFT — pending owner approval. Last updated: 2026-07-27</p>
+
+    <section>
+      <h2>What Syxx is</h2>
+      <p>Syxx is a DNS-integrity tool. Its job is to inspect <em>your own</em> network from
+      <em>your own</em> device and tell you honestly what it found. That job requires collecting
+      as little as possible about you, and we designed the service accordingly.</p>
+    </section>
+
+    <section>
+      <h2>Data we process, and why</h2>
+      <ul>
+        <li><b>License keys.</b> When you activate or use Pro features, your license key is sent to
+        our licensing service to confirm the subscription is active. We do not link the key to your
+        device's identity beyond what validation requires.</li>
+        <li><b>DNS leak-test queries.</b> The leak test works by having your device resolve a
+        one-time, randomly generated subdomain of our test zone. Our authoritative DNS server
+        necessarily observes the IP address of the resolver that forwards that query — that
+        observation <em>is</em> the test. Results are signed, returned to you, and collected data is
+        erased after use under our data-retention policy.</li>
+        <li><b>Purchase details.</b> Payments are processed by Stripe. We receive your email address
+        (to deliver your license key) and the subscription status. We never see or store card
+        numbers.</li>
+        <li><b>Error and performance telemetry.</b> The server records operational errors and
+        performance traces to keep the service working. The desktop apps send crash and usage
+        telemetry only when the corresponding setting is enabled; it can be turned off in
+        Settings.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>What we do not do</h2>
+      <ul>
+        <li>We do not sell or share personal data with third parties for marketing.</li>
+        <li>We do not build browsing profiles. Scan evidence stays on your device unless you
+        explicitly export or submit it.</li>
+        <li>We do not require an account to use the free tier.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Retention</h2>
+      <p>Leak-test observations are retained only as long as needed to produce and verify your
+      result, then erased. Licensing records persist for the life of the subscription plus the
+      period required for accounting. Server logs rotate on a fixed schedule.</p>
+    </section>
+
+    <section>
+      <h2>Your rights</h2>
+      <p>You may request a copy or deletion of the data associated with your license key or purchase
+      email. Contact <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a> and we will
+      respond within 30 days. EU/EEA and UK users may also lodge a complaint with their supervisory
+      authority.</p>
+    </section>
+
+    <section>
+      <h2>Contact</h2>
+      <p>Milk &amp; Gin — <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a></p>
+    </section>
+  </main>
+</body>
+</html>

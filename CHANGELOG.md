@@ -2,6 +2,58 @@
 
 Running log of ROADMAP.md implementation work, plus a reserved watchdog channel.
 
+## Warp hardening: four contracts stopped drifting from reality (2026-08-13)
+
+Track `warp-hardening_20260811`, closing four remediations a review found sharing one
+root cause: hand-maintained artifacts that had quietly drifted from the code they were
+supposed to describe.
+
+**What was actually wrong.** (1) `/warp` served an unsigned "declared hash" baseline a
+MITM could forge into a false match, and its signed successor `/api/warp/manifest`
+(WARP_MANIFEST_V1) already existed — but the scheduler's baseline job and the
+`/api/diff` content half still consumed the unsigned shape, so the deprecated route
+stayed reachable because something still depended on it. (2) `Server/docs/openapi.yaml`
+documented 36 of 42 live routes; the missing 7 had no spec entry and nothing in CI
+compared spec paths to code routes, so the drift was invisible. (3) `type_map`/rcode-name
+dictionaries were hand-copied at four `app.py` sites; the duplication had already caused
+two real bugs (A155 int-vs-str, SEC-H1 HMAC field-order mismatch) before this track
+started. (4) Four C# call sites blocked on async work with `.GetAwaiter().GetResult()`,
+`.Result`, or `.Wait()` — a latent deadlock/UI-freeze risk.
+
+- **Warp pathway (Phase 1).** The scheduler baseline job and the `/api/diff` content
+  half were migrated to consume the signed manifest shape. `/warp` and
+  `/api/warp/assembly` are retired-with-pointer, not deleted: both remain routed and now
+  return `410 Gone` with `{"successor": "/api/warp/manifest", "deprecated": true}`,
+  never fabricating a baseline.
+- **OpenAPI drift (Phase 2).** The 7 missing routes (`/api/appcast`, `/api/beta/reserve`,
+  `/api/billing/portal`, `/api/broadcast`, `/api/startup`, `/api/whats-new`, `/leak`)
+  were added to `openapi.yaml`. A new drift checker, `Server/tools/check_openapi_drift.py`,
+  derives the live route set from `app.py`'s own dispatch table and diffs it against the
+  spec; it is wired into `Makefile:205`, `.github/workflows/ci.yml:388`, and
+  `Server/tests/test_openapi_drift.py`. The gate was proven to bind, not just wired, by
+  deliberately deleting a route and watching the check fail.
+- **Constants dedup (Phase 3).** `resolver._TYPE_NAMES`/`RCODE_NAMES` are now the single
+  source of truth for type/rcode name maps; the four hand-copied `app.py` tables are
+  gone. `Server/tests/test_wire_pinning.py` pins the exact JSON byte output for
+  `/api/lookup`, `/api/reverse-dns`, `/api/propagation`, `/api/whois`, and `/dns-query`
+  so a future consolidation can't silently change wire format.
+- **C# sync-over-async (Phase 4).** `MonitorScheduler.cs`, `LicenseManager.cs`,
+  `EncryptedDNSConfigurator.cs`, and `UnboundManager.cs` were converted end-to-end to
+  `await`, preserving `UnboundManager`'s existing 30-second bound via `WaitAsync`. This
+  landed as recovery checkpoint `b03118e` and **carries confirmed open defects B1–B5**:
+  a post-`Stop()` tick is still counted, latched, and delivered in `MonitorScheduler`.
+  Remediation is planned (not implemented) in
+  `conductor/tracks/review-verify_20260813/fix-plans.md` under P4.
+
+**Verification.** Python suite 434 passed, `ruff` clean. C# 868/880 with the 12 known
+pre-existing macOS-host failures (unrelated to this track). Windows and Linux runtime
+`dotnet test` did **not** run — no such host is available here, and there is no hosted
+CI at present, so those two runtimes are unverified.
+
+**Not done, and why.** The B1–B5 `MonitorScheduler` defects the Phase 4 checkpoint
+carries are filed, not fixed — see `conductor/tracks/review-verify_20260813/fix-plans.md`
+P4. Windows and Linux dotnet runs are owed on those hosts once one is available.
+
 ## Prophet parity drift collapsed onto one shared source (2026-08-03)
 
 Owner asked for the Prophet parity smell flagged in the Wave 2b entry to be fixed. The

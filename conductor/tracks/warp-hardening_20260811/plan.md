@@ -83,8 +83,19 @@ Eliminate blocking async calls in production C#.
 - [x] Full Python suite green, `ruff` clean, C# build + tests green **on the available macOS host**. **Re-scoped 2026-08-13 by owner decision** — the original wording required Windows *and* Linux runtime runs. **Run 2026-08-13:** Python 434 passed, 51 subtests passed; `ruff check syxx_server/ tests/ tools/` clean; `dotnet test Windows/dotNET/Syxx.Tests` 868/880 with 12 failing names, all in the known pre-existing macOS-host set (`ProbeRunnerTests.Default{Glutton,Mirror,Portal,Prophet}_HasExpectedValues`, `MatrixGoldenCorpusTests.DefaultSpecMatchesFrozenOracle`, `D100TtlTieBreakDeterminismTests`, `AuthoritativeVantageConsensusTests`, `ReportTests.RenderText_ContainsRequiredStructuralSections`, `ResultProvenanceTests` ×2, `SectionCompletenessTests.TimeoutDatapointLowersCompleteness`, `NetworkKeyStateTests.EncryptedDNSStatusNoForPlainUDP`). None is on a Phase 4 surface.
   - **RESIDUAL RISK, accepted:** the async conversions in `UnboundManager`, `UnboundResolver`, and `MonitorScheduler` have never executed on a Windows or Linux runtime. `SyxxUI`/`SyxxUI.Tests` are `net10.0-windows` and cannot build on this host at all. Windows-specific process, pipe, and thread-affinity behavior is unverified for this track.
 - [x] CI gate green on the changed jobs — **not achievable; closed as re-scoped.** No hosted CI at present (see `AGENTS.md`). The three gate scripts under `scripts/` are CI-only and there is no local gate runner. The OpenAPI drift check is the one gate this track added, and it binds locally through `make` and pytest independently of CI.
-- [ ] Documentation updated: CHANGELOG entry, `docs/` references to `/warp` (warp-manifest-v1-spec.md), openapi regenerated.
-- [ ] Ready for review.
+- [x] Documentation updated: CHANGELOG entry, `docs/` references to `/warp`, openapi regenerated. **Done 2026-08-13 by documentation specialist.**
+  - CHANGELOG.md:5-56 — "Warp hardening: four contracts stopped drifting from reality (2026-08-13)", covering all four phases, and stating without softening that Phase 4 shipped as checkpoint `b03118e` carrying open B1–B5 and that Windows/Linux runtime runs did not execute.
+  - `docs/` references: **no file needed correction.** All 27 `/warp` matches under `docs/`, `Server/docs/`, and `README.md` were classified. Live guidance was already accurate — `Server/docs/api.html:404-409` already documents `/api/warp/assembly` as 410 Gone with the migration pointer, and no bare `/warp` endpoint is documented anywhere. The rest are historical records (`*.bak*`/`*.backup`, `docs/stale/`, dated plans, delta logs) and were deliberately left alone; rewriting them would misrepresent what those reviews found at the time. Note: there is **no** non-stale `docs/warp-manifest-v1-spec.md` — only `docs/stale/warp-manifest-v1-spec.md` exists, so the plan's parenthetical pointed at a file that has since moved.
+  - openapi: `check_openapi_drift.py` exits 0, "no drift — 50 live, 50 spec". Spec is current; nothing to regenerate.
+- [ ] Ready for review. **BLOCKED** — B1–B5 open (see below).
+
+### Follow-up found while closing this track (NOT fixed here)
+
+The drift gate this track added compares **paths only**, not methods. `_analyze` does `live = set(live_methods)` (`check_openapi_drift.py:170`), so `missing`/`extra` are path-set differences, while `_print_methods` enumerates method×path pairs. That is why the run prints "live routes (54)" and "spec paths (53)" and then concludes "50 live, 50 spec".
+
+Consequence today: `GET /api/leaktest/start` is live (`app.py:896`; the POST is at `:1027`) and `openapi.yaml:613-614` documents only `post:` for that path. The gate reports no drift and structurally cannot see the undocumented method.
+
+This satisfies the acceptance criterion as written — "the set of spec paths ≠ set of live code routes" is a path-level test — so it is **not** a regression against this track. It is a new finding: a gate whose printed output overstates what it verified. Owner decision required on whether to widen the comparison to method-level. Not filed as a delta without that decision.
 
 ### Phase 4 commit status
 

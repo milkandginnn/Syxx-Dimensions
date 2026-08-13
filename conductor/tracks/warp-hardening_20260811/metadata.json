@@ -16,14 +16,13 @@
   },
   "final_verification": {
     "total": 5,
-    "completed": 3,
+    "completed": 4,
     "outstanding": [
-      "documentation: CHANGELOG entry, docs/ references to /warp, openapi status",
-      "ready for review — blocked while B1-B5 are open"
+      "ready for review \u2014 blocked while B1-B5 are open"
     ]
   },
   "current_phase": "final-verification",
-  "current_task": "documentation",
+  "current_task": "ready-for-review (blocked)",
   "commits": [
     "2ca4505e: [warp-hardening_20260811] warp: retire /warp route to 410 + migration pointer",
     "70920bc0: [warp-hardening_20260811] plan: mark Phase 1 complete",
@@ -36,7 +35,7 @@
     {
       "id": "D-PHASE4-CHECKPOINT",
       "date": "2026-08-13",
-      "decision": "Commit Phase 4 as an owner-authorized recovery checkpoint under IMPLEMENTATION-RULES.md §12 rather than fixing B1-B5 first",
+      "decision": "Commit Phase 4 as an owner-authorized recovery checkpoint under IMPLEMENTATION-RULES.md \u00a712 rather than fixing B1-B5 first",
       "rationale": "The phase was recorded verified but existed only in the working tree; 5 files of async-conversion work were one stash mishap from silent loss. B1-B5 remediation belongs to review-verify_20260813 P4 and pulling it here would widen this track's scope.",
       "consequence": "b03118e ships known-defective MonitorScheduler code with a test (MonitorSchedulerTests.cs:141) that asserts the broken invariant. The commit message states this."
     },
@@ -63,13 +62,13 @@
     "host": "macOS (darwin 25.6.0)",
     "python": "434 passed, 51 subtests passed",
     "ruff": "clean on syxx_server/, tests/, tools/",
-    "csharp": "868/880 — 12 failing names, all in the known pre-existing macOS-host set, none on a Phase 4 surface",
-    "openapi_drift": "no drift — 50 live, 50 spec",
+    "csharp": "868/880 \u2014 12 failing names, all in the known pre-existing macOS-host set, none on a Phase 4 surface",
+    "openapi_drift": "no drift \u2014 50 live, 50 spec",
     "not_run": [
       "Windows runtime dotnet test",
       "Linux runtime dotnet test",
       "swift build / swift test (out of scope for this track)",
-      "CI — none hosted at present"
+      "CI \u2014 none hosted at present"
     ]
   },
   "governing_rules": [
@@ -77,5 +76,14 @@
     "SUBAGENT-RULES.md",
     "BUDGET-RULES.md",
     "COMMUNICATION-RULES.md"
+  ],
+  "open_questions": [
+    {
+      "id": "Q-DRIFT-METHODS",
+      "date": "2026-08-13",
+      "question": "Widen check_openapi_drift.py to compare methods, not just paths?",
+      "detail": "_analyze compares path sets (line 170) while _print_methods enumerates method x path pairs, so the run prints 54 live / 53 spec then concludes 50/50. GET /api/leaktest/start (app.py:896) is live and undocumented; openapi.yaml:614 has only post:. Meets the acceptance criterion as written; new finding, not a regression.",
+      "owner_decision_required": true
+    }
   ]
 }

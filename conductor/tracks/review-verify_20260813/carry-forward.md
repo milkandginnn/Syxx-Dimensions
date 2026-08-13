@@ -123,3 +123,32 @@ The original per-dimension finding texts are not in the track's read scope, so c
 - The `:136` refutation must not be allowed to retire the separate `:141` MEDIUM.
 
 **Next recommended action:** Phase 1, Task 1.1 — verify the DNSSEC root trust anchor. If confirmed, it likely warrants its own track and would reorder everything after it.
+
+---
+
+# Phase 3 — Cluster L (macOS test quality)
+
+**Baseline correction:** macOS files are **clean**, not dirty. The Phase 0 note said 12 of 13 cited paths were dirty; that held for the Server and Windows paths I queried, but the macOS test files are tracked and unmodified. Briefing the specialists otherwise was an over-generalization. Changes no finding in this cluster.
+
+| ID | State | Detail |
+|---|---|---|
+| L1 | Confirmed as fact, **hygiene not defect** | The discarded `SecItemDelete` status is real, but the UUID-per-run probe service means a leaked item can never satisfy a later probe, and every product query pins an exact service so none can reach one. `kSecMatchLimitAll` appears nowhere under `macOS/`. Cost is one ~5-byte item per abnormally terminated run. Record as latent; not worth a fix |
+| L2 | **Confirmed, and broader than reported.** Medium | See below |
+| L3 | Confirmed, **cited lines wrong** | The guard is at `AppModelWitnessTests.swift:42-73`, not `:186-211` — those lines are an unrelated test body. Parity file is `:129-157`, cited as `:135-157` |
+
+## L2 — the asymmetry is worse than "strict vs lenient"
+
+Swift's `ExpectedCase` has no optional stored properties, so any missing or retyped key fails loudly. The C# twin reads keys individually off a `JsonDocument`, and three diverge:
+
+- **`manifestState` uses `TryGetProperty`, so the assertion is silently skipped when the key is absent.** This is exactly the pattern the Swift comment says `ExpectedCase` was written to eliminate — quietly turning a lookup into nil and skipping the assertion that key guards. A case omitting it goes red on macOS and **green on Windows, one real assertion lighter than it looks**.
+- `assets[].class` and `notes` are never read in C# at all — contract-only, no assertion lost either side.
+
+All 14 corpus cases conform today, so the finding is latent. Fix is one line at `WarpEngineTests.cs:119-120`; the cleaner move is deserializing `expected.json` into a record with required members so each runtime states its schema contract once.
+
+**Two further twin deltas found while comparing:** the case-directory filter is `^\d\d\d_` in Swift but only checks first-char-digit and `n[3] == '_'` in C#, so `0a1_foo` would be collected by one and skipped by the other. And Swift silently `continue`s past any brotli case, so `014_br_identity` is never exercised on macOS while C# decodes it — the already-recorded parity gap, noted only because it is the same silent-skip family sitting four lines from the L2 decode.
+
+## L3 — extraction is safe, but not by inheritance
+
+Take a value type, not a base class. Forgetting `super` in `setUp` fails safe — no backup, so no restore. Forgetting it in `tearDown` does **not**: the restore is lost and whatever key the test wrote stays in the developer's keychain. That asymmetry is the argument against a shared base class. Per-instance state is required; lifting the backup to `static` turns a per-test restore into last-writer-wins over a real key.
+
+A third site shares the pattern at `SyxxKitTests/WitnessKeyValidationTests.swift:52,57`, but it is in a different test target from the support type, so extraction cannot cover it without relocating.

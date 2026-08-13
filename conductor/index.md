@@ -15,6 +15,8 @@ Navigation hub for project context.
 - [warp-hardening_20260811](tracks/warp-hardening_20260811/) — Warp Hardening & Contract Drift Fixes (pending)
 - [review-fixes_20260812](tracks/review-fixes_20260812/) — Recovered xhigh Review — Confirmed Defect Repairs (pending)
 
+- [review-verify_20260813](tracks/review-verify_20260813/) — Ultra Review — Dedupe, Verify, Plan Fixes (pending)
+
 <!-- Auto-populated by /conductor:new-track -->
 
 ## Getting Started

@@ -1,0 +1,51 @@
+{
+  "id": "review-verify_20260813",
+  "title": "Ultra Review — Dedupe, Verify, Plan Fixes",
+  "type": "bug",
+  "status": "pending",
+  "tier": 3,
+  "created": "2026-08-13T00:30:00Z",
+  "updated": "2026-08-13T00:30:00Z",
+  "phases": {
+    "total": 6,
+    "completed": 0
+  },
+  "tasks": {
+    "total": 39,
+    "completed": 0
+  },
+  "findings": {
+    "unique_after_dedup": 37,
+    "carried_forward": 12,
+    "to_verify": 25,
+    "source": "source-report.md",
+    "source_provenance": "~/Documents/REVIEW-ultra-macos-2026-08-12.md — three concatenated ultra reports (macOS review, adjudication pass, working-tree diff review) with heavy overlap"
+  },
+  "clusters": {
+    "A": "DNSSEC validator security (7)",
+    "B": "MonitorScheduler lifecycle (5)",
+    "C": "Forged-packet remaining sites (2)",
+    "D": "Stale tests (2)",
+    "E": "Windows process glue (4)",
+    "F": "Dead code from the refactor (4)",
+    "G": "Behavior/data (2)",
+    "H": "Deploy (1)",
+    "I": "Perf/maintainability (3)",
+    "J": "Marketplace — planned separately (3)",
+    "K": "Documentation contracts (2)",
+    "L": "macOS test quality (3)"
+  },
+  "deliverable": "verified findings table plus one implementation plan per confirmed defect — NO fixes land in this track",
+  "blocking_dependencies": [
+    "multi-agent-coordinator is not installed; copy-first from subagents/04-meta-orchestration/",
+    "review-fixes_20260812 holds the prior evidence this track carries forward"
+  ],
+  "governing_rules": [
+    "IMPLEMENTATION-RULES.md",
+    "SUBAGENT-RULES.md",
+    "BUDGET-RULES.md",
+    "PLUGIN-RULES.md",
+    "WORKFLOW-RULES.md",
+    "COMMUNICATION-RULES.md"
+  ]
+}

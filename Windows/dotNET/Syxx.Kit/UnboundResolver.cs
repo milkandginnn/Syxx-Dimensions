@@ -54,13 +54,15 @@ public sealed record UnboundConfig(
 
 /// The seam the future entitlement-gated implementation slots into. The shell-level switch
 /// (`WindowsSystemResolverSwitcher`) is the entitlement-free v1.
+/// warp-hardening_20260811 Task 4.4: the seam is async (the PowerShell switch awaits a 30s pipe
+/// drain); every implementation and caller goes through the *Async forms — no sync-over-async.
 public interface ISystemResolverSwitching
 {
     /// Returns the current DNS server list. Null means "could not read" (no safe restore point);
     /// empty means "genuinely no DNS servers configured" (D099).
-    IReadOnlyList<string>? Snapshot();
-    (bool ok, bool elevationDenied, string? reason) SetServers(IReadOnlyList<string> servers);
-    (bool ok, bool elevationDenied, string? reason) Restore(IReadOnlyList<string> servers);
+    Task<IReadOnlyList<string>?> SnapshotAsync();
+    Task<(bool ok, bool elevationDenied, string? reason)> SetServersAsync(IReadOnlyList<string> servers);
+    Task<(bool ok, bool elevationDenied, string? reason)> RestoreAsync(IReadOnlyList<string> servers);
 }
 
 public static class UnboundResolver

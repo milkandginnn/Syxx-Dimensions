@@ -24,10 +24,10 @@ namespace Syxx.Tests
             state == MonitorState.Changed);
 
         [Fact]
-        public void RunOnce_RecordsTheResult()
+        public async Task RunOnce_RecordsTheResult()
         {
-            var s = new MonitorScheduler(intervalSeconds: 999, tick: () => MakeTick(MonitorState.BaselineEstablished));
-            var r = s.RunOnce();
+            var s = new MonitorScheduler(intervalSeconds: 999, tick: () => Task.FromResult(MakeTick(MonitorState.BaselineEstablished)));
+            var r = await s.RunOnceAsync();
 
             Assert.Equal(MonitorState.BaselineEstablished, r?.State);
             Assert.Equal(MonitorState.BaselineEstablished, s.LastTick?.State);
@@ -35,7 +35,7 @@ namespace Syxx.Tests
         }
 
         [Fact]
-        public void AChangeIsLatched_AndNotErasedByALaterNoChange()
+        public async Task AChangeIsLatched_AndNotErasedByALaterNoChange()
         {
             // The property that makes the feature trustworthy: "your DNS changed at 3pm" must survive
             // the next quiet tick. If a NoChange cleared LastChange, the user could miss the one event
@@ -48,13 +48,13 @@ namespace Syxx.Tests
             });
 
             var s = new MonitorScheduler(intervalSeconds: 999,
-                tick: () => MakeTick(states.Dequeue()));
+                tick: () => Task.FromResult(MakeTick(states.Dequeue())));
 
-            s.RunOnce();  // baseline
-            s.RunOnce();  // changed
+            await s.RunOnceAsync();  // baseline
+            await s.RunOnceAsync();  // changed
             Assert.Equal(MonitorState.Changed, s.LastChange?.State);
 
-            s.RunOnce();  // noChange
+            await s.RunOnceAsync();  // noChange
             Assert.Equal(MonitorState.Changed, s.LastChange?.State);
             // A later NoChange must NOT erase the latched change.
 
@@ -63,16 +63,16 @@ namespace Syxx.Tests
         }
 
         [Fact]
-        public void OnTick_FiresPerTick_ForNotifications()
+        public async Task OnTick_FiresPerTick_ForNotifications()
         {
             // onTick is how a surface raises a notification. It must fire once per tick, with the result.
             var seen = new List<MonitorState>();
             var s = new MonitorScheduler(intervalSeconds: 999,
-                tick: () => MakeTick(MonitorState.Changed),
+                tick: () => Task.FromResult(MakeTick(MonitorState.Changed)),
                 onTick: r => seen.Add(r.State));
 
-            s.RunOnce();
-            s.RunOnce();
+            await s.RunOnceAsync();
+            await s.RunOnceAsync();
 
             Assert.Equal(new[] { MonitorState.Changed, MonitorState.Changed }, seen);
         }
@@ -93,7 +93,7 @@ namespace Syxx.Tests
             // rarer and the suite slower.
             //
             // The injected tick is the seam, so it is used as the clock: the test advances only on
-            // signals from it, and it PARKS the loop's first tick so Stop() is called at a moment
+            // signals from it, and it PARKS the loop's second tick so Stop() is called at a moment
             // when the in-flight tick is known, which removes race (b) by construction.
             var entries = 0;                // every entry into the injected tick
             var entriesAfterStop = 0;       // entries seen after Stop() returned — must stay 0
@@ -101,16 +101,17 @@ namespace Syxx.Tests
             var loopTickEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var release = new ManualResetEventSlim(false);
 
-            var s = new MonitorScheduler(intervalSeconds: 0.02, tick: () =>
+            var s = new MonitorScheduler(intervalSeconds: 0.02, tick: async () =>
             {
                 var n = Interlocked.Increment(ref entries);
                 if (Volatile.Read(ref stopped)) { Interlocked.Increment(ref entriesAfterStop); }
                 if (n == 2)
                 {
-                    // The loop's first tick (call 1 is Start()'s immediate, synchronous one — it must
-                    // never park here or Start() would deadlock on the caller's thread). Park so the
-                    // test can Stop() with this tick provably in flight. RunOnce holds `_runLock`
-                    // while calling us and Stop() does not take that lock, so this cannot deadlock.
+                    // The loop's second tick (call 1 is the first tick, which now runs inside the
+                    // loop Task per macOS parity — not on Start()'s thread). Park so the test can
+                    // Stop() with this tick provably in flight. RunOnceAsync does not hold
+                    // `_runLock` across the tick and Stop() does not take that lock, so this
+                    // cannot deadlock.
                     loopTickEntered.SetResult();
                     release.Wait(TimeSpan.FromSeconds(30));
                 }
@@ -118,8 +119,6 @@ namespace Syxx.Tests
             });
 
             s.Start();
-            Assert.Equal(1, s.TickCount);           // start() ticks immediately, on this thread
-            Assert.Equal(1, Volatile.Read(ref entries));
             Assert.True(s.IsRunning);
 
             // The interval loop really ran — awaited on an explicit signal, not slept for.
@@ -159,13 +158,13 @@ namespace Syxx.Tests
         /// B256 unit: RunOnce-only path yields exact tick counts without any wall clock.
         /// Failure case: break TickCount increment → assertion red.
         [Fact]
-        public void InjectedTicks_YieldExactDueCount()
+        public async Task InjectedTicks_YieldExactDueCount()
         {
-            var s = new MonitorScheduler(intervalSeconds: 999, tick: () => MakeTick(MonitorState.NoChange));
+            var s = new MonitorScheduler(intervalSeconds: 999, tick: () => Task.FromResult(MakeTick(MonitorState.NoChange)));
             Assert.Equal(0, s.TickCount);
-            s.RunOnce();
-            s.RunOnce();
-            s.RunOnce();
+            await s.RunOnceAsync();
+            await s.RunOnceAsync();
+            await s.RunOnceAsync();
             Assert.Equal(3, s.TickCount);
         }
     }

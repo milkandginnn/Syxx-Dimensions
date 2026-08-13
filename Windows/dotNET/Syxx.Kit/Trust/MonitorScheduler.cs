@@ -43,7 +43,10 @@ namespace Syxx.Kit
         public int TickCount { get; private set; }
 
         private readonly TimeSpan _interval;
-        private readonly Func<MonitorTick> _tick;
+        // warp-hardening_20260811 Task 4.3: the tick is async (macOS-parity, D-5). The C# default
+        // previously called ContinuousMonitor.TickOnceAsync().GetAwaiter().GetResult() — sync-over-async
+        // on the UI thread via Start(). Start() no longer ticks synchronously at all.
+        private readonly Func<Task<MonitorTick>> _tick;
         private CancellationTokenSource? _cts;
         private Task? _loopTask;
         private readonly object _runLock = new();
@@ -51,67 +54,70 @@ namespace Syxx.Kit
 
         /// <summary>
         /// - <paramref name="intervalSeconds"/>: seconds between ticks.
-        /// - <paramref name="tick"/>: the work. Defaults to the real <see cref="ContinuousMonitor.TickOnce"/>;
+        /// - <paramref name="tick"/>: the work. Defaults to the real <see cref="ContinuousMonitor.TickOnceAsync"/>;
         ///   a test injects a fake.
         /// - <paramref name="onTick"/>: called after each tick (e.g. to raise a notification on change).
         /// </summary>
         public MonitorScheduler(
             double intervalSeconds = 900,
-            Func<MonitorTick>? tick = null,
+            Func<Task<MonitorTick>>? tick = null,
             Action<MonitorTick>? onTick = null)
         {
             _interval = TimeSpan.FromSeconds(intervalSeconds);
             // C136: default to the async tick that performs DNS sampling and records in
             // AnswerLedger, matching macOS ContinuousMonitor.tickOnce. The sync TickOnce
             // is kept for backward compatibility but does not sample DNS.
-            _tick = tick ?? (() => ContinuousMonitor.TickOnceAsync().GetAwaiter().GetResult());
+            _tick = tick ?? (() => ContinuousMonitor.TickOnceAsync());
             _onTick = onTick;
         }
 
         /// <summary>
-        /// Run one tick now, synchronously. Safe to call directly (the "Check now" button) or from
+        /// Run one tick now, asynchronously. Safe to call directly (the "Check now" button) or from
         /// the loop. Guarded so two ticks never overlap and stomp the snapshot file.
         /// Returns null when a tick is already in flight.
         /// </summary>
-        public MonitorTick? RunOnce()
+        public async Task<MonitorTick?> RunOnceAsync()
         {
-            MonitorTick result;
+            // Re-entrancy guard — tick() is I/O and must not overlap. Claim under the lock; the lock
+            // must NOT be held across the await (C# does not allow it and it would serialize I/O).
             lock (_runLock)
             {
-                // Re-entrancy guard — tick() is I/O and must not overlap.
                 if (_inFlight) return null;
                 _inFlight = true;
+            }
 
-                try
-                {
-                    result = _tick();
-                }
-                catch (Exception ex)
-                {
-                    // C150: a tick failure must NOT kill the loop silently. Surface the failure as
-                    // a warning alert, record it as a tick, and let the loop continue. A transient
-                    // disk error must not end monitoring.
-                    _inFlight = false;
-                    result = new MonitorTick(
-                        MonitorState.Changed, // forces UI attention
-                        Array.Empty<ConfigChange>(),
-                        new[] { new MonitorAlert(Severity.Warning, "Monitoring tick failed",
-                            ex.Message) },
-                        $"Monitoring tick failed: {ex.Message}. Monitoring continues.",
-                        RecheckRecommended: true);
-                }
-                finally
-                {
-                    _inFlight = false;
-                }
+            MonitorTick result;
+            try
+            {
+                result = await _tick();
+            }
+            catch (Exception ex)
+            {
+                // C150: a tick failure must NOT kill the loop silently. Surface the failure as
+                // a warning alert, record it as a tick, and let the loop continue. A transient
+                // disk error must not end monitoring.
+                result = new MonitorTick(
+                    MonitorState.Changed, // forces UI attention
+                    Array.Empty<ConfigChange>(),
+                    new[] { new MonitorAlert(Severity.Warning, "Monitoring tick failed",
+                        ex.Message) },
+                    $"Monitoring tick failed: {ex.Message}. Monitoring continues.",
+                    RecheckRecommended: true);
+            }
+            finally
+            {
+                lock (_runLock) { _inFlight = false; }
+            }
 
-                // C142: a tick that finishes after the user stopped monitoring must not be
-                // counted, latched, or delivered. Direct port of MonitorScheduler.swift:62.
-                if (_cts is { IsCancellationRequested: true }) return null;
+            // C142: a tick that finishes after the user stopped monitoring must not be
+            // counted, latched, or delivered. Direct port of MonitorScheduler.swift:62.
+            if (_cts is { IsCancellationRequested: true }) return null;
 
-                // C143: state mutations live inside _runLock so reads from any thread see a
-                // consistent snapshot. Previously these sat outside the lock and were plain
-                // auto-properties written from the loop thread with no barrier.
+            // C143: state mutations live inside _runLock so reads from any thread see a
+            // consistent snapshot. Previously these sat outside the lock and were plain
+            // auto-properties written from the loop thread with no barrier.
+            lock (_runLock)
+            {
                 TickCount++;
                 LastTick = result;
                 if (result.State == MonitorState.Changed)
@@ -129,17 +135,13 @@ namespace Syxx.Kit
         /// <summary>
         /// Begin the interval loop. Runs one tick immediately (so the user sees a baseline at once),
         /// then every <see cref="_interval"/> seconds until <see cref="Stop"/>. Idempotent — a second
-        /// start is a no-op.
+        /// start is a no-op. The immediate first tick runs inside the loop task (macOS parity,
+        /// MonitorScheduler.swift) — Start() itself never blocks the caller on the async tick.
         /// </summary>
         public void Start()
         {
             if (State is SchedulerState.Starting or SchedulerState.Running) return;
             State = SchedulerState.Starting;
-
-            RunOnce();
-
-            // F035 Fix 3: transition to Running only after the first tick completes.
-            State = SchedulerState.Running;
 
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
@@ -147,6 +149,15 @@ namespace Syxx.Kit
             {
                 try
                 {
+                    // F035 Fix 3: transition to Running only after the first tick completes. A
+                    // Stop() racing the loop start (before the first tick begins) must leave State
+                    // as Stop set it — the token pre-checks preserve the old synchronous semantics
+                    // where no tick could be produced after Stop() for a not-yet-started loop.
+                    if (token.IsCancellationRequested) return;
+                    await RunOnceAsync();
+                    if (token.IsCancellationRequested) return;
+                    State = SchedulerState.Running;
+
                     while (!token.IsCancellationRequested)
                     {
                         try
@@ -158,10 +169,10 @@ namespace Syxx.Kit
                             break;
                         }
                         if (token.IsCancellationRequested) break;
-                        RunOnce();
+                        await RunOnceAsync();
                     }
                 }
-                // F035 Fix 2: catch any unhandled exception from RunOnce (e.g. _onTick throwing)
+                // F035 Fix 2: catch any unhandled exception from RunOnceAsync (e.g. _onTick throwing)
                 // and transition to Crashed rather than silently terminating the loop.
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

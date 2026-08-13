@@ -276,11 +276,11 @@ namespace Syxx.Kit
         ///
         /// Anchors the launch date on the server if online (KTRU-03), and returns DateTime.MinValue
         /// if clock regression is detected (KTRU-04).
-        /// Blocking wrapper retained ONLY for the [Obsolete] sync IsFeatureUnlocked path, which has
-        /// no production callers. Production code (GUI + CLI) reaches the async version below.
-        public static DateTime GetFirstLaunchDate()
-            => GetFirstLaunchDateAsync().GetAwaiter().GetResult();
-
+        /// NOTE: the blocking sync wrapper that previously lived here (GetFirstLaunchDate) was
+        /// DELETED (warp-hardening_20260811 Task 4.3) — it called GetFirstLaunchDateAsync via
+        /// GetAwaiter().GetResult() and had zero production or test callers; the [Obsolete] sync
+        /// IsFeatureUnlocked path it was "retained for" was already deleted (D028). Every consumer
+        /// reaches the async version below.
         public static async Task<DateTime> GetFirstLaunchDateAsync()
         {
             var dict = LoadConfig();

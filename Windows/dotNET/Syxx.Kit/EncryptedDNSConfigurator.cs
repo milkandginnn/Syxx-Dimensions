@@ -144,7 +144,7 @@ public static class EncryptedDNSConfigurator
         var stderrTask = p.StandardError.ReadToEndAsync();
         await Task.WhenAll(stdoutTask, stderrTask);
         await p.WaitForExitAsync();
-        string err = stderrTask.Result;
+        string err = await stderrTask;
         return (p.ExitCode, string.IsNullOrWhiteSpace(err) ? null : err.Trim());
     }
 }

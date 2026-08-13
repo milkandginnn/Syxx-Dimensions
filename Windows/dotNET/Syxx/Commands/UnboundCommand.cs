@@ -23,7 +23,7 @@ namespace Syxx.Commands
                 case "verify": await RunVerify(); break;
                 case "status": RunStatus(); break;
                 case "enable": await RunEnable(); break;
-                case "disable": RunDisable(); break;
+                case "disable": await RunDisable(); break;
                 default: Console.WriteLine($"Unknown 'unbound' action '{sub}'. Use: verify | status | enable | disable"); break;
             }
         }
@@ -64,11 +64,11 @@ namespace Syxx.Commands
             PrintResult(await mgr.EnableAsync());
         }
 
-        private static void RunDisable()
+        private static async Task RunDisable()
         {
             Console.WriteLine("\n  Disabling local Unbound; restoring the original system resolver…");
             var mgr = new UnboundManager();
-            PrintResult(mgr.Disable());
+            PrintResult(await mgr.DisableAsync());
         }
 
         private static void PrintResult(UnboundResult r)

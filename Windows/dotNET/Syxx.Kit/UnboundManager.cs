@@ -30,27 +30,27 @@ namespace Syxx.Kit;
 public sealed class WindowsSystemResolverSwitcher : ISystemResolverSwitching
 {
     /// The InterfaceIndex of the adapter carrying the default IPv4 route, or null.
-    private int? PrimaryInterfaceIndex()
+    private static async Task<int?> PrimaryInterfaceIndexAsync()
     {
-        var (outp, code) = Run("powershell", "-NoProfile -Command \"(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).InterfaceIndex\"");
+        var (outp, code) = await RunAsync("powershell", "-NoProfile -Command \"(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).InterfaceIndex\"");
         if (code != 0) return null;
         return int.TryParse(outp.Trim(), out var idx) ? idx : (int?)null;
     }
 
-    public IReadOnlyList<string>? Snapshot()
+    public async Task<IReadOnlyList<string>?> SnapshotAsync()
     {
-        var idx = PrimaryInterfaceIndex();
+        var idx = await PrimaryInterfaceIndexAsync();
         if (idx is null) return null;   // D099: "could not determine interface" ≠ "no servers"
-        var (outp, code) = Run("powershell",
+        var (outp, code) = await RunAsync("powershell",
             $"-NoProfile -Command \"(Get-DnsClientServerAddress -InterfaceIndex {idx} -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses -join ','\"");
         if (code != 0) return null;     // D099: PowerShell failure ≠ "no servers"
         if (string.IsNullOrWhiteSpace(outp)) return Array.Empty<string>(); // genuinely no servers
         return outp.Trim().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
-    public (bool ok, bool elevationDenied, string? reason) SetServers(IReadOnlyList<string> servers)
+    public async Task<(bool ok, bool elevationDenied, string? reason)> SetServersAsync(IReadOnlyList<string> servers)
     {
-        var idx = PrimaryInterfaceIndex();
+        var idx = await PrimaryInterfaceIndexAsync();
         if (idx is null) return (false, false, "could not determine the primary network interface");
 
         // D111: validate every server address before interpolation — a crafted string could
@@ -65,12 +65,12 @@ public sealed class WindowsSystemResolverSwitcher : ISystemResolverSwitching
         string cmd = servers.Count == 0
             ? $"Set-DnsClientServerAddress -InterfaceIndex {idx} -ResetServerAddresses"
             : $"Set-DnsClientServerAddress -InterfaceIndex {idx} -ServerAddresses {string.Join(",", servers)}";
-        var (outp, code) = Run("powershell", $"-NoProfile -Command \"{cmd}\"");
+        var (outp, code) = await RunAsync("powershell", $"-NoProfile -Command \"{cmd}\"");
         if (code == 0) return (true, false, null);
         return (false, IsElevationError(code, outp), string.IsNullOrWhiteSpace(outp) ? $"powershell exited {code}" : outp.Trim());
     }
 
-    public (bool ok, bool elevationDenied, string? reason) Restore(IReadOnlyList<string> servers) => SetServers(servers);
+    public Task<(bool ok, bool elevationDenied, string? reason)> RestoreAsync(IReadOnlyList<string> servers) => SetServersAsync(servers);
 
     /// D110: elevation detection via exit code and pre-check, not localized English substrings.
     /// PowerShell exit code 5 = ERROR_ACCESS_DENIED; exit code 1223 = ERROR_CANCELLED (UAC declined).
@@ -101,7 +101,7 @@ public sealed class WindowsSystemResolverSwitcher : ISystemResolverSwitching
         return tool;
     }
 
-    private static (string outp, int code) Run(string file, string args)
+    private static async Task<(string outp, int code)> RunAsync(string file, string args)
     {
         try
         {
@@ -114,14 +114,18 @@ public sealed class WindowsSystemResolverSwitcher : ISystemResolverSwitching
             // when the child fills one pipe while we block on the other.
             var outpTask = p.StandardOutput.ReadToEndAsync();
             var errTask = p.StandardError.ReadToEndAsync();
-            Task.WhenAll(outpTask, errTask).Wait(TimeSpan.FromSeconds(30));
+            // warp-hardening_20260811 Task 4.4: async conversion. WaitAsync throws TimeoutException
+            // where the old Wait(bool) returned false, so catch and fall through to the exit/kill
+            // path — preserving the original 30s pipe-drain bound + 5s exit grace, then kill.
+            try { await Task.WhenAll(outpTask, errTask).WaitAsync(TimeSpan.FromSeconds(30)); }
+            catch (TimeoutException) { /* fall through to exit/kill */ }
             if (!p.WaitForExit(5000))
             {
                 try { p.Kill(entireProcessTree: true); } catch { /* best effort */ }
                 return ("process timed out", -1);
             }
-            var outp = outpTask.IsCompleted ? outpTask.Result : "";
-            var err = errTask.IsCompleted ? errTask.Result : "";
+            var outp = outpTask.IsCompleted ? await outpTask : "";
+            var err = errTask.IsCompleted ? await errTask : "";
             return (string.IsNullOrWhiteSpace(outp) ? err : outp, p.ExitCode);
         }
         catch (Exception ex) { return (ex.Message, -1); }
@@ -171,7 +175,7 @@ public sealed class UnboundManager
             return UnboundResolver.ClassifyEnable(port, Array.Empty<string>(), true, true, false, false, false, false, false, false);
         }
 
-        var prior = _switcher.Snapshot();
+        var prior = await _switcher.SnapshotAsync();
         lock (_lock) { _snapshot = prior; }
 
         // D099: refuse to switch DNS when we have no safe restore point — an empty snapshot
@@ -183,7 +187,7 @@ public sealed class UnboundManager
                 "could not read the current DNS servers — refusing to switch without a safe restore point");
         }
 
-        var sw = _switcher.SetServers(new[] { "127.0.0.1" });
+        var sw = await _switcher.SetServersAsync(new[] { "127.0.0.1" });
         if (!sw.ok)
         {
             StopProcess();
@@ -194,7 +198,7 @@ public sealed class UnboundManager
         var postOk = await LocalResolvesAsync(port, sanityDomain);
         if (!postOk)
         {
-            _switcher.Restore(prior);
+            await _switcher.RestoreAsync(prior);
             StopProcess();
             return UnboundResolver.ClassifyEnable(port, prior, true, true, false, true, true, false, false, true);
         }
@@ -203,7 +207,7 @@ public sealed class UnboundManager
 
     // MARK: - Disable (failsafe: always restore the exact snapshot)
 
-    public UnboundResult Disable()
+    public async Task<UnboundResult> DisableAsync()
     {
         IReadOnlyList<string>? prior;
         lock (_lock) { prior = _snapshot; }
@@ -217,7 +221,7 @@ public sealed class UnboundManager
                 "could not restore DNS — original servers were never readable (no safe restore point)");
         }
 
-        var restore = _switcher.Restore(prior);
+        var restore = await _switcher.RestoreAsync(prior);
         if (!restore.ok)
         {
             if (restore.elevationDenied)
@@ -357,11 +361,11 @@ public sealed class UnboundManager
 /// Honestly refuses rather than pretending to switch — never a fake success.
 public sealed class NullResolverSwitcher : ISystemResolverSwitching
 {
-    public IReadOnlyList<string>? Snapshot() => Array.Empty<string>();
-    public (bool ok, bool elevationDenied, string? reason) SetServers(IReadOnlyList<string> servers) =>
-        (false, false, "system DNS switching is not implemented for this OS in Syxx.Kit yet");
+    public Task<IReadOnlyList<string>?> SnapshotAsync() => Task.FromResult<IReadOnlyList<string>?>(Array.Empty<string>());
+    public Task<(bool ok, bool elevationDenied, string? reason)> SetServersAsync(IReadOnlyList<string> servers) =>
+        Task.FromResult<(bool ok, bool elevationDenied, string? reason)>((false, false, "system DNS switching is not implemented for this OS in Syxx.Kit yet"));
     // E082: Restore must return failure, not fake success. The old (true, false, null) caused
     // the CLI to print "DISABLED — restored: (DHCP-provided)" when nothing was ever touched.
-    public (bool ok, bool elevationDenied, string? reason) Restore(IReadOnlyList<string> servers) =>
-        (false, false, "system DNS switching is not implemented for this OS in Syxx.Kit yet");
+    public Task<(bool ok, bool elevationDenied, string? reason)> RestoreAsync(IReadOnlyList<string> servers) =>
+        Task.FromResult<(bool ok, bool elevationDenied, string? reason)>((false, false, "system DNS switching is not implemented for this OS in Syxx.Kit yet"));
 }

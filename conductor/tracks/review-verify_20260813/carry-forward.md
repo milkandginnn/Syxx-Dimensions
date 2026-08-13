@@ -208,3 +208,57 @@ Confirmed: B1's fix repairs the stale-commit half of B2 — a token captured at 
 5. **B4's lock-hoist** — independent, land anywhere.
 
 Also: macOS records `skippedTickCount` and `lastTickAttemptedAt` (C111) so a skipped baseline is visible; **the C# port dropped that accounting** and returns null silently. Port it.
+
+---
+
+# Phase 3 — Clusters F/G/I/J/K
+
+**Baseline correction:** `tools/` is dirty too — `capabilities.py` and `test_adapters.py` both modified. Load-bearing for J1.
+
+| ID | Result |
+|---|---|
+| F4 | Confirmed. All four `.format()` calls and three sibling f-strings are in the **same function**, all added by this diff. Diff touches 11 added lines, not 9 — two are continuations |
+| G2 | Confirmed, medium. Both in-repo contrasts hold |
+| I1 | Confirmed at `:370`, **misfiled at `:255`** |
+| I2 | **REFUTED — drop it** |
+| I3 | Confirmed, low |
+| J1 | Confirmed and **understated — escalate** |
+| K1 | Confirmed, documentation-only |
+
+## I2 refuted
+
+`netutil.ip_is_public` is **live** at `netutil.py:26`, reached from `whois_lookup` via `fetcher._resolve_public` → `fetcher._ip_is_public`. The same delegation appears in `resolver.py` and `firewall_test.py`. The docstring is accurate and the body comment already spells out the indirection. Nothing to fix.
+
+## J1 — not a docs cleanup, an uncommitted revert
+
+`git show HEAD:tools/adapters/capabilities.py` carries the full tier ladder — fable/opus/sonnet/haiku/inherit each mapped to its own Anthropic model. The working tree replaces all five with one free-tier model in a **single hunk**, and `test_adapters.py:637` was edited in the same dirty state to follow the code.
+
+Four signals it is undocumented, one contradicting it outright:
+- The `MODEL_ALIASES` header explains codex, copilot and gemini by name; says nothing about opencode.
+- One commit in that file's history, so no explanatory message — and the change is not committed at all.
+- No changelog entry, comment, or doc anywhere mentions the model.
+- **`docs/harnesses.md:63-64` still documents the OpenCode column as the tier ladder** — matching HEAD, contradicting the working tree.
+
+Consequence: **every OpenCode subagent, including the security-auditor and code-reviewer roles, is silently pinned to one free-tier model.** Cursor's all-`inherit` collapse is not the same defect — it is documented and hands choice back to the user rather than pinning.
+
+Owner decision: revert to the ladder, or keep the pin deliberately and land it properly with a header comment, a docs update, all five rows asserted, and mirrors regenerated.
+
+## G2 — the harm is deferred, not immediate
+
+An immediate duplicate is harmless (zero rows matched). The real damage: `license.renewed` only records a note and re-issues nothing, so **once a customer re-subscribes and mints fresh keys, re-posting the old captured signed body revokes those too** — silent customer-facing denial of service, answered 200.
+
+Resist escalating beyond medium: the attack needs possession of a previously-valid signed body, and TLS covers the wire.
+
+Fix: the payload exposes no event id (`data.get("id")` is the *license* id), so key the guard on the already-computed HMAC, mirroring `fulfillment.py:417`.
+
+**Undetermined, network denied:** which headers Keygen actually sends. The code consumes a bare hex HMAC, not the keyId/algorithm form the validate-key path parses, so a Date header may not exist. The freshness half of the fix is an open question; the idempotency half stands alone.
+
+## I1 split
+
+`:370` calls `_pdk` **three times per DNSKEY**, each allocating a fresh copy — worth the one-line walrus fix. `:255` is the last line of `_kt` and copies nothing; the real per-RRSIG redundancy is `_psig` at `:265`, but hoisting it means restructuring the key × signature loops inside signature verification, where a subtle change alters which pairs get tried. **Not worth the churn.**
+
+## K1 — plus a third floor
+
+Confirmed: README claims 3.8+ while `StrEnum` and four `datetime.UTC` sites (all added by this diff) require 3.11+. README is **clean**, so the claim predates the change; the code moved. Runtime and lint already agree on 3.12, and ruff's `UP` rules actively push toward these constructs.
+
+Adjacent, outside K1: **`Server/uv.lock:3` declares `requires-python = ">=3.14"`** — a third floor disagreeing with both CI's 3.12 and ruff's py312 target, while `pyproject.toml` declares none at all.

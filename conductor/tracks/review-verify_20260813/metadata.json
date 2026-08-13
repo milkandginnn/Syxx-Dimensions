@@ -1,25 +1,25 @@
 {
   "id": "review-verify_20260813",
-  "title": "Ultra Review — Dedupe, Verify, Plan Fixes",
+  "title": "Ultra Review \u2014 Dedupe, Verify, Plan Fixes",
   "type": "bug",
-  "status": "pending",
+  "status": "in_progress",
   "tier": 3,
   "created": "2026-08-13T00:30:00Z",
-  "updated": "2026-08-13T00:30:00Z",
+  "updated": "2026-08-13T07:20:00Z",
   "phases": {
     "total": 6,
     "completed": 0
   },
   "tasks": {
     "total": 39,
-    "completed": 0
+    "completed": 5
   },
   "findings": {
-    "unique_after_dedup": 37,
-    "carried_forward": 12,
-    "to_verify": 25,
+    "unique_after_dedup": 38,
+    "carried_forward": 15,
+    "to_verify": 23,
     "source": "source-report.md",
-    "source_provenance": "~/Documents/REVIEW-ultra-macos-2026-08-12.md — three concatenated ultra reports (macOS review, adjudication pass, working-tree diff review) with heavy overlap"
+    "source_provenance": "~/Documents/REVIEW-ultra-macos-2026-08-12.md \u2014 three concatenated ultra reports (macOS review, adjudication pass, working-tree diff review) with heavy overlap"
   },
   "clusters": {
     "A": "DNSSEC validator security (7)",
@@ -31,11 +31,11 @@
     "G": "Behavior/data (2)",
     "H": "Deploy (1)",
     "I": "Perf/maintainability (3)",
-    "J": "Marketplace — planned separately (3)",
+    "J": "Marketplace \u2014 planned separately (3)",
     "K": "Documentation contracts (2)",
     "L": "macOS test quality (3)"
   },
-  "deliverable": "verified findings table plus one implementation plan per confirmed defect — NO fixes land in this track",
+  "deliverable": "verified findings table plus one implementation plan per confirmed defect \u2014 NO fixes land in this track",
   "blocking_dependencies": [
     "multi-agent-coordinator is not installed; copy-first from subagents/04-meta-orchestration/",
     "review-fixes_20260812 holds the prior evidence this track carries forward"
@@ -47,5 +47,7 @@
     "PLUGIN-RULES.md",
     "WORKFLOW-RULES.md",
     "COMMUNICATION-RULES.md"
-  ]
+  ],
+  "current_phase": 0,
+  "current_task": "0.6"
 }

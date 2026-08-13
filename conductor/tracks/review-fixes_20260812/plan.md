@@ -37,7 +37,7 @@ Per `SUBAGENT-RULES.md` §16.1, every assignment declares read scope, write scop
 |---|---|---|---|---|
 | Orchestrator | `agent-teams:team-lead` | plan.md, TODO, handoffs | 40 | Owns sequencing, integration, gates. Never edits code. |
 | C# implementer | `jvm-languages__csharp-pro` | `Windows/dotNET/**`, `Linux/Ubuntu/**` | 60 | Primary for W-series |
-| Swift implementer | `multi-platform-apps:ios-developer` | `macOS/Sources/**` | 60 | Primary for M-series; equips `swiftui-pro` |
+| Swift implementer | `swift-expert` (project-scoped) | `macOS/Sources/**` | 60 | Primary for M-series |
 | Python implementer | `python-development:python-pro` | `Server/syxx_server/**`, `Server/tests/**` | 25 | W16 parity only; uv/ruff/ty |
 | Security specialist | `security-scanning:security-scanning-security-auditor` | none (advisory) | 30 | Mandatory consult: waves 2–5 |
 | Test specialist | `unit-testing:unit-testing-test-automator` | `**/tests/**`, `Syxx.Tests/**` | 50 | Owns red tests + golden vectors |
@@ -45,6 +45,8 @@ Per `SUBAGENT-RULES.md` §16.1, every assignment declares read scope, write scop
 | Synthesist | `agent-orchestration:...-context-manager` | handoff docs | 20 | Required — more than two agents contribute |
 | UI specialist | `ui-design:ui-designer` | `macOS/Sources/SyxxApp/**` | 25 | Wave 6 only |
 | Accessibility reviewer | `ui-design:accessibility-expert` | none (advisory) | 15 | Wave 6 only, Tier 3 requirement |
+
+**Roster correction (2026-08-12).** `multi-platform-apps:ios-developer` was the wrong specialist — its domain is iOS app development, while this codebase is a macOS SwiftPM package (library + CLI + privileged helper, no iOS target, no UIKit). A `swift-expert` existed in this repo's own `subagents/` library and was not in the active configuration. Installed project-scoped at `.claude/agents/swift-expert.md` under the copy-first rule (`PLUGIN-RULES.md` §2.3, `SUBAGENT-RULES.md` §§2.5-2.6): provenance recorded in frontmatter, never edited in place at source, adapted on copy to satisfy §12's output contract and §14.3's structure, with the iOS-app material removed and repo constraints added. Wave 6's UI specialist should be checked against `subagents/` the same way before use.
 
 Skills equipped on assignment: `swiftui-pro`, `dotnet-contribution:dotnet-backend-patterns`, `python-development:python-testing-patterns`, `python-development:python-type-safety`, `developer-essentials:debugging-strategies`, `developer-essentials:error-handling-patterns`, `security-scanning:security-requirement-extraction`, `ui-design:accessibility-compliance` (wave 6).
 

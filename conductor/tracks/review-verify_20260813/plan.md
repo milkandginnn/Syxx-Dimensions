@@ -57,11 +57,11 @@ Blocking. No specialist starts until this is accepted.
 
 ### Tasks
 
-- [ ] Task 0.1: Install `multi-agent-coordinator` copy-first per `PLUGIN-RULES.md` §2.3 and `SUBAGENT-RULES.md` §§2.5-2.6 — copy from `subagents/04-meta-orchestration/multi-agent-coordinator.md` into `.claude/agents/`, record provenance in frontmatter, never edit the source in place, and adapt on copy to satisfy §12's output contract and §14.3's structure. The library copy is OpenCode-format and will not validate as-is.
-- [ ] Task 0.2: Record the baseline — `git rev-parse HEAD`, the working-tree diff stat, and which of the 147 uncommitted files touch cited paths. Every finding must later state whether it was checked against HEAD or the dirty tree; several cited defects live in uncommitted code.
-- [ ] Task 0.3: Build the **carry-forward table**. For each of the ~37 deduped findings, search `review-fixes_20260812/triage.md` and this session's reported findings for prior evidence. Record: finding ID, prior source, prior conclusion, and whether the cited code has changed since. A carried-forward finding must cite its source; it may never be silently merged.
-- [ ] Task 0.4: Reconcile the report's **own dedup claims** against the actual file. Section 2 asserts five findings collapse 2–3×; verify that collapsing is correct rather than assuming it, since a wrongly-merged pair hides a distinct defect.
-- [ ] Task 0.5: Re-check the four **self-refuted** findings. The report refuted them in its own adjudication pass; that pass is advisory. Spot-check each and record any disagreement.
+- [x] Task 0.1: Install `multi-agent-coordinator` copy-first per `PLUGIN-RULES.md` §2.3 and `SUBAGENT-RULES.md` §§2.5-2.6 — copy from `subagents/04-meta-orchestration/multi-agent-coordinator.md` into `.claude/agents/`, record provenance in frontmatter, never edit the source in place, and adapt on copy to satisfy §12's output contract and §14.3's structure. The library copy is OpenCode-format and will not validate as-is.
+- [x] Task 0.2: Record the baseline — `git rev-parse HEAD`, the working-tree diff stat, and which of the 147 uncommitted files touch cited paths. Every finding must later state whether it was checked against HEAD or the dirty tree; several cited defects live in uncommitted code.
+- [x] Task 0.3: Build the **carry-forward table**. For each of the ~37 deduped findings, search `review-fixes_20260812/triage.md` and this session's reported findings for prior evidence. Record: finding ID, prior source, prior conclusion, and whether the cited code has changed since. A carried-forward finding must cite its source; it may never be silently merged.
+- [x] Task 0.4: Reconcile the report's **own dedup claims** against the actual file. Section 2 asserts five findings collapse 2–3×; verify that collapsing is correct rather than assuming it, since a wrongly-merged pair hides a distinct defect.
+- [x] Task 0.5: Re-check the four **self-refuted** findings. The report refuted them in its own adjudication pass; that pass is advisory. Spot-check each and record any disagreement.
 - [ ] Task 0.6: Assign clusters to specialists with declared scopes and ceilings; emit the assignment packets.
 - [ ] Task 0.7: Emit the Phase 0 durable handoff (`BUDGET-RULES.md` §Durable Handoff Template) and commit.
 

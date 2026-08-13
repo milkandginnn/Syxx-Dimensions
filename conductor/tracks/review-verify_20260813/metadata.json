@@ -12,7 +12,7 @@
   },
   "tasks": {
     "total": 39,
-    "completed": 5
+    "completed": 6
   },
   "findings": {
     "unique_after_dedup": 38,
@@ -49,5 +49,5 @@
     "COMMUNICATION-RULES.md"
   ],
   "current_phase": 0,
-  "current_task": "0.6"
+  "current_task": "0.6 (assignment packets) \u2014 gate"
 }

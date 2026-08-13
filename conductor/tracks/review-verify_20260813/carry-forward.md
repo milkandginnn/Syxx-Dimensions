@@ -93,3 +93,33 @@ All four upheld. One carries a caveat that matters.
 ## Scope limit declared
 
 The original per-dimension finding texts are not in the track's read scope, so collapses 1, 3 and 5 rest on the cited code admitting only one defect — not on comparing reviewer prose.
+
+---
+
+# Phase 0 Handoff
+
+**Objective:** dedupe the ultra review, verify each cited defect, plan fixes. No fixes land in this track.
+
+**Completed:** coordinator installed copy-first with provenance · baseline captured · carry-forward table built · the report's dedup claims adjudicated · its four self-refutations spot-checked.
+
+**Files/components affected:** track documents only. No source changed — verify with `git diff --stat` over source paths.
+
+**Verified facts:**
+- HEAD `ecda22c9`, branch `main`. **12 of 13 cited paths are dirty** — the report reviewed the working tree, not HEAD.
+- 15 of 38 findings carry forward with prior evidence; 23 need fresh work.
+- G1 disproved by execution and withdrawn; F2 split 1 → 2.
+- The three MonitorScheduler bugs are genuinely distinct, but fixing C142 also repairs the stale-commit half of the race.
+- `.claude/` is gitignored, so `multi-agent-coordinator` and `swift-expert` exist on disk but are **untracked** — they will not survive a clean checkout.
+
+**Decisions made:** DNSSEC anchor in scope at highest priority · trust prior evidence where cited · coordinator plus four advisory specialists · marketplace findings planned separately · every spawned agent reads `AGENTS.md` and `rules/*` as step 0 and confirms it in its output header.
+
+**Validation performed:** none beyond reading — no builds, no suites. Correct for a verification phase; Phase 1 Task 1.3 is the first task requiring execution.
+
+**Remaining work:** Task 0.6 assignment packets · Task 0.7 this handoff · then Phases 1–5.
+
+**Risks / compatibility notes:**
+- The dirty tree is the dominant risk. Committing, reverting, or stashing it before fixes land invalidates findings — the same trap that made Phase 0 of `review-fixes_20260812` necessary, recurring one level up.
+- This track and `review-fixes_20260812` both touch `VantageComparer`. Whichever runs second must check the other's state.
+- The `:136` refutation must not be allowed to retire the separate `:141` MEDIUM.
+
+**Next recommended action:** Phase 1, Task 1.1 — verify the DNSSEC root trust anchor. If confirmed, it likely warrants its own track and would reorder everything after it.

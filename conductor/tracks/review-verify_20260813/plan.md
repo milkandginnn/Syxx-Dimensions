@@ -3,7 +3,7 @@
 **Track ID:** review-verify_20260813
 **Spec:** [spec.md](./spec.md) · **Source:** [source-report.md](./source-report.md)
 **Created:** 2026-08-13
-**Status:** [ ] Not Started
+**Status:** [~] Phase 0 complete except assignment packets
 **Tier:** 3 — orchestrator mandatory, specialist team, explicit sequencing
 
 ## Overview
@@ -63,7 +63,7 @@ Blocking. No specialist starts until this is accepted.
 - [x] Task 0.4: Reconcile the report's **own dedup claims** against the actual file. Section 2 asserts five findings collapse 2–3×; verify that collapsing is correct rather than assuming it, since a wrongly-merged pair hides a distinct defect.
 - [x] Task 0.5: Re-check the four **self-refuted** findings. The report refuted them in its own adjudication pass; that pass is advisory. Spot-check each and record any disagreement.
 - [ ] Task 0.6: Assign clusters to specialists with declared scopes and ceilings; emit the assignment packets.
-- [ ] Task 0.7: Emit the Phase 0 durable handoff (`BUDGET-RULES.md` §Durable Handoff Template) and commit.
+- [x] Task 0.7: Emit the Phase 0 durable handoff (`BUDGET-RULES.md` §Durable Handoff Template) and commit.
 
 ### Verification
 

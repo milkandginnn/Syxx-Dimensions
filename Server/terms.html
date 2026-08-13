@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<!-- DRAFT - UNAPPROVED - PENDING OWNER SIGN-OFF (AGENTS.md 4.7).
+     Do NOT link this page from index.html or any live navigation until the owner has approved the
+     text AND resolved the [OWNER DECISION] placeholders. Bracketed placeholders are deliberate:
+     they mark calls that require a human legal or business decision, not drafting.
+     Written to be consistent with Server/privacy.html as of 2026-07-27.
+     Supersedes the shorter 2026-07-27 draft of this file. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Syxx - Terms of Service</title>
+  <link rel="icon" type="image/png" href="assets/syxx-favicon.png">
+  <link rel="canonical" href="https://syxx.app/terms">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Jost:ital,wght@0,300..700;1,300..500&family=Cormorant+SC:wght@400;600;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --io-bg: #0b0518;
+      --io-surface: #170c2e;
+      --io-text: #efeafe;
+      --io-text-secondary: #c9c1e6;
+      --io-blue: #7c5cff;
+      --io-accent-start: #d9a441;
+      --font-sans: 'Jost', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: radial-gradient(130% 80% at 15% 0%, #1a0c33 0%, #0b0518 55%);
+      color: var(--io-text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+    h1, h2, h3 { font-family: 'Cinzel', Georgia, serif; color: var(--io-text); }
+    h1 { font-size: 32px; margin: 0 0 4px; }
+    .updated { color: var(--io-accent-start); font-size: 13px; margin-bottom: 32px; font-family: var(--font-sans); }
+    h2 { font-size: 20px; margin: 32px 0 10px; }
+    p, li { color: var(--io-text-secondary); font-family: 'EB Garamond', Georgia, serif; font-size: 17px; line-height: 1.7; }
+    section { background: var(--io-surface); border: 1px solid rgba(124,92,255,0.25);
+              border-radius: 14px; padding: 8px 24px 16px; margin-bottom: 16px; }
+    section.highlight { border-color: rgba(217,164,65,0.55); }
+    a { color: var(--io-blue); }
+    b { color: var(--io-text); }
+    nav.crumb { padding: 20px 24px 0; max-width: 760px; margin: 0 auto; font-family: var(--font-sans); }
+    nav.crumb a { color: var(--io-text-secondary); text-decoration: none; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav class="crumb" aria-label="Breadcrumb"><a href="/">&larr; syxx.app</a></nav>
+  <main>
+    <h1>Terms of Service</h1>
+    <p class="updated">DRAFT - unapproved, pending owner sign-off. Last updated: 2026-07-29</p>
+
+    <section>
+      <h2>1. The agreement</h2>
+      <p>These Terms of Service (the "Terms") form a contract between you and
+      <b>[OWNER DECISION: exact legal entity name and registered address]</b>, trading as Milk and
+      Gin ("we", "us"), covering the Syxx application on macOS, Windows, and Linux, the Syxx command
+      line tools, and the services at syxx.app (together, the "Service"). By installing, activating,
+      or using the Service you accept these Terms. If you do not accept them, do not use the
+      Service.</p>
+      <p>Your privacy is governed by our <a href="/privacy">Privacy Policy</a>, which forms part of
+      these Terms. Where a desktop application also presents an End User License Agreement, that
+      agreement governs your use of that application and these Terms govern your subscription and
+      your use of syxx.app. If the two conflict on a subscription question, these Terms prevail.</p>
+    </section>
+
+    <section class="highlight">
+      <h2>2. What Syxx does, and what it does not promise</h2>
+      <p>Syxx inspects DNS resolution from your device and reports what it observed. It is a
+      diagnostic instrument, not a guarantee.</p>
+      <p>We do <b>not</b> warrant that Syxx will detect any particular instance of DNS tampering,
+      hijacking, spoofing, interception, or censorship, that it will detect all such activity, or
+      that any result it produces is complete or free from error. Network measurement is inherently
+      partial: evidence can be unavailable, degraded, delayed, or actively withheld by the network
+      under test, and a party able to interfere with DNS may also be able to interfere with the
+      detection of that interference.</p>
+      <p>Syxx is built to say so when that happens. Where the evidence does not support a
+      Conclusion, the Service is designed to report the result as inconclusive rather than to report
+      that your resolution is clean. An inconclusive result is correct behaviour of the Service, not
+      a defect. Equally, a result reporting that nothing was detected means exactly that, that
+      nothing was detected, and is not a statement that your network is safe.</p>
+      <p>Nothing produced by the Service is legal advice, a security certification, a compliance
+      attestation, or evidence admissible in any proceeding. You are responsible for how you
+      interpret and act on any result, and you should independently corroborate anything
+      consequential.</p>
+    </section>
+
+    <section>
+      <h2>3. License grant</h2>
+      <p>Subject to these Terms and to payment of any applicable fees, we grant you a personal,
+      limited, non-exclusive, non-transferable, non-sublicensable, revocable license to install and
+      run the Service for your own use on devices you own or control, up to
+      <b>[OWNER DECISION: device limit per license]</b> devices. The Service is licensed to you, not
+      sold. All rights not expressly granted here are reserved.</p>
+    </section>
+
+    <section>
+      <h2>4. License restrictions</h2>
+      <p>You may not, and may not permit anyone else to:</p>
+      <ul>
+        <li>resell, rent, lease, sublicense, distribute, or provide the Service as a hosted or
+        managed offering to third parties;</li>
+        <li>copy, modify, translate, or create derivative works of the Service, except as these
+        Terms allow;</li>
+        <li>reverse engineer, decompile, or disassemble the Service, except to the extent applicable
+        law expressly permits despite this restriction, and then only within the limits of that
+        law;</li>
+        <li>remove, obscure, or alter any proprietary notice, license mechanism, cryptographic
+        signature, or evidence-integrity control;</li>
+        <li>share, publish, or circumvent a license key, or use one licensed seat to serve multiple
+        unlicensed users;</li>
+        <li>use the Service to build a competing product, or publish benchmark results about it
+        without our prior written consent.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. Acceptable use</h2>
+      <p>Syxx sends DNS queries and network probes to destinations you choose. You are solely
+      responsible for having the authority to test the networks, resolvers, domains, and endpoints
+      you direct it toward. You agree not to use the Service to attack, overload, or gain
+      unauthorised access to any system, to violate any law or any third-party right, to conduct
+      surveillance of another person, or to exceed the published rate limits for the syxx.app
+      endpoints. We may suspend or terminate access we reasonably believe breaches this section,
+      and where the circumstances allow we will tell you why.</p>
+    </section>
+
+    <section class="highlight">
+      <h2>6. Subscriptions and automatic renewal</h2>
+      <p><b>Please read this section carefully. It describes a subscription that renews and charges
+      you automatically until you cancel it.</b></p>
+      <ul>
+        <li><b>Plans and price.</b> Syxx Pro is offered at <b>US$3.95 per month</b> or
+        <b>US$19.95 per year</b>, plus any tax we are required to collect. Prices are in United
+        States dollars.</li>
+        <li><b>Automatic renewal.</b> Your subscription <b>renews automatically</b> at the end of
+        each billing period, monthly on a monthly plan and annually on an annual plan, and your
+        payment method is charged the then-current price for the next period <b>without further
+        action by you</b>. This continues until you cancel.</li>
+        <li><b>When you are charged.</b> The first charge is taken at checkout. Each renewal charge
+        is taken on or about the anniversary of that date for the applicable period. If a free trial
+        applies, the first charge is taken when the trial ends unless you cancel before then.</li>
+        <li><b>Payment method.</b> You authorise us and our payment processor, Stripe, to charge the
+        payment method you provide for each renewal. Keeping that payment method valid is your
+        responsibility. If a charge fails we may retry it and may suspend Pro features until payment
+        succeeds.</li>
+        <li><b>Price changes.</b> We will give you at least <b>30 days</b> notice by email before a
+        price increase takes effect for your subscription. If you do not want the new price, cancel
+        before it takes effect. Continuing after that date means you accept the new price.</li>
+        <li><b>Renewal reminders.</b> Where the law of your jurisdiction requires advance notice of
+        an automatic renewal, we will send it to the email address on your account.</li>
+      </ul>
+    </section>
+
+    <section class="highlight">
+      <h2>7. How to cancel</h2>
+      <p>You can cancel at any time, for any reason, and you do not have to give a reason.</p>
+      <p><b>[OWNER DECISION: this clause must describe the mechanism that actually exists on the day
+      it is published. A self-service online cancellation route is required for California residents
+      who subscribed online and is strongly advisable elsewhere. If the billing portal is not live
+      at launch, delete the "Online" bullet, honour the email route promptly, and ship the portal
+      before selling to California residents.]</b></p>
+      <ul>
+        <li><b>Online:</b> open the billing portal at <a href="/billing">syxx.app/billing</a> and
+        choose Cancel subscription.</li>
+        <li><b>By email:</b> write to
+        <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a> from the address on
+        your account and ask us to cancel. We will action it and confirm by email.</li>
+      </ul>
+      <p>Cancellation stops future renewals. It takes effect at the end of the billing period you
+      have already paid for, and you keep Pro features until then. Cancelling is not by itself a
+      request for a refund. For refunds see the <a href="/refund-policy">Refund Policy</a>.</p>
+    </section>
+
+    <section>
+      <h2>8. Refunds</h2>
+      <p>Our refund terms, including a 30-day money-back guarantee on a first subscription, are set
+      out in the <a href="/refund-policy">Refund Policy</a>, which forms part of these Terms.
+      Nothing in these Terms limits any statutory cancellation, withdrawal, or refund right you have
+      as a consumer, including the right of withdrawal available to consumers in the European Union
+      and the United Kingdom.</p>
+    </section>
+
+    <section>
+      <h2>9. Free tier and trials</h2>
+      <p>Some features are available without payment. Free and trial access is provided on an as
+      available basis, may be limited per device, and may be changed or withdrawn at any time. A
+      trial converts to a paid subscription automatically at the end of the trial period unless you
+      cancel first, on the terms in section 6. We may limit trials to one per person or device and
+      may use a device identifier to enforce that limit, as described in the
+      <a href="/privacy">Privacy Policy</a>.</p>
+    </section>
+
+    <section>
+      <h2>10. Changes to the Service</h2>
+      <p>We develop the Service continuously and may add, change, or remove features. Server-backed
+      features, including any independent vantage point used for comparison, are provided on a
+      reasonable-effort basis without a guaranteed service level. If we discontinue a material paid
+      feature we will tell you and, at our discretion, offer a pro-rata refund of the unused portion
+      of your current billing period.</p>
+    </section>
+
+    <section>
+      <h2>11. Your content and evidence</h2>
+      <p>Scan evidence produced on your device belongs to you. We claim no ownership of it. If you
+      choose to export it or send it to us, you grant us only the limited license needed to handle
+      it for the purpose you sent it for, such as diagnosing a problem you reported.</p>
+    </section>
+
+    <section>
+      <h2>12. Intellectual property</h2>
+      <p>The Service, including its code, interfaces, wording, artwork, and the Syxx and Milk and
+      Gin names and marks, is owned by us or our licensors and is protected by copyright, trademark,
+      and other laws. These Terms grant no right to use our names or marks. Third-party open source
+      components remain subject to their own licenses, which are listed in the application.</p>
+    </section>
+
+    <section>
+      <h2>13. Disclaimer of warranties</h2>
+      <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE"
+      WITHOUT WARRANTY OF ANY KIND. WE DISCLAIM ALL WARRANTIES, EXPRESS, IMPLIED, AND STATUTORY,
+      INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. WE
+      DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED OR ERROR-FREE, THAT ANY DEFECT WILL BE
+      CORRECTED, OR THAT THE SERVICE WILL DETECT, IDENTIFY, OR CORRECTLY CHARACTERISE ANY DNS
+      TAMPERING, HIJACKING, SPOOFING, INTERCEPTION, OR CENSORSHIP.</p>
+      <p>Some jurisdictions do not allow the exclusion of certain warranties or of statutory
+      consumer guarantees. Where that is so, this section applies only to the extent permitted and
+      you keep the rights your local law gives you.</p>
+    </section>
+
+    <section>
+      <h2>14. Limitation of liability</h2>
+      <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE WILL NOT BE LIABLE FOR ANY INDIRECT,
+      INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES, OR FOR LOST PROFITS, LOST DATA,
+      BUSINESS INTERRUPTION, OR ANY LOSS ARISING FROM RELIANCE ON A RESULT THE SERVICE PRODUCED OR
+      FAILED TO PRODUCE, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY.</p>
+      <p>OUR TOTAL AGGREGATE LIABILITY ARISING OUT OF OR RELATING TO THE SERVICE OR THESE TERMS IS
+      LIMITED TO <b>[OWNER DECISION: liability cap. A common formulation is the greater of the
+      amount you paid us in the 12 months before the claim, or US$50.]</b></p>
+      <p>Nothing here limits liability that cannot be limited by law, including liability for death
+      or personal injury caused by negligence, for fraud, or under non-excludable consumer
+      protection law.</p>
+    </section>
+
+    <section>
+      <h2>15. Indemnity</h2>
+      <p>You agree to indemnify us against claims, losses, and reasonable costs arising from your
+      use of the Service in breach of these Terms, including any claim that you probed, tested, or
+      measured a network or system you were not authorised to.</p>
+    </section>
+
+    <section>
+      <h2>16. Suspension and termination</h2>
+      <p>You may stop using the Service at any time. We may suspend or terminate your license if you
+      materially breach these Terms, if payment fails and is not cured, or if we are required to by
+      law. On termination the license in section 3 ends and you must stop using the Service.
+      Sections 2, 11 to 15, and 17 to 19 survive termination.</p>
+    </section>
+
+    <section class="highlight">
+      <h2>17. Governing law and disputes</h2>
+      <p><b>[OWNER DECISION: governing law, exclusive forum, and whether to require arbitration and
+      waive class actions. This follows from where the entity is established and is not a drafting
+      choice. It also interacts with EU and UK consumer law, which prevents a trader from depriving
+      a consumer of the protection of their home country's mandatory rules or of their home
+      courts.]</b></p>
+      <p>Consumers in the European Union may also use the European Commission's online dispute
+      resolution facilities. Before starting formal proceedings please contact
+      <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a> so we can try to resolve
+      the matter directly.</p>
+    </section>
+
+    <section>
+      <h2>18. Changes to these Terms</h2>
+      <p>We may update these Terms. The current version is always posted here with its effective
+      date. If a change materially reduces your rights or increases your obligations we will give
+      you at least <b>30 days</b> notice by email or in the application before it takes effect, and
+      it will not apply retroactively. Continuing to use the Service after the effective date means
+      you accept the updated Terms. If you do not accept them, cancel before that date. Changes
+      required by law or made to address a security issue may take effect immediately, and we will
+      say so when we post them.</p>
+    </section>
+
+    <section>
+      <h2>19. General</h2>
+      <p>These Terms, the Privacy Policy, the Refund Policy, and any End User License Agreement
+      presented in the application are the entire agreement between us about the Service. If a
+      provision is held unenforceable the rest stays in force. Our failure to enforce a provision is
+      not a waiver of it. You may not assign these Terms. We may assign them to a successor in
+      connection with a merger or sale of the business.</p>
+    </section>
+
+    <section>
+      <h2>20. Contact</h2>
+      <p>Milk and Gin,
+      <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a>. Security reports: see
+      <a href="/.well-known/security.txt">security.txt</a>.</p>
+    </section>
+  </main>
+</body>
+</html>

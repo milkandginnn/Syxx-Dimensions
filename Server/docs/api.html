@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Syxx API Documentation</title>
+<link rel="icon" type="image/svg+xml" href="/syxx-favicon.svg">
+<!-- seo.py owns title/description/og:title/og:description/og:type/twitter:card/
+     canonical for this path and re-emits them at serve time. It never emits
+     og:url, and emits og:image only for "/", so these two are the only
+     identity tags that survive here. -->
+<meta property="og:url" content="https://syxx.app/docs/api">
+<meta property="og:image" content="https://syxx.app/assets/syxx-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Jost:ital,wght@0,300..700;1,300..500&family=Cormorant+SC:wght@400;600;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0b0518;--bg2:#1a0c33;--purple:#7c5cff;--teal:#2dd4bf;--gold:#e0b45a;--text:#c9c1e6;--text-hi:#efeafe;--border:rgba(124,92,255,.18);--card:rgba(26,12,51,.65)}
+body{background:radial-gradient(130% 80% at 15% 0%,var(--bg2) 0%,var(--bg) 55%);color:var(--text);font-family:'EB Garamond',Georgia,serif;font-size:17px;line-height:1.65;min-height:100vh}
+a{color:#a78bff;text-decoration:none}a:hover{color:#c4b3ff}
+h1,h2,h3,h4{font-family:'Cinzel',serif;color:var(--text-hi);font-weight:600}
+h1{font-size:28px;margin-bottom:4px}h2{font-size:22px;margin:36px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+h3{font-size:17px;margin:18px 0 8px}
+code,pre{font-family:'Fira Code',monospace;font-size:13.5px}
+code{background:rgba(124,92,255,.12);padding:2px 6px;border-radius:4px;color:#d4c8ff}
+pre{background:#0f0822;border:1px solid var(--border);border-radius:8px;padding:14px 18px;overflow-x:auto;margin:10px 0;position:relative}
+pre code{background:none;padding:0;color:#c9c1e6}
+.layout{display:flex;max-width:1180px;margin:0 auto;padding:32px 28px}
+.sidebar{width:220px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;max-height:calc(100vh - 48px);overflow-y:auto;padding-right:18px}
+.sidebar a{display:block;padding:5px 0;font-size:14px;font-family:'EB Garamond',serif;color:#8f83b8}
+.sidebar a:hover,.sidebar a.active{color:var(--text-hi)}
+.sidebar .sec{font-family:'Cinzel',serif;font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:#6f6597;margin:14px 0 4px}
+.main{flex:1;min-width:0}
+.breadcrumb{font-size:13px;color:#6f6597;margin-bottom:18px}
+.breadcrumb a{color:#8f83b8}
+.badge{display:inline-block;font-size:11px;font-family:system-ui,sans-serif;font-weight:600;padding:2px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.05em;vertical-align:middle;margin-left:6px}
+.badge-free{background:rgba(45,212,191,.15);color:var(--teal);border:1px solid rgba(45,212,191,.3)}
+.badge-pro{background:rgba(224,180,90,.12);color:var(--gold);border:1px solid rgba(224,180,90,.25)}
+.badge-deprecated{background:rgba(160,160,170,.12);color:#9a9aa5;border:1px solid rgba(160,160,170,.3)}
+.method{display:inline-block;font-size:11px;font-family:'Fira Code',monospace;font-weight:500;padding:2px 7px;border-radius:4px;margin-right:4px}
+.method-get{background:rgba(45,212,191,.15);color:var(--teal)}.method-post{background:rgba(124,92,255,.18);color:#b9a7ff}.method-delete{background:rgba(255,90,90,.12);color:#ff8a8a}
+details{border:1px solid var(--border);border-radius:8px;margin:10px 0;background:var(--card);transition:border-color .2s}
+details[open]{border-color:rgba(124,92,255,.35)}
+summary{cursor:pointer;padding:12px 16px;font-family:'Cinzel',serif;font-size:15px;color:var(--text-hi);list-style:none;display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'ᚨ';color:var(--teal);transition:transform .2s;display:inline-block;font-size:13px;font-family:system-ui}
+details[open] summary::before{transform:rotate(90deg)}
+/* Mirror endpoints: ᛞ violet */
+details[id^="ep-diff"] summary::before,details[id^="ep-warp"] summary::before,details[id^="ep-bulk"] summary::before,details[id^="ep-lookalike"] summary::before{content:'ᛞ';color:#a78bff}
+/* Portal endpoints: ᛜ violet */
+details[id^="ep-trace"] summary::before,details[id^="ep-exposure"] summary::before{content:'ᛜ';color:#a78bff}
+/* Glutton endpoints: ᚦ red */
+details[id^="ep-leak"] summary::before,details[id^="ep-leaktest"] summary::before{content:'ᚦ';color:#ff4d6d}
+/* Witness endpoints: ᛉ violet */
+details[id^="ep-activate"] summary::before,details[id^="ep-keys"] summary::before,details[id^="ep-monitors"] summary::before{content:'ᛉ';color:#a78bff}
+/* Health/utility: ◧ muted */
+details[id^="ep-healthz"] summary::before{content:'◧';color:#6f6597}
+.rune{font-size:14px;margin-right:6px;display:inline-block;width:16px;text-align:center}
+.rune-prophet{color:#2dd4bf}.rune-mirror{color:#a78bff}.rune-portal{color:#a78bff}
+.rune-glutton{color:#ff4d6d}.rune-witness{color:#a78bff}.rune-cage{color:#a78bff}
+.det{padding:0 16px 16px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-hi);font-family:'Cinzel',serif;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+td{padding:7px 10px;border-bottom:1px solid rgba(124,92,255,.08)}
+.copy-btn{position:absolute;top:8px;right:8px;background:rgba(124,92,255,.2);border:1px solid var(--border);color:#b9a7ff;font-size:11px;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:system-ui;opacity:.7;transition:opacity .15s}
+.copy-btn:hover{opacity:1}
+.kw{color:#c792ea}.str{color:#c3e88d}.num{color:#f78c6c}.cm{color:#5f567f}.fn{color:#82aaff}.op{color:#89ddff}
+.nav-links{display:flex;gap:16px;margin-top:6px;font-size:14px}
+.note{background:rgba(124,92,255,.08);border-left:3px solid var(--purple);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:15px}
+@media(max-width:768px){.layout{flex-direction:column}.sidebar{width:100%;position:static;max-height:none;padding-right:0;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px}}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="sidebar">
+<div style="font:700 13px 'Cinzel',serif;color:var(--text-hi);margin-bottom:12px;display:flex;align-items:center;gap:7px"><img src="../assets/syxx-logo.png" width="18" height="18" alt="Syxx" style="border-radius:4px"> Syxx API</div>
+<div class="sec">Getting Started</div>
+<a href="#overview">Overview</a>
+<a href="#auth-guide">Authentication</a>
+<a href="#rate-limits">Rate Limits</a>
+<div class="sec">Free Endpoints</div>
+<a href="#ep-lookup"><span class="rune rune-prophet">ᚨ</span>/api/lookup</a>
+<a href="#ep-reverse-dns"><span class="rune rune-prophet">ᚨ</span>/api/reverse-dns</a>
+<a href="#ep-benchmark"><span class="rune rune-prophet">ᚨ</span>/api/benchmark</a>
+<a href="#ep-whois"><span class="rune rune-prophet">ᚨ</span>/api/whois</a>
+<a href="#ep-email-auth"><span class="rune rune-prophet">ᚨ</span>/api/email-auth</a>
+<a href="#ep-subdomains"><span class="rune rune-prophet">ᚨ</span>/api/subdomains</a>
+<a href="#ep-propagation"><span class="rune rune-prophet">ᚨ</span>/api/propagation</a>
+<a href="#ep-firewall-test"><span class="rune rune-prophet">ᚨ</span>/api/firewall-test</a>
+<a href="#ep-dnssec"><span class="rune rune-prophet">ᚨ</span>/api/dnssec</a>
+<a href="#ep-healthz"><span class="rune" style="color:#6f6597">◧</span>/healthz</a>
+<div class="sec">Pro Endpoints</div>
+<a href="#ep-investigate"><span class="rune rune-prophet">ᚨ</span>/api/investigate</a>
+<a href="#ep-diff"><span class="rune rune-mirror">ᛞ</span>/api/diff</a>
+<a href="#ep-authoritative"><span class="rune rune-prophet">ᚨ</span>/api/authoritative</a>
+<a href="#ep-trace"><span class="rune rune-portal">ᛜ</span>/api/trace</a>
+<a href="#ep-baseline"><span class="rune rune-prophet">ᚨ</span>/api/baseline</a>
+<a href="#ep-passive-dns"><span class="rune rune-prophet">ᚨ</span>/api/passive-dns</a>
+<a href="#ep-exposure"><span class="rune rune-portal">ᛜ</span>/api/exposure</a>
+<a href="#ep-warp-manifest"><span class="rune rune-mirror">ᛞ</span>/api/warp/manifest</a>
+<a href="#ep-warp-raw"><span class="rune rune-mirror">ᛞ</span>/api/warp/raw</a>
+<a href="#ep-warp-assembly"><span class="rune rune-mirror">ᛞ</span>/api/warp/assembly</a>
+<a href="#ep-bulk"><span class="rune rune-mirror">ᛞ</span>/api/bulk-investigate</a>
+<a href="#ep-lookalike"><span class="rune rune-mirror">ᛞ</span>/api/lookalike</a>
+<a href="#ep-leaktest"><span class="rune rune-glutton">ᚦ</span>/api/leaktest</a>
+<a href="#ep-activate"><span class="rune rune-witness">ᛉ</span>/api/auth/activate</a>
+<a href="#ep-keys"><span class="rune rune-witness">ᛉ</span>/api/keys</a>
+<a href="#ep-monitors"><span class="rune rune-witness">ᛉ</span>/api/monitors</a>
+<div class="sec">Reference</div>
+<a href="#sdk-examples">SDK Examples</a>
+<div style="margin-top:16px;font-size:13px"><a href="/">← Back to Syxx</a><br><a href="/docs/help">Help Page</a></div>
+</nav>
+
+<main class="main">
+<div class="breadcrumb"><a href="/">Home</a> › <a href="/docs/help">Docs</a> › API Reference</div>
+<h1>API Documentation</h1>
+<p style="font-style:italic;color:#9a8fc0;margin-bottom:8px">Complete reference for the Syxx Dimensions web API.</p>
+<div class="nav-links"><a href="/">Main Site</a><a href="/docs/help">Help</a></div>
+
+<h2 id="overview">Overview</h2>
+<table>
+<tr><th style="width:160px">Base URL</th><td><code>https://syxx.app</code></td></tr>
+<tr><th>Response Format</th><td>JSON (<code>Content-Type: application/json</code>)</td></tr>
+<tr><th>Error Format</th><td><code>{"error": "descriptive message"}</code> with appropriate HTTP status</td></tr>
+<tr><th>Free Tier</th><td>No authentication required. Rate-limited per client IP (30 req burst, ~1/sec refill).</td></tr>
+<tr><th>Pro Tier</th><td>Requires authentication via API key, Bearer token, or license header.</td></tr>
+</table>
+<div class="note">Free endpoints need no auth. Pro endpoints return <code>402 Payment Required</code> without valid credentials.</div>
+
+<h2 id="auth-guide">Authentication Guide</h2>
+<p>Pro endpoints accept three authentication methods, checked in this precedence order:</p>
+<table>
+<tr><th>Priority</th><th>Method</th><th>Header</th></tr>
+<tr><td>1</td><td>API Key</td><td><code>X-Syxx-API-Key: syxx_...</code> or <code>Authorization: apikey syxx_...</code></td></tr>
+<tr><td>2</td><td>Session Token</td><td><code>Authorization: Bearer &lt;session_token&gt;</code></td></tr>
+<tr><td>3</td><td>License Key (legacy)</td><td><code>X-Syxx-License: YOUR-LICENSE-KEY</code></td></tr>
+</table>
+<h3>Getting a Session Token</h3>
+<pre><code><span class="fn">POST</span> /api/auth/activate
+<span class="kw">Content-Type</span>: application/json
+
+{<span class="str">"key"</span>: <span class="str">"YOUR-LICENSE-KEY"</span>}</code></pre>
+<p>Returns <code>{"token": "...", "expiresAt": "..."}</code>. Use the token as a Bearer credential.</p>
+<h3>Getting an API Key</h3>
+<pre><code><span class="fn">POST</span> /api/keys
+<span class="kw">Authorization</span>: Bearer &lt;session_token&gt;
+<span class="kw">Content-Type</span>: application/json
+
+{<span class="str">"label"</span>: <span class="str">"my-script"</span>, <span class="str">"ttlDays"</span>: <span class="num">90</span>}</code></pre>
+<p>Returns <code>{"key": "syxx_...", ...}</code>. Store it immediately; it is shown only once. Maximum 5 keys created per day.</p>
+
+<h2 id="rate-limits">Rate Limits</h2>
+<p>Rate limiting uses a token-bucket algorithm. Free endpoints key on client IP; Pro endpoints key on session/license subject.</p>
+<table>
+<tr><th>Tier</th><th>Burst Capacity</th><th>Refill Rate</th><th>Scope</th></tr>
+<tr><td>Free</td><td>30 requests</td><td>~1/second</td><td>Per IP address</td></tr>
+<tr><td>Pro</td><td>30 requests</td><td>~1/second</td><td>Per license/session</td></tr>
+</table>
+<p>Endpoint-specific limits also apply:</p>
+<table>
+<tr><th>Endpoint</th><th>Limit</th></tr>
+<tr><td>POST /api/keys</td><td>5 per day</td></tr>
+<tr><td>POST /api/bulk-investigate</td><td>10 per hour</td></tr>
+<tr><td>POST /api/lookalike</td><td>5 per hour</td></tr>
+</table>
+<p>When rate-limited, the server responds with <code>429 Too Many Requests</code> and <code>{"error": "rate limit exceeded"}</code>.</p>
+
+<h2>Free-Tier Endpoints</h2>
+
+<details id="ep-lookup"><summary><span class="method method-get">GET</span> /api/lookup <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>DNS record lookup for any supported record type.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain name to query (max 253 chars)</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>No</td><td>Record type: A, AAAA, MX, TXT, NS, CNAME, SOA, CAA, PTR, SRV (default: A)</td></tr>
+<tr><td><code>server</code></td><td>string</td><td>No</td><td>Resolver IP (must be public; default: 1.1.1.1)</td></tr>
+</table>
+<pre><code><span class="cm"># Query MX records for example.com</span>
+curl <span class="str">"https://syxx.app/api/lookup?domain=example.com&type=MX"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"domain", "type", "server", "rcode", "rcodeName", "ad", "records": [...], "truncated"}</code></p>
+<p>Errors: 400 (invalid domain/type/resolver), 502 (DNS query failure).</p>
+</div></details>
+
+<details id="ep-reverse-dns"><summary><span class="method method-get">GET</span> /api/reverse-dns <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>Reverse DNS (PTR) lookup from an IP address.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>ip</code></td><td>string</td><td>Yes</td><td>IPv4 or IPv6 address</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/reverse-dns?ip=8.8.8.8"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"ip", "arpa", "ptr", "allPtr": [...], "rcode"}</code></p>
+<p>Errors: 400 (missing/invalid IP), 502 (query failure).</p>
+</div></details>
+
+<details id="ep-benchmark"><summary><span class="method method-get">GET</span> /api/benchmark <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>DNS latency benchmark across public resolvers (Cloudflare, Google, Quad9, OpenDNS, Verisign).</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to resolve</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>No</td><td>Record type (default: A)</td></tr>
+<tr><td><code>rounds</code></td><td>integer</td><td>No</td><td>Number of rounds per resolver, 1 to 10 (default: 3)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/benchmark?domain=example.com&rounds=5"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"domain", "type", "rounds", "resolvers": [{server, label, avg_ms, min_ms, max_ms, failures, results}], "fastest", "slowest"}</code></p>
+</div></details>
+
+<details id="ep-whois"><summary><span class="method method-get">GET</span> /api/whois <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>WHOIS/RDAP registration data lookup. Uses RDAP as primary (structured JSON), falls back to raw WHOIS on port 43.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain name (max 253 chars)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/whois?domain=example.com"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-email-auth"><summary><span class="method method-get">GET</span> /api/email-auth <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>SPF, DMARC, and DKIM email authentication record check.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to check</td></tr>
+<tr><td><code>selector</code></td><td>string</td><td>No</td><td>DKIM selector (if known)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/email-auth?domain=example.com"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-subdomains"><summary><span class="method method-get">GET</span> /api/subdomains <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>Subdomain enumeration via Certificate Transparency logs.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Root domain to enumerate</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/subdomains?domain=example.com"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-propagation"><summary><span class="method method-get">GET</span> /api/propagation <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>DNS propagation check across 17 global resolvers, queried concurrently with a 12-second deadline.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain name</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>No</td><td>Record type: A, AAAA, NS, MX, TXT, CNAME (default: A)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/propagation?domain=example.com&type=A"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: array of resolver results with server, label, region, status, records, and time_ms.</p>
+</div></details>
+
+<details id="ep-firewall-test"><summary><span class="method method-get">GET</span> /api/firewall-test <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>DNS filtering and blocking detection. Tests whether a resolver is intercepting or filtering queries.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>resolver</code></td><td>string</td><td>No</td><td>Resolver IP to test (must be public; auto-detected from client IP if omitted)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/firewall-test?resolver=1.1.1.1"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Errors: 400 (non-public or invalid resolver IP).</p>
+</div></details>
+
+<details id="ep-dnssec"><summary><span class="method method-get">GET</span> /api/dnssec <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>DNSSEC chain-of-trust validation. Walks root → TLD → domain verifying DS/DNSKEY/RRSIG records.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to validate (max 253 chars)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/dnssec?domain=cloudflare.com"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Errors: 400 (invalid domain), 501 (DNSSEC validation unavailable).</p>
+</div></details>
+
+<details id="ep-healthz"><summary><span class="method method-get">GET</span> /healthz <span class="badge badge-free">Free</span></summary>
+<div class="det">
+<p>Server health check. Returns <code>200 OK</code> when the server is operational.</p>
+<pre><code>curl <span class="str">"https://syxx.app/healthz"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<h2>Pro Endpoints</h2>
+<div class="note">All Pro endpoints require authentication. See <a href="#auth-guide">Authentication Guide</a> above.</div>
+
+<details id="ep-investigate"><summary><span class="method method-get">GET</span> /api/investigate <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Multi-vantage DNS investigation with consensus analysis.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to investigate</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/investigate?domain=example.com"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Errors: 400 (invalid domain), 402 (no entitlement).</p>
+</div></details>
+
+<details id="ep-diff"><summary><span class="method method-post">POST</span> /api/diff <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>DNS + content diff: compare your local DNS answers against authoritative and clean-vantage responses. Detects on-path interception.</p>
+<table>
+<tr><th>Body Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to compare</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>No</td><td>Record type: A or AAAA (default: A)</td></tr>
+<tr><td><code>localAnswers</code></td><td>string[]</td><td>Yes</td><td>Your local DNS answers (up to 64)</td></tr>
+<tr><td><code>url</code></td><td>string</td><td>No</td><td>URL for optional content comparison</td></tr>
+<tr><td><code>localHTML</code></td><td>string</td><td>No</td><td>Your local page HTML (max 500KB)</td></tr>
+<tr><td><code>localScripts</code></td><td>string[]</td><td>No</td><td>Local external script URLs</td></tr>
+<tr><td><code>localInlineScriptHashes</code></td><td>string[]</td><td>No</td><td>SHA-256 hashes of local inline scripts</td></tr>
+</table>
+<pre><code>curl -X POST <span class="str">"https://syxx.app/api/diff"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"domain":"example.com","type":"A","localAnswers":["93.184.216.34"]}'</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"domain", "type", "localAnswers", "authoritative", "cleanVantage", "reference", "match", "assessment", "conclusion"}</code></p>
+<p>Assessment values: <code>match</code>, <code>divergent</code>, <code>partial</code>, <code>inconclusive</code>.</p>
+</div></details>
+
+<details id="ep-authoritative"><summary><span class="method method-get">GET</span> /api/authoritative <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Authoritative DNS walk: root → TLD → authoritative nameserver. Returns the zone's own answer plus the delegation chain.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to walk</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>No</td><td>Record type: A, AAAA, NS (default: A)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/authoritative?domain=example.com&type=A"</span> \
+  -H <span class="str">"X-Syxx-API-Key: syxx_YOUR_KEY"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-trace"><summary><span class="method method-get">GET</span> /api/trace <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>DNS delegation trace: shows the root → TLD → authoritative walk with per-zone delegation details and where resolution breaks.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to trace</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>No</td><td>Record type: A, AAAA, NS (default: A)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/trace?domain=example.com"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"domain", "type", "delegation": [...], "conclusion", "brokenAt"}</code></p>
+</div></details>
+
+<details id="ep-baseline"><summary><span class="method method-get">GET</span> /api/baseline <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Historical DNS baseline and drift detection. Shows what a domain has resolved to over time, so changes after long stability can be spotted.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to check</td></tr>
+<tr><td><code>type</code></td><td>string</td><td>No</td><td>Record type: A, AAAA, CNAME, NS, MX, TXT (optional filter)</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/baseline?domain=example.com&type=A"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-passive-dns"><summary><span class="method method-get">GET</span> /api/passive-dns <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Passive DNS history query. Returns historical DNS observations from the server's passive-DNS store.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to query</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/passive-dns?domain=example.com"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-exposure"><summary><span class="method method-get">GET</span> /api/exposure <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Open resolver and CHAOS query exposure check. Tests whether your public IP answers recursive DNS from the internet. Self-scoped: only probes the connection's own source IP.</p>
+<p>No parameters required. Automatically uses your source IP.</p>
+<pre><code>curl <span class="str">"https://syxx.app/api/exposure"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"ip", "reachable", "openResolver", "assessment", "detail"}</code></p>
+<p>Assessment values: <code>open-resolver</code>, <code>closed</code>, <code>inconclusive</code>, <code>not-applicable</code>.</p>
+</div></details>
+
+<details id="ep-warp-manifest"><summary><span class="method method-get">GET</span> /api/warp/manifest <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p><strong>WARP_MANIFEST_V1</strong> signed content-integrity manifest, from the server's clean vantage. The server is the <strong>only</strong> parser: it fetches the initial-load HTML, resolves the transitive static-asset closure (HTML + JS via <code>&lt;script src&gt;</code>/<code>&lt;link rel=modulepreload&gt;</code>/<code>&lt;link rel=preload as=script&gt;</code> + CSS via <code>&lt;link rel=stylesheet&gt;</code> + CSS <code>@import</code>, deduped and depth-bounded), and hashes each asset's <strong>raw</strong> (envelope-decoded, incl. brotli) bytes. The inner manifest is serialized once and Ed25519-signed with the collector key over the exact transmitted bytes. Initial-load only (no JS execution) — a declared boundary. An asset that will not fetch is recorded <code>{"fetch_status":"fetch_failed"}</code> (never dropped), forcing the client to INCONCLUSIVE, never a clean pass.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>url</code></td><td>string</td><td>Yes</td><td>Target page URL (must be http or https)</td></tr>
+<tr><td><code>nonce</code></td><td>string</td><td>No</td><td>Replay-binding nonce, &le;64 chars of <code>[A-Za-z0-9_-]</code>; echoed inside the signed bytes</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/warp/manifest?url=https://example.com&amp;nonce=abc123"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"manifest_b64", "signature_ed25519", "key_id"}</code>. Verify the detached Ed25519 <code>signature_ed25519</code> over the base64-decoded <code>manifest_b64</code> bytes <em>before</em> parsing the JSON; <code>key_id</code> is the lowercase hex of the raw 32-byte collector public key (the pinned-key label — cross-check against <code>/api/pubkey</code>). The inner manifest carries <code>warp_manifest_version, origin_url, final_url, html_sha256, asset_classes_in_scope ["HTML","JS","CSS","CSS_IMPORT"], assets[], timestamp</code> (integer ms), <code>freshness_seconds, redirect_policy, allowed_redirects, nonce</code>.</p>
+<p>Errors: 400 (missing URL, malformed nonce, or target blocked), 502 (fetch failed, or inconclusive — initial-load HTML unavailable).</p>
+</div></details>
+
+<details id="ep-warp-raw"><summary><span class="method method-get">GET</span> /api/warp/raw <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Server clean-path copy of one resource so the client can diff it against what its own network delivered. Default mode returns JSON with the utf-8-decoded text (binary content is refused). <strong>WARP_MANIFEST_V1 §9 diff overlay:</strong> pass <code>raw=1</code> to receive the envelope-decoded <strong>raw bytes</strong> as <code>application/octet-stream</code> with an <code>X-Syxx-Warp-Sha256</code> header (and <code>X-Syxx-Warp-Final-Url</code>), bypassing the utf-8-replace path so the bytes are byte-exact for a mismatch overlay.</p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>url</code></td><td>string</td><td>Yes</td><td>URL to fetch (must be http or https)</td></tr>
+<tr><td><code>raw</code></td><td>string</td><td>No</td><td><code>raw=1</code> → octet-stream of the raw decoded bytes + <code>X-Syxx-Warp-Sha256</code></td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/warp/raw?url=https://example.com&amp;raw=1"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: default JSON <code>{"vantage": "server-clean-path", "requestedUrl", "finalUrl", "contentType", "bytes", "sha256", "content"}</code>; with <code>raw=1</code>, <code>application/octet-stream</code> raw bytes + <code>X-Syxx-Warp-Sha256</code>.</p>
+<p>Errors: 400 (missing URL or target blocked), 415 (non-text content, default mode only), 502 (fetch failed).</p>
+</div></details>
+
+<details id="ep-warp-assembly"><summary><span class="method method-get">GET</span> /api/warp/assembly <span class="badge badge-deprecated">Deprecated</span></summary>
+<div class="det">
+<p><strong>Deprecated / Gone.</strong> The WARP_ASSEMBLY_V1 raw-concatenation assembler is retired: a parity+security audit proved three hand-written parsers could not hold byte-parity and that the raw-concatenation response was unsigned (a MITM could forge the declared hash into a false match). Superseded by the signed manifest at <a href="#ep-warp-manifest"><code>/api/warp/manifest</code></a> (WARP_MANIFEST_V1). The assembler machinery is deleted; this stub remains for one deprecation release and returns <strong>410 Gone</strong> with a migration pointer — it never fabricates a blob.</p>
+<pre><code>curl <span class="str">"https://syxx.app/api/warp/assembly?url=https://example.com"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>410 Gone</code> — <code>{"error", "successor":"/api/warp/manifest", "deprecated":true}</code>.</p>
+</div></details>
+
+<details id="ep-bulk"><summary><span class="method method-post">POST</span> /api/bulk-investigate <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Bulk domain investigation: run investigation on up to 50 domains concurrently. Limit: 10 requests per hour.</p>
+<table>
+<tr><th>Body Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domains</code></td><td>string[]</td><td>Yes</td><td>List of domains (1 to 50)</td></tr>
+</table>
+<pre><code>curl -X POST <span class="str">"https://syxx.app/api/bulk-investigate"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"domains":["example.com","cloudflare.com","google.com"]}'</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-lookalike"><summary><span class="method method-post">POST</span> /api/lookalike <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Lookalike and homoglyph domain scanner. Generates permutations and checks for registered lookalike domains. Limit: 5 requests per hour.</p>
+<table>
+<tr><th>Body Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>Domain to scan for lookalikes</td></tr>
+<tr><td><code>maxPermutations</code></td><td>integer</td><td>No</td><td>Maximum permutations to generate (default: 200, max: 500)</td></tr>
+</table>
+<pre><code>curl -X POST <span class="str">"https://syxx.app/api/lookalike"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"domain":"example.com"}'</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<details id="ep-activate"><summary><span class="method method-post">POST</span> /api/auth/activate <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Activate a license key and receive a session token. This is how you obtain credentials for all other Pro endpoints.</p>
+<table>
+<tr><th>Body Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>key</code></td><td>string</td><td>Yes</td><td>Your Syxx Pro license key</td></tr>
+</table>
+<pre><code>curl -X POST <span class="str">"https://syxx.app/api/auth/activate"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"key":"YOUR-LICENSE-KEY"}'</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>Response: <code>{"token": "...", "expiresAt": "..."}</code></p>
+<p>Errors: 402 (invalid or expired license key).</p>
+</div></details>
+
+<details id="ep-keys"><summary><span class="method method-get">GET</span> / <span class="method method-post">POST</span> / <span class="method method-delete">DELETE</span> /api/keys <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Manage API keys for programmatic access.</p>
+<table>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td><span class="method method-get">GET</span></td><td>/api/keys</td><td>List all API keys for your account</td></tr>
+<tr><td><span class="method method-post">POST</span></td><td>/api/keys</td><td>Create a new API key. Body: <code>{"label": "...", "ttlDays": 90}</code></td></tr>
+<tr><td><span class="method method-delete">DELETE</span></td><td>/api/keys/&lt;id&gt;</td><td>Revoke an API key by its ID</td></tr>
+</table>
+<pre><code><span class="cm"># List keys</span>
+curl <span class="str">"https://syxx.app/api/keys"</span> -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
+
+<span class="cm"># Create key</span>
+curl -X POST <span class="str">"https://syxx.app/api/keys"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"label":"ci-pipeline","ttlDays":180}'</span>
+
+<span class="cm"># Revoke key</span>
+curl -X DELETE <span class="str">"https://syxx.app/api/keys/42"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p>POST response includes a <code>warning</code>: the key is shown only once. Store it immediately.</p>
+</div></details>
+
+<details id="ep-monitors"><summary><span class="method method-get">GET</span> / <span class="method method-delete">DELETE</span> /api/monitors <span class="badge badge-pro">Pro</span></summary>
+<div class="det">
+<p>Manage scheduled DNS monitors.</p>
+<table>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td><span class="method method-get">GET</span></td><td>/api/monitors</td><td>List all scheduled monitors</td></tr>
+<tr><td><span class="method method-delete">DELETE</span></td><td>/api/monitors/&lt;id&gt;</td><td>Delete a scheduled monitor</td></tr>
+</table>
+<pre><code>curl <span class="str">"https://syxx.app/api/monitors"</span> \
+  -H <span class="str">"X-Syxx-API-Key: syxx_YOUR_KEY"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+</div></details>
+
+<h2 id="sdk-examples">SDK / Integration Examples</h2>
+
+<h3>Python (requests)</h3>
+<pre><code><span class="kw">import</span> requests
+
+BASE = <span class="str">"https://syxx.app"</span>
+HEADERS = {<span class="str">"X-Syxx-API-Key"</span>: <span class="str">"syxx_your_api_key"</span>}
+
+<span class="cm"># Free endpoint (no auth needed)</span>
+r = requests.get(<span class="fn">f</span><span class="str">"{BASE}/api/lookup"</span>, params={<span class="str">"domain"</span>: <span class="str">"example.com"</span>, <span class="str">"type"</span>: <span class="str">"MX"</span>})
+<span class="fn">print</span>(r.json())
+
+<span class="cm"># Pro endpoint</span>
+r = requests.get(<span class="fn">f</span><span class="str">"{BASE}/api/investigate"</span>, params={<span class="str">"domain"</span>: <span class="str">"example.com"</span>}, headers=HEADERS)
+<span class="fn">print</span>(r.json())
+
+<span class="cm"># Bulk investigation</span>
+r = requests.post(<span class="fn">f</span><span class="str">"{BASE}/api/bulk-investigate"</span>, json={
+    <span class="str">"domains"</span>: [<span class="str">"example.com"</span>, <span class="str">"cloudflare.com"</span>, <span class="str">"google.com"</span>]
+}, headers={**HEADERS, <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>})
+<span class="fn">print</span>(r.json())</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+<h3>JavaScript (fetch)</h3>
+<pre><code><span class="kw">const</span> BASE = <span class="str">"https://syxx.app"</span>;
+<span class="kw">const</span> headers = { <span class="str">"X-Syxx-API-Key"</span>: <span class="str">"syxx_your_api_key"</span> };
+
+<span class="cm">// Free endpoint</span>
+<span class="kw">const</span> lookup = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${BASE}/api/lookup?domain=example.com&type=A`</span>);
+console.<span class="fn">log</span>(<span class="kw">await</span> lookup.<span class="fn">json</span>());
+
+<span class="cm">// Pro endpoint with diff</span>
+<span class="kw">const</span> diff = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${BASE}/api/diff`</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: { ...headers, <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span> },
+  body: JSON.<span class="fn">stringify</span>({
+    domain: <span class="str">"example.com"</span>, type: <span class="str">"A"</span>,
+    localAnswers: [<span class="str">"93.184.216.34"</span>]
+  })
+});
+console.<span class="fn">log</span>(<span class="kw">await</span> diff.<span class="fn">json</span>());</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+<h3>curl Quick Reference</h3>
+<pre><code><span class="cm"># Free: DNS lookup</span>
+curl <span class="str">"https://syxx.app/api/lookup?domain=example.com&type=AAAA"</span>
+
+<span class="cm"># Free: Reverse DNS</span>
+curl <span class="str">"https://syxx.app/api/reverse-dns?ip=1.1.1.1"</span>
+
+<span class="cm"># Free: DNSSEC validation</span>
+curl <span class="str">"https://syxx.app/api/dnssec?domain=cloudflare.com"</span>
+
+<span class="cm"># Pro: Investigate (Bearer token)</span>
+curl <span class="str">"https://syxx.app/api/investigate?domain=example.com"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
+
+<span class="cm"># Pro: Investigate (API key)</span>
+curl <span class="str">"https://syxx.app/api/investigate?domain=example.com"</span> \
+  -H <span class="str">"X-Syxx-API-Key: syxx_YOUR_KEY"</span>
+
+<span class="cm"># Pro: Authoritative walk</span>
+curl <span class="str">"https://syxx.app/api/authoritative?domain=example.com&type=A"</span> \
+  -H <span class="str">"X-Syxx-API-Key: syxx_YOUR_KEY"</span>
+
+<span class="cm"># Pro: Exposure check (uses your source IP automatically)</span>
+curl <span class="str">"https://syxx.app/api/exposure"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+<div style="margin-top:48px;padding-top:20px;border-top:1px solid var(--border);font-size:14px;color:#6f6597;text-align:center">
+Syxx Dimensions API &middot; <a href="/">syxx.app</a> &middot; <a href="/docs/help">Help</a>
+</div>
+</main>
+</div>
+
+<script>
+function copyCode(btn){
+  const pre=btn.closest('pre');
+  const code=pre.querySelector('code');
+  const text=code.innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Copied!';
+    setTimeout(()=>btn.textContent='Copy',1500);
+  });
+}
+document.querySelectorAll('details').forEach(d=>{
+  d.addEventListener('toggle',()=>{
+    if(d.open){
+      const id=d.id;
+      if(id)history.replaceState(null,null,'#'+id);
+    }
+  });
+});
+if(location.hash){
+  const el=document.querySelector(location.hash);
+  if(el&&el.tagName==='DETAILS'){el.open=true;el.scrollIntoView({behavior:'smooth'});}
+}
+</script>
+</body>
+</html>

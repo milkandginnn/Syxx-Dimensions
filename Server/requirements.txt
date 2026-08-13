@@ -1,0 +1,15 @@
+# Syxx collector server — runtime dependencies.
+#
+# The server core is stdlib-only (http.server, sqlite3, email, ssl, csv, …).
+# `cryptography` is used by leak.py to Ed25519-sign leak attestations (CF-01).
+# `opentelemetry` sends error traces to the Syxx collector (bugsmasher.syxx.app).
+cryptography>=41.0.0
+# brotli decodes `Content-Encoding: br` assets in the WARP_MANIFEST_V1 closure (warp.py
+# _envelope_decode). Both protocol sides MUST support br (spec §8); a br body that cannot be
+# decoded is recorded fetch_failed, never hashed while still compressed. `brotlicffi` is an
+# accepted drop-in alternative (warp.py tries it if `brotli` is absent).
+brotli>=1.1.0
+opentelemetry-api>=1.44.0
+opentelemetry-sdk>=1.44.0
+opentelemetry-exporter-otlp-proto-http>=1.44.0
+sentry-sdk[opentelemetry]>=2.19

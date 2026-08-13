@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syxx DNS Leak Test — Free DNS Privacy Check</title>
+<link rel="icon" type="image/svg+xml" href="/syxx-favicon.svg">
+<meta name="description" content="Free DNS leak test. Check if your VPN or DNS resolver is leaking your DNS queries to third-party resolvers. Powered by Syxx.">
+<meta property="og:title" content="Syxx DNS Leak Test — Free DNS Privacy Check">
+<meta property="og:description" content="Check if your DNS queries are leaking. Free, no account required.">
+<meta property="og:type" content="website">
+<!-- seo.py owns title/description/og:title/og:description/og:type/twitter:card/canonical
+     for this path and re-emits them at serve time. It never emits og:url, and emits
+     og:image only for "/", so these two are the only identity tags that survive here. -->
+<meta property="og:url" content="https://syxx.app/leaktest">
+<meta property="og:image" content="https://syxx.app/assets/syxx-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Jost:ital,wght@0,300..700;1,300..500&family=Cormorant+SC:wght@400;600;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(130% 80% at 15% 0%,#1a0c33 0%,#0b0518 55%);font-family:'Jost',system-ui,-apple-system,sans-serif;min-height:100vh;color:#c9c1e6;padding:0 0 80px}
+  a{color:#a78bff;text-decoration:none}a:hover{color:#c4b3ff}
+  ::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:rgba(124,92,255,.25);border-radius:8px}
+  .wrap{max-width:800px;margin:0 auto;padding:40px 28px}
+  h1{font:700 28px 'Cinzel',serif;color:#efeafe;margin-bottom:4px}
+  h2{font:600 20px 'Cinzel',serif;color:#efeafe;margin:32px 0 12px}
+  p{font-family:'EB Garamond',serif;font-size:17px;line-height:1.6}
+  .btn{cursor:pointer;transition:all .15s;border:none;font:600 15px 'Jost',system-ui,sans-serif}
+  .btn:hover{filter:brightness(1.09);transform:translateY(-2px)}
+  .btn-primary{padding:14px 32px;border-radius:12px;background:linear-gradient(120deg,#7c5cff,#5b3fd6);color:#fff;box-shadow:0 12px 30px rgba(124,92,255,.4)}
+  .btn-secondary{padding:10px 20px;border-radius:10px;background:rgba(124,92,255,.14);border:1px solid rgba(160,140,255,.3);color:#c4b3ff}
+  .card{border-radius:14px;background:rgba(13,7,32,.65);border:1px solid rgba(124,92,255,.18);padding:24px;margin:16px 0}
+  .result{font:700 22px 'Cinzel',serif;margin:8px 0 16px}
+  .result.safe{color:#2dd4bf}.result.leak{color:#ff4d6d}.result.warn{color:#f7931e}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+  th{text-align:left;padding:8px 12px;border-bottom:1px solid rgba(124,92,255,.2);color:#8f83b8;font:600 11px system-ui;text-transform:uppercase;letter-spacing:.1em}
+  td{padding:8px 12px;border-bottom:1px solid rgba(124,92,255,.08);font-family:ui-monospace,monospace;font-size:13px;color:#c9c1e6}
+  .progress{height:6px;border-radius:3px;background:rgba(124,92,255,.12);margin:12px 0;overflow:hidden}
+  .progress-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,#7c5cff,#2dd4bf);transition:width .3s}
+  .step{font-size:13px;color:#8f83b8;margin:4px 0}
+  .step.done{color:#2dd4bf}.step.active{color:#efeafe}.step.err{color:#ff4d6d}
+  .badge{display:inline-block;font-size:10px;font-family:system-ui;font-weight:700;padding:2px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.05em}
+  .badge-free{background:rgba(45,212,191,.14);color:#2dd4bf;border:1px solid rgba(45,212,191,.3)}
+  pre{font-family:ui-monospace,monospace;font-size:11px;color:#8f83b8;white-space:pre-wrap;line-height:1.5;margin:12px 0;padding:16px;border-radius:10px;background:#07040f;border:1px solid rgba(124,92,255,.12);overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header style="text-align:center;margin-bottom:8px">
+    <pre aria-hidden="true" style="display:inline-block;text-align:left;background:none;border:none;padding:0;margin:0 auto;font-size:10px;line-height:1.2;color:#6f6597">
+                         kmOQO
+                    LLQCUXh#
+                 X]]>ii?&lt;!Ykkk#
+             dv][!i\     c]+1bbbh
+           j]]!,           r?]dddwmk
+       $/][l'              O]>pqqd/]OZp%
+    q)]]l`                W?]]wwwd   z]J0w%
+  0]-l'                  \?][mmmm       L[zQd
+  C[,                 q[??]COOOa          uQw
+  J]:               (????JQQZ             vLq
+  C]:            v_--?fCCw                vLq
+  C]:          [+__cU0tuZZO0wh            cLw
+  J[:        {~\wbdfYZZZOOO0QLLo          cCw
+  J]:      $udbdZtmm]>;/}]]]-~~JCd        vCZ
+  J[:     &amp;ddddtZh         u?????(#       vJm
+  C];    &amp;qppp/Z             {??---       uJm
+  J];    *qqqLt               -----(      vUm
+  C];    dwwwJL               x---_]      cUm
+  U];    dwwmZU               j-___?      vUZ
+  C];    omZZZC               _____&lt;      cYm
+  L]?(   #ZOOO00             r_____      0vYm
+    01]?) B000QLLm         Or___+_    JzYCo
+       $(]]}OQLLCCCJJCQJUYY_____-  YXYLC
+          ]|??LCCCJJUUUYY-____-8cYYQ]
+             X/--jzcr}______(nYY0
+                 f--ij   hnYYm
+                    r-_1UUq
+                       X$</pre>
+    <h1 style="margin-top:15px">Syxx DNS Leak Test</h1>
+    <p style="color:#9a8fc0;font-style:italic;margin-top:4px">Check if your DNS queries are leaking to third-party resolvers.</p>
+    <span class="badge badge-free" style="margin-top:8px">Free · No account required</span>
+  </header>
+
+  <main>
+
+  <div id="intro" class="card">
+    <h2 style="margin-top:0">What is a DNS leak?</h2>
+    <p>A <strong>DNS leak</strong> occurs when your device sends DNS queries to a resolver you didn't intend to use — typically your ISP's resolver instead of your VPN's or encrypted DNS provider's resolver. This means your browsing history is visible to parties you expected to be hidden from.</p>
+    <p style="margin-top:12px">This test issues unique DNS lookups through your browser, records which resolvers forward them to our authoritative server, and reports what it found.</p>
+    <div style="text-align:center;margin-top:20px">
+      <button type="button" class="btn btn-primary" data-action="startTest" data-arg="standard">Run Standard Test</button>
+      <button type="button" class="btn btn-secondary" style="margin-left:12px" data-action="startTest" data-arg="extended">Extended Test</button>
+    </div>
+    <p style="font-size:13px;color:#6f6597;margin-top:12px;text-align:center">Standard: 6 unique lookups · Extended: 20 unique lookups</p>
+  </div>
+
+  <div id="progress" class="card" style="display:none">
+    <h2 id="progress-title">Running test…</h2>
+    <div class="progress"><div id="progress-bar" class="progress-bar" style="width:0%"></div></div>
+    <div id="steps"></div>
+  </div>
+
+  <div id="results" class="card" style="display:none">
+    <h2>Results</h2>
+    <div id="result-box"></div>
+    <div id="resolvers-table"></div>
+    <div id="attestation" style="margin-top:16px"></div>
+  </div>
+
+  <div id="explain" class="card" style="display:none">
+    <h2>What does this mean?</h2>
+    <div id="explain-text"></div>
+  </div>
+
+  <div id="about" class="card">
+    <h2>How it works</h2>
+    <p><strong>Step 1:</strong> We generate unique, random subdomains under our authoritative DNS zone.</p>
+    <p style="margin-top:8px"><strong>Step 2:</strong> Your browser resolves those subdomains. Whatever DNS resolver your device uses will forward the lookup to our server.</p>
+    <p style="margin-top:8px"><strong>Step 3:</strong> Our authoritative server records which resolver IPs forwarded the queries.</p>
+    <p style="margin-top:8px"><strong>Step 4:</strong> We report which resolvers were observed. If you see your ISP's resolver when you expected your VPN's resolver, you have a DNS leak.</p>
+    <h2 style="margin-top:24px">How to fix a DNS leak</h2>
+    <p>• Configure your VPN to use its own DNS resolver (not your ISP's)</p>
+    <p style="margin-top:4px">• Enable DNS-over-HTTPS or DNS-over-TLS in your browser or OS</p>
+    <p style="margin-top:4px">• Disable IPv6 if your VPN doesn't tunnel IPv6 traffic</p>
+    <p style="margin-top:4px">• Use <a href="https://syxx.app">Syxx</a> for deeper investigation — process-level leak attribution, DNSSEC validation, and cryptographic evidence</p>
+  </div>
+
+  </main>
+
+  <footer style="text-align:center;margin-top:32px;font-size:13px;color:#6f6597">
+    <p>Syxx · A DNS investigative and protection suite</p>
+    <p>© J.J. Warne d/b/a MilkandGin · All rights reserved</p>
+    <p><a href="https://syxx.app">syxx.app</a> · <a href="mailto:feedback@milkandgin.com">feedback@milkandgin.com</a></p>
+  </footer>
+
+</div>
+
+<script>
+const NUM_STANDARD = 6, NUM_EXTENDED = 20, TRIGGER_DELAY_MS = 300;
+
+function addStep(text, cls) {
+  const el = document.getElementById('steps');
+  const s = document.createElement('div');
+  s.className = 'step ' + (cls || '');
+  s.textContent = text;
+  el.appendChild(s);
+  return s;
+}
+
+function setProgress(pct) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+async function startTest(mode) {
+  const count = mode === 'extended' ? NUM_EXTENDED : NUM_STANDARD;
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('explain').style.display = 'none';
+  document.getElementById('progress').style.display = 'block';
+  document.getElementById('steps').innerHTML = '';
+  document.getElementById('progress-title').textContent = mode === 'extended' ? 'Running extended test…' : 'Running standard test…';
+
+  // Step 1: Get token
+  addStep('Requesting test token…', 'active');
+  setProgress(5);
+  let tokenData;
+  try {
+    const r = await fetch('/api/leaktest/start', { method: 'POST' });
+    if (!r.ok) throw new Error('token request failed: ' + r.status);
+    tokenData = await r.json();
+  } catch (e) {
+    addStep('Failed to get test token: ' + e.message, 'err');
+    setProgress(0);
+    return;
+  }
+  addStep('Token received. Triggering ' + count + ' DNS lookups…', 'done');
+  setProgress(10);
+
+  const token = tokenData.token;
+  const zone = tokenData.zone || 'leak.syxx.app';
+
+  // Step 2: Trigger DNS lookups via dual probes (Image + fetch)
+  // Using both methods maximizes the chance that DNS resolution occurs
+  // across all browsers, regardless of PNA, HTTPS-Only, or CORS policies.
+  const triggered = [];
+  for (let i = 0; i < count; i++) {
+    const subdomain = token + '-' + i + '-' + Math.random().toString(36).slice(2, 8);
+    const fqdn = subdomain + '.' + zone;
+    const step = addStep('  [' + (i+1) + '/' + count + '] ' + fqdn, 'active');
+    try {
+      // Dual probe: Image load triggers DNS via browser resource pipeline;
+      // fetch with no-cors triggers DNS via network stack. Both resolve
+      // before any connection attempt, so even failures still produce DNS queries.
+      await new Promise((resolve) => {
+        let settled = false;
+        const done = () => { if (!settled) { settled = true; resolve(); } };
+        // Image probe — DNS happens before connection to sink IP fails
+        const img = new Image();
+        img.onload = done;
+        img.onerror = done;
+        img.src = 'https://' + fqdn + '/leaktest-probe?' + Date.now();
+        // Fetch probe — no-cors ensures DNS resolution even when
+        // browser blocks the actual request due to PNA/CORS
+        fetch('https://' + fqdn + '/leaktest-probe?' + Date.now(), {
+          mode: 'no-cors', cache: 'no-cache'
+        }).then(done).catch(done);
+        setTimeout(done, 3000); // 3s timeout per probe
+      });
+      step.textContent = '  [' + (i+1) + '/' + count + '] ' + fqdn + ' ✓';
+      step.className = 'step done';
+      triggered.push(fqdn);
+    } catch (e) {
+      step.textContent = '  [' + (i+1) + '/' + count + '] ' + fqdn + ' ✗';
+      step.className = 'step err';
+    }
+    setProgress(10 + (80 * (i+1) / count));
+    // Small delay between probes to avoid rate limiting
+    if (i < count - 1) await new Promise(r => setTimeout(r, TRIGGER_DELAY_MS));
+  }
+
+  addStep('All lookups triggered. Waiting for DNS propagation…', 'active');
+  setProgress(92);
+  // Wait for DNS to propagate to authoritative server
+  await new Promise(r => setTimeout(r, 2000));
+
+  // Step 3: Check results
+  addStep('Checking observed resolvers…', 'active');
+  setProgress(95);
+  let resultData;
+  try {
+    const r = await fetch('/api/leaktest/check?token=' + encodeURIComponent(token));
+    if (!r.ok) throw new Error('check failed: ' + r.status);
+    resultData = await r.json();
+  } catch (e) {
+    addStep('Failed to check results: ' + e.message, 'err');
+    setProgress(0);
+    return;
+  }
+  addStep('Results received.', 'done');
+  setProgress(100);
+
+  // Step 4: Display results
+  displayResults(resultData, count);
+}
+
+function displayResults(data, probeCount) {
+  document.getElementById('progress').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('explain').style.display = 'block';
+
+  const obs = data.observations || [];
+  const resolvers = {};
+  obs.forEach(o => {
+    const ip = o.resolver_ip || o.resolverIP || 'unknown';
+    if (!resolvers[ip]) resolvers[ip] = { count: 0, hostname: o.hostname || '' };
+    resolvers[ip].count++;
+  });
+
+  const resolverList = Object.entries(resolvers).sort((a,b) => b[1].count - a[1].count);
+  const uniqueCount = resolverList.length;
+
+  // C076: hedged conclusions — the server sees only the last-mile resolver IP.
+  // It cannot determine encryption status, VPN correctness, or leak status.
+  let resultClass, resultText, explainHTML;
+  if (uniqueCount === 0) {
+    resultClass = 'warn';
+    resultText = 'This test could not determine whether you have a leak';
+    explainHTML = '<p>No DNS lookups reached our authoritative server. This could mean:</p>' +
+      '<p style="margin-top:4px">• Your DNS resolver is working correctly</p>' +
+      '<p style="margin-top:4px">• DNS propagation has not completed yet (try again in a moment)</p>' +
+      '<p style="margin-top:4px">• Your browser or network blocked the probe domains</p>';
+  } else if (uniqueCount === 1) {
+    resultClass = 'safe';
+    resultText = '1 resolver observed your DNS queries';
+    explainHTML = '<p>All ' + obs.length + ' DNS queries were forwarded by a single resolver:</p>' +
+      '<p style="margin-top:4px;font-family:ui-monospace,monospace;color:#2dd4bf">' + resolverList[0][0] + '</p>' +
+      '<p style="margin-top:8px"><strong>Verify this resolver matches your VPN or encrypted DNS provider.</strong> This test cannot confirm whether your DNS traffic is encrypted or whether this resolver is the one you intended to use.</p>';
+  } else {
+    resultClass = uniqueCount <= 2 ? 'warn' : 'leak';
+    resultText = uniqueCount + ' different resolvers observed your DNS queries';
+    explainHTML = '<p>Your DNS queries were forwarded by <strong>' + uniqueCount + ' different resolvers</strong>.</p>' +
+      '<p style="margin-top:8px">This test cannot determine whether this is a leak. Multiple resolvers may be expected if your VPN or encrypted DNS provider uses load balancing. Search the IPs below to find out whether they are associated with your ISP, VPN, or encrypted DNS provider.</p>';
+  }
+
+  // Platform-specific recovery guidance
+  var platform = navigator.platform || '';
+  var osGuidance = '';
+  if (platform.indexOf('Mac') !== -1) {
+    osGuidance = '<p style="margin-top:12px;font-size:13px;color:#8f83b8"><strong>On macOS:</strong> Check System Settings → Network → DNS. Reinstall your VPN or encrypted DNS profile. Delete any cached network configurations before reinstalling.</p>';
+  } else if (platform.indexOf('Win') !== -1) {
+    osGuidance = '<p style="margin-top:12px;font-size:13px;color:#8f83b8"><strong>On Windows:</strong> Disable and re-enable DNS-over-HTTPS in Windows Settings or reinstall your VPN or encrypted DNS client. Check your network adapter DNS settings.</p>';
+  } else if (platform.indexOf('Linux') !== -1) {
+    osGuidance = '<p style="margin-top:12px;font-size:13px;color:#8f83b8"><strong>On Linux:</strong> Check /etc/systemd/resolved.conf for changes. Ensure encrypted DNS flags are enabled. Reinstall your VPN or encrypted DNS client if applicable.</p>';
+  }
+  explainHTML += osGuidance;
+
+  document.getElementById('result-box').innerHTML = '<div class="result ' + resultClass + '">' + resultText + '</div>' +
+    '<p style="font-size:13px;color:#8f83b8">' + obs.length + ' observations from ' + probeCount + ' probes</p>';
+
+  // Resolver table
+  let tableHTML = '<table><thead><tr><th>Resolver IP</th><th>Hostname</th><th>Queries</th></tr></thead><tbody>';
+  resolverList.forEach(([ip, info]) => {
+    tableHTML += '<tr><td>' + ip + '</td><td>' + (info.hostname || '—') + '</td><td>' + info.count + '</td></tr>';
+  });
+  tableHTML += '</tbody></table>';
+  document.getElementById('resolvers-table').innerHTML = tableHTML;
+
+  // Attestation
+  if (data.attestation) {
+    document.getElementById('attestation').innerHTML = '<p style="font-size:12px;color:#6f6597">Attestation signed by collector key <code>' + (data.keyId || '') + '</code>. Verifiable with the public key at <a href="/api/pubkey">/api/pubkey</a>.</p>';
+  }
+
+  document.getElementById('explain-text').innerHTML = explainHTML;
+}
+
+// Delegated click handling keyed on data-action / data-arg. No inline handlers,
+// so this page can be served under a script-src CSP without 'unsafe-inline'.
+document.addEventListener('click', function (ev) {
+  var el = ev.target.closest('[data-action]');
+  if (!el) return;
+  if (el.getAttribute('data-action') !== 'startTest') return;
+  ev.preventDefault();
+  startTest(el.getAttribute('data-arg') || 'standard');
+});
+</script>
+</body>
+</html>

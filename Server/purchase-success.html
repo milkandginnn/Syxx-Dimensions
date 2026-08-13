@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Syxx — Purchase Complete</title>
+  <link rel="icon" type="image/png" href="assets/syxx-favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Jost:ital,wght@0,300..700;1,300..500&family=Cormorant+SC:wght@400;600;700&family=EB+Garamond:ital,wght@0,400..600;1,400..600&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --io-bg: #0b0518;
+      --io-surface: #170c2e;
+      --io-text: #efeafe;
+      --io-text-secondary: #c9c1e6;
+      --io-blue: #7c5cff;
+      --io-electric: #a78bff;
+      --io-accent-start: #d9a441;
+      --io-ok: #2dd4bf;
+      --font-sans: 'Jost', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'Jost', ui-monospace, 'SF Mono', Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: radial-gradient(130% 80% at 15% 0%, #1a0c33 0%, #0b0518 55%);
+      color: var(--io-text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      max-width: 560px; width: 90%; margin: 40px auto;
+      padding: 48px 40px;
+      background: var(--io-surface);
+      border-radius: 20px;
+      border: 1px solid rgba(124, 92, 255, 0.3);
+      text-align: center;
+    }
+    .icon { font-size: 56px; margin-bottom: 8px; display: block; }
+    h1 { font-family: 'Cinzel', Georgia, serif; font-size: 28px; font-weight: 700; margin: 0 0 8px 0; color: var(--io-text); }
+    .subtitle { font-family: 'EB Garamond', Georgia, serif; color: var(--io-text-secondary); font-size: 17px; line-height: 1.5; margin-bottom: 28px; }
+    .checklist { text-align: left; margin: 0 auto 28px auto; max-width: 380px; }
+    .checklist li { font-family: 'EB Garamond', Georgia, serif; color: var(--io-text-secondary); font-size: 16px; line-height: 1.6; padding: 4px 0; }
+    .checklist li b { color: var(--io-text); }
+    .btn {
+      display: inline-block; padding: 14px 32px; border-radius: 10px;
+      font-family: var(--font-sans); font-weight: 600; font-size: 15px;
+      color: #fff; background: var(--io-blue); text-decoration: none;
+      transition: filter .2s;
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .session-id { margin-top: 20px; font-family: var(--font-mono); font-size: 12px; color: rgba(201,193,230,0.5); }
+    .footer { margin-top: 24px; font-size: 13px; color: rgba(201,193,230,0.4); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <span class="icon">&#10003;</span>
+    <h1>Purchase Complete</h1>
+    <p class="subtitle">
+      Thank you for supporting Syxx. Your Pro license is being minted and will arrive by email within a few minutes.
+    </p>
+    <ol class="checklist">
+      <li><b>Check your email</b> — your license key will be sent to the address you used at checkout.</li>
+      <li><b>Copy the key</b> and open Syxx on your Mac, Windows, or Linux machine.</li>
+      <li><b>Paste it into</b> License view and click Activate. Your Pro features unlock immediately.</li>
+    </ol>
+    <a class="btn" href="https://syxx.app">Back to Syxx</a>
+    <div class="session-id" id="sessionRef"></div>
+    <footer class="footer">If you don't receive the email within 10 minutes, contact support at syxx.app/help</footer>
+  </main>
+  <script>
+    var m = window.location.search.match(/[?&]session_id=([^&]+)/);
+    if (m) document.getElementById('sessionRef').textContent = 'Reference: ' + m[1];
+  </script>
+</body>
+</html>

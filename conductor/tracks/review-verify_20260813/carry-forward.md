@@ -152,3 +152,59 @@ All 14 corpus cases conform today, so the finding is latent. Fix is one line at 
 Take a value type, not a base class. Forgetting `super` in `setUp` fails safe — no backup, so no restore. Forgetting it in `tearDown` does **not**: the restore is lost and whatever key the test wrote stays in the developer's keychain. That asymmetry is the argument against a shared base class. Per-instance state is required; lifting the backup to `static` turns a per-test restore into last-writer-wins over a real key.
 
 A third site shares the pattern at `SyxxKitTests/WitnessKeyValidationTests.swift:52,57`, but it is in a different test target from the support type, so extraction cannot cover it without relocating.
+
+---
+
+# Phase 2 — Clusters B and E (Windows)
+
+All six confirmed. **Three severities are wrong in the source report — two up, one down.**
+
+| ID | Result | Reachable? |
+|---|---|---|
+| B2 skipped baseline | confirmed | Yes — plain monitoring toggle off/on |
+| B2 stale commit | confirmed | Yes — same path; repaired by B1's fix |
+| B3 `State` TOCTOU | confirmed — **permanent wedge, not transient** | Yes, narrow window |
+| B4 deadlock | confirmed shape — **not reachable** | **No** |
+| E1 dropped output | confirmed — **escalates to a silent DNS reset** | Yes, rare |
+| E3 `catch(Exception)` | confirmed as written — latent, no token passed today | Not today |
+| E4 shape divergence | confirmed — **the material divergence runs the other way** | n/a |
+
+## E1 is not "lost diagnostics" — recommend LOW → higher
+
+`WaitForExit(5000)` is the **timed** overload, which does not wait for redirected-stream EOF. If the process exits inside those 5 s with the drain still pending, both outputs return `""` and `ExitCode` is typically **0**.
+
+Trace it forward: `SnapshotAsync` sees `code == 0`, so the D099 guard does not fire; the empty-string branch then returns "**genuinely no DNS servers configured**". That empty-but-non-null list is not `null`, so `EnableAsync`'s refuse-to-switch guard does not trip either. On the later `DisableAsync` the empty list is restored, `SetServersAsync` takes `-ResetServerAddresses`, and **the user's static DNS is silently reset to DHCP** — precisely the outcome the five D099 comments exist to prevent.
+
+A "could not read" is laundered into a confident "no servers". Realistic trigger: PowerShell spawns a helper inheriting the stdout handle, so the drain outlives the direct child's exit.
+
+Also answered: the abandoned read tasks can fault unobserved when `using var p` disposes the pipes, but no crash today — the repo sets no `ThrowUnobservedTaskExceptions`, so .NET swallows them. Enabling that switch would turn this into a crash.
+
+## B3 is a permanent wedge — recommend MED → higher
+
+A `Stop()` landing between the token check and the `State = Running` assignment runs to completion, then the loop thread overwrites `State` with `Running`. Result: `State == Running`, `_cts == null`, `_loopTask == null`, no live loop. Nothing ever writes `State` back to `Idle`, so **the wedge lasts the process lifetime**: `IsRunning` reports true, the toggle shows monitoring on, and no tick runs again. Silent failure of a safety feature.
+
+**Do not fix with `_runLock`** — `_onTick` runs under it, so folding lifecycle in converts B4 from conditional to certain. Needs a separate lifecycle lock.
+
+## B4 is not reachable — recommend MED → lower
+
+Every consumer was enumerated: `new MonitorScheduler(` appears at six sites, and **only `AppViewModel.cs:108` passes `onTick`**. That handler marshals through `TryEnqueue` (fire-and-forget); the headless fallback runs inline but blocks on nothing. **Nothing in the repo calls `StopAsync()` at all.** The handler is `Action<MonitorTick>`, so it cannot even await — it would have to block explicitly.
+
+A latent trap, not a live bug. The lock-hoist is still worth doing: it also removes disk I/O (`SyxxSettingsStore.Load()`) and toast construction from under the lock.
+
+## E4 — the material divergence is nullability, and it runs toward macOS
+
+The filed async-vs-sync shape difference is real but deliberate and correct per platform. The consequential one is different: C# `SnapshotAsync` returns `IReadOnlyList<string>?` where `null` means "could not read" and empty means "genuinely none" — the D099 tri-state. **Swift's `snapshot() -> [String]` is non-optional and cannot express "could not read" at all**, its consumers guard nothing, and `disable()` restores unconditionally.
+
+**macOS has no D099 safe-restore-point guard, because its protocol shape makes one impossible.** C# is ahead on safety here. Closing the gap means changing Swift's return type, not C#'s.
+
+## B1/B2 overlap and fix sequencing
+
+Confirmed: B1's fix repairs the stale-commit half of B2 — a token captured at entry is the old, cancelled one, so the commit is discarded. It does **not** touch the skipped baseline, whose cause is `_inFlight` being instance-scoped and outliving `Stop()`.
+
+1. **B1 + `MonitorSchedulerTests.cs:141` in one commit.** After the fix `TickCount` is 1; the test burns its full 30 s timeout then fails. Assertion becomes 1 and the comment documenting the wrong invariant is rewritten.
+2. **B3** — introduces the lifecycle lock step 4 also needs.
+3. **B5** — after B1, since it widens the window `_inFlight` is held.
+4. **B2's remaining half** — a design call, not a one-liner. `Start()` must not clear `_inFlight` (two overlapping ticks would stomp the snapshot file). Preferred: the loop's first tick retries with backoff rather than treating null as a completed baseline.
+5. **B4's lock-hoist** — independent, land anywhere.
+
+Also: macOS records `skippedTickCount` and `lastTickAttemptedAt` (C111) so a skipped baseline is visible; **the C# port dropped that accounting** and returns null silently. Port it.

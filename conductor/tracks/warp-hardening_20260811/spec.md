@@ -24,11 +24,13 @@ Per `conductor/product.md` and `conductor/workflow.md`: tests are required befor
 
 ## Acceptance Criteria
 
-- [ ] No server route marked `DEPRECATED` with a live alternative remains reachable; legacy unsigned warp consumers (scheduler baseline job, `/api/diff`) are migrated to the signed manifest or explicitly retired with 410 + migration pointer.
-- [ ] `openapi.yaml` documents every live route; a CI spec↔route drift check fails when the set of spec paths ≠ set of live code routes.
-- [ ] Duplicated `type_map`/rcode-name dictionaries are consolidated to a single source of truth, and wire-format pinning tests prove byte-identical output for `/api/lookup`, `/api/reverse-dns`, `/api/propagation`, `/api/whois`, `/dns-query`.
-- [ ] Zero `GetAwaiter().GetResult()`, `.Result`, or `.Wait()` in production C# (`Windows/dotNET` + `Linux/dotNET`, excluding tests); each of the 4 sites is converted to `await` end-to-end or, where conversion is impossible, annotated with an explicit documented rationale.
-- [ ] Full Python suite green (`OTEL_TRACES_EXPORTER=none uv run pytest tests/ -q`), `ruff check` clean on touched files, dotnet build + C# tests green on Windows and Linux runtimes, CI gate green on the changed jobs.
+- [x] No server route marked `DEPRECATED` with a live alternative remains reachable; legacy unsigned warp consumers (scheduler baseline job, `/api/diff`) are migrated to the signed manifest or explicitly retired with 410 + migration pointer.
+- [x] `openapi.yaml` documents every live route; a CI spec↔route drift check fails when the set of spec paths ≠ set of live code routes.
+- [x] Duplicated `type_map`/rcode-name dictionaries are consolidated to a single source of truth, and wire-format pinning tests prove byte-identical output for `/api/lookup`, `/api/reverse-dns`, `/api/propagation`, `/api/whois`, `/dns-query`.
+- [x] Zero `GetAwaiter().GetResult()`, `.Result`, or `.Wait()` in production C# (`Windows/dotNET` + `Linux/dotNET`, excluding tests); each of the 4 sites is converted to `await` end-to-end or, where conversion is impossible, annotated with an explicit documented rationale.
+- [x] ~~Full Python suite green (`OTEL_TRACES_EXPORTER=none uv run pytest tests/ -q`), `ruff check` clean on touched files, dotnet build + C# tests green on Windows and Linux runtimes, CI gate green on the changed jobs.~~ **Amended 2026-08-13 by owner decision:** Full Python suite green, `ruff check` clean, dotnet build + C# tests green **on the available macOS host**. Windows and Linux runtime runs and the CI gate are deferred — no hosted CI at present, and `SyxxUI`/`SyxxUI.Tests` are `net10.0-windows` and cannot build here. Residual risk is recorded in `plan.md` under Final Verification: the `UnboundManager` / `UnboundResolver` / `MonitorScheduler` async conversions have never executed on a Windows or Linux runtime.
+
+> **Sign-off is still blocked.** Phase 4 landed at `b03118e` as an owner-authorized recovery checkpoint carrying confirmed defects B1–B5, remediated in `review-verify_20260813` fix-plans P4. Meeting these criteria is not the same as being ready for review.
 
 ## Dependencies
 

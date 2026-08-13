@@ -79,11 +79,20 @@ Eliminate blocking async calls in production C#.
 
 ## Final Verification
 
-- [ ] All 4 acceptance criteria met (no deprecated-with-alternative route; OpenAPI drift check binds; constants deduped with wire pins; zero production sync-over-async).
-- [ ] Full Python suite green, `ruff` clean, C# build + tests green on both runtimes.
-- [ ] CI gate green on the changed jobs (ruff/SwiftLint/parity unaffected by this track).
+- [x] All 4 acceptance criteria met (no deprecated-with-alternative route; OpenAPI drift check binds; constants deduped with wire pins; zero production sync-over-async). **Evidence 2026-08-13:** `/warp` + `/api/warp/assembly` return 410 with `{"successor": "/api/warp/manifest", "deprecated": true}` (`app.py:1584`, `:1744`, present at HEAD); drift gate at `Server/tools/check_openapi_drift.py` wired into `Makefile:205`, `ci.yml:388`, and `tests/test_openapi_drift.py`, reporting no drift at 50 live / 50 spec, and proven to bind by deliberate removal; `test_wire_pinning.py` green; zero live `GetAwaiter().GetResult()` / `.Wait(` in production C# — the only surviving strings are comments recording the removal.
+- [x] Full Python suite green, `ruff` clean, C# build + tests green **on the available macOS host**. **Re-scoped 2026-08-13 by owner decision** — the original wording required Windows *and* Linux runtime runs. **Run 2026-08-13:** Python 434 passed, 51 subtests passed; `ruff check syxx_server/ tests/ tools/` clean; `dotnet test Windows/dotNET/Syxx.Tests` 868/880 with 12 failing names, all in the known pre-existing macOS-host set (`ProbeRunnerTests.Default{Glutton,Mirror,Portal,Prophet}_HasExpectedValues`, `MatrixGoldenCorpusTests.DefaultSpecMatchesFrozenOracle`, `D100TtlTieBreakDeterminismTests`, `AuthoritativeVantageConsensusTests`, `ReportTests.RenderText_ContainsRequiredStructuralSections`, `ResultProvenanceTests` ×2, `SectionCompletenessTests.TimeoutDatapointLowersCompleteness`, `NetworkKeyStateTests.EncryptedDNSStatusNoForPlainUDP`). None is on a Phase 4 surface.
+  - **RESIDUAL RISK, accepted:** the async conversions in `UnboundManager`, `UnboundResolver`, and `MonitorScheduler` have never executed on a Windows or Linux runtime. `SyxxUI`/`SyxxUI.Tests` are `net10.0-windows` and cannot build on this host at all. Windows-specific process, pipe, and thread-affinity behavior is unverified for this track.
+- [x] CI gate green on the changed jobs — **not achievable; closed as re-scoped.** No hosted CI at present (see `AGENTS.md`). The three gate scripts under `scripts/` are CI-only and there is no local gate runner. The OpenAPI drift check is the one gate this track added, and it binds locally through `make` and pytest independently of CI.
 - [ ] Documentation updated: CHANGELOG entry, `docs/` references to `/warp` (warp-manifest-v1-spec.md), openapi regenerated.
 - [ ] Ready for review.
+
+### Phase 4 commit status
+
+Phase 4 was recorded complete on 2026-08-11 but lived only in the working tree until **2026-08-13**, when it was committed as `b03118e` — an **owner-authorized recovery checkpoint** under `IMPLEMENTATION-RULES.md` §12, not a clean commit.
+
+It **carries confirmed open defects**. `review-verify_20260813` confirmed B1–B5 in this MonitorScheduler code; B1 is live — the guard at `:114` is dead in the `Stop()` path, so a post-`Stop()` tick is counted, latched, and delivered. `MonitorSchedulerTests.cs:141` asserts that broken invariant, which is why the suite reports green on this surface. Remediation is planned in `conductor/tracks/review-verify_20260813/fix-plans.md` P4 and is **not** in this track.
+
+**This track cannot be marked "Ready for review" while B1–B5 are open.**
 
 ---
 

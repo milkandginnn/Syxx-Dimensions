@@ -3,8 +3,9 @@
   "title": "Warp Hardening & Contract Drift Fixes",
   "type": "refactor",
   "status": "in_progress",
+  "tier": 2,
   "created": "2026-08-11T04:40:00Z",
-  "updated": "2026-08-11T15:40:00Z",
+  "updated": "2026-08-13T00:00:00Z",
   "phases": {
     "total": 4,
     "completed": 4
@@ -13,6 +14,68 @@
     "total": 19,
     "completed": 19
   },
-  "current_phase": 4,
-  "current_task": "4.5"
+  "final_verification": {
+    "total": 5,
+    "completed": 3,
+    "outstanding": [
+      "documentation: CHANGELOG entry, docs/ references to /warp, openapi status",
+      "ready for review — blocked while B1-B5 are open"
+    ]
+  },
+  "current_phase": "final-verification",
+  "current_task": "documentation",
+  "commits": [
+    "2ca4505e: [warp-hardening_20260811] warp: retire /warp route to 410 + migration pointer",
+    "70920bc0: [warp-hardening_20260811] plan: mark Phase 1 complete",
+    "29322ed0: [warp-hardening_20260811] openapi: add route-drift gate + document all live routes",
+    "6442699c: [warp-hardening_20260811] mark phase 2 (openapi drift) complete",
+    "a2adae23: [warp-hardening_20260811] dedup type/rcode/HMAC maps + wire-format pinning",
+    "b03118e: [warp-hardening_20260811] checkpoint: phase 4 C# sync-over-async conversions"
+  ],
+  "decisions": [
+    {
+      "id": "D-PHASE4-CHECKPOINT",
+      "date": "2026-08-13",
+      "decision": "Commit Phase 4 as an owner-authorized recovery checkpoint under IMPLEMENTATION-RULES.md §12 rather than fixing B1-B5 first",
+      "rationale": "The phase was recorded verified but existed only in the working tree; 5 files of async-conversion work were one stash mishap from silent loss. B1-B5 remediation belongs to review-verify_20260813 P4 and pulling it here would widen this track's scope.",
+      "consequence": "b03118e ships known-defective MonitorScheduler code with a test (MonitorSchedulerTests.cs:141) that asserts the broken invariant. The commit message states this."
+    },
+    {
+      "id": "D-CROSSRUNTIME-RESCOPE",
+      "date": "2026-08-13",
+      "decision": "Amend the final acceptance criterion to macOS-host verification; defer Windows/Linux runtime runs and the CI gate",
+      "rationale": "No hosted CI at present; SyxxUI/SyxxUI.Tests are net10.0-windows and cannot build on this host. Holding the track open until CI returns (~2026-08-27) would leave committed work unsigned-off for two weeks.",
+      "consequence": "Residual risk accepted and recorded: the UnboundManager / UnboundResolver / MonitorScheduler async conversions have never executed on a Windows or Linux runtime."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B1-B5",
+      "severity": "high",
+      "summary": "Phase 4's MonitorScheduler carries five confirmed lifecycle defects; B1 lets a post-Stop() tick be counted, latched, and delivered",
+      "owner_track": "review-verify_20260813",
+      "plan": "conductor/tracks/review-verify_20260813/fix-plans.md P4",
+      "blocks": "ready-for-review"
+    }
+  ],
+  "validation": {
+    "date": "2026-08-13",
+    "host": "macOS (darwin 25.6.0)",
+    "python": "434 passed, 51 subtests passed",
+    "ruff": "clean on syxx_server/, tests/, tools/",
+    "csharp": "868/880 — 12 failing names, all in the known pre-existing macOS-host set, none on a Phase 4 surface",
+    "openapi_drift": "no drift — 50 live, 50 spec",
+    "not_run": [
+      "Windows runtime dotnet test",
+      "Linux runtime dotnet test",
+      "swift build / swift test (out of scope for this track)",
+      "CI — none hosted at present"
+    ]
+  },
+  "governing_rules": [
+    "IMPLEMENTATION-RULES.md",
+    "SUBAGENT-RULES.md",
+    "BUDGET-RULES.md",
+    "COMMUNICATION-RULES.md"
+  ]
 }

@@ -3,7 +3,8 @@
 **Track ID:** review-verify_20260813
 **Spec:** [spec.md](./spec.md) · **Source:** [source-report.md](./source-report.md)
 **Created:** 2026-08-13
-**Status:** [~] Phase 0 complete except assignment packets
+**Status:** [x] Complete — verification and fix planning delivered
+**Fix plans:** [fix-plans.md](./fix-plans.md) · **Evidence:** [carry-forward.md](./carry-forward.md)
 **Tier:** 3 — orchestrator mandatory, specialist team, explicit sequencing
 
 ## Overview
@@ -62,7 +63,7 @@ Blocking. No specialist starts until this is accepted.
 - [x] Task 0.3: Build the **carry-forward table**. For each of the ~37 deduped findings, search `review-fixes_20260812/triage.md` and this session's reported findings for prior evidence. Record: finding ID, prior source, prior conclusion, and whether the cited code has changed since. A carried-forward finding must cite its source; it may never be silently merged.
 - [x] Task 0.4: Reconcile the report's **own dedup claims** against the actual file. Section 2 asserts five findings collapse 2–3×; verify that collapsing is correct rather than assuming it, since a wrongly-merged pair hides a distinct defect.
 - [x] Task 0.5: Re-check the four **self-refuted** findings. The report refuted them in its own adjudication pass; that pass is advisory. Spot-check each and record any disagreement.
-- [ ] Task 0.6: Assign clusters to specialists with declared scopes and ceilings; emit the assignment packets.
+- [x] Task 0.6: Assign clusters to specialists with declared scopes and ceilings; emit the assignment packets.
 - [x] Task 0.7: Emit the Phase 0 durable handoff (`BUDGET-RULES.md` §Durable Handoff Template) and commit.
 
 ### Verification
@@ -79,13 +80,13 @@ Seven findings, one of which decides whether the product's integrity check can b
 
 ### Tasks
 
-- [ ] Task 1.1: **A1 — root trust anchor.** Verify the chain end to end: `validate_chain` discovers a root server via `_find(".")`, fetches the root DNSKEY via `_sq(".", TYPE_DNSKEY, ...)`, selects a KSK via `_ksk`, and records `_step(ch, ".", "root-dnskey", "valid", ...)`. Confirm by reading whether **(a)** any RFC 7958 anchor, keyTag 19036/38696 constant, or digest pin exists anywhere in `Server/`, and **(b)** whether the root DNSKEY RRset's own RRSIG is verified before the anchor is trusted. Both must be absent for the finding to stand.
-- [ ] Task 1.2: **A1 reachability.** Determine what an attacker needs: on-path capability at the resolver, or less. Trace whether any caller reaches `validate_chain` with an attacker-influencable server list. State the blast radius on `/api/dnssec` and on any client surface that consumes it.
-- [ ] Task 1.3: **A1 reproduction.** Attempt a local reproduction with a simulated hostile root using the existing `Server/tests/dns_sim.py` harness. If it cannot be reproduced locally, state precisely why and what would be required — an unreproduced High is reported as unreproduced, never softened.
-- [ ] Task 1.4: **A2** — confirm `_ksk`'s three-level fallback terminates at `rs[0]` with no SEP or protocol constraint, and whether A1 subsumes it or it stands independently.
-- [ ] Task 1.5: **A3–A6** — verify each: `_vec` on-curve check, `_vrsa` modulus floor, `_dsm` comparison timing, `_parse` QDCOUNT handling versus `resolver.py:232`. For A3 and A5 assess exploitability honestly; the report itself judges their practical impact nil, and a verification pass that inflates them wastes the owner's attention.
-- [ ] Task 1.6: **A7** — confirm the swallowing `try/except` around resolver private-helper imports and what `/api/dnssec` returns when it fires.
-- [ ] Task 1.7: Cross-runtime check — does the C# or Swift DNSSEC path share any of A1–A6? `DNSSECVerifier.cs` and `.swift` validate RRSIG windows; determine whether either performs chain validation with the same anchor weakness.
+- [x] Task 1.1: **A1 — root trust anchor.** Verify the chain end to end: `validate_chain` discovers a root server via `_find(".")`, fetches the root DNSKEY via `_sq(".", TYPE_DNSKEY, ...)`, selects a KSK via `_ksk`, and records `_step(ch, ".", "root-dnskey", "valid", ...)`. Confirm by reading whether **(a)** any RFC 7958 anchor, keyTag 19036/38696 constant, or digest pin exists anywhere in `Server/`, and **(b)** whether the root DNSKEY RRset's own RRSIG is verified before the anchor is trusted. Both must be absent for the finding to stand.
+- [x] Task 1.2: **A1 reachability.** Determine what an attacker needs: on-path capability at the resolver, or less. Trace whether any caller reaches `validate_chain` with an attacker-influencable server list. State the blast radius on `/api/dnssec` and on any client surface that consumes it.
+- [x] Task 1.3: **A1 reproduction.** Attempt a local reproduction with a simulated hostile root using the existing `Server/tests/dns_sim.py` harness. If it cannot be reproduced locally, state precisely why and what would be required — an unreproduced High is reported as unreproduced, never softened.
+- [x] Task 1.4: **A2** — confirm `_ksk`'s three-level fallback terminates at `rs[0]` with no SEP or protocol constraint, and whether A1 subsumes it or it stands independently.
+- [x] Task 1.5: **A3–A6** — verify each: `_vec` on-curve check, `_vrsa` modulus floor, `_dsm` comparison timing, `_parse` QDCOUNT handling versus `resolver.py:232`. For A3 and A5 assess exploitability honestly; the report itself judges their practical impact nil, and a verification pass that inflates them wastes the owner's attention.
+- [x] Task 1.6: **A7** — confirm the swallowing `try/except` around resolver private-helper imports and what `/api/dnssec` returns when it fires.
+- [x] Task 1.7: Cross-runtime check — does the C# or Swift DNSSEC path share any of A1–A6? `DNSSECVerifier.cs` and `.swift` validate RRSIG windows; determine whether either performs chain validation with the same anchor weakness.
 
 ### Verification
 
@@ -99,14 +100,14 @@ Five findings, four distinct root causes, in one class whose macOS twin behaves 
 
 ### Tasks
 
-- [ ] Task 2.1: **B1** — confirm `Stop()` nulls `_cts` synchronously after `Cancel()`, and that the `:114` guard `_cts is { IsCancellationRequested: true }` is therefore false for null and cannot fire in the `Stop()` path. Confirm the post-stop tick is counted, latched, and delivered to `_onTick`. Confirm `StopAsync` keeps `_cts` alive so the guard works on that path only.
-- [ ] Task 2.2: **B1 test coupling** — confirm `MonitorSchedulerTests.cs:135-141` asserts `Assert.Equal(2, afterStop)` and therefore *requires* the broken guard. This determines that code and test must change together, which the fix plan must state.
-- [ ] Task 2.3: **B2** — trace the `Stop()`→`Start()` interleaving: new `_cts`, first `RunOnceAsync()` returning null because the old `_inFlight` is still held, baseline silently skipped while `State=Running`, old tick committing stale data against the new uncancelled `_cts`.
-- [ ] Task 2.4: **B3** — confirm the TOCTOU on `State`: check-then-act without a lock lets `Stop()` interleave so `State=Running` is set with no live loop and `_cts==null`, and the next `Start()` becomes a no-op.
-- [ ] Task 2.5: **B4** — confirm `_onTick` fires inside `_runLock` while `StopAsync` awaits `_loopTask`, and that a handler awaiting `StopAsync()` deadlocks. Determine whether any shipping handler does so (`AppViewModel`).
-- [ ] Task 2.6: **B5** — confirm `_inFlight` is released in the `finally` before the state commit, permitting a stale `LastTick`.
-- [ ] Task 2.7: Confirm the macOS twin discards correctly at `MonitorScheduler.swift:91`, and record the divergence direction.
-- [ ] Task 2.8: Adjudicate whether B1–B5 are five defects or fewer. The report's own dedup collapses B1 with a maintainability finding; verify that and check whether B2/B3/B5 share a root cause in `_inFlight` ownership.
+- [x] Task 2.1: **B1** — confirm `Stop()` nulls `_cts` synchronously after `Cancel()`, and that the `:114` guard `_cts is { IsCancellationRequested: true }` is therefore false for null and cannot fire in the `Stop()` path. Confirm the post-stop tick is counted, latched, and delivered to `_onTick`. Confirm `StopAsync` keeps `_cts` alive so the guard works on that path only.
+- [x] Task 2.2: **B1 test coupling** — confirm `MonitorSchedulerTests.cs:135-141` asserts `Assert.Equal(2, afterStop)` and therefore *requires* the broken guard. This determines that code and test must change together, which the fix plan must state.
+- [x] Task 2.3: **B2** — trace the `Stop()`→`Start()` interleaving: new `_cts`, first `RunOnceAsync()` returning null because the old `_inFlight` is still held, baseline silently skipped while `State=Running`, old tick committing stale data against the new uncancelled `_cts`.
+- [x] Task 2.4: **B3** — confirm the TOCTOU on `State`: check-then-act without a lock lets `Stop()` interleave so `State=Running` is set with no live loop and `_cts==null`, and the next `Start()` becomes a no-op.
+- [x] Task 2.5: **B4** — confirm `_onTick` fires inside `_runLock` while `StopAsync` awaits `_loopTask`, and that a handler awaiting `StopAsync()` deadlocks. Determine whether any shipping handler does so (`AppViewModel`).
+- [x] Task 2.6: **B5** — confirm `_inFlight` is released in the `finally` before the state commit, permitting a stale `LastTick`.
+- [x] Task 2.7: Confirm the macOS twin discards correctly at `MonitorScheduler.swift:91`, and record the divergence direction.
+- [x] Task 2.8: Adjudicate whether B1–B5 are five defects or fewer. The report's own dedup collapses B1 with a maintainability finding; verify that and check whether B2/B3/B5 share a root cause in `_inFlight` ownership.
 
 ### Verification
 
@@ -120,16 +121,16 @@ Runs after Phase 2 so the C# specialist is free. Clusters are independent; speci
 
 ### Tasks
 
-- [ ] Task 3.1: **C1/C2** — carried forward from N20. Confirm the cited lines still match, and confirm no additional site shares the missing filter. Do not re-derive the mechanism; cite the prior evidence.
-- [ ] Task 3.2: **D1** — the four stale `VantageComparerTests`. Carried forward from `triage.md` cause 1. Confirm the classification still holds and that the report's High severity is about incomplete reconciliation rather than a regression.
-- [ ] Task 3.3: **D2** — confirm the deleted first-tick assertions and that the doc comment still promises the behavior.
-- [ ] Task 3.4: **E1–E4** — the Windows process glue. E1's dropped output on the drain timeout is the only one with a behavioral consequence; verify whether the abandoned `ReadToEndAsync` can fault unobserved.
-- [ ] Task 3.5: **F1–F4** — the dead expressions. Confirm each is a bare expression statement and that the removed binding was genuinely unused, so the fix is deletion rather than restoration. F2 is the exception: verify whether the discarded subscription id should drive the reinstatement lookup.
-- [ ] Task 3.6: **G1** — confirm the homoglyph map lost `1→l` and that `_permutations` is single-replacement, so the fix is a data-structure change rather than re-adding a key that cannot coexist.
-- [ ] Task 3.7: **G2** — confirm the Keygen webhook has no timestamp window and no event-id idempotency, and contrast with the Stripe handler's `kv_insert_once` and the project's own A056 freshness standard.
-- [ ] Task 3.8: **H1** — confirm `|| true` masks a groupadd failure and that the block duplicates `:549`.
-- [ ] Task 3.9: **I1–I3** — perf and maintainability. Confirm; assess honestly whether any is worth the churn.
-- [ ] Task 3.10: **L1–L3** — macOS test quality. L1's orphaned probe items and L2's decode strictness versus the C# twin both need the twin checked, not just the Swift side.
+- [x] Task 3.1: **C1/C2** — carried forward from N20. Confirm the cited lines still match, and confirm no additional site shares the missing filter. Do not re-derive the mechanism; cite the prior evidence.
+- [x] Task 3.2: **D1** — the four stale `VantageComparerTests`. Carried forward from `triage.md` cause 1. Confirm the classification still holds and that the report's High severity is about incomplete reconciliation rather than a regression.
+- [x] Task 3.3: **D2** — confirm the deleted first-tick assertions and that the doc comment still promises the behavior.
+- [x] Task 3.4: **E1–E4** — the Windows process glue. E1's dropped output on the drain timeout is the only one with a behavioral consequence; verify whether the abandoned `ReadToEndAsync` can fault unobserved.
+- [x] Task 3.5: **F1–F4** — the dead expressions. Confirm each is a bare expression statement and that the removed binding was genuinely unused, so the fix is deletion rather than restoration. F2 is the exception: verify whether the discarded subscription id should drive the reinstatement lookup.
+- [x] Task 3.6: **G1** — confirm the homoglyph map lost `1→l` and that `_permutations` is single-replacement, so the fix is a data-structure change rather than re-adding a key that cannot coexist.
+- [x] Task 3.7: **G2** — confirm the Keygen webhook has no timestamp window and no event-id idempotency, and contrast with the Stripe handler's `kv_insert_once` and the project's own A056 freshness standard.
+- [x] Task 3.8: **H1** — confirm `|| true` masks a groupadd failure and that the block duplicates `:549`.
+- [x] Task 3.9: **I1–I3** — perf and maintainability. Confirm; assess honestly whether any is worth the churn.
+- [x] Task 3.10: **L1–L3** — macOS test quality. L1's orphaned probe items and L2's decode strictness versus the C# twin both need the twin checked, not just the Swift side.
 
 ### Verification
 
@@ -142,11 +143,11 @@ Separate from the app per decision 4.
 
 ### Tasks
 
-- [ ] Task 4.1: **J1** — confirm the five opencode aliases collapse to one model id and that `test_adapters.py:637` asserts only one of them. Determine whether the collapse is intentional.
-- [ ] Task 4.2: **J2** — confirm `AGENTS.md` grants agents authorization to edit it, that repo-root `CLAUDE.md` symlinks to it, and that the mandatory-rules list it contains points at read-only `rules/`. Also confirm the list omits `rules/BUDGET-RULES.md`, which exists on disk.
-- [ ] Task 4.3: **J3** — confirm the two agent counts contradict, and determine the true count from `ls plugins/*/agents/*.md`.
-- [ ] Task 4.4: **K1** — confirm `StrEnum` and `datetime.UTC` usage sets a 3.11+ floor against a README claiming 3.8+, and that the authoritative docs already pin 3.12. The fix is documentation, not code.
-- [ ] Task 4.5: **K2** — confirm the three banned-term uses in the user guide. **The verifying agent must not reproduce the term in its own output.**
+- [x] Task 4.1: **J1** — confirm the five opencode aliases collapse to one model id and that `test_adapters.py:637` asserts only one of them. Determine whether the collapse is intentional.
+- [x] Task 4.2: **J2** — confirm `AGENTS.md` grants agents authorization to edit it, that repo-root `CLAUDE.md` symlinks to it, and that the mandatory-rules list it contains points at read-only `rules/`. Also confirm the list omits `rules/BUDGET-RULES.md`, which exists on disk.
+- [x] Task 4.3: **J3** — confirm the two agent counts contradict, and determine the true count from `ls plugins/*/agents/*.md`.
+- [x] Task 4.4: **K1** — confirm `StrEnum` and `datetime.UTC` usage sets a 3.11+ floor against a README claiming 3.8+, and that the authoritative docs already pin 3.12. The fix is documentation, not code.
+- [x] Task 4.5: **K2** — confirm the three banned-term uses in the user guide. **The verifying agent must not reproduce the term in its own output.**
 
 ### Verification
 
@@ -159,13 +160,13 @@ One implementation plan per confirmed defect. No code is written.
 
 ### Tasks
 
-- [ ] Task 5.1: For each confirmed defect, draft: approach, affected files, test strategy (red test first, per `workflow.md`), blast radius, and rollback.
-- [ ] Task 5.2: **Identify the cross-runtime twin for every confirmed defect.** Twenty-four divergences were created by repairing one side only; a fix plan that does not name its twin repeats that. Where no twin exists, say so explicitly.
-- [ ] Task 5.3: Plan B1 and its test as a single coordinated change, stating that the test asserts the broken behavior today.
-- [ ] Task 5.4: Plan A1 separately and prominently — it is a trust-model change, not a patch, and it may warrant its own track. Include what pinning approach is proposed, how the anchor is provisioned and rotated, and what happens when the pin cannot be satisfied. Fail-closed behavior is required: an unverifiable anchor must not yield a valid conclusion.
-- [ ] Task 5.5: Sequence the plans by dependency and blast radius, and mark which are safe to batch.
-- [ ] Task 5.6: Record every owner decision the plans surface, with a recommendation each.
-- [ ] Task 5.7: Emit the final handoff and commit.
+- [x] Task 5.1: For each confirmed defect, draft: approach, affected files, test strategy (red test first, per `workflow.md`), blast radius, and rollback.
+- [x] Task 5.2: **Identify the cross-runtime twin for every confirmed defect.** Twenty-four divergences were created by repairing one side only; a fix plan that does not name its twin repeats that. Where no twin exists, say so explicitly.
+- [x] Task 5.3: Plan B1 and its test as a single coordinated change, stating that the test asserts the broken behavior today.
+- [x] Task 5.4: Plan A1 separately and prominently — it is a trust-model change, not a patch, and it may warrant its own track. Include what pinning approach is proposed, how the anchor is provisioned and rotated, and what happens when the pin cannot be satisfied. Fail-closed behavior is required: an unverifiable anchor must not yield a valid conclusion.
+- [x] Task 5.5: Sequence the plans by dependency and blast radius, and mark which are safe to batch.
+- [x] Task 5.6: Record every owner decision the plans surface, with a recommendation each.
+- [x] Task 5.7: Emit the final handoff and commit.
 
 ### Verification
 

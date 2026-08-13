@@ -2,24 +2,27 @@
   "id": "review-verify_20260813",
   "title": "Ultra Review \u2014 Dedupe, Verify, Plan Fixes",
   "type": "bug",
-  "status": "in_progress",
+  "status": "complete",
   "tier": 3,
   "created": "2026-08-13T00:30:00Z",
-  "updated": "2026-08-13T07:20:00Z",
+  "updated": "2026-08-13T07:40:00Z",
   "phases": {
     "total": 6,
-    "completed": 0
+    "completed": 6
   },
   "tasks": {
     "total": 39,
-    "completed": 6
+    "completed": 39
   },
   "findings": {
     "unique_after_dedup": 38,
     "carried_forward": 15,
     "to_verify": 23,
     "source": "source-report.md",
-    "source_provenance": "~/Documents/REVIEW-ultra-macos-2026-08-12.md \u2014 three concatenated ultra reports (macOS review, adjudication pass, working-tree diff review) with heavy overlap"
+    "source_provenance": "~/Documents/REVIEW-ultra-macos-2026-08-12.md \u2014 three concatenated ultra reports (macOS review, adjudication pass, working-tree diff review) with heavy overlap",
+    "confirmed": 33,
+    "refuted": 3,
+    "severity_corrections": 5
   },
   "clusters": {
     "A": "DNSSEC validator security (7)",
@@ -48,6 +51,6 @@
     "WORKFLOW-RULES.md",
     "COMMUNICATION-RULES.md"
   ],
-  "current_phase": 0,
-  "current_task": "0.6 (assignment packets) \u2014 gate"
+  "current_phase": "complete",
+  "current_task": "complete"
 }

@@ -17,23 +17,25 @@ Close `warp-hardening_20260811`, then two owner-approved follow-ons: B1–B5 (`r
 
 Track Final Verification is 4/5. Only "ready for review" remains, blocked on B1–B5.
 
-## UNCOMMITTED AND AT RISK
+## RESOLVED — this section no longer describes risk
 
-`Windows/dotNET/Syxx.Kit/Trust/MonitorScheduler.cs` and `Windows/dotNET/Syxx.Tests/MonitorSchedulerTests.cs` — roughly +471/-119 implementing B1, B3, B5, B4 and B2's accounting half (C111 port).
+**Superseded 2026-08-13.** The MonitorScheduler work is committed at `e22126f8`. The working tree is clean for `Windows/dotNET`. Nothing is at risk.
 
-**Do not `git checkout --`, `git clean`, or `stash drop` anything.** `rules/` is untracked and owner-authored; any sweeping operation destroys it.
+`Windows/dotNET/Syxx.Kit/Trust/MonitorScheduler.cs` and `Windows/dotNET/Syxx.Tests/MonitorSchedulerTests.cs` — B1, B3, B4, B5 and B2's accounting half (C111 port), plus the `[high]` fix and three `[low]` items.
 
-State when this was written: an agent named `monitor-lifecycle` was mid-edit applying the fix below. The files may be in a partially-applied state. **Verify before committing** — run `dotnet test Windows/dotNET/Syxx.Tests` and compare failing NAMES, never counts.
+**Standing caution, unrelated to the above:** never `git checkout --`, `git clean`, or `stash drop` in this repo. `rules/` is untracked and owner-authored; any sweeping operation destroys it.
 
-## The one blocker
+## The `[high]` — fixed at `e22126f8`
 
-Code review returned **commit after fixing one `[high]`**, independently confirmed at the cited lines:
+Code review returned **commit after fixing one `[high]`**, independently confirmed at the cited lines before it was acted on:
 
-`MonitorScheduler.cs:278` calls the parameterless `RunOnceAsync()`, discarding the token `RunLoopAsync` already holds; `:140` then re-reads the `_cts` field. If `Stop()` lands between the loop's check at `:277` and that capture, the tick captures `CancellationToken.None`, the guard at `:184` cannot fire, and the tick is counted, latched, and delivered to `_onTick` — a toast for a round the user switched off. `Stop()` is called from the UI thread at `AppViewModel.cs:163`.
+`MonitorScheduler.cs:278` called the parameterless `RunOnceAsync()`, discarding the token `RunLoopAsync` already held; `:140` then re-read the `_cts` field. If `Stop()` landed between the loop's check at `:277` and that capture, the tick captured `CancellationToken.None`, the guard at `:184` could not fire, and the tick was counted, latched, and delivered to `_onTick` — a toast for a round the user switched off. `Stop()` is called from the UI thread at `AppViewModel.cs:163`.
 
-**Fix:** private `RunOnceCoreAsync(CancellationToken)` holding the body; `RunLoopAsync` passes its own token; the public parameterless entry keeps the field-reading capture and delegates. Also resolves a Swift divergence.
+**Fix as landed:** private `RunOnceCoreAsync(CancellationToken)` carries the body; `RunLoopAsync` passes its own captured token at both call sites. Three `[low]` items folded in: the two comment corrections and the unthrottled test spin.
 
-Three `[low]` items folded into the same round: comment at `:136-138` (direct-call semantics), comment at `:98-100` (`LastTickCompletedAt` is a transient signal; `SkippedTickCount` is the durable one), and an unthrottled spin at `MonitorSchedulerTests.cs:208`.
+**VERIFICATION GAP — read this before trusting the fix.** It was confirmed by the implementer's own red/green regression test (`LoopTickEnteringAroundStop_IsNeverCommittedAfterTheFact`, reproduced 10/10 pre-fix at 13–63 ms, passes post-fix) and by the failing-name comparison against baseline. The independent review seat did **not** re-check it — session budget ended first. Author-verified, not independently verified. A re-review is the cheapest remaining confidence gain.
+
+One thing the implementer corrected in the orchestrator's brief, worth preserving: keeping the field-read in the public parameterless entry is what *preserves* the direct-call divergence from Swift, rather than resolving it as the brief assumed. See decision 1 below.
 
 ## Verified facts — do not re-derive
 
@@ -56,4 +58,10 @@ Three `[low]` items folded into the same round: comment at `:136-138` (direct-ca
 
 ## Next action
 
-Confirm the `[high]` fix landed, re-run the C# suite, compare failing NAMES, then commit both files as ONE change with the test inversion declared openly in the message. Then mark Final Verification 5/5 only if B1–B5 are genuinely closed.
+1. **Optional, cheapest confidence gain:** have a review seat re-check the `RunOnceCoreAsync` split at `e22126f8`. The original reviewer holds the full lock analysis in context.
+2. **Owner sign-off** on Final Verification item 5. The blocker is cleared; what remains is a judgment about the accepted cross-runtime residual risk, not a mechanical check.
+3. Then decide the three open items above.
+
+## Session commits
+
+`b03118e` Phase 4 checkpoint · `22b55cb` state + decisions · `06e3c67` CHANGELOG · `68f5161` method-level drift gate · `339ec5c1` this handoff · `e22126f8` B1–B5 fixes.

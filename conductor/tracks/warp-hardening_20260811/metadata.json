@@ -18,18 +18,19 @@
     "total": 5,
     "completed": 4,
     "outstanding": [
-      "ready for review \u2014 blocked while B1-B5 are open"
+      "ready for review \u2014 blocker cleared by e22126f8; awaiting owner sign-off"
     ]
   },
   "current_phase": "final-verification",
-  "current_task": "ready-for-review (blocked)",
+  "current_task": "ready-for-review (awaiting owner sign-off)",
   "commits": [
     "2ca4505e: [warp-hardening_20260811] warp: retire /warp route to 410 + migration pointer",
     "70920bc0: [warp-hardening_20260811] plan: mark Phase 1 complete",
     "29322ed0: [warp-hardening_20260811] openapi: add route-drift gate + document all live routes",
     "6442699c: [warp-hardening_20260811] mark phase 2 (openapi drift) complete",
     "a2adae23: [warp-hardening_20260811] dedup type/rcode/HMAC maps + wire-format pinning",
-    "b03118e: [warp-hardening_20260811] checkpoint: phase 4 C# sync-over-async conversions"
+    "b03118e: [warp-hardening_20260811] checkpoint: phase 4 C# sync-over-async conversions",
+    "e22126f8: [review-verify_20260813] fix: MonitorScheduler lifecycle B1, B3, B4, B5 + C111 accounting"
   ],
   "decisions": [
     {
@@ -50,11 +51,11 @@
   "blockers": [
     {
       "id": "B1-B5",
-      "severity": "high",
-      "summary": "Phase 4's MonitorScheduler carries five confirmed lifecycle defects; B1 lets a post-Stop() tick be counted, latched, and delivered",
+      "severity": "resolved",
+      "summary": "Phase 4's MonitorScheduler lifecycle defects \u2014 CLOSED by e22126f8",
       "owner_track": "review-verify_20260813",
-      "plan": "conductor/tracks/review-verify_20260813/fix-plans.md P4",
-      "blocks": "ready-for-review"
+      "resolution": "B1, B3, B4, B5 and the C111 accounting port landed; stale test at MonitorSchedulerTests.cs:141 inverted openly; one [high] from code review (RunLoopAsync discarding its captured token) fixed",
+      "verification_gap": "the [high] fix was author-verified via its own red/green regression test and the failing-name baseline comparison; the independent review seat did NOT re-check it \u2014 session budget ended first"
     }
   ],
   "validation": {
@@ -83,6 +84,13 @@
       "date": "2026-08-13",
       "question": "Widen check_openapi_drift.py to compare methods, not just paths?",
       "detail": "_analyze compares path sets (line 170) while _print_methods enumerates method x path pairs, so the run prints 54 live / 53 spec then concludes 50/50. GET /api/leaktest/start (app.py:896) is live and undocumented; openapi.yaml:614 has only post:. Meets the acceptance criterion as written; new finding, not a regression.",
+      "owner_decision_required": true
+    },
+    {
+      "id": "Q-DIRECT-CALL-PARITY",
+      "date": "2026-08-13",
+      "question": "Should a direct 'Check now' during a running loop survive a later Stop()?",
+      "detail": "It currently inherits the loop's token and is discarded; Swift commits, since Task.isCancelled reflects the calling task. One line at MonitorScheduler.cs:151 (pass CancellationToken.None). User-visible behavior change, documented in place at :140-147. Implementer and orchestrator both lean toward parity.",
       "owner_decision_required": true
     }
   ]

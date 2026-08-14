@@ -87,7 +87,7 @@ Eliminate blocking async calls in production C#.
   - CHANGELOG.md:5-56 — "Warp hardening: four contracts stopped drifting from reality (2026-08-13)", covering all four phases, and stating without softening that Phase 4 shipped as checkpoint `b03118e` carrying open B1–B5 and that Windows/Linux runtime runs did not execute.
   - `docs/` references: **no file needed correction.** All 27 `/warp` matches under `docs/`, `Server/docs/`, and `README.md` were classified. Live guidance was already accurate — `Server/docs/api.html:404-409` already documents `/api/warp/assembly` as 410 Gone with the migration pointer, and no bare `/warp` endpoint is documented anywhere. The rest are historical records (`*.bak*`/`*.backup`, `docs/stale/`, dated plans, delta logs) and were deliberately left alone; rewriting them would misrepresent what those reviews found at the time. Note: there is **no** non-stale `docs/warp-manifest-v1-spec.md` — only `docs/stale/warp-manifest-v1-spec.md` exists, so the plan's parenthetical pointed at a file that has since moved.
   - openapi: `check_openapi_drift.py` exits 0, "no drift — 50 live, 50 spec". Spec is current; nothing to regenerate.
-- [ ] Ready for review. **BLOCKED** — B1–B5 open (see below).
+- [ ] Ready for review. **Blocker cleared 2026-08-13; awaiting owner sign-off.** B1–B5 were closed by `e22126f8` (see below), so this item is now *eligible* to close. It is left unchecked deliberately: the cross-runtime criterion above closed by re-scope with accepted residual risk, and declaring the track ready for review is an owner judgment, not a mechanical consequence of the blocker clearing.
 
 ### Follow-up found while closing this track (NOT fixed here)
 
@@ -101,9 +101,13 @@ This satisfies the acceptance criterion as written — "the set of spec paths �
 
 Phase 4 was recorded complete on 2026-08-11 but lived only in the working tree until **2026-08-13**, when it was committed as `b03118e` — an **owner-authorized recovery checkpoint** under `IMPLEMENTATION-RULES.md` §12, not a clean commit.
 
-It **carries confirmed open defects**. `review-verify_20260813` confirmed B1–B5 in this MonitorScheduler code; B1 is live — the guard at `:114` is dead in the `Stop()` path, so a post-`Stop()` tick is counted, latched, and delivered. `MonitorSchedulerTests.cs:141` asserts that broken invariant, which is why the suite reports green on this surface. Remediation is planned in `conductor/tracks/review-verify_20260813/fix-plans.md` P4 and is **not** in this track.
+It **shipped carrying confirmed open defects**. `review-verify_20260813` confirmed B1–B5 in this MonitorScheduler code; B1 was live — the guard at the then-`:114` was dead in the `Stop()` path, so a post-`Stop()` tick was counted, latched, and delivered, and `MonitorSchedulerTests.cs:141` asserted that broken invariant.
 
-**This track cannot be marked "Ready for review" while B1–B5 are open.**
+**Resolved 2026-08-13 by `e22126f8`** (committed under `review-verify_20260813`, since the remediation is that track's fix-plans P4). B1, B3, B4, B5 and the C111 accounting port all landed; the stale test was inverted openly. An independent code-review seat found one `[high]` — `RunLoopAsync` discarding its captured token — which that commit closes.
+
+**Verification gap, stated plainly:** the `[high]` fix was confirmed by the implementer's own red/green regression test (reproduced 10/10 pre-fix at 13–63 ms, passes post-fix) and by the failing-name comparison against baseline. The independent reviewer did **not** re-check it — the session ran out of budget first. Author-verified, not independently verified.
+
+**Still open, and not blocking this track:** B2's remainder (loop first tick refused after a monitoring toggle — a twin fix, owner design call) and the direct-call parity question documented at `MonitorScheduler.cs:140-147`.
 
 ---
 

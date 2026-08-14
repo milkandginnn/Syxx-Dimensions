@@ -55,8 +55,8 @@
     "WORKFLOW-RULES.md",
     "COMMUNICATION-RULES.md"
   ],
-  "current_phase": 2,
-  "current_task": "2.1",
+  "current_phase": 1,
+  "current_task": "1.1",
   "baseline": {
     "head": "a2adae23ed4d19fab4cb30166d92a52d1afd44ff",
     "branch": "main",
@@ -69,5 +69,11 @@
     "moved_live": 1,
     "absent_code": 5,
     "new_defects_found": 5
+  },
+  "pointer_correction": {
+    "date": "2026-08-13",
+    "was": "current_phase 2 / current_task 2.1",
+    "now": "current_phase 1 / current_task 1.1",
+    "reason": "plan.md is the source of truth and has Phase 1 Tasks 1.1-1.4 and 1.7-1.9 still pending; only 1.5 and 1.6 are complete. The old pointer claimed Phase 1 was finished."
   }
 }

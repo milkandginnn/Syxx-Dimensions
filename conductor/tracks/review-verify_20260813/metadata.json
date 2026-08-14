@@ -52,5 +52,15 @@
     "COMMUNICATION-RULES.md"
   ],
   "current_phase": "complete",
-  "current_task": "complete"
+  "current_task": "complete",
+  "deliverable_deviation": {
+    "date": "2026-08-13",
+    "note": "The stated deliverable was 'NO fixes land in this track'. Fixes DID land under this track's ID, by owner instruction given after the track closed.",
+    "commit": "e22126f8 \u2014 MonitorScheduler B1, B3, B4, B5 + C111 accounting (fix-plans P4 steps 1,2,3,5 and the B2 accounting half)",
+    "still_planned_not_implemented": [
+      "P4 step 4 \u2014 B2 remainder (loop first tick refused after a monitoring toggle); twin fix, owner design call",
+      "P1, P3, P5, P6 and every other fix plan in this track"
+    ],
+    "verification_gap": "the [high] found in code review was fixed but not independently re-reviewed"
+  }
 }

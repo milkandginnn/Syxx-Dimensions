@@ -609,8 +609,24 @@ paths:
         "404":
           description: Unknown or expired token
 
-  # 2026-08-11 /api/leaktest/start POST — warp-hardening_20260811 pre-existing; verified against live dispatch — unchanged
+  # 2026-08-13 /api/leaktest/start GET+POST — warp-hardening_20260811 GET added
+  # (method-level OpenAPI drift gate surfaced it: GET is live via _dispatch_get,
+  # app.py:1027-1028, dispatching to the same handler as POST, do_POST:896-897,
+  # both calling _route_leaktest_start, app.py:2121 — a free, unauthenticated,
+  # per-IP-rate-limited route per its own docstring — but only POST was
+  # documented); POST pre-existing, unchanged
   /api/leaktest/start:
+    get:
+      tags: [Public]
+      summary: Start a web-based leak test (GET variant)
+      description: >
+        Identical to the POST route below — both dispatch to the same handler,
+        _route_leaktest_start. Free, unauthenticated, rate-limited per IP; no
+        license required, since the subject is the caller's IP rather than a
+        license.
+      responses:
+        "200":
+          description: Leak test token for web
     post:
       tags: [Paid]
       summary: Start a web-based leak test

@@ -3,18 +3,22 @@
 
 Derives the live route set MECHANICALLY from the route dispatch in
 ``syxx_server/app.py`` (via AST — never a hand-maintained list), loads the
-``paths:`` keys from ``docs/openapi.yaml``, and fails (exit 1) on ANY
-divergence in either direction:
+``paths:`` keys and their methods from ``docs/openapi.yaml``, and fails
+(exit 1) on ANY divergence in either direction. The comparison is over
+(METHOD, path) pairs, not path alone — a path documented for one HTTP
+method but live under a different one is drift a path-only comparison
+cannot see:
 
-    missing = live routes not documented in the spec
-    extra   = spec paths with no live handler
+    missing = live (method, path) pairs not documented in the spec
+    extra   = spec (method, path) pairs with no live handler
 
 Usage:
     uv run python Server/tools/check_openapi_drift.py     # from repo root
     python tools/check_openapi_drift.py                    # from Server/
     python tools/check_openapi_drift.py APP.py SPEC.yaml   # explicit paths
 
-Importable from tests as ``check(app_path, spec_path) -> (live, missing, extra)``.
+Importable from tests as ``check(app_path, spec_path) -> (live, missing, extra)``,
+where all three are sets of (METHOD, path) pairs.
 """
 
 from __future__ import annotations
@@ -148,6 +152,11 @@ def _load_spec(spec_path):
     return path_set, path_methods
 
 
+def _pairs(route_methods: dict[str, set[str]]) -> set[tuple[str, str]]:
+    """Flatten a {route: {method, ...}} map to a set of (METHOD, route) pairs."""
+    return {(method.upper(), route) for route, methods in route_methods.items() for method in methods}
+
+
 def _analyze(app_path, spec_path):
     app_path = Path(app_path)
     spec_path = Path(spec_path)
@@ -168,8 +177,10 @@ def _analyze(app_path, spec_path):
             f"(`paths:` empty in {spec_path})"
         )
     live = set(live_methods)
-    missing = live - spec
-    extra = spec - live
+    live_pairs = _pairs(live_methods)
+    spec_pairs = _pairs(spec_methods)
+    missing = live_pairs - spec_pairs
+    extra = spec_pairs - live_pairs
     return {
         "app_path": app_path,
         "spec_path": spec_path,
@@ -178,20 +189,23 @@ def _analyze(app_path, spec_path):
         "excluded": excluded,
         "spec": spec,
         "spec_methods": spec_methods,
+        "live_pairs": live_pairs,
+        "spec_pairs": spec_pairs,
         "missing": missing,
         "extra": extra,
     }
 
 
 def check(app_path, spec_path) -> tuple[set, set, set]:
-    """Return (live_routes, missing, extra) for the given app.py + openapi.yaml.
+    """Return (live_pairs, missing, extra) for the given app.py + openapi.yaml.
 
-    - live_routes: set of routes served by Handler dispatch (exclusions applied)
-    - missing:     live routes absent from the spec (`paths:` keys)
-    - extra:       spec paths with no live handler
+    All three are sets of (METHOD, path) pairs:
+    - live_pairs: pairs served by Handler dispatch (exclusions applied)
+    - missing:    live pairs absent from the spec
+    - extra:      spec pairs with no live handler
     """
     data = _analyze(app_path, spec_path)
-    return data["live"], data["missing"], data["extra"]
+    return data["live_pairs"], data["missing"], data["extra"]
 
 
 def _print_methods(title, route_map):
@@ -226,19 +240,19 @@ def main(argv=None) -> int:
 
     if data["missing"]:
         print("MISSING from spec (live - spec):")
-        for route in sorted(data["missing"]):
-            for method in sorted(data["live_methods"].get(route, {"?"})):
-                print(f"  {method.upper()} {route}")
+        for method, route in sorted(data["missing"]):
+            print(f"  {method} {route}")
     if data["extra"]:
         print("EXTRA in spec (spec - live):")
-        for route in sorted(data["extra"]):
-            for method in sorted(data["spec_methods"].get(route, {"?"})):
-                print(f"  {method.upper()} {route}")
+        for method, route in sorted(data["extra"]):
+            print(f"  {method} {route}")
 
+    # Counts here are (METHOD, path) pairs — the same unit the comparison and
+    # the "live routes"/"spec paths" listings above use — so they always agree.
     if not data["missing"] and not data["extra"]:
         print(
             f"RESULT: no drift — spec matches live routes "
-            f"({len(data['live'])} live, {len(data['spec'])} spec)."
+            f"({len(data['live_pairs'])} live, {len(data['spec_pairs'])} spec)."
         )
         return 0
     print(

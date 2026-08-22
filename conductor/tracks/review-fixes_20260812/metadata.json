@@ -5,14 +5,14 @@
   "status": "in_progress",
   "tier": 3,
   "created": "2026-08-12T13:19:00Z",
-  "updated": "2026-08-22T14:20:01Z",
+  "updated": "2026-08-22T14:41:00Z",
   "phases": {
     "total": 7,
     "completed": 1
   },
   "tasks": {
     "total": 59,
-    "completed": 11
+    "completed": 12
   },
   "defects": {
     "total": 36,
@@ -56,7 +56,7 @@
     "COMMUNICATION-RULES.md"
   ],
   "current_phase": 1,
-  "current_task": "1.2",
+  "current_task": "1.3",
   "baseline": {
     "head": "a2adae23ed4d19fab4cb30166d92a52d1afd44ff",
     "branch": "main",
@@ -86,5 +86,11 @@
     "date": "2026-08-22",
     "commit": "72f213f4",
     "note": "Shared synthesis fixture set landed at corpus/matrix/synthesis/sh-1..sh-6 (JSON: name/spec/input/expected/why; 'default' spec = shipping SyxxMatrixIntegration spec). C# corpus loader + loader tests at Windows/dotNET/Syxx.Tests/MatrixSynthesisCorpusTests.cs: frozen DeterminativeResult JSON (whitespace-normalised — the Task 1.8 parity contract), no-affirmative-clean phase invariant, scenario invariants. 3/3 green; the 12 failing tests elsewhere in the suite pre-exist on pristine HEAD (verified via worktree at 3de34ed2). Phase 1 now stands at 3/9."
+  },
+  "task_1_2_completion": {
+    "date": "2026-08-22",
+    "commit": "49bdce33",
+    "deviation": "degenerate red — defect pre-repaired",
+    "note": "W02 ratifies as already repaired (triage.md:13): honesty gate at ReportCard.cs:76-83 in-tree; hasThreatOverhang removed from the card, overhang moved into engine Assemble (C065, MatrixDeterminativeEngine.cs:1146). Per the workflow's passed-unexpectedly rule: HALTed, investigated, owner chose 'accept pin' (2026-08-22). ReportCardInconclusiveHonestyTests.cs (5 tests, green on first run) pins the repair; negative controls prevent an ungrade-everything regression. Phase 1 now stands at 4/9."
   }
 }

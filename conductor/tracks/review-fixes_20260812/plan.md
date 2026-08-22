@@ -112,7 +112,7 @@ Seven defects in one evidence-scoring pipeline. Repairing them independently is 
 ### Tasks
 
 - [x] Task 1.1 (red): Build the shared synthesis fixture set — a run with a hard-excluded threat, a run where every section timed out, a run with a non-usable section carrying an observed indicator, a run whose only firing indicators contradict the diagnosis, a thin-but-conclusive section, and a run with unmappable rules in the spec.
-- [ ] Task 1.2 (red): **W02** — assert `DeterminativeState.Inconclusive` never yields Grade B / `Severity.Clean` / a "looks clean" headline, and that `hasThreatOverhang` counts `HardExcluded` suppressions. Cover both `ReportCard.cs:88` and `:83`.
+- [x] Task 1.2 (red): **W02** — assert `DeterminativeState.Inconclusive` never yields Grade B / `Severity.Clean` / a "looks clean" headline, and that `hasThreatOverhang` counts `HardExcluded` suppressions. Cover both `ReportCard.cs:88` and `:83`.
 - [ ] Task 1.3 (red): **W01** — assert a control-domain DNSSEC canary success cannot hard-exclude `dnsSpoofing`/`dnsInterception` for a *target* domain.
 - [ ] Task 1.4 (red): **W03** — assert NXDOMAIN/REFUSED/SERVFAIL never produces affirmative clean support, and never counts toward the `MajorCount >= 2` conclusive-clean requirement.
 - [x] Task 1.5 (red): **W20 / M02 / M09 / M10** — assert coverage excludes non-usable sections' weight (C# must match `MatrixDeterminativeEngine.swift:785`), contradicting indicators never enter `supportingIndicators` / `hasDecisive` / `alignedSupport`, the quality floor admits thin-but-conclusive sections, and unmappable rules stay out of the coverage denominator.

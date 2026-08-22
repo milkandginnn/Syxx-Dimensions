@@ -117,7 +117,7 @@ Seven defects in one evidence-scoring pipeline. Repairing them independently is 
 - [x] Task 1.4 (red): **W03** — assert NXDOMAIN/REFUSED/SERVFAIL never produces affirmative clean support, and never counts toward the `MajorCount >= 2` conclusive-clean requirement.
 - [x] Task 1.5 (red): **W20 / M02 / M09 / M10** — assert coverage excludes non-usable sections' weight (C# must match `MatrixDeterminativeEngine.swift:785`), contradicting indicators never enter `supportingIndicators` / `hasDecisive` / `alignedSupport`, the quality floor admits thin-but-conclusive sections, and unmappable rules stay out of the coverage denominator.
 - [x] Task 1.6 (green): Implement W01, W02, W03, W20 in `Syxx.Kit/Synthesis/`. Consult the security specialist before changing any exclusion threshold or indicator strength.
-- [ ] Task 1.7 (green): Implement M02, M09, M10 in `SyxxKit/Synthesis/`.
+- [~] Task 1.7 (green): Implement M02, M09, M10 in `SyxxKit/Synthesis/`.
 - [ ] Task 1.8: Cross-runtime parity check — C# and Swift produce identical determinations for every Task 1.1 fixture.
 - [ ] Task 1.9: Code review (severity-tagged); resolve `[blocker]`/`[high]` before commit.
 

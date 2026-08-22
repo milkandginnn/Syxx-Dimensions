@@ -5,7 +5,7 @@
   "status": "in_progress",
   "tier": 3,
   "created": "2026-08-12T13:19:00Z",
-  "updated": "2026-08-22T15:07:00Z",
+  "updated": "2026-08-22T17:30:00Z",
   "phases": {
     "total": 7,
     "completed": 1
@@ -104,5 +104,17 @@
     "commit": "439a9003",
     "deviation": "degenerate red — defect pre-repaired",
     "note": "W03 ratifies as already repaired (triage.md:13): no clean-support entries exist in IndicatorMapping (documented deliberate, N1). HALTed; owner-approved accept-pin pattern applied. ResolverStatusCleanSupportPinTests.cs (3 tests, green on first run): the NXDOMAIN/REFUSED/SERVFAIL readings map to no clean-support indicator; structural pin over the whole EvidenceId vocabulary; end-to-end five resolver failures never yield clean. Phase 1 now stands at 6/9; remaining: 1.7 (Swift green M02/M09/M10), 1.8 (cross-runtime parity on the sh-* fixtures), 1.9 (code review)."
+  },
+  "task_1_7_blocker": {
+    "date": "2026-08-22",
+    "state": "task 1.7 marked [~], NO repo changes, NO commits since 2a545535; tree clean for this task",
+    "blocker": "subagent model gap — environment configuration, not a code defect",
+    "evidence": "opencode.json exposes only vast-qwen/Qwen/Qwen3.8-27B and ollama/qwen3-coder:30b; all 217 agents in ~/.config/opencode/agents/ declare unavailable models (claude-sonnet-5/opus-4-8/haiku-4-5, opencode/big-pickle, opencode/deepseek-v4-flash-free, opencode-go/qwen3.7-max). swift-expert (opencode/big-pickle) returned empty twice; agent-teams__team-implementer (claude-opus-4-8) and multi-platform-apps__ios-developer (claude-sonnet-5) failed with 'Model not found'; only built-ins (general/explore) run. Discovery order per PLUGIN-RULES §2.1 exhausted (~/agents, ~/.agents, ~/Software/Syxx/agents, Syxx/plugins — same definitions, same model lines). SUBAGENT-RULES §2.3 + conductor workflow.md:9 forbid orchestrator-direct code, so escalated per IMPLEMENTATION-RULES §10.",
+    "owner_decision": "fix the agent model config and restart the session (chosen 2026-08-22 over orchestrator-direct deviation and pause)",
+    "minimal_edit_list": [
+      "~/.config/opencode/agents/swift-expert.md: model: opencode/big-pickle -> an available model (suggest vast-qwen/Qwen/Qwen3.8-27B); permission edit: deny -> edit: allow (1.7 may need an engine edit if any of M02/M09/M10 is not in-tree; if all in-tree, write:allow suffices for pin tests)",
+      "~/.config/opencode/agents/comprehensive-review__code-reviewer.md: model: opencode/big-pickle -> an available model (needed for Task 1.9; permission block is read/edit-deny/write-allow — fine for review)"
+    ],
+    "resume": "after restart: 'continue review-fixes_20260812 task 1.7' — dispatch swift-expert with the Task 1.7 assignment packet (M02/M09/M10, repo /Users/masterrabbit/Software/Syxx; write only under macOS/Sources/SyxxKit/Synthesis/ and macOS/Tests/SyxxKitTests/; TDD + degenerate-red-HALT/accept-pin pattern; no commits by subagent; banned-word and rules/ constraints unchanged)"
   }
 }

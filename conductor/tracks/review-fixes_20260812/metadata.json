@@ -5,14 +5,14 @@
   "status": "in_progress",
   "tier": 3,
   "created": "2026-08-12T13:19:00Z",
-  "updated": "2026-08-12T14:45:00Z",
+  "updated": "2026-08-22T14:20:01Z",
   "phases": {
     "total": 7,
-    "completed": 2
+    "completed": 1
   },
   "tasks": {
     "total": 59,
-    "completed": 10
+    "completed": 11
   },
   "defects": {
     "total": 36,
@@ -56,7 +56,7 @@
     "COMMUNICATION-RULES.md"
   ],
   "current_phase": 1,
-  "current_task": "1.1",
+  "current_task": "1.2",
   "baseline": {
     "head": "a2adae23ed4d19fab4cb30166d92a52d1afd44ff",
     "branch": "main",
@@ -75,5 +75,16 @@
     "was": "current_phase 2 / current_task 2.1",
     "now": "current_phase 1 / current_task 1.1",
     "reason": "plan.md is the source of truth and has Phase 1 Tasks 1.1-1.4 and 1.7-1.9 still pending; only 1.5 and 1.6 are complete. The old pointer claimed Phase 1 was finished."
+  },
+  "phases_correction": {
+    "date": "2026-08-21",
+    "was": "phases.completed 2",
+    "now": "phases.completed 1",
+    "reason": "Same error as pointer_correction: Phase 1 was counted complete. plan.md shows only Phase 0 fully closed (8/8 tasks, 5/5 verification); Phase 1 stands at 2/9 (Tasks 1.5 and 1.6). tasks 59/10 re-verified correct against plan.md."
+  },
+  "task_1_1_completion": {
+    "date": "2026-08-22",
+    "commit": "72f213f4",
+    "note": "Shared synthesis fixture set landed at corpus/matrix/synthesis/sh-1..sh-6 (JSON: name/spec/input/expected/why; 'default' spec = shipping SyxxMatrixIntegration spec). C# corpus loader + loader tests at Windows/dotNET/Syxx.Tests/MatrixSynthesisCorpusTests.cs: frozen DeterminativeResult JSON (whitespace-normalised — the Task 1.8 parity contract), no-affirmative-clean phase invariant, scenario invariants. 3/3 green; the 12 failing tests elsewhere in the suite pre-exist on pristine HEAD (verified via worktree at 3de34ed2). Phase 1 now stands at 3/9."
   }
 }

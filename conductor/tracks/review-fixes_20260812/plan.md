@@ -111,7 +111,7 @@ Seven defects in one evidence-scoring pipeline. Repairing them independently is 
 
 ### Tasks
 
-- [ ] Task 1.1 (red): Build the shared synthesis fixture set — a run with a hard-excluded threat, a run where every section timed out, a run with a non-usable section carrying an observed indicator, a run whose only firing indicators contradict the diagnosis, a thin-but-conclusive section, and a run with unmappable rules in the spec.
+- [x] Task 1.1 (red): Build the shared synthesis fixture set — a run with a hard-excluded threat, a run where every section timed out, a run with a non-usable section carrying an observed indicator, a run whose only firing indicators contradict the diagnosis, a thin-but-conclusive section, and a run with unmappable rules in the spec.
 - [ ] Task 1.2 (red): **W02** — assert `DeterminativeState.Inconclusive` never yields Grade B / `Severity.Clean` / a "looks clean" headline, and that `hasThreatOverhang` counts `HardExcluded` suppressions. Cover both `ReportCard.cs:88` and `:83`.
 - [ ] Task 1.3 (red): **W01** — assert a control-domain DNSSEC canary success cannot hard-exclude `dnsSpoofing`/`dnsInterception` for a *target* domain.
 - [ ] Task 1.4 (red): **W03** — assert NXDOMAIN/REFUSED/SERVFAIL never produces affirmative clean support, and never counts toward the `MajorCount >= 2` conclusive-clean requirement.

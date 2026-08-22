@@ -1,0 +1,63 @@
+{
+  "name": "SH-3: non-usable section carries an observed indicator → gated, overhang, not clean",
+  "spec": "default",
+  "input": {
+    "sections": [
+      {
+        "id": "prophet",
+        "status": "invalidated",
+        "trusted": true
+      },
+      {
+        "id": "mirror",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "portal",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "glutton",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "cage",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "witness",
+        "status": "passed",
+        "trusted": true
+      }
+    ],
+    "indicators": [
+      {
+        "id": "authoritativeMismatch",
+        "section": "prophet",
+        "observedStrength": 0.95,
+        "quality": 1.0,
+        "contradictory": false
+      }
+    ]
+  },
+  "expected": {
+  "state": "inconclusive",
+  "diagnoses": [],
+  "suppressed": [
+    {
+      "id": "dnsSpoofing",
+      "displayName": "DNS spoofing / poisoning",
+      "reason": "invalidatedRequiredSection",
+      "rawStrength": 0,
+      "rawSupport": 1.2,
+      "detail": "Required section \u0027prophet\u0027 ran but its premise failed (invalidated)."
+    }
+  ],
+  "explanation": "Inconclusive: a possible threat signal (DNS spoofing / poisoning) was observed but could not be verified because required evidence was missing or invalidated. Not treated as clean."
+},
+  "why": "W20/M02 (B162, MatrixDeterminativeEngine.swift:782-785): the indicator fired in a section whose premise failed (invalidated). The observation must score nothing — no coverage, fit, contradiction, or tier-gate contribution (rawStrength 0) — yet still be admitted to the honesty overhang (rawSupport 1.2, above the 0.30 floor). dnsSpoofing is hard-gated on its invalidated required section, and the run stays inconclusive ('seen but could not be verified'), never clean."
+}

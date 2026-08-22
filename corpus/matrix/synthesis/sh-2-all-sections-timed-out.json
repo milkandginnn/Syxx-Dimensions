@@ -1,0 +1,46 @@
+{
+  "name": "SH-2: every section timed out → untested, never clean",
+  "spec": "default",
+  "input": {
+    "sections": [
+      {
+        "id": "prophet",
+        "status": "untested",
+        "trusted": true
+      },
+      {
+        "id": "mirror",
+        "status": "untested",
+        "trusted": true
+      },
+      {
+        "id": "portal",
+        "status": "untested",
+        "trusted": true
+      },
+      {
+        "id": "glutton",
+        "status": "untested",
+        "trusted": true
+      },
+      {
+        "id": "cage",
+        "status": "untested",
+        "trusted": true
+      },
+      {
+        "id": "witness",
+        "status": "untested",
+        "trusted": true
+      }
+    ],
+    "indicators": []
+  },
+  "expected": {
+  "state": "untested",
+  "diagnoses": [],
+  "suppressed": [],
+  "explanation": "No sections have been evaluated yet."
+},
+  "why": "W03: a run in which every section timed out (NXDOMAIN/REFUSED/SERVFAIL-style non-response, modeled as untested) is unmeasured evidence. It must read untested — an honest 'we measured nothing' — and must never produce an affirmative clean or count toward the MajorCount >= 2 conclusive-clean requirement."
+}

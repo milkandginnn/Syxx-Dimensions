@@ -1,0 +1,61 @@
+{
+  "name": "SH-4: only firing indicators contradict the diagnosis → contradiction, never support",
+  "spec": "default",
+  "input": {
+    "sections": [
+      {
+        "id": "prophet",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "mirror",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "portal",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "glutton",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "cage",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "witness",
+        "status": "passed",
+        "trusted": true
+      }
+    ],
+    "indicators": [
+      {
+        "id": "authoritativeMismatch",
+        "section": "prophet",
+        "observedStrength": 0.95,
+        "quality": 1.0,
+        "contradictory": true
+      },
+      {
+        "id": "signedAnswerMismatch",
+        "section": "mirror",
+        "observedStrength": 0.9,
+        "quality": 1.0,
+        "contradictory": true
+      }
+    ]
+  },
+  "expected": {
+  "state": "inconclusive",
+  "diagnoses": [],
+  "suppressed": [],
+  "explanation": "Inconclusive: the evidence does not affirmatively resolve to clean or to any threat."
+},
+  "why": "M09: the only observations in the run actively contradict dnsSpoofing's support rules. Contradictory observations add contradiction mass and must never enter supportingIndicators / alignedSupport / hasDecisive, must never count as support for the diagnosis, and must never flip the run to an affirmative clean. Because they contribute no observed support, nothing reaches the overhang floor: the run is plain inconclusive."
+}

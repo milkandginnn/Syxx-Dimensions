@@ -1,0 +1,46 @@
+{
+  "name": "SH-6: unmappable rules in the spec → clean unreachable, inconclusive",
+  "spec": "default",
+  "input": {
+    "sections": [
+      {
+        "id": "prophet",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "mirror",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "portal",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "glutton",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "cage",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "witness",
+        "status": "passed",
+        "trusted": true
+      }
+    ],
+    "indicators": []
+  },
+  "expected": {
+  "state": "inconclusive",
+  "diagnoses": [],
+  "suppressed": [],
+  "explanation": "Inconclusive: the evidence does not affirmatively resolve to clean or to any threat."
+},
+  "why": "M10/N1/B156: all four of clean's support rules (resolverAgreement, routeClean, trustedWitnessOK, localEvidenceSealValid) are unmappable — no evidence producer exists for them, so they can never be observed. They stay in the coverage denominator (totalSupportWeight 3.7), coverage stays 0, and clean is unreachable under ANY input. The honest result for an all-pass run with no threat signals is inconclusive — 'inconclusive over unearned clean'. Pins denominator composition for Task 1.8 cross-runtime parity."
+}

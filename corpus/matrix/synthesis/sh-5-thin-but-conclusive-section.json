@@ -1,0 +1,95 @@
+{
+  "name": "SH-5: thin-but-conclusive section still scores in full → conclusive",
+  "spec": "default",
+  "input": {
+    "sections": [
+      {
+        "id": "prophet",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "mirror",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "portal",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "glutton",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "cage",
+        "status": "inconclusive",
+        "trusted": true
+      },
+      {
+        "id": "witness",
+        "status": "passed",
+        "trusted": true
+      }
+    ],
+    "indicators": [
+      {
+        "id": "authoritativeMismatch",
+        "section": "prophet",
+        "observedStrength": 0.95,
+        "quality": 1.0,
+        "contradictory": false
+      },
+      {
+        "id": "signedAnswerMismatch",
+        "section": "mirror",
+        "observedStrength": 0.9,
+        "quality": 1.0,
+        "contradictory": false
+      },
+      {
+        "id": "signedWitnessMismatch",
+        "section": "cage",
+        "observedStrength": 0.95,
+        "quality": 0.9,
+        "contradictory": false
+      }
+    ]
+  },
+  "expected": {
+  "state": "threatDetected",
+  "diagnoses": [
+    {
+      "id": "dnsSpoofing",
+      "displayName": "DNS spoofing / poisoning",
+      "confidence": "conclusive",
+      "strength": 0.780488,
+      "fit": 0.969697,
+      "coverage": 0.804878,
+      "margin": 0.780488,
+      "contradiction": 0,
+      "independentSupportGroups": 3,
+      "supportingIndicators": [
+        "authoritativeMismatch",
+        "signedAnswerMismatch",
+        "signedWitnessMismatch"
+      ],
+      "explanation": "Conclusive support for DNS spoofing / poisoning: a decisive observation across 3 independent evidence groups (fit 97%, coverage 80%, margin 78%, contradiction 0%)."
+    }
+  ],
+  "suppressed": [
+    {
+      "id": "contentTampering",
+      "displayName": "Content tampering",
+      "reason": "belowTier",
+      "rawStrength": 0.189474,
+      "rawSupport": 0.8,
+      "detail": "Observed with real support but below the reporting threshold; could not be confirmed or ruled out."
+    }
+  ],
+  "explanation": "Detected: DNS spoofing / poisoning. The evidence affirmatively supports this diagnosis."
+},
+  "why": "M02/M09/M10 (quality floor): cage ran thin — inconclusive status, quality-attenuated observation — but a section that RAN and produced usable output must still contribute in full. The unusable-section guard may attenuate weight; it must never hide what a usable section measured. dnsSpoofing reaches Conclusive on real evidence, and the same thin-section observation is honestly admitted to contentTampering's overhang (belowTier) — the guard removes scoring, never the honesty overhang."
+}

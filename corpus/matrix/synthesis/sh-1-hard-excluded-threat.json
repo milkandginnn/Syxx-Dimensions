@@ -1,0 +1,78 @@
+{
+  "name": "SH-1: hard-excluded threat → suppressed (hardExcluded), never clean",
+  "spec": "default",
+  "input": {
+    "sections": [
+      {
+        "id": "prophet",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "mirror",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "portal",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "glutton",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "cage",
+        "status": "passed",
+        "trusted": true
+      },
+      {
+        "id": "witness",
+        "status": "passed",
+        "trusted": true
+      }
+    ],
+    "indicators": [
+      {
+        "id": "authoritativeMismatch",
+        "section": "prophet",
+        "observedStrength": 0.95,
+        "quality": 1.0,
+        "contradictory": false
+      },
+      {
+        "id": "trustedWitnessOK",
+        "section": "witness",
+        "observedStrength": 0.95,
+        "quality": 1.0,
+        "contradictory": false
+      }
+    ]
+  },
+  "expected": {
+  "state": "inconclusive",
+  "diagnoses": [],
+  "suppressed": [
+    {
+      "id": "clean",
+      "displayName": "Clean",
+      "reason": "hardExcluded",
+      "rawStrength": 0.324324,
+      "rawSupport": 1.2,
+      "detail": "Excluded by a confirmed authoritativeMismatch observation."
+    },
+    {
+      "id": "dnsSpoofing",
+      "displayName": "DNS spoofing / poisoning",
+      "reason": "hardExcluded",
+      "rawStrength": 0.292683,
+      "rawSupport": 1.2,
+      "detail": "Excluded by a confirmed trustedWitnessOK observation."
+    }
+  ],
+  "explanation": "Inconclusive: the evidence does not affirmatively resolve to clean or to any threat."
+},
+  "why": "W02 (ReportCard.cs:88 / :83): dnsSpoofing carries real observed support (authoritativeMismatch) but is hard-excluded by firing trustedWitnessOK at/above the 0.5 exclusion-firing threshold. A hard-excluded threat must surface as a suppression with reason hardExcluded and must never let the run read clean — hasThreatOverhang counts HardExcluded suppressions. Same conflicting evidence also hard-excludes clean (authoritativeMismatch is an exclusionary indicator for it), which is exactly why the run abstains. Shared fixture for Task 1.8 cross-runtime parity."
+}

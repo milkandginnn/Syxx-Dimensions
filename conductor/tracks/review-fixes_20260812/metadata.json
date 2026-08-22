@@ -5,14 +5,14 @@
   "status": "in_progress",
   "tier": 3,
   "created": "2026-08-12T13:19:00Z",
-  "updated": "2026-08-22T14:52:00Z",
+  "updated": "2026-08-22T15:07:00Z",
   "phases": {
     "total": 7,
     "completed": 1
   },
   "tasks": {
     "total": 59,
-    "completed": 13
+    "completed": 14
   },
   "defects": {
     "total": 36,
@@ -56,7 +56,7 @@
     "COMMUNICATION-RULES.md"
   ],
   "current_phase": 1,
-  "current_task": "1.4",
+  "current_task": "1.7",
   "baseline": {
     "head": "a2adae23ed4d19fab4cb30166d92a52d1afd44ff",
     "branch": "main",
@@ -98,5 +98,11 @@
     "commit": "dbac0f2c",
     "deviation": "degenerate red — defect pre-repaired",
     "note": "W01 ratifies as already repaired (triage.md:13): DnssecCanarySecure has no IndicatorMapping entry, so a control-domain canary success can no longer mint TrustedWitnessOK and hard-exclude dnsSpoofing/dnsInterception for an untouched target. HALTed; owner-approved accept-pin pattern applied. DnssecCanaryScopePinTests.cs (3 tests, green on first run): canary-secure maps to nothing; end-to-end belowTier-not-hardExcluded with target-domain support; negative control keeps DnssecCanaryStripped -> SignedAnswerMismatch. Phase 1 now stands at 5/9."
+  },
+  "task_1_4_completion": {
+    "date": "2026-08-22",
+    "commit": "439a9003",
+    "deviation": "degenerate red — defect pre-repaired",
+    "note": "W03 ratifies as already repaired (triage.md:13): no clean-support entries exist in IndicatorMapping (documented deliberate, N1). HALTed; owner-approved accept-pin pattern applied. ResolverStatusCleanSupportPinTests.cs (3 tests, green on first run): the NXDOMAIN/REFUSED/SERVFAIL readings map to no clean-support indicator; structural pin over the whole EvidenceId vocabulary; end-to-end five resolver failures never yield clean. Phase 1 now stands at 6/9; remaining: 1.7 (Swift green M02/M09/M10), 1.8 (cross-runtime parity on the sh-* fixtures), 1.9 (code review)."
   }
 }

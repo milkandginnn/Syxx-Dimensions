@@ -16,6 +16,7 @@ Navigation hub for project context.
 - [review-fixes_20260812](tracks/review-fixes_20260812/) — Recovered xhigh Review — Confirmed Defect Repairs (pending)
 
 - [review-verify_20260813](tracks/review-verify_20260813/) — Ultra Review — Dedupe, Verify, Plan Fixes (pending)
+- [notarization-audit_20260830](tracks/notarization-audit_20260830/) — Notarization-Gated Feature Audit & Developer ID Readiness (pending)
 
 <!-- Auto-populated by /conductor:new-track -->
 

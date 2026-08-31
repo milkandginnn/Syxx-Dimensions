@@ -1,0 +1,18 @@
+{
+  "id": "notarization-audit_20260830",
+  "title": "Notarization-Gated Feature Audit & Developer ID Readiness",
+  "type": "chore",
+  "status": "in_progress",
+  "created": "2026-08-31T02:30:19Z",
+  "updated": "2026-08-31T02:58:00Z",
+  "current_phase": 1,
+  "current_task": "phase-1-gate",
+  "phases": {
+    "total": 4,
+    "completed": 1
+  },
+  "tasks": {
+    "total": 26,
+    "completed": 4
+  }
+}
